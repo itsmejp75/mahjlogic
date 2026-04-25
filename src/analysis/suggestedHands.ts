@@ -1036,20 +1036,6 @@ function redistributeJokerPreviewMarksToFirstMeld(
   }
 }
 
-function hasJokerSuggestionTarget(
-  kinds: readonly PreviewSlotSuggestKind[],
-  defs: TileDef[],
-  jokerEligible: readonly boolean[],
-): boolean {
-  for (const [a, b] of jokerMeldPreviewIndexRanges(defs, [...jokerEligible])) {
-    for (let i = a; i < b; i++) {
-      if (!jokerEligible[i]) continue
-      if (kinds[i] == null) return true
-    }
-  }
-  return false
-}
-
 /** NMJL: jokers only in 3+ identical melds — slot list from `patternPreviewJokerEligibleBySlot`. */
 function previewSlotAllowsJoker(
   d: TileDef,
@@ -2313,8 +2299,6 @@ function buildSuggestedStripSlotsFromStripDefs(
 function buildConsecOpposingSuitStripVariantRows(
   p: PracticePattern,
   rack: TileInstance[],
-  usedOrder: readonly string[],
-  bestIdsForAssignment: ReadonlySet<string>,
   usedMeta: readonly GroupUsedMeta[] | null,
   stripResolved: TileDef[],
 ): {
@@ -2704,8 +2688,6 @@ export function buildSuggestedStripSlotRowsWithVariants(
   const altConsec = buildConsecOpposingSuitStripVariantRows(
     p,
     rack,
-    usedOrder,
-    bestIdsForAssignment,
     usedMeta,
     stripResolved,
   )
@@ -2795,10 +2777,6 @@ export function previewSlotSuggestKinds(
   usedMetaArg?: readonly GroupUsedMeta[] | null,
 ): PreviewSlotSuggestKind[] {
   return computePreviewStripAssignment(p, rackForPattern, usedOrder, bestIds, usedMetaArg).kinds
-}
-
-function deadCopiesOnTable(def: TileDef, visible: TileInstance[]): number {
-  return visible.filter((v) => tileDefsEqual(v.def, def)).length
 }
 
 /**
@@ -3005,9 +2983,7 @@ export function sortHandForSuggestedPattern(
   const basePattern = PRACTICE_PATTERNS.find((x) => x.id === patternId)
   if (!basePattern) return [...hand]
   const playerClaimMelds = input.playerClaimMelds ?? []
-  const eastTableClaimMelds = input.eastTableClaimMelds ?? input.playerClaimMelds ?? []
   const rackForPattern = [...hand, ...playerClaimMelds.flatMap((e) => e.tiles)]
-  const visible = tableVisibleTiles(input.discards, input.exposures, eastTableClaimMelds)
   const handIds = new Set(hand.map((t) => t.id))
   const exposureTileIds: ReadonlySet<string> | undefined =
     playerClaimMelds.length > 0
@@ -3022,8 +2998,6 @@ export function sortHandForSuggestedPattern(
   // Effective pattern used for the "matches/not-helping/dead-copies" tail sort. For the
   // multi-combo "all" case we fall back to the base pattern so any tile that fits ANY
   // variant is treated as a match in the tail comparator.
-  const tailPattern: PracticePattern = pinnedPatterns.length === 1 ? pinnedPatterns[0]! : basePattern
-
   const orderedBest: TileInstance[] = []
   const seen = new Set<string>()
   if (pinnedPatterns.length > 0) {

@@ -102,8 +102,6 @@ export function SuggestedHandsPanel({
   onPatternDoubleClick,
   handsListOn,
   tilesGuideOn,
-  onHandsListOnChange,
-  onTilesGuideOnChange,
   rackTilesForSuggestedStrip,
   exposureTileIdsForSuggestedStrip,
   filterButtonPortal,

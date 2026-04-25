@@ -16,7 +16,7 @@ import {
   type RankSuggestedHandsInput,
 } from './suggestedHands'
 import { PRACTICE_PATTERNS } from '../card/practicePatterns'
-import type { DiscardEntry, EastExposure, TileInstance } from '../mahjong/types'
+import type { DiscardEntry, TileInstance } from '../mahjong/types'
 import type { BotExposure, BotSeat } from './types'
 
 // ── Context ───────────────────────────────────────────────────────────────────

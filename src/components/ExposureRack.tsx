@@ -122,7 +122,6 @@ function SortableStagedSlot({
       ]
         .filter(Boolean)
         .join(' ')}
-      role="listitem"
       onClick={() => onTileClick(tile.id)}
       {...listeners}
       {...attributes}

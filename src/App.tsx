@@ -50,7 +50,6 @@ import type { CardTextSeg } from './card/cardText'
 import { PRACTICE_PATTERNS } from './card/practicePatterns'
 import {
   buildPinnedPatternsFromFocusKey,
-  buildSuggestedStripSlots,
   computeRackPatternHighlightIds,
   greedyPatternMatchDetail,
   isMultiComboFocusKey,
@@ -59,7 +58,6 @@ import {
   summarizeRackTowardWin,
   type GreedyPatternMatchOpts,
   type RankSuggestedHandsInput,
-  type SuggestedStripSlot,
 } from './analysis/suggestedHands'
 import { IllegalMahjongDialog } from './components/IllegalMahjongDialog'
 import { CardColoredText } from './components/CardColoredText'
@@ -73,12 +71,10 @@ import {
   hasLegalMahjongOnBotDiscard,
   MSG_CALL_DEAD_JOKER,
   MSG_CALL_INSUFFICIENT_TILES,
-  MSG_MAHJONG_AWAITING_BOT_DISCARD,
   MSG_MAHJONG_DURING_CHARLESTON,
   MSG_SWAP_NO_EXPOSED_JOKERS,
   MSG_SWAP_NO_LEGAL_FOR_TILE,
   MSG_SWAP_PICK_TILE_FIRST,
-  simulateEastClaim,
   type CallValidationRoundSlice,
 } from './mahjong/callValidation'
 import {
@@ -463,7 +459,6 @@ type BotTurnResult = {
  */
 function performBotPreDiscardSwaps(
   hand: TileInstance[],
-  seat: Seat,
   eastExposures: EastExposure[],
   botExposures: BotExposure[],
 ): { hand: TileInstance[]; eastExposures: EastExposure[]; botExposures: BotExposure[] } {
@@ -532,7 +527,7 @@ function runOneBotTurn(
   const [drawn, ...wallNext] = wall
   const handWithDraw = [...botHand, drawn]
   // Redeem any jokers available in exposed melds before deciding what to discard
-  const swapped = performBotPreDiscardSwaps(handWithDraw, seat, eastExposures, botExposures)
+  const swapped = performBotPreDiscardSwaps(handWithDraw, eastExposures, botExposures)
   const handAfterSwaps = swapped.hand
   const nonJokers = handAfterSwaps.filter((t) => t.def.cat !== 'joker')
   const jokers = handAfterSwaps.filter((t) => t.def.cat === 'joker')
@@ -998,7 +993,6 @@ function commitEastDiscardWithHand(
     const allBotExposuresWithNew = [...r.botExposures, newExposure]
     const postCallSwap = performBotPreDiscardSwaps(
       botsNext[botIndex],
-      BOT_SEATS[botIndex]!,
       r.eastExposures,
       allBotExposuresWithNew,
     )
@@ -1215,7 +1209,6 @@ function applySkipBotDiscard(r: RoundState, botWinsEnabled = false): RoundState 
     const allBotExposuresSkip = [...r.botExposures, newExposure]
     const postCallSwapSkip = performBotPreDiscardSwaps(
       botsNext[callerIdx]!,
-      BOT_SEATS[callerIdx]!,
       r.eastExposures,
       allBotExposuresSkip,
     )
@@ -1647,7 +1640,7 @@ export default function App() {
     setSuggestedPanelHeight(Math.max(minH, Math.min(maxH, drag.startHeight + delta)))
   }, [])
 
-  const onDragHandlePointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+  const onDragHandlePointerUp = useCallback(() => {
     const drag = dragStateRef.current
     if (!drag) return
     dragStateRef.current = null
@@ -1879,9 +1872,7 @@ export default function App() {
   /** Jokers currently in hand (can substitute in any meld). */
   const handJokers = useMemo(() => hand.filter((t) => t.def.cat === 'joker'), [hand])
 
-  const canPung  = callMatches.length + handJokers.length >= 2
   const canKong  = callMatches.length + handJokers.length >= 3
-  const canQuint = callMatches.length + handJokers.length >= 4
 
   const canCommitStagedCallDone = useMemo(() => {
     if (mainPhase !== 'call-staging' || !activeBotDiscard) return false
@@ -2165,7 +2156,18 @@ export default function App() {
     }
 
     // Other players: East (player) + remaining bots
-    type ReviewRow = { label: string; isWinner: boolean; sortedHand: TileInstance[]; exposureGroups: { tiles: TileInstance[] }[]; bestTilesAway: number; bestIds: Set<string>; closestTitle: string; titleSegments: typeof winnerLine extends { titleSegments?: infer S } ? S : undefined; section: string; cardLineNumber: number | null }
+    type ReviewRow = {
+      label: string
+      isWinner: boolean
+      sortedHand: TileInstance[]
+      exposureGroups: { tiles: TileInstance[] }[]
+      bestTilesAway: number
+      bestIds: Set<string>
+      closestTitle: string
+      titleSegments?: CardTextSeg[]
+      section: string
+      cardLineNumber: number | null
+    }
     const winner: ReviewRow = {
       label: `Bot ${botIndex + 1} (${winnerLabel})`,
       isWinner: true,
@@ -2212,8 +2214,8 @@ export default function App() {
       cardLineNumber: eastLine?.cardLineNumber ?? null,
     }
 
-    const otherRows = BOT_LABELS.map((label, idx) => {
-      if (idx === botIndex) return null
+    const otherRows: ReviewRow[] = BOT_LABELS.flatMap((label, idx) => {
+      if (idx === botIndex) return []
       const botHand = bots[idx] ?? []
       const claims = botExposures.filter((e) => e.seat === label)
       const rankInput: RankSuggestedHandsInput = {
@@ -2235,7 +2237,7 @@ export default function App() {
           bestIds = new Set(detail.usedOrder.filter((id) => rack.some((t) => t.id === id)))
         }
       }
-      return {
+      const row: ReviewRow = {
         label: `Bot ${idx + 1} (${label})`,
         isWinner: false,
         sortedHand,
@@ -2246,8 +2248,9 @@ export default function App() {
         titleSegments: closestLine?.titleSegments,
         section: closestLine?.section ?? '',
         cardLineNumber: closestLine?.cardLineNumber ?? null,
-      } satisfies ReviewRow
-    }).filter((r): r is ReviewRow => r !== null)
+      }
+      return [row]
+    })
 
     return { winner, rows: [eastRow, ...otherRows], winnerLine }
   }, [mainPhase, botWin, bots, hand, wall.length, discardTiles, botExposures, eastExposures])
@@ -4192,164 +4195,6 @@ export default function App() {
                             )}
                               </div>
                             ) : null}
-                            {false && mainPhase === 'mahjong-declared' && (
-                              <div className="mahjong-win-inlay" role="region" aria-label="Mah Jongg win">
-                                <div className="mahjong-win">
-                                  <p className="mahjong-win__headline">Mah Jongg!</p>
-                                  {playerWinPattern ? (
-                                    <p className="mahjong-win__note">
-                                      {playerWinPattern.section && playerWinPattern.cardLineNumber != null
-                                        ? `${playerWinPattern.section} #${playerWinPattern.cardLineNumber} · `
-                                        : ''}
-                                      {playerWinPattern.titleSegments
-                                        ? <CardColoredText segments={playerWinPattern.titleSegments} />
-                                        : playerWinPattern.title}
-                                    </p>
-                                  ) : (
-                                    <p className="mahjong-win__note">
-                                      Your hand has been validated. Review it above, then start a new game.
-                                    </p>
-                                  )}
-                                  {postGameBotReview ? (
-                                    <div className="mahjong-win__bots-review" aria-labelledby="bots-review-heading">
-                                      <h3 id="bots-review-heading" className="mahjong-win__bots-review-title">
-                                        Other seats (practice card)
-                                      </h3>
-                                      <ul className="mahjong-win__bots-review-list">
-                                        {postGameBotReview.map((row) => (
-                                          <li key={row.label} className="mahjong-win__bots-review-card">
-                                            <div className="mahjong-win__bots-review-header">
-                                              <span className="mahjong-win__bots-review-seat">{row.label}</span>
-                                              <span className="mahjong-win__bots-review-away">
-                                                {row.bestTilesAway === 0 ? '0 away' : `${row.bestTilesAway} away`}
-                                              </span>
-                                              {row.section && row.cardLineNumber != null && (
-                                                <span className="mahjong-win__bots-review-ref">
-                                                  {row.section} #{row.cardLineNumber}
-                                                </span>
-                                              )}
-                                              <span className="mahjong-win__bots-review-pattern">
-                                                {row.titleSegments
-                                                  ? <CardColoredText segments={row.titleSegments} />
-                                                  : row.closestTitle}
-                                              </span>
-                                            </div>
-                                            <div className="mahjong-win__bots-review-tiles">
-                                              {row.exposureGroups.map((exp, gi) => (
-                                                <div key={gi} className="mahjong-win__bots-review-meld">
-                                                  {exp.tiles.map((tile) => (
-                                                    <div
-                                                      key={tile.id}
-                                                      className={[
-                                                        'mahjong-win__bots-review-tile',
-                                                        row.bestIds.has(tile.id) ? '' : 'mahjong-win__bots-review-tile--dim',
-                                                      ].filter(Boolean).join(' ')}
-                                                    >
-                                                      <TileFace def={tile.def} />
-                                                    </div>
-                                                  ))}
-                                                </div>
-                                              ))}
-                                              {row.sortedHand.map((tile) => (
-                                                <div
-                                                  key={tile.id}
-                                                  className={[
-                                                    'mahjong-win__bots-review-tile',
-                                                    row.bestIds.has(tile.id) ? '' : 'mahjong-win__bots-review-tile--dim',
-                                                  ].filter(Boolean).join(' ')}
-                                                >
-                                                  <TileFace def={tile.def} />
-                                                </div>
-                                              ))}
-                                            </div>
-                                          </li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                  ) : null}
-                                  <button type="button" className="btn btn--primary" onClick={newHand}>
-                                    New Game
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                            {false && mainPhase === 'bot-mahjong' && postGameBotMahjongReview && (
-                              <div className="mahjong-win-inlay" role="region" aria-label="Bot Mah Jongg win">
-                                <div className="mahjong-win">
-                                  <p className="mahjong-win__headline mahjong-win__headline--bot">
-                                    {postGameBotMahjongReview.winner.label} got Mah Jongg!
-                                  </p>
-                                  <div className="mahjong-win__bot-winner-info">
-                                    <span className="mahjong-win__bot-winner-hand">
-                                      {postGameBotMahjongReview.winner.titleSegments
-                                        ? <CardColoredText segments={postGameBotMahjongReview.winner.titleSegments} />
-                                        : postGameBotMahjongReview.winner.closestTitle}
-                                    </span>
-                                    <span className="mahjong-win__bot-winner-how"> · Mah Jongg · Drew Own Tile</span>
-                                    <span className="mahjong-win__bot-winner-pts">+TBD pts</span>
-                                  </div>
-                                  <div className="mahjong-win__bots-review" aria-labelledby="bot-mj-others-heading">
-                                    <h3 id="bot-mj-others-heading" className="mahjong-win__bots-review-title">
-                                      Other seats
-                                    </h3>
-                                    <ul className="mahjong-win__bots-review-list">
-                                      {postGameBotMahjongReview.rows.map((row) => (
-                                        <li key={row.label} className="mahjong-win__bots-review-card">
-                                          <div className="mahjong-win__bots-review-header">
-                                            <span className="mahjong-win__bots-review-seat">{row.label}</span>
-                                            <span className="mahjong-win__bots-review-away">
-                                              {row.bestTilesAway === 0 ? '0 away' : `${row.bestTilesAway} away`}
-                                            </span>
-                                            {row.section && row.cardLineNumber != null && (
-                                              <span className="mahjong-win__bots-review-ref">
-                                                {row.section} #{row.cardLineNumber}
-                                              </span>
-                                            )}
-                                            <span className="mahjong-win__bots-review-pattern">
-                                              {row.titleSegments
-                                                ? <CardColoredText segments={row.titleSegments} />
-                                                : row.closestTitle}
-                                            </span>
-                                            <span className="mahjong-win__bot-mj-pts">−TBD pts</span>
-                                          </div>
-                                          <div className="mahjong-win__bots-review-tiles">
-                                            {row.exposureGroups.map((exp, gi) => (
-                                              <div key={gi} className="mahjong-win__bots-review-meld">
-                                                {exp.tiles.map((tile) => (
-                                                  <div
-                                                    key={tile.id}
-                                                    className={[
-                                                      'mahjong-win__bots-review-tile',
-                                                      row.bestIds.has(tile.id) ? '' : 'mahjong-win__bots-review-tile--dim',
-                                                    ].filter(Boolean).join(' ')}
-                                                  >
-                                                    <TileFace def={tile.def} />
-                                                  </div>
-                                                ))}
-                                              </div>
-                                            ))}
-                                            {row.sortedHand.map((tile) => (
-                                              <div
-                                                key={tile.id}
-                                                className={[
-                                                  'mahjong-win__bots-review-tile',
-                                                  row.bestIds.has(tile.id) ? '' : 'mahjong-win__bots-review-tile--dim',
-                                                ].filter(Boolean).join(' ')}
-                                              >
-                                                <TileFace def={tile.def} />
-                                              </div>
-                                            ))}
-                                          </div>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                  <button type="button" className="btn btn--primary" onClick={newHand}>
-                                    New Game
-                                  </button>
-                                </div>
-                              </div>
-                            )}
                           </div>
                           </SortableContext>
                         </div>

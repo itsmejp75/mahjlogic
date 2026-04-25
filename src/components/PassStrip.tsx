@@ -14,7 +14,7 @@ function DraggablePassTile({
   inlineTail: boolean
   suggestBest: boolean
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: tile.id,
   })
 
