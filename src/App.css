@@ -883,14 +883,15 @@
 @media (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) {
   :root {
     /* Most dimensions are rem-based; lowering root font-size scales UI uniformly. */
-    font-size: clamp(11px, 1.55vw, 14px);
-    --app-h-pad-base: clamp(0.18rem, 1vw, 0.42rem);
-    --app-v-pad: clamp(0.16rem, 0.7vh, 0.3rem);
-    --hand-window-pad-inline: clamp(0.14rem, 0.8vw, 0.26rem);
-    --rack-tray-inset-inline: 0.24rem;
+    font-size: clamp(10px, 1.45vw, 13px);
+    --app-h-pad-base: clamp(0.06rem, 0.45vw, 0.16rem);
+    --app-v-pad: clamp(0.12rem, 0.6vh, 0.22rem);
+    --hand-window-pad-inline: clamp(0.08rem, 0.5vw, 0.18rem);
+    --rack-tray-inset-inline: 0.16rem;
     --rack-tray-inset-block: 0.18rem;
-    --hand-rack-tile-w: max(1.42rem, calc(var(--hand-rack-usable-w) / 14));
-    --hand-rack-tile-h: max(1.9rem, calc(var(--hand-rack-usable-w) / 14 * 1.3333));
+    --hand-rack-tile-w: max(1.28rem, calc(var(--hand-rack-usable-w) / 14));
+    --hand-rack-tile-h: max(1.72rem, calc(var(--hand-rack-usable-w) / 14 * 1.3333));
+    --player-rack-face-gap: 1px;
     --rack-bottom-action-fs: clamp(0.62rem, 1.5vw, 0.8rem);
     --btn-font-size: clamp(0.72rem, 1.7vw, 0.9rem);
     --btn-letter-spacing: calc(0.008em + 0.008rem);
@@ -898,23 +899,6 @@
 
   .app-main__scroll {
     max-height: min(20dvh, 6.5rem);
-  }
-
-  /*
-   * Last-resort uniform scaling for short phone landscape: scale the whole app
-   * canvas together so tiles, buttons, and spacing keep the same proportions.
-   */
-  .app {
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .app-layout {
-    --phone-landscape-scale: 0.78;
-    transform: scale(var(--phone-landscape-scale));
-    transform-origin: top center;
-    width: 100%;
-    min-height: 100%;
   }
 }
 
