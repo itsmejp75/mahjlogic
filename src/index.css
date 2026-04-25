@@ -1,0 +1,289 @@
+/* Local Noto Serif Bengali (assets/fonts/Noto_Serif_Bengali): static Black = weight 900 for rack watermark. */
+@font-face {
+  font-family: 'Noto Serif Bengali';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url('../assets/fonts/Noto_Serif_Bengali/static/NotoSerifBengali-Black.ttf') format('truetype');
+}
+
+/* Local Figtree (assets/fonts/Figtree): variable font covering weights 100–900.
+   Used for the rack watermark "Logic" (SemiBold/600) and for all UI buttons. */
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../assets/fonts/Figtree/Figtree-VariableFont_wght.ttf') format('truetype-variations');
+}
+@font-face {
+  font-family: 'Figtree';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../assets/fonts/Figtree/Figtree-Italic-VariableFont_wght.ttf') format('truetype-variations');
+}
+
+/* Local Noto Sans Arabic (assets/fonts/Noto_Sans_Arabic): variable font covering weights 100–900.
+   Used for numeric glyphs on tile faces (suit ranks + digit-bearing labels). */
+@font-face {
+  font-family: 'Noto Sans Arabic';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../assets/fonts/Noto_Sans_Arabic/NotoSansArabic-VariableFont_wdth,wght.ttf') format('truetype-variations');
+}
+
+:root {
+  --text: #4a433c;
+  --text-h: #14110f;
+  --bg: #ebe4d8;
+  --bg-elevated: #f6f1e8;
+  --border: #cfc4b4;
+  --code-bg: #e2d8c8;
+  --accent: #b84a32;
+  --accent-bg: rgba(184, 74, 50, 0.14);
+  --accent-border: rgba(184, 74, 50, 0.5);
+  --coach-teal: #0d5c55;
+  --coach-teal-bg: rgba(13, 92, 85, 0.1);
+  --coach-teal-border: rgba(13, 92, 85, 0.35);
+  --stop-red: #b91c1c;
+  --stop-red-border: rgba(185, 28, 28, 0.35);
+  --shadow:
+    rgba(20, 17, 15, 0.12) 0 10px 24px -6px, rgba(20, 17, 15, 0.06) 0 4px 10px -4px;
+
+  --sans: 'Source Sans 3', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --heading: 'Source Serif 4', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia,
+    serif;
+  --mono: ui-monospace, Consolas, monospace;
+  /* Concealed-hand “C” badge: rounder, wider glyph than UI mono. */
+  --font-concealed-c: 'Nunito', var(--sans);
+
+  /*
+   * NMJL card line inks — matched to tile glyph colors (bam/crak/dot).
+   * "Navy" = dot-suit blue. Green = bam. Red = crak.
+   * Card line text: flowers / winds / jokers use navy blue; suggested-hand **mini** flowers/winds/jokers
+   * use `--wind-tile-bg` via `rack-wind` (see `cardInkTileSkin.ts`).
+   */
+  --card-ink-navy: #42a5f5;
+  --card-ink-green: #66bb6a;
+  --card-ink-red: #ff5252;
+  --card-ink-neutral: var(--text-h);
+
+  /*
+   * Suggested-hand strip mini tiles: match NMJL **card PDF** (blue / black / red / green print).
+   * See `src/card/cardInkTileSkin.ts` + `patternLinePreviewSlots`.
+   */
+  --card-tile-skin-blue-bg: var(--card-ink-navy);
+  --card-tile-skin-blue-fg: #ffffff;
+  --card-tile-skin-black-bg: #1c2430;
+  --card-tile-skin-black-fg: #f2f5fa;
+  --card-tile-skin-red-bg: var(--card-ink-red);
+  --card-tile-skin-red-fg: #1a0a0a;
+  --card-tile-skin-green-bg: var(--card-ink-green);
+  --card-tile-skin-green-fg: #0d1a0f;
+  --card-tile-skin-neutral-bg: #c4bdb2;
+  --card-tile-skin-neutral-fg: var(--text-h);
+
+  /* Panel / rail “windows” in MahjLogic (tile faces keep their own fills). */
+  --window-surface: #1a1e24;
+  --window-border: #3d444d;
+  --window-inner-surface: #08090a;
+  --window-fg: #eae8e4;
+  --window-fg-muted: #a0aec0;
+  /* Wind tiles: dimmed white face so inset/white highlight rings read clearly on the rack. */
+  --wind-tile-bg: #d0cfca;
+
+  font: 17px/145% var(--sans);
+  letter-spacing: 0.01em;
+  color-scheme: light;
+  color: var(--text);
+  background-color: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  @media (max-width: 1024px) {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --text: #e0e0e0;
+    --text-h: #e0e0e0;
+    --bg: #12151a;
+    --bg-elevated: #222a28;
+    --border: #3a4542;
+    --code-bg: #24302e;
+    --accent: #e07a5f;
+    --accent-bg: rgba(224, 122, 95, 0.12);
+    --accent-border: rgba(224, 122, 95, 0.45);
+    --coach-teal: #5eead4;
+    --coach-teal-bg: rgba(94, 234, 212, 0.08);
+    --coach-teal-border: rgba(94, 234, 212, 0.35);
+    --stop-red: #f87171;
+    --stop-red-border: rgba(248, 113, 113, 0.35);
+    --shadow:
+      rgba(0, 0, 0, 0.45) 0 12px 28px -8px, rgba(0, 0, 0, 0.28) 0 6px 12px -6px;
+
+    --card-ink-navy: #42a5f5;
+    --card-ink-green: #66bb6a;
+    --card-ink-red: #ff5252;
+    --card-ink-neutral: var(--text-h);
+
+    --card-tile-skin-blue-bg: var(--card-ink-navy);
+    --card-tile-skin-blue-fg: #ffffff;
+    --card-tile-skin-black-bg: #0f141c;
+    --card-tile-skin-black-fg: #e8edf5;
+    --card-tile-skin-red-bg: var(--card-ink-red);
+    --card-tile-skin-red-fg: #1a0505;
+    --card-tile-skin-green-bg: var(--card-ink-green);
+    --card-tile-skin-green-fg: #061208;
+    --card-tile-skin-neutral-bg: #4a524e;
+    --card-tile-skin-neutral-fg: var(--text-h);
+
+    --window-surface: #1a1e24;
+    --window-border: #3d444d;
+    --window-inner-surface: #08090a;
+    --window-fg: #e8e6e3;
+    --window-fg-muted: #a0aec0;
+    --wind-tile-bg: #b9b7b1;
+  }
+}
+
+html {
+  height: 100%;
+}
+
+#root {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  text-align: left;
+  /* One screen: app controls internal scrolling (phone / PWA feel). */
+  height: 100%;
+  min-height: 100dvh;
+  max-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  background: #08090a;
+}
+
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2 {
+  font-family: var(--heading);
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+h1 {
+  font-size: clamp(1.55rem, 3.6vw, 2rem);
+  letter-spacing: -0.03em;
+  margin: 0 0 0.35rem;
+}
+
+h2 {
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.35rem;
+}
+
+p {
+  margin: 0;
+}
+
+code {
+  font-family: var(--mono);
+  font-size: 0.92em;
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.25rem;
+  background: var(--code-bg);
+  color: var(--text-h);
+}
+
+.card-ink {
+  font-weight: 600;
+}
+
+.card-ink--neutral {
+  color: var(--card-ink-neutral);
+}
+
+.card-ink--navy,
+.card-ink--honor,
+.card-ink--flower,
+.card-ink--joker {
+  color: var(--card-ink-navy);
+}
+
+.card-ink--green {
+  color: var(--card-ink-green);
+}
+
+.card-ink--red {
+  color: var(--card-ink-red);
+}
+
+.card-ink--soap {
+  color: var(--card-ink-navy);
+}
+
+.card-ink--rack-wind {
+  color: var(--card-ink-navy);
+}
+
+/* Suggested hands: mini tile faces track official card print colors (`cardInkTileSkin.ts`). */
+.tile-face.tile-face--card-skin-navy,
+.tile-face.tile-face--card-skin-soap {
+  background: var(--card-tile-skin-blue-bg);
+  color: var(--card-tile-skin-blue-fg);
+}
+
+/* Suggested strip: winds / jokers match main rack wind tile (`.tile--wind`). */
+.tile-face.tile-face--card-skin-rack-wind {
+  background: var(--wind-tile-bg);
+  color: #000;
+}
+
+/* Suggested strip: flowers match main rack flower tile (`.tile--flower`). */
+.tile-face.tile-face--card-skin-rack-flower {
+  background: #ab47bc;
+  color: #000;
+}
+
+.tile-face.tile-face--card-skin-honor {
+  background: var(--card-tile-skin-black-bg);
+  color: var(--card-tile-skin-black-fg);
+}
+
+.tile-face.tile-face--card-skin-red {
+  background: var(--card-tile-skin-red-bg);
+  color: var(--card-tile-skin-red-fg);
+}
+
+.tile-face.tile-face--card-skin-green {
+  background: var(--card-tile-skin-green-bg);
+  color: var(--card-tile-skin-green-fg);
+}
+
+.tile-face.tile-face--card-skin-neutral {
+  background: var(--card-tile-skin-neutral-bg);
+  color: var(--card-tile-skin-neutral-fg);
+}

@@ -1,0 +1,6456 @@
+/* Hand / exposure / Charleston pass — single tile geometry */
+:root {
+  --rack-tile-w: 2.65rem;
+  --rack-tile-h: 3.53rem;
+  --rack-tile-gap: 1px;
+  /* Used by `.tile-face` and dark tray shells that frame those faces (discard, bot rows). */
+  --tile-face-border-radius: 0.35rem;
+  /* DnD subtree re-declares; concentric with tile faces where faces sit `inner-pad` inside the shell. */
+  --bot-exposure-inner-pad: 4px;
+  /* R_outer = R_tile + padding — same concentric look as the toolbar well around Menu / Suggested. */
+  --tile-tray-shell-radius: calc(var(--tile-face-border-radius) + var(--bot-exposure-inner-pad));
+  /* Base face border width on default `.tile-face` (used in gap/inner-width math). */
+  --rack-tile-face-bw: 1px;
+  /* Visible gap used by the player rack / player exposure row once tile borders are removed. */
+  --player-rack-face-gap: calc(var(--rack-tile-gap) + var(--rack-tile-face-bw));
+  /* Horizontal inset so exposure row and hand row share one column grid */
+  --rack-panel-inset: 0.45rem;
+  /* Exposure row slot height (tile face). Charleston pass row overrides per rack. */
+  --exposure-slot-h: var(--rack-tile-h);
+
+  /*
+   * Locked vertical offset for the play column (`.app-dnd-frame`: bot rail + rack + suggested hands / discard).
+   * Move that stack together by editing only this value — avoid extra margin-top on inner sections
+   * so header / prompt strip layout does not fight this placement.
+   */
+  --app-dnd-rack-hands-margin-top: 0;
+  /* Bot exposure card: inset from border (see `--rack-stack-gap-y` for East rack vertical rhythm). */
+  --rack-card-padding-block: 0.22rem;
+  --rack-card-padding-inline: 0.38rem;
+  /* Main rack window inline padding (match discard tracker side padding). */
+  --hand-window-pad-inline: clamp(0.28rem, 0.9vw, 0.55rem);
+  /**
+   * One vertical rhythm for: bot rail ↔ East rack ↔ lower panels, and inside East rack
+   * (panel inset, exposure↔hand, hand↔actions). Same value Charleston + main play.
+   */
+  --rack-stack-gap-y: 0.22rem;
+  /*
+   * Vertical strip between main dark trays (East exposure↔hand, hand↔action, bot toolbar↔body,
+   * bot row↔row ×2). Modeled as four gaps at `--rack-stack-gap-y` plus two at `+ 4px` (old bot
+   * list step); uniform thickness = arithmetic mean `(6 * S + 8px) / 6` = `S + 8px/6`.
+   * Does not replace `--rack-stack-gap-y` everywhere — tray insets / horizontal split unchanged.
+   */
+  --play-tray-h-divider: calc((6 * var(--rack-stack-gap-y) + 8px) / 6);
+  /* Pass/Sort/Clear etc. — wells use `+ var(--bot-exposure-inner-pad)` so inner corners match the buttons. */
+  --rack-tile-btn-border-radius: 0.68rem;
+  --rack-tray-inset-inline: 0.44rem;
+  --rack-tray-inset-block: 0.3rem;
+  /* Suggested-hands panel top inset — alias of rack stack gap. */
+  --hands-panel-padding-top: var(--rack-stack-gap-y);
+  /* Discard tracker + bot exposures below rack: shared max height. */
+  --play-split-panel-max-h: clamp(12.5rem, 43dvh, 22rem);
+  /*
+   * Main East rack tile sizing — fills the full window width at every viewport size.
+   * --app-h-pad: horizontal inset on `.app-rack-stage` / `.app-play-split` (one side); mobile override below.
+   * --app-v-pad: bottom inset on `.app-main` (top is flush); mobile override in same breakpoint.
+   * Usable width = 100vw minus 2× this inset, 2× panel inline padding, and the 13 inter-tile gaps.
+   * Tile width = usable ÷ 14 (no upper cap so the rack always spans edge-to-edge).
+   */
+  /* Slightly tighter min than before so rack + lower strip reclaim horizontal room
+     after the top header band / safe-area padding (matches East 14-slot usable width). */
+  --app-h-pad: clamp(0.3rem, 1.65vw, 1.35rem);
+  --app-v-pad: clamp(0.4rem, 2vw, 1.5rem);
+  --hand-rack-usable-w: calc(
+    100vw
+    - 2 * var(--app-h-pad)
+    - 2 * var(--hand-window-pad-inline)
+    - 2 * var(--rack-tray-inset-inline)
+    - 13 * var(--player-rack-face-gap)
+  );
+  --hand-rack-tile-w: max(2.34rem, calc(var(--hand-rack-usable-w) / 14));
+  --hand-rack-tile-h: max(3.12rem, calc(var(--hand-rack-usable-w) / 14 * 1.3333));
+  /* Match `.tile-face` inner (border-box face width) — all rack actions use these at every viewport. */
+  --rack-tile-btn-inner-1: calc(var(--hand-rack-tile-w) - 2 * var(--rack-tile-face-bw));
+  --rack-tile-btn-inner-2: calc(2 * var(--hand-rack-tile-w) + var(--player-rack-face-gap) - 2 * var(--rack-tile-face-bw));
+  --rack-tile-btn-inner-3: calc(3 * var(--hand-rack-tile-w) + 2 * var(--player-rack-face-gap) - 2 * var(--rack-tile-face-bw));
+  --rack-tile-btn-inner-7: calc(7 * var(--hand-rack-tile-w) + 6 * var(--player-rack-face-gap) - 2 * var(--rack-tile-face-bw));
+  /* East rack column outer width; Pass (cols 12–14) left edge inside that column (tile-grid + insets). */
+  --rack-col-outer-w: calc(
+    14 * var(--hand-rack-tile-w) + 13 * var(--player-rack-face-gap) + 2 * var(--rack-tray-inset-inline)
+  );
+  --rack-pass-btn-left-from-rack-col: calc(
+    var(--rack-tray-inset-inline) + 1px
+    + 11 * var(--hand-rack-tile-w) + 11 * var(--player-rack-face-gap)
+    + var(--rack-tile-face-bw)
+  );
+  /*
+   * Main action bar (`.panel--hand .rack-bottom-bar--tile-grid`): horizontal center of Swap
+   * (`grid-column: 6 / 8`, two face-width slots) from the same origin as play-split inner-left
+   * (after `--app-h-pad`): hand + discard panel inline pad, bar pad + -2px/+1px nudge, then 6
+   * tile tracks + 5.5 gaps to the span midpoint.
+   */
+  --rack-swap-center-x-from-stage-content: calc(
+    var(--hand-window-pad-inline)
+    + var(--rack-tray-inset-inline)
+    - 1px
+    + 6 * var(--hand-rack-tile-w)
+    + 5.5 * var(--player-rack-face-gap)
+  );
+  /* Menu: 2 columns — inner face (matches bottom action bar) */
+  --menu-btn-w: var(--rack-tile-btn-inner-2);
+
+  /* Default `.btn` text — larger type, slightly tighter padding so control size stays similar */
+  --btn-font-size: 1.07rem;
+  --btn-line-height: 1.22;
+  /* Prior tight track + 0.05rem extra tracking (see `.btn`, mode toggle, menu, suggested tab, call buttons). */
+  --btn-letter-spacing: calc(0.03em + 0.05rem);
+  --btn-pad-block: 0.44rem;
+  --btn-pad-inline: 0.82rem;
+
+  /* Rack bottom bar: Sort, wall #, Pass, MJ / Call / Swap — larger type, same slot geometry */
+  --rack-bottom-action-fs: clamp(0.9rem, 2.75vw, 1.12rem);
+
+  /* Rack action row + bot toolbar (Menu / Clear / Suggested): larger tap targets on phones. */
+  --rack-action-touch-min-h: max(48px, calc(var(--hand-rack-tile-h) * 0.52));
+  --suggested-tab-h: var(--rack-action-touch-min-h);
+
+  /* Inner dark trays: East exposure, hand bank, discard well, bot exposure rows, suggested-hands body. */
+  --dark-tray-rim-border-top: color-mix(in srgb, var(--window-border) 22%, color-mix(in srgb, var(--window-surface) 46%, #000 54%) 78%);
+  --dark-tray-rim-border-inline: color-mix(in srgb, var(--window-border) 56%, transparent 44%);
+  --dark-tray-rim-border-bottom: var(--window-border);
+  /* Rim fully INSET so trays read as recessed panels — dark on top, bright on bottom — matching the
+     inset look of the action buttons. Outer shadows were clipped by `overflow-y: auto` (discard)
+     and bled into inter-row gaps (bot exposures).
+     Top rim color = midpoint gray between the tray interior (`--window-inner-surface`) and the
+     outer gray wrapper (`--window-surface`), so the recessed look reads symmetrically. */
+  --dark-tray-rim-shadow-up-1: inset 0 1px 0 color-mix(in srgb, var(--window-inner-surface) 50%, var(--window-surface) 50%);
+  --dark-tray-rim-shadow-up-2: inset 0 2px 0 color-mix(in srgb, var(--window-inner-surface) 50%, var(--window-surface) 50%);
+  --dark-tray-rim-shadow-down-1: inset 0 -1px 0 #4a5568;
+  --dark-tray-rim-shadow-down-2: inset 0 -2px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Exposure + hand: one vertical stack, no extra margin between rows */
+.rack-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+/* After Charleston: exposure + hand column, vertical actions to the right */
+.rack-stack--main-game {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
+.rack-stack__column {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  gap: 0;
+}
+
+/* Main East rack: mid-size tiles (between compact + near-full-screen passes); rack centered via rack-stage */
+.panel--hand {
+  /* Slightly wider formula + higher caps → bigger tiles; h capped vs w so panel doesn’t grow tall. */
+  /* ~8% larger than base — drives tiles, exposure row, and bottom bar grid (alignment unchanged). */
+  --rack-tile-w: var(--hand-rack-tile-w);
+  --rack-tile-h: var(--hand-rack-tile-h);
+  --rack-panel-inset: clamp(0.54rem, 1.28vw, 1.02rem);
+  /* Visible dark tray around tile rows (all sides). */
+  --rack-tray-inset-inline: 0.44rem;
+  --rack-tray-inset-block: 0.3rem;
+  /* Match Charleston pass row height. */
+  --exposure-slot-h: var(--rack-tile-h);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  margin-inline: auto;
+  margin-bottom: 1rem;
+  /* Frame only — height follows rack content (tiles / exposures / bar unchanged). */
+  box-sizing: border-box;
+}
+
+.panel--hand > .panel-hand-rack {
+  flex: 0 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.panel-hand-rack {
+  width: 100%;
+  min-width: 0;
+}
+
+.panel-hand-rack__column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 100%;
+  /* Rare extra siblings; vertical tray dividers use `--play-tray-h-divider`. */
+  gap: var(--play-tray-h-divider);
+}
+
+/* Hand row + tile-aligned action bar share one width (matches mock). */
+.panel-hand-rack__hand-tray {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  max-width: 100%;
+  align-self: stretch;
+  gap: var(--rack-tile-gap);
+}
+
+.panel--hand .panel-hand-rack__hand-tray {
+  /* Match the vertical strip between exposure rack and hand (same as `.rack-stage__rack-col`). */
+  gap: var(--play-tray-h-divider);
+}
+
+/*
+ * Same shell + outer height as `.panel--bot-exposures__toolbar-well`: full inner pad on the
+ * tray + min inner row = `--suggested-tab-h` (Menu / Clear row). Horizontal padding stays 0 so
+ * the 14-column bar still lines up with tiles; `--bot-exposure-inner-pad` comes from `.app-dnd-frame`.
+ */
+.panel--hand .panel-hand-rack__action-well {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
+  padding-block: var(--bot-exposure-inner-pad);
+  padding-inline: 0;
+  min-height: calc(2 * var(--bot-exposure-inner-pad) + var(--suggested-tab-h));
+  position: relative;
+  z-index: 1;
+  background: var(--window-inner-surface);
+  border-radius: calc(var(--rack-tile-btn-border-radius) + var(--bot-exposure-inner-pad));
+  overflow: hidden;
+}
+
+/*
+ * Charleston Sort→Pass row: same min-height rhythm as `.panel--bot-exposures__toolbar-well`.
+ * Keep top/bottom inset symmetric so the gap below Pass matches the space above it.
+ */
+.panel--hand .panel-hand-rack__charleston-actions-well {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
+  padding-top: var(--bot-exposure-inner-pad);
+  padding-inline: 0;
+  padding-bottom: var(--bot-exposure-inner-pad);
+  min-height: calc(2 * var(--bot-exposure-inner-pad) + var(--rack-action-touch-min-h));
+  position: relative;
+  z-index: 1;
+  background: var(--window-inner-surface);
+  border-radius: calc(var(--rack-tile-btn-border-radius) + var(--bot-exposure-inner-pad));
+  overflow: hidden;
+}
+
+
+/* Hand tray: side inset lives on .hand-row so left/right tile-edge gaps stay symmetric. */
+.panel--hand .panel-hand-rack__hand-tray .hand-bank {
+  padding-block: var(--rack-tray-inset-block);
+  padding-inline: 0;
+  box-sizing: border-box;
+  min-height: calc(var(--rack-tile-h) + 2 * var(--rack-tray-inset-block));
+  /* Bank is the dark tray — tiles sit at natural width so padding shows on all sides */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.panel--hand .panel-hand-rack__hand-tray .hand-row {
+  /* Keep a hard, equal left/right inset adjacent to the tiles. */
+  padding-inline: calc(var(--rack-tray-inset-inline) + 1px);
+  box-sizing: border-box;
+  /* Final sub-pixel alignment against the Charleston pass strip above. */
+  margin-left: -2px;
+  /* Lock row to natural tile width; tray centers it for symmetric left/right reveal. */
+  width: max-content;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+
+/* Charleston + main East: same column (exposure / pass row → hand tray) */
+.rack-stage__rack-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rack-tile-gap);
+  min-width: 0;
+}
+
+.panel--hand .rack-stage__rack-col {
+  gap: var(--play-tray-h-divider);
+  /* Pin the column to exactly 14 tile-widths so exposure rack, hand, and
+     button bar all share the same coordinate origin and never center separately.
+     `.rack-stage` is now flex+align-items:center (see below), so align-self
+     handles horizontal centering. margin-inline auto is redundant but harmless. */
+  width: calc(14 * var(--rack-tile-w) + 13 * var(--player-rack-face-gap) + 2 * var(--rack-tray-inset-inline));
+  max-width: 100%;
+  margin-inline: auto;
+  align-self: center;
+}
+
+.rack-stage__rack-top {
+  min-width: 0;
+  position: relative;
+  z-index: 2;
+}
+
+/* Exposure row fills the shared column width — centering is handled by rack-stage__rack-col. */
+.panel--hand .rack-stage__rack-top {
+  align-self: stretch;
+  width: 100%;
+}
+
+.panel--hand .rack-stage__rack-top .exposure-rack {
+  position: relative;
+  z-index: 1;
+}
+
+.panel--hand .rack-stage__rack-top .exposure-rack__watermark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  user-select: none;
+  z-index: 3;
+}
+
+/* MahjLogic watermark inside East exposure rack — above tray background, below tiles. */
+.rack-logo-watermark {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0;
+  font-size: clamp(2.025rem, 7.2vw, 4.05rem);
+  letter-spacing: -0.03em;
+  line-height: 1;
+  opacity: 0.1;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.rack-logo-watermark__mahj {
+  font-family: 'Noto Serif Bengali', 'Noto Serif', Georgia, 'Times New Roman', serif;
+  font-style: normal;
+  font-weight: 900;
+  font-size: 1.08em;
+  letter-spacing: -0.056em;
+  line-height: 1;
+  color: #00B4D8;
+  -webkit-text-stroke: 0;
+  text-shadow: none;
+  font-kerning: normal;
+}
+
+.rack-logo-watermark__logic {
+  font-family: 'Figtree', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 1.14em;
+  margin-left: -0.04em;
+  letter-spacing: -0.02em;
+  font-kerning: none;
+  line-height: 1;
+  color: #FFB800;
+  -webkit-text-stroke: 0;
+  text-shadow: none;
+}
+
+.panel--hand .rack-stage__rack-top .exposure-rack .exposure-rack__slot {
+  position: relative;
+  z-index: 2;
+}
+
+.rack-stage__rack-top .exposure-rack {
+  margin-bottom: 0;
+}
+
+.rack-stage__rack-bottom {
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
+/* Charleston: rack only (wall + exposure / hand); actions on bar below */
+.rack-stage--charleston {
+  width: 100%;
+  box-sizing: border-box;
+  /* Flex-center the inner rack-col to guarantee symmetric left/right empty space
+     regardless of sub-pixel rounding or stray horizontal margins upstream. */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.rack-stage--main-rack {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.rack-bottom-bar {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 14 hand slots: Sort=1, Undo=2, empty 3, MJ 4–5, Swap 6–7, Call 8–9, wall=10, empty 11, primary 12–14
+   (primary matches Charleston pass width: three slots). Fixed column widths (same as tiles). */
+.rack-bottom-bar--tile-grid {
+  --rack-hand-slot-count: 14;
+  display: grid;
+  grid-template-columns: repeat(14, var(--rack-tile-w));
+  column-gap: var(--player-rack-face-gap);
+  width: calc(14 * var(--rack-tile-w) + 13 * var(--player-rack-face-gap));
+  max-width: none;
+  margin-inline: auto;
+  box-sizing: border-box;
+  justify-items: stretch;
+}
+
+.rack-bottom-bar--tile-grid > * {
+  grid-row: 1;
+}
+
+/* Same horizontal origin as the 14 hand slots: `.hand-row` uses this inset + 2px nudge (see
+   above). A plain `14 * tile + 13 * gap` bar centered in the tray is shifted by ~0.44rem, so
+   every column and every multi-tile control looked one tile off or “too small”. */
+.panel--hand .rack-bottom-bar--tile-grid {
+  width: calc(100% + 2px);
+  max-width: none;
+  box-sizing: border-box;
+  padding-inline: calc(var(--rack-tray-inset-inline) + 1px);
+  /* Clear base `margin-inline: auto` so width + nudge line up with `.hand-row` (same -2px trick). */
+  margin: 0;
+  margin-left: -2px;
+}
+
+/*
+ * Wall-game action row: buttons vertically centered in the visible gap between the
+ * tile rack above and the discard tracker below.
+ *
+ * Root cause of earlier misalignment: .panel--hand has margin-bottom + padding below
+ * the button row, but the hand-tray only puts --rack-stack-gap-y above it — so the
+ * buttons hugged the tile rack with lots of empty space below them.
+ *
+ * padding-top on this row adds matching breathing room above the buttons so they
+ * sit visually centered in the region, without touching the panel layout.
+ *
+ * width: 100% fills rack-stage__rack-col — same outer edge as the exposure rack above.
+ * No horizontal padding — buttons stretch edge-to-edge to match the rack borders above.
+ */
+.rack-bottom-bar--wall-game {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--rack-stack-gap-y);
+  width: 100%;
+  padding-inline: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.rack-bottom-bar--wall-game .rack-bottom-tile-cell {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Match normal action-row button metrics (non–panel-hand / legacy flex). */
+.rack-bottom-bar--wall-game .btn.rack-bottom-tile-cell {
+  width: 100%;
+  max-width: 100%;
+  font-size: var(--rack-bottom-action-fs);
+  line-height: 1.06;
+  padding: 0.14rem 0.05rem;
+  border-radius: var(--rack-tile-btn-border-radius);
+  border: none;
+}
+
+/* Same 14-column grid + insets as the main tile action bar; inner-7 wide controls. */
+.panel--hand .rack-bottom-bar--wall-game {
+  display: grid;
+  grid-template-columns: repeat(14, var(--hand-rack-tile-w));
+  column-gap: var(--player-rack-face-gap);
+  row-gap: 0;
+  width: calc(100% + 2px);
+  max-width: none;
+  box-sizing: border-box;
+  padding-inline: calc(var(--rack-tray-inset-inline) + 1px);
+  margin: 0;
+  margin-left: -2px;
+  align-items: center;
+}
+
+.panel--hand .rack-bottom-bar--wall-game > * {
+  grid-row: 1;
+}
+
+.panel--hand .rack-bottom-bar--wall-game .rack-bottom-tile-cell {
+  flex: none;
+}
+
+.panel--hand .rack-bottom-bar--wall-game .btn.rack-bottom-tile-cell {
+  width: var(--rack-tile-btn-inner-7);
+  max-width: var(--rack-tile-btn-inner-7);
+  margin-inline-start: var(--rack-tile-face-bw);
+  justify-self: start;
+}
+
+/* Charleston inline pass info — sits in the grid bar between wall count and pass cluster. */
+.rack-bottom-charleston-pass-info-inline {
+  grid-column: 3 / 9;
+  grid-row: 1;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  font-size: var(--rack-bottom-action-fs);
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--text-h);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  padding-inline: 0.3rem;
+}
+
+/* Charleston: Stop cols 9–11, Pass cols 12–14 — direct grid children, no wrapper needed */
+
+.rack-bottom-tile-cell {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: var(--rack-action-touch-min-h);
+  font-weight: 500;
+  font-size: var(--rack-bottom-action-fs);
+  line-height: 1.06;
+  padding: 0.2rem 0.05rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.rack-bottom-tile-cell--c1 {
+  grid-column: 1 / 2;
+}
+
+.rack-bottom-tile-cell--c2 {
+  grid-column: 2 / 3;
+}
+
+.rack-bottom-tile-cell--c3 {
+  grid-column: 3 / 4;
+}
+
+.rack-bottom-tile-cell--c3-5 {
+  grid-column: 3 / 6;
+}
+
+.rack-bottom-tile-cell--c4-5 {
+  grid-column: 4 / 6;
+}
+
+.rack-bottom-tile-cell--c6-7 {
+  grid-column: 6 / 8;
+}
+
+.rack-bottom-tile-cell--c8-9 {
+  grid-column: 8 / 10;
+}
+
+.rack-bottom-tile-cell--c10-11 {
+  grid-column: 10 / 12;
+}
+
+.rack-bottom-tile-cell--c10 {
+  grid-column: 10 / 11;
+}
+
+.rack-bottom-tile-cell--c12 {
+  grid-column: 12 / 13;
+}
+
+.rack-bottom-tile-cell--c7-8 {
+  grid-column: 7 / 9;
+}
+
+.rack-bottom-tile-cell--c9-10 {
+  grid-column: 9 / 11;
+}
+
+.rack-bottom-tile-cell--c11-12 {
+  grid-column: 11 / 13;
+}
+
+/* Last two hand slots (tiles 13–14); negative lines stay correct if slot count changes. */
+.rack-bottom-tile-cell--c13-14 {
+  grid-column: -3 / -1;
+}
+
+/* Charleston: Stop = cols 9–11, Pass = cols 12–14 */
+.rack-bottom-tile-cell--c9-11 {
+  grid-column: 9 / 12;
+}
+
+.rack-bottom-tile-cell--c12-14 {
+  grid-column: 12 / -1;
+}
+
+/*
+ * Action widths = inner colored face of `.tile-face` (1px border, border-box), not the slot.
+ * 1 = inner width; 2+ = n slots + (n−1) gaps − 2 face borders to span the row of faces.
+ * `margin-inline-start` lines the control up with the face’s left edge in the first column.
+ */
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c1,
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c2,
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c3,
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c10,
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c12 {
+  width: var(--rack-tile-btn-inner-1);
+  max-width: var(--rack-tile-btn-inner-1);
+  margin-inline-start: var(--rack-tile-face-bw);
+  justify-self: start;
+}
+
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c4-5,
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c6-7,
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c8-9,
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c10-11,
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c7-8,
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c9-10,
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c11-12,
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c13-14 {
+  width: var(--rack-tile-btn-inner-2);
+  max-width: var(--rack-tile-btn-inner-2);
+  margin-inline-start: var(--rack-tile-face-bw);
+  justify-self: start;
+}
+
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c3-5,
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c9-11,
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c12-14 {
+  width: var(--rack-tile-btn-inner-3);
+  max-width: var(--rack-tile-btn-inner-3);
+  margin-inline-start: var(--rack-tile-face-bw);
+  justify-self: start;
+}
+
+/* 7-slot wide controls (inner face), e.g. review row on tile-grid if used */
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c1-7,
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c8-14 {
+  width: var(--rack-tile-btn-inner-7);
+  max-width: var(--rack-tile-btn-inner-7);
+  margin-inline-start: var(--rack-tile-face-bw);
+  justify-self: start;
+}
+
+/* Wall-game review action bar: New Game (cols 1–8) + Replay (cols 9–14) */
+.rack-bottom-tile-cell--c1-8 {
+  grid-column: 1 / 9;
+}
+
+.rack-bottom-tile-cell--c9-14 {
+  grid-column: 9 / -1;
+}
+
+/* Wall-game action bar split evenly 7/7. */
+.rack-bottom-tile-cell--c1-7 {
+  grid-column: 1 / 8;
+}
+
+.rack-bottom-tile-cell--c8-14 {
+  grid-column: 8 / -1;
+}
+
+.rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell {
+  width: var(--rack-tile-btn-inner-1);
+  min-width: 0;
+  max-width: var(--rack-tile-btn-inner-1);
+  margin-inline-start: var(--rack-tile-face-bw);
+  padding: 0.16rem 0.04rem;
+  font-size: var(--rack-bottom-action-fs);
+  border-radius: var(--rack-tile-btn-border-radius);
+  border: none;
+  /* Solid fill — hue 120=green → 60=yellow → 25=orange → 0=red (sat/luma match Mahjong btn) */
+  background: hsl(var(--wall-hue, 120) 64% 52%);
+  color: #000;
+  box-shadow: none;
+}
+
+.rack-hand-tools__wall {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--rack-tile-btn-border-radius);
+  border: none;
+  background: color-mix(in srgb, var(--bg-elevated) 94%, #fff 6%);
+  color: var(--text-h);
+  font-family: 'Figtree', var(--sans);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.panel--hand .exposure-rack {
+  justify-content: center;
+  padding-block: var(--rack-tray-inset-block);
+  padding-inline: var(--rack-tray-inset-inline);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.panel--hand .hand-bank {
+  display: flex;
+  justify-content: center;
+}
+
+.panel--hand .hand-row {
+  justify-content: flex-start;
+}
+
+/* During Charleston the exposure row packs 11 empty slots + the 3-tile pass-tail
+   to span cols 1–14. The main rack only has 11 tiles, so centering it leaves a
+   gap between the last rack tile (col 11) and the first pass tile (col 12). Pack
+   from the left so the main rack and pass-tail meet flush. */
+.panel--hand .rack-stage--charleston .hand-bank {
+  justify-content: flex-start;
+}
+
+.panel--hand .rack-stack__column {
+  gap: var(--rack-tile-gap);
+}
+
+.panel--hand .rack-bottom-tile-cell {
+  font-size: var(--rack-bottom-action-fs);
+}
+
+.panel--hand .rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell {
+  font-size: var(--rack-bottom-action-fs);
+}
+
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell {
+  padding: 0.14rem 0.05rem;
+}
+
+.rack-stack .exposure-rack,
+.rack-stage__rack-top .exposure-rack {
+  margin-bottom: 0;
+}
+
+.rack-stack .hand-bank,
+.rack-stage__rack-bottom .hand-bank {
+  padding-block: var(--rack-tray-inset-block);
+  padding-inline: var(--rack-tray-inset-inline);
+}
+
+/* Root shell: flush to the viewport (no padding). Vertical inset for the play column
+   lives on `.app-main` (top + bottom). Horizontal inset lives on `.app-rack-stage` /
+   `.app-play-split` only. */
+.app {
+  min-width: 0;
+  width: 100%;
+  max-width: none;
+  margin: 0 auto;
+  padding: 0;
+  box-sizing: border-box;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--window-surface);
+}
+
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  overscroll-behavior-y: contain;
+}
+
+/* Menu → Animations OFF: strip remaining rack/menu motion (game logic also skips fly-ins / FLIP). */
+.app-layout[data-animations='off'] .sortable-tile-wrap {
+  transition: none !important;
+}
+
+.app-layout[data-animations='off'] .sortable-tile-wrap--just-drawn {
+  animation: none;
+}
+
+.app-layout[data-animations='off'] .sortable-tile-wrap--suggest-dim .tile-face {
+  transition: none;
+}
+
+.app-layout[data-animations='off'] .app-menu-tray {
+  animation: none;
+}
+
+.app-layout[data-animations='off'] .exposure-rack__incoming-discard-fly--from-right,
+.app-layout[data-animations='off'] .exposure-rack__incoming-discard-fly--from-left,
+.app-layout[data-animations='off'] .exposure-rack__incoming-discard-fly--from-across {
+  animation: none;
+}
+
+.app-layout[data-animations='off'] .pass-strip-tail--fly-out-left .pass-strip__tile-wrap,
+.app-layout[data-animations='off'] .pass-strip-tail--fly-out-right .pass-strip__tile-wrap,
+.app-layout[data-animations='off'] .pass-strip-tail--fly-out-across .pass-strip__tile-wrap,
+.app-layout[data-animations='off'] .pass-box--fly-out-left .pass-strip__tile-wrap,
+.app-layout[data-animations='off'] .pass-box--fly-out-right .pass-strip__tile-wrap,
+.app-layout[data-animations='off'] .pass-box--fly-out-across .pass-strip__tile-wrap {
+  animation: none;
+}
+
+.app-main {
+  min-width: 0;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Match bottom breathing room (`--app-v-pad`) so the rack isn’t glued to the top edge. */
+  padding-top: var(--app-v-pad);
+  padding-bottom: var(--app-v-pad);
+}
+
+@media (max-width: 47.99rem) {
+  :root {
+    --app-h-pad: clamp(0.35rem, 2.2vw, 0.75rem);
+    --app-v-pad: clamp(0.35rem, 2.2vw, 0.75rem);
+  }
+}
+
+.app-main__scroll {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: min(30dvh, 15rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.app-main__scroll--collapsed {
+  flex: 0 0 0;
+  max-height: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
+  gap: 0;
+  border: none;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+/* Bot exposures: same chrome as `.panel` (rounded card, not a square strip). */
+.app-opponents-rail {
+  flex-shrink: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-top: 0;
+  padding: var(--rack-stack-gap-y) var(--rack-card-padding-inline) var(--rack-stack-gap-y);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--bg-elevated);
+  /*
+   * Bot tile sizing — 3 seats × 14 slots each fill the full window width.
+   * Deduction: 2× .app padding + 2× rail inline padding (0.76rem) + 2× cell gaps (0.44rem).
+   * No per-rack or slot padding — tiles are edge-to-edge within each cell.
+   */
+  --rack-tile-w: max(1.38rem, calc((100vw - 2 * var(--app-h-pad) - 1.2rem) / 42));
+  --rack-tile-h: max(1.84rem, calc((100vw - 2 * var(--app-h-pad) - 1.2rem) / 42 * 1.3333));
+  --rack-panel-inset: 0;
+  --app-opponent-slot-pad-y: 0;
+  --exposure-slot-h: var(--rack-tile-h);
+  --opponent-rack-pad-x: 0;
+}
+
+.app-opponents-rail__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.22rem;
+  width: 100%;
+}
+
+.app-opponents-rail__cell {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+/* Inner wrapper: shrinks to tile content and centers in the cell as a unit.
+   Header then left-aligns with the first tile regardless of rack fill. */
+.app-opponent-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: fit-content;
+  max-width: 100%;
+}
+
+/* Seat name above each opponent rack. */
+.app-opponent-header {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding-inline: var(--opponent-rack-pad-x, 0.076rem);
+  margin-bottom: 0;
+  line-height: 1;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.app-opponent-seat {
+  font-family: 'Figtree', var(--sans);
+  font-size: clamp(0.58rem, 1.5vw, 0.7rem);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--text-muted) 82%, #d1d5db 18%);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.app-opponents-rail__cell--swap-drop {
+  border-radius: var(--tile-tray-shell-radius);
+}
+
+.app-opponents-rail__cell--swap-over {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #f59e0b 58%, var(--border));
+}
+
+.app-opponents-rail .exposure-rack {
+  justify-content: center;
+  align-items: center;
+  align-content: center;
+  flex-wrap: nowrap;
+  margin-bottom: 0;
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.app-opponents-rail .tile-face__glyph {
+  font-size: clamp(1.02rem, 4.71vw, 1.35rem);
+}
+
+.app-opponents-rail .exposure-rack__slot {
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.panel--main-game--compact {
+  padding: 0.45rem 0.55rem;
+  margin-bottom: 0;
+}
+
+.panel--main-game--compact .call-prompt {
+  margin: 0;
+}
+
+/* DnD subtree: rack full width; below it, discard tracker (left) + suggested hands (right).
+   Horizontal inset for panels is on `.app-rack-stage` / `.app-play-split`. */
+.app-dnd-frame {
+  /* Inherited by `.app-rack-stage` (hand action-well) and `.app-play-split` (re-declared there too). */
+  --bot-exposure-inner-pad: 4px;
+  --tile-tray-shell-radius: calc(var(--tile-face-border-radius) + var(--bot-exposure-inner-pad));
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+  max-width: 100%;
+  margin-top: var(--app-dnd-rack-hands-margin-top);
+  background: var(--window-inner-surface);
+}
+
+.app-play-split {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  /* Flush join: discard + bot read as one lower panel */
+  gap: 0;
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
+  padding-inline: var(--app-h-pad);
+  /*
+   * No extra band here — the strip under the East rack (above discard) is only
+   * `.panel.panel--hand` bottom padding (`--play-tray-h-divider`), same as other tray dividers.
+   */
+  --app-play-split-strip-pad-top: 0px;
+  padding-top: var(--app-play-split-strip-pad-top);
+  background: var(--window-surface);
+  position: relative;
+  /*
+   * Bot panel reference tile size: same density as the old 50/50 14-slot layout so tiles
+   * don't change size when the split becomes asymmetric.
+   * Discard panel is inset from the bot column by `--rack-stack-gap-y` (same as vertical row gaps).
+   * --bot-exposure-slot-scale widens bot rows; the right column grows so the discard column
+   * (and discard tray’s right edge) shifts left.
+   * --bot-panel-outer-w drives both the right column width and the disc usable-w formula.
+   */
+  --play-split-discard-bot-join-pad: 0px;
+  /* Pull the discard tray’s right edge left (increase to move further left). */
+  --discard-tray-right-pull: 0.85rem;
+  /* Window strip between discard column and bot column — same as `.bot-exposures__list` row gap. */
+  --play-split-discard-bot-separator: calc(var(--rack-stack-gap-y) + 4px);
+  /*
+   * Single bottom padding for **both** lower tray panels (discard + bot). Together with
+   * `.app-main { padding-bottom: var(--app-v-pad) }`, distance from tray bottom to screen =
+   *   var(--hand-window-pad-inline) + var(--app-h-pad)
+   * which matches the horizontal inset to the tray edges:
+   *   var(--app-h-pad) + var(--hand-window-pad-inline)
+   * (same two tokens — tweak only here + `--app-h-pad` / `--app-v-pad` on `:root` / `.app-main`.)
+   */
+  --play-split-tray-panel-padding-bottom: calc(
+    var(--hand-window-pad-inline) + var(--app-h-pad) - var(--app-v-pad)
+  );
+  /*
+   * Desktop side-by-side: shift only the toolbar + exposure stack left toward the discard column.
+   * Tuned here — does not read `--discard-tray-right-pull` so discard width stays independent.
+   */
+  --bot-toolbar-exposure-nudge-left: calc(var(--rack-stack-gap-y) + 2.5rem);
+  --bot-exposure-slot-scale: 1.05;
+  /* Slightly larger visible bot tiles; column width budget stays separate below. */
+  --bot-exposure-tile-scale: 0.94;
+  /*
+   * Visible bot exposure gap: same raw inter-cell step as the discard tray grid.
+   */
+  --bot-exposure-tile-gap: var(--rack-tile-gap);
+  /* Column-width math only: keeps bot column / discard split unchanged when tuning visual gap. */
+  --bot-exposure-tile-gap-budget: calc(var(--rack-tile-gap) + 2 * var(--rack-tile-face-bw));
+  --bot-tile-w-ref: max(1rem, calc(
+    ((100vw - 2 * var(--app-h-pad)) / 2
+    - 2 * var(--hand-window-pad-inline)
+    - 13 * var(--rack-tile-gap)) / 14 * var(--bot-exposure-slot-scale)
+  ));
+  --bot-tile-h-ref: max(1.34rem, calc(var(--bot-tile-w-ref) * 1.3333));
+  /* Same token as `.app-dnd-frame` — restated so play-split subtree always resolves (toolbar-well padding). */
+  --bot-exposure-inner-pad: 4px;
+  --tile-tray-shell-radius: calc(var(--tile-face-border-radius) + var(--bot-exposure-inner-pad));
+  /*
+   * Just-fit budget: 12 scaled faces + 11 gaps + tray inner pad + panel inline pad (end side).
+   * `--play-split-discard-bot-join-pad` is 0 here but stays in the formula for tweaks.
+   */
+  --bot-panel-outer-w: calc(
+    var(--play-split-discard-bot-join-pad)
+    + var(--hand-window-pad-inline)
+    + 12 * var(--bot-tile-w-ref) * var(--bot-exposure-tile-scale)
+    + 11 * var(--bot-exposure-tile-gap-budget)
+    + 2 * var(--bot-exposure-inner-pad)
+  );
+}
+
+.app-play-split .panel {
+  /* Discard/bot panels: no top pad; space under East rack is `.panel.panel--hand` bottom padding (`--play-tray-h-divider`). */
+  padding-top: 0;
+  padding-bottom: var(--hand-window-pad-inline);
+  padding-inline: var(--hand-window-pad-inline);
+  margin-bottom: 0;
+}
+
+/* Flush with discard column — `--play-split-discard-bot-join-pad` is 0 (kept for formulas). */
+.app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures {
+  padding-inline-start: var(--play-split-discard-bot-join-pad);
+}
+
+.app-play-split__right .panel--hands {
+  padding: var(--rack-stack-gap-y) clamp(0.4rem, 1.4vw, 0.82rem) 0.48rem;
+}
+
+/*
+ * Discard panel: full column width. Tray width uses `--discard-tray-gap-to-bot` (horizontal nudge only).
+ */
+.app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker {
+  --discard-tray-gap-to-bot: 0px;
+  flex: 1 1 0;
+  min-height: 0;
+  /* Separator strip to bot + `--discard-tray-right-pull` (tune on `.app-play-split`). */
+  align-self: flex-start;
+  width: calc(100% - var(--play-split-discard-bot-separator) - var(--discard-tray-right-pull));
+  max-width: 100%;
+  padding-inline-end: var(--play-split-discard-bot-join-pad);
+  max-height: none;
+  overflow-y: auto;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 0;
+}
+
+/* Bot exposures: fill column height. Grid (toolbar auto row + body `minmax(0, 1fr)` row)
+   guarantees the body cell has a definite height to shrink into. */
+.app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures {
+  flex: 1 1 0;
+  min-height: 0;
+  width: var(--bot-panel-outer-w);
+  max-height: none;
+  /* Let `.panel--bot-exposures__body` be the only clip surface so the menu tray can pop above
+     the toolbar (absolute; `bottom: calc(100% + …)`) without being cut off. */
+  overflow: visible;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--play-tray-h-divider);
+  container-type: size;
+  container-name: bot-exposures-panel;
+}
+
+/* ── Bot exposures side panel (right of discard tracker) ── */
+.panel--bot-exposures {
+  display: flex;
+  flex-direction: column;
+  gap: var(--play-tray-h-divider);
+  --bot-exposure-row-count: 3;
+  --bot-toolbar-track-h: calc(2 * var(--bot-exposure-inner-pad) + var(--rack-action-touch-min-h));
+  --bot-body-top-pad: 0px;
+  --bot-body-bottom-pad: 0px;
+  /* Row↔row gaps match East rack tray dividers (`--play-tray-h-divider`). */
+  --bot-body-gap: var(--play-tray-h-divider);
+  /* `--bot-exposure-tile-scale` is set on `.app-play-split` (drives bot column + these faces). */
+  /* Small extra only — large bleed was crowding the tray rim / shadows vs tile height. */
+  --bot-exposure-tray-vert-bleed: 0.08rem;
+  --bot-tile-h-width-fit: calc(var(--bot-tile-h-ref) * var(--bot-exposure-tile-scale));
+  --bot-tile-h-height-fit: var(--bot-tile-h-width-fit);
+  --rack-tile-h: min(var(--bot-tile-h-width-fit), var(--bot-tile-h-height-fit));
+  --rack-tile-w: calc(var(--rack-tile-h) / 1.3333);
+  --rack-panel-inset: 0;
+  --exposure-slot-h: var(--rack-tile-h);
+}
+
+/*
+ * Toolbar is only as tall as the well (no flex growth). Spacing to the exposure list uses
+ * `.panel--bot-exposures` `gap` (same token as East exposure ↔ hand).
+ */
+.panel--bot-exposures__toolbar {
+  flex: 0 0 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  width: 100%;
+  box-sizing: border-box;
+  padding-top: 0;
+  padding-bottom: 0;
+  position: relative;
+  z-index: 2;
+}
+
+/* Same shell as `.app-opponents-rail__cell`: dark tray, radius, rim shadows; holds Menu / Clear / Suggested.
+   Horizontal gap matches visible space between adjacent main-rack action buttons:
+   grid column-gap + 2 × face-border-width (one inset on each button's near edge). */
+.panel--bot-exposures__toolbar-well {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: calc(var(--rack-tile-gap) + 2 * var(--rack-tile-face-bw));
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--bot-exposure-inner-pad);
+  position: relative;
+  z-index: 2;
+  background: var(--window-inner-surface);
+  border-radius: calc(var(--rack-tile-btn-border-radius) + var(--bot-exposure-inner-pad));
+  /* Must not clip: `.app-menu-tray` is positioned up from the menu button inside this shell. */
+  overflow: visible;
+  min-height: calc(2 * var(--bot-exposure-inner-pad) + var(--rack-action-touch-min-h));
+}
+
+/*
+ * Match the hand rack column: same width as 14 face slots + insets, centered like `.rack-stage__rack-col`
+ * so the trailing control (Suggested Hands) right-aligns with the right edge of tile 14, the pass cluster,
+ * and the main hand action row (e.g. discard / ignore when shown in cols 12–14).
+ */
+.app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well {
+  max-width: var(--rack-col-outer-w);
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  justify-content: flex-end;
+  padding-inline-end: calc(var(--rack-tray-inset-inline) - 1px);
+}
+
+/* Wide side-by-side: bot column is right of a wide discard; keep the well flush to the column’s
+   trailing edge (same as East rack + action bar right edge) instead of re-centering in a narrow sub-column. */
+@media (min-width: 36.01rem) {
+  .app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well {
+    margin-left: 0;
+    margin-right: 0;
+    align-self: flex-end;
+  }
+}
+
+/*
+ * List starts below the menu row (spacing from `.panel--bot-exposures` grid gap only); flex spacer
+ * at the end fills the column so the hand/discard play split can still use full height.
+ */
+.panel--bot-exposures__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  /* Racks + list use global `--rack-tile-gap` (same 1px as `.discard-pile`); do not override here. */
+  /* Toolbar↔first bot row spacing comes only from `.panel--bot-exposures` grid gap (`--play-tray-h-divider`). */
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/* Play-split only: the body is the clipped shell; the list fills it completely so the lowest bot
+   tray stays locked to the wrapper edge like the discard tray. */
+.app-dnd-frame .app-play-split .panel--bot-exposures__body {
+  flex: 1 1 0;
+  overflow: hidden;
+}
+
+.panel--bot-exposures__body-fill {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+}
+
+.bot-exposures__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  /* Same vertical strip thickness as East rack (`--play-tray-h-divider`). */
+  gap: var(--play-tray-h-divider);
+}
+
+.panel--bot-exposures__body > .bot-exposures__list {
+  flex: 0 0 auto;
+}
+
+.app-dnd-frame .app-play-split .panel--bot-exposures__body > .bot-exposures__list {
+  flex: 1 1 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  align-content: stretch;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
+.app-dnd-frame .app-play-split .panel--bot-exposures__body-fill {
+  display: none;
+}
+
+@container bot-exposures-panel (min-height: 0px) {
+  .app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures {
+    --bot-tile-h-height-fit: max(
+      0.72rem,
+      calc(
+        (
+          100cqh
+          - var(--bot-toolbar-track-h)
+          - var(--play-tray-h-divider)
+          - var(--bot-body-top-pad)
+          - var(--bot-body-bottom-pad)
+          - (var(--bot-exposure-row-count) - 1) * var(--bot-body-gap)
+        ) / var(--bot-exposure-row-count)
+        - 2 * var(--bot-exposure-inner-pad)
+        - 2px
+      )
+    );
+  }
+}
+
+/* Each row: discrete tray like `.panel--hand .rack-stage__rack-top .exposure-rack` — base border
+   here; shared `--dark-tray-rim-*` block below matches hand-bank rim. List row↔row gap uses
+   `--play-tray-h-divider` (same as East rack tray strips; horizontal discard↔bot offset unchanged). */
+.panel--bot-exposures .app-opponents-rail__cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  position: relative;
+  width: 100%;
+  max-width: none;
+  flex: 1 1 0;
+  /* Close the tray evenly around the tiles, matching the discard tray's simple inner inset. */
+  padding-top: var(--bot-exposure-inner-pad);
+  padding-bottom: var(--bot-exposure-inner-pad);
+  padding-inline: var(--bot-exposure-inner-pad);
+  box-sizing: border-box;
+  min-height: 0;
+  background: var(--window-inner-surface);
+  border: 1px solid var(--window-border);
+  border-radius: var(--tile-tray-shell-radius);
+  overflow: hidden;
+}
+
+/* After base cell shadow above — merge joker-swap ring without losing tray highlight. */
+.panel--bot-exposures .app-opponents-rail__cell--swap-over {
+  box-shadow:
+    var(--dark-tray-rim-shadow-up-1),
+    var(--dark-tray-rim-shadow-up-2),
+    var(--dark-tray-rim-shadow-down-1),
+    var(--dark-tray-rim-shadow-down-2),
+    inset 0 0 0 1px color-mix(in srgb, #f59e0b 58%, var(--border));
+}
+
+
+.bot-exposure-row__watermark {
+  position: absolute;
+  top: 50%;
+  right: 0.5rem;
+  transform: translateY(-50%);
+  font-family: 'Figtree', var(--sans);
+  font-size: clamp(1.0rem, 3vw, 1.8rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  opacity: 0.12;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+  line-height: 1;
+  /* Above the <li> background, below the rack tiles (z-index: 2). */
+  z-index: 1;
+}
+
+/* South / West / North: deep ink seat labels; stamped shadow like panel headers. */
+.panel--bot-exposures .bot-exposure-row__watermark {
+  right: 0;
+  padding-right: 12px;
+  text-align: right;
+  font-family: 'Figtree', var(--sans);
+  font-size: clamp(1.08rem, 3.2vw, 1.95rem);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #1e2329;
+  opacity: 1;
+  -webkit-text-stroke: 0;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+  z-index: 2;
+}
+
+.panel--bot-exposures .exposure-rack {
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  gap: var(--bot-exposure-tile-gap);
+  padding: 0;
+  margin-bottom: 0;
+  width: fit-content;
+  max-width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.panel--bot-exposures .tile-face__glyph {
+  font-size: clamp(1.08rem, 3vw, 1.5rem);
+}
+
+.panel--bot-exposures .exposure-rack__slot {
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+/* Droppable meld wrappers (joker-swap active): use same inter-tile gap as the outer rack. */
+.panel--bot-exposures .exposure-rack__meld-drop {
+  gap: var(--bot-exposure-tile-gap);
+}
+
+.app-play-split__left {
+  flex: 1 1 0;
+  width: 0; /* fills remaining space after the fixed-width bot panel */
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.app-play-split__right {
+  flex: 0 0 auto; /* bot column: fixed width; inner stack fills height */
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  /* `stretch` so `.app-play-split__right-stack` can use `height: 100%` and match the discard column’s
+     stretched cross-size; `flex-end` kept the stack short of the row height on some layouts. */
+  align-items: stretch;
+}
+
+/* Side-by-side: discard right edge is `--play-split-discard-bot-separator` from the visible bot
+   left edge (same as horizontal gaps between bot exposure row trays). Formula:
+     discard_width = left-col 100% − bot-stack-nudge − gap
+   (bot-stack-nudge is the leftward shift on __right-stack that defines the visible panel origin). */
+@media (min-width: 36.01rem) {
+  .app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker {
+    width: calc(100% - var(--bot-toolbar-exposure-nudge-left) - var(--play-split-discard-bot-separator));
+  }
+
+  .app-dnd-frame .app-play-split > .app-play-split__right .app-play-split__right-stack {
+    margin-left: calc(-1 * var(--bot-toolbar-exposure-nudge-left));
+    /* Match discard column height: fill stretched `.app-play-split__right` so the bot panel’s outer
+       bottom lines up with `.panel--discard-tracker` (row `align-items: stretch`). */
+    width: var(--bot-panel-outer-w);
+    min-height: 100%;
+    height: 100%;
+    box-sizing: border-box;
+  }
+
+  .app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures {
+    height: 100%;
+    min-height: 0;
+  }
+}
+
+/* Right column: controls on top, bot exposures bottom-aligned with discard tracker. */
+.app-play-split__right-stack {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  width: var(--bot-panel-outer-w);
+}
+
+/*
+ * Below ~36rem the side-by-side discard + bot column steals width from both;
+ * stack discard (full width) then bot exposures underneath — same as the older
+ * vertical rhythm. Tile refs match the East rack so edges stay aligned.
+ */
+@media (max-width: 36rem) {
+  .app-play-split {
+    flex-direction: column;
+    align-items: stretch;
+    --bot-tile-w-ref: max(1rem, calc(var(--hand-rack-usable-w) / 14 * var(--bot-exposure-slot-scale)));
+    --bot-tile-h-ref: max(1.34rem, calc(var(--bot-tile-w-ref) * 1.3333));
+    --bot-panel-outer-w: min(
+      100%,
+      calc(
+        2 * var(--hand-window-pad-inline)
+        + 12 * var(--bot-tile-w-ref) * var(--bot-exposure-tile-scale)
+        + 11 * var(--bot-exposure-tile-gap-budget)
+        + 2 * var(--bot-exposure-inner-pad)
+      )
+    );
+  }
+
+  /*
+   * Narrow: discard uses all flexible height above; bot stays at the bottom of the play strip
+   * (same bottom edge as the card), with internal scroll if rows don’t fit.
+   */
+  .app-play-split__left {
+    width: 100%;
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  .app-play-split__right {
+    width: 100%;
+    flex: 0 0 auto;
+    min-height: 0;
+    align-items: stretch;
+  }
+
+  .app-play-split__right-stack {
+    width: 100%;
+    max-width: 100%;
+    flex: 0 1 auto;
+    min-height: 0;
+  }
+
+  .app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures {
+    width: 100%;
+    max-width: 100%;
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  .app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker {
+    flex: 1 1 0;
+    min-height: 0;
+    /* Bot sits below discard — no horizontal tray↔bot gutter. */
+    --discard-tray-gap-to-bot: 0px;
+  }
+
+  .panel--bot-exposures__toolbar {
+    flex: 0 0 auto;
+  }
+}
+
+/* In-panel toolbar: Menu | Clear | Suggested — `gap` matches `.rack-bottom-bar--tile-grid` column-gap
+   (same as Mah Jongg ↔ Swap between adjacent controls). */
+.panel--bot-exposures__toolbar-well .app-menu-anchor {
+  position: relative;
+  bottom: auto;
+  right: auto;
+  left: auto;
+  transform: none;
+  flex: 0 0 auto;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--menu-btn-w);
+  height: var(--rack-action-touch-min-h);
+  min-height: var(--rack-action-touch-min-h);
+  z-index: 2;
+  margin-left: 0;
+}
+
+.panel--bot-exposures__toolbar-well .app-bottom-center-controls {
+  position: relative;
+  bottom: auto;
+  right: auto;
+  left: auto;
+  flex: 0 0 auto;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--rack-tile-btn-inner-3);
+  z-index: 2;
+}
+
+.panel--bot-exposures__toolbar-well .app-menu-tray {
+  position: absolute;
+  left: 0;
+  right: auto;
+  bottom: calc(100% + 0.55rem);
+  top: auto;
+}
+
+.panel--bot-exposures__toolbar-well .panel--bot-exposures__clear {
+  flex: 0 0 auto;
+  align-self: center;
+  box-sizing: border-box;
+  width: var(--rack-tile-btn-inner-1);
+  max-width: 100%;
+  min-height: var(--rack-action-touch-min-h);
+  height: var(--rack-action-touch-min-h);
+  padding: 0.2rem 0.05rem;
+  font-size: var(--rack-bottom-action-fs);
+  line-height: 1.06;
+  border-radius: var(--rack-tile-btn-border-radius);
+  border: none;
+  z-index: 2;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #d4af37;
+  color: #14110f;
+  box-shadow:
+    0 2px 4px color-mix(in srgb, #000 16%, transparent),
+    0 1px 2px color-mix(in srgb, #000 10%, transparent);
+}
+
+/* Disabled: no dim — same fill/text as enabled (only pointer feedback differs via global :disabled cursor). */
+.panel--bot-exposures__toolbar-well .panel--bot-exposures__clear:disabled {
+  opacity: 1;
+  filter: none;
+}
+
+.panel--bot-exposures__toolbar-well .app-bottom-center-controls .suggested-hands-tab {
+  flex: 0 0 auto;
+  align-self: center;
+  min-height: var(--rack-action-touch-min-h);
+  height: var(--rack-action-touch-min-h);
+  padding: 0.2rem 0.05rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.panel--bot-exposures__toolbar-well .app-menu-anchor .app-bottom-center-controls__menu-btn {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--menu-btn-w);
+  height: var(--rack-action-touch-min-h);
+}
+
+.panel--discard-tracker {
+  flex: 1 1 0;
+  min-height: 0;
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Dark inner content box — same formula as bot exposure rack cells */
+.panel--discard-tracker > .panel__title-row {
+  flex-shrink: 0;
+  z-index: 1;
+  background: transparent;
+  margin-bottom: 0;
+}
+
+.panel--bot-exposures__body > .panel__title-row {
+  background: transparent;
+  margin-bottom: 0;
+  justify-content: flex-start;
+}
+
+/* Hide bot/discard panel headings while keeping tray layout intact. */
+.panel--discard-tracker > .panel__title-row,
+.panel--bot-exposures__body > .panel__title-row,
+.discard-tracker__status {
+  display: none;
+}
+
+/* Steel highlight on the top edge of every outer panel wrapper (inset by border-radius so corners stay clean). */
+.panel--discard-tracker,
+.panel--hand,
+.panel--charleston,
+.panel--main-game,
+.panel--bot-exposures {
+  position: relative;
+}
+
+/* Curved top highlight: gradient ring that follows each panel's border-radius.
+   Bright at the top edge + corners, fades out ~10% down the vertical sides. */
+.panel--discard-tracker::before,
+.panel--hand::before,
+.panel--charleston::before,
+.panel--main-game::before,
+.panel--bot-exposures::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  box-sizing: border-box;
+  background: linear-gradient(to bottom, #4a5568 0%, transparent 10%);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.panel--discard-tracker::after,
+.panel--hand::after,
+.panel--charleston::after,
+.panel--main-game::after,
+.panel--bot-exposures::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border-radius: 0.75rem;
+  padding: 1px;
+  box-sizing: border-box;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.07) 0%, transparent 10%);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Panels with no border-radius: suppress the curved gradient ring and use a flat
+   inset box-shadow instead so the highlight shows only on the top edge. */
+.app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker::before,
+.app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker::after,
+.app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures::before,
+.app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures::after,
+.app-rack-stage .panel--hand::before,
+.app-rack-stage .panel--hand::after {
+  content: none;
+}
+
+.app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker,
+.app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures {
+  box-shadow: none;
+}
+
+/* Suggested hands popup: curved top-highlight that follows the border-radius.
+   Uses the gradient-border mask trick: a 1px ring whose background fades from
+   bright at the top (including corners) to transparent partway down the sides. */
+.suggested-hands-popup::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 0.75rem;
+  padding: 1px;
+  box-sizing: border-box;
+  background: linear-gradient(to bottom, #4a5568 0%, transparent 10%);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Soft white shimmer 1px inside the highlight — also curves with the radius */
+.suggested-hands-popup::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border-radius: calc(0.75rem - 1px);
+  padding: 1px;
+  box-sizing: border-box;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.07) 0%, transparent 10%);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Headings line up with inner tray content (tray border + inner pad, same as tile area). */
+.panel--discard-tracker > .panel__title-row .panel__title,
+.panel--bot-exposures__body > .panel__title-row .panel__title {
+  padding-inline-start: calc(1px + var(--bot-exposure-inner-pad));
+  text-align: left;
+}
+
+.panel__title-row--discard-tracker {
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.discard-tracker__status {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-inline-end: calc(1px + var(--bot-exposure-inner-pad));
+  font-size: 0.78rem;
+  line-height: 1.35;
+  font-weight: 600;
+  color: var(--text-h);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.discard-tracker__content {
+  flex: 1 1 0;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  background: var(--window-inner-surface);
+  border-radius: var(--tile-tray-shell-radius);
+}
+
+/*
+ * Play-split discard tray: width + bot gutter; container so 15 tiles + gaps fill inner tray evenly
+ * (drop zone uses same --bot-exposure-inner-pad as tile↔tray edge).
+ */
+.app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker .discard-tracker__content {
+  box-sizing: border-box;
+  width: calc(100% - var(--discard-tray-gap-to-bot));
+  margin-inline-end: var(--discard-tray-gap-to-bot);
+  container-type: inline-size;
+  container-name: discard-tray;
+}
+
+/* Fallback when container queries are unavailable (matches bot tile size). */
+.panel--discard-tracker .discard-pile {
+  --rack-tile-w: var(--bot-tile-w-ref);
+  --rack-tile-h: var(--bot-tile-h-ref);
+}
+
+/* 15 columns + 14 gaps across tray inner width; symmetric inset via drop-zone inset. */
+@container discard-tray (min-width: 0px) {
+  .panel--discard-tracker .discard-pile {
+    --rack-tile-w: max(
+      1px,
+      calc(
+        (
+          100cqw
+          - 2 * var(--bot-exposure-inner-pad)
+          - 14 * var(--rack-tile-gap)
+        ) / 15
+      )
+    );
+    --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
+  }
+}
+
+.discard-tracker__content .discard-pile-drop-zone {
+  position: absolute;
+  inset: var(--bot-exposure-inner-pad);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  z-index: 1;
+}
+
+.app-rack-stage {
+  /* Only as tall as the hand panel — no extra flex stretch above the rack */
+  flex: 0 0 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-end;
+  width: 100%;
+  box-sizing: border-box;
+  padding-inline: var(--app-h-pad);
+  /* Flat fill — top air comes from `.app-main` padding, not a gradient band. */
+  background: var(--window-surface);
+  position: relative;
+}
+
+/* Rack stage itself stays clean; bottom inset shadow lives on the inner hand wrapper. */
+.app-dnd-frame .app-rack-stage {
+  box-shadow: none;
+}
+
+.app-rack-stage .panel--hand {
+  width: 100%;
+  max-width: 100%;
+  align-self: stretch;
+  margin-bottom: 0;
+  border: none;
+  border-radius: 0;
+}
+
+.app__header {
+  display: none;
+}
+
+/* ── Controls bar: fixed lower-right overlay ── */
+
+.app__actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+/* ── Mode switcher (Training / Competition) ── */
+.app__mode-switcher {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  gap: 0;
+}
+
+.app__mode-btn {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.26rem clamp(0.32rem, 1.55vw, 0.58rem);
+  min-height: var(--rack-action-touch-min-h);
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  font-size: clamp(0.58rem, 1.9vw, 0.82rem);
+  font-weight: 500;
+  font-family: 'Figtree', var(--sans);
+  color: color-mix(in srgb, var(--text-h) 55%, transparent);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: var(--btn-letter-spacing);
+  transition: background 0.14s ease, color 0.14s ease;
+  white-space: nowrap;
+}
+
+.app__mode-btn:not(.app__mode-btn--active):hover {
+  background: color-mix(in srgb, var(--border) 30%, transparent);
+  color: var(--text-h);
+}
+
+.app__mode-btn--active {
+  background: color-mix(in srgb, var(--coach-teal) 22%, transparent);
+  color: var(--coach-teal);
+}
+
+.app__mode-btn + .app__mode-btn {
+  border-left: 1px solid var(--border);
+}
+
+/*
+ * Same pill shape + bar metrics as Charleston Pass (rack-bottom-tile-cell + tile-grid btn).
+ * Slightly wider than two hand slots so “New Game” fits; min-width never smaller than Pass.
+ */
+
+.app__header .app__menu-btn {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--rack-action-touch-min-h);
+  min-height: var(--rack-action-touch-min-h);
+  padding: 0.3rem;
+  border-radius: 999px;
+  line-height: 0;
+}
+
+.app__header .app__menu-btn:hover {
+  border-color: var(--coach-teal-border);
+}
+
+.app__header .app__menu-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--coach-teal) 55%, transparent);
+  outline-offset: 1px;
+}
+
+.app__menu-icon {
+  display: block;
+  width: 1.45rem;
+  height: 1.45rem;
+}
+
+.coach-panel {
+  display: flex;
+  border-radius: 0.85rem;
+  overflow: hidden;
+  border: 1px solid var(--coach-teal-border);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+}
+
+.coach-panel__stripe {
+  width: 0.35rem;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, var(--coach-teal), var(--accent));
+}
+
+.coach-panel__body {
+  padding: 0.85rem 1rem 1rem;
+  min-width: 0;
+}
+
+.coach-panel__title {
+  font-family: var(--heading);
+  font-size: 1.12rem;
+  margin: 0 0 0.35rem;
+}
+
+.coach-panel__mode {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 0.5rem;
+  opacity: 0.88;
+}
+
+.coach-panel__mode-value {
+  font-family: var(--mono);
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--coach-teal);
+}
+
+.coach-panel__headline {
+  font-weight: 600;
+  color: var(--text-h);
+  margin: 0 0 0.6rem;
+  line-height: 1.35;
+}
+
+.coach-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.coach-panel__item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 0.5rem;
+  row-gap: 0.2rem;
+  padding: 0.55rem 0.6rem;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--coach-teal-bg) 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--coach-teal-border) 55%, transparent);
+}
+
+.coach-panel__band {
+  grid-row: 1 / span 2;
+  align-self: start;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.25rem;
+  background: var(--code-bg);
+  color: var(--text-h);
+}
+
+.coach-panel__label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-h);
+}
+
+.coach-panel__detail {
+  grid-column: 2;
+  font-size: 0.84rem;
+  line-height: 1.42;
+  opacity: 0.95;
+}
+
+.coach-panel__item--blunder .coach-panel__band {
+  background: color-mix(in srgb, var(--accent) 28%, var(--code-bg));
+}
+
+.coach-panel__item--inaccuracy .coach-panel__band {
+  background: color-mix(in srgb, var(--accent) 14%, var(--code-bg));
+}
+
+.coach-panel__item--close .coach-panel__band {
+  background: color-mix(in srgb, var(--coach-teal) 18%, var(--code-bg));
+}
+
+.coach-panel__subhead {
+  font-family: var(--heading);
+  font-size: 0.98rem;
+  margin: 1.1rem 0 0.35rem;
+  color: var(--text-h);
+}
+
+.coach-panel__subhint {
+  margin: 0 0 0.55rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  opacity: 0.9;
+}
+
+.coach-panel__hands {
+  margin: 0;
+  padding: 0 0 0 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.coach-panel__hand-row {
+  display: flex;
+  gap: 0.45rem;
+  align-items: flex-start;
+}
+
+.coach-panel__hand-rank {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--coach-teal);
+  min-width: 1.1rem;
+  padding-top: 0.2rem;
+}
+
+.coach-panel__hand-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.coach-panel__hand-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem;
+}
+
+.coach-panel__hand-title {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--text-h);
+}
+
+.coach-panel__pressure {
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.12rem 0.35rem;
+  border-radius: 0.25rem;
+  border: 1px solid var(--border);
+}
+
+.coach-panel__pressure--comfortable {
+  border-color: var(--coach-teal-border);
+  background: var(--coach-teal-bg);
+  color: var(--coach-teal);
+}
+
+.coach-panel__pressure--tight {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: color-mix(in srgb, var(--accent-bg) 55%, transparent);
+  color: var(--text-h);
+}
+
+.coach-panel__pressure--desperate {
+  border-color: var(--accent-border);
+  background: color-mix(in srgb, var(--accent) 18%, var(--code-bg));
+  color: var(--text-h);
+}
+
+.coach-panel__hand-stats {
+  margin: 0.15rem 0 0;
+  font-size: 0.76rem;
+  opacity: 0.92;
+}
+
+.coach-panel__hand-meta {
+  margin: 0.1rem 0 0;
+  font-size: 0.72rem;
+  opacity: 0.85;
+}
+
+.coach-panel__hand-section {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.68rem;
+  color: var(--coach-teal);
+}
+
+.coach-panel__closed-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.2rem;
+  background: color-mix(in srgb, var(--accent) 15%, var(--code-bg));
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  color: var(--text-h);
+}
+
+.coach-panel__hand-note {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.38;
+  opacity: 0.94;
+}
+
+.app__title {
+  font-size: clamp(1.28rem, 2.8vw, 1.52rem);
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+  margin: 0;
+  font-family: var(--heading);
+}
+
+.btn {
+  font-family: 'Figtree', var(--sans);
+  font-size: var(--btn-font-size);
+  font-weight: 500;
+  line-height: var(--btn-line-height);
+  text-transform: uppercase;
+  letter-spacing: var(--btn-letter-spacing);
+  cursor: pointer;
+  border-radius: 0.7rem;
+  padding: var(--btn-pad-block) var(--btn-pad-inline);
+  border: none;
+  background: color-mix(in srgb, var(--bg-elevated) 94%, #fff 6%);
+  color: var(--text-h);
+  /* Symmetric drop shadow (centered below) so the rightmost button in the
+     bottom bar doesn't bleed past the rack-col's right edge more than the
+     leftmost button bleeds past its left edge. Keeps empty space on both
+     sides of the rack visually equal. */
+  box-shadow:
+    0 2px 4px color-mix(in srgb, #000 16%, transparent),
+    0 1px 2px color-mix(in srgb, #000 10%, transparent);
+  isolation: isolate;
+  transition: box-shadow 0.14s ease;
+}
+
+.btn--primary {
+  background: color-mix(in srgb, var(--bg-elevated) 94%, #fff 6%);
+  color: var(--text-h);
+}
+
+.btn--primary:hover:not(.rack-bottom-tile-cell):not(.suggested-hands-tab) {
+  background: color-mix(in srgb, var(--bg-elevated) 86%, #fff 14%);
+  box-shadow:
+    0 2px 5px color-mix(in srgb, #000 18%, transparent),
+    0 1px 3px color-mix(in srgb, #000 12%, transparent);
+}
+
+.btn--danger {
+  border: none;
+  background: color-mix(in srgb, #c0392b 14%, var(--bg-elevated));
+  color: #e74c3c;
+}
+
+.btn--danger:hover {
+  background: color-mix(in srgb, #c0392b 22%, var(--bg-elevated));
+  box-shadow:
+    0 2px 5px color-mix(in srgb, #000 18%, transparent),
+    0 1px 3px color-mix(in srgb, #000 12%, transparent);
+}
+
+.btn--mahjong {
+  background: #e0115f;
+  color: #fff;
+}
+
+.btn--rack-neutral {
+  background: #3a424d;
+  color: #fff;
+}
+
+/* Default buttons only — rack / bot toolbar / menu use flat fills (tweak colors without hover wash). */
+.btn:hover:not(:disabled):not(.rack-bottom-tile-cell):not(.app-bottom-center-controls__menu-btn):not(
+    .panel--bot-exposures__clear
+  ):not(.suggested-hands-tab) {
+  background: color-mix(in srgb, var(--bg-elevated) 86%, #fff 14%);
+  box-shadow:
+    0 2px 5px color-mix(in srgb, #000 18%, transparent),
+    0 1px 3px color-mix(in srgb, #000 12%, transparent);
+}
+
+.btn:active:not(:disabled):not(.rack-bottom-tile-cell):not(.app-bottom-center-controls__menu-btn) {
+  transition: none;
+  transform: scale(0.98);
+  box-shadow:
+    inset 3px 3px 7px rgba(0, 0, 0, 0.35),
+    inset -2px -2px 5px rgba(255, 255, 255, 0.12);
+}
+
+.btn:disabled,
+.btn--primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  box-shadow: none;
+  filter: grayscale(0.35);
+}
+
+/* Bot toolbar + menu: skip global .btn:disabled wash so palette stays readable. */
+.panel--bot-exposures__toolbar-well .btn:disabled:not(.panel--bot-exposures__clear),
+.app-bottom-center-controls__menu-btn:disabled {
+  opacity: 0.5;
+  filter: none;
+}
+
+.btn--primary:disabled:hover {
+  box-shadow: none;
+}
+
+/* Discard-phase: default fill overridden on main rack (teal c12-14 rule below). */
+.btn--discard {
+  background: var(--code-bg);
+  color: var(--text-h);
+}
+
+/* After `.btn` so padding/radius don’t widen controls past their grid tracks (Pass under 13–14). */
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell {
+  min-width: 0;
+  font-size: var(--rack-bottom-action-fs);
+  line-height: 1.06;
+  padding: 0.14rem 0.05rem;
+  border-radius: var(--rack-tile-btn-border-radius);
+  border: none;
+  /* Base `.btn` uses a soft drop-shadow that reads as a border next to the tile row */
+  box-shadow: none;
+}
+
+/* Same inner-face metrics as the general `.rack-bottom-tile-cell` block above (see :root). */
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c2,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c3 {
+  width: var(--rack-tile-btn-inner-1);
+  max-width: var(--rack-tile-btn-inner-1);
+  margin-inline-start: var(--rack-tile-face-bw);
+  justify-self: start;
+}
+
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c4-5,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c8-9,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c10-11,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c7-8,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c9-10,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c11-12,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c13-14 {
+  width: var(--rack-tile-btn-inner-2);
+  max-width: var(--rack-tile-btn-inner-2);
+  margin-inline-start: var(--rack-tile-face-bw);
+  justify-self: start;
+}
+
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c3-5,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c9-11,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14 {
+  width: var(--rack-tile-btn-inner-3);
+  max-width: var(--rack-tile-btn-inner-3);
+  margin-inline-start: var(--rack-tile-face-bw);
+  justify-self: start;
+}
+
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1-7,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c8-14 {
+  width: var(--rack-tile-btn-inner-7);
+  max-width: var(--rack-tile-btn-inner-7);
+  margin-inline-start: var(--rack-tile-face-bw);
+  justify-self: start;
+}
+
+/*
+ * Hand row: hand tiles are borderless and fill each slot (--rack-tile-w). The rules above size
+ * buttons to the *inner* face of a bordered .tile-face; in the hand panel, stretch to the full
+ * grid area so left/right edges line up with the tile faces in the hand row.
+ */
+.panel--hand .rack-bottom-bar--tile-grid > .rack-bottom-tile-cell,
+.panel--hand .rack-bottom-bar--tile-grid > .btn.rack-bottom-tile-cell {
+  width: 100%;
+  max-width: none;
+  margin-inline-start: 0;
+  justify-self: stretch;
+}
+
+.panel--hand .rack-bottom-bar--wall-game > .rack-bottom-tile-cell,
+.panel--hand .rack-bottom-bar--wall-game > .btn.rack-bottom-tile-cell {
+  width: 100%;
+  max-width: none;
+  margin-inline-start: 0;
+  justify-self: stretch;
+}
+
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:hover:not(:disabled) {
+  box-shadow: none;
+}
+
+/* No pressed/inset or hover tint — true fills stay visible while you tune palette. */
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:active:not(:disabled) {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Unavailable: lighter opacity only, no gray filter, keep label readable on colored faces. */
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:disabled {
+  opacity: 0.5;
+  filter: none;
+  border: none;
+  box-shadow: none;
+}
+
+/* Main rack: Ignore / Discard — same teal as Pass (#007791). */
+.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:not(:disabled) {
+  background: #007791;
+  color: #fff;
+}
+
+/* Inactive: dim Ignore only — Discard (`.btn--discard`, east-discard) stays full-strength. */
+.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:disabled:not(.btn--discard) {
+  background: #007791;
+  color: #fff;
+  opacity: 0.5;
+}
+
+.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14.btn--discard:disabled {
+  background: #007791;
+  color: #fff;
+  opacity: 1;
+  filter: none;
+}
+
+/* Main rack: Swap (joker swap) — #6A0DAD */
+.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7:not(:disabled) {
+  background: #6a0dad;
+  color: #fff;
+}
+
+.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7:disabled {
+  background: #6a0dad;
+  color: #fff;
+  opacity: 0.5;
+}
+
+.panel {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1rem clamp(0.75rem, 2.2vw, 1.5rem);
+  margin-bottom: 1rem;
+  background: var(--bg-elevated);
+}
+
+/* Sides/top use window inset; bottom strip matches other tray dividers (`--play-tray-h-divider`). */
+.panel.panel--hand {
+  padding:
+    var(--hand-window-pad-inline)
+    var(--hand-window-pad-inline)
+    var(--play-tray-h-divider);
+}
+
+/* Discard + bot: one token from `.app-play-split` (see `--play-split-tray-panel-padding-bottom`). */
+.app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker,
+.app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures {
+  padding-bottom: var(--play-split-tray-panel-padding-bottom);
+}
+
+.panel--charleston {
+  border-color: var(--window-border);
+  background: var(--window-surface);
+}
+
+.panel--main-game {
+  border-color: var(--window-border);
+  background: var(--window-surface);
+}
+
+/* Dark gray panel shells in the app; scoped tokens for type and controls. Tile faces keep suit colors. */
+.app .panel,
+.app .app-opponents-rail,
+.app .coach-panel {
+  --text-h: var(--window-fg);
+  --text: var(--window-fg-muted);
+  --bg: var(--window-surface);
+  --bg-elevated: var(--window-surface);
+  --border: var(--window-border);
+  --code-bg: color-mix(in srgb, var(--window-fg) 11%, var(--window-surface));
+  background: var(--window-surface);
+  border-color: var(--window-border);
+  color: var(--window-fg);
+}
+
+.app .panel.panel--charleston {
+  background: var(--window-surface);
+}
+
+.app .panel.panel--main-game {
+  background: var(--window-surface);
+}
+
+/* Hand + discard + bot panels: flat surface (no top fade band above the exposure row). */
+.app .panel.panel--discard-tracker,
+.app .panel.panel--bot-exposures,
+.app .panel.panel--hand {
+  background: var(--window-surface);
+}
+
+.app .tile-face.tile--wind {
+  background: var(--wind-tile-bg);
+}
+
+/* Empty tile wells (not the flat window fill). */
+.app .panel .exposure-rack__slot--empty::before,
+.app .app-opponents-rail .exposure-rack__slot--empty::before {
+  border-color: color-mix(in srgb, #fff 15%, var(--window-border));
+  background: color-mix(in srgb, #000 12%, var(--window-surface));
+  box-shadow: none;
+}
+
+.charleston-banner {
+  margin: 0.35rem 0 0.5rem;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.charleston-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 1rem;
+  margin-top: 0.35rem;
+}
+
+.charleston-actions__hint {
+  font-size: 0.85rem;
+  opacity: 0.95;
+  max-width: min(36rem, 100%);
+}
+
+.charleston-actions__hint--block {
+  flex-basis: 100%;
+  max-width: none;
+}
+
+.panel__title {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+}
+
+.panel__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.panel__title-row .panel__title {
+  margin: 0;
+}
+
+.btn--sm {
+  font-size: calc(var(--btn-font-size) * 0.86);
+  line-height: 1.2;
+  padding: 0.16rem 0.52rem;
+}
+
+.panel__stat {
+  margin: 0.25rem 0 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.6rem;
+}
+
+.panel__stat-value {
+  font-size: 1.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-h);
+}
+
+.panel__stat-label {
+  font-size: 0.9rem;
+}
+
+.panel__hint {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  opacity: 0.95;
+}
+
+.pass-box-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  margin-top: 0.75rem;
+}
+
+/* One rectangle sized for three rack tiles side by side (same chrome as call-initiate / pass-tail) */
+.pass-box {
+  box-sizing: border-box;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.4rem 0.45rem;
+  border-radius: 0.38rem;
+  border: 1px solid color-mix(in srgb, var(--coach-teal) 32%, var(--border) 40%, var(--bg-elevated) 28%);
+  background: color-mix(in srgb, var(--coach-teal-bg) 80%, var(--bg-elevated) 20%);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.pass-box--over {
+  background: color-mix(in srgb, var(--coach-teal) 28%, var(--bg-elevated));
+  border-color: color-mix(in srgb, var(--coach-teal) 40%, var(--border) 34%, var(--bg-elevated) 26%);
+  box-shadow: none;
+}
+
+.pass-box__inner {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rack-tile-gap);
+  min-height: var(--rack-tile-h);
+  cursor: default;
+}
+
+.pass-box__cell {
+  width: var(--rack-tile-w);
+  height: var(--rack-tile-h);
+  flex-shrink: 0;
+  border-radius: 0.35rem;
+  border: 1px dashed color-mix(in srgb, var(--border) 55%, transparent);
+  background: color-mix(in srgb, var(--border) 06%, transparent);
+  box-sizing: border-box;
+}
+
+.pass-box-actions {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.pass-box-actions__btn {
+  min-width: 7rem;
+  font-weight: 500;
+}
+
+/* Charleston pass: last three slots inline on the exposure rack row */
+.charleston-provision__hint {
+  margin: 0 0 0.45rem;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  opacity: 0.95;
+}
+
+.charleston-pass-btn {
+  font-weight: 500;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Charleston Pass on rack: solid teal (#007791). `.suggested-hands-tab` keeps soft coach-teal below. */
+.btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):not(:disabled) {
+  background: #007791;
+  color: #fff;
+}
+
+.btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):disabled {
+  background: #007791;
+  color: #fff;
+  opacity: 0.5;
+  filter: none;
+  box-shadow: none;
+}
+
+/* Suggested Hands tab: soft coach-teal wash (not rack Pass). */
+.btn.btn--primary.charleston-pass-btn.suggested-hands-tab:not(:disabled) {
+  background: color-mix(in srgb, var(--coach-teal) 8%, transparent);
+  color: var(--text-h);
+}
+
+.charleston-stop-btn {
+  font-weight: 500;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Stop Charleston only (c9-11); Undo (c2 + rack-neutral) stays dark gray. */
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c9-11.charleston-stop-btn:not(:disabled) {
+  background: #9b1b30;
+  color: #fff;
+}
+
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c2.btn.btn--rack-neutral.charleston-stop-btn:not(:disabled) {
+  background: #3a424d;
+  color: #fff;
+}
+
+/* Keeps column height when Stop is inactive so the pass strip does not jump */
+.charleston-stop-btn--reserved {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.charleston-stop-btn--reserved:disabled {
+  opacity: 0;
+}
+
+.pass-strip-tail {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  justify-content: flex-start;
+}
+
+.pass-strip-tail__inner {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--rack-tile-gap);
+  cursor: default;
+  /* Pin to exactly 3 tile widths + 2 gaps so children cannot get squeezed
+     by sub-pixel rounding or parent flex constraints. */
+  width: calc(3 * var(--rack-tile-w) + 2 * var(--rack-tile-gap));
+  flex-shrink: 0;
+  box-sizing: border-box;
+  /* Unified 3-tile box — same border + fill as call-initiate */
+  background: color-mix(in srgb, var(--coach-teal-bg) 80%, var(--bg-elevated) 20%);
+  border: 1px solid color-mix(in srgb, var(--coach-teal) 32%, var(--border) 40%, var(--bg-elevated) 28%);
+  border-radius: 0.38rem;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+/* Same span as hand slots 12–14: `--player-rack-face-gap` matches `.panel-hand-rack__hand-tray .hand-row`. */
+.panel--hand .pass-strip-tail__inner {
+  gap: var(--player-rack-face-gap);
+  width: calc(3 * var(--rack-tile-w) + 2 * var(--player-rack-face-gap));
+}
+
+/* Brighten only when hovering an actual tile, not empty space */
+.pass-strip-tail__inner:has(.pass-strip__tile-wrap:hover) {
+  background: color-mix(in srgb, var(--coach-teal) 14%, var(--bg-elevated));
+  border-color: color-mix(in srgb, var(--coach-teal) 40%, var(--border) 34%, var(--bg-elevated) 26%);
+}
+
+/* Drop target: same stronger fill + border as call box --over */
+.pass-strip-tail--over .pass-strip-tail__inner {
+  background: color-mix(in srgb, var(--coach-teal) 28%, var(--bg-elevated));
+  border-color: color-mix(in srgb, var(--coach-teal) 40%, var(--border) 34%, var(--bg-elevated) 26%);
+}
+
+/* Dragging FROM the box: keep it bright */
+.pass-strip-tail__inner:has(.pass-strip__tile-wrap--dragging) {
+  background: color-mix(in srgb, var(--coach-teal) 14%, var(--bg-elevated));
+  border-color: color-mix(in srgb, var(--coach-teal) 40%, var(--border) 34%, var(--bg-elevated) 26%);
+}
+
+/* Charleston: tiles exit the pass box toward the pass direction before the exchange commits. */
+.pass-strip-tail.pass-strip-tail--fly-out {
+  pointer-events: none;
+}
+
+@keyframes charleston-pass-fly-out-left {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    /* % is of the tile wrap’s own width — works in Charleston hand + pass-tail layouts */
+    transform: translateX(-220%);
+    opacity: 0;
+  }
+}
+
+@keyframes charleston-pass-fly-out-right {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(220%);
+    opacity: 0;
+  }
+}
+
+@keyframes charleston-pass-fly-out-across {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-220%);
+    opacity: 0;
+  }
+}
+
+.pass-strip-tail--fly-out-left .pass-strip__tile-wrap,
+.pass-box--fly-out-left .pass-strip__tile-wrap {
+  animation: charleston-pass-fly-out-left 0.3s ease-in forwards;
+}
+
+.pass-strip-tail--fly-out-right .pass-strip__tile-wrap,
+.pass-box--fly-out-right .pass-strip__tile-wrap {
+  animation: charleston-pass-fly-out-right 0.3s ease-in forwards;
+}
+
+.pass-strip-tail--fly-out-across .pass-strip__tile-wrap,
+.pass-box--fly-out-across .pass-strip__tile-wrap {
+  animation: charleston-pass-fly-out-across 0.3s ease-in forwards;
+}
+
+.pass-box--fly-out {
+  pointer-events: none;
+}
+
+/* DragOverlay sits outside `.panel--hand` — same tile size as the rack (see `--hand-rack-tile-*`). */
+.drag-overlay-tile {
+  --rack-tile-w: var(--hand-rack-tile-w);
+  --rack-tile-h: var(--hand-rack-tile-h);
+  width: var(--rack-tile-w);
+  height: var(--rack-tile-h);
+  flex-shrink: 0;
+  cursor: grabbing;
+  touch-action: none;
+  transform: scale(1.05);
+  transform-origin: center;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.55));
+}
+
+.drag-overlay-tile .tile-face {
+  width: 100%;
+  height: 100%;
+}
+
+.pass-strip__tile-wrap {
+  cursor: grab;
+  touch-action: none;
+  width: var(--rack-tile-w);
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+/* Boxed pass strip: wrap is not an exposure slot — fix cell height here */
+.pass-strip__tile-wrap:not(.exposure-rack__slot) {
+  height: var(--rack-tile-h);
+}
+
+.pass-strip__tile-wrap:active {
+  cursor: grabbing;
+}
+
+.pass-strip__tile-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 0.35rem;
+  width: 100%;
+  height: 100%;
+  line-height: 0;
+  box-sizing: border-box;
+}
+
+.hand-bank {
+  margin-top: 0;
+  padding: var(--rack-panel-inset);
+  background: var(--window-inner-surface);
+  border-radius: 0.55rem;
+}
+
+.hand-bank--hover {
+}
+
+.hand-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--rack-tile-gap);
+  touch-action: none;
+}
+
+.sortable-tile-wrap {
+  position: relative;
+  cursor: grab;
+  touch-action: none;
+  flex-shrink: 0;
+  width: var(--rack-tile-w);
+  height: var(--rack-tile-h);
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  /* Neighbouring tiles slide smoothly when the dragged tile is hovering over them.
+     Inline style overrides this to 'none' for the active drag tile and during
+     Charleston (suppressLayoutAnimation) so cursor-tracking stays real-time. */
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+/* Suppress browser default focus ring on tile wraps — the --selected class provides its own ring. */
+.sortable-tile-wrap:focus,
+.sortable-tile-wrap:focus-visible {
+  outline: none;
+}
+
+.hand-slot--empty {
+  box-sizing: border-box;
+  width: var(--rack-tile-w);
+  height: var(--rack-tile-h);
+  flex-shrink: 0;
+}
+
+.sortable-tile-wrap:active {
+  cursor: grabbing;
+}
+
+.sortable-tile-wrap--selected .tile-face {
+  outline: 3px solid var(--coach-teal);
+  outline-offset: 2px;
+}
+
+.sortable-tile-wrap--charleston-new .tile-face {
+  /* Flat face: no 3D bottom shadow; only dim white inset ring on the edge */
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.32);
+}
+
+.sortable-tile-wrap--suggest-dim .tile-face {
+  opacity: 0.44;
+  transition: opacity 0.16s ease;
+}
+
+.sortable-tile-wrap--suggest-dim.sortable-tile-wrap--selected .tile-face {
+  opacity: 1;
+}
+
+.sortable-tile-wrap--suggest-best .tile-face {
+  border-radius: 0.35rem;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
+}
+
+/* Pass slot and discard staging tiles that belong to the focused suggested hand */
+.pass-strip__tile-wrap--suggest-best .tile-face,
+.east-discard-staging__tile--suggest-best .tile-face {
+  border-radius: 0.35rem;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
+}
+
+.sortable-tile-wrap--discard-mode {
+  cursor: pointer;
+}
+
+/* Tile selected to join a call meld (call-staging phase) — amber ring */
+.sortable-tile-wrap--staged-meld .tile-face {
+  outline: 3px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+.sortable-tile-wrap--discard-mode:hover .tile-face {
+  outline: 2px solid #ef4444;
+  outline-offset: 2px;
+}
+
+/* ── Drawn tile drop-in animation ── */
+/* --draw-anim-dx / --draw-anim-dy are set at runtime to the offset from the tile's
+   final rest position back to the animation origin (rack-local wall draw, joker-swap capture, etc.). */
+@keyframes tile-drop-in {
+  0% {
+    transform: translate(var(--draw-anim-dx, 0px), var(--draw-anim-dy, -3rem));
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+}
+
+/* Inner wrapper: fly-in keyframes run here so dnd-kit's inline `transform` on the outer
+   `.sortable-tile-wrap` does not override the animation. */
+.sortable-tile-wrap__fly {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.sortable-tile-wrap--just-drawn {
+  animation: tile-drop-in 0.34s cubic-bezier(0.34, 1.28, 0.64, 1) both;
+  position: relative;
+  z-index: 10;
+}
+
+/* ── Bot list ── */
+
+.bot-list {
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.bot-list__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.bot-list__seat {
+  font-family: 'Figtree', var(--sans);
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.bot-list__row-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+}
+
+.bot-list__progress {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--text-muted, #6b6560);
+  max-width: 100%;
+}
+
+.bot-list__progress strong {
+  color: var(--text-h);
+  font-weight: 600;
+}
+
+.bot-list__progress-title {
+  font-weight: 500;
+  opacity: 0.88;
+}
+
+
+.tile-face {
+  box-sizing: border-box;
+  width: var(--rack-tile-w);
+  height: var(--rack-tile-h);
+  border-radius: var(--tile-face-border-radius);
+  border: 1px solid color-mix(in srgb, #000 22%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  user-select: none;
+  background: var(--border);
+  color: #000;
+}
+
+.tile-face--elevated {
+  opacity: 0.98;
+}
+
+/* Font scales with `var(--rack-tile-w)`; 1.5× vs legacy ratio (suit numerals + honor glyphs). */
+.tile-face__glyph {
+  font-weight: 700;
+  font-size: calc(var(--rack-tile-w) * 1.03 / 2.65 * 1.5);
+  letter-spacing: 0.02em;
+  color: #000;
+}
+
+/* Tile glyph splits digits vs letters so numerals render in Noto Sans Arabic (per design),
+   while suit letters (B / D / C / F / J / winds / dragons) stay in Figtree. Applies everywhere
+   `.tile-face__glyph` renders: hand racks, exposures, bot rows, discard tracker, pass strip,
+   suggested-hand mini tiles, dialogs, drag overlays. */
+.tile-face__glyph-num {
+  font-family: 'Noto Sans Arabic', var(--sans);
+}
+
+.tile-face__glyph-letter {
+  font-family: 'Figtree', var(--sans);
+}
+
+/* Main hand + staged discard (`TileFace` `rackSuitStacked`): rank at tile center; suit band fills
+   from below the numeral to the bottom face, with DOT/BAM/CRAK centered in that band (same fs as Mah Jongg btn). */
+.tile-face.tile-face--rack-suit-stack {
+  --tile-face-rank-fs: calc(var(--rack-tile-w) * 1.03 / 2.65 * 1.5);
+  position: relative;
+  padding: 0;
+  line-height: 1;
+}
+
+.tile-face.tile-face--rack-suit-stack .tile-face__rank {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  font-weight: 700;
+  /* Numerals use Noto Sans Arabic across all tile surfaces (hand rack stacked layout here). */
+  font-family: 'Noto Sans Arabic', var(--sans);
+  /* Match scaled `.tile-face__glyph` (stacked suit rank). */
+  font-size: var(--tile-face-rank-fs);
+  letter-spacing: 0.02em;
+  color: #000;
+  line-height: 1;
+  text-align: center;
+}
+
+/* Band from just below the **visible bottom of the numeral ink** (≈ baseline, ~0.3 × rank-fs
+   below center — digits have no descender) to the tile face bottom. Using 0.5 × rank-fs (full
+   line-box bottom) left a strip of invisible descender slack above the band, so DOT / BAM / CRAK
+   appeared lower than the true visual gap. Tight flex centering with zero block padding ensures
+   the text sits dead-center in that visible gap regardless of any inherited tile-face padding. */
+.tile-face.tile-face--rack-suit-stack .tile-face__suit-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(50% + var(--tile-face-rank-fs) * 0.3);
+  bottom: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 0.1rem;
+  padding-block: 0;
+}
+
+/* Wrapper: line-height 0 so the grid/flex “center” is the text ink, not the strut. */
+.tile-face.tile-face--rack-suit-stack .tile-face__suit-name {
+  line-height: 0;
+  display: inline-block;
+  max-width: 100%;
+  text-align: center;
+}
+
+/* Actual DOT/BAM/CRAK — metrics live here; vertically centered in `.tile-face__suit-band` */
+.tile-face.tile-face--rack-suit-stack .tile-face__suit-text {
+  font-family: 'Figtree', var(--sans);
+  font-weight: 600;
+  font-size: var(--rack-bottom-action-fs);
+  letter-spacing: var(--btn-letter-spacing);
+  line-height: 1;
+  color: #000;
+  text-align: center;
+  text-transform: uppercase;
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+.tile-face.tile--bam {
+  background: var(--card-ink-green);
+}
+
+.tile-face.tile--crak {
+  background: var(--card-ink-red);
+}
+
+.tile-face.tile--dot {
+  background: var(--card-ink-navy);
+}
+
+.tile-face.tile--wind {
+  background: var(--wind-tile-bg);
+}
+
+.tile-face.tile--dragon-red {
+  background: var(--card-ink-red);
+}
+
+.tile-face.tile--dragon-green {
+  background: var(--card-ink-green);
+}
+
+.tile-face.tile--dragon-soap {
+  background: var(--card-ink-navy);
+}
+
+.tile-face.tile--dragon-any {
+  background: #5c6470;
+}
+
+.tile-face.tile--flower {
+  background: #ab47bc;
+}
+
+.tile-face.tile--joker {
+  position: relative;
+  background: #ab47bc;
+}
+
+/*
+ * Joker ring: do not use cqw/cqh here — a size container on an ancestor (e.g. bot-exposures panel)
+ * can steal query resolution so the ring looks different in the hand / East exposure row vs bot.
+ * Padding-bottom % is always against the tile’s own width, giving a square inscribed on portrait
+ * faces (our tiles are always wider-aspect short edge = width).
+ */
+.tile-face.tile--joker::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 62%;
+  height: 0;
+  padding-bottom: 62%;
+  border-radius: 50%;
+  border: 2px solid #000;
+  box-sizing: content-box;
+  pointer-events: none;
+}
+
+.tile-face.tile--joker .tile-face__glyph {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Call prompt ── */
+
+/* ── Bot exposure meld drop zone (drag-to-exposure joker swap) ── */
+
+.exposure-rack__meld-drop {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--rack-tile-gap);
+  align-items: flex-start;
+}
+
+.exposure-rack__meld-drop--over .exposure-rack__slot {
+  box-shadow: inset 0 0 0 2px rgba(245, 158, 11, 0.7);
+}
+
+/* ── Staging meld drop zone (exposure rack wrapper during call-staging) ── */
+
+.staging-meld-drop-zone {
+  border-radius: 0.5rem;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.staging-meld-drop-zone--over {
+  background: rgba(245, 158, 11, 0.12);
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.5);
+}
+
+/* ── Call prompt ── */
+
+.call-prompt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin-top: 0.35rem;
+}
+
+.call-prompt__who {
+  flex-basis: 100%;
+  font-weight: 600;
+  color: var(--text-h);
+  font-size: 0.95rem;
+}
+
+.call-prompt__who--error {
+  color: #b91c1c;
+}
+
+/* ── Mah Jongg win overlay ── */
+
+.mahjong-win-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: color-mix(in srgb, #0a0a0a 72%, transparent);
+  backdrop-filter: blur(3px);
+  overflow-y: auto;
+}
+
+.mahjong-win-dialog {
+  width: fit-content;
+  min-width: min(32rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
+  padding: 2rem 2.25rem 1.75rem;
+  border-radius: 0.75rem;
+  background: var(--bg-panel, #1a1a1a);
+  border: 2px solid #d97706;
+  box-shadow:
+    0 0 0 1px rgba(217, 119, 6, 0.25),
+    0 12px 40px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.mahjong-win-dialog--bot {
+  border-color: #dc2626;
+  box-shadow:
+    0 0 0 1px rgba(220, 38, 38, 0.25),
+    0 12px 40px rgba(0, 0, 0, 0.7);
+}
+
+.mahjong-win-dialog__actions {
+  display: flex;
+  justify-content: center;
+  padding-top: 0.5rem;
+}
+
+.mahjong-win__new-game-btn {
+  width: var(--rack-tile-btn-inner-2);
+  min-height: var(--rack-action-touch-min-h);
+  font-size: var(--rack-bottom-action-fs);
+  font-weight: 600;
+}
+
+.mahjong-win {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.mahjong-win__headline {
+  margin: 0;
+  font-family: var(--heading);
+  font-size: 2.2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #d97706;
+  text-align: center;
+}
+
+.mahjong-win__headline--bot {
+  color: #dc2626;
+}
+
+.mahjong-win__bot-winner-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.6rem;
+  font-size: 1.06rem;
+  font-weight: 500;
+  line-height: 1.5;
+  opacity: 0.92;
+}
+
+.mahjong-win__bot-winner-hand {
+  font-weight: 600;
+}
+
+.mahjong-win__bot-winner-how {
+  opacity: 0.75;
+}
+
+.mahjong-win__bot-winner-pts {
+  font-family: var(--mono);
+  font-weight: 700;
+  color: #16a34a;
+}
+
+.mahjong-win__bot-mj-pts {
+  font-family: var(--mono);
+  font-weight: 600;
+  color: #b45309;
+  font-size: 1.06rem;
+}
+
+/* Row: pattern · win method · points */
+.mahjong-win__player-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.2rem 0.55rem;
+  font-size: 1.06rem;
+  line-height: 1.5;
+}
+
+.mahjong-win__note {
+  opacity: 0.92;
+}
+
+.mahjong-win__player-meta-divider {
+  opacity: 0.4;
+  font-weight: 400;
+}
+
+.mahjong-win__win-method {
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.mahjong-win__points {
+  font-family: var(--mono);
+  font-weight: 600;
+  color: #b45309;
+  opacity: 0.8;
+}
+
+.mahjong-win__bots-review {
+  margin: 0.5rem 0 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.5rem;
+  border: none;
+  background: color-mix(in srgb, #000 14%, var(--window-surface));
+}
+
+.mahjong-win__bots-review-title {
+  margin: 0 0 0.4rem;
+  font-size: 1.06rem;
+  font-weight: 600;
+  color: var(--text-h);
+  text-align: center;
+}
+
+.mahjong-win__bots-review-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-radius: 0.38rem;
+  overflow: hidden;
+  background: color-mix(in srgb, #000 24%, var(--window-surface));
+}
+
+.mahjong-win__bots-review-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0;
+  border: none;
+  background: transparent;
+}
+
+/* Centers the header+tiles block as a unit; header stays left-aligned with tile row */
+.mahjong-win__bots-review-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: fit-content;
+}
+
+/* Single line: seat · away · section #N · pattern text */
+.mahjong-win__bots-review-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.65rem;
+  font-size: 1.06rem;
+  line-height: 1.4;
+}
+
+.mahjong-win__bots-review-seat {
+  font-family: 'Figtree', var(--sans);
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.mahjong-win__bots-review-away {
+  font-family: var(--mono);
+  font-weight: 600;
+  color: #b45309;
+}
+
+.mahjong-win__bots-review-dead {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--stop-red);
+  background: color-mix(in srgb, var(--stop-red) 14%, transparent);
+  border: 1px solid var(--stop-red-border);
+  border-radius: 0.35rem;
+  padding: 0.1rem 0.42rem;
+}
+
+.mahjong-win__bots-review-card--dead .mahjong-win__bots-review-tile {
+  opacity: 0.45;
+}
+
+.mahjong-win__bots-review-ref {
+  font-size: 1.06rem;
+  font-weight: 600;
+  opacity: 0.6;
+}
+
+.mahjong-win__bots-review-pattern {
+  font-size: 1.06rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+/* Player's winning 14 tiles shown directly under "Mah Jongg!" headline */
+.mahjong-win__player-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  justify-content: center;
+  padding: 0.5rem 0;
+}
+
+/* Tile row: meld boxes + loose hand tiles */
+.mahjong-win__bots-review-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Boxed border around an exposed meld group */
+.mahjong-win__bots-review-meld {
+  display: flex;
+  gap: 1px;
+  padding: 2px;
+  border: 1px solid color-mix(in srgb, var(--text-h) 35%, var(--border));
+  border-radius: 0.3rem;
+}
+
+.mahjong-win__bots-review-tile {
+  --rack-tile-w: 2.65rem;
+  --rack-tile-h: 3.53rem;
+  width: var(--rack-tile-w);
+  height: var(--rack-tile-h);
+  flex-shrink: 0;
+}
+
+.mahjong-win__bots-review-tile .tile-face {
+  width: 100%;
+  height: 100%;
+}
+
+/* Tiles not contributing to the closest hand */
+.mahjong-win__bots-review-tile--dim .tile-face {
+  opacity: 0.43;
+}
+
+.call-prompt__tile {
+  flex-shrink: 0;
+}
+
+.call-prompt__actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.call-prompt__matches {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.call-prompt__matches-label {
+  font-size: 0.78rem;
+  opacity: 0.82;
+  white-space: nowrap;
+  margin-right: 0.2rem;
+}
+
+.call-prompt__hint {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  opacity: 0.9;
+}
+
+/* ── Suggested hands panel (below rack in main area) ── */
+/* Title + category dropdown on one row; list scrolls inside the panel. */
+
+.panel--hands {
+  border-color: var(--border);
+  display: flex;
+  flex-direction: column;
+  max-height: min(22rem, 52dvh);
+  min-height: 0;
+}
+
+/* Suggested hands in play split: width cap (height + flex shared with discard tracker above). */
+.app-dnd-frame .panel--hands {
+  max-width: 100%;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.panel--hands__head.panel__title-row {
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.04rem;
+  flex-wrap: wrap;
+}
+
+.panel--hands__head .panel__title {
+  min-width: 0;
+}
+
+.panel--hands__title-cluster {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.28rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.panel--hands__title-cluster .panel__title {
+  margin: 0;
+}
+
+.panel--hands__title-cluster .hands-panel__display-toggles {
+  margin-left: auto;
+}
+
+.hands-panel__display-toggles {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.24rem;
+  flex-shrink: 0;
+  /* Hands / Tiles / Categories pills match Select (header trigger) box. */
+  --hands-header-chip-py: 0.14rem;
+  --hands-header-chip-px: 0.38rem;
+  --hands-header-chip-fs: 0.78rem;
+  --hands-header-chip-lh: 1.1;
+}
+
+.hands-panel__display-toggles .hands-panel__display-toggle,
+.hands-panel__display-toggles .hands-panel__categories-trigger--header {
+  padding: var(--hands-header-chip-py) var(--hands-header-chip-px);
+  font-size: var(--hands-header-chip-fs);
+  font-weight: 600;
+  line-height: var(--hands-header-chip-lh);
+  min-height: calc(
+    2 * var(--hands-header-chip-py) + var(--hands-header-chip-lh) * var(--hands-header-chip-fs) + 2px
+  );
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  align-self: center;
+}
+
+.hands-panel__display-toggles .hands-panel__display-toggle {
+  justify-content: center;
+}
+
+.hands-panel__display-toggles .hands-panel__categories-trigger--header {
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+/* Matches app-wide .btn neumorphic style */
+.hands-panel__display-toggle {
+  box-sizing: border-box;
+  margin: 0;
+  font: inherit;
+  letter-spacing: 0.02em;
+  border-radius: 0.7rem;
+  border: none;
+  background: color-mix(in srgb, var(--bg-elevated) 94%, #fff 6%);
+  /* Off: 32% opacity text — same as disabled call button */
+  color: color-mix(in srgb, var(--text-h) 32%, transparent);
+  cursor: pointer;
+  white-space: nowrap;
+  isolation: isolate;
+  box-shadow:
+    2px 2px 4px color-mix(in srgb, #000 16%, transparent),
+    0 1px 2px color-mix(in srgb, #000 10%, transparent);
+  transition: box-shadow 0.14s ease;
+}
+
+.hands-panel__display-toggle:hover:not(:disabled) {
+  color: color-mix(in srgb, var(--text-h) 65%, transparent);
+  box-shadow:
+    2px 2px 5px color-mix(in srgb, #000 18%, transparent),
+    0 1px 3px color-mix(in srgb, #000 12%, transparent);
+}
+
+.hands-panel__display-toggle:active:not(:disabled) {
+  transition: none;
+  transform: scale(0.98);
+  box-shadow:
+    inset 3px 3px 7px rgba(0, 0, 0, 0.35),
+    inset -2px -2px 5px rgba(255, 255, 255, 0.12);
+}
+
+.hands-panel__display-toggle:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--coach-teal) 55%, transparent);
+  outline-offset: 1px;
+}
+
+/* On / active state — teal tint, full brightness */
+.hands-panel__display-toggle--on {
+  background: color-mix(in srgb, var(--coach-teal) 13%, var(--bg-elevated));
+  color: var(--coach-teal);
+  box-shadow:
+    inset 2px 2px 5px rgba(0, 0, 0, 0.28),
+    inset -1px -1px 3px rgba(255, 255, 255, 0.10);
+}
+
+.hands-panel__display-toggle--on:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--coach-teal) 18%, var(--bg-elevated));
+  box-shadow:
+    inset 2px 2px 5px rgba(0, 0, 0, 0.28),
+    inset -1px -1px 3px rgba(255, 255, 255, 0.10);
+}
+
+.hands-panel__display-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+  box-shadow: none;
+}
+
+.hands-panel__info-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.hands-panel__info-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.65rem;
+  height: 1.65rem;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: color-mix(in srgb, var(--text-h) 88%, var(--text) 12%);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.hands-panel__info-btn:hover {
+  color: var(--coach-teal);
+}
+
+.hands-panel__info-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--coach-teal) 55%, transparent);
+  outline-offset: 1px;
+}
+
+.hands-panel__info-icon {
+  display: block;
+}
+
+.hands-panel__hint-popover {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  z-index: 45;
+  width: min(22rem, 92vw);
+  max-width: min(22rem, calc(100vw - 2rem));
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.45rem;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+  box-sizing: border-box;
+}
+
+.hands-panel__hint-popover__text {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--text-h);
+}
+
+.hands-panel__hint-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.hands-panel__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.hands-panel__list-off {
+  margin: 0.45rem 0 0;
+  flex: 1;
+  min-height: 2.25rem;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--text) 75%, var(--bg) 25%);
+}
+
+.hands-panel__content {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+}
+
+.hands-panel__list-column {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  container-type: inline-size;
+  container-name: suggest-hands-panel;
+  /* Wide suggested-hand rows scroll here; grid keeps column tracks aligned. */
+  overflow-x: auto;
+}
+
+.hands-panel__list-column .hands-list {
+  flex: 1;
+  min-height: 0;
+}
+
+.hands-panel__categories-wrap {
+  position: relative;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.hands-panel__categories-wrap--in-header {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  margin: 0;
+  padding: 0;
+}
+
+.hands-panel__categories-trigger--header {
+  min-width: 4.1rem;
+  max-width: none;
+  gap: 0.32rem;
+}
+
+.hands-panel__display-toggles .hands-panel__categories-trigger--header .hands-panel__categories-trigger__label {
+  text-align: center;
+}
+
+.hands-panel__categories-popover--nested {
+  z-index: 45;
+  max-height: min(14rem, min(45dvh, calc(100dvh - 3rem)));
+  overflow-y: auto;
+}
+
+/* Portaled to document.body so it can overlay rack / Pass UI (not clipped by panel overflow). */
+.hands-panel__categories-popover--nested.hands-panel__categories-popover--portal {
+  position: fixed;
+  z-index: 5000;
+  right: auto;
+  bottom: auto;
+  min-width: 0;
+  box-sizing: border-box;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hands-panel__categories-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.1;
+  padding: 0.24rem 0.48rem 0.24rem 0.52rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--code-bg);
+  color: var(--text-h);
+  cursor: pointer;
+  box-sizing: border-box;
+  min-width: 8.75rem;
+  max-width: min(13rem, 48vw);
+}
+
+.hands-panel__categories-trigger__label {
+  min-width: 0;
+  text-align: left;
+}
+
+.hands-panel__categories-trigger__chevron {
+  flex-shrink: 0;
+  display: block;
+  opacity: 0.88;
+  transition: transform 0.15s ease;
+}
+
+.hands-panel__categories-trigger--open .hands-panel__categories-trigger__chevron {
+  transform: rotate(180deg);
+}
+
+.hands-panel__categories-trigger:hover {
+  border-color: var(--coach-teal-border);
+}
+
+.hands-panel__categories-trigger:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--coach-teal) 55%, transparent);
+  outline-offset: 1px;
+}
+
+.hands-panel__categories-popover {
+  position: absolute;
+  top: calc(100% + 0.2rem);
+  right: 0;
+  z-index: 40;
+  min-width: min(18rem, 85vw);
+  max-width: min(22rem, 92vw);
+  max-height: min(16rem, 42dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.28rem 0.35rem;
+  border-radius: 0.45rem;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+  box-sizing: border-box;
+}
+
+.hands-panel__categories-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.22rem 0.28rem;
+  border-radius: 0.32rem;
+  cursor: pointer;
+  font-size: 0.76rem;
+  line-height: 1.35;
+  color: var(--text-h);
+}
+
+.hands-panel__categories-row:hover {
+  background: color-mix(in srgb, var(--coach-teal) 8%, transparent);
+}
+
+.hands-panel__categories-row--all {
+  font-weight: 600;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  margin-bottom: 0.12rem;
+  padding-bottom: 0.32rem;
+}
+
+.hands-panel__categories-row--after-sections {
+  border-top: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  margin-top: 0.12rem;
+  padding-top: 0.28rem;
+}
+
+/* Hidden native checkbox — keep it accessible but invisible */
+.hands-panel__categories-checkbox {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Toggle track */
+.hands-panel__toggle {
+  flex-shrink: 0;
+  display: inline-block;
+  position: relative;
+  width: 2.05rem;
+  height: 1.1rem;
+  border-radius: 999px;
+  background: #dcdcdc;
+  transition: background 0.18s ease;
+  cursor: pointer;
+  align-self: center;
+}
+
+/* Thumb */
+.hands-panel__toggle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0.12rem;
+  width: 0.84rem;
+  height: 0.84rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  transform: translateY(-50%);
+  transition: left 0.18s ease;
+}
+
+/* Checked: green track, thumb slides right */
+.hands-panel__categories-checkbox:checked + .hands-panel__toggle {
+  background: #40d900;
+}
+.hands-panel__categories-checkbox:checked + .hands-panel__toggle::after {
+  left: calc(100% - 0.12rem - 0.84rem);
+}
+
+/* Disabled state */
+.hands-panel__categories-checkbox:disabled + .hands-panel__toggle {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.hands-panel__categories-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.hands-panel__hint {
+  margin: 0.35rem 0 0.15rem;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: color-mix(in srgb, var(--text) 72%, var(--bg) 28%);
+  max-width: 36rem;
+}
+
+.hands-list {
+  list-style: none;
+  margin: 0.12rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  /* Vertical scroll only; horizontal visible so absolutely positioned tile strips are not clipped. */
+  overflow-y: auto;
+  overflow-x: visible;
+  min-height: 0;
+  flex: 1;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Hands toggle off + Tiles on: hide card line text only; keep section (category) + tile strip. */
+.hands-list--hands-off .hands-list__lead {
+  display: none;
+}
+
+.hands-list__row {
+  display: block;
+  padding: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  overflow: visible;
+}
+
+/* Tiles mode: one column track set on the list; each row subgrids so vertical rules line up. */
+.hands-list.hands-list--tiles-excel {
+  display: grid;
+  --hands-grid-away-w: 3.25rem;
+  --hands-row-pattern-gap: var(--rack-tile-gap);
+  --hands-strip-em: 0.9rem;
+  --hands-preview-tile-w: var(--hands-strip-em);
+  --hands-preview-tile-h: calc(var(--hands-strip-em) * 1.3);
+  --hands-preview-strip-w: calc(
+    14 * var(--hands-preview-tile-w) + 13 * var(--hands-row-pattern-gap)
+  );
+  /* Shared left inset: category label, tile strip, and hand line stay aligned and clear rack-guide ring. */
+  --hands-tiles-cell-pad-x: clamp(0.45rem, 1.65vw, 0.78rem);
+  /*
+   * Col1 = 14-tile strip + horizontal cell padding (grows with slider).
+   * Col2 = at least widest hand line (max-content); extra space goes to middle only.
+   */
+  grid-template-columns:
+    calc(var(--hands-preview-strip-w) + 2 * var(--hands-tiles-cell-pad-x))
+    minmax(max-content, 1fr)
+    var(--hands-grid-away-w);
+  width: max-content;
+  min-width: 100%;
+  box-sizing: border-box;
+  border-radius: 0;
+}
+
+/*
+ * When the category header row is off (Hands+Tiles only, or Tiles only), the middle column used
+ * minmax(max-content, 1fr) + hand min-width: min-content — the middle track could swallow space and
+ * break “tiles away” alignment. Use a shrinkable middle track so column 3 stays the away column.
+ */
+.hands-list.hands-list--tiles-excel.hands-list--tiles-excel-flat {
+  grid-template-columns:
+    calc(var(--hands-preview-strip-w) + 2 * var(--hands-tiles-cell-pad-x))
+    minmax(0, 1fr)
+    var(--hands-grid-away-w);
+}
+
+.hands-list.hands-list--tiles-excel.hands-list--tiles-excel-flat
+  .hands-list__row-hit--with-tiles
+  > .hands-list__cell--hand,
+.hands-list.hands-list--tiles-excel.hands-list--tiles-excel-flat
+  .hands-list__row-hit--with-tiles
+  > .hands-list__cell--hand-placeholder {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.hands-list--tiles-excel .hands-list__row-hit--with-tiles > .hands-list__cell--away {
+  grid-column: -2 / -1;
+  justify-self: stretch;
+}
+
+.hands-list.hands-list--tiles-excel > .hands-list__row {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+}
+
+.hands-list.hands-list--tiles-excel > .hands-list__row > .hands-list__row-hit--with-tiles {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  width: 100%;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+}
+
+.hands-list.hands-list--tiles-excel > .hands-list__row--active > .hands-list__row-hit--with-tiles {
+  border-radius: 0.5rem;
+}
+
+.hands-list__row--active {
+  background: transparent;
+  box-shadow: none;
+}
+
+/*
+ * Hands-only (no Tiles rack-guide): full 1px inset ring on all sides (rounded).
+ * With Tiles on, `.hands-list__row--rack-guide` adds the white guide ring + teal left band.
+ */
+.hands-list__row--active .hands-list__row-hit {
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--coach-teal) 8%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--coach-teal) 44%, rgba(255, 255, 255, 0.22));
+}
+
+.hands-list__row--active .hands-list__row-hit:hover {
+  background: color-mix(in srgb, var(--coach-teal) 10%, transparent);
+}
+
+.hands-list__row--active.hands-list__row--rack-guide .hands-list__row-hit {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+    inset 3px 0 0 0 color-mix(in srgb, var(--coach-teal) 52%, transparent);
+}
+
+.hands-list__row--rack-guide:not(.hands-list__row--active) .hands-list__row-hit {
+  border-radius: 0.5rem;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+.hands-list__row-hit {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0.22rem 0.32rem;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 0;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+/* Tiles on: row uses parent subgrid (see .hands-list--tiles-excel). */
+.hands-list:not(.hands-list--tiles-excel) .hands-list__row-hit--with-tiles {
+  --hands-preview-tile-w: var(--hands-strip-em);
+  --hands-preview-tile-h: calc(var(--hands-strip-em) * 1.3);
+  --hands-preview-strip-w: calc(
+    14 * var(--hands-preview-tile-w) + 13 * var(--hands-row-pattern-gap)
+  );
+  --hands-grid-away-w: 4rem;
+  display: grid;
+  grid-template-columns: minmax(var(--hands-preview-strip-w), 1fr) minmax(0, 1fr) var(--hands-grid-away-w);
+  grid-template-rows: auto;
+  grid-template-areas: 'tiles tiles away';
+  align-items: center;
+  column-gap: 0;
+  --hands-row-pad-block: 0.06rem;
+  --hands-strip-em: 1.18rem;
+  --hands-strip-gap: 0.45rem;
+  padding: 0;
+  width: 100%;
+  min-width: 0;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.hands-list__row-hit--with-tiles {
+  grid-template-rows: auto;
+  grid-template-areas: 'tiles tiles away';
+  align-items: center;
+  column-gap: 0;
+  --hands-row-pad-block: 0.06rem;
+  --hands-strip-gap: 0.45rem;
+}
+
+.hands-list--hands-off .hands-list__row-hit--with-tiles {
+  --hands-row-pad-block: 0.04rem;
+}
+
+.hands-list__row-hit--with-tiles > .hands-list__cell {
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  box-sizing: border-box;
+  padding: 0.2rem 0.35rem;
+}
+
+.hands-list__row-hit--with-tiles.hands-list__row-hit--with-category {
+  grid-template-rows: auto auto;
+  grid-template-areas:
+    'category away'
+    'tiles    awayPad';
+}
+
+.hands-list__row-hit--with-tiles > .hands-list__cell--category {
+  grid-area: category;
+  min-height: 1.35rem;
+  align-self: stretch;
+  /* Stretch both sides of the row to the same height (tallest content wins). */
+  align-items: stretch;
+  display: flex;
+  flex-direction: row;
+  gap: 0.55rem;
+  overflow: hidden;
+}
+
+.hands-list__row-hit--with-tiles > .hands-list__cell--category-clickable {
+  cursor: pointer;
+  border-radius: 0.35rem;
+  transition: background-color 0.12s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.hands-list__row-hit--with-tiles > .hands-list__cell--category-clickable:hover {
+  background: color-mix(in srgb, var(--coach-teal) 6%, transparent);
+}
+
+.hands-list__row-hit--with-tiles > .hands-list__cell--category-clickable:focus-visible {
+  outline: 2px solid var(--coach-teal);
+  outline-offset: -2px;
+}
+
+/* Category label shrinks to content width when paired with inline hand. */
+.hands-list__cell--category .hands-list__with-tiles-category {
+  width: auto;
+  flex-shrink: 0;
+  justify-content: center;
+  text-align: center;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+}
+
+/* Hand name inline to the right of the category label — no wrapping. */
+.hands-list__category-inline-hand {
+  flex: 1 1 0;
+  min-width: 0;
+  align-self: stretch;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0.18rem;
+  white-space: nowrap;
+  overflow: hidden;
+  font-size: clamp(0.93rem, 2.4vw, 1.2rem);
+  line-height: 1.2;
+  color: var(--text-h);
+}
+
+/*
+ * Concealed C: smaller than the hand line; red outline only (no fill).
+ */
+.hands-list__category-inline-hand .hands-list__card-c {
+  /* Pull the badge away from the card line so it reads as metadata, not part of the pattern. */
+  margin-left: 0.45em;
+}
+
+.hands-list__row-hit--with-tiles > .hands-list__cell--category-gap {
+  min-height: 1.35rem;
+  align-self: stretch;
+  align-items: flex-end;
+}
+
+.hands-list__row-hit--with-tiles > .hands-list__cell--category-hand {
+  grid-area: category-hand;
+}
+
+.hands-list__row-hit--with-tiles > .hands-list__cell--category-away {
+  grid-area: category-away;
+}
+
+.hands-list__row-hit--with-tiles > .hands-list__cell--tiles {
+  grid-area: tiles;
+  min-width: 0;
+  max-width: 100%;
+  padding-block: 0.1rem;
+  padding-inline: 0.2rem;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Excel: left inset on category; away and trail stay flush. */
+.hands-list--tiles-excel .hands-list__row-hit--with-tiles > .hands-list__cell--category {
+  padding-left: var(--hands-tiles-cell-pad-x);
+  padding-right: 0;
+}
+
+/* Hand name: centered in col 2 when category row is active, left-aligned otherwise. */
+.hands-list--tiles-excel .hands-list__row-hit--with-category > .hands-list__cell--hand {
+  justify-content: center;
+  padding-inline: 0.2rem;
+}
+
+.hands-list--tiles-excel .hands-list__row-hit--with-tiles > .hands-list__cell--away {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.hands-list:not(.hands-list--tiles-excel) .hands-list__row-hit--with-tiles > .hands-list__cell--tiles {
+  min-width: var(--hands-preview-strip-w);
+  max-width: none;
+  overflow-x: visible;
+}
+
+.hands-list__row-hit--with-tiles > .hands-list__cell--hand {
+  grid-area: hand;
+  min-width: 0;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.hands-list__row-hit--with-tiles > .hands-list__cell--hand-placeholder {
+  grid-area: hand;
+  min-height: var(--hands-preview-tile-h);
+}
+
+.hands-list__row-hit--with-tiles > .hands-list__cell--away {
+  grid-area: away;
+  justify-content: center;
+}
+
+/* Reserves the away column on the tile row when the count is shown on the category row (Hands+Tiles). */
+.hands-list__row-hit--with-tiles > .hands-list__cell--tiles-away-pad {
+  grid-area: awayPad;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  pointer-events: none;
+}
+
+.hands-list__with-tiles-category {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  min-height: auto;
+  white-space: nowrap;
+}
+
+/* Excel grid: no ellipsis; hand line stays one row; columns grow / panel scrolls horizontally. */
+.hands-list--tiles-excel .hands-list__title-row--with-tiles {
+  justify-content: flex-start;
+  width: 100%;
+  min-width: min-content;
+}
+
+.hands-list--tiles-excel .hands-list__title-row--with-tiles .hands-list__meta {
+  white-space: nowrap;
+}
+
+.hands-list--tiles-excel .hands-list__title-row--with-tiles .hands-list__lead {
+  flex: 0 0 auto;
+  min-width: max-content;
+  max-width: none;
+}
+
+.hands-list--tiles-excel .hands-list__title-row--with-tiles .hands-list__title {
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  min-width: max-content;
+  max-width: none;
+  overflow: visible;
+}
+
+.hands-list--tiles-excel .hands-list__title-row--with-tiles .hands-list__title-text {
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  min-width: max-content;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.hands-list__row-text {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  row-gap: 0.04rem;
+  align-items: stretch;
+}
+
+.hands-list__row-text .hands-list__section {
+  margin-bottom: 0;
+  display: flex;
+  align-items: center;
+}
+
+.hands-list--hands-off .hands-list__row-hit {
+  padding-block: 0.12rem;
+}
+
+.hands-list__row-hit:hover {
+  background: color-mix(in srgb, var(--coach-teal) 8%, transparent);
+}
+
+.hands-list__row-hit:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--coach-teal) 55%, transparent);
+  outline-offset: -1px;
+}
+
+.hands-list__title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.hands-list__title-row--with-tiles {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  align-self: stretch;
+}
+
+.hands-list__row:last-child {
+  border-bottom: none;
+}
+
+.hands-list__rank {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--coach-teal);
+  min-width: 1.1rem;
+  flex-shrink: 0;
+}
+
+.hands-list__title-row:not(.hands-list__title-row--with-tiles) .hands-list__lead {
+  flex: 1;
+  min-width: 0;
+}
+
+.hands-list__lead {
+  min-width: 0;
+}
+
+@media (min-width: 24rem) {
+  .hands-list__lead {
+    min-width: min(20rem, 100%);
+  }
+
+  .hands-list__title-row--with-tiles .hands-list__lead {
+    min-width: 0;
+  }
+}
+
+.hands-list__title {
+  font-weight: 600;
+  font-size: 1.06rem;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+}
+
+.hands-list__title-text {
+  min-width: 0;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.hands-list__title-row:not(.hands-list__title-row--with-tiles) .hands-list__title {
+  flex: 1;
+  min-width: 0;
+}
+
+.hands-list__title-row:not(.hands-list__title-row--with-tiles) .hands-list__title-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.hands-list__paren {
+  margin-left: 0.28em;
+  /* em: tracks .hands-list__title font-size (including list scale on suggested hands). */
+  font-size: 0.79em;
+  font-weight: 500;
+  line-height: 1.15;
+  opacity: 0.72;
+  font-style: italic;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+/* NMJL card “C” (concealed) — compact red outline; `em` tracks the category hand line size. */
+.hands-list__card-c {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  margin-left: 0;
+  padding: 0.02em 0.14em 0.04em;
+  border: 1px solid #dc2626;
+  border-radius: 1px;
+  line-height: 1;
+  font-family: var(--font-concealed-c);
+  font-size: 0.68em;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: #dc2626;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.hands-list__tiles-away {
+  font-family: var(--mono);
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: #e0e0e0;
+  white-space: nowrap;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.hands-list--tiles-excel .hands-list__tiles-away {
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+@container (max-width: 44rem) {
+  .hands-list.hands-list--tiles-excel {
+    grid-template-columns:
+      calc(var(--hands-preview-strip-w) + 2 * var(--hands-tiles-cell-pad-x))
+      var(--hands-grid-away-w);
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Compact tiles-only: tile strip spans wide col, away in narrow col. */
+  .hands-list--tiles-excel .hands-list__row-hit--with-tiles {
+    grid-template-areas: 'tiles away';
+  }
+
+  /* Compact with-category: same two-column strip + away pad as wide mode. */
+  .hands-list--tiles-excel .hands-list__row-hit--with-tiles.hands-list__row-hit--with-category {
+    grid-template-areas:
+      'category away'
+      'tiles    awayPad';
+  }
+
+  .hands-list--tiles-excel .hands-list__row-hit--with-tiles > .hands-list__cell--hand,
+  .hands-list--tiles-excel .hands-list__row-hit--with-tiles > .hands-list__cell--hand-placeholder {
+    min-width: 0;
+  }
+
+  .hands-list--tiles-excel .hands-list__title-row--with-tiles .hands-list__lead,
+  .hands-list--tiles-excel .hands-list__title-row--with-tiles .hands-list__title-text {
+    min-width: 0;
+    white-space: normal;
+  }
+}
+
+.hands-list__title-row--with-tiles .hands-list__lead {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.hands-list__title-row--with-tiles .hands-list__title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.hands-list__title-row--with-tiles .hands-list__title-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hands-list__title-row--with-tiles .hands-list__meta {
+  margin: 0;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.hands-list__title-row--with-tiles .hands-list__tiles-away {
+  flex-shrink: 0;
+}
+
+.hands-list__tiles-away--with-tiles-col {
+  align-self: center;
+  text-align: center;
+}
+
+.hands-list__pattern-tiles {
+  flex: 0 0 auto;
+  align-self: stretch;
+  min-width: var(--hands-preview-strip-w);
+  width: var(--hands-preview-strip-w);
+  margin-left: 0;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  overscroll-behavior-x: none;
+  -webkit-overflow-scrolling: touch;
+  /* Tile strip uses 1em = one tile width; match .hands-list__title (1.02rem). */
+  font-size: 1.02rem;
+}
+
+.hands-list__pattern-tiles--tie-stack {
+  align-items: flex-start;
+  align-self: flex-start;
+}
+
+.hands-list__pattern-tiles-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  width: max-content;
+  max-width: 100%;
+}
+
+.hands-list__pattern-tiles-stack-row {
+  border-radius: 0.22rem;
+  padding: 0.08rem 0.12rem;
+  margin: 0 -0.12rem;
+  cursor: pointer;
+}
+
+.hands-list__pattern-tiles-stack-row:hover {
+  background: color-mix(in srgb, var(--coach-teal) 6%, transparent);
+}
+
+.hands-list__pattern-tiles-stack-row--active {
+  background: color-mix(in srgb, var(--coach-teal) 8%, transparent);
+  border-radius: 0.25rem;
+}
+
+.hands-list__row-hit--with-tiles .hands-list__pattern-tiles {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  overscroll-behavior-x: none;
+  -webkit-overflow-scrolling: touch;
+  padding-block: 0;
+  font-size: var(--hands-strip-em);
+  max-width: var(--hands-preview-strip-w);
+  height: 100%;
+  align-self: center;
+}
+
+.hands-list--tiles-excel .hands-list__row-hit--with-tiles .hands-list__pattern-tiles {
+  overflow: visible;
+  max-width: 100%;
+  width: min(100%, max-content);
+  min-width: 0;
+  flex: 0 1 auto;
+  align-self: flex-start;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.hands-list--tiles-excel .hands-list__row-hit--with-tiles .hands-list__pattern-tiles-grid {
+  align-self: flex-start;
+}
+
+.hands-list__row-hit--with-tiles .hands-list__title-row--with-tiles .hands-list__title-text {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.hands-list__row-hit--with-tiles .hands-list__tiles-away--with-tiles-col {
+  align-self: center;
+}
+
+.hands-list__row-hit--with-tiles .hands-list__title-row--with-tiles {
+  align-self: center;
+  height: auto;
+  min-height: 0;
+  width: 100%;
+}
+
+.hands-list__pattern-tiles-grid {
+  /* One row of 14 — same aspect as rack (--hand-rack-tile-h uses ×1.3 of width term). */
+  --hands-row-pattern-cols: 14;
+  --hands-row-pattern-gap: var(--rack-tile-gap);
+  font-size: inherit;
+  display: grid;
+  grid-template-columns: repeat(var(--hands-row-pattern-cols), var(--hands-preview-tile-w));
+  grid-auto-rows: var(--hands-preview-tile-h);
+  gap: var(--hands-row-pattern-gap);
+  width: max-content;
+  flex-shrink: 0;
+}
+
+.hands-list__row-hit--with-tiles .hands-list__pattern-tiles-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--hands-row-pattern-cols), var(--hands-preview-tile-w));
+  grid-auto-rows: var(--hands-preview-tile-h);
+  align-items: center;
+  gap: var(--hands-row-pattern-gap);
+  width: max-content;
+  min-height: var(--hands-preview-tile-h);
+  align-self: center;
+}
+
+.hands-list__pattern-tiles-grid .tile-face {
+  /* Same corner proportion as rack faces (~0.35rem on ~3.05rem width). */
+  border-radius: calc(0.116 * var(--hands-preview-tile-w));
+}
+
+.hands-list__pattern-tiles-grid .tile-face__glyph {
+  font-size: calc(0.37 * var(--hands-preview-tile-w) * 1.5);
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.hands-list__row-hit--with-tiles .hands-list__pattern-tiles-grid .tile-face {
+  box-sizing: border-box;
+  height: 100%;
+  width: 100%;
+  max-width: none;
+  border-radius: clamp(0.1rem, calc(0.12 * var(--hands-strip-em)), 0.35rem);
+}
+
+.hands-list__row-hit--with-tiles .hands-list__pattern-tiles-grid .tile-face__glyph {
+  /* Avoid container queries here (absolute + size container is fragile across engines). */
+  font-size: clamp(0.78rem, calc(0.37 * var(--hands-strip-em) * 10 / 13 * 1.5), 1.68rem);
+}
+
+.hands-list__pattern-tile-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell {
+  box-sizing: border-box;
+  position: relative;
+  width: var(--hands-preview-tile-w);
+  height: var(--hands-preview-tile-h);
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+}
+
+/* Match rack `sortable-tile-wrap--suggest-*` for the focused suggested line. */
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-best .tile-face {
+  border-radius: clamp(0.1rem, calc(0.12 * var(--hands-strip-em)), 0.35rem);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
+}
+
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim .tile-face {
+  opacity: 0.44;
+  transition: opacity 0.16s ease;
+}
+
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker .tile-face {
+  border-radius: clamp(0.1rem, calc(0.12 * var(--hands-strip-em)), 0.35rem);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
+}
+
+.hands-list__pattern-joker-mark {
+  position: absolute;
+  /* Sit slightly below the tile top so “JOKER” clears the inset highlight ring on .tile-face */
+  top: 0.38em;
+  left: 50%;
+  transform: translateX(-50%);
+  box-sizing: border-box;
+  height: 1.05em;
+  min-width: 0;
+  min-height: 0;
+  padding: 0 0.28em;
+  border: 0;
+  background: transparent;
+  color: #000;
+  font-size: clamp(0.34rem, calc(0.24 * var(--hands-strip-em)), 0.52rem);
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+.hands-list__pressure {
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.hands-list__pressure--comfortable {
+  color: var(--coach-teal);
+}
+
+.hands-list__pressure--tight {
+  color: var(--text-h);
+}
+
+.hands-list__pressure--desperate {
+  color: var(--accent);
+}
+
+.hands-list__meta {
+  margin: 0.15rem 0 0;
+  font-size: 0.76rem;
+  opacity: 0.88;
+}
+
+.hands-list__section {
+  display: block;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.62rem;
+  color: color-mix(in srgb, var(--text) 42%, var(--bg) 58%);
+  margin-bottom: 0;
+  line-height: 1.05;
+}
+
+.hands-list__section-num {
+  font-weight: 400;
+  letter-spacing: 0;
+  opacity: 0.75;
+  /* Flex row: explicit gap before “#n” so it never reads as SECTION#n */
+  margin-left: 0.35em;
+}
+
+/* Suggested-hands list typography; tile metrics follow list column width (see @container below). */
+.hands-panel__content .hands-list__row-hit {
+  padding-block: 0.22rem;
+  padding-inline: clamp(0.45rem, 1.65vw, 0.78rem);
+}
+
+.hands-panel__content .hands-list--tiles-excel .hands-list__row-hit,
+.hands-panel__content .hands-list--tiles-excel .hands-list__row-hit--with-tiles {
+  padding: 0;
+  column-gap: 0;
+}
+
+/*
+ * Suggested-hands excel grid: two parent tracks (strip + away on row 1, category+tiles below).
+ * Keeps “tiles away” in the narrow column beside the strip instead of a flexible middle track.
+ */
+.hands-panel__content .hands-list.hands-list--tiles-excel {
+  grid-template-columns: minmax(0, 1fr) var(--hands-grid-away-w);
+  width: 100%;
+  min-width: 0;
+}
+
+/*
+ * Fluid 14-tile strip: derive tile width from the scroll list column so the rack fills the cell
+ * (no separate zoom control).
+ */
+@container suggest-hands-panel (min-width: 0px) {
+  .hands-panel__list-column .hands-list.hands-list--tiles-excel {
+    --hands-tiles-cell-pad-x: clamp(0.32rem, 1.2vw, 0.62rem);
+    --hands-strip-col: calc(100cqi - var(--hands-grid-away-w));
+    /* Match ~0.2rem horizontal padding on `.hands-list__cell--tiles`. */
+    --hands-strip-inner: calc(var(--hands-strip-col) - 0.4rem);
+    --hands-preview-tile-w: max(
+      0.42rem,
+      calc((var(--hands-strip-inner) - 13 * var(--hands-row-pattern-gap)) / 14)
+    );
+    --hands-preview-tile-h: calc(var(--hands-preview-tile-w) * 1.3);
+    --hands-strip-em: var(--hands-preview-tile-w);
+    --hands-preview-strip-w: calc(
+      14 * var(--hands-preview-tile-w) + 13 * var(--hands-row-pattern-gap)
+    );
+  }
+}
+
+/* Row `grid-template-areas` is set inline from toggles (Categories / Tiles / Hands). */
+
+.hands-panel__content
+  .hands-list--tiles-excel
+  .hands-list__row-hit--with-tiles.hands-list__row-hit--with-category
+  > .hands-list__cell--category-hand,
+.hands-panel__content
+  .hands-list--tiles-excel
+  .hands-list__row-hit--with-tiles.hands-list__row-hit--with-category
+  > .hands-list__cell--category-away {
+  display: none;
+}
+
+.hands-panel__content .hands-list--tiles-excel .hands-list__row-hit--with-tiles > .hands-list__cell--category {
+  min-height: 0;
+  padding-block: 0.05rem;
+  align-items: stretch;
+}
+
+/*
+ * Strip-relative center for card hands: `1fr | auto | 1fr` so the hand column axis matches every row
+ * (category length does not shift the hand). Category stays in the left track.
+ */
+.hands-panel__content .hands-list--tiles-excel .hands-list__row-hit--with-category > .hands-list__cell--category {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 0.45rem;
+  padding-inline: var(--hands-tiles-cell-pad-x);
+}
+
+.hands-panel__content
+  .hands-list--tiles-excel
+  .hands-list__row-hit--with-category
+  > .hands-list__cell--category
+  .hands-list__with-tiles-category {
+  grid-column: 1;
+  justify-self: start;
+  text-align: left;
+  justify-content: flex-start;
+}
+
+.hands-panel__content .hands-list--tiles-excel .hands-list__with-tiles-category {
+  min-height: 0;
+  font-size: clamp(0.93rem, 2.4vw, 1.2rem);
+  font-weight: 500;
+  line-height: 1.18;
+  letter-spacing: 0.04em;
+  /* Same ink as `.hands-list__paren` (hand parenthetical): --text-h at 0.72 opacity. */
+  color: var(--text-h);
+  opacity: 0.72;
+}
+
+.hands-panel__content .hands-list--tiles-excel .hands-list__with-tiles-category .hands-list__section-num {
+  font-weight: 500;
+  opacity: 1;
+}
+
+.hands-panel__content .hands-list--tiles-excel .hands-list__row-hit--with-tiles > .hands-list__cell--tiles {
+  min-width: 0;
+  width: 100%;
+}
+
+.hands-panel__content
+  .hands-list--tiles-excel
+  .hands-list__row-hit--with-tiles
+  .hands-list__pattern-tiles {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  justify-content: flex-start;
+}
+
+.hands-panel__content .hands-list--tiles-excel .hands-list__row-hit--with-tiles > .hands-list__cell--away {
+  justify-content: center;
+  align-items: center;
+}
+
+.hands-panel__content .hands-list--tiles-excel .hands-list__row-hit--with-tiles > .hands-list__cell--hand-trail {
+  grid-area: hand-trail;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+}
+
+.hands-panel__content .hands-list--tiles-excel .hands-list__tiles-away {
+  text-align: center;
+}
+
+.hands-panel__content .hands-list:not(.hands-list--tiles-excel) .hands-list__row-hit--with-tiles {
+  --hands-row-pad-block: 0.06rem;
+  --hands-strip-em: 1.18rem;
+  padding-block: var(--hands-row-pad-block);
+  column-gap: var(--hands-strip-gap);
+}
+
+.hands-panel__content .hands-list--hands-off.hands-list--tiles-excel .hands-list__row-hit {
+  padding-block: 0.12rem;
+}
+
+.hands-panel__content .hands-list--hands-off.hands-list--tiles-excel .hands-list__row-hit--with-tiles {
+  --hands-row-pad-block: 0.04rem;
+  padding-block: var(--hands-row-pad-block);
+}
+
+.hands-panel__content .hands-list__rank {
+  font-size: 0.72rem;
+  min-width: 1.1rem;
+}
+
+.hands-panel__content .hands-list__title {
+  font-size: 1.06rem;
+}
+
+/* Card hand + concealed C — tracks category row size. */
+.hands-panel__content .hands-list__category-inline-hand {
+  font-size: clamp(0.93rem, 2.4vw, 1.2rem);
+  gap: 0.18rem;
+}
+
+.hands-panel__content
+  .hands-list--tiles-excel
+  .hands-list__row-hit--with-category
+  .hands-list__category-inline-hand {
+  grid-column: 2;
+  justify-self: center;
+  flex: none;
+  min-width: 0;
+  max-width: 100%;
+  justify-content: center;
+}
+
+.hands-panel__content .hands-list__tiles-away {
+  font-size: 1.02rem;
+}
+
+.hands-panel__content .hands-list__pattern-tiles {
+  font-size: 1.02rem;
+}
+
+.hands-panel__content .hands-list__row-text {
+  row-gap: 0.04rem;
+}
+
+.hands-panel__content .hands-list__row-hit--with-tiles .hands-list__pattern-tiles {
+  font-size: var(--hands-strip-em);
+  max-width: none;
+}
+
+.hands-panel__content .hands-list__pressure {
+  font-size: 0.66rem;
+}
+
+.hands-panel__content .hands-list__meta {
+  font-size: 0.76rem;
+}
+
+.hands-panel__content .hands-list__section {
+  font-size: 0.62rem;
+}
+
+/* Split 14 columns across the full tiles cell; height follows tile aspect ratio. */
+.hands-panel__list-column .hands-list__pattern-tiles .hands-list__pattern-tiles-grid {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  grid-template-columns: repeat(14, minmax(0, 1fr));
+}
+
+.hands-panel__list-column .hands-list__pattern-tiles .hands-list__pattern-tile-cell {
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  aspect-ratio: 10 / 13;
+  align-self: center;
+}
+
+.hands-panel__list-column .hands-list__pattern-tiles-stack {
+  width: 100%;
+  max-width: 100%;
+  align-items: stretch;
+}
+
+
+
+
+.exposure-rack {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--rack-tile-gap);
+  padding-left: var(--rack-panel-inset);
+  padding-right: var(--rack-panel-inset);
+  margin-bottom: 0.1rem;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+/* Charleston + inline pass: one row height = hand tile height (no dot rail). */
+.exposure-rack--charleston-pass {
+  --exposure-slot-h: var(--rack-tile-h);
+}
+
+.exposure-rack__slot {
+  flex-shrink: 0;
+  position: relative;
+  width: var(--rack-tile-w);
+  min-width: var(--rack-tile-w);
+  max-width: var(--rack-tile-w);
+  height: var(--exposure-slot-h);
+  box-sizing: border-box;
+  padding-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* Inline call-action buttons (Kong / Quint / Done) — tile-face sized, inside a normal slot. */
+.exposure-rack__call-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--rack-tile-w);
+  height: var(--rack-tile-h);
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--text-h) 28%, var(--border));
+  border-radius: 0.38rem;
+  background: color-mix(in srgb, var(--border) 14%, transparent);
+  color: var(--text-h);
+  font: inherit;
+  font-family: 'Figtree', var(--sans);
+  font-size: 0.86rem;
+  line-height: 1.05;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--btn-letter-spacing);
+  cursor: pointer;
+  transition: background 0.13s ease, border-color 0.13s ease, color 0.13s ease;
+}
+
+.exposure-rack__call-action-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--border) 28%, transparent);
+  border-color: color-mix(in srgb, var(--text-h) 48%, var(--border));
+}
+
+.exposure-rack__call-action-btn--active {
+  border-color: color-mix(in srgb, #f59e0b 72%, var(--border));
+  color: #f59e0b;
+  background: color-mix(in srgb, #f59e0b 10%, transparent);
+}
+
+.exposure-rack__call-action-btn--done:not(:disabled) {
+  border-color: color-mix(in srgb, #22c55e 68%, var(--border));
+  color: #22c55e;
+  background: color-mix(in srgb, #22c55e 10%, transparent);
+}
+
+.exposure-rack__call-action-btn:disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+}
+
+.exposure-rack__slot--suggest-dim .tile-face {
+  opacity: 0.44;
+  transition: opacity 0.16s ease;
+}
+
+.exposure-rack__slot--suggest-best .tile-face,
+.exposure-rack__slot--called .tile-face {
+  border-radius: 0.35rem;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
+}
+
+/* Staged call tiles that can be clicked/dragged back to the hand */
+.exposure-rack__slot--staged-returnable {
+  cursor: grab;
+}
+.exposure-rack__slot--staged-returnable:hover .tile-face {
+  box-shadow: inset 0 0 0 2px rgba(245, 158, 11, 0.7);
+  border-radius: 0.35rem;
+}
+.exposure-rack__slot--dragging {
+  opacity: 0.4;
+}
+
+.exposure-rack--charleston-pass .exposure-rack__slot {
+  padding-bottom: 0;
+}
+
+/* East main game: match Charleston exposure strip height */
+.panel--hand .exposure-rack:not(.exposure-rack--charleston-pass) {
+  align-items: stretch;
+}
+
+.panel--hand .exposure-rack:not(.exposure-rack--charleston-pass) .exposure-rack__slot {
+  height: auto;
+  min-height: var(--exposure-slot-h);
+  padding-bottom: 0;
+}
+
+/* Meld boundaries: rely on parent `gap: var(--player-rack-face-gap)` (same as `.hand-row`) — no extra margin. */
+.exposure-rack__slot--meld-start {
+  margin-left: 0;
+}
+
+.exposure-rack__slot--empty {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+}
+
+.exposure-rack__slot--empty::before {
+  content: '';
+  display: block;
+  width: var(--rack-tile-w);
+  height: var(--rack-tile-h);
+  border-radius: 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--text-h) 35%, var(--border));
+  background: color-mix(in srgb, #000 6%, var(--bg-elevated));
+  flex: 0 0 auto;
+}
+
+/* Replaced first empty cell: wrapper must not add an extra flex item */
+.exposure-rack__first-empty-override {
+  display: contents;
+}
+
+/* Training: when dragging a hand tile within range, first empty cell shows Call affordance (teal, like pass / discard) */
+.app .panel--hand .exposure-rack__call-initiate-target--near.exposure-rack__slot--empty::before {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.app .panel--hand .exposure-rack__call-initiate-target--near {
+  border-radius: 0.35rem;
+  /* Slightly brighter edge than the fill, without a heavy ring */
+  border: 1px solid color-mix(in srgb, var(--coach-teal) 32%, var(--border) 40%, var(--bg-elevated) 28%);
+  background: color-mix(in srgb, var(--coach-teal-bg) 80%, var(--bg-elevated) 20%);
+  transition: background 0.15s ease, border-color 0.15s ease;
+  box-sizing: border-box;
+}
+
+.app .panel--hand .exposure-rack__call-initiate-target--near.exposure-rack__call-initiate-target--over {
+  background: color-mix(in srgb, var(--coach-teal) 28%, var(--bg-elevated));
+  /* Clearer ring on hover / drop, still softer than 50%+ teal */
+  border-color: color-mix(in srgb, var(--coach-teal) 40%, var(--border) 34%, var(--bg-elevated) 26%);
+}
+
+/* Bot-turn incoming discard — same box chrome as call-initiate (no extra ring on the tile) */
+.panel--hand .exposure-rack__slot--incoming-discard {
+  justify-content: center;
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--coach-teal) 32%, var(--border) 40%, var(--bg-elevated) 28%);
+  background: color-mix(in srgb, var(--coach-teal-bg) 80%, var(--bg-elevated) 20%);
+  border-radius: 0.38rem;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.exposure-rack__slot--incoming-discard {
+  justify-content: center;
+}
+
+/* After drag-to-Call, the called tile “snaps” from the release point into the exposure slot */
+.exposure-rack__call-magnet-anim {
+  will-change: transform;
+  z-index: 4;
+  transform: translate(var(--call-magnet-tx, 0px), var(--call-magnet-ty, 0px));
+  transition: transform 0.42s cubic-bezier(0.2, 0.82, 0.18, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .exposure-rack__call-magnet-anim {
+    transition: transform 0.1s ease;
+  }
+}
+
+/* Bot-turn last slot: inbound fly-in from discarding seat (same 220% / 0.3s / ease-in as Charleston pass fly-out). */
+.exposure-rack__incoming-discard-drag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+}
+
+.exposure-rack__incoming-discard-drag:active {
+  cursor: grabbing;
+}
+
+.exposure-rack__incoming-discard-fly {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes exposure-incoming-discard-fly-in-right {
+  from {
+    transform: translateX(220%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes exposure-incoming-discard-fly-in-left {
+  from {
+    transform: translateX(-220%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes exposure-incoming-discard-fly-in-across {
+  from {
+    transform: translateY(-220%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.exposure-rack__incoming-discard-fly--from-right {
+  animation: exposure-incoming-discard-fly-in-right 0.3s ease-in both;
+}
+
+.exposure-rack__incoming-discard-fly--from-left {
+  animation: exposure-incoming-discard-fly-in-left 0.3s ease-in both;
+}
+
+.exposure-rack__incoming-discard-fly--from-across {
+  animation: exposure-incoming-discard-fly-in-across 0.3s ease-in both;
+}
+
+.exposure-rack__slot--seat-marker {
+  border: none;
+  background: transparent;
+  justify-content: center;
+}
+
+.exposure-rack__seat-marker {
+  font-family: 'Figtree', var(--sans);
+  color: color-mix(in srgb, var(--text-muted) 82%, #d1d5db 18%);
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+
+/* Slot 14: East discard staging (same column as incoming bot discard when not staging). */
+.exposure-rack__slot--east-discard-slot {
+  justify-content: center;
+}
+
+.exposure-rack__slot--east-discard-slot .east-discard-staging--inline {
+  margin-inline: auto;
+}
+
+/* Inline discard slot: same border + fill as call-initiate / pass-tail */
+.exposure-rack__slot--east-discard-slot .east-discard-staging.east-discard-staging--inline {
+  border: 1px solid color-mix(in srgb, var(--coach-teal) 32%, var(--border) 40%, var(--bg-elevated) 28%);
+  border-radius: 0.38rem;
+  background: color-mix(in srgb, var(--coach-teal-bg) 80%, var(--bg-elevated) 20%);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.exposure-rack__slot--east-discard-slot .east-discard-staging.east-discard-staging--inline:has(.east-discard-staging__tile) {
+  outline: none;
+  background: color-mix(in srgb, var(--coach-teal-bg) 72%, var(--bg-elevated) 28%);
+}
+
+.exposure-rack__slot--east-discard-slot
+  .east-discard-staging.east-discard-staging--inline.east-discard-staging--over:not(:has(.east-discard-staging__tile)) {
+  outline: none;
+  background: color-mix(in srgb, var(--coach-teal) 28%, var(--bg-elevated));
+  border-color: color-mix(in srgb, var(--coach-teal) 40%, var(--border) 34%, var(--bg-elevated) 26%);
+}
+
+.exposure-rack__slot--east-discard-slot
+  .east-discard-staging.east-discard-staging--inline.east-discard-staging--over:has(.east-discard-staging__tile) {
+  box-shadow: none;
+  background: color-mix(in srgb, var(--coach-teal) 28%, var(--bg-elevated));
+  border-color: color-mix(in srgb, var(--coach-teal) 40%, var(--border) 34%, var(--bg-elevated) 26%);
+}
+
+/* Hovering the staged tile should be visibly brighter than the base green slot. */
+.exposure-rack__slot--east-discard-slot
+  .east-discard-staging.east-discard-staging--inline:has(.east-discard-staging__tile:hover) {
+  background: color-mix(in srgb, var(--coach-teal-bg) 92%, var(--bg-elevated) 8%);
+  border-color: color-mix(in srgb, var(--coach-teal) 40%, var(--border) 34%, var(--bg-elevated) 26%);
+}
+
+/* Pass tail cells use the same geometry as the rest of the Charleston exposure row */
+.exposure-rack__slot--pass-tail {
+  padding-bottom: 0;
+}
+
+/* Pass-tail slots are transparent — the unified box on pass-strip-tail__inner provides the bg */
+.exposure-rack--charleston-pass .exposure-rack__slot--pass-tail.exposure-rack__slot--empty::before {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.exposure-rack--charleston-pass .exposure-rack__slot--pass-tail.pass-strip__tile-wrap {
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+}
+
+.exposure-rack--charleston-pass .exposure-rack__slot--pass-tail.pass-strip__tile-wrap--dragging {
+  background: transparent;
+}
+
+.exposure-rack__slot.pass-strip__tile-wrap {
+  padding-bottom: 0;
+  justify-content: center;
+}
+
+/* ── Joined tray: player exposure rack (non-charleston) ── */
+.panel--hand .exposure-rack:not(.exposure-rack--charleston-pass) {
+  background: var(--window-inner-surface);
+  border: 1px solid var(--window-border);
+  border-radius: 0.38rem;
+}
+
+/* Keep Charleston exposure row in the same visible tray container. */
+.panel--hand .exposure-rack.exposure-rack--charleston-pass {
+  background: var(--window-inner-surface);
+  border: 1px solid var(--window-border);
+  border-radius: 0.38rem;
+  padding-top: var(--rack-tray-inset-block);
+  padding-bottom: var(--rack-tray-inset-block);
+  justify-content: flex-start;
+  /* Same inter-face gap as `.hand-row` (cols 1–14 share one grid). */
+  gap: var(--player-rack-face-gap);
+  /* Align row origin with `.hand-row` (padding +1px, margin-left -2px on the hand = −1px vs base tray inset). */
+  padding-inline: calc(var(--rack-tray-inset-inline) - 1px);
+}
+
+.panel--hand .exposure-rack.exposure-rack--charleston-pass .exposure-rack__slot--east-discard-slot .tile-face,
+.panel--hand .exposure-rack.exposure-rack--charleston-pass .exposure-rack__slot--incoming-discard .tile-face {
+  outline: none;
+}
+
+/* ── Joined tray: bot exposures ── */
+.panel--bot-exposures .exposure-rack {
+  background: transparent;
+  border-radius: 0;
+  position: relative;
+  z-index: 2;
+}
+
+/*
+ * Player exposure row + Bot Exposures: dark empty wells, no border.
+ * Charleston pass-tail empties and pass-strip tile wraps keep bordered styling (see rules above).
+ * East discard staging slot unchanged (bordered .east-discard-staging--inline).
+ */
+.panel--hand .exposure-rack .exposure-rack__slot--empty:not(.exposure-rack__slot--pass-tail)::before,
+.panel--bot-exposures .exposure-rack .exposure-rack__slot--empty::before {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.panel--hand .exposure-rack .tile-face,
+.panel--bot-exposures .exposure-rack .tile-face {
+  border: none;
+}
+
+/* Match bot exposure tiles' cleaner edge without changing tile size. */
+.panel--hand .hand-row .tile-face,
+.panel--discard-tracker .discard-pile .tile-face {
+  border: none;
+}
+
+/* Match bot exposure inter-tile spacing in the exact main-rack / discard / player-exposure rows. */
+.panel--hand .panel-hand-rack__hand-tray .hand-row,
+.panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass),
+.panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass) .exposure-rack__meld-drop {
+  gap: var(--player-rack-face-gap);
+}
+
+/* Pass-tail tiles keep their bordered look so Charleston still reads as a distinct strip. */
+.panel--hand .exposure-rack--charleston-pass .exposure-rack__slot--pass-tail .tile-face {
+  border: 1px solid color-mix(in srgb, #000 22%, transparent);
+}
+
+.discard-pile-drop-zone {
+  position: relative;
+}
+
+.east-discard-staging {
+  margin-bottom: 0.85rem;
+  min-height: 4.1rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.38rem;
+  border: 1px solid color-mix(in srgb, var(--coach-teal) 32%, var(--border) 40%, var(--bg-elevated) 28%);
+  background: color-mix(in srgb, var(--coach-teal-bg) 80%, var(--bg-elevated) 20%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.east-discard-staging--inline {
+  margin-bottom: 0;
+  min-height: var(--rack-tile-h);
+  max-height: var(--rack-tile-h);
+  min-width: var(--rack-tile-w);
+  max-width: var(--rack-tile-w);
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.east-discard-staging--inline .east-discard-staging__placeholder {
+  display: block;
+  width: 100%;
+  min-height: 1.25rem;
+}
+
+.east-discard-staging--over {
+  background: color-mix(in srgb, var(--coach-teal) 28%, var(--bg-elevated));
+  border-color: color-mix(in srgb, var(--coach-teal) 40%, var(--border) 34%, var(--bg-elevated) 26%);
+}
+
+.east-discard-staging__placeholder {
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--text) 72%, transparent);
+  text-align: center;
+  line-height: 1.35;
+  user-select: none;
+}
+
+.east-discard-staging__tile {
+  cursor: grab;
+  touch-action: none;
+}
+
+.east-discard-staging__tile:active {
+  cursor: grabbing;
+}
+
+.discard-pile__actions {
+  margin-top: 0.65rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+}
+
+/* ── Bot list updated for exposure racks ── */
+
+.bot-list__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+
+/* ── Discard pile ── */
+
+.discard-pile {
+  display: grid;
+  grid-template-columns: repeat(15, var(--rack-tile-w));
+  grid-auto-rows: var(--rack-tile-h);
+  gap: var(--rack-tile-gap);
+  margin-top: 0;
+  align-content: start;
+}
+
+.discard-entry {
+  position: relative;
+}
+
+.discard-entry--claimable .tile-face {
+  outline: 3px solid #f59e0b;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px color-mix(in srgb, #f59e0b 20%, transparent);
+}
+
+.discard-entry--stale .tile-face {
+  opacity: 0.35;
+}
+
+/* ── Charleston validation modal ── */
+
+.charleston-error-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: color-mix(in srgb, #0a0a0a 72%, transparent);
+  backdrop-filter: blur(3px);
+  overflow-y: auto;
+}
+
+.charleston-error-dialog {
+  width: 100%;
+  max-width: min(36rem, calc(100vw - 2rem));
+  padding: 1.1rem 1.25rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  box-shadow:
+    var(--shadow),
+    0 0 0 1px color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+.charleston-error-dialog__message {
+  margin: 0 0 1rem;
+  font-size: 0.98rem;
+  line-height: 1.4;
+  color: var(--text-h);
+}
+
+.charleston-error-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.charleston-error-dialog__actions--center {
+  justify-content: center;
+  margin-top: 0.25rem;
+}
+
+.charleston-error-dialog__actions--spread {
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  gap: 0.75rem;
+}
+
+/* Swap (and similar): felt + gold border — matches coach teal + pass-box gold accents */
+.charleston-error-dialog--table {
+  position: relative;
+  max-width: min(40rem, calc(100vw - 2rem));
+  padding: 1.35rem 1.5rem 1.15rem;
+  border-radius: 0.45rem;
+  border: 3px solid color-mix(in srgb, #d4a012 78%, #f5e6a3 22%);
+  background: color-mix(in srgb, var(--coach-teal) 52%, #0c2220 48%);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #000 35%, transparent),
+    var(--shadow);
+}
+
+.charleston-error-dialog--table .charleston-error-dialog__title {
+  margin: 0 1.75rem 0.65rem 0;
+  font-family: var(--sans);
+  font-size: 1.12rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  color: color-mix(in srgb, #f5e6a3 88%, #d4a012 12%);
+  letter-spacing: 0.02em;
+}
+
+.charleston-error-dialog--table .charleston-error-dialog__body {
+  margin: 0 0 1.1rem;
+  font-size: 0.95rem;
+  line-height: 1.48;
+  text-align: center;
+  color: #f7f4ef;
+}
+
+.charleston-error-dialog__dismiss {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  margin: 0;
+  padding: 0.15rem 0.45rem;
+  border: none;
+  border-radius: 0.25rem;
+  font: inherit;
+  font-size: 1.35rem;
+  line-height: 1;
+  font-weight: 600;
+  color: color-mix(in srgb, #f5e6a3 90%, #d4a012 10%);
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.92;
+}
+
+.charleston-error-dialog__dismiss:hover {
+  opacity: 1;
+}
+
+/* Same pill weight as rack “Sort” / “Mah Jongg” — not accent Pass red */
+.game-blocking-dialog__ok-btn {
+  min-width: 7.5rem;
+  padding: 0.42rem 1.35rem;
+  border-radius: 999px;
+  font-weight: 600;
+  border: 1px solid color-mix(in srgb, #d4a012 38%, #1a1a1a 62%);
+  background: color-mix(in srgb, #ebe4d8 88%, #c4bfb6 12%);
+  color: #1e1c18;
+}
+
+.game-blocking-dialog__ok-btn:hover {
+  box-shadow: 0 2px 10px color-mix(in srgb, #000 22%, transparent);
+}
+
+/* Illegal Mah Jongg on discard — wide felt shell + white “card” panel */
+.charleston-error-dialog--mahjong-blocked {
+  max-width: min(48rem, calc(100vw - 1.25rem));
+  width: 100%;
+  padding: 1.25rem 1.35rem 1rem;
+}
+
+.charleston-error-dialog__title--mj {
+  font-size: clamp(1.02rem, 2.8vw, 1.28rem);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.75rem;
+}
+
+.mahjong-blocked-modal__scroll {
+  max-height: min(72dvh, 34rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.25rem;
+  margin-bottom: 0.5rem;
+  overscroll-behavior: contain;
+}
+
+.mahjong-blocked-modal__lead {
+  margin: 0 0 0.85rem;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: #f0ece6;
+  text-align: center;
+}
+
+.mahjong-blocked-modal__select-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.mahjong-blocked-modal__field {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.25rem;
+  min-width: min(17rem, 100%);
+}
+
+.mahjong-blocked-modal__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: color-mix(in srgb, #fff 88%, #d4a012 12%);
+}
+
+.mahjong-blocked-modal__select {
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 0.32rem 0.5rem;
+  border-radius: 0.35rem;
+  border: 2px solid color-mix(in srgb, #2563eb 55%, #1e3a5f 45%);
+  background: #f8fafc;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.mahjong-blocked-modal__select:focus {
+  outline: 2px solid color-mix(in srgb, #f5e6a3 70%, transparent);
+  outline-offset: 2px;
+}
+
+.mahjong-blocked-modal__white-panel {
+  background: #fdfcfa;
+  color: #1a1816;
+  border-radius: 0.4rem;
+  padding: 0.75rem 0.85rem 0.9rem;
+  margin-bottom: 1rem;
+  border: 1px solid color-mix(in srgb, #000 12%, transparent);
+}
+
+.mahjong-blocked-modal__line-summary {
+  margin: 0 0 0.45rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.mahjong-blocked-modal__pattern-title {
+  margin: 0 0 0.65rem;
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+
+.mahjong-blocked-modal__c-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.28em;
+  padding: 0.02em 0.14em 0.04em;
+  border: 1px solid #dc2626;
+  border-radius: 1px;
+  line-height: 1;
+  font-family: var(--font-concealed-c);
+  font-size: 0.72em;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: #dc2626;
+  vertical-align: baseline;
+}
+
+.mahjong-blocked-modal__unused-label {
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: #3d3834;
+}
+
+.mahjong-blocked-modal__tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: flex-end;
+}
+
+.mahjong-blocked-modal__tile-wrap {
+  width: 2.1rem;
+  height: 2.78rem;
+}
+
+.mahjong-blocked-modal__tile-wrap .tile-face {
+  width: 100%;
+  height: 100%;
+  font-size: 0.72rem;
+}
+
+.mahjong-blocked-modal__unused-empty {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.42;
+  color: #4a433c;
+}
+
+.mahjong-blocked-modal__league {
+  margin: 0 0 0.85rem;
+  font-size: 0.88rem;
+  text-align: center;
+  color: color-mix(in srgb, #fff 92%, transparent);
+}
+
+.mahjong-blocked-modal__rules-heading {
+  margin: 0 0 0.4rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #fefce8;
+}
+
+.mahjong-blocked-modal__rules-list {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: 0.86rem;
+  line-height: 1.42;
+  color: #f7f4ef;
+}
+
+.mahjong-blocked-modal__rules-list li + li {
+  margin-top: 0.28rem;
+}
+
+/* ── Dead Hand overlay ── */
+
+.dead-hand-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, #0a0a0a 72%, transparent);
+  backdrop-filter: blur(3px);
+}
+
+.dead-hand-dialog {
+  width: 100%;
+  max-width: min(38rem, calc(100vw - 2rem));
+  padding: 1.5rem 1.75rem 1.25rem;
+  border-radius: 0.75rem;
+  background: #1e1210;
+  border: 2px solid #c0392b;
+  box-shadow:
+    0 0 0 1px rgba(192, 57, 43, 0.3),
+    0 12px 40px rgba(0, 0, 0, 0.7);
+  text-align: center;
+}
+
+.dead-hand-dialog__title {
+  margin: 0 0 0.75rem;
+  font-family: var(--sans);
+  font-size: clamp(1.3rem, 4vw, 1.7rem);
+  font-weight: 800;
+  color: #e74c3c;
+  letter-spacing: 0.03em;
+}
+
+.dead-hand-dialog__body {
+  margin: 0 0 1.4rem;
+  font-size: 0.97rem;
+  line-height: 1.55;
+  color: #f0ddd8;
+}
+
+.dead-hand-dialog__actions {
+  display: flex;
+  justify-content: center;
+}
+
+/* ── Wall Game overlay ── */
+.wall-game-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, #0a0a0a 72%, transparent);
+  backdrop-filter: blur(3px);
+}
+
+.wall-game-dialog {
+  width: 100%;
+  max-width: min(42rem, calc(100vw - 2rem));
+  padding: 2rem 1.75rem 1.5rem;
+  border-radius: 0.75rem;
+  background: var(--window-surface, #16202e);
+  border: 2px solid var(--border, #334);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
+  text-align: center;
+}
+
+.wall-game-dialog__intro {
+  margin: 0 0 1rem;
+  max-width: 36rem;
+  margin-inline: auto;
+  font-family: var(--sans);
+  font-size: 0.92rem;
+  line-height: 1.45;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--window-fg, #e8eaf0) 88%, transparent);
+  text-align: center;
+}
+
+.wall-game-dialog__review {
+  max-height: min(46dvh, 22rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin: 0 0 1.25rem;
+  padding-inline: 0.15rem;
+  text-align: left;
+  -webkit-overflow-scrolling: touch;
+}
+
+.wall-game-dialog__title {
+  margin: 0 0 1.5rem;
+  font-family: var(--sans);
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  font-weight: 800;
+  color: var(--fg, #e8eaf0);
+  letter-spacing: 0.04em;
+}
+
+.wall-game-dialog__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.wall-game-dialog__actions .btn {
+  width: 100%;
+  justify-content: center;
+  padding-block: 0.52rem;
+  font-size: calc(var(--btn-font-size) * 1.05);
+  line-height: var(--btn-line-height);
+}
+
+/* ── Suggested Hands tab + slide-up popup ── */
+
+.suggested-hands-tab {
+  position: relative;
+  z-index: 1;
+  font-family: 'Figtree', var(--sans);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--btn-letter-spacing);
+  white-space: nowrap;
+  min-height: var(--suggested-tab-h);
+  /* 3 tile columns — inner face (Charleston Pass / action row) */
+  width: var(--rack-tile-btn-inner-3);
+}
+
+.app-menu-anchor {
+  position: fixed;
+  bottom: var(--app-h-pad);
+  right: var(--app-h-pad);
+  left: auto;
+  transform: none;
+  z-index: 302;
+  width: var(--menu-btn-w);
+  height: var(--suggested-tab-h);
+}
+
+.app-bottom-center-controls {
+  position: fixed;
+  bottom: var(--app-h-pad);
+  right: calc(var(--app-h-pad) + var(--menu-btn-w) + 0.5rem);
+  left: auto;
+  z-index: 301;
+  display: flex;
+  align-items: flex-end;
+  width: var(--rack-tile-btn-inner-3);
+}
+
+.app-menu-tray {
+  --tray-item-w: var(--rack-tile-btn-inner-3);
+  position: fixed;
+  bottom: calc(var(--app-h-pad) + var(--suggested-tab-h) + 0.55rem);
+  right: var(--app-h-pad);
+  left: auto;
+  width: max(calc(var(--tray-item-w) + 0.9rem), 13rem);
+  display: flex;
+  flex-direction: column;
+  gap: var(--rack-tile-gap);
+  padding: 0.45rem;
+  background: color-mix(in srgb, var(--bg-elevated) 97%, #fff 3%);
+  border-radius: 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  box-shadow:
+    0 -4px 18px rgba(0, 0, 0, 0.22),
+    0 2px 6px rgba(0, 0, 0, 0.12);
+  z-index: 302;
+  overflow-y: auto;
+  animation: app-menu-tray-in 0.16s cubic-bezier(0.34, 1.36, 0.64, 1) both;
+}
+
+@keyframes app-menu-tray-in {
+  from { opacity: 0; transform: translateY(0.5rem) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)      scale(1);    }
+}
+
+.app-menu-tray__item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Figtree', var(--sans);
+  min-height: var(--rack-action-touch-min-h);
+  padding: 0.2rem 0.3rem;
+  font-size: var(--rack-bottom-action-fs);
+  font-weight: 500;
+  border-radius: var(--rack-tile-btn-border-radius);
+  white-space: nowrap;
+  line-height: var(--btn-line-height);
+  text-transform: uppercase;
+  letter-spacing: var(--btn-letter-spacing);
+}
+
+/* Toggle row variant */
+.app-menu-tray__item--toggle {
+  justify-content: space-between;
+  gap: 0.55rem;
+  padding-left: 0.55rem;
+  padding-right: 0.45rem;
+}
+
+.app-menu-tray__toggle-label {
+  flex: 1 1 auto;
+  text-align: left;
+}
+
+.app-menu-tray__toggle-pill {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  border-radius: 1rem;
+  padding: 0.1rem 0.5rem;
+  background: color-mix(in srgb, var(--fg) 14%, transparent);
+  color: var(--fg);
+  opacity: 0.55;
+  transition: background 0.15s, opacity 0.15s, color 0.15s;
+}
+
+.app-menu-tray__toggle-pill--on {
+  background: var(--primary);
+  color: #fff;
+  opacity: 1;
+}
+
+.app-menu-tray__divider {
+  height: 1px;
+  background: color-mix(in srgb, var(--border) 60%, transparent);
+  margin: 0.15rem 0.15rem;
+}
+
+.app-bottom-center-controls__menu-btn {
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--suggested-tab-h);
+  width: var(--menu-btn-w);
+  padding: 0 0.72rem;
+  border-radius: 0.7rem;
+  border: none;
+  background: #0f52ba;
+  color: #fff;
+  font-family: 'Figtree', var(--sans);
+  font-size: 1.0625rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--btn-letter-spacing);
+  cursor: pointer;
+  isolation: isolate;
+  box-shadow:
+    2px 2px 4px color-mix(in srgb, #000 16%, transparent),
+    0 1px 2px color-mix(in srgb, #000 10%, transparent);
+  transition: box-shadow 0.14s ease, background 0.14s ease;
+  z-index: 2;
+}
+
+/* When Suggested list is open, no inset/pressed shading — read label color clearly. */
+.btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open {
+  background: color-mix(in srgb, var(--coach-teal) 8%, transparent);
+  box-shadow: none;
+}
+
+/* ── Suggested Hands slide-up tray — identical shell to .panel.panel--discard-tracker ── */
+.suggested-hands-popup {
+  position: fixed;
+  /* Covers the discard column exactly: app-pad on the left, bot-panel on the right. */
+  left: var(--app-h-pad);
+  right: calc(var(--app-h-pad) + var(--bot-panel-outer-w));
+  /* `top` and `bottom` are always set inline from discardTrackerPanelRef measurements.
+     No CSS fallback — avoids a full-viewport flash before JS fires. */
+  z-index: 300;
+  /* Outer panel shell — mirrors .app .panel.panel--discard-tracker exactly */
+  --text-h: var(--window-fg);
+  --text: var(--window-fg-muted);
+  --bg: var(--window-surface);
+  --bg-elevated: var(--window-surface);
+  --border: var(--window-border);
+  --code-bg: color-mix(in srgb, var(--window-fg) 11%, var(--window-surface));
+  --panel-lower-header-fade-h: clamp(3rem, 11vw, 4.5rem);
+  background:
+    linear-gradient(
+      to bottom,
+      #2d333b 0%,
+      color-mix(in srgb, #2d333b 55%, var(--window-surface) 45%) 52%,
+      var(--window-surface) 100%
+    )
+    top / 100% var(--panel-lower-header-fade-h) no-repeat,
+    var(--window-surface);
+  border: 1px solid var(--window-border);
+  border-radius: 0.75rem;
+  color: var(--window-fg);
+  /* Inner layout */
+  padding: var(--hand-window-pad-inline);
+  box-sizing: border-box;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  /* Hidden below viewport until --open */
+  transform: translateY(calc(100% + 2rem));
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.18s ease,
+    visibility 0s linear 0.3s;
+  pointer-events: none;
+}
+
+/* Inner content area — matches .discard-tracker__content */
+.suggested-hands-popup .panel--hands {
+  border-radius: var(--tile-tray-shell-radius);
+  background: var(--window-inner-surface);
+  margin: 0;
+  max-height: none;
+  /* Positioning context for the right-slide filter tray */
+  position: relative;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.suggested-hands-popup--open {
+  transform: translateY(0);
+  opacity: 1;
+  visibility: visible;
+  transition:
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.22s ease,
+    visibility 0s linear 0s;
+  pointer-events: auto;
+}
+
+/* ── Filter tray (slides in from right inside .panel--hands) ── */
+.suggested-hands-filter-tray {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(13rem, 62%);
+  display: flex;
+  flex-direction: column;
+  background: var(--window-surface);
+  border-left: 1px solid var(--window-border);
+  transform: translateX(100%);
+  transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 5;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.suggested-hands-filter-tray--open {
+  transform: translateX(0);
+}
+
+.suggested-hands-filter-tray__inner {
+  padding: 0.45rem 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+
+
+/* Tray items — same vertical height as the Hands/Tiles/Filter header chips */
+.suggested-hands-filter-tray__item.btn {
+  width: 100%;
+  text-align: left;
+  justify-content: flex-start;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.38rem 0.65rem;
+  border-radius: 0.7rem;
+  /* Off: 32% opacity text — matches app-wide inactive button standard */
+  color: color-mix(in srgb, var(--text-h) 32%, transparent);
+}
+
+.suggested-hands-filter-tray__item.btn:hover:not(:disabled) {
+  color: color-mix(in srgb, var(--text-h) 65%, transparent);
+}
+
+/* "On" = section is included in filter results */
+.suggested-hands-filter-tray__item--on.btn {
+  background: color-mix(in srgb, var(--coach-teal) 13%, var(--bg-elevated));
+  color: var(--coach-teal);
+  box-shadow:
+    inset 2px 2px 5px rgba(0, 0, 0, 0.3),
+    inset -1px -1px 3px rgba(255, 255, 255, 0.10);
+}
+
+.suggested-hands-filter-tray__item--on.btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--coach-teal) 18%, var(--bg-elevated));
+  box-shadow:
+    inset 2px 2px 5px rgba(0, 0, 0, 0.3),
+    inset -1px -1px 3px rgba(255, 255, 255, 0.10);
+}
+
+.suggested-hands-filter-tray__item.btn:active:not(:disabled) {
+  transition: none;
+  transform: scale(0.97);
+  box-shadow:
+    inset 3px 3px 7px rgba(0, 0, 0, 0.35),
+    inset -2px -2px 5px rgba(255, 255, 255, 0.12);
+}
+
+.suggested-hands-popup__drag-handle {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  /* Flush with panel padding — matches .panel__title-row rhythm */
+  padding: 0 0 calc(var(--hand-window-pad-inline) * 0.75) 0;
+  margin-bottom: calc(var(--hand-window-pad-inline) * 0.5);
+  cursor: ns-resize;
+  border-bottom: none;
+  user-select: none;
+  touch-action: none;
+}
+
+.suggested-hands-popup__drag-pip {
+  display: block;
+  width: 1.5rem;
+  height: 0.22rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-h) 22%, transparent);
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.suggested-hands-popup__drag-label {
+  flex: 1;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-h);
+  pointer-events: none;
+}
+
+.suggested-hands-popup__header-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  --hands-header-chip-py: 0.38rem;
+  --hands-header-chip-px: 1rem;
+  --hands-header-chip-fs: 1rem;
+  --hands-header-chip-lh: 1.22;
+}
+
+.suggested-hands-popup__header-controls .hands-panel__display-toggle {
+  padding: var(--hands-header-chip-py) var(--hands-header-chip-px);
+  font-size: var(--hands-header-chip-fs);
+  font-weight: 600;
+  line-height: var(--hands-header-chip-lh);
+  min-height: calc(
+    2 * var(--hands-header-chip-py) + var(--hands-header-chip-lh) * var(--hands-header-chip-fs) + 2px
+  );
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.suggested-hands-popup__filter-portal {
+  display: contents;
+}
+
+.suggested-hands-popup__close {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.25rem 0.4rem;
+  border-radius: 0.35rem;
+  color: var(--text-muted);
+  z-index: 1;
+}
+
+.suggested-hands-popup__close:hover {
+  background: color-mix(in srgb, var(--text-h) 10%, transparent);
+  color: var(--text-h);
+}
+
+/* Shared inner-tray rim: full-width shadows follow each tray’s `border-radius`; border top + soft
+   inline edges read against the wrapper; bottom pair matches discard / hand exposure. */
+.panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass),
+.panel--hand .rack-stage__rack-top .exposure-rack.exposure-rack--charleston-pass,
+.hand-bank,
+.discard-tracker__content,
+.panel--bot-exposures .app-opponents-rail__cell,
+.panel--bot-exposures__toolbar-well,
+.panel--hand .panel-hand-rack__action-well,
+.panel--hand .panel-hand-rack__charleston-actions-well,
+.suggested-hands-popup .panel--hands {
+  border-width: 1px;
+  border-style: solid;
+  border-top-color: var(--dark-tray-rim-border-top);
+  border-inline-color: var(--dark-tray-rim-border-inline);
+  border-bottom-color: var(--dark-tray-rim-border-bottom);
+  box-shadow:
+    var(--dark-tray-rim-shadow-up-1),
+    var(--dark-tray-rim-shadow-up-2),
+    var(--dark-tray-rim-shadow-down-1),
+    var(--dark-tray-rim-shadow-down-2);
+}
+
+@media (prefers-color-scheme: dark) {
+  .tile-face {
+    border-color: color-mix(in srgb, #000 35%, transparent);
+  }
+
+  .exposure-rack__slot--empty::before {
+    background: color-mix(in srgb, #000 12%, var(--bg-elevated));
+    box-shadow: none;
+    border-color: color-mix(in srgb, var(--border) 60%, transparent);
+  }
+}
