@@ -900,6 +900,22 @@
   .app-main__scroll {
     max-height: min(20dvh, 6.5rem);
   }
+
+  /*
+   * On phone landscape, remove desktop sub-pixel nudges (+1/-2px) so rack math
+   * resolves exactly to viewport width and the right edge no longer clips.
+   */
+  .panel--hand .panel-hand-rack__hand-tray .hand-row {
+    padding-inline: var(--rack-tray-inset-inline);
+    margin-left: 0;
+  }
+
+  .panel--hand .rack-bottom-bar--tile-grid,
+  .panel--hand .rack-bottom-bar--wall-game {
+    width: 100%;
+    padding-inline: var(--rack-tray-inset-inline);
+    margin-left: 0;
+  }
 }
 
 .app-main__scroll {
