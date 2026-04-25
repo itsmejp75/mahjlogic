@@ -876,11 +876,14 @@
 }
 
 /*
- * iPhone home-screen landscape behaves like a short, wide desktop viewport.
- * Shrink core rhythm together (tiles + controls + spacing) so the whole page
- * scales proportionally instead of individual parts clipping first.
+ * iPhone in landscape: short, wide viewport. Shrink core rhythm (tiles, controls, spacing)
+ * so the page scales proportionally instead of individual parts clipping first.
+ *
+ * Use a short+wide test (min-width & max-height) instead of (orientation: landscape) —
+ * iOS Safari can still report `portrait` in some full-screen / dynamic-viewport cases,
+ * which skipped the old block and left the wide layout squished into phone-portrait rules.
  */
-@media (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) {
+@media (min-width: 31.25rem) and (max-height: 31.25rem) and (pointer: coarse) {
   :root {
     /* Most dimensions are rem-based; lowering root font-size scales UI uniformly. */
     font-size: clamp(10px, 1.45vw, 13px);
