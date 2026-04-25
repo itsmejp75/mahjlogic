@@ -342,7 +342,7 @@
   font-size: clamp(2.025rem, 7.2vw, 4.05rem);
   letter-spacing: -0.03em;
   line-height: 1;
-  opacity: 0.1;
+  opacity: 0.25;
   pointer-events: none;
   user-select: none;
   white-space: nowrap;
