@@ -56,9 +56,12 @@
    * Usable width = 100vw minus 2× this inset, 2× panel inline padding, and the 13 inter-tile gaps.
    * Tile width = usable ÷ 14 (no upper cap so the rack always spans edge-to-edge).
    */
+  /* Safe-area aware side inset for notch devices (iPhone landscape/portrait). */
+  --app-safe-inline: max(env(safe-area-inset-left), env(safe-area-inset-right));
   /* Slightly tighter min than before so rack + lower strip reclaim horizontal room
      after the top header band / safe-area padding (matches East 14-slot usable width). */
-  --app-h-pad: clamp(0.3rem, 1.65vw, 1.35rem);
+  --app-h-pad-base: clamp(0.3rem, 1.65vw, 1.35rem);
+  --app-h-pad: calc(var(--app-h-pad-base) + var(--app-safe-inline));
   --app-v-pad: clamp(0.4rem, 2vw, 1.5rem);
   --hand-rack-usable-w: calc(
     100vw
@@ -845,8 +848,73 @@
 
 @media (max-width: 47.99rem) {
   :root {
-    --app-h-pad: clamp(0.35rem, 2.2vw, 0.75rem);
+    --app-h-pad-base: clamp(0.35rem, 2.2vw, 0.75rem);
     --app-v-pad: clamp(0.35rem, 2.2vw, 0.75rem);
+    /*
+     * Phone fit: allow smaller tile minimum so the full 14-slot rack + controls
+     * can fit without clipping/awkward squeeze.
+     */
+    --hand-rack-tile-w: max(1.62rem, calc(var(--hand-rack-usable-w) / 14));
+    --hand-rack-tile-h: max(2.16rem, calc(var(--hand-rack-usable-w) / 14 * 1.3333));
+    --hand-window-pad-inline: clamp(0.2rem, 1.2vw, 0.35rem);
+    --rack-tray-inset-inline: 0.3rem;
+    --rack-bottom-action-fs: clamp(0.7rem, 2.6vw, 0.9rem);
+    --btn-font-size: clamp(0.82rem, 2.7vw, 0.95rem);
+    --btn-letter-spacing: calc(0.01em + 0.01rem);
+  }
+}
+
+/* iPhone homescreen / very narrow portrait: give one extra notch of compression. */
+@media (max-width: 26rem) {
+  :root {
+    --app-h-pad-base: clamp(0.24rem, 1.8vw, 0.5rem);
+    --hand-rack-tile-w: max(1.5rem, calc(var(--hand-rack-usable-w) / 14));
+    --hand-rack-tile-h: max(2rem, calc(var(--hand-rack-usable-w) / 14 * 1.3333));
+    --rack-bottom-action-fs: clamp(0.66rem, 2.4vw, 0.82rem);
+    --btn-font-size: clamp(0.78rem, 2.4vw, 0.9rem);
+  }
+}
+
+/*
+ * iPhone home-screen landscape behaves like a short, wide desktop viewport.
+ * Shrink core rhythm together (tiles + controls + spacing) so the whole page
+ * scales proportionally instead of individual parts clipping first.
+ */
+@media (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) {
+  :root {
+    /* Most dimensions are rem-based; lowering root font-size scales UI uniformly. */
+    font-size: clamp(11px, 1.55vw, 14px);
+    --app-h-pad-base: clamp(0.18rem, 1vw, 0.42rem);
+    --app-v-pad: clamp(0.16rem, 0.7vh, 0.3rem);
+    --hand-window-pad-inline: clamp(0.14rem, 0.8vw, 0.26rem);
+    --rack-tray-inset-inline: 0.24rem;
+    --rack-tray-inset-block: 0.18rem;
+    --hand-rack-tile-w: max(1.42rem, calc(var(--hand-rack-usable-w) / 14));
+    --hand-rack-tile-h: max(1.9rem, calc(var(--hand-rack-usable-w) / 14 * 1.3333));
+    --rack-bottom-action-fs: clamp(0.62rem, 1.5vw, 0.8rem);
+    --btn-font-size: clamp(0.72rem, 1.7vw, 0.9rem);
+    --btn-letter-spacing: calc(0.008em + 0.008rem);
+  }
+
+  .app-main__scroll {
+    max-height: min(20dvh, 6.5rem);
+  }
+
+  /*
+   * Last-resort uniform scaling for short phone landscape: scale the whole app
+   * canvas together so tiles, buttons, and spacing keep the same proportions.
+   */
+  .app {
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .app-layout {
+    --phone-landscape-scale: 0.78;
+    transform: scale(var(--phone-landscape-scale));
+    transform-origin: top center;
+    width: 100%;
+    min-height: 100%;
   }
 }
 
