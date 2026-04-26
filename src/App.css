@@ -367,10 +367,10 @@
   justify-content: center;
   pointer-events: none;
   user-select: none;
-  z-index: 3;
+  z-index: 0;
 }
 
-/* MahjLogic watermark inside East exposure rack — above tray background, below tiles. */
+/* MahjLogic watermark — behind exposure tiles (see `.exposure-rack__slot` z-index). */
 .rack-logo-watermark {
   display: flex;
   align-items: baseline;
@@ -414,7 +414,7 @@
 
 .panel--hand .rack-stage__rack-top .exposure-rack .exposure-rack__slot {
   position: relative;
-  z-index: 2;
+  z-index: 1;
 }
 
 .rack-stage__rack-top .exposure-rack {
@@ -830,6 +830,155 @@
   align-items: stretch;
   overflow: hidden;
   background: var(--window-surface);
+  /* Tile graphics — Classic: maps to current rack + suggested card-skin defaults */
+  --tg-bam: var(--card-ink-green);
+  --tg-crak: var(--card-ink-red);
+  --tg-dot: var(--card-ink-navy);
+  --tg-wind: var(--wind-tile-bg);
+  --tg-dragon-red: var(--card-ink-red);
+  --tg-dragon-green: var(--card-ink-green);
+  --tg-dragon-soap: var(--card-ink-navy);
+  --tg-dragon-any: #5c6470;
+  --tg-flower: #ab47bc;
+  --tg-joker: #ab47bc;
+  --tg-ink: #000;
+  --tg-suit-band-ink: #000;
+  --tg-joker-ring: #000;
+  --tg-cs-navy-bg: var(--card-tile-skin-blue-bg);
+  --tg-cs-navy-fg: var(--card-tile-skin-blue-fg);
+  --tg-cs-black-bg: var(--card-tile-skin-black-bg);
+  --tg-cs-black-fg: var(--card-tile-skin-black-fg);
+  --tg-cs-red-bg: var(--card-tile-skin-red-bg);
+  --tg-cs-red-fg: var(--card-tile-skin-red-fg);
+  --tg-cs-green-bg: var(--card-tile-skin-green-bg);
+  --tg-cs-green-fg: var(--card-tile-skin-green-fg);
+  --tg-cs-neutral-bg: var(--card-tile-skin-neutral-bg);
+  --tg-cs-neutral-fg: var(--card-tile-skin-neutral-fg);
+  --tg-cs-rack-wind-bg: var(--wind-tile-bg);
+  --tg-cs-rack-wind-fg: #000;
+  --tg-cs-rack-flower-bg: #ab47bc;
+  --tg-cs-rack-flower-fg: #000;
+}
+
+/* Tile graphics: menu presets (override --tg-* only) */
+.app[data-tile-graphics='solid-color'] {
+  --tg-bam: #1b5e20;
+  --tg-crak: #b71c1c;
+  --tg-dot: #0d47a1;
+  --tg-wind: #4a4a4a;
+  --tg-dragon-red: #b71c1c;
+  --tg-dragon-green: #1b5e20;
+  --tg-dragon-soap: #0d47a1;
+  --tg-dragon-any: #3e2723;
+  --tg-flower: #4a148c;
+  --tg-joker: #4a148c;
+  --tg-ink: #fff;
+  --tg-suit-band-ink: #fff;
+  --tg-joker-ring: #fff;
+  --tg-cs-navy-bg: #1565c0;
+  --tg-cs-navy-fg: #fff;
+  --tg-cs-black-bg: #212121;
+  --tg-cs-black-fg: #f5f5f5;
+  --tg-cs-red-bg: #b71c1c;
+  --tg-cs-red-fg: #fff;
+  --tg-cs-green-bg: #1b5e20;
+  --tg-cs-green-fg: #fff;
+  --tg-cs-neutral-bg: #37474f;
+  --tg-cs-neutral-fg: #fff;
+  --tg-cs-rack-wind-bg: #4a4a4a;
+  --tg-cs-rack-wind-fg: #fff;
+  --tg-cs-rack-flower-bg: #4a148c;
+  --tg-cs-rack-flower-fg: #fff;
+}
+
+.app[data-tile-graphics='dark'] {
+  --tg-bam: #1a3d2a;
+  --tg-crak: #3d1a1a;
+  --tg-dot: #0f2538;
+  --tg-wind: #2a2a2a;
+  --tg-dragon-red: #3d1a1a;
+  --tg-dragon-green: #1a3d2a;
+  --tg-dragon-soap: #0f2538;
+  --tg-dragon-any: #1e1e1e;
+  --tg-flower: #3a1a3a;
+  --tg-joker: #3a1a3a;
+  --tg-ink: #f0f0f0;
+  --tg-suit-band-ink: #f0f0f0;
+  --tg-joker-ring: #e0e0e0;
+  --tg-cs-navy-bg: #1a3650;
+  --tg-cs-navy-fg: #e2edf5;
+  --tg-cs-black-bg: #111418;
+  --tg-cs-black-fg: #d8e0e8;
+  --tg-cs-red-bg: #3d1a1a;
+  --tg-cs-red-fg: #fde8e8;
+  --tg-cs-green-bg: #1a3d2a;
+  --tg-cs-green-fg: #e8f5e9;
+  --tg-cs-neutral-bg: #2a2e32;
+  --tg-cs-neutral-fg: #e8e8e4;
+  --tg-cs-rack-wind-bg: #2a2a2a;
+  --tg-cs-rack-wind-fg: #e8e4dc;
+  --tg-cs-rack-flower-bg: #2d1a2d;
+  --tg-cs-rack-flower-fg: #f0e0f0;
+}
+
+.app[data-tile-graphics='light'] {
+  --tg-bam: #c8e6c9;
+  --tg-crak: #ffcdd2;
+  --tg-dot: #bbdefb;
+  --tg-wind: #e8e8e5;
+  --tg-dragon-red: #ffcdd2;
+  --tg-dragon-green: #c8e6c9;
+  --tg-dragon-soap: #bbdefb;
+  --tg-dragon-any: #cfd8dc;
+  --tg-flower: #e1bee7;
+  --tg-joker: #e1bee7;
+  --tg-ink: #1a1a1a;
+  --tg-suit-band-ink: #1a1a1a;
+  --tg-joker-ring: #1a1a1a;
+  --tg-cs-navy-bg: #90caf9;
+  --tg-cs-navy-fg: #0d1b2a;
+  --tg-cs-black-bg: #b0bec5;
+  --tg-cs-black-fg: #111;
+  --tg-cs-red-bg: #ffab91;
+  --tg-cs-red-fg: #1a0a0a;
+  --tg-cs-green-bg: #a5d6a7;
+  --tg-cs-green-fg: #0a1a0a;
+  --tg-cs-neutral-bg: #d7ccc8;
+  --tg-cs-neutral-fg: #1a1a1a;
+  --tg-cs-rack-wind-bg: #e8e8e5;
+  --tg-cs-rack-wind-fg: #111;
+  --tg-cs-rack-flower-bg: #e1bee7;
+  --tg-cs-rack-flower-fg: #1a1a1a;
+}
+
+.app[data-tile-graphics='designer'] {
+  --tg-bam: #2d4a3e;
+  --tg-crak: #5c2a2a;
+  --tg-dot: #1e3a4f;
+  --tg-wind: #a8a59c;
+  --tg-dragon-red: #6b2d2d;
+  --tg-dragon-green: #2d4a3e;
+  --tg-dragon-soap: #1e3a4f;
+  --tg-dragon-any: #4a4f54;
+  --tg-flower: #5a3a5a;
+  --tg-joker: #5a3a5a;
+  --tg-ink: #f4f0e6;
+  --tg-suit-band-ink: #e8e4d9;
+  --tg-joker-ring: #c4b8a8;
+  --tg-cs-navy-bg: #1e3d52;
+  --tg-cs-navy-fg: #e3eef5;
+  --tg-cs-black-bg: #181c20;
+  --tg-cs-black-fg: #dde4ea;
+  --tg-cs-red-bg: #5a2828;
+  --tg-cs-red-fg: #fceaea;
+  --tg-cs-green-bg: #243a32;
+  --tg-cs-green-fg: #e6f0eb;
+  --tg-cs-neutral-bg: #4a4e52;
+  --tg-cs-neutral-fg: #ece8e0;
+  --tg-cs-rack-wind-bg: #8c8980;
+  --tg-cs-rack-wind-fg: #1a1812;
+  --tg-cs-rack-flower-bg: #4a2d4a;
+  --tg-cs-rack-flower-fg: #f0e0f0;
 }
 
 .app-layout {
@@ -845,7 +994,9 @@
 }
 
 /* Menu → Animations OFF: strip remaining rack/menu motion (game logic also skips fly-ins / FLIP). */
-.app-layout[data-animations='off'] .sortable-tile-wrap {
+.app-layout[data-animations='off'] .sortable-tile-wrap,
+.app-layout[data-animations='off'] .pass-strip__tile-wrap,
+.app-layout[data-animations='off'] .exposure-rack__slot--staged-returnable {
   transition: none !important;
 }
 
@@ -857,7 +1008,7 @@
   transition: none;
 }
 
-.app-layout[data-animations='off'] .app-menu-tray {
+.app-layout[data-animations='off'] .app-menu-modal {
   animation: none;
 }
 
@@ -1356,7 +1507,7 @@
   z-index: 2;
   background: var(--window-inner-surface);
   border-radius: calc(var(--rack-tile-btn-border-radius) + var(--bot-exposure-inner-pad));
-  /* Must not clip: `.app-menu-tray` is positioned up from the menu button inside this shell. */
+  /* Must not clip: the Menu control sits in this shell. */
   overflow: visible;
   min-height: calc(2 * var(--bot-exposure-inner-pad) + var(--rack-action-touch-min-h));
 }
@@ -1716,14 +1867,6 @@
   z-index: 2;
 }
 
-.panel--bot-exposures__toolbar-well .app-menu-tray {
-  position: absolute;
-  left: 0;
-  right: auto;
-  bottom: calc(100% + 0.55rem);
-  top: auto;
-}
-
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__clear {
   flex: 0 0 auto;
   align-self: center;
@@ -1816,6 +1959,7 @@
 
 /* Curved top highlight: gradient ring that follows each panel's border-radius.
    Bright at the top edge + corners, fades out ~10% down the vertical sides. */
+.suggested-hands-popup::before,
 .panel--discard-tracker::before,
 .panel--hand::before,
 .panel--charleston::before,
@@ -1837,6 +1981,7 @@
   z-index: 10;
 }
 
+.suggested-hands-popup::after,
 .panel--discard-tracker::after,
 .panel--hand::after,
 .panel--charleston::after,
@@ -1872,44 +2017,6 @@
 .app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker,
 .app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures {
   box-shadow: none;
-}
-
-/* Suggested hands popup: curved top-highlight that follows the border-radius.
-   Uses the gradient-border mask trick: a 1px ring whose background fades from
-   bright at the top (including corners) to transparent partway down the sides. */
-.suggested-hands-popup::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 0.75rem;
-  padding: 1px;
-  box-sizing: border-box;
-  background: linear-gradient(to bottom, #4a5568 0%, transparent 10%);
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-  z-index: 10;
-}
-
-/* Soft white shimmer 1px inside the highlight — also curves with the radius */
-.suggested-hands-popup::after {
-  content: '';
-  position: absolute;
-  inset: 1px;
-  border-radius: calc(0.75rem - 1px);
-  padding: 1px;
-  box-sizing: border-box;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.07) 0%, transparent 10%);
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-  z-index: 10;
 }
 
 /* Headings line up with inner tray content (tray border + inner pad, same as tile area). */
@@ -2666,7 +2773,7 @@
 }
 
 .app .tile-face.tile--wind {
-  background: var(--wind-tile-bg);
+  background: var(--tg-wind, var(--wind-tile-bg));
 }
 
 /* Empty tile wells (not the flat window fill). */
@@ -3074,10 +3181,8 @@
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
-  /* Neighbouring tiles slide smoothly when the dragged tile is hovering over them.
-     Inline style overrides this to 'none' for the active drag tile and during
-     Charleston (suppressLayoutAnimation) so cursor-tracking stays real-time. */
-  transition: transform 0.2s cubic-bezier(0.2, 0, 0.2, 1);
+  /* Transform transition comes from dnd `useSortable`’s `transition` inline (see
+     `SortableTile`) so it doesn’t stack with @dnd-kit’s layout animation + FLIP. */
 }
 
 /* Suppress browser default focus ring on tile wraps — the --selected class provides its own ring. */
@@ -3126,6 +3231,15 @@
 .east-discard-staging__tile--suggest-best .tile-face {
   border-radius: 0.35rem;
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
+}
+
+.pass-strip__tile-wrap--suggest-dim .tile-face {
+  opacity: 0.44;
+  transition: opacity 0.16s ease;
+}
+
+.pass-strip__tile-wrap--suggest-dim.pass-strip__tile-wrap--suggest-best .tile-face {
+  opacity: 1;
 }
 
 .sortable-tile-wrap--discard-mode {
@@ -3238,7 +3352,7 @@
   flex-shrink: 0;
   user-select: none;
   background: var(--border);
-  color: #000;
+  color: var(--tg-ink, #000);
 }
 
 .tile-face--elevated {
@@ -3250,7 +3364,7 @@
   font-weight: 700;
   font-size: var(--tile-face-glyph-fs);
   letter-spacing: 0.02em;
-  color: #000;
+  color: var(--tg-ink, #000);
 }
 
 /* Tile glyph splits digits vs letters so numerals render in Noto Sans Arabic (per design),
@@ -3286,7 +3400,7 @@
   /* Match scaled `.tile-face__glyph` (stacked suit rank). */
   font-size: var(--tile-face-rank-fs);
   letter-spacing: 0.02em;
-  color: #000;
+  color: var(--tg-ink, #000);
   line-height: 1;
   text-align: center;
 }
@@ -3329,7 +3443,7 @@
   font-size: min(calc(var(--rack-bottom-action-fs) * 0.8), calc(var(--rack-tile-w) * 0.285));
   letter-spacing: var(--btn-letter-spacing);
   line-height: 1;
-  color: #000;
+  color: var(--tg-suit-band-ink, #000);
   text-align: center;
   text-transform: uppercase;
   display: inline-block;
@@ -3341,44 +3455,44 @@
 }
 
 .tile-face.tile--bam {
-  background: var(--card-ink-green);
+  background: var(--tg-bam, var(--card-ink-green));
 }
 
 .tile-face.tile--crak {
-  background: var(--card-ink-red);
+  background: var(--tg-crak, var(--card-ink-red));
 }
 
 .tile-face.tile--dot {
-  background: var(--card-ink-navy);
+  background: var(--tg-dot, var(--card-ink-navy));
 }
 
 .tile-face.tile--wind {
-  background: var(--wind-tile-bg);
+  background: var(--tg-wind, var(--wind-tile-bg));
 }
 
 .tile-face.tile--dragon-red {
-  background: var(--card-ink-red);
+  background: var(--tg-dragon-red, var(--card-ink-red));
 }
 
 .tile-face.tile--dragon-green {
-  background: var(--card-ink-green);
+  background: var(--tg-dragon-green, var(--card-ink-green));
 }
 
 .tile-face.tile--dragon-soap {
-  background: var(--card-ink-navy);
+  background: var(--tg-dragon-soap, var(--card-ink-navy));
 }
 
 .tile-face.tile--dragon-any {
-  background: #5c6470;
+  background: var(--tg-dragon-any, #5c6470);
 }
 
 .tile-face.tile--flower {
-  background: #ab47bc;
+  background: var(--tg-flower, #ab47bc);
 }
 
 .tile-face.tile--joker {
   position: relative;
-  background: #ab47bc;
+  background: var(--tg-joker, #ab47bc);
 }
 
 /*
@@ -3397,7 +3511,7 @@
   height: 0;
   padding-bottom: 62%;
   border-radius: 50%;
-  border: 2px solid #000;
+  border: 2px solid var(--tg-joker-ring, #000);
   box-sizing: content-box;
   pointer-events: none;
 }
@@ -3405,6 +3519,12 @@
 .tile-face.tile--joker .tile-face__glyph {
   position: relative;
   z-index: 1;
+}
+
+.app[data-tile-graphics='designer'] .tile-face {
+  box-shadow:
+    0 1px 3px color-mix(in srgb, #000 22%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 10%, transparent);
 }
 
 /* ── Call prompt ── */
@@ -3462,19 +3582,26 @@
   inset: 0;
   z-index: 500;
   display: flex;
-  align-items: center;
+  /* Top-align so the outcome line (“Mah Jongg!”, “Wall game”, who won) stays in view; vertical
+     centering clips tall end-game content on short viewports. */
+  align-items: flex-start;
   justify-content: center;
-  padding: 1rem;
+  padding: max(0.75rem, env(safe-area-inset-top, 0px)) 1rem max(0.75rem, env(safe-area-inset-bottom, 0px));
   background: color-mix(in srgb, #0a0a0a 72%, transparent);
   backdrop-filter: blur(3px);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .mahjong-win-dialog {
   width: fit-content;
   min-width: min(32rem, calc(100vw - 2rem));
-  max-width: calc(100vw - 2rem);
-  padding: 2rem 2.25rem 1.75rem;
+  max-width: calc(100vw - 1.5rem);
+  /* Cap height so the dialog scrolls as a unit; inner “Other seats” can scroll after. */
+  max-height: min(92dvh, calc(100dvh - 1.25rem));
+  min-height: 0;
+  margin-block: 0.25rem 0.75rem;
+  padding: 1.1rem 1.35rem 0.9rem;
   border-radius: 0.75rem;
   background: var(--bg-panel, #1a1a1a);
   border: 2px solid #d97706;
@@ -3483,7 +3610,11 @@
     0 12px 40px rgba(0, 0, 0, 0.7);
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.45rem;
+  /* Inner `.mahjong-win__bots-review` usually scrolls; this catches edge cases. */
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .mahjong-win-dialog--bot {
@@ -3496,7 +3627,8 @@
 .mahjong-win-dialog__actions {
   display: flex;
   justify-content: center;
-  padding-top: 0.5rem;
+  padding-top: 0.4rem;
+  flex-shrink: 0;
 }
 
 .mahjong-win__new-game-btn {
@@ -3515,11 +3647,12 @@
 .mahjong-win__headline {
   margin: 0;
   font-family: var(--heading);
-  font-size: 2.2rem;
+  font-size: clamp(1.4rem, 4.2vw, 2.1rem);
   font-weight: 700;
   letter-spacing: -0.02em;
   color: #d97706;
   text-align: center;
+  flex-shrink: 0;
 }
 
 .mahjong-win__headline--bot {
@@ -3531,10 +3664,11 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.2rem 0.6rem;
-  font-size: 1.06rem;
+  font-size: 0.98rem;
   font-weight: 500;
-  line-height: 1.5;
+  line-height: 1.4;
   opacity: 0.92;
+  flex-shrink: 0;
 }
 
 .mahjong-win__bot-winner-hand {
@@ -3565,8 +3699,9 @@
   align-items: baseline;
   justify-content: center;
   gap: 0.2rem 0.55rem;
-  font-size: 1.06rem;
-  line-height: 1.5;
+  font-size: 0.98rem;
+  line-height: 1.4;
+  flex-shrink: 0;
 }
 
 .mahjong-win__note {
@@ -3591,8 +3726,8 @@
 }
 
 .mahjong-win__bots-review {
-  margin: 0.5rem 0 0;
-  padding: 0.65rem 0.85rem;
+  margin: 0.35rem 0 0;
+  padding: 0.5rem 0.65rem;
   border-radius: 0.5rem;
   border: none;
   background: color-mix(in srgb, #000 14%, var(--window-surface));
@@ -3688,14 +3823,36 @@
   letter-spacing: 0.01em;
 }
 
+/* Tied “same tiles away” lines: pattern title + native select of alternates (end-game review) */
+.post-game-tied__pattern-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.65rem;
+  min-width: 0;
+}
+
+.post-game-tied__select {
+  font: inherit;
+  font-size: 0.96em;
+  max-width: min(100%, 20rem);
+  border-radius: 0.35rem;
+  padding: 0.18rem 0.4rem;
+  background: color-mix(in srgb, var(--panel-2) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  color: var(--text-h);
+  cursor: pointer;
+}
+
 /* Player's winning 14 tiles shown directly under "Mah Jongg!" headline */
 .mahjong-win__player-tiles {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   justify-content: center;
-  padding: 0.5rem 0;
+  padding: 0.35rem 0;
+  flex-shrink: 0;
 }
 
 /* Tile row: meld boxes + loose hand tiles */
@@ -5829,6 +5986,17 @@
   opacity: 0.35;
 }
 
+/* Suggested-hand focus: ring discards that match a natural you’re still short (same as rack). */
+.discard-entry--suggest-need .tile-face {
+  border-radius: 0.35rem;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
+}
+
+.discard-entry--suggest-dim .tile-face {
+  opacity: 0.44;
+  transition: opacity 0.16s ease;
+}
+
 /* ── Charleston validation modal ── */
 
 .charleston-error-overlay {
@@ -5913,24 +6081,42 @@
 
 .charleston-error-dialog__dismiss {
   position: absolute;
-  top: 0.55rem;
-  right: 0.55rem;
+  top: 0.4rem;
+  right: 0.4rem;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
   margin: 0;
-  padding: 0.15rem 0.45rem;
-  border: none;
-  border-radius: 0.25rem;
+  padding: 0;
+  /* Strong visible frame so the control reads as a tappable “box” on felt or card panels */
+  border: 2px solid color-mix(in srgb, #f5e6a3 62%, #fff 38%);
+  border-radius: 0.4rem;
+  background: color-mix(in srgb, #0a0a0a 38%, color-mix(in srgb, currentColor 10%, #1a1a1a) 62%);
   font: inherit;
-  font-size: 1.35rem;
+  font-size: 1.7rem;
   line-height: 1;
-  font-weight: 600;
+  font-weight: 700;
   color: color-mix(in srgb, #f5e6a3 90%, #d4a012 10%);
-  background: transparent;
   cursor: pointer;
-  opacity: 0.92;
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    box-shadow 0.12s;
 }
 
 .charleston-error-dialog__dismiss:hover {
-  opacity: 1;
+  background: color-mix(in srgb, #f5e6a3 16%, color-mix(in srgb, #0a0a0a 55%, transparent) 84%);
+  border-color: #fff;
+  color: #1a1a1a;
+  box-shadow: 0 0 0 1px color-mix(in srgb, #fff 40%, transparent), 0 2px 8px color-mix(in srgb, #000 25%, transparent);
+}
+
+.charleston-error-dialog__dismiss:focus-visible {
+  outline: 2px solid color-mix(in srgb, #f5e6a3 75%, #fff 25%);
+  outline-offset: 2px;
 }
 
 /* Same pill weight as rack “Sort” / “Mah Jongg” — not accent Pass red */
@@ -6171,58 +6357,71 @@
   inset: 0;
   z-index: 500;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  padding: max(0.75rem, env(safe-area-inset-top, 0px)) 1rem max(0.75rem, env(safe-area-inset-bottom, 0px));
   background: color-mix(in srgb, #0a0a0a 72%, transparent);
   backdrop-filter: blur(3px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .wall-game-dialog {
   width: 100%;
-  max-width: min(42rem, calc(100vw - 2rem));
-  padding: 2rem 1.75rem 1.5rem;
+  max-width: min(42rem, calc(100vw - 1.5rem));
+  max-height: min(92dvh, calc(100dvh - 1.25rem));
+  min-height: 0;
+  margin-block: 0.25rem 0.75rem;
+  padding: 1.1rem 1.25rem 0.95rem;
   border-radius: 0.75rem;
   background: var(--window-surface, #16202e);
   border: 2px solid var(--border, #334);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  gap: 0.4rem;
 }
 
 .wall-game-dialog__intro {
-  margin: 0 0 1rem;
+  margin: 0;
   max-width: 36rem;
   margin-inline: auto;
   font-family: var(--sans);
-  font-size: 0.92rem;
-  line-height: 1.45;
+  font-size: 0.86rem;
+  line-height: 1.4;
   font-weight: 500;
   color: color-mix(in srgb, var(--window-fg, #e8eaf0) 88%, transparent);
   text-align: center;
+  flex-shrink: 0;
 }
 
 .wall-game-dialog__review {
-  max-height: min(46dvh, 22rem);
-  overflow-y: auto;
-  overflow-x: hidden;
-  margin: 0 0 1.25rem;
+  margin: 0;
   padding-inline: 0.15rem;
   text-align: left;
-  -webkit-overflow-scrolling: touch;
 }
 
 .wall-game-dialog__title {
-  margin: 0 0 1.5rem;
+  margin: 0 0 0.35rem;
   font-family: var(--sans);
-  font-size: clamp(1.5rem, 5vw, 2rem);
+  font-size: clamp(1.25rem, 4.2vw, 1.85rem);
   font-weight: 800;
   color: var(--fg, #e8eaf0);
   letter-spacing: 0.04em;
+  flex-shrink: 0;
 }
 
 .wall-game-dialog__actions {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
+  flex-shrink: 0;
 }
 
 .wall-game-dialog__actions .btn {
@@ -6270,31 +6469,292 @@
   width: var(--rack-tile-btn-inner-3);
 }
 
-.app-menu-tray {
-  --tray-item-w: var(--rack-tile-btn-inner-3);
+/* Centered menu panel opened from the Menu control */
+.app-menu-modal-layer {
   position: fixed;
-  bottom: calc(var(--app-h-pad) + var(--suggested-tab-h) + 0.55rem);
-  right: var(--app-h-pad);
-  left: auto;
-  width: max(calc(var(--tray-item-w) + 0.9rem), 13rem);
+  inset: 0;
+  z-index: 380;
   display: flex;
-  flex-direction: column;
-  gap: var(--rack-tile-gap);
-  padding: 0.45rem;
-  background: color-mix(in srgb, var(--bg-elevated) 97%, #fff 3%);
-  border-radius: 0.85rem;
-  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
-  box-shadow:
-    0 -4px 18px rgba(0, 0, 0, 0.22),
-    0 2px 6px rgba(0, 0, 0, 0.12);
-  z-index: 302;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem 1.5rem;
+  box-sizing: border-box;
   overflow-y: auto;
-  animation: app-menu-tray-in 0.16s cubic-bezier(0.34, 1.36, 0.64, 1) both;
+  -webkit-overflow-scrolling: touch;
 }
 
-@keyframes app-menu-tray-in {
-  from { opacity: 0; transform: translateY(0.5rem) scale(0.96); }
-  to   { opacity: 1; transform: translateY(0)      scale(1);    }
+.app-menu-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: color-mix(in srgb, #0a0a0a 72%, transparent);
+  backdrop-filter: blur(3px);
+  cursor: pointer;
+}
+
+.app-menu-modal {
+  /* Selected / on-state rim for menu controls */
+  --app-menu-rim-active: #22c55e;
+  /* Unselected control hover: brighter than the default rim so hover reads clearly */
+  --app-menu-rim-hover-bright: color-mix(in srgb, #fff 82%, #e2e8f0 18%);
+
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: min(38rem, 100%);
+  max-height: min(90dvh, 48rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  background: var(--bg-elevated);
+  box-shadow:
+    var(--shadow, 0 8px 32px rgba(0, 0, 0, 0.28)),
+    0 0 0 1px color-mix(in srgb, var(--border) 50%, transparent);
+  animation: app-menu-modal-in 0.2s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+@keyframes app-menu-modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.4rem) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.app-menu-modal__header {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0.75rem 0.75rem 0.6rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
+}
+
+.app-menu-modal__close {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0;
+  border: 2px solid color-mix(in srgb, #fff 32%, var(--text-muted) 68%);
+  border-radius: 0.45rem;
+  background: color-mix(in srgb, var(--fg) 5%, var(--bg-elevated) 95%);
+  font: inherit;
+  font-size: 1.6rem;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--text-muted, var(--fg));
+  cursor: pointer;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--fg) 8%, transparent);
+  transition: background 0.12s, color 0.12s, border-color 0.12s, box-shadow 0.12s;
+}
+
+.app-menu-modal__close:hover {
+  background: color-mix(in srgb, #fff 6%, var(--bg-elevated) 94%);
+  color: var(--text-h, var(--fg));
+  border-color: color-mix(in srgb, #fff 80%, #e5e7eb 20%);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #fff 18%, transparent),
+    0 2px 8px color-mix(in srgb, #000 12%, transparent);
+}
+
+.app-menu-modal__close:focus-visible {
+  outline: 2px solid var(--primary, #0f52ba);
+  outline-offset: 2px;
+}
+
+.app-menu-modal__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.85rem 1.2rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.app-menu-modal__new-game {
+  width: 100%;
+  margin-bottom: 0.1rem;
+}
+
+/* Bot difficulty: sits under New Game — raised tray so the four options read as primary controls */
+.app-menu-modal__diff-block {
+  margin: 0.2rem 0 0.15rem;
+  padding: 0.5rem 0.65rem 0.6rem;
+  border-radius: 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--border) 50%, var(--text-muted) 50%);
+  background: color-mix(in srgb, var(--fg) 6.5%, var(--bg-elevated) 93.5%);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 7%, transparent),
+    0 2px 10px color-mix(in srgb, #000 16%, transparent),
+    0 1px 3px color-mix(in srgb, #000 10%, transparent);
+}
+
+.app-menu-modal__diff-block .app-menu-modal__subhead {
+  margin: 0 0 0.4rem;
+  text-align: center;
+  color: var(--text-h, var(--fg));
+}
+
+.app-menu-modal__diff-block .app-menu-modal__diff-row {
+  padding: 0;
+  gap: 0.4rem;
+}
+
+/* Tile graphics: mode buttons stay on one line (scroll horizontally on very narrow modals). */
+.app-menu-modal__tile-graphics-modes {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  padding: 0.04rem 0 0.15rem;
+  margin-inline: 0;
+  gap: 0.35rem;
+}
+
+.app-menu-modal__tile-graphics-modes.app-menu-tray__diff-row.app-menu-modal__diff-row {
+  flex-wrap: nowrap;
+  justify-content: center;
+}
+
+.app-menu-modal__tile-graphics-modes .app-menu-tray__diff-btn {
+  flex: 0 0 auto;
+  min-width: max-content;
+  box-sizing: border-box;
+}
+
+/* Sample row under the mode strip — compact tile faces like the main rack.
+   Geometry: same face ratio as hand rack (h / w = 1.3333). Gap matches main-rack visible spacing. */
+.app-menu-modal__tile-graphics-preview {
+  --menu-tile-g: var(--player-rack-face-gap);
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  container-type: inline-size;
+  /* Ten equal columns; tiles fill each column with the same gap as the main rack. */
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  column-gap: var(--menu-tile-g);
+  row-gap: 0;
+  place-items: center;
+  margin-top: 0.55rem;
+  /* Lock all four container edges to the same distance as the inter-tile gap. */
+  padding: var(--menu-tile-g);
+  border-radius: 0.45rem;
+  background: color-mix(in srgb, #000 22%, var(--bg-elevated) 78%);
+  border: 1px solid color-mix(in srgb, var(--border) 45%, #000 25%);
+}
+
+.app .app-menu-modal__tile-graphics-preview .tile-face {
+  box-sizing: border-box;
+  place-self: center;
+  flex: none;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 4;
+  /* Match main-rack / bot `TileFace` chrome vars (glyph math + joker ring). */
+  --rack-tile-w: calc((100cqw - 9 * var(--menu-tile-g)) / 10);
+  --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
+  /* Single shadow for the strip (overrides designer tile shadow here). */
+  box-shadow:
+    0 1px 0 color-mix(in srgb, #000 12%, transparent),
+    0 2px 7px color-mix(in srgb, #000 35%, transparent);
+  transition: box-shadow 0.12s ease;
+}
+
+.app-menu-modal__diff-block--tile-graphics {
+  padding-bottom: 0.58rem;
+}
+
+/* Game settings: clear frame on each control; hover = light rim; On / selected = green rim */
+.app-menu-modal .app-menu-tray__item {
+  box-sizing: border-box;
+  border: 1.5px solid color-mix(in srgb, var(--border) 72%, var(--fg) 28%);
+  background: color-mix(in srgb, var(--fg) 5%, var(--bg-elevated) 95%);
+  transition:
+    border-color 0.14s ease,
+    background 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+/* Toggles with ON, or any row: — keep green rim on hover; unselected get a brighter hover rim */
+.app-menu-modal .app-menu-tray__item:hover:not(:disabled):not([aria-pressed='true']) {
+  border-color: var(--app-menu-rim-hover-bright);
+  box-shadow: 0 0 0 1px color-mix(in srgb, #fff 24%, transparent);
+}
+
+.app-menu-modal .app-menu-tray__item--toggle[aria-pressed='true'],
+.app-menu-modal .app-menu-tray__item--toggle[aria-pressed='true']:hover:not(:disabled) {
+  border-color: var(--app-menu-rim-active);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--app-menu-rim-active) 30%, transparent);
+}
+
+.app-menu-modal__section-rule {
+  margin: 0.2rem 0 0.15rem;
+}
+
+.app-menu-modal__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  min-width: 0;
+}
+
+.app-menu-modal__row--toggle {
+  padding: 0.1rem 0;
+}
+
+.app-menu-modal__label {
+  font-size: var(--app-ui-control-fs, 0.9rem);
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: right;
+  color: var(--text-h, var(--fg));
+  min-width: 0;
+}
+
+.app-menu-modal__toggle {
+  /* Label is in the left column; only the ON/OFF pill is inside the control. */
+  width: auto;
+  min-width: 5.6rem;
+  padding-left: 0.6rem;
+  padding-right: 0.5rem;
+  justify-content: center;
+}
+
+.app-menu-modal__subhead {
+  margin: 0.35rem 0 0.1rem;
+  font-size: var(--app-ui-control-fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted, var(--window-fg-muted));
+  line-height: 1.3;
+}
+
+.app-menu-modal__diff-row {
+  padding: 0.1rem 0 0.15rem;
+  justify-content: flex-end;
 }
 
 .app-menu-tray__item {
@@ -6352,6 +6812,96 @@
   margin: 0.15rem 0.15rem;
 }
 
+.app-menu-tray__subhead {
+  margin: 0.15rem 0.4rem 0.05rem;
+  font-size: var(--app-ui-control-fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted, var(--window-fg-muted));
+  line-height: 1.3;
+}
+
+.app-menu-tray__diff-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  padding: 0.1rem 0.1rem 0.25rem;
+}
+
+.app-menu-tray__diff-btn {
+  box-sizing: border-box;
+  flex: 1 1 20%;
+  min-width: 0;
+  font-size: var(--app-ui-control-fs-xs);
+  font-weight: 600;
+  padding: 0.35rem 0.2rem;
+  line-height: 1.2;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  color: var(--fg);
+  border: 1.5px solid color-mix(in srgb, var(--border) 60%, var(--fg) 18%);
+  transition: border-color 0.14s ease, background 0.14s ease, box-shadow 0.14s ease, transform 0.12s ease;
+}
+
+.app-menu-tray__diff-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--fg) 12%, transparent);
+}
+
+/* In settings modal: all four options share size; unselected vs selected paint split below (specificity) */
+.app-menu-modal .app-menu-tray__diff-btn {
+  min-height: 2.5rem;
+  padding: 0.42rem 0.3rem;
+  font-size: max(0.8125rem, var(--app-ui-control-fs-xs));
+  font-weight: 700;
+  border-radius: 0.42rem;
+  transition: border-color 0.14s ease, background 0.14s ease, box-shadow 0.14s ease, transform 0.12s ease;
+}
+
+.app-menu-modal .app-menu-tray__diff-btn:not(.app-menu-tray__diff-btn--on) {
+  background: color-mix(in srgb, var(--fg) 11%, var(--bg-elevated) 89%);
+  color: var(--text-h, var(--fg));
+  border: 1.5px solid color-mix(in srgb, var(--border) 45%, var(--text-muted) 55%);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 16%, transparent),
+    0 2px 5px color-mix(in srgb, #000 12%, transparent),
+    0 1px 2px color-mix(in srgb, #000 8%, transparent);
+}
+
+/* Unselected: brighter rim on hover; slight lift (selected omits this selector — border stays green) */
+.app-menu-modal .app-menu-tray__diff-btn:hover:not(:disabled):not(.app-menu-tray__diff-btn--on) {
+  border-color: var(--app-menu-rim-hover-bright);
+  background: color-mix(in srgb, #fff 5%, color-mix(in srgb, var(--fg) 12%, var(--bg-elevated) 88%) 95%);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 24%, transparent),
+    0 0 0 1px color-mix(in srgb, #fff 20%, transparent),
+    0 3px 10px color-mix(in srgb, #000 14%, transparent);
+  transform: translateY(-1px);
+}
+
+/* Selected: green rim + deep shadow (modal-only — beats :not rules above) */
+.app-menu-modal .app-menu-tray__diff-btn.app-menu-tray__diff-btn--on,
+.app-menu-modal .app-menu-tray__diff-btn.app-menu-tray__diff-btn--on:hover:not(:disabled) {
+  background: var(--primary);
+  color: #fff;
+  border: 2px solid var(--app-menu-rim-active, #22c55e);
+  text-shadow: 0 1px 0 color-mix(in srgb, #000 30%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 22%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--app-menu-rim-active, #22c55e) 45%, transparent),
+    0 3px 8px color-mix(in srgb, #000 22%, transparent),
+    0 1px 0 color-mix(in srgb, var(--app-menu-rim-active) 25%, #000 75%);
+  transform: none;
+}
+
+.app-menu-modal .app-menu-tray__diff-btn.app-menu-tray__diff-btn--on:hover:not(:disabled) {
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 28%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--app-menu-rim-active, #22c55e) 52%, transparent),
+    0 5px 14px color-mix(in srgb, #000 24%, transparent);
+}
+
 .app-bottom-center-controls__menu-btn {
   position: absolute;
   top: 0;
@@ -6364,7 +6914,7 @@
   width: var(--menu-btn-w);
   padding: 0 0.72rem;
   border-radius: 0.7rem;
-  border: none;
+  border: 2px solid color-mix(in srgb, #fff 22%, #0a3a72);
   background: #0f52ba;
   color: #fff;
   font-family: 'Figtree', var(--sans);
@@ -6377,8 +6927,25 @@
   box-shadow:
     2px 2px 4px color-mix(in srgb, #000 16%, transparent),
     0 1px 2px color-mix(in srgb, #000 10%, transparent);
-  transition: box-shadow 0.14s ease, background 0.14s ease;
+  transition: box-shadow 0.14s ease, background 0.14s ease, border-color 0.14s ease;
   z-index: 2;
+}
+
+/* Unopened Menu: strong bright hover; --open (below) overrides so border stays green when the panel is up */
+.app-bottom-center-controls__menu-btn:hover:not(:disabled):not(.app-bottom-center-controls__menu-btn--open) {
+  border-color: #f8fafc;
+  box-shadow:
+    2px 2px 4px color-mix(in srgb, #000 16%, transparent),
+    0 1px 2px color-mix(in srgb, #000 10%, transparent),
+    0 0 0 1px color-mix(in srgb, #fff 40%, #93c5fd 20%);
+}
+
+.app-bottom-center-controls__menu-btn--open,
+.app-bottom-center-controls__menu-btn--open:hover:not(:disabled) {
+  border-color: #22c55e;
+  box-shadow:
+    2px 2px 4px color-mix(in srgb, #000 16%, transparent),
+    0 0 0 2px color-mix(in srgb, #22c55e 50%, #16a34a 50%);
 }
 
 /* When Suggested list is open, keep the same face color; drop shadow for a flatter “pressed” read. */
@@ -6394,8 +6961,8 @@
   /* Covers the discard column exactly: app-pad on the left, bot-panel on the right. */
   left: var(--app-h-pad);
   right: calc(var(--app-h-pad) + var(--bot-panel-outer-w));
-  /* `top` and `bottom` are always set inline from discardTrackerPanelRef measurements.
-     No CSS fallback — avoids a full-viewport flash before JS fires. */
+  /* `top` from the bottom edge of the rack action shell (or discard top as fallback);
+     `bottom` from discardTrackerPanelRef. No CSS fallback — avoids a full-viewport flash. */
   z-index: 300;
   /* Outer panel shell — mirrors .app .panel.panel--discard-tracker exactly */
   --text-h: var(--window-fg);
@@ -6532,6 +7099,46 @@
     inset -2px -2px 5px rgba(255, 255, 255, 0.12);
 }
 
+/* Widen / narrow: drag the strip at the right edge; width resets when the panel closes. */
+.suggested-hands-popup__right-edge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 0.5rem;
+  z-index: 6;
+  cursor: ew-resize;
+  user-select: none;
+  touch-action: none;
+  /* Hit area a bit past the border so the resize affordance is easy to grab. */
+  margin-right: -0.12rem;
+  box-sizing: content-box;
+  padding: 0 0.1rem 0 0.18rem;
+}
+
+.suggested-hands-popup__right-edge::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0.14rem;
+  bottom: 0;
+  width: 2px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--text-h) 25%, transparent);
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.suggested-hands-popup__right-edge:hover::after {
+  opacity: 0.85;
+  background: color-mix(in srgb, var(--coach-teal) 50%, var(--text-h) 20%);
+}
+
+.app-layout[data-animations='off'] .suggested-hands-popup__right-edge::after {
+  transition: none;
+}
+
 .suggested-hands-popup__drag-handle {
   flex-shrink: 0;
   display: flex;
@@ -6594,20 +7201,39 @@
 
 .suggested-hands-popup__close {
   flex-shrink: 0;
-  background: none;
-  border: none;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0;
+  border: 2px solid color-mix(in srgb, #fff 32%, var(--text-muted) 68%);
+  border-radius: 0.45rem;
+  background: color-mix(in srgb, var(--fg) 5%, var(--bg-elevated) 95%);
   cursor: pointer;
-  font-size: var(--app-ui-control-fs);
+  font-size: 1.6rem;
   line-height: 1;
-  padding: 0.25rem 0.4rem;
-  border-radius: 0.35rem;
+  font-weight: 600;
   color: var(--text-muted);
   z-index: 1;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--fg) 8%, transparent);
+  transition: background 0.12s, color 0.12s, border-color 0.12s, box-shadow 0.12s;
 }
 
 .suggested-hands-popup__close:hover {
-  background: color-mix(in srgb, var(--text-h) 10%, transparent);
+  background: color-mix(in srgb, #fff 6%, var(--bg-elevated) 94%);
   color: var(--text-h);
+  border-color: color-mix(in srgb, #fff 80%, #e5e7eb 20%);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #fff 18%, transparent),
+    0 2px 8px color-mix(in srgb, #000 12%, transparent);
+}
+
+.suggested-hands-popup__close:focus-visible {
+  outline: 2px solid var(--primary, #0f52ba);
+  outline-offset: 2px;
 }
 
 /* Shared inner-tray rim: full-width shadows follow each tray’s `border-radius`; border top + soft
