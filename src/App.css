@@ -862,33 +862,33 @@
 
 /* Tile graphics: menu presets (override --tg-* only) */
 .app[data-tile-graphics='solid-color'] {
-  --tg-bam: #1b5e20;
-  --tg-crak: #b71c1c;
-  --tg-dot: #0d47a1;
-  --tg-wind: #4a4a4a;
-  --tg-dragon-red: #b71c1c;
-  --tg-dragon-green: #1b5e20;
-  --tg-dragon-soap: #0d47a1;
-  --tg-dragon-any: #3e2723;
-  --tg-flower: #4a148c;
-  --tg-joker: #4a148c;
-  --tg-ink: #fff;
-  --tg-suit-band-ink: #fff;
-  --tg-joker-ring: #fff;
-  --tg-cs-navy-bg: #1565c0;
-  --tg-cs-navy-fg: #fff;
-  --tg-cs-black-bg: #212121;
-  --tg-cs-black-fg: #f5f5f5;
-  --tg-cs-red-bg: #b71c1c;
-  --tg-cs-red-fg: #fff;
-  --tg-cs-green-bg: #1b5e20;
-  --tg-cs-green-fg: #fff;
-  --tg-cs-neutral-bg: #37474f;
-  --tg-cs-neutral-fg: #fff;
-  --tg-cs-rack-wind-bg: #4a4a4a;
-  --tg-cs-rack-wind-fg: #fff;
-  --tg-cs-rack-flower-bg: #4a148c;
-  --tg-cs-rack-flower-fg: #fff;
+  --tg-bam: var(--card-ink-green);
+  --tg-crak: var(--card-ink-red);
+  --tg-dot: var(--card-ink-navy);
+  --tg-wind: var(--wind-tile-bg);
+  --tg-dragon-red: var(--card-ink-red);
+  --tg-dragon-green: var(--card-ink-green);
+  --tg-dragon-soap: var(--card-ink-navy);
+  --tg-dragon-any: #5c6470;
+  --tg-flower: #ab47bc;
+  --tg-joker: #ab47bc;
+  --tg-ink: #000;
+  --tg-suit-band-ink: #000;
+  --tg-joker-ring: #000;
+  --tg-cs-navy-bg: var(--card-tile-skin-blue-bg);
+  --tg-cs-navy-fg: var(--card-tile-skin-blue-fg);
+  --tg-cs-black-bg: var(--card-tile-skin-black-bg);
+  --tg-cs-black-fg: var(--card-tile-skin-black-fg);
+  --tg-cs-red-bg: var(--card-tile-skin-red-bg);
+  --tg-cs-red-fg: var(--card-tile-skin-red-fg);
+  --tg-cs-green-bg: var(--card-tile-skin-green-bg);
+  --tg-cs-green-fg: var(--card-tile-skin-green-fg);
+  --tg-cs-neutral-bg: var(--card-tile-skin-neutral-bg);
+  --tg-cs-neutral-fg: var(--card-tile-skin-neutral-fg);
+  --tg-cs-rack-wind-bg: var(--wind-tile-bg);
+  --tg-cs-rack-wind-fg: #000;
+  --tg-cs-rack-flower-bg: #ab47bc;
+  --tg-cs-rack-flower-fg: #000;
 }
 
 .app[data-tile-graphics='dark'] {
