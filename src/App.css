@@ -57,24 +57,35 @@
   --hands-panel-padding-top: var(--rack-stack-gap-y);
   /* Discard tracker + bot exposures below rack: shared max height. */
   /* `dvb` matches html --app-viewport-block so lower panels don’t outgrow a short window independently of the hand row. */
-  --play-split-panel-max-h: clamp(12.5rem, 43dvb, 22rem);
+  --play-split-panel-max-h: clamp(12.5rem, 53dvb, 32rem);
   /*
    * Main East rack tile sizing — fills the play column at every viewport size.
    * `html { --app-viewport-inline: 100dvi }` (index.css) keeps hand / bot / discard math aligned.
    * --app-h-pad: horizontal inset on `.app-rack-stage` / `.app-play-split` (one side); mobile override below.
-   * --app-v-pad: bottom inset on `.app-main` (top is flush); mobile override in same breakpoint.
+   * --app-v-pad: bottom inset on `.app-main` (top is flush). Use **dvb** (not vw) so only height changes
+   *   reflow vertical rhythm; horizontal resizes should not act like vertical compression.
    * Usable width = that inline minus 2× this inset, 2× panel inline padding, and the 13 inter-tile gaps.
    * Tile width = usable ÷ 14 (no upper cap so the rack always spans edge-to-edge).
    */
   /* Safe-area aware side inset for notch devices (iPhone landscape/portrait). */
   --app-safe-inline: max(env(safe-area-inset-left), env(safe-area-inset-right));
+  /*
+   * Effective play width. On short/wide windows, height is allowed to pull the sides inward
+   * so the rack + lower board keep one ratio and compress toward the center instead of
+   * dumping all shrink into the lower half.
+   */
+  --app-play-fit-inline-from-block: 195vh;
+  --app-play-fit-inline: min(
+    var(--app-viewport-inline, 100vw),
+    var(--app-play-fit-inline-from-block)
+  );
   /* Slightly tighter min than before so rack + lower strip reclaim horizontal room
      after the top header band / safe-area padding (matches East 14-slot usable width). */
   --app-h-pad-base: clamp(0.3rem, 1.65vw, 1.35rem);
   --app-h-pad: calc(var(--app-h-pad-base) + var(--app-safe-inline));
-  --app-v-pad: clamp(0.4rem, 2vw, 1.5rem);
+  --app-v-pad: var(--app-h-pad-base);
   --hand-rack-usable-w: calc(
-    var(--app-viewport-inline, 100vw)
+    var(--app-play-fit-inline)
     - 2 * var(--app-h-pad)
     - 2 * var(--hand-window-pad-inline)
     - 2 * var(--rack-tray-inset-inline)
@@ -147,6 +158,12 @@
   --dark-tray-rim-shadow-up-2: inset 0 2px 0 color-mix(in srgb, var(--window-inner-surface) 50%, var(--window-surface) 50%);
   --dark-tray-rim-shadow-down-1: inset 0 -1px 0 #4a5568;
   --dark-tray-rim-shadow-down-2: inset 0 -2px 0 rgba(255, 255, 255, 0.06);
+}
+
+@supports (width: 100dvi) {
+  :root {
+    --app-play-fit-inline-from-block: 195dvb;
+  }
 }
 
 /* Exposure + hand: one vertical stack, no extra margin between rows */
@@ -359,7 +376,8 @@
   align-items: baseline;
   justify-content: center;
   gap: 0;
-  font-size: clamp(2.025rem, 7.2vw, 4.05rem);
+  /* Inherits `--rack-tile-w` from `.exposure-rack` (includes `--hand-rack-tile-scale`) — not `--hand-rack-tile-w` on `:root` alone. */
+  font-size: clamp(1.55rem, calc(var(--rack-tile-w) * 1.52), 4.05rem);
   letter-spacing: -0.03em;
   line-height: 1;
   opacity: 0.25;
@@ -874,7 +892,7 @@
 @media (max-width: 47.99rem) {
   :root {
     --app-h-pad-base: clamp(0.35rem, 2.2vw, 0.75rem);
-    --app-v-pad: clamp(0.35rem, 2.2vw, 0.75rem);
+    /* --app-v-pad: inherited; do not set from vw here or horizontal resizes look like vertical reflow. */
     /*
      * Phone fit: allow smaller tile minimum so the full 14-slot rack + controls
      * can fit without clipping/awkward squeeze.
@@ -906,7 +924,7 @@
   :root {
     /* Tile + control type scale from `--hand-rack-tile-w` only; avoid a second `html` font-size scale. */
     --app-h-pad-base: clamp(0.06rem, 0.45vw, 0.16rem);
-    --app-v-pad: clamp(0.12rem, 0.6vh, 0.22rem);
+    --app-v-pad: clamp(0.12rem, 0.6dvb, 0.22rem);
     --hand-window-pad-inline: clamp(0.08rem, 0.5vw, 0.18rem);
     --rack-tray-inset-inline: 0.16rem;
     --rack-tray-inset-block: 0.18rem;
@@ -917,7 +935,7 @@
   }
 
   .app-main__scroll {
-    max-height: min(20dvh, 6.5rem);
+    max-height: min(20dvb, 6.5rem);
   }
 
   /*
@@ -940,7 +958,7 @@
 .app-main__scroll {
   flex: 0 1 auto;
   min-height: 0;
-  max-height: min(30dvh, 15rem);
+  max-height: min(30dvb, 15rem);
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior-y: contain;
@@ -1034,7 +1052,8 @@
 
 .app-opponent-seat {
   font-family: 'Figtree', var(--sans);
-  font-size: clamp(0.58rem, 1.5vw, 0.7rem);
+  /* Same control scale as rack buttons (not independent vw) */
+  font-size: var(--app-ui-control-fs-sm);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -1088,21 +1107,27 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  justify-content: center;
   gap: 0;
-  width: 100%;
+  width: min(100%, var(--app-play-fit-inline));
   max-width: 100%;
+  margin-inline: auto;
   margin-top: var(--app-dnd-rack-hands-margin-top);
-  background: var(--window-inner-surface);
+  /* Keep center-fit slack invisible; rack/split/tray children paint the dark surfaces. */
+  background: var(--window-surface);
 }
 
 .app-play-split {
   display: flex;
   flex-direction: row;
+  flex-wrap: nowrap;
   align-items: stretch;
   /* Flush join: discard + bot read as one lower panel */
   gap: 0;
-  flex: 1 1 0;
+  flex: 1 1 var(--play-split-panel-max-h);
+  min-width: 0;
   min-height: 0;
+  max-height: var(--play-split-panel-max-h);
   width: 100%;
   box-sizing: border-box;
   padding-inline: var(--app-h-pad);
@@ -1132,6 +1157,39 @@
   --play-split-lower-toolbar-edge-gap-end: 2px;
   --play-split-lower-toolbar-align-x: clamp(-1px, calc(22.5px - 2.5vw), 4px);
   --play-split-lower-toolbar-button-group-nudge-x: -2.5px;
+  --play-split-lower-toolbar-after-menu-shift: 1.5px;
+  --play-split-lower-toolbar-hands-right-gap: 3.5px;
+  --play-split-lower-toolbar-menu-nudge-x: 0.5px;
+  --play-split-lower-toolbar-clear-edge-gap: 4.86px;
+  --play-split-lower-toolbar-locked-action-gap: var(--player-rack-face-gap);
+  --play-split-lower-toolbar-menu-w: calc(
+    2 * var(--hand-rack-tile-w)
+    + var(--play-split-lower-toolbar-button-gap)
+    + var(--play-split-lower-toolbar-after-menu-shift)
+  );
+  --play-split-lower-toolbar-menu-right-x: calc(
+    var(--play-split-lower-toolbar-edge-gap-start)
+    + var(--play-split-lower-toolbar-menu-w)
+    + var(--play-split-lower-toolbar-button-group-nudge-x)
+    + var(--play-split-lower-toolbar-menu-nudge-x)
+  );
+  --play-split-lower-toolbar-hands-left-extension: calc(
+    var(--play-split-lower-toolbar-clear-edge-gap) - var(--play-split-lower-toolbar-locked-action-gap)
+  );
+  --play-split-lower-toolbar-hands-w: calc(
+    var(--rack-tile-btn-inner-3) + var(--play-split-lower-toolbar-hands-left-extension)
+  );
+  --play-split-lower-toolbar-hands-left-x: calc(
+    100% - var(--play-split-lower-toolbar-hands-right-gap) - var(--play-split-lower-toolbar-hands-w)
+  );
+  --play-split-lower-toolbar-clear-left-x: calc(
+    var(--play-split-lower-toolbar-menu-right-x) + var(--play-split-lower-toolbar-locked-action-gap)
+  );
+  --play-split-lower-toolbar-clear-w: calc(
+    var(--play-split-lower-toolbar-hands-left-x)
+    - var(--play-split-lower-toolbar-locked-action-gap)
+    - var(--play-split-lower-toolbar-clear-left-x)
+  );
   /* Pull the discard tray’s right edge left (increase to move further left). */
   --discard-tray-right-pull: 0.55rem;
   /* Window strip between discard column and bot column — same as `.bot-exposures__list` row gap. */
@@ -1239,8 +1297,6 @@
   grid-template-rows: auto minmax(0, 1fr);
   grid-template-columns: minmax(0, 1fr);
   gap: var(--play-tray-h-divider);
-  container-type: size;
-  container-name: bot-exposures-panel;
 }
 
 /* ── Bot exposures side panel (right of discard tracker) ── */
@@ -1323,9 +1379,10 @@
   margin-left: auto;
   margin-right: auto;
   justify-content: flex-start;
+  width: calc(100% - var(--play-split-lower-box-edge-inset) + var(--play-split-lower-box-left-bleed));
   padding-inline-start: var(--play-split-lower-toolbar-edge-gap-start);
   padding-inline-end: var(--play-split-lower-toolbar-edge-gap-end);
-  transform: translateX(var(--play-split-lower-toolbar-align-x));
+  transform: none;
 }
 
 .app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well > .app-menu-anchor,
@@ -1338,14 +1395,33 @@
 
 .app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well > .app-menu-anchor {
   grid-column: 1 / 3;
+  width: calc(100% + var(--play-split-lower-toolbar-after-menu-shift));
+  transform: translateX(calc(
+    var(--play-split-lower-toolbar-button-group-nudge-x)
+    + var(--play-split-lower-toolbar-menu-nudge-x)
+  ));
 }
 
 .app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well > .panel--bot-exposures__clear {
-  grid-column: 3 / 4;
+  grid-column: auto;
+  position: absolute;
+  top: 50%;
+  left: var(--play-split-lower-toolbar-clear-left-x);
+  width: var(--play-split-lower-toolbar-clear-w);
+  transform: translateY(-50%);
 }
 
 .app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well > .app-bottom-center-controls {
-  grid-column: 4 / 7;
+  /*
+   * Edge lock: HANDS right edge is anchored to the toolbar shell instead of
+   * inheriting drift from the tile-grid columns during resize.
+   */
+  grid-column: auto;
+  position: absolute;
+  top: 50%;
+  right: var(--play-split-lower-toolbar-hands-right-gap);
+  width: var(--play-split-lower-toolbar-hands-w);
+  transform: translateY(-50%);
 }
 
 .app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well .app-bottom-center-controls__menu-btn,
@@ -1354,6 +1430,10 @@
   min-width: 0;
   width: 100%;
   max-width: 100%;
+}
+
+.app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well > .panel--bot-exposures__clear {
+  width: var(--play-split-lower-toolbar-clear-w);
 }
 
 /* Wide side-by-side: bot column is right of a wide discard; keep the well flush to the column’s
@@ -1434,26 +1514,6 @@
   display: none;
 }
 
-@container bot-exposures-panel (min-height: 0px) {
-  .app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures {
-    --bot-tile-h-height-fit: max(
-      0.72rem,
-      calc(
-        (
-          100cqh
-          - var(--bot-toolbar-track-h)
-          - var(--play-tray-h-divider)
-          - var(--bot-body-top-pad)
-          - var(--bot-body-bottom-pad)
-          - (var(--bot-exposure-row-count) - 1) * var(--bot-body-gap)
-        ) / var(--bot-exposure-row-count)
-        - 2 * var(--bot-exposure-inner-pad)
-        - 2px
-      )
-    );
-  }
-}
-
 /* Each row: discrete tray like `.panel--hand .rack-stage__rack-top .exposure-rack` — base border
    here; shared `--dark-tray-rim-*` block below matches hand-bank rim. List row↔row gap uses
    `--play-tray-h-divider` (same as East rack tray strips; horizontal discard↔bot offset unchanged). */
@@ -1500,7 +1560,7 @@
   right: 0.5rem;
   transform: translateY(-50%);
   font-family: 'Figtree', var(--sans);
-  font-size: clamp(1.0rem, 3vw, 1.8rem);
+  font-size: min(calc(var(--hand-rack-tile-w) * 0.58), 1.65rem);
   font-weight: 600;
   letter-spacing: -0.03em;
   text-transform: uppercase;
@@ -1520,7 +1580,7 @@
   padding-right: 12px;
   text-align: right;
   font-family: 'Figtree', var(--sans);
-  font-size: clamp(1.08rem, 3.2vw, 1.95rem);
+  font-size: min(calc(var(--hand-rack-tile-w) * 0.64), 1.85rem);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -1619,71 +1679,7 @@
   flex: 1 1 0;
   min-height: 0;
   width: var(--bot-panel-outer-w);
-}
-
-/*
- * Below ~36rem the side-by-side discard + bot column steals width from both;
- * stack discard (full width) then bot exposures underneath — same as the older
- * vertical rhythm. Tile refs match the East rack so edges stay aligned.
- */
-@media (max-width: 36rem) {
-  .app-play-split {
-    flex-direction: column;
-    align-items: stretch;
-    --bot-tile-w-ref: max(1rem, calc(var(--hand-rack-usable-w) / 14 * var(--bot-exposure-slot-scale)));
-    --bot-tile-h-ref: max(1.34rem, calc(var(--bot-tile-w-ref) * 1.3333));
-    --bot-panel-outer-w: min(
-      100%,
-      calc(
-        2 * var(--hand-window-pad-inline)
-        + 12 * var(--bot-tile-w-ref) * var(--bot-exposure-tile-scale)
-        + 11 * var(--bot-exposure-tile-gap-budget)
-        + 2 * var(--bot-exposure-inner-pad)
-      )
-    );
-  }
-
-  /*
-   * Narrow: discard uses all flexible height above; bot stays at the bottom of the play strip
-   * (same bottom edge as the card), with internal scroll if rows don’t fit.
-   */
-  .app-play-split__left {
-    width: 100%;
-    flex: 1 1 0;
-    min-height: 0;
-  }
-
-  .app-play-split__right {
-    width: 100%;
-    flex: 0 0 auto;
-    min-height: 0;
-    align-items: stretch;
-  }
-
-  .app-play-split__right-stack {
-    width: 100%;
-    max-width: 100%;
-    flex: 0 1 auto;
-    min-height: 0;
-  }
-
-  .app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures {
-    width: 100%;
-    max-width: 100%;
-    flex: 1 1 0;
-    min-height: 0;
-  }
-
-  .app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker {
-    flex: 1 1 0;
-    min-height: 0;
-    /* Bot sits below discard — no horizontal tray↔bot gutter. */
-    --discard-tray-gap-to-bot: 0px;
-  }
-
-  .panel--bot-exposures__toolbar {
-    flex: 0 0 auto;
-  }
+  align-items: stretch;
 }
 
 /* In-panel toolbar: Menu | Clear | Suggested — `gap` matches `.rack-bottom-bar--tile-grid` column-gap
@@ -1967,24 +1963,31 @@
   container-name: discard-tray;
 }
 
-/* Fallback when container queries are unavailable (matches bot tile size). */
+/*
+ * Fallback when container queries are unavailable: blend bot ref with a hand-tied cap
+ * (15 slots in a 14-wide row → ~14/15 of `--hand-rack-tile-w` at equal track width).
+ */
 .panel--discard-tracker .discard-pile {
-  --rack-tile-w: var(--bot-tile-w-ref);
-  --rack-tile-h: var(--bot-tile-h-ref);
+  --rack-tile-w: min(var(--bot-tile-w-ref), calc(var(--hand-rack-tile-w) * 14 / 15));
+  --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
 }
 
 /* 15 columns + 14 gaps across tray inner width; symmetric inset via drop-zone inset. */
 @container discard-tray (min-width: 0px) {
   .panel--discard-tracker .discard-pile {
-    --rack-tile-w: max(
-      1px,
-      calc(
-        (
-          100cqw
-          - 2 * var(--bot-exposure-inner-pad)
-          - 14 * var(--rack-tile-gap)
-        ) / 15
-      )
+    /* Fit tray; cap by the same hand scale so tiles resize with the East rack, not a separate curve. */
+    --rack-tile-w: min(
+      max(
+        1px,
+        calc(
+          (
+            100cqw
+            - 2 * var(--bot-exposure-inner-pad)
+            - 14 * var(--rack-tile-gap)
+          ) / 15
+        )
+      ),
+      calc(var(--hand-rack-tile-w) * 14 / 15)
     );
     --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
   }
@@ -2009,6 +2012,8 @@
   align-items: stretch;
   justify-content: flex-end;
   width: 100%;
+  max-width: var(--app-play-fit-inline);
+  margin-inline: auto;
   box-sizing: border-box;
   padding-inline: var(--app-h-pad);
   /* Flat fill — top air comes from `.app-main` padding, not a gradient band. */
@@ -5735,7 +5740,7 @@
 
 .east-discard-staging {
   margin-bottom: 0.85rem;
-  min-height: 4.1rem;
+  min-height: calc(var(--hand-rack-tile-h) * 1.1);
   padding: 0.5rem 0.65rem;
   border-radius: 0.38rem;
   border: 1px solid color-mix(in srgb, var(--coach-teal) 32%, var(--border) 40%, var(--bg-elevated) 28%);
@@ -5768,7 +5773,7 @@
 }
 
 .east-discard-staging__placeholder {
-  font-size: 0.85rem;
+  font-size: var(--app-ui-control-fs-sm);
   color: color-mix(in srgb, var(--text) 72%, transparent);
   text-align: center;
   line-height: 1.35;
