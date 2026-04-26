@@ -365,6 +365,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   pointer-events: none;
   user-select: none;
   z-index: 0;
@@ -376,14 +377,46 @@
   align-items: baseline;
   justify-content: center;
   gap: 0;
-  /* Inherits `--rack-tile-w` from `.exposure-rack` (includes `--hand-rack-tile-scale`) — not `--hand-rack-tile-w` on `:root` alone. */
-  font-size: clamp(1.55rem, calc(var(--rack-tile-w) * 1.52), 4.05rem);
+  min-width: 0;
+  max-width: 100%;
+  /* Inherits `--rack-tile-w` from `.exposure-rack` (includes `--hand-rack-tile-scale`).
+   * Min/preferred scale with the slot width; avoid a fixed `rem` floor here — that was
+   * fighting the exposure rack as the window (and tile width) shrank. */
+  --rack-logo-fs-min: 0.65;
+  --rack-logo-fs-pref: 1.52;
+  font-size: clamp(
+    calc(var(--rack-tile-w) * var(--rack-logo-fs-min)),
+    calc(var(--rack-tile-w) * var(--rack-logo-fs-pref)),
+    4.05rem
+  );
   letter-spacing: -0.03em;
   line-height: 1;
   opacity: 0.25;
   pointer-events: none;
   user-select: none;
   white-space: nowrap;
+}
+
+@supports (width: 1cqi) {
+  .panel--hand .rack-stage__rack-top .exposure-rack__watermark {
+    container-type: inline-size;
+  }
+
+  .rack-logo-watermark {
+    /*
+     * Keep the logo in rational proportion to the *actual* exposure tray width.
+     * This prevents "MahjLogic" from holding a large size while the tray narrows.
+     */
+    --rack-logo-fs-container-ratio: calc(100cqi * 0.067);
+    font-size: clamp(
+      calc(var(--rack-tile-w) * var(--rack-logo-fs-min)),
+      min(
+        calc(var(--rack-tile-w) * var(--rack-logo-fs-pref)),
+        var(--rack-logo-fs-container-ratio)
+      ),
+      4.05rem
+    );
+  }
 }
 
 .rack-logo-watermark__mahj {
