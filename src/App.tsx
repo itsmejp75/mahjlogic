@@ -35,6 +35,7 @@ import {
   applyCharlestonExchange,
   charlestonAllowsBlind,
   charlestonMahjongButtonPhase,
+  charlestonPassDirections,
   nextCharlestonPhase,
   type CharlestonPhase,
   type FourHands,
@@ -2530,17 +2531,6 @@ export default function App() {
         ? passSlotCount <= 3
         : passSlotCount === 3
 
-  const charlestonPassLabel: Record<string, string> = {
-    right1:   'Pass 3 Right →',
-    across1:  'Pass 3 Across',
-    left1:    'Blind Pass 0–3 Left',
-    left2:    'Pass 3 Left',
-    across2:  'Pass 3 Across',
-    right2:   'Blind Pass 0–3 Right',
-    courtesy: 'Courtesy Pass 0–3',
-  }
-  const passButtonLabel = charlestonPassLabel[charlestonPhase] ?? 'Pass'
-
   const newHand = useCallback(() => {
     setPendingJokerSwapTileId(null)
     setCharlestonPassError(null)
@@ -2698,8 +2688,13 @@ export default function App() {
     setPassStripFlyOut(null)
     pushRound((r) => {
       if (r.charlestonPhase !== 'left2' || !r.awaitingSecondCharlestonChoice) return r
+      // Return any tiles currently parked in the pass slots back to the hand so
+      // stopping the Charleston never silently drops the player's tiles.
+      const returning = r.passSlots.filter(Boolean) as TileInstance[]
+      const handNext = returning.length > 0 ? [...r.hand, ...returning] : r.hand
       return {
         ...r,
+        hand: handNext,
         charlestonPhase: 'courtesy',
         charlestonSkippedSecondRound: true,
         awaitingSecondCharlestonChoice: false,
@@ -2867,21 +2862,22 @@ export default function App() {
       setBlockingDialog(null)
       setCallRuleError(null)
       const flags = getCallCapacityFlags(hand, activeBotDiscard)
+      // Stage a pung first (2 from hand): Kong/Quint stay opt-in via the meld buttons.
+      // applyAutoSelectCallTiles uses naturals first, then jokers only to fill leftover slots.
       const needed =
-        flags.canQuint ? 4
-        : flags.canKong ? 3
-        : flags.canPung ? 2
-        : hasLegalMahjongOnBotDiscard({
-            mainPhase: 'bot-turn',
-            activeBotDiscard,
-            hand,
-            eastExposures,
-            botExposures,
-            wall,
-            discardPile,
-          })
-          ? 0
-        : 2
+        flags.canPung
+          ? 2
+          : hasLegalMahjongOnBotDiscard({
+              mainPhase: 'bot-turn',
+              activeBotDiscard,
+              hand,
+              eastExposures,
+              botExposures,
+              wall,
+              discardPile,
+            })
+            ? 0
+          : 2
       pushRound((r) => applyAutoSelectCallTiles(applyInitiateCall(r), needed))
     }
   }, [mainPhase, activeBotDiscard, hand, eastExposures, botExposures, wall, discardPile, pushRound])
@@ -3920,7 +3916,9 @@ export default function App() {
                                   className="btn btn--mahjong rack-bottom-tile-cell rack-bottom-tile-cell--c6-7"
                                   onClick={declareMahjong}
                                 >
-                                  Mah Jongg
+                                  Mah
+                                  <br />
+                                  Jongg
                                 </button>
                               ) : null}
                               {awaitingSecondCharlestonChoice ? (
@@ -3928,19 +3926,21 @@ export default function App() {
                                   type="button"
                                   className="btn charleston-stop-btn rack-bottom-tile-cell rack-bottom-tile-cell--c9-11"
                                   title="Skip the rest of the second Charleston and go to courtesy pass"
+                                  aria-label="Stop Charleston: skip to courtesy pass"
                                   onClick={skipToCourtesyPass}
                                 >
-                                  Stop Charleston
+                                  STOP
                                 </button>
                               ) : null}
                               <button
                                 type="button"
                                 className="btn btn--primary charleston-pass-btn rack-bottom-tile-cell rack-bottom-tile-cell--c12-14"
+                                aria-label={charlestonPassDirections(charlestonPhase)}
                                 disabled={!passReady || passStripFlyOut != null}
                                 aria-disabled={!passReady || passStripFlyOut != null}
                                 onClick={onCharlestonPassButtonClick}
                               >
-                                {passButtonLabel}
+                                PASS
                               </button>
                             </div>
                             </div>
@@ -4149,7 +4149,9 @@ export default function App() {
                                   disabled={!mahjongButtonEnabled}
                                   onClick={declareMahjong}
                                 >
-                                  Mah Jongg
+                                  Mah
+                                  <br />
+                                  Jongg
                                 </button>
                                 <button
                                   type="button"
@@ -4347,21 +4349,23 @@ export default function App() {
                           <button
                             type="button"
                             className="btn btn--rack-neutral panel--bot-exposures__clear"
+                            aria-label="Clear suggested hand focus"
                             disabled={suggestedFocusHandKey === null}
                             onClick={() => setSuggestedFocusHandKey(null)}
                           >
-                            Clear
+                            CLR
                           </button>
                           {showSuggestedHandsPanel ? (
                             <div className="app-bottom-center-controls" role="group" aria-label="Suggested hands controls">
                               <button
                                 type="button"
                                 className={['btn', 'btn--primary', 'charleston-pass-btn', 'suggested-hands-tab', suggestedPanelHandsOn ? 'suggested-hands-tab--open' : ''].filter(Boolean).join(' ')}
+                                aria-label="Suggested hands"
                                 onClick={() => setSuggestedPanelHandsOn((v) => !v)}
                                 aria-expanded={suggestedPanelHandsOn}
                                 aria-controls="suggested-hands-popup"
                               >
-                                Suggested Hands
+                                HANDS
                               </button>
                             </div>
                           ) : null}

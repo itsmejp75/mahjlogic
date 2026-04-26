@@ -156,6 +156,19 @@
 
 html {
   height: 100%;
+  /*
+   * Single source for layout math in App.css: dynamic viewport inlines/blocks
+   * track the *visible* area (avoids 100vw vs scrollbar + matches notched / resized windows).
+   */
+  --app-viewport-inline: 100vw;
+  --app-viewport-block: 100vh;
+}
+
+@supports (width: 100dvi) {
+  html {
+    --app-viewport-inline: 100dvi;
+    --app-viewport-block: 100dvb;
+  }
 }
 
 #root {
