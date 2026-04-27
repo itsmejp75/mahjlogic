@@ -47,7 +47,6 @@ import { PassStrip } from './components/PassStrip'
 import { HandBank, HAND_BANK_ID } from './components/HandBank'
 import { TileFace } from './components/TileFace'
 import { ExposureRack } from './components/ExposureRack'
-import type { CardTextSeg } from './card/cardText'
 import { PRACTICE_PATTERNS } from './card/practicePatterns'
 import {
   buildPinnedPatternsFromFocusKey,
@@ -55,16 +54,29 @@ import {
   greedyPatternMatchDetail,
   isMultiComboFocusKey,
   rankSuggestedHands,
+  focusKeyForSuggestedHandLine,
   sortHandForSuggestedPattern,
+  sortFullRackTilesForPattern,
+  suggestedHandsTiedAtBest,
   summarizeRackTowardWin,
-  type GreedyPatternMatchOpts,
+  computeSuggestedDiscardNeedHighlightIds,
   type RankSuggestedHandsInput,
 } from './analysis/suggestedHands'
+import { PostGameLoserRackRow } from './components/PostGameLoserRackRow'
 import { IllegalMahjongDialog } from './components/IllegalMahjongDialog'
 import { CardColoredText } from './components/CardColoredText'
 import { SuggestedHandsPanel } from './components/SuggestedHandsPanel'
 import type { BotExposure, BotSeat } from './analysis/types'
-import { chooseBotDiscard, botCallStrategicProbability, type BotRankContext } from './analysis/botAI'
+import {
+  BOT_DIFFICULTIES,
+  type BotDifficulty,
+  chooseBotCharlestonPass,
+  chooseBotDiscard,
+  botCallStrategicProbability,
+  DEFAULT_BOT_DIFFICULTY,
+  isBotDifficulty,
+  type BotRankContext,
+} from './analysis/botAI'
 import {
   getCallInitiateBlockMessage,
   getCallCapacityFlags,
@@ -92,12 +104,110 @@ import {
   parseBotSeatSwapDropId,
   parseBotExposureSwapDropId,
 } from './mahjong/jokerSwapTarget'
-import { openClaimMeldsFitSomePracticeLine } from './analysis/eastExposurePatternFit'
+import {
+  openClaimMeldsFitSomePracticeLine,
+  reorderEastExposuresToPatternGroupOrder,
+} from './analysis/eastExposurePatternFit'
 import './App.css'
 
+const BOT_DIFFICULTY_LABEL: Record<BotDifficulty, string> = {
+  easy: 'Easy',
+  normal: 'Normal',
+  hard: 'Hard',
+  unfair: 'Unfair',
+}
+
+const BOT_DIFFICULTY_TITLE: Record<BotDifficulty, string> = {
+  easy: 'Softer on patterns, Charleston, calls, and joker redeems. Good for learning.',
+  normal:
+    'Default strength: can miss a joker redeem on the first look, then catch it. Solid overall.',
+  hard: 'Reads the board, discards, and exposures at a strong human level.',
+  unfair: 'Maximum table-legal play: very tight discards, passes, calls, and joker work.',
+}
+
+const SUGGESTED_HANDS_REMEMBER_SIZE_LABEL = 'Remember hands window size'
+const SUGGESTED_HANDS_REMEMBER_SIZE_TITLE =
+  'On: same height and width when you open Suggested hands again. Off: back to the default after you close. The panel is always resizable while it is open (drag the top bar or the right edge).'
+
 const LS_KEY_BOT_WINS = 'mahjlogic.botWinsEnabled'
+
+const BOT_WINS_LABEL = 'Bot wins'
 const LS_KEY_BOTS_CALL_EAST_DEAD = 'mahjlogic.botsCallDeadEnabled'
 const LS_KEY_ANIMATIONS = 'mahjlogic.animationsEnabled'
+/** When true, height/width of Suggested hands panel are saved when closed and restored on next open. */
+const LS_KEY_SUGGESTED_HANDS_REMEMBER_SIZE = 'mahjlogic.suggestedHandsRememberSize'
+const LS_KEY_SUGGESTED_HANDS_PANEL_HEIGHT = 'mahjlogic.suggestedHandsPanelHeight'
+const LS_KEY_SUGGESTED_HANDS_RIGHT_DELTA = 'mahjlogic.suggestedHandsRightDelta'
+/** @deprecated Migrated to LS_KEY_SUGGESTED_HANDS_REMEMBER_SIZE; removed on read */
+const LS_KEY_SUGGESTED_HANDS_RESIZE_LOCK_LEGACY = 'mahjlogic.suggestedHandsResizeLock'
+const LS_KEY_BOT_DIFFICULTY = 'mahjlogic.botDifficulty'
+const LS_KEY_TILE_GRAPHICS = 'mahjlogic.tileGraphics'
+const LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED = 'mahjlogic.tileGraphicsDefaultMigrated'
+
+const TILE_GRAPHICS = ['classic', 'solid-color', 'dark', 'light', 'designer', 'bakelite'] as const
+type TileGraphics = (typeof TILE_GRAPHICS)[number]
+
+const TILE_GRAPHICS_LABEL: Record<TileGraphics, string> = {
+  classic: 'Ivory',
+  'solid-color': 'Prism',
+  dark: 'Obsidian',
+  light: 'Sorbet',
+  designer: 'Jewel',
+  bakelite: 'Autumn',
+}
+
+const TILE_GRAPHICS_CATEGORY_MINIMALIST_ID = 'tile-graphics-category-minimalist'
+const TILE_GRAPHICS_CATEGORY_ILLUSTRATIVE_ID = 'tile-graphics-category-illustrative'
+
+/** Invisible 10-up grid cells so the Illustrative strip matches the Minimalist preview height before real tiles exist. */
+const ILLUSTRATIVE_PREVIEW_PLACEHOLDERS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as const
+
+const TILE_GRAPHICS_TITLE: Record<TileGraphics, string> = {
+  classic:
+    'Ivory (#F9F6EE); dot/bam/crak index and R/G in #004B93 / #2D6A4F / #A4161A; soap 0, winds, and joker ring #1A1A1A; black joker J.',
+  'solid-color': 'Bold, high-contrast solid suit fills; #080808 inlay (default “card ink” look).',
+  dark: 'Volcanic glass: deep jade, garnet, and ink-blue black tile faces; light text like a polish sheen.',
+  light: 'Cool sorbet pastels — mint, berry, and blue with enough saturation to read at a glance; dark text.',
+  designer:
+    'Boutique jewel: bright emerald, garnet, sapphire, amethyst — crisp white-silver inlay (not soft grey) on lit gem faces, polished-glass lustre; not flat primaries.',
+  bakelite:
+    'Fall harvest: olive bam, rust crak, twilight dot, ochre joker, slate winds; #F5F5DC inlay on warm wood-stone faces.',
+}
+
+/** Menu Tile graphics sample row: same `TileFace` layout as the main hand rack (stacked suit tiles). */
+const MENU_TILE_GRAPHICS_PREVIEW: readonly { label: string; def: TileDef }[] = [
+  { label: '1d', def: { cat: 'suit', suit: 'dot', rank: 1 } },
+  { label: '2d', def: { cat: 'suit', suit: 'dot', rank: 2 } },
+  { label: '3b', def: { cat: 'suit', suit: 'bam', rank: 3 } },
+  { label: '4b', def: { cat: 'suit', suit: 'bam', rank: 4 } },
+  { label: '5c', def: { cat: 'suit', suit: 'crak', rank: 5 } },
+  { label: '6c', def: { cat: 'suit', suit: 'crak', rank: 6 } },
+  { label: 'F', def: { cat: 'flower', flower: 1 } },
+  { label: 'G', def: { cat: 'dragon', dragon: 'green' } },
+  { label: 'N', def: { cat: 'wind', wind: 'N' } },
+  { label: 'J', def: { cat: 'joker' } },
+]
+
+function isTileGraphics(s: string): s is TileGraphics {
+  return (TILE_GRAPHICS as readonly string[]).includes(s)
+}
+
+function readTileGraphicsFromStorage(): TileGraphics {
+  try {
+    const v = localStorage.getItem(LS_KEY_TILE_GRAPHICS)
+    // Default tile set is Prism; older sessions may still have Classic saved
+    // from when this menu first landed.
+    if (v === 'classic' && localStorage.getItem(LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED) !== 'true') {
+      localStorage.setItem(LS_KEY_TILE_GRAPHICS, 'solid-color')
+      localStorage.setItem(LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED, 'true')
+      return 'solid-color'
+    }
+    if (v != null && isTileGraphics(v)) return v
+  } catch {
+    /* ignore */
+  }
+  return 'solid-color'
+}
 
 function readBotWinsEnabledFromStorage(): boolean {
   try {
@@ -125,6 +235,55 @@ function readAnimationsEnabledFromStorage(): boolean {
   } catch {
     return true
   }
+}
+
+function readSuggestedHandsRememberSizeFromStorage(): boolean {
+  try {
+    const v = localStorage.getItem(LS_KEY_SUGGESTED_HANDS_REMEMBER_SIZE)
+    if (v !== null) {
+      return v === 'true' || v === '1'
+    }
+    try {
+      localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_RESIZE_LOCK_LEGACY)
+    } catch {
+      /* ignore */
+    }
+  } catch {
+    /* ignore */
+  }
+  return false
+}
+
+function readSuggestedPanelHeightFromStorage(): number | null {
+  try {
+    const v = localStorage.getItem(LS_KEY_SUGGESTED_HANDS_PANEL_HEIGHT)
+    if (v == null) return null
+    const n = parseFloat(v)
+    return Number.isFinite(n) ? n : null
+  } catch {
+    return null
+  }
+}
+
+function readSuggestedPanelRightDeltaFromStorage(): number | null {
+  try {
+    const v = localStorage.getItem(LS_KEY_SUGGESTED_HANDS_RIGHT_DELTA)
+    if (v == null) return null
+    const n = parseFloat(v)
+    return Number.isFinite(n) ? n : null
+  } catch {
+    return null
+  }
+}
+
+function readBotDifficultyFromStorage(): BotDifficulty {
+  try {
+    const v = localStorage.getItem(LS_KEY_BOT_DIFFICULTY)
+    if (v != null && isBotDifficulty(v)) return v
+  } catch {
+    /* ignore */
+  }
+  return DEFAULT_BOT_DIFFICULTY
 }
 
 /**
@@ -457,16 +616,30 @@ type BotTurnResult = {
  * Before discarding, a bot greedily claims any joker it can redeem by placing a
  * matching natural into an exposed meld (East's or any other bot's).
  * Returns the updated hand and exposures; up to 5 swaps per call.
+ * Difficulty softens or sharpens how often the bot “sees” a redeem in the first pass.
  */
 function performBotPreDiscardSwaps(
   hand: TileInstance[],
   eastExposures: EastExposure[],
   botExposures: BotExposure[],
+  difficulty: BotDifficulty = 'normal',
 ): { hand: TileInstance[]; eastExposures: EastExposure[]; botExposures: BotExposure[] } {
+  // Easy: often fail to redeem (discards a natural that could have swapped first)
+  if (difficulty === 'easy' && Math.random() < 0.3) {
+    return { hand, eastExposures, botExposures }
+  }
+
   let curHand = [...hand]
   let curEast = eastExposures
   let curBots = botExposures
   for (let pass = 0; pass < 5; pass++) {
+    // Normal: first outer pass sometimes misses; the next pass catches the same joker
+    if (difficulty === 'normal' && pass === 0 && Math.random() < 0.32) {
+      continue
+    }
+    if (difficulty === 'easy' && pass > 0 && Math.random() < 0.24) {
+      break
+    }
     let swapped = false
     // Scan East's exposures first
     for (let ei = 0; ei < curEast.length && !swapped; ei++) {
@@ -521,6 +694,9 @@ function runOneBotTurn(
   seat: Seat,
   eastExposures: EastExposure[],
   botExposures: BotExposure[],
+  botDifficulty: BotDifficulty,
+  /** When false, a bot that could win on the draw does not self-declare Mah Jongg and discards instead (practice). */
+  botWinsEnabled: boolean,
 ): BotTurnResult {
   if (wall.length === 0) {
     return { botHand, wall, discardPile, discarded: null, eastExposuresOut: eastExposures, botExposuresOut: botExposures, botMahjong: false }
@@ -528,7 +704,7 @@ function runOneBotTurn(
   const [drawn, ...wallNext] = wall
   const handWithDraw = [...botHand, drawn]
   // Redeem any jokers available in exposed melds before deciding what to discard
-  const swapped = performBotPreDiscardSwaps(handWithDraw, eastExposures, botExposures)
+  const swapped = performBotPreDiscardSwaps(handWithDraw, eastExposures, botExposures, botDifficulty)
   const handAfterSwaps = swapped.hand
   const nonJokers = handAfterSwaps.filter((t) => t.def.cat !== 'joker')
   const jokers = handAfterSwaps.filter((t) => t.def.cat === 'joker')
@@ -545,15 +721,18 @@ function runOneBotTurn(
     eastTableClaimMelds: swapped.eastExposures,
   }
   if (summarizeRackTowardWin(mjRankInput).bestTilesAway === 0) {
-    return {
-      botHand: handAfterSwaps,
-      wall: wallNext,
-      discardPile,
-      discarded: null,
-      eastExposuresOut: swapped.eastExposures,
-      botExposuresOut: swapped.botExposures,
-      botMahjong: true,
+    if (botWinsEnabled) {
+      return {
+        botHand: handAfterSwaps,
+        wall: wallNext,
+        discardPile,
+        discarded: null,
+        eastExposuresOut: swapped.eastExposures,
+        botExposuresOut: swapped.botExposures,
+        botMahjong: true,
+      }
     }
+    // Practice: bot does not self-declare — pick a normal discard and keep the round going.
   }
 
   let pick: TileInstance
@@ -578,7 +757,7 @@ function runOneBotTurn(
       eastExposures: swapped.eastExposures,
       botExposures: swapped.botExposures,
     }
-    pick = chooseBotDiscard(ctx)
+    pick = chooseBotDiscard(ctx, botDifficulty)
   }
   const handNext = handAfterSwaps.filter((t) => t.id !== pick.id)
   return {
@@ -651,11 +830,14 @@ function trySingleBotCall(
  * Scan bots in seat order (South → West → North) to see if any wants to call East's discard.
  * Higher claim types take priority within the same bot; first eligible bot wins.
  */
+type BotContextExposureOverride = { east: EastExposure[]; bot: BotExposure[] }
+
 /** Build the strategic context for a single bot at a given index. */
 function buildBotContext(
   r: RoundState,
   botHand: TileInstance[],
   botIdx: number,
+  exposureOverride?: BotContextExposureOverride,
 ): BotRankContext {
   const botSeat = BOT_LABELS[botIdx]! as BotSeat
   return {
@@ -663,8 +845,8 @@ function buildBotContext(
     botSeat,
     wall: r.wall,
     discardPile: r.discardPile,
-    eastExposures: r.eastExposures,
-    botExposures: r.botExposures,
+    eastExposures: exposureOverride?.east ?? r.eastExposures,
+    botExposures: exposureOverride?.bot ?? r.botExposures,
   }
 }
 
@@ -672,10 +854,11 @@ function findBotCallOnDiscard(
   bots: [TileInstance[], TileInstance[], TileInstance[]],
   discard: TileInstance,
   r: RoundState,
+  botDifficulty: BotDifficulty,
 ): { botIndex: 0 | 1 | 2; claimType: ClaimType; matches: TileInstance[] } | null {
   for (let i = 0; i < 3; i++) {
     const ctx = buildBotContext(r, bots[i]!, i)
-    const prob = botCallStrategicProbability(ctx, discard)
+    const prob = botCallStrategicProbability(ctx, discard, botDifficulty)
     const hit = trySingleBotCall(bots[i]!, discard.def, prob)
     if (!hit) continue
     const seat = BOT_LABELS[i]! as (typeof BOT_LABELS)[number]
@@ -699,11 +882,12 @@ function findBotCallAfterEastSkipped(
   discard: TileInstance,
   discarderIndex: number,
   r: RoundState,
+  botDifficulty: BotDifficulty,
 ): { botIndex: 0 | 1 | 2; claimType: ClaimType; matches: TileInstance[] } | null {
   for (let step = 1; step <= 2; step++) {
     const bi = (discarderIndex + step) % 3
     const ctx = buildBotContext(r, bots[bi]!, bi)
-    const prob = botCallStrategicProbability(ctx, discard)
+    const prob = botCallStrategicProbability(ctx, discard, botDifficulty)
     const hit = trySingleBotCall(bots[bi]!, discard.def, prob)
     if (!hit) continue
     const seat = BOT_LABELS[bi]! as (typeof BOT_LABELS)[number]
@@ -853,17 +1037,14 @@ function applyEastNaturalForExposedJoker(
 const MAX_BOT_JOKER_SWAP_PASSES = 24
 
 /**
- * Any bot holding the natural tile for an East exposure joker may exchange: natural
- * goes into East’s meld, joker into the bot’s hand (NMJL symmetric to East↔bot swaps).
- * Runs only in `east-discard` / `bot-turn`; repeated until no more swaps.
+ * Other seats (bots) may redeem a joker in East’s or a bot’s exposure only on **a bot’s turn** —
+ * not on East’s turn (`east-discard`, including immediately after a call is committed) and
+ * not during `call-staging` while East is building a claim. East’s own joker redemptions use
+ * {@link applyEastNaturalForExposedJoker} and do not run this pass.
+ * Repeated until no more swaps, then the returned state is unchanged.
  */
 function applyBotsJokerSwapsFromEast(r: RoundState): RoundState {
-  if (
-    r.mainPhase !== 'east-discard' &&
-    r.mainPhase !== 'bot-turn' &&
-    r.mainPhase !== 'call-staging'
-  )
-    return r
+  if (r.mainPhase !== 'bot-turn') return r
   let cur = r
   for (let pass = 0; pass < MAX_BOT_JOKER_SWAP_PASSES; pass++) {
     let swapped = false
@@ -939,6 +1120,7 @@ function commitEastDiscardWithHand(
   discardedTile: TileInstance,
   handNext: TileInstance[],
   botWinsEnabled = false,
+  botDifficulty: BotDifficulty = 'normal',
 ): RoundState {
   if (r.mainPhase !== 'east-discard') return r
 
@@ -972,7 +1154,7 @@ function commitEastDiscardWithHand(
   }
 
   // ── Check if a bot wants to call East's discard ──────────────────────────
-  const botCall = findBotCallOnDiscard(r.bots, discardedTile, r)
+  const botCall = findBotCallOnDiscard(r.bots, discardedTile, r, botDifficulty)
   if (botCall) {
     const { botIndex, claimType, matches } = botCall
     const botsNext: [TileInstance[], TileInstance[], TileInstance[]] = [
@@ -996,16 +1178,22 @@ function commitEastDiscardWithHand(
       botsNext[botIndex],
       r.eastExposures,
       allBotExposuresWithNew,
+      botDifficulty,
     )
     botsNext[botIndex] = postCallSwap.hand
     const eastExposuresAfterCallSwap = postCallSwap.eastExposures
     const botExposuresAfterCallSwap = postCallSwap.botExposures
 
-    // Bot discards a non-joker tile from their (now smaller) hand
-    const nonJokersAfterCall = botsNext[botIndex].filter((t) => t.def.cat !== 'joker')
+    const afterCallCtx = buildBotContext(
+      r,
+      botsNext[botIndex]!,
+      botIndex,
+      { east: eastExposuresAfterCallSwap, bot: botExposuresAfterCallSwap },
+    )
+    const nonJokersAfterCall = botsNext[botIndex]!.filter((t) => t.def.cat !== 'joker')
     const pick = nonJokersAfterCall.length > 0
-      ? nonJokersAfterCall[Math.floor(Math.random() * nonJokersAfterCall.length)]!
-      : botsNext[botIndex][0] // fallback: all jokers, shouldn't happen
+      ? chooseBotDiscard(afterCallCtx, botDifficulty)
+      : botsNext[botIndex]![0]! // fallback: all jokers, shouldn't happen
 
     if (!pick) {
       // Bot can't discard (empty hand) — edge case, just advance
@@ -1062,10 +1250,19 @@ function commitEastDiscardWithHand(
     [...r.bots[1]],
     [...r.bots[2]],
   ]
-  const result = runOneBotTurn(botsNext[0], r.wall, pileAfterEast, 'south', r.eastExposures, r.botExposures)
+  const result = runOneBotTurn(
+    botsNext[0],
+    r.wall,
+    pileAfterEast,
+    'south',
+    r.eastExposures,
+    r.botExposures,
+    botDifficulty,
+    botWinsEnabled,
+  )
   botsNext[0] = result.botHand
 
-  if (botWinsEnabled && result.botMahjong) {
+  if (result.botMahjong) {
     return {
       ...r,
       hand: handNext,
@@ -1124,11 +1321,15 @@ function commitEastDiscardWithHand(
   })
 }
 
-function commitEastDiscardAfterStaged(r: RoundState, botWinsEnabled = false): RoundState {
+function commitEastDiscardAfterStaged(
+  r: RoundState,
+  botWinsEnabled = false,
+  botDifficulty: BotDifficulty = 'normal',
+): RoundState {
   const staged = r.pendingEastDiscardTile
   if (!staged || r.mainPhase !== 'east-discard') return r
   if (r.hand.some((t) => t.id === staged.id)) return { ...r, pendingEastDiscardTile: null }
-  return commitEastDiscardWithHand(r, staged, r.hand, botWinsEnabled)
+  return commitEastDiscardWithHand(r, staged, r.hand, botWinsEnabled, botDifficulty)
 }
 
 /**
@@ -1136,7 +1337,11 @@ function commitEastDiscardAfterStaged(r: RoundState, botWinsEnabled = false): Ro
  * Remaining bots (in turn) may claim that discard; otherwise the next bot draws and discards,
  * or East draws when all have passed.
  */
-function applySkipBotDiscard(r: RoundState, botWinsEnabled = false): RoundState {
+function applySkipBotDiscard(
+  r: RoundState,
+  botWinsEnabled = false,
+  botDifficulty: BotDifficulty = 'normal',
+): RoundState {
   if (r.mainPhase !== 'bot-turn' || r.activeBotIndex === null || !r.activeBotDiscard) return r
 
   const fromIdx = r.activeBotIndex
@@ -1190,7 +1395,7 @@ function applySkipBotDiscard(r: RoundState, botWinsEnabled = false): RoundState 
     })
   }
 
-  const botClaim = findBotCallAfterEastSkipped(botsNext, calledTile, fromIdx, r)
+  const botClaim = findBotCallAfterEastSkipped(botsNext, calledTile, fromIdx, r, botDifficulty)
 
   if (botClaim) {
     const { botIndex: callerIdx, claimType, matches } = botClaim
@@ -1212,16 +1417,23 @@ function applySkipBotDiscard(r: RoundState, botWinsEnabled = false): RoundState 
       botsNext[callerIdx]!,
       r.eastExposures,
       allBotExposuresSkip,
+      botDifficulty,
     )
     botsNext[callerIdx] = postCallSwapSkip.hand
     const eastExposuresAfterSkipSwap = postCallSwapSkip.eastExposures
     const botExposuresAfterSkipSwap = postCallSwapSkip.botExposures
 
+    const afterSkipCtx = buildBotContext(
+      r,
+      botsNext[callerIdx]!,
+      callerIdx,
+      { east: eastExposuresAfterSkipSwap, bot: botExposuresAfterSkipSwap },
+    )
     const nonJokersSkip = botsNext[callerIdx]!.filter((t) => t.def.cat !== 'joker')
     const pick =
       nonJokersSkip.length > 0
-        ? nonJokersSkip[Math.floor(Math.random() * nonJokersSkip.length)]!
-        : botsNext[callerIdx]![0]
+        ? chooseBotDiscard(afterSkipCtx, botDifficulty)
+        : botsNext[callerIdx]![0]!
 
     if (!pick) {
       const draw = autoDrawFromWall(r.hand, r.wall)
@@ -1270,10 +1482,19 @@ function applySkipBotDiscard(r: RoundState, botWinsEnabled = false): RoundState 
   }
 
   const seat = BOT_SEATS[nextBotIndex]!
-  const result = runOneBotTurn(botsNext[nextBotIndex]!, r.wall, r.discardPile, seat, r.eastExposures, r.botExposures)
+  const result = runOneBotTurn(
+    botsNext[nextBotIndex]!,
+    r.wall,
+    r.discardPile,
+    seat,
+    r.eastExposures,
+    r.botExposures,
+    botDifficulty,
+    botWinsEnabled,
+  )
   botsNext[nextBotIndex] = result.botHand
 
-  if (botWinsEnabled && result.botMahjong) {
+  if (result.botMahjong) {
     return {
       ...r,
       bots: botsNext,
@@ -1360,6 +1581,30 @@ function applyToggleStagedCallTile(r: RoundState, tileId: string): RoundState {
   return { ...r, stagedCallTileIds: [...r.stagedCallTileIds, tileId] }
 }
 
+/** After committing a new claim meld, left-to-right order of exposures matches the closest line’s group order when possible. */
+function orderEastExposuresForClosestCardLine(
+  r: RoundState,
+  hand: TileInstance[],
+  discardPile: RoundState['discardPile'],
+  nextEast: EastExposure[],
+): EastExposure[] {
+  if (nextEast.length < 2) return nextEast
+  const { closestLine } = summarizeRackTowardWin({
+    hand,
+    wallRemaining: r.wall.length,
+    discards: discardPile.map((e) => e.tile),
+    exposures: r.botExposures,
+    playerClaimMelds: nextEast,
+    eastTableClaimMelds: nextEast,
+  })
+  if (!closestLine) return nextEast
+  const pat = PRACTICE_PATTERNS.find((p) => p.id === closestLine.id)
+  if (!pat) return nextEast
+  const reordered = reorderEastExposuresToPatternGroupOrder(nextEast, pat)
+  if (!reordered) return nextEast
+  return reordered as EastExposure[]
+}
+
 /**
  * Commit the staged meld: remove staged tiles from hand, add the exposure, return to east-discard;
  * or complete Mah Jongg on the live discard (0 staged = tile to hand only; 1 staged = pair exposure win).
@@ -1410,12 +1655,13 @@ function applyCommitStagedCall(r: RoundState): RoundState {
       eastTableClaimMelds: eastMelds,
     })
     if (bestTilesAway !== 0) return r
+    const eastOrdered = orderEastExposuresForClosestCardLine(r, handNext, pileNext, eastMelds)
     const botLabel = r.activeBotIndex != null ? (BOT_LABELS[r.activeBotIndex] ?? 'Bot') : 'Bot'
     return applyBotsJokerSwapsFromEast({
       ...r,
       hand: handNext,
       discardPile: pileNext,
-      eastExposures: eastMelds,
+      eastExposures: eastOrdered,
       mainPhase: 'mahjong-declared',
       activeBotIndex: null,
       activeBotDiscard: null,
@@ -1447,11 +1693,15 @@ function applyCommitStagedCall(r: RoundState): RoundState {
     claimType,
     calledTileId: calledTile.id,
   }
+  const nextEast = orderEastExposuresForClosestCardLine(r, handNext, pileNext, [
+    ...r.eastExposures,
+    exposure,
+  ])
   return applyBotsJokerSwapsFromEast({
     ...r,
     hand: handNext,
     discardPile: pileNext,
-    eastExposures: [...r.eastExposures, exposure],
+    eastExposures: nextEast,
     mainPhase: 'east-discard',
     activeBotIndex: null,
     activeBotDiscard: null,
@@ -1505,14 +1755,6 @@ function applyDeclareMahjongSelfDraw(r: RoundState): RoundState {
   }
 }
 
-function greedyMatchOptsFromClaimMelds(
-  melds: ReadonlyArray<{ tiles: TileInstance[] }>,
-): GreedyPatternMatchOpts | undefined {
-  if (melds.length === 0) return undefined
-  const exposureTileIds = new Set(melds.flatMap((e) => e.tiles).map((t) => t.id))
-  return exposureTileIds.size > 0 ? { exposureTileIds } : undefined
-}
-
 export default function App() {
   const [round, setRound] = useState<RoundState>(() => createNewRound())
   const [suggestedFocusHandKey, setSuggestedFocusHandKey] = useState<string | null>(null)
@@ -1528,6 +1770,34 @@ export default function App() {
   const [botWinsEnabled, setBotWinsEnabled] = useState<boolean>(() => readBotWinsEnabledFromStorage())
   const [botsCallDeadEnabled, setBotsCallDeadEnabled] = useState<boolean>(() => readBotsCallEastDeadFromStorage())
   const [animationsEnabled, setAnimationsEnabled] = useState<boolean>(() => readAnimationsEnabledFromStorage())
+  const [suggestedHandsRememberSize, setSuggestedHandsRememberSize] = useState<boolean>(() =>
+    readSuggestedHandsRememberSizeFromStorage(),
+  )
+  const suggestedHandsRememberSizeRef = useRef(suggestedHandsRememberSize)
+  suggestedHandsRememberSizeRef.current = suggestedHandsRememberSize
+  const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>(() => readBotDifficultyFromStorage())
+  const botDifficultyRef = useRef(botDifficulty)
+  botDifficultyRef.current = botDifficulty
+  const [tileGraphics, setTileGraphics] = useState<TileGraphics>(() => readTileGraphicsFromStorage())
+  const setTileGraphicsMode = useCallback((g: TileGraphics) => {
+    setTileGraphics(g)
+    try {
+      localStorage.setItem(LS_KEY_TILE_GRAPHICS, g)
+      localStorage.setItem(LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED, 'true')
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  const setBotDifficultyLevel = useCallback((d: BotDifficulty) => {
+    setBotDifficulty(d)
+    try {
+      localStorage.setItem(LS_KEY_BOT_DIFFICULTY, d)
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
   const toggleBotWins = useCallback(() => {
     setBotWinsEnabled((v) => {
       const next = !v
@@ -1563,6 +1833,22 @@ export default function App() {
     })
   }, [])
 
+  const toggleSuggestedHandsRememberSize = useCallback(() => {
+    setSuggestedHandsRememberSize((v) => {
+      const next = !v
+      try {
+        localStorage.setItem(LS_KEY_SUGGESTED_HANDS_REMEMBER_SIZE, next ? 'true' : 'false')
+        if (!next) {
+          localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_PANEL_HEIGHT)
+          localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_RIGHT_DELTA)
+        }
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }, [])
+
   // Keep a ref so pure-function callbacks always see the current setting value.
   const botWinsEnabledRef = useRef(botWinsEnabled)
   useEffect(() => {
@@ -1587,6 +1873,18 @@ export default function App() {
       const a = readAnimationsEnabledFromStorage()
       return prev === a ? prev : a
     })
+    setSuggestedHandsRememberSize((prev) => {
+      const s = readSuggestedHandsRememberSizeFromStorage()
+      return prev === s ? prev : s
+    })
+    setBotDifficulty((prev) => {
+      const b = readBotDifficultyFromStorage()
+      return prev === b ? prev : b
+    })
+    setTileGraphics((prev) => {
+      const t = readTileGraphicsFromStorage()
+      return prev === t ? prev : t
+    })
   }, [])
 
   /** If another tab changes a preference, stay in sync. */
@@ -1607,26 +1905,73 @@ export default function App() {
         const on = e.newValue === 'true' || e.newValue === '1'
         setAnimationsEnabled(on)
         animationsEnabledRef.current = on
+      } else if (e.key === LS_KEY_SUGGESTED_HANDS_REMEMBER_SIZE) {
+        if (e.newValue == null) return
+        setSuggestedHandsRememberSize(e.newValue === 'true' || e.newValue === '1')
+      } else if (e.key === LS_KEY_BOT_DIFFICULTY) {
+        if (e.newValue == null) return
+        if (isBotDifficulty(e.newValue)) setBotDifficulty(e.newValue)
+      } else if (e.key === LS_KEY_TILE_GRAPHICS) {
+        if (e.newValue == null) return
+        if (isTileGraphics(e.newValue)) setTileGraphics(e.newValue)
       }
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
   }, [])
 
-  // Tracks the discard panel edges so the suggested tray docks exactly over it.
+  // Discard bottom edge + optional top from the rack action wells (so the tray can extend upward).
   const discardTrackerPanelRef = useRef<HTMLElement>(null)
+  const suggestedPopupTopAnchorCharlestonRef = useRef<HTMLDivElement | null>(null)
+  const suggestedPopupTopAnchorMainRef = useRef<HTMLDivElement | null>(null)
   const [suggestedPopupTop, setSuggestedPopupTop] = useState<number | null>(null)
   const [suggestedPopupBottom, setSuggestedPopupBottom] = useState<number | null>(null)
+  const [suggestedPopupRight, setSuggestedPopupRight] = useState<number | null>(null)
   const [suggestedPanelHeight, setSuggestedPanelHeight] = useState<number | null>(null)
+  /** Pixels added to the measured `right` (larger = narrower; smaller = wider). Cleared on panel close. */
+  const [suggestedPanelRightDelta, setSuggestedPanelRightDelta] = useState<number | null>(null)
   const suggestedPopupRef = useRef<HTMLDivElement>(null)
-  const dragStateRef = useRef<{ startY: number; startHeight: number; moved: boolean } | null>(null)
+  const suggestedPopupRightRef = useRef<number | null>(null)
+  suggestedPopupRightRef.current = suggestedPopupRight
+  const dragStateRef = useRef<{
+    startY: number
+    startHeight: number
+    moved: boolean
+    closeOnTap: boolean
+  } | null>(null)
+  const rightEdgeDragRef = useRef<{
+    startX: number
+    startRightCss: number
+    leftBound: number
+    moved: boolean
+  } | null>(null)
 
   const onDragHandlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return
     e.preventDefault()
     const popup = suggestedPopupRef.current
     if (!popup) return
-    dragStateRef.current = { startY: e.clientY, startHeight: popup.getBoundingClientRect().height, moved: false }
+    dragStateRef.current = {
+      startY: e.clientY,
+      startHeight: popup.getBoundingClientRect().height,
+      moved: false,
+      closeOnTap: true,
+    }
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  }, [])
+
+  const onTopEdgePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return
+    e.preventDefault()
+    e.stopPropagation()
+    const popup = suggestedPopupRef.current
+    if (!popup) return
+    dragStateRef.current = {
+      startY: e.clientY,
+      startHeight: popup.getBoundingClientRect().height,
+      moved: false,
+      closeOnTap: false,
+    }
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
   }, [])
 
@@ -1645,38 +1990,103 @@ export default function App() {
     const drag = dragStateRef.current
     if (!drag) return
     dragStateRef.current = null
-    if (!drag.moved) {
+    if (!drag.moved && drag.closeOnTap) {
       setSuggestedPanelHandsOn(false)
-      setSuggestedPanelHeight(null)
     }
   }, [setSuggestedPanelHandsOn])
-  useEffect(() => {
-    const el = discardTrackerPanelRef.current
+
+  const MIN_SUGGESTED_PANEL_PX = 200
+
+  const onRightEdgePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return
+    e.preventDefault()
+    e.stopPropagation()
+    const el = suggestedPopupRef.current
     if (!el) return
-    const update = () => {
-      const rect = el.getBoundingClientRect()
-      setSuggestedPopupTop(rect.top)
-      setSuggestedPopupBottom(window.innerHeight - rect.bottom)
+    const r = el.getBoundingClientRect()
+    rightEdgeDragRef.current = {
+      startX: e.clientX,
+      startRightCss: window.innerWidth - r.right,
+      leftBound: r.left,
+      moved: false,
     }
-    update()
-    const ro = new ResizeObserver(update)
-    ro.observe(el)
-    window.addEventListener('scroll', update, { passive: true })
-    return () => {
-      ro.disconnect()
-      window.removeEventListener('scroll', update)
-    }
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
   }, [])
+
+  const onRightEdgePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const d = rightEdgeDragRef.current
+    if (!d) return
+    const dx = e.clientX - d.startX
+    if (Math.abs(dx) > 3) d.moved = true
+    if (!d.moved) return
+    const w = window.innerWidth
+    const minR = 0
+    const maxR = w - d.leftBound - MIN_SUGGESTED_PANEL_PX
+    const newRight = Math.max(minR, Math.min(maxR, d.startRightCss - dx))
+    const base = suggestedPopupRightRef.current
+    if (base == null) return
+    setSuggestedPanelRightDelta(Math.abs(newRight - base) < 0.5 ? null : newRight - base)
+  }, [])
+
+  const onRightEdgePointerUp = useCallback(() => {
+    rightEdgeDragRef.current = null
+  }, [])
+
+  const lastSuggestedPanelOpenRef = useRef(suggestedPanelHandsOn)
+  const panelSizeOnLatestRenderRef = useRef({ h: null as number | null, d: null as number | null })
+  panelSizeOnLatestRenderRef.current = { h: suggestedPanelHeight, d: suggestedPanelRightDelta }
+
+  useEffect(() => {
+    const wasOpen = lastSuggestedPanelOpenRef.current
+    if (wasOpen && !suggestedPanelHandsOn) {
+      const { h, d } = panelSizeOnLatestRenderRef.current
+      if (suggestedHandsRememberSizeRef.current) {
+        try {
+          if (h != null) {
+            localStorage.setItem(LS_KEY_SUGGESTED_HANDS_PANEL_HEIGHT, String(h))
+          } else {
+            localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_PANEL_HEIGHT)
+          }
+          if (d != null) {
+            localStorage.setItem(LS_KEY_SUGGESTED_HANDS_RIGHT_DELTA, String(d))
+          } else {
+            localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_RIGHT_DELTA)
+          }
+        } catch {
+          /* ignore */
+        }
+      } else {
+        try {
+          localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_PANEL_HEIGHT)
+          localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_RIGHT_DELTA)
+        } catch {
+          /* ignore */
+        }
+      }
+      setSuggestedPanelHeight(null)
+      setSuggestedPanelRightDelta(null)
+    } else if (!wasOpen && suggestedPanelHandsOn) {
+      if (suggestedHandsRememberSize) {
+        const h0 = readSuggestedPanelHeightFromStorage()
+        const d0 = readSuggestedPanelRightDeltaFromStorage()
+        if (h0 != null) {
+          setSuggestedPanelHeight(h0)
+        }
+        if (d0 != null) {
+          setSuggestedPanelRightDelta(d0)
+        }
+      }
+    }
+    lastSuggestedPanelOpenRef.current = suggestedPanelHandsOn
+  }, [suggestedPanelHandsOn, suggestedHandsRememberSize])
 
   useEffect(() => {
     if (!menuOpen) return
-    const handler = (e: MouseEvent) => {
-      if (menuContainerRef.current && !menuContainerRef.current.contains(e.target as Node)) {
-        setMenuOpen(false)
-      }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false)
     }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
   }, [menuOpen])
 
   const {
@@ -1703,6 +2113,42 @@ export default function App() {
     playerWinMethod,
   } = round
   const charlestonDone = charlestonPhase === 'done'
+
+  useEffect(() => {
+    const disc = discardTrackerPanelRef.current
+    if (!disc) return
+    const update = () => {
+      const dRect = disc.getBoundingClientRect()
+      const topFromAction = charlestonDone
+        ? suggestedPopupTopAnchorMainRef.current?.getBoundingClientRect().bottom
+        : suggestedPopupTopAnchorCharlestonRef.current?.getBoundingClientRect().bottom
+      const toolbarBorderLeft =
+        menuContainerRef.current
+          ?.closest('.panel--bot-exposures__toolbar-well')
+          ?.getBoundingClientRect().left
+      setSuggestedPopupTop(topFromAction ?? dRect.top)
+      setSuggestedPopupBottom(window.innerHeight - dRect.bottom)
+      setSuggestedPopupRight(
+        toolbarBorderLeft == null ? null : window.innerWidth - toolbarBorderLeft,
+      )
+    }
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(disc)
+    const a = charlestonDone
+      ? suggestedPopupTopAnchorMainRef.current
+      : suggestedPopupTopAnchorCharlestonRef.current
+    if (a) ro.observe(a)
+    if (menuContainerRef.current) ro.observe(menuContainerRef.current)
+    window.addEventListener('scroll', update, { passive: true })
+    window.addEventListener('resize', update, { passive: true })
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('scroll', update)
+      window.removeEventListener('resize', update)
+    }
+  }, [charlestonDone, mainPhase])
+
   const charlestonGlowTileIds = useMemo(() => {
     if (charlestonDone || charlestonNewTileIds.length === 0) return null
     return new Set(charlestonNewTileIds)
@@ -1999,6 +2445,25 @@ export default function App() {
     return { bestIds }
   }, [suggestedFocusHandKey, mainPhase, rackForSuggestedHandsUi, suggestedHandsExposureTileIds])
 
+  /** Discards that match naturals the focused line is still short (Strip slots without highlight). */
+  const suggestedDiscardNeedIds = useMemo(() => {
+    if (!suggestedFocusHandKey) return null
+    if (mainPhase === 'mahjong-declared' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand' || mainPhase === 'wall-game')
+      return null
+    return computeSuggestedDiscardNeedHighlightIds(
+      suggestedFocusHandKey,
+      rackForSuggestedHandsUi,
+      discardTiles,
+      suggestedHandsExposureTileIds,
+    )
+  }, [
+    suggestedFocusHandKey,
+    mainPhase,
+    rackForSuggestedHandsUi,
+    discardTiles,
+    suggestedHandsExposureTileIds,
+  ])
+
   useEffect(() => {
     if (mainPhase === 'mahjong-declared' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand' || mainPhase === 'wall-game') setSuggestedFocusHandKey(null)
   }, [mainPhase])
@@ -2044,80 +2509,40 @@ export default function App() {
         playerClaimMelds: playerClaims,
         eastTableClaimMelds: eastExposures,
       }
-      const { bestTilesAway, closestLine } = summarizeRackTowardWin(rankInput)
-
-      // Sort the bot's hand tiles into pattern order
-      const sortedHand = closestLine
-        ? sortHandForSuggestedPattern(botHand, closestLine.id, rankInput)
-        : [...botHand]
-
-      // Compute which tile ids count toward the closest hand (for lit/dim)
-      let bestIds = new Set<string>()
-      if (closestLine) {
-        const p = PRACTICE_PATTERNS.find((x) => x.id === closestLine.id)
-        if (p) {
-          const rackForPattern = [...botHand, ...playerClaims.flatMap((e) => e.tiles)]
-          const detail = greedyPatternMatchDetail(
-            rackForPattern,
-            p,
-            greedyMatchOptsFromClaimMelds(playerClaims),
-          )
-          const rackIdSet = new Set(rackForPattern.map((t) => t.id))
-          bestIds = new Set(detail.usedOrder.filter((id) => rackIdSet.has(id)))
-          if (bestIds.size === 0) {
-            for (const t of rackForPattern) {
-              if (p.matches(t.def)) bestIds.add(t.id)
-            }
-          }
-        }
-      }
-
-      return {
-        label,
-        bestTilesAway,
-        section: closestLine?.section ?? '',
-        cardLineNumber: closestLine?.cardLineNumber ?? null,
-        titleSegments: closestLine?.titleSegments,
-        closestTitle: closestLine?.title ?? '—',
-        sortedHand,
-        exposureGroups: playerClaims,
-        bestIds,
-      }
+      const { bestTilesAway, linesAtMin } = suggestedHandsTiedAtBest(rankInput)
+      return { label, bestTilesAway, linesAtMin, rankInput }
     })
   }, [mainPhase, bots, wall.length, discardTiles, botExposures, eastExposures])
 
   /**
-   * On win: all 14 player tiles (exposed + concealed) sorted into card-pattern order
-   * so they can be laid face-up in the correct hand sequence for other players to verify.
+   * On win: full 14 (concealed + exposures) left-to-right in the order of the winning
+   * practice line — same rack model as in-play suggestions (`hand` + claim melds).
    */
   const winHandSortedTiles = useMemo(() => {
     if (mainPhase !== 'mahjong-declared') return null
-    const exposedTiles = eastExposures.flatMap((e) => e.tiles)
-    const allTiles = [...hand, ...exposedTiles]
     const rankInput: RankSuggestedHandsInput = {
-      hand: allTiles,
+      hand,
       wallRemaining: wall.length,
       discards: discardTiles,
       exposures: botExposures,
-      playerClaimMelds: [],
+      playerClaimMelds: eastExposures,
       eastTableClaimMelds: eastExposures,
     }
     const { closestLine } = summarizeRackTowardWin(rankInput)
+    const allTiles = [...hand, ...eastExposures.flatMap((e) => e.tiles)]
     if (!closestLine) return allTiles
-    return sortHandForSuggestedPattern(allTiles, closestLine.id, rankInput)
+    return sortFullRackTilesForPattern(closestLine.id, rankInput, focusKeyForSuggestedHandLine(closestLine))
   }, [mainPhase, hand, eastExposures, wall.length, discardTiles, botExposures])
 
   /** Winning pattern info shown on the player win screen. */
   const playerWinPattern = useMemo(() => {
     if (mainPhase !== 'mahjong-declared') return null
-    const exposedTiles = eastExposures.flatMap((e) => e.tiles)
-    const allTiles = [...hand, ...exposedTiles]
     const rankInput: RankSuggestedHandsInput = {
-      hand: allTiles,
+      hand,
       wallRemaining: wall.length,
       discards: discardTiles,
       exposures: botExposures,
-      playerClaimMelds: [],
+      playerClaimMelds: eastExposures,
       eastTableClaimMelds: eastExposures,
     }
     const { closestLine } = summarizeRackTowardWin(rankInput)
@@ -2143,46 +2568,20 @@ export default function App() {
       eastTableClaimMelds: eastExposures,
     }
     const { closestLine: winnerLine } = summarizeRackTowardWin(winnerRankInput)
-    const winnerSortedHand = winnerLine
-      ? sortHandForSuggestedPattern(winnerHand, winnerLine.id, winnerRankInput)
-      : [...winnerHand]
-    let winnerBestIds = new Set<string>()
-    if (winnerLine) {
-      const p = PRACTICE_PATTERNS.find((x) => x.id === winnerLine.id)
-      if (p) {
-        const rack = [...winnerHand, ...winnerExposures.flatMap((e) => e.tiles)]
-        const detail = greedyPatternMatchDetail(rack, p, greedyMatchOptsFromClaimMelds(winnerExposures))
-        winnerBestIds = new Set(detail.usedOrder.filter((id) => rack.some((t) => t.id === id)))
-      }
-    }
 
-    // Other players: East (player) + remaining bots
-    type ReviewRow = {
-      label: string
-      isWinner: boolean
-      sortedHand: TileInstance[]
-      exposureGroups: { tiles: TileInstance[] }[]
-      bestTilesAway: number
-      bestIds: Set<string>
-      closestTitle: string
-      titleSegments?: CardTextSeg[]
-      section: string
-      cardLineNumber: number | null
-    }
-    const winner: ReviewRow = {
+    const winner = {
       label: `Bot ${botIndex + 1} (${winnerLabel})`,
-      isWinner: true,
-      sortedHand: winnerSortedHand,
-      exposureGroups: winnerExposures,
-      bestTilesAway: 0,
-      bestIds: winnerBestIds,
       closestTitle: winnerLine?.title ?? '—',
       titleSegments: winnerLine?.titleSegments,
-      section: winnerLine?.section ?? '',
-      cardLineNumber: winnerLine?.cardLineNumber ?? null,
     }
 
-    // East (player)
+    type LoserRow = {
+      label: string
+      bestTilesAway: number
+      linesAtMin: ReturnType<typeof suggestedHandsTiedAtBest>['linesAtMin']
+      rankInput: RankSuggestedHandsInput
+    }
+
     const eastRankInput: RankSuggestedHandsInput = {
       hand,
       wallRemaining: wall.length,
@@ -2191,31 +2590,10 @@ export default function App() {
       playerClaimMelds: eastExposures,
       eastTableClaimMelds: eastExposures,
     }
-    const { bestTilesAway: eastAway, closestLine: eastLine } = summarizeRackTowardWin(eastRankInput)
-    const eastSortedHand = eastLine ? sortHandForSuggestedPattern(hand, eastLine.id, eastRankInput) : [...hand]
-    let eastBestIds = new Set<string>()
-    if (eastLine) {
-      const p = PRACTICE_PATTERNS.find((x) => x.id === eastLine.id)
-      if (p) {
-        const rack = [...hand, ...eastExposures.flatMap((e) => e.tiles)]
-        const detail = greedyPatternMatchDetail(rack, p, greedyMatchOptsFromClaimMelds(eastExposures))
-        eastBestIds = new Set(detail.usedOrder.filter((id) => rack.some((t) => t.id === id)))
-      }
-    }
-    const eastRow: ReviewRow = {
-      label: 'You (East)',
-      isWinner: false,
-      sortedHand: eastSortedHand,
-      exposureGroups: eastExposures,
-      bestTilesAway: eastAway,
-      bestIds: eastBestIds,
-      closestTitle: eastLine?.title ?? '—',
-      titleSegments: eastLine?.titleSegments,
-      section: eastLine?.section ?? '',
-      cardLineNumber: eastLine?.cardLineNumber ?? null,
-    }
+    const { bestTilesAway: eastAway, linesAtMin: eastLines } = suggestedHandsTiedAtBest(eastRankInput)
+    const eastRow: LoserRow = { label: 'You (East)', bestTilesAway: eastAway, linesAtMin: eastLines, rankInput: eastRankInput }
 
-    const otherRows: ReviewRow[] = BOT_LABELS.flatMap((label, idx) => {
+    const otherRows: LoserRow[] = BOT_LABELS.flatMap((label, idx) => {
       if (idx === botIndex) return []
       const botHand = bots[idx] ?? []
       const claims = botExposures.filter((e) => e.seat === label)
@@ -2227,30 +2605,8 @@ export default function App() {
         playerClaimMelds: claims,
         eastTableClaimMelds: eastExposures,
       }
-      const { bestTilesAway, closestLine } = summarizeRackTowardWin(rankInput)
-      const sortedHand = closestLine ? sortHandForSuggestedPattern(botHand, closestLine.id, rankInput) : [...botHand]
-      let bestIds = new Set<string>()
-      if (closestLine) {
-        const p = PRACTICE_PATTERNS.find((x) => x.id === closestLine.id)
-        if (p) {
-          const rack = [...botHand, ...claims.flatMap((e) => e.tiles)]
-          const detail = greedyPatternMatchDetail(rack, p, greedyMatchOptsFromClaimMelds(claims))
-          bestIds = new Set(detail.usedOrder.filter((id) => rack.some((t) => t.id === id)))
-        }
-      }
-      const row: ReviewRow = {
-        label: `Bot ${idx + 1} (${label})`,
-        isWinner: false,
-        sortedHand,
-        exposureGroups: claims,
-        bestTilesAway,
-        bestIds,
-        closestTitle: closestLine?.title ?? '—',
-        titleSegments: closestLine?.titleSegments,
-        section: closestLine?.section ?? '',
-        cardLineNumber: closestLine?.cardLineNumber ?? null,
-      }
-      return [row]
+      const { bestTilesAway, linesAtMin } = suggestedHandsTiedAtBest(rankInput)
+      return [{ label: `Bot ${idx + 1} (${label})`, bestTilesAway, linesAtMin, rankInput }]
     })
 
     return { winner, rows: [eastRow, ...otherRows], winnerLine }
@@ -2264,16 +2620,11 @@ export default function App() {
   const postGameWallGameReview = useMemo(() => {
     if (mainPhase !== 'wall-game') return null
 
-    type ReviewRow = {
+    type WRow = {
       label: string
-      sortedHand: TileInstance[]
-      exposureGroups: { tiles: TileInstance[] }[]
       bestTilesAway: number
-      bestIds: Set<string>
-      closestTitle: string
-      titleSegments?: CardTextSeg[]
-      section: string
-      cardLineNumber: number | null
+      linesAtMin: ReturnType<typeof suggestedHandsTiedAtBest>['linesAtMin']
+      rankInput: RankSuggestedHandsInput
     }
 
     const eastRankInput: RankSuggestedHandsInput = {
@@ -2284,30 +2635,10 @@ export default function App() {
       playerClaimMelds: eastExposures,
       eastTableClaimMelds: eastExposures,
     }
-    const { bestTilesAway: eastAway, closestLine: eastLine } = summarizeRackTowardWin(eastRankInput)
-    const eastSortedHand = eastLine ? sortHandForSuggestedPattern(hand, eastLine.id, eastRankInput) : [...hand]
-    let eastBestIds = new Set<string>()
-    if (eastLine) {
-      const p = PRACTICE_PATTERNS.find((x) => x.id === eastLine.id)
-      if (p) {
-        const rack = [...hand, ...eastExposures.flatMap((e) => e.tiles)]
-        const detail = greedyPatternMatchDetail(rack, p, greedyMatchOptsFromClaimMelds(eastExposures))
-        eastBestIds = new Set(detail.usedOrder.filter((id) => rack.some((t) => t.id === id)))
-      }
-    }
-    const eastRow: ReviewRow = {
-      label: 'You (East)',
-      sortedHand: eastSortedHand,
-      exposureGroups: eastExposures,
-      bestTilesAway: eastAway,
-      bestIds: eastBestIds,
-      closestTitle: eastLine?.title ?? '—',
-      titleSegments: eastLine?.titleSegments,
-      section: eastLine?.section ?? '',
-      cardLineNumber: eastLine?.cardLineNumber ?? null,
-    }
+    const { bestTilesAway: eastAway, linesAtMin: eastLines } = suggestedHandsTiedAtBest(eastRankInput)
+    const eastRow: WRow = { label: 'You (East)', bestTilesAway: eastAway, linesAtMin: eastLines, rankInput: eastRankInput }
 
-    const botRows: ReviewRow[] = BOT_LABELS.map((label, idx) => {
+    const botRows: WRow[] = BOT_LABELS.map((label, idx) => {
       const botHand = bots[idx] ?? []
       const claims = botExposures.filter((e) => e.seat === label)
       const rankInput: RankSuggestedHandsInput = {
@@ -2318,32 +2649,12 @@ export default function App() {
         playerClaimMelds: claims,
         eastTableClaimMelds: eastExposures,
       }
-      const { bestTilesAway, closestLine } = summarizeRackTowardWin(rankInput)
-      const sortedHand = closestLine ? sortHandForSuggestedPattern(botHand, closestLine.id, rankInput) : [...botHand]
-      let bestIds = new Set<string>()
-      if (closestLine) {
-        const p = PRACTICE_PATTERNS.find((x) => x.id === closestLine.id)
-        if (p) {
-          const rack = [...botHand, ...claims.flatMap((e) => e.tiles)]
-          const detail = greedyPatternMatchDetail(rack, p, greedyMatchOptsFromClaimMelds(claims))
-          bestIds = new Set(detail.usedOrder.filter((id) => rack.some((t) => t.id === id)))
-          if (bestIds.size === 0) {
-            for (const t of rack) {
-              if (p.matches(t.def)) bestIds.add(t.id)
-            }
-          }
-        }
-      }
+      const { bestTilesAway, linesAtMin } = suggestedHandsTiedAtBest(rankInput)
       return {
         label: `Bot ${idx + 1} (${label})`,
-        sortedHand,
-        exposureGroups: claims,
         bestTilesAway,
-        bestIds,
-        closestTitle: closestLine?.title ?? '—',
-        titleSegments: closestLine?.titleSegments,
-        section: closestLine?.section ?? '',
-        cardLineNumber: closestLine?.cardLineNumber ?? null,
+        linesAtMin,
+        rankInput,
       }
     })
 
@@ -2559,6 +2870,10 @@ export default function App() {
   }, [])
 
   const sendCharlestonPass = useCallback(() => {
+    const charlestonBotPassOpts = {
+      pickBotPass: (hand: TileInstance[], n: number, botIndex: 0 | 1 | 2) =>
+        chooseBotCharlestonPass(hand, n, BOT_LABELS[botIndex] as BotSeat, botDifficultyRef.current),
+    }
     let blockedByJoker = false
     pushRound((r) => {
       if (r.charlestonPhase === 'done') return r
@@ -2573,7 +2888,7 @@ export default function App() {
 
       if (phase === 'courtesy') {
         if (eastRack.length > 3) return r
-        const nextHands = applyCharlestonExchange(phase, toFourHands(r), eastRack, 0)
+        const nextHands = applyCharlestonExchange(phase, toFourHands(r), eastRack, 0, charlestonBotPassOpts)
         const nextPhase = nextCharlestonPhase(phase)
         const incoming =
           nextPhase === 'done'
@@ -2598,7 +2913,13 @@ export default function App() {
       if (blindOk) {
         const blindCount = 3 - eastRack.length
         if (blindCount < 0 || blindCount > 3) return r
-        const nextHands = applyCharlestonExchange(phase, toFourHands(r), eastRack, blindCount)
+        const nextHands = applyCharlestonExchange(
+          phase,
+          toFourHands(r),
+          eastRack,
+          blindCount,
+          charlestonBotPassOpts,
+        )
         const nextPhase = nextCharlestonPhase(phase)
         const incoming =
           nextPhase === 'done'
@@ -2620,7 +2941,7 @@ export default function App() {
       }
 
       if (eastRack.length !== 3) return r
-      const nextHands = applyCharlestonExchange(phase, toFourHands(r), eastRack, 0)
+      const nextHands = applyCharlestonExchange(phase, toFourHands(r), eastRack, 0, charlestonBotPassOpts)
       const nextPhase = nextCharlestonPhase(phase)
       const incoming =
         nextPhase === 'done' ? [] : charlestonIncomingHandTileIds(r.hand, nextHands.east)
@@ -2705,9 +3026,15 @@ export default function App() {
     })
   }, [])
 
-  const skipBotDiscard = useCallback(() => pushRound((r) => applySkipBotDiscard(r, botWinsEnabledRef.current)), [pushRound])
+  const skipBotDiscard = useCallback(
+    () =>
+      pushRound((r) => applySkipBotDiscard(r, botWinsEnabledRef.current, botDifficultyRef.current)),
+    [pushRound],
+  )
   const commitEastDiscard = useCallback(() => {
-    pushRound((r) => commitEastDiscardAfterStaged(r, botWinsEnabledRef.current))
+    pushRound((r) =>
+      commitEastDiscardAfterStaged(r, botWinsEnabledRef.current, botDifficultyRef.current),
+    )
   }, [pushRound])
   const returnStagedEastDiscard = useCallback(() => {
     pushRound((r) => {
@@ -3276,6 +3603,11 @@ export default function App() {
       ? hand.filter((t) => !stagedCallTileIds.includes(t.id))
       : hand
   const handIds = visibleHandTiles.map((t) => t.id)
+  /** Charleston: pass strip + hand share one context so pass tiles slide like rack tiles. */
+  const charlestonPassAndHandSortableItems = useMemo(() => {
+    const passIds = passSlots.map((s) => s?.id).filter((id): id is string => id != null)
+    return [...passIds, ...handIds]
+  }, [passSlots, handIds])
   // Staged tiles share the same SortableContext as hand tiles so dragging animates both zones.
   const sortableItems = mainPhase === 'call-staging'
     ? [...stagedCallTileIds, ...handIds]
@@ -3313,8 +3645,240 @@ export default function App() {
         : `${BOT_LABELS[activeBotIndex ?? 0]} discarded ${tileShortLabel(activeBotDiscard.def)}`
       : null
 
+  const suggestedPopupRightForStyle: number | undefined =
+    suggestedPopupRight != null
+      ? suggestedPopupRight + (suggestedPanelRightDelta ?? 0)
+      : undefined
+
   return (
-    <div className="app">
+    <div className="app" data-tile-graphics={tileGraphics}>
+      {menuOpen ? (
+        <div
+          className="app-menu-modal-layer"
+          role="presentation"
+        >
+          <button
+            type="button"
+            className="app-menu-modal__backdrop"
+            tabIndex={-1}
+            aria-label="Close menu"
+            onClick={() => setMenuOpen(false)}
+          />
+          <div
+            id="app-menu-modal"
+            className="app-menu-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu"
+          >
+            <header className="app-menu-modal__header">
+              <button
+                type="button"
+                className="app-menu-modal__close"
+                aria-label="Close"
+                onClick={() => setMenuOpen(false)}
+              >
+                ✕
+              </button>
+            </header>
+            <div className="app-menu-modal__body">
+              <button
+                type="button"
+                className="btn app-menu-tray__item app-menu-modal__new-game"
+                onClick={() => {
+                  newHand()
+                  setMenuOpen(false)
+                }}
+              >
+                New Game
+              </button>
+              <div className="app-menu-modal__diff-block">
+                <div className="app-menu-modal__subhead" id="bot-difficulty-menu-label">
+                  Bot difficulty
+                </div>
+                <div
+                  className="app-menu-tray__diff-row app-menu-modal__diff-row"
+                  role="radiogroup"
+                  aria-labelledby="bot-difficulty-menu-label"
+                >
+                  {BOT_DIFFICULTIES.map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      className={['btn', 'app-menu-tray__diff-btn', botDifficulty === d ? 'app-menu-tray__diff-btn--on' : ''].filter(Boolean).join(' ')}
+                      role="radio"
+                      aria-checked={botDifficulty === d}
+                      title={BOT_DIFFICULTY_TITLE[d]}
+                      onClick={() => setBotDifficultyLevel(d)}
+                    >
+                      {BOT_DIFFICULTY_LABEL[d]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="app-menu-modal__diff-block app-menu-modal__diff-block--tile-graphics">
+                <div className="app-menu-modal__subhead" id="tile-graphics-menu-label">
+                  Tile graphics
+                </div>
+                <div className="app-menu-modal__tile-graphics-category">
+                  <hr className="app-menu-modal__tile-graphics-category__line" aria-hidden="true" />
+                  <span
+                    className="app-menu-modal__tile-graphics-category__label"
+                    id={TILE_GRAPHICS_CATEGORY_MINIMALIST_ID}
+                  >
+                    Minimalist
+                  </span>
+                  <hr className="app-menu-modal__tile-graphics-category__line" aria-hidden="true" />
+                </div>
+                <div
+                  className="app-menu-modal__tile-graphics-modes app-menu-tray__diff-row app-menu-modal__diff-row"
+                  role="radiogroup"
+                  aria-labelledby={['tile-graphics-menu-label', TILE_GRAPHICS_CATEGORY_MINIMALIST_ID].join(' ')}
+                >
+                  {TILE_GRAPHICS.map((g) => (
+                    <button
+                      key={g}
+                      type="button"
+                      className={[
+                        'btn',
+                        'app-menu-tray__diff-btn',
+                        tileGraphics === g ? 'app-menu-tray__diff-btn--on' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      role="radio"
+                      aria-checked={tileGraphics === g}
+                      title={TILE_GRAPHICS_TITLE[g]}
+                      onClick={() => setTileGraphicsMode(g)}
+                    >
+                      {TILE_GRAPHICS_LABEL[g]}
+                    </button>
+                  ))}
+                </div>
+                <div
+                  className="app-menu-modal__tile-graphics-preview"
+                  role="group"
+                  aria-label="Sample Minimalist-style tiles for the current selection"
+                >
+                  {MENU_TILE_GRAPHICS_PREVIEW.map((spec) => (
+                    <TileFace
+                      key={spec.label}
+                      def={spec.def}
+                      rackSuitStacked
+                    />
+                  ))}
+                </div>
+                <div
+                  className="app-menu-modal__tile-graphics-category app-menu-modal__tile-graphics-category--illustrative"
+                >
+                  <hr className="app-menu-modal__tile-graphics-category__line" aria-hidden="true" />
+                  <span
+                    className="app-menu-modal__tile-graphics-category__label"
+                    id={TILE_GRAPHICS_CATEGORY_ILLUSTRATIVE_ID}
+                  >
+                    Illustrative
+                  </span>
+                  <hr className="app-menu-modal__tile-graphics-category__line" aria-hidden="true" />
+                </div>
+                <div
+                  className="app-menu-modal__tile-graphics-preview app-menu-modal__tile-graphics-preview--illustrative"
+                  role="group"
+                  aria-label="Illustrative tile styles (no samples yet)"
+                >
+                  {ILLUSTRATIVE_PREVIEW_PLACEHOLDERS.map((i) => (
+                    <div
+                      key={i}
+                      className="app-menu-modal__tile-graphics-preview__sizer"
+                      aria-hidden="true"
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="app-menu-tray__divider app-menu-modal__section-rule" role="separator" />
+              <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                <span
+                  className="app-menu-modal__label"
+                  id="app-menu-label-bot-wins"
+                >
+                  {BOT_WINS_LABEL}
+                </span>
+                <button
+                  type="button"
+                  className="btn app-menu-tray__item app-menu-tray__item--toggle app-menu-modal__toggle"
+                  aria-labelledby="app-menu-label-bot-wins"
+                  aria-pressed={botWinsEnabled}
+                  onClick={toggleBotWins}
+                >
+                  <span
+                    className={['app-menu-tray__toggle-pill', botWinsEnabled ? 'app-menu-tray__toggle-pill--on' : ''].filter(Boolean).join(' ')}
+                    aria-hidden="true"
+                  >
+                    {botWinsEnabled ? 'ON' : 'OFF'}
+                  </span>
+                </button>
+              </div>
+              <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                <span className="app-menu-modal__label" id="app-menu-label-bots-dead">
+                  Bots call East dead
+                </span>
+                <button
+                  type="button"
+                  className="btn app-menu-tray__item app-menu-tray__item--toggle app-menu-modal__toggle"
+                  aria-labelledby="app-menu-label-bots-dead"
+                  aria-pressed={botsCallDeadEnabled}
+                  onClick={toggleBotsCallDead}
+                >
+                  <span
+                    className={['app-menu-tray__toggle-pill', botsCallDeadEnabled ? 'app-menu-tray__toggle-pill--on' : ''].filter(Boolean).join(' ')}
+                    aria-hidden="true"
+                  >
+                    {botsCallDeadEnabled ? 'ON' : 'OFF'}
+                  </span>
+                </button>
+              </div>
+              <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                <span className="app-menu-modal__label" id="app-menu-label-anim">
+                  Animations
+                </span>
+                <button
+                  type="button"
+                  className="btn app-menu-tray__item app-menu-tray__item--toggle app-menu-modal__toggle"
+                  aria-labelledby="app-menu-label-anim"
+                  aria-pressed={animationsEnabled}
+                  onClick={toggleAnimations}
+                >
+                  <span
+                    className={['app-menu-tray__toggle-pill', animationsEnabled ? 'app-menu-tray__toggle-pill--on' : ''].filter(Boolean).join(' ')}
+                    aria-hidden="true"
+                  >
+                    {animationsEnabled ? 'ON' : 'OFF'}
+                  </span>
+                </button>
+              </div>
+              <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                <span className="app-menu-modal__label" id="app-menu-label-remember-hands-size" title={SUGGESTED_HANDS_REMEMBER_SIZE_TITLE}>
+                  {SUGGESTED_HANDS_REMEMBER_SIZE_LABEL}
+                </span>
+                <button
+                  type="button"
+                  className="btn app-menu-tray__item app-menu-tray__item--toggle app-menu-modal__toggle"
+                  title={SUGGESTED_HANDS_REMEMBER_SIZE_TITLE}
+                  aria-labelledby="app-menu-label-remember-hands-size"
+                  aria-pressed={suggestedHandsRememberSize}
+                  onClick={toggleSuggestedHandsRememberSize}
+                >
+                  <span
+                    className={['app-menu-tray__toggle-pill', suggestedHandsRememberSize ? 'app-menu-tray__toggle-pill--on' : ''].filter(Boolean).join(' ')}
+                    aria-hidden="true"
+                  >
+                    {suggestedHandsRememberSize ? 'ON' : 'OFF'}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {charlestonPassError || callRuleError || blockingDialog ? (
         <div
           className="charleston-error-overlay"
@@ -3517,8 +4081,8 @@ export default function App() {
           <div className="wall-game-dialog" onClick={(e) => e.stopPropagation()}>
             <h2 id="wall-game-title" className="wall-game-dialog__title">Wall Game</h2>
             <p className="wall-game-dialog__intro">
-              The wall ran out — no one drew a winning tile. Below is each seat&apos;s closest card hand,
-              tiles away, and full rack (exposures + concealed), same readout as after Mah Jongg.
+              The wall ran out — no one drew a winning tile. Below is each seat&apos;s closest card line
+              (fewest tiles away), tiles away, and full rack in that line&apos;s left-to-right card order.
             </p>
             {postGameWallGameReview ? (
               <div className="wall-game-dialog__review mahjong-win__bots-review" aria-labelledby="wall-game-review-heading">
@@ -3528,58 +4092,16 @@ export default function App() {
                 <ul className="mahjong-win__bots-review-list">
                   {postGameWallGameReview.rows.map((row) => (
                     <li key={row.label} className="mahjong-win__bots-review-card">
-                      <div className="mahjong-win__bots-review-inner">
-                        <div className="mahjong-win__bots-review-header">
-                          <span className="mahjong-win__bots-review-seat">{row.label}</span>
-                          <span className="mahjong-win__bots-review-away">
-                            {row.bestTilesAway === 0 ? '0 away' : `${row.bestTilesAway} away`}
-                          </span>
-                          {row.section && row.cardLineNumber != null && (
-                            <span className="mahjong-win__bots-review-ref">
-                              {row.section} #{row.cardLineNumber}
-                            </span>
-                          )}
-                          <span className="mahjong-win__bots-review-pattern">
-                            {row.titleSegments ? (
-                              <CardColoredText segments={row.titleSegments} />
-                            ) : (
-                              row.closestTitle
-                            )}
-                          </span>
-                        </div>
-                        <div className="mahjong-win__bots-review-tiles">
-                          {row.exposureGroups.map((exp, gi) => (
-                            <div key={gi} className="mahjong-win__bots-review-meld">
-                              {exp.tiles.map((tile) => (
-                                <div
-                                  key={tile.id}
-                                  className={[
-                                    'mahjong-win__bots-review-tile',
-                                    row.bestIds.has(tile.id) ? '' : 'mahjong-win__bots-review-tile--dim',
-                                  ]
-                                    .filter(Boolean)
-                                    .join(' ')}
-                                >
-                                  <TileFace def={tile.def} />
-                                </div>
-                              ))}
-                            </div>
-                          ))}
-                          {row.sortedHand.map((tile) => (
-                            <div
-                              key={tile.id}
-                              className={[
-                                'mahjong-win__bots-review-tile',
-                                row.bestIds.has(tile.id) ? '' : 'mahjong-win__bots-review-tile--dim',
-                              ]
-                                .filter(Boolean)
-                                .join(' ')}
-                            >
-                              <TileFace def={tile.def} />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                      <PostGameLoserRackRow
+                        rowId={`wall-${row.label}`}
+                        label={row.label}
+                        bestTilesAway={row.bestTilesAway}
+                        linesAtMin={row.linesAtMin}
+                        rankInput={row.rankInput}
+                        showTiedLinePicker={row.linesAtMin.length > 1}
+                        cardVariant="wrapped"
+                        trailingLabel="none"
+                      />
                     </li>
                   ))}
                 </ul>
@@ -3615,28 +4137,15 @@ export default function App() {
         <div className="mahjong-win-overlay" role="dialog" aria-modal="true" aria-labelledby="mj-win-title">
           <div className="mahjong-win-dialog" onClick={(e) => e.stopPropagation()}>
             <p id="mj-win-title" className="mahjong-win__headline">Mah Jongg!</p>
-            {winHandSortedTiles && (() => {
-              const exposedIds = new Set(eastExposures.flatMap((e) => e.tiles.map((t) => t.id)))
-              const concealedSorted = winHandSortedTiles.filter((t) => !exposedIds.has(t.id))
-              return (
+            {winHandSortedTiles && (
                 <div className="mahjong-win__player-tiles">
-                  {eastExposures.map((exp, gi) => (
-                    <div key={gi} className="mahjong-win__bots-review-meld">
-                      {exp.tiles.map((tile) => (
-                        <div key={tile.id} className="mahjong-win__bots-review-tile">
-                          <TileFace def={tile.def} />
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                  {concealedSorted.map((tile) => (
+                  {winHandSortedTiles.map((tile) => (
                     <div key={tile.id} className="mahjong-win__bots-review-tile">
                       <TileFace def={tile.def} />
                     </div>
                   ))}
                 </div>
-              )
-            })()}
+            )}
             <div className="mahjong-win__player-meta">
               {playerWinPattern ? (
                 <span className="mahjong-win__note">
@@ -3669,52 +4178,16 @@ export default function App() {
                 <ul className="mahjong-win__bots-review-list">
                   {postGameBotReview.map((row) => (
                     <li key={row.label} className="mahjong-win__bots-review-card">
-                      <div className="mahjong-win__bots-review-inner">
-                      <div className="mahjong-win__bots-review-header">
-                        <span className="mahjong-win__bots-review-seat">{row.label}</span>
-                        <span className="mahjong-win__bots-review-away">
-                          {row.bestTilesAway === 0 ? '0 away' : `${row.bestTilesAway} away`}
-                        </span>
-                        {row.section && row.cardLineNumber != null && (
-                          <span className="mahjong-win__bots-review-ref">
-                            {row.section} #{row.cardLineNumber}
-                          </span>
-                        )}
-                        <span className="mahjong-win__bots-review-pattern">
-                          {row.titleSegments
-                            ? <CardColoredText segments={row.titleSegments} />
-                            : row.closestTitle}
-                        </span>
-                      </div>
-                      <div className="mahjong-win__bots-review-tiles">
-                        {row.exposureGroups.map((exp, gi) => (
-                          <div key={gi} className="mahjong-win__bots-review-meld">
-                            {exp.tiles.map((tile) => (
-                              <div
-                                key={tile.id}
-                                className={[
-                                  'mahjong-win__bots-review-tile',
-                                  row.bestIds.has(tile.id) ? '' : 'mahjong-win__bots-review-tile--dim',
-                                ].filter(Boolean).join(' ')}
-                              >
-                                <TileFace def={tile.def} />
-                              </div>
-                            ))}
-                          </div>
-                        ))}
-                        {row.sortedHand.map((tile) => (
-                          <div
-                            key={tile.id}
-                            className={[
-                              'mahjong-win__bots-review-tile',
-                              row.bestIds.has(tile.id) ? '' : 'mahjong-win__bots-review-tile--dim',
-                            ].filter(Boolean).join(' ')}
-                          >
-                            <TileFace def={tile.def} />
-                          </div>
-                        ))}
-                      </div>
-                      </div>
+                      <PostGameLoserRackRow
+                        rowId={`mj-win-bots-${row.label}`}
+                        label={row.label}
+                        bestTilesAway={row.bestTilesAway}
+                        linesAtMin={row.linesAtMin}
+                        rankInput={row.rankInput}
+                        showTiedLinePicker={row.linesAtMin.length > 1}
+                        cardVariant="wrapped"
+                        trailingLabel="none"
+                      />
                     </li>
                   ))}
                 </ul>
@@ -3750,51 +4223,16 @@ export default function App() {
               <ul className="mahjong-win__bots-review-list">
                 {postGameBotMahjongReview.rows.map((row) => (
                   <li key={row.label} className="mahjong-win__bots-review-card">
-                    <div className="mahjong-win__bots-review-header">
-                      <span className="mahjong-win__bots-review-seat">{row.label}</span>
-                      <span className="mahjong-win__bots-review-away">
-                        {row.bestTilesAway === 0 ? '0 away' : `${row.bestTilesAway} away`}
-                      </span>
-                      {row.section && row.cardLineNumber != null && (
-                        <span className="mahjong-win__bots-review-ref">
-                          {row.section} #{row.cardLineNumber}
-                        </span>
-                      )}
-                      <span className="mahjong-win__bots-review-pattern">
-                        {row.titleSegments
-                          ? <CardColoredText segments={row.titleSegments} />
-                          : row.closestTitle}
-                      </span>
-                      <span className="mahjong-win__bot-mj-pts">−TBD pts</span>
-                    </div>
-                    <div className="mahjong-win__bots-review-tiles">
-                      {row.exposureGroups.map((exp, gi) => (
-                        <div key={gi} className="mahjong-win__bots-review-meld">
-                          {exp.tiles.map((tile) => (
-                            <div
-                              key={tile.id}
-                              className={[
-                                'mahjong-win__bots-review-tile',
-                                row.bestIds.has(tile.id) ? '' : 'mahjong-win__bots-review-tile--dim',
-                              ].filter(Boolean).join(' ')}
-                            >
-                              <TileFace def={tile.def} />
-                            </div>
-                          ))}
-                        </div>
-                      ))}
-                      {row.sortedHand.map((tile) => (
-                        <div
-                          key={tile.id}
-                          className={[
-                            'mahjong-win__bots-review-tile',
-                            row.bestIds.has(tile.id) ? '' : 'mahjong-win__bots-review-tile--dim',
-                          ].filter(Boolean).join(' ')}
-                        >
-                          <TileFace def={tile.def} />
-                        </div>
-                      ))}
-                    </div>
+                    <PostGameLoserRackRow
+                      rowId={`bot-mj-lose-${row.label}`}
+                      label={row.label}
+                      bestTilesAway={row.bestTilesAway}
+                      linesAtMin={row.linesAtMin}
+                      rankInput={row.rankInput}
+                      showTiedLinePicker={row.linesAtMin.length > 1}
+                      cardVariant="flat"
+                      trailingLabel="bot-mj-loss-pts"
+                    />
                   </li>
                 ))}
               </ul>
@@ -3838,6 +4276,7 @@ export default function App() {
                     <>
                       <div className="rack-stage rack-stage--charleston" role="group">
                         <div className="rack-stage__rack-col">
+                          <SortableContext items={charlestonPassAndHandSortableItems} strategy={rectSortingStrategy}>
                           <div className="rack-stage__rack-top">
                             <ExposureRack
                               className="exposure-rack--charleston-pass"
@@ -3853,7 +4292,6 @@ export default function App() {
                                 </span>
                               )}
                               suggestedTileGuide={suggestedTileGuide}
-                              suppressDim
                               slotCount={14}
                               reserveTrailingSlots={3}
                               ariaLabel="Your exposures and Charleston pass"
@@ -3871,7 +4309,6 @@ export default function App() {
                           </div>
                           <div className="panel-hand-rack__hand-tray">
                             <div className="rack-stage__rack-bottom">
-                              <SortableContext items={handIds} strategy={rectSortingStrategy}>
                                 <HandBank>
                                   <SortableHand
                                     tiles={hand}
@@ -3887,9 +4324,11 @@ export default function App() {
                                     animationsEnabled={animationsEnabled}
                                   />
                                 </HandBank>
-                              </SortableContext>
                             </div>
-                            <div className="panel-hand-rack__charleston-actions-well">
+                            <div
+                              className="panel-hand-rack__charleston-actions-well"
+                              ref={suggestedPopupTopAnchorCharlestonRef}
+                            >
                             <div
                               className="rack-bottom-bar rack-bottom-bar--charleston rack-bottom-bar--tile-grid"
                               role="group"
@@ -3945,6 +4384,7 @@ export default function App() {
                             </div>
                             </div>
                           </div>
+                          </SortableContext>
                         </div>
                       </div>
                     </>
@@ -3986,7 +4426,6 @@ export default function App() {
                                   ]
                               }
                               suggestedTileGuide={suggestedTileGuide}
-                              suppressDim
                               highlightCalledTile={mainPhase === 'call-staging'}
                               watermark={(
                                 <span className="rack-logo-watermark">
@@ -4100,7 +4539,10 @@ export default function App() {
                             </div>
                             )}
                             {mainPhase !== 'bot-mahjong' && mainPhase !== 'dead-hand' ? (
-                              <div className="panel-hand-rack__action-well">
+                              <div
+                                className="panel-hand-rack__action-well"
+                                ref={suggestedPopupTopAnchorMainRef}
+                              >
                               {mainPhase === 'wall-game' ? (
                                 <div
                                   className="rack-bottom-bar rack-bottom-bar--wall-game"
@@ -4239,12 +4681,18 @@ export default function App() {
                       {displayedDiscardPile.length > 0 ? (
                         <div className="discard-pile" role="list" aria-label="Committed discards">
                           {displayedDiscardPile.map(({ tile, seat }) => {
+                            const needRing =
+                              suggestedDiscardNeedIds != null && suggestedDiscardNeedIds.has(tile.id)
+                            const canDimPile = (suggestedDiscardNeedIds?.size ?? 0) > 0
+                            const isDim = canDimPile && !needRing
                             return (
                               <div
                                 key={tile.id}
                                 className={[
                                   'discard-entry',
                                   `discard-entry--${seat}`,
+                                  needRing ? 'discard-entry--suggest-need' : '',
+                                  isDim ? 'discard-entry--suggest-dim' : '',
                                 ]
                                   .filter(Boolean)
                                   .join(' ')}
@@ -4281,67 +4729,14 @@ export default function App() {
                       <div className="panel--bot-exposures__toolbar">
                         <div className="panel--bot-exposures__toolbar-well">
                           <div ref={menuContainerRef} className="app-menu-anchor" role="group" aria-label="Bottom controls">
-                            {menuOpen && (
-                              <div
-                                className="app-menu-tray"
-                                role="menu"
-                              >
-                                <button type="button" className="btn app-menu-tray__item" role="menuitem"
-                                  onClick={() => { newHand(); setMenuOpen(false) }}>New Game</button>
-                                <div className="app-menu-tray__divider" role="separator" />
-                                <button
-                                  type="button"
-                                  className="btn app-menu-tray__item app-menu-tray__item--toggle"
-                                  role="menuitemcheckbox"
-                                  aria-checked={botWinsEnabled}
-                                  onClick={toggleBotWins}
-                                >
-                                  <span className="app-menu-tray__toggle-label">Bot wins</span>
-                                  <span className={['app-menu-tray__toggle-pill', botWinsEnabled ? 'app-menu-tray__toggle-pill--on' : ''].filter(Boolean).join(' ')} aria-hidden="true">
-                                    {botWinsEnabled ? 'ON' : 'OFF'}
-                                  </span>
-                                </button>
-                                <button
-                                  type="button"
-                                  className="btn app-menu-tray__item app-menu-tray__item--toggle"
-                                  role="menuitemcheckbox"
-                                  aria-checked={botsCallDeadEnabled}
-                                  onClick={toggleBotsCallDead}
-                                >
-                                  <span className="app-menu-tray__toggle-label">Bots call East dead</span>
-                                  <span className={['app-menu-tray__toggle-pill', botsCallDeadEnabled ? 'app-menu-tray__toggle-pill--on' : ''].filter(Boolean).join(' ')} aria-hidden="true">
-                                    {botsCallDeadEnabled ? 'ON' : 'OFF'}
-                                  </span>
-                                </button>
-                                <button
-                                  type="button"
-                                  className="btn app-menu-tray__item app-menu-tray__item--toggle"
-                                  role="menuitemcheckbox"
-                                  aria-checked={animationsEnabled}
-                                  onClick={toggleAnimations}
-                                >
-                                  <span className="app-menu-tray__toggle-label">Animations</span>
-                                  <span
-                                    className={[
-                                      'app-menu-tray__toggle-pill',
-                                      animationsEnabled ? 'app-menu-tray__toggle-pill--on' : '',
-                                    ]
-                                      .filter(Boolean)
-                                      .join(' ')}
-                                    aria-hidden="true"
-                                  >
-                                    {animationsEnabled ? 'ON' : 'OFF'}
-                                  </span>
-                                </button>
-                              </div>
-                            )}
                             <button
                               type="button"
                               className={['btn app-bottom-center-controls__menu-btn', menuOpen ? 'app-bottom-center-controls__menu-btn--open' : ''].filter(Boolean).join(' ')}
                               aria-label="Menu"
-                              aria-haspopup="menu"
+                              aria-haspopup="dialog"
                               aria-expanded={menuOpen}
-                              onClick={() => setMenuOpen(v => !v)}
+                              aria-controls={menuOpen ? 'app-menu-modal' : undefined}
+                              onClick={() => setMenuOpen((v) => !v)}
                             >
                               Menu
                             </button>
@@ -4419,23 +4814,42 @@ export default function App() {
                       id="suggested-hands-popup"
                       className={['suggested-hands-popup', suggestedPanelHandsOn ? 'suggested-hands-popup--open' : ''].filter(Boolean).join(' ')}
                       style={suggestedPanelHeight != null
-                        ? { top: 'auto', bottom: suggestedPopupBottom ?? undefined, height: suggestedPanelHeight }
-                        : { top: suggestedPopupTop ?? undefined, bottom: suggestedPopupBottom ?? undefined }}
+                        ? {
+                            top: 'auto',
+                            right: suggestedPopupRightForStyle,
+                            bottom: suggestedPopupBottom ?? undefined,
+                            height: suggestedPanelHeight,
+                          }
+                        : {
+                            top: suggestedPopupTop ?? undefined,
+                            right: suggestedPopupRightForStyle,
+                            bottom: suggestedPopupBottom ?? undefined,
+                          }}
                       role="dialog"
                       aria-label="Suggested Hands"
                       aria-modal="false"
                       aria-hidden={!suggestedPanelHandsOn}
                     >
-                      {/* Drag handle — tap to close, drag to resize */}
+                      <div
+                        className="suggested-hands-popup__top-edge"
+                        role="separator"
+                        aria-orientation="horizontal"
+                        aria-label="Drag to resize height"
+                        tabIndex={-1}
+                        onPointerDown={onTopEdgePointerDown}
+                        onPointerMove={onDragHandlePointerMove}
+                        onPointerUp={onDragHandlePointerUp}
+                        onPointerCancel={onDragHandlePointerUp}
+                      />
                       <div
                         className="suggested-hands-popup__drag-handle"
                         role="button"
-                        aria-label="Drag to resize, tap to close"
+                        aria-label="Drag the top to resize height, or tap to close. Drag the right edge to resize width."
                         tabIndex={0}
                         onPointerDown={onDragHandlePointerDown}
                         onPointerMove={onDragHandlePointerMove}
                         onPointerUp={onDragHandlePointerUp}
-                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setSuggestedPanelHandsOn(false); setSuggestedPanelHeight(null) } }}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setSuggestedPanelHandsOn(false) } }}
                       >
                         <span className="suggested-hands-popup__drag-pip" aria-hidden="true" />
                         <span className="suggested-hands-popup__drag-label">Suggested Hands</span>
@@ -4471,7 +4885,7 @@ export default function App() {
                           type="button"
                           className="suggested-hands-popup__close"
                           aria-label="Close suggested hands"
-                          onClick={(e) => { e.stopPropagation(); setSuggestedPanelHandsOn(false); setSuggestedPanelHeight(null) }}
+                          onClick={(e) => { e.stopPropagation(); setSuggestedPanelHandsOn(false) }}
                           onPointerDown={(e) => e.stopPropagation()}
                         >
                           ✕
@@ -4490,6 +4904,17 @@ export default function App() {
                         exposureTileIdsForSuggestedStrip={suggestedHandsExposureTileIds}
                         filterButtonPortal={filterBtnPortalEl}
                         isOpen={suggestedPanelHandsOn}
+                      />
+                      <div
+                        className="suggested-hands-popup__right-edge"
+                        role="separator"
+                        aria-orientation="vertical"
+                        aria-label="Drag to resize width"
+                        tabIndex={-1}
+                        onPointerDown={onRightEdgePointerDown}
+                        onPointerMove={onRightEdgePointerMove}
+                        onPointerUp={onRightEdgePointerUp}
+                        onPointerCancel={onRightEdgePointerUp}
                       />
                     </div>
                   ) : null}
