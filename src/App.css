@@ -863,7 +863,7 @@
   align-items: stretch;
   overflow: hidden;
   background: var(--window-surface);
-  /* Tile graphics — Classic: maps to current rack + suggested card-skin defaults */
+  /* Tile graphics: base --tg-* (overridden by `data-tile-graphics` on `.app`) */
   --tg-bam: var(--card-ink-green);
   --tg-crak: var(--card-ink-red);
   --tg-dot: var(--card-ink-navy);
@@ -894,20 +894,22 @@
 }
 
 /* Tile graphics: menu presets (override --tg-* only) */
-.app[data-tile-graphics='solid-color'] {
-  --tg-bam: var(--card-ink-green);
-  --tg-crak: var(--card-ink-red);
-  --tg-dot: var(--card-ink-navy);
-  --tg-wind: var(--wind-tile-bg);
-  --tg-dragon-red: var(--card-ink-red);
-  --tg-dragon-green: var(--card-ink-green);
-  --tg-dragon-soap: var(--card-ink-navy);
-  --tg-dragon-any: #5c6470;
-  --tg-flower: #ab47bc;
-  --tg-joker: #ab47bc;
+/* Ivory (data-tile-graphics `classic`): warm ivory; #1A1A1A numerals, wind letters, joker ring; index letters per suit */
+.app[data-tile-graphics='classic'] {
+  --tg-ivory-face: #f9f6ee;
+  --tg-bam: var(--tg-ivory-face);
+  --tg-crak: var(--tg-ivory-face);
+  --tg-dot: var(--tg-ivory-face);
+  --tg-wind: var(--tg-ivory-face);
+  --tg-dragon-red: var(--tg-ivory-face);
+  --tg-dragon-green: var(--tg-ivory-face);
+  --tg-dragon-soap: var(--tg-ivory-face);
+  --tg-dragon-any: var(--tg-ivory-face);
+  --tg-flower: var(--tg-ivory-face);
+  --tg-joker: var(--tg-ivory-face);
   --tg-ink: #000;
   --tg-suit-band-ink: #000;
-  --tg-joker-ring: #000;
+  --tg-joker-ring: #1a1a1a;
   --tg-cs-navy-bg: var(--card-tile-skin-blue-bg);
   --tg-cs-navy-fg: var(--card-tile-skin-blue-fg);
   --tg-cs-black-bg: var(--card-tile-skin-black-bg);
@@ -919,99 +921,248 @@
   --tg-cs-neutral-bg: var(--card-tile-skin-neutral-bg);
   --tg-cs-neutral-fg: var(--card-tile-skin-neutral-fg);
   --tg-cs-rack-wind-bg: var(--wind-tile-bg);
-  --tg-cs-rack-wind-fg: #000;
+  --tg-cs-rack-wind-fg: #1a1a1a;
   --tg-cs-rack-flower-bg: #ab47bc;
   --tg-cs-rack-flower-fg: #000;
+  /* Index letters: custom dot / bam / crak; F (flower); R/G from crak/bam; soap “0” = num, see rules below */
+  --tg-classic-letter-bam: #2d6a4f;
+  --tg-classic-letter-crak: #a4161a;
+  --tg-classic-letter-dot: #004b93;
+  --tg-classic-letter-wind: #1a1a1a;
+  --tg-classic-letter-dragon-gray: #455a64;
+  --tg-classic-letter-orchid: #a4161a;
 }
 
+.app[data-tile-graphics='classic'] .tile-face__glyph-num,
+.app[data-tile-graphics='classic'] .tile-face.tile-face--rack-suit-stack .tile-face__rank {
+  color: #1a1a1a;
+}
+
+.app[data-tile-graphics='classic'] .tile--bam .tile-face__glyph-letter {
+  color: var(--tg-classic-letter-bam);
+}
+.app[data-tile-graphics='classic'] .tile--crak .tile-face__glyph-letter {
+  color: var(--tg-classic-letter-crak);
+}
+.app[data-tile-graphics='classic'] .tile--dot .tile-face__glyph-letter {
+  color: var(--tg-classic-letter-dot);
+}
+.app[data-tile-graphics='classic'] .tile--wind .tile-face__glyph-letter {
+  color: var(--tg-classic-letter-wind);
+}
+.app[data-tile-graphics='classic'] .tile--dragon-red .tile-face__glyph-letter {
+  color: var(--tg-classic-letter-crak);
+}
+.app[data-tile-graphics='classic'] .tile--dragon-green .tile-face__glyph-letter {
+  color: var(--tg-classic-letter-bam);
+}
+/* Soap “0” is a numeral; any soap letter edge case: same #1A1A1A (not dot blue) */
+.app[data-tile-graphics='classic'] .tile--dragon-soap .tile-face__glyph-num,
+.app[data-tile-graphics='classic'] .tile--dragon-soap .tile-face__glyph-letter {
+  color: #1a1a1a;
+}
+.app[data-tile-graphics='classic'] .tile--dragon-any .tile-face__glyph-letter {
+  color: var(--tg-classic-letter-dragon-gray);
+}
+.app[data-tile-graphics='classic'] .tile--flower .tile-face__glyph-letter {
+  color: var(--tg-classic-letter-orchid);
+}
+
+.app[data-tile-graphics='classic'] .tile--bam .tile-face__suit-text {
+  color: var(--tg-classic-letter-bam);
+}
+.app[data-tile-graphics='classic'] .tile--crak .tile-face__suit-text {
+  color: var(--tg-classic-letter-crak);
+}
+.app[data-tile-graphics='classic'] .tile--dot .tile-face__suit-text {
+  color: var(--tg-classic-letter-dot);
+}
+
+/* Ivory: joker “J” stays black; ring alone is #1A1A1A (see --tg-joker-ring) */
+.app[data-tile-graphics='classic'] .tile-face.tile--joker .tile-face__glyph {
+  color: #000;
+}
+
+/* Prism (data-tile-graphics `solid-color`): saturated suit fills; near-black ink #080808 on face + card strip */
+.app[data-tile-graphics='solid-color'] {
+  --tg-bam: var(--card-ink-green);
+  --tg-crak: var(--card-ink-red);
+  --tg-dot: var(--card-ink-navy);
+  --tg-wind: #d1d5db;
+  --tg-dragon-red: var(--card-ink-red);
+  --tg-dragon-green: var(--card-ink-green);
+  --tg-dragon-soap: var(--card-ink-navy);
+  --tg-dragon-any: #5c6470;
+  --tg-flower: #ab47bc;
+  --tg-joker: #ffc107;
+  --tg-ink: #080808;
+  --tg-suit-band-ink: #080808;
+  --tg-joker-ring: #333333;
+  --tg-cs-navy-bg: var(--card-tile-skin-blue-bg);
+  --tg-cs-navy-fg: #080808;
+  --tg-cs-black-bg: var(--card-tile-skin-black-bg);
+  --tg-cs-black-fg: #080808;
+  --tg-cs-red-bg: var(--card-tile-skin-red-bg);
+  --tg-cs-red-fg: #080808;
+  --tg-cs-green-bg: var(--card-tile-skin-green-bg);
+  --tg-cs-green-fg: #080808;
+  --tg-cs-neutral-bg: var(--card-tile-skin-neutral-bg);
+  --tg-cs-neutral-fg: #080808;
+  --tg-cs-rack-wind-bg: #d1d5db;
+  --tg-cs-rack-wind-fg: #080808;
+  --tg-cs-rack-flower-bg: #ab47bc;
+  --tg-cs-rack-flower-fg: #080808;
+}
+
+/* Prism: joker “J” uses the same ink as the rest of the set; ring stays --tg-joker-ring */
+.app[data-tile-graphics='solid-color'] .tile-face.tile--joker .tile-face__glyph {
+  color: var(--tg-ink, #000);
+}
+
+/* Obsidian (data-tile-graphics `dark`): dark glass, suit-tinted — a step brighter so faces read in UI */
 .app[data-tile-graphics='dark'] {
   --tg-bam: #1a3d2a;
-  --tg-crak: #3d1a1a;
-  --tg-dot: #0f2538;
-  --tg-wind: #2a2a2a;
-  --tg-dragon-red: #3d1a1a;
+  --tg-crak: #3a1e24;
+  --tg-dot: #0f2a40;
+  --tg-wind: #1a1a1d;
+  --tg-dragon-red: var(--tg-crak);
   --tg-dragon-green: #1a3d2a;
-  --tg-dragon-soap: #0f2538;
-  --tg-dragon-any: #1e1e1e;
-  --tg-flower: #3a1a3a;
-  --tg-joker: #3a1a3a;
-  --tg-ink: #f0f0f0;
-  --tg-suit-band-ink: #f0f0f0;
-  --tg-joker-ring: #e0e0e0;
-  --tg-cs-navy-bg: #1a3650;
-  --tg-cs-navy-fg: #e2edf5;
-  --tg-cs-black-bg: #111418;
-  --tg-cs-black-fg: #d8e0e8;
-  --tg-cs-red-bg: #3d1a1a;
-  --tg-cs-red-fg: #fde8e8;
-  --tg-cs-green-bg: #1a3d2a;
-  --tg-cs-green-fg: #e8f5e9;
-  --tg-cs-neutral-bg: #2a2e32;
-  --tg-cs-neutral-fg: #e8e8e4;
-  --tg-cs-rack-wind-bg: #2a2a2a;
-  --tg-cs-rack-wind-fg: #e8e4dc;
-  --tg-cs-rack-flower-bg: #2d1a2d;
-  --tg-cs-rack-flower-fg: #f0e0f0;
+  --tg-dragon-soap: var(--tg-dot);
+  --tg-dragon-any: #2c343e;
+  --tg-flower: #3e2a4d;
+  --tg-joker: #5e4c2a;
+  /* Lighter inlay: center ranks/glyphs; suit band (DOT/BAM/CRAK) + joker ring = #B0B0B0 in rules below */
+  --tg-ink: #d4d4d4;
+  --tg-suit-band-ink: #b0b0b0;
+  --tg-joker-ring: #b0b0b0;
+  --tg-cs-navy-bg: #1a3a50;
+  --tg-cs-navy-fg: #d4d4d4;
+  --tg-cs-black-bg: #1a2028;
+  --tg-cs-black-fg: #d4d4d4;
+  --tg-cs-red-bg: #3a1e24;
+  --tg-cs-red-fg: #d4d4d4;
+  --tg-cs-green-bg: #1a3d2c;
+  --tg-cs-green-fg: #d4d4d4;
+  --tg-cs-neutral-bg: #2e343e;
+  --tg-cs-neutral-fg: #d4d4d4;
+  --tg-cs-rack-wind-bg: #1a1a1d;
+  --tg-cs-rack-wind-fg: #d4d4d4;
+  --tg-cs-rack-flower-bg: #3e2a4d;
+  --tg-cs-rack-flower-fg: #d4d4d4;
 }
 
+/* Obsidian: compact 3B-style — B / D / C keep #B0B0B0; joker “J” inlay = #D4D4D4, ring = --tg-joker-ring */
+.app[data-tile-graphics='dark'] .tile--suit .tile-face__glyph-letter {
+  color: #B0B0B0;
+}
+
+.app[data-tile-graphics='dark'] .tile-face.tile--joker .tile-face__glyph {
+  color: #d4d4d4;
+}
+
+/* Sorbet (data-tile-graphics `light`): cool dessert tints, punchier than the old hazy pastels */
 .app[data-tile-graphics='light'] {
-  --tg-bam: #c8e6c9;
-  --tg-crak: #ffcdd2;
-  --tg-dot: #bbdefb;
-  --tg-wind: #e8e8e5;
-  --tg-dragon-red: #ffcdd2;
-  --tg-dragon-green: #c8e6c9;
-  --tg-dragon-soap: #bbdefb;
-  --tg-dragon-any: #cfd8dc;
-  --tg-flower: #e1bee7;
-  --tg-joker: #e1bee7;
+  --tg-bam: #5cb87c;
+  --tg-crak: #f08080;
+  --tg-dot: #5c9ce6;
+  --tg-wind: #d1d5db;
+  --tg-dragon-red: var(--tg-crak);
+  --tg-dragon-green: var(--tg-bam);
+  --tg-dragon-soap: var(--tg-dot);
+  --tg-dragon-any: #6c7d92;
+  --tg-flower: #b07cc6;
+  --tg-joker: #ffdb93;
   --tg-ink: #1a1a1a;
   --tg-suit-band-ink: #1a1a1a;
   --tg-joker-ring: #1a1a1a;
-  --tg-cs-navy-bg: #90caf9;
-  --tg-cs-navy-fg: #0d1b2a;
-  --tg-cs-black-bg: #b0bec5;
-  --tg-cs-black-fg: #111;
-  --tg-cs-red-bg: #ffab91;
-  --tg-cs-red-fg: #1a0a0a;
-  --tg-cs-green-bg: #a5d6a7;
-  --tg-cs-green-fg: #0a1a0a;
-  --tg-cs-neutral-bg: #d7ccc8;
+  --tg-cs-navy-bg: #4a9ad8;
+  --tg-cs-navy-fg: #0a1118;
+  --tg-cs-black-bg: #7a8d9a;
+  --tg-cs-black-fg: #0b0b0b;
+  --tg-cs-red-bg: #f08080;
+  --tg-cs-red-fg: #1a080c;
+  --tg-cs-green-bg: #5eb888;
+  --tg-cs-green-fg: #05180e;
+  --tg-cs-neutral-bg: #b8a090;
   --tg-cs-neutral-fg: #1a1a1a;
-  --tg-cs-rack-wind-bg: #e8e8e5;
-  --tg-cs-rack-wind-fg: #111;
-  --tg-cs-rack-flower-bg: #e1bee7;
-  --tg-cs-rack-flower-fg: #1a1a1a;
+  --tg-cs-rack-wind-bg: #d1d5db;
+  --tg-cs-rack-wind-fg: #111008;
+  --tg-cs-rack-flower-bg: #b07cc6;
+  --tg-cs-rack-flower-fg: #160a18;
 }
 
+/* Jewel (data-tile-graphics `designer`): premium gem glass — “power” hue set: sapphire, ruby, amethyst, emerald */
 .app[data-tile-graphics='designer'] {
-  --tg-bam: #2d4a3e;
-  --tg-crak: #5c2a2a;
-  --tg-dot: #1e3a4f;
-  --tg-wind: #a8a59c;
-  --tg-dragon-red: #6b2d2d;
-  --tg-dragon-green: #2d4a3e;
-  --tg-dragon-soap: #1e3a4f;
-  --tg-dragon-any: #4a4f54;
-  --tg-flower: #5a3a5a;
-  --tg-joker: #5a3a5a;
-  --tg-ink: #f4f0e6;
-  --tg-suit-band-ink: #e8e4d9;
-  --tg-joker-ring: #c4b8a8;
-  --tg-cs-navy-bg: #1e3d52;
-  --tg-cs-navy-fg: #e3eef5;
-  --tg-cs-black-bg: #181c20;
-  --tg-cs-black-fg: #dde4ea;
-  --tg-cs-red-bg: #5a2828;
-  --tg-cs-red-fg: #fceaea;
-  --tg-cs-green-bg: #243a32;
-  --tg-cs-green-fg: #e6f0eb;
-  --tg-cs-neutral-bg: #4a4e52;
-  --tg-cs-neutral-fg: #ece8e0;
-  --tg-cs-rack-wind-bg: #8c8980;
-  --tg-cs-rack-wind-fg: #1a1812;
-  --tg-cs-rack-flower-bg: #4a2d4a;
-  --tg-cs-rack-flower-fg: #f0e0f0;
+  /* Dots = sapphire; bams = vivid emerald; purples nudged up in chroma to match #9B111E punch */
+  --tg-bam: #008a56;
+  --tg-crak: #9b111e;
+  --tg-dot: #0f52ba;
+  /* Winds: cool deep slate (not a hue) so silver inlay reads pewter / polished metal vs. gem suiting */
+  --tg-wind: #2a2f37;
+  --tg-dragon-red: #9b111e;
+  --tg-dragon-green: #008a56;
+  --tg-dragon-soap: var(--tg-dot);
+  --tg-dragon-any: #40444b;
+  --tg-flower: #751fa5;
+  /* Gold joker: dark letter + ring so type stays legible (white inlay on this yellow has poor contrast) */
+  --tg-joker: #f59f09;
+  /* Inlay: slightly softer than pure white; joker J + ring use --tg-joker-ring, not this */
+  --tg-ink: #e8e8e8;
+  --tg-suit-band-ink: #e8e8e8;
+  --tg-joker-ring: #2b1b17;
+  --tg-cs-navy-bg: #0c468c;
+  --tg-cs-navy-fg: #e8e8e8;
+  --tg-cs-black-bg: #31353c;
+  --tg-cs-black-fg: #e8e8e8;
+  --tg-cs-red-bg: #9b111e;
+  --tg-cs-red-fg: #e8e8e8;
+  --tg-cs-green-bg: #008a56;
+  --tg-cs-green-fg: #e8e8e8;
+  --tg-cs-neutral-bg: #494d55;
+  --tg-cs-neutral-fg: #e8e8e8;
+  --tg-cs-rack-wind-bg: #2a2f37;
+  --tg-cs-rack-wind-fg: #e8e8e8;
+  --tg-cs-rack-flower-bg: #5f1894;
+  --tg-cs-rack-flower-fg: #e8e8e8;
+}
+
+/* Autumn (data-tile-graphics `bakelite`): moss, rust, dusk, ochre joker — winds = desaturated slate/pewter (not competing hue) */
+.app[data-tile-graphics='bakelite'] {
+  --tg-bam: #4a5632;
+  --tg-crak: #944230;
+  --tg-dot: #2a3c4c;
+  /* Match depth of dot/bam; gray enough to read as material, not a “color” */
+  --tg-wind: #2a2826;
+  --tg-dragon-red: var(--tg-crak);
+  --tg-dragon-green: var(--tg-bam);
+  --tg-dragon-soap: var(--tg-dot);
+  --tg-dragon-any: #4a3c2c;
+  --tg-flower: #4a1a32;
+  /* Former wind mustard/ochre: reads as a warm accent (bakelite) vs. the gem suits */
+  --tg-joker: #b09056;
+  --tg-ink: #f5f5dc;
+  --tg-suit-band-ink: #f5f5dc;
+  --tg-joker-ring: #3a2418;
+  --tg-cs-navy-bg: #2a3c4e;
+  --tg-cs-navy-fg: #f5f5dc;
+  --tg-cs-black-bg: #2a1e14;
+  --tg-cs-black-fg: #f5f5dc;
+  --tg-cs-red-bg: #7a2c20;
+  --tg-cs-red-fg: #f5f5dc;
+  --tg-cs-green-bg: #3a4630;
+  --tg-cs-green-fg: #f5f5dc;
+  --tg-cs-neutral-bg: #6a5840;
+  --tg-cs-neutral-fg: #f5f5dc;
+  --tg-cs-rack-wind-bg: #2a2826;
+  --tg-cs-rack-wind-fg: #f5f5dc;
+  --tg-cs-rack-flower-bg: #3a1028;
+  --tg-cs-rack-flower-fg: #f5f5dc;
+}
+
+.app[data-tile-graphics='bakelite'] .tile-face {
+  box-shadow:
+    0 1px 3px color-mix(in srgb, #0f0804 25%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #d4a060 18%, transparent);
 }
 
 .app-layout {
@@ -3468,23 +3619,26 @@
 /* Actual DOT/BAM/CRAK — metrics live here; vertically centered in `.tile-face__suit-band` */
 .tile-face.tile-face--rack-suit-stack .tile-face__suit-text {
   font-family: 'Figtree', var(--sans);
-  font-weight: 600;
+  font-weight: 700;
   /*
-   * Keep prior control-linked scale, but clamp by tile width so labels don't truncate
-   * (e.g. "CRAK" -> "CR...") on tighter viewports.
+   * “CRAK” is the widest line — cap size to inner tile width so the label always scales down
+   * (no ellipsis); pair with a slightly tighter track than global buttons.
    */
-  font-size: min(calc(var(--rack-bottom-action-fs) * 0.8), calc(var(--rack-tile-w) * 0.285));
-  letter-spacing: var(--btn-letter-spacing);
+  --suit-tile-w: max(0.5rem, calc(var(--rack-tile-w) - 0.35rem));
+  font-size: min(
+    calc(var(--rack-bottom-action-fs) * 0.96),
+    calc(var(--suit-tile-w) * 0.23)
+  );
+  letter-spacing: 0.045em;
   line-height: 1;
   color: var(--tg-suit-band-ink, #000);
   text-align: center;
   text-transform: uppercase;
-  display: inline-block;
-  max-width: 100%;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  vertical-align: middle;
+  overflow: visible;
 }
 
 .tile-face.tile--bam {
@@ -3552,12 +3706,54 @@
 .tile-face.tile--joker .tile-face__glyph {
   position: relative;
   z-index: 1;
+  /* Match the inscribed ring (`::after` border) so J and circle are one “piece” of ink. */
+  color: var(--tg-joker-ring, var(--tg-ink, #000));
 }
 
 .app[data-tile-graphics='designer'] .tile-face {
+  position: relative;
+  isolation: isolate;
+  /* Depth + cut edge; cool outer whisper so it reads “gem” not warm Obsidian */
   box-shadow:
-    0 1px 3px color-mix(in srgb, #000 22%, transparent),
-    inset 0 1px 0 color-mix(in srgb, #fff 10%, transparent);
+    0 1px 4px color-mix(in srgb, #000 32%, transparent),
+    0 0 14px -2px color-mix(in srgb, #7a7e9a 10%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #f0f2fa 16%, transparent),
+    inset 0 -1px 0 color-mix(in srgb, #000 26%, transparent);
+}
+
+/* Translucent polish: cool silver highlights so white inlay still “floats” above the stone */
+.app[data-tile-graphics='designer'] .tile-face::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: var(--tile-face-border-radius);
+  pointer-events: none;
+  background: linear-gradient(
+    158deg,
+    color-mix(in srgb, #eef0f8 20%, transparent) 0%,
+    color-mix(in srgb, #9898a8 4%, transparent) 38%,
+    transparent 52%,
+    color-mix(in srgb, #080820 30%, transparent) 100%
+  );
+  mix-blend-mode: soft-light;
+  opacity: 0.9;
+}
+
+/* Only lift the single-line glyph above `::before` lustre. Stacked suit (rank + band) must keep
+   `position: absolute` from `.tile-face--rack-suit-stack` — a generic `> *` was overriding it. */
+.app[data-tile-graphics='designer'] .tile-face > .tile-face__glyph {
+  position: relative;
+  z-index: 1;
+}
+
+/* Joker ring between polish and letter: keep ring above lustre, glyph above ring. */
+.app[data-tile-graphics='designer'] .tile-face.tile--joker::after {
+  z-index: 1;
+}
+
+.app[data-tile-graphics='designer'] .tile-face.tile--joker .tile-face__glyph {
+  z-index: 2;
 }
 
 /* ── Call prompt ── */
@@ -6650,6 +6846,47 @@
   gap: 0.4rem;
 }
 
+/* Minimalist / Illustrative: category lines — side accent lines, centered label. */
+.app-menu-modal__diff-block--tile-graphics .app-menu-modal__tile-graphics-category {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin: 0.05rem 0 0.32rem;
+}
+
+.app-menu-modal__diff-block--tile-graphics .app-menu-modal__tile-graphics-category__line {
+  /* `hr` flex lines: reset margins + use contrast vs panel (border-mix was invisible on dark). */
+  flex: 1 1 0;
+  min-width: 0.3rem;
+  min-height: 1.5px;
+  height: 1.5px;
+  margin: 0;
+  border: 0;
+  border-radius: 0.5px;
+  /* Blend heading ink into border so the hairline reads in both light and dark menus */
+  background: color-mix(in srgb, var(--text-h, var(--fg)) 32%, var(--border) 68%);
+  align-self: center;
+  pointer-events: none;
+  flex-shrink: 1;
+}
+
+.app-menu-modal__diff-block--tile-graphics .app-menu-modal__tile-graphics-category__label {
+  flex: 0 0 auto;
+  text-align: center;
+  font-size: var(--app-ui-control-fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--text-h, var(--fg));
+  line-height: 1.3;
+}
+
+.app-menu-modal__diff-block--tile-graphics .app-menu-modal__tile-graphics-category--illustrative {
+  margin-top: 0.55rem;
+}
+
 /* Tile graphics: mode buttons stay on one line (scroll horizontally on very narrow modals). */
 .app-menu-modal__tile-graphics-modes {
   display: flex;
@@ -6675,7 +6912,7 @@
   box-sizing: border-box;
 }
 
-/* Sample row under the mode strip — compact tile faces like the main rack.
+/* Sample row under the mode strip — same stacked suit layout as the main hand rack.
    Geometry: same face ratio as hand rack (h / w = 1.3333). Gap matches main-rack visible spacing. */
 .app-menu-modal__tile-graphics-preview {
   --menu-tile-g: var(--player-rack-face-gap);
@@ -6697,6 +6934,19 @@
   border: 1px solid color-mix(in srgb, var(--border) 45%, #000 25%);
 }
 
+/* Illustrative: same outer tray + 10-up grid; invisible aspect boxes reserve height until real tiles are added. */
+.app-menu-modal__tile-graphics-preview--illustrative
+  .app-menu-modal__tile-graphics-preview__sizer {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 4;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  pointer-events: none;
+  visibility: hidden; /* keep layout; strip’s aria-label covers the group */
+}
+
 .app .app-menu-modal__tile-graphics-preview .tile-face {
   box-sizing: border-box;
   place-self: center;
@@ -6707,11 +6957,20 @@
   /* Match main-rack / bot `TileFace` chrome vars (glyph math + joker ring). */
   --rack-tile-w: calc((100cqw - 9 * var(--menu-tile-g)) / 10);
   --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
-  /* Single shadow for the strip (overrides designer tile shadow here). */
+  /* Strip lift; Jewel adds inner highlight in a more specific rule so lustre + tray read together. */
   box-shadow:
     0 1px 0 color-mix(in srgb, #000 12%, transparent),
     0 2px 7px color-mix(in srgb, #000 35%, transparent);
   transition: box-shadow 0.12s ease;
+}
+
+.app[data-tile-graphics='designer'] .app-menu-modal__tile-graphics-preview .tile-face {
+  box-shadow:
+    0 1px 0 color-mix(in srgb, #000 12%, transparent),
+    0 2px 7px color-mix(in srgb, #000 35%, transparent),
+    0 0 12px -2px color-mix(in srgb, #7a7e9a 9%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #f0f2fa 14%, transparent),
+    inset 0 -1px 0 color-mix(in srgb, #000 20%, transparent);
 }
 
 .app-menu-modal__diff-block--tile-graphics {
@@ -6964,13 +7223,11 @@
   z-index: 2;
 }
 
-/* Unopened Menu: strong bright hover; --open (below) overrides so border stays green when the panel is up */
+/* Unopened Menu: keep hover flat — no extra border/ring. --open below owns the green active rim. */
 .app-bottom-center-controls__menu-btn:hover:not(:disabled):not(.app-bottom-center-controls__menu-btn--open) {
-  border-color: #f8fafc;
   box-shadow:
     2px 2px 4px color-mix(in srgb, #000 16%, transparent),
-    0 1px 2px color-mix(in srgb, #000 10%, transparent),
-    0 0 0 1px color-mix(in srgb, #fff 40%, #93c5fd 20%);
+    0 1px 2px color-mix(in srgb, #000 10%, transparent);
 }
 
 .app-bottom-center-controls__menu-btn--open,
@@ -7169,6 +7426,45 @@
 }
 
 .app-layout[data-animations='off'] .suggested-hands-popup__right-edge::after {
+  transition: none;
+}
+
+.suggested-hands-popup__top-edge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 0.5rem;
+  z-index: 7;
+  cursor: ns-resize;
+  user-select: none;
+  touch-action: none;
+  /* Hit area a bit above the border so the resize affordance is easy to grab. */
+  margin-top: -0.12rem;
+  box-sizing: content-box;
+  padding: 0.14rem 0 0.18rem;
+}
+
+.suggested-hands-popup__top-edge::after {
+  content: '';
+  position: absolute;
+  top: 0.14rem;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--text-h) 25%, transparent);
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.suggested-hands-popup__top-edge:hover::after {
+  opacity: 0.85;
+  background: color-mix(in srgb, var(--coach-teal) 50%, var(--text-h) 20%);
+}
+
+.app-layout[data-animations='off'] .suggested-hands-popup__top-edge::after {
   transition: none;
 }
 
