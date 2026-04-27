@@ -1,116 +1,11 @@
 import type { CSSProperties, RefObject } from 'react'
 import { useRef, useLayoutEffect, useEffect, useState } from 'react'
-import { useSortable } from '@dnd-kit/sortable'
 import { useDndContext } from '@dnd-kit/core'
+import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { TileInstance } from '../mahjong/types'
 import type { HandTileFlyIn } from '../mahjong/handTileFlyIn'
 import { TileFace } from './TileFace'
-
-/**
- * After any non-drag layout change (discard, sort, staged call tile), tiles that
- * shifted left animate from their old position to their new one using a CSS
- * transform. Uses offsetLeft (transform-independent) so dnd-kit's own transforms
- * never corrupt the position cache.
- */
-function useFlipAnimation(
-  rowRef: RefObject<HTMLDivElement | null>,
-  disabled: boolean,
-) {
-  const { active: dndActive } = useDndContext()
-  const posCache = useRef<Map<string, number>>(new Map())
-  const prevDndActiveId = useRef<string | null>(null)
-  const pendingFrame = useRef<number | null>(null)
-
-  useLayoutEffect(() => {
-    const row = rowRef.current
-    if (!row || disabled) return
-
-    const prevActiveId = prevDndActiveId.current
-    prevDndActiveId.current = dndActive ? String(dndActive.id) : null
-
-    const isDragging = dndActive !== null
-    // The render immediately after a drag completes — dnd-kit's own animateLayoutChanges
-    // handles the post-drop reorder, so we skip to avoid a double animation.
-    const wasDragging = prevActiveId !== null && !isDragging
-
-    const tileEls = Array.from(row.querySelectorAll<HTMLElement>('[data-flip-id]'))
-
-    // offsetLeft ignores CSS transforms, so the cache is never polluted by dnd-kit
-    // transforms even when they're briefly applied during/after drag.
-    const newPositions = new Map<string, number>()
-    for (const el of tileEls) {
-      const id = el.dataset.flipId
-      if (id) newPositions.set(id, el.offsetLeft)
-    }
-
-    if (isDragging || wasDragging) {
-      posCache.current = newPositions
-      return
-    }
-
-    // Identify tiles whose layout position changed since the last render.
-    const flipItems: { el: HTMLElement; dx: number }[] = []
-    for (const el of tileEls) {
-      const id = el.dataset.flipId
-      if (!id) continue
-      const prevX = posCache.current.get(id)
-      const newX = newPositions.get(id)
-      if (prevX !== undefined && newX !== undefined && Math.abs(prevX - newX) >= 1) {
-        flipItems.push({ el, dx: prevX - newX })
-      }
-    }
-
-    // Store new positions before we apply any transform so the next render's diff is clean.
-    posCache.current = newPositions
-
-    if (flipItems.length === 0) return
-
-    // Abort any still-running FLIP from a previous render.
-    if (pendingFrame.current !== null) {
-      cancelAnimationFrame(pendingFrame.current)
-      pendingFrame.current = null
-      for (const el of tileEls) {
-        el.style.transition = ''
-        el.style.transform = ''
-      }
-    }
-
-    // 1) Snap each moved tile to its previous visual position (no transition).
-    for (const { el, dx } of flipItems) {
-      el.style.transition = 'none'
-      el.style.transform = `translateX(${dx}px)`
-    }
-
-    // 2) Force a synchronous reflow so the browser registers the snap before we add
-    //    the transition. Without this the browser may batch both style changes and skip
-    //    straight to the final position.
-    void row.offsetHeight
-
-    // 3) Slide each tile to its new position.
-    pendingFrame.current = requestAnimationFrame(() => {
-      for (const { el } of flipItems) {
-        el.style.transition = 'transform 0.2s cubic-bezier(0.2, 0, 0.2, 1)'
-        el.style.transform = ''
-        el.addEventListener(
-          'transitionend',
-          () => {
-            el.style.transition = ''
-          },
-          { once: true },
-        )
-      }
-      pendingFrame.current = null
-    })
-  }) // No dep array — intentional: run after every render so position cache stays fresh.
-
-  useEffect(
-    () => () => {
-      if (pendingFrame.current !== null) cancelAnimationFrame(pendingFrame.current)
-    },
-    [],
-  )
-}
 
 function SortableTile({
   tile,
@@ -120,7 +15,6 @@ function SortableTile({
   suggestDim,
   suggestBest,
   stagedForMeld,
-  suppressLayoutAnimation,
   isJustDrawn,
   isHandFlyIn,
   handTileFlyIn,
@@ -134,7 +28,6 @@ function SortableTile({
   suggestDim: boolean
   suggestBest: boolean
   stagedForMeld: boolean
-  suppressLayoutAnimation: boolean
   isJustDrawn: boolean
   /** Charleston / wall-draw fly-in (viewport corner origin). */
   isHandFlyIn: boolean
@@ -144,18 +37,26 @@ function SortableTile({
   drawAnimOriginRef?: RefObject<{ x: number; y: number } | null>
   onSelect: (id: string) => void
 }) {
+  const { active } = useDndContext()
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useSortable({
       id: tile.id,
-      ...(suppressLayoutAnimation ? { animateLayoutChanges: () => false } : {}),
+      // Never use sortable’s **post-drop** “layout” animation. It can stack with `transition`
+      // and, with a separate FLIP, made neighbours jump. During drag, `transform` still updates.
+      animateLayoutChanges: () => false,
     })
 
   const style: CSSProperties = {
     transform: CSS.Transform.toString(transform),
-    // Active drag tile: 'none' so it tracks the cursor in real time with zero lag.
-    // All other tiles (including during Charleston): leave undefined so the CSS class
-    // rule applies its transition and neighbours slide smoothly out of the way.
-    transition: isDragging ? 'none' : undefined,
+    // The dragged tile itself must track the pointer with no easing. Neighbours should always
+    // quick-slide while a drag is active (including Charleston); after release, cleanup
+    // transforms snap so the old post-drop left-jut/flip cannot play.
+    transition:
+      isDragging
+        ? 'none'
+        : active
+          ? 'transform 0.14s cubic-bezier(0.2, 0, 0.2, 1)'
+          : 'none',
     opacity: isDragging ? 0 : undefined,
     zIndex: isDragging ? 2 : undefined,
   }
@@ -230,7 +131,6 @@ function SortableTile({
   return (
     <div
       ref={setWrapRef}
-      data-flip-id={tile.id}
       style={style}
       className={[
         'sortable-tile-wrap',
@@ -282,7 +182,7 @@ type Props = {
   stagedForMeldIds?: ReadonlySet<string>
   /** When set, the next draw-in animation originates from this position (e.g. a joker swap source). */
   drawAnimOriginRef?: RefObject<{ x: number; y: number } | null>
-  /** When false, skip draw / Charleston / Mah Jongg fly-in and hand FLIP slide. Default true. */
+  /** When false, skip draw / Charleston / Mah Jongg fly-in. Default true. */
   animationsEnabled?: boolean
 }
 
@@ -297,15 +197,12 @@ export function SortableHand({
   suggestedTileGuide,
   discardMode = false,
   slotCount = 14,
-  suppressLayoutAnimation = false,
   stagedForMeldIds,
   drawAnimOriginRef,
   animationsEnabled = true,
 }: Props) {
   const emptyCount = Math.max(0, slotCount - tiles.length)
   const g = suggestedTileGuide
-  const rowRef = useRef<HTMLDivElement>(null)
-  useFlipAnimation(rowRef, suppressLayoutAnimation || !animationsEnabled)
 
   // Track the most-recently drawn tile so we can play a drop-in animation exactly once.
   const [justDrawnId, setJustDrawnId] = useState<string | null>(null)
@@ -323,7 +220,7 @@ export function SortableHand({
   }, [highlightedTileId, animationsEnabled])
 
   return (
-    <div className="hand-row" role="list" aria-label="Your hand" ref={rowRef}>
+    <div className="hand-row" role="list" aria-label="Your hand">
       {tiles.map((tile) => {
         const isBest = !!g && g.bestIds.has(tile.id)
         // Newly received tiles (drawn or passed) stay lit regardless of bestIds.
@@ -341,7 +238,6 @@ export function SortableHand({
             suggestDim={!!g && !isBest && !isNewlyReceived}
             suggestBest={isBest}
             stagedForMeld={stagedForMeldIds?.has(tile.id) ?? false}
-            suppressLayoutAnimation={suppressLayoutAnimation}
             isJustDrawn={animationsEnabled && justDrawnId === tile.id}
             isHandFlyIn={isHandFlyIn}
             handTileFlyIn={handTileFlyIn}

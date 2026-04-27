@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
-import { useDraggable, useDroppable } from '@dnd-kit/core'
+import { useDndContext, useDraggable, useDroppable } from '@dnd-kit/core'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { HandTileFlyInFrom } from '../mahjong/handTileFlyIn'
@@ -89,27 +89,44 @@ export type MeldGroup = {
   onTileClick?: (tileId: string) => void
 }
 
-/** A staged call tile that participates in the shared SortableContext so hand tiles animate. */
+/** A staged call tile that participates in the shared SortableContext so hand + exposure animate like Charleston/pass. */
 function SortableStagedSlot({
   tile,
   gi,
   isFirst,
   onTileClick,
   stackSuitTiles,
+  suggestBestIds,
+  suppressDim,
 }: {
   tile: TileInstance
   gi: number
   isFirst: boolean
   onTileClick: (id: string) => void
   stackSuitTiles: boolean
+  suggestBestIds: ReadonlySet<string> | null
+  suppressDim: boolean
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { active } = useDndContext()
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({
     id: tile.id,
+    animateLayoutChanges: () => false,
   })
+  // Match SortableHand / PassStrip: neighbors slide while any sortable item is being dragged.
   const style: CSSProperties = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    transition:
+      isDragging
+        ? 'none'
+        : active
+          ? 'transform 0.14s cubic-bezier(0.2, 0, 0.2, 1)'
+          : 'none',
+    opacity: isDragging ? 0 : undefined,
+    zIndex: isDragging ? 2 : undefined,
   }
+  const isJoker = tile.def.cat === 'joker'
+  const isBest = !!suggestBestIds && suggestBestIds.has(tile.id)
+  const suggestDim = !suppressDim && !!suggestBestIds && !isBest
   return (
     <div
       ref={setNodeRef}
@@ -119,6 +136,9 @@ function SortableStagedSlot({
         gi > 0 && isFirst ? 'exposure-rack__slot--meld-start' : '',
         'exposure-rack__slot--staged-returnable',
         isDragging ? 'exposure-rack__slot--dragging' : '',
+        isJoker ? 'exposure-rack__slot--joker' : '',
+        isBest ? 'exposure-rack__slot--suggest-best' : '',
+        suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -126,7 +146,7 @@ function SortableStagedSlot({
       {...listeners}
       {...attributes}
     >
-      <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
+      <TileFace def={tile.def} elevated={isDragging} rackSuitStacked={stackSuitTiles} />
     </div>
   )
 }
@@ -292,6 +312,11 @@ export function ExposureRack({
   const tailReserved = reserveTrailingSlots + (reserveLastSlotForDiscard ? 1 : 0)
   const emptyCount = Math.max(0, slotCount - totalExposed - suffixSlotCount - tailReserved)
 
+  const gLast = suggestedTileGuide
+  const lastSlotIsBest = lastSlotTile && gLast ? gLast.bestIds.has(lastSlotTile.id) : false
+  const lastSlotSuggestDim = !!(lastSlotTile && gLast && !suppressDim && !lastSlotIsBest)
+  const lastSlotJoker = lastSlotTile?.def.cat === 'joker'
+
   return (
     <div
       className={['exposure-rack', className].filter(Boolean).join(' ')}
@@ -323,6 +348,10 @@ export function ExposureRack({
           return ordered.map((tile, ti) => {
             const isCalled = meld.calledTileId === tile.id
             if (isCalled) {
+              const g = suggestedTileGuide
+              const isJoker = tile.def.cat === 'joker'
+              const isBest = !!g && g.bestIds.has(tile.id)
+              const suggestDim = !suppressDim && !!g && !isBest
               // Called tile is locked — render as a static (non-draggable) slot
               return (
                 <div
@@ -332,6 +361,9 @@ export function ExposureRack({
                     'exposure-rack__slot',
                     gi > 0 && ti === 0 ? 'exposure-rack__slot--meld-start' : '',
                     'exposure-rack__slot--called',
+                    isJoker ? 'exposure-rack__slot--joker' : '',
+                    isBest ? 'exposure-rack__slot--suggest-best' : '',
+                    suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
                   ]
                     .filter(Boolean)
                     .join(' ')}
@@ -349,6 +381,8 @@ export function ExposureRack({
                 isFirst={ti === 0}
                 onTileClick={handler}
                 stackSuitTiles={stackSuitTiles}
+                suggestBestIds={suggestedTileGuide?.bestIds ?? null}
+                suppressDim={suppressDim}
               />
             )
           })
@@ -417,7 +451,12 @@ export function ExposureRack({
             className={[
               'exposure-rack__slot',
               lastSlotTile ? 'exposure-rack__slot--incoming-discard' : 'exposure-rack__slot--empty',
-            ].join(' ')}
+              lastSlotTile && gLast && lastSlotIsBest ? 'exposure-rack__slot--suggest-best' : '',
+              lastSlotTile && gLast && lastSlotSuggestDim ? 'exposure-rack__slot--suggest-dim' : '',
+              lastSlotTile && lastSlotJoker ? 'exposure-rack__slot--joker' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
             role="listitem"
             aria-label={lastSlotTile ? 'Current bot discard' : undefined}
           >

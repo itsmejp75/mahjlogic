@@ -4,6 +4,7 @@ import type { CardInk } from '../card/cardText'
 import {
   firstOpposingConsecutiveStandInPairFromTitle,
   patternLinePreviewCardInks,
+  patternLinePreviewDefs,
   patternLinePreviewGroupOrderDefs,
   patternPreviewJokerEligibleBySlot,
   reorderConsec6GroupTileDefsToDisplay,
@@ -2780,6 +2781,117 @@ export function previewSlotSuggestKinds(
 }
 
 /**
+ * Picks which strip row(s) match the current focus. Multi-combo "all" keys use every row; a single
+ * opposing-consec variant matches `patternId::oc::…`.
+ */
+function pickStripRowsForFocusKey(
+  patternId: string,
+  focusKey: string,
+  isMulti: boolean,
+  res: SuggestedStripRowsResult,
+): SuggestedStripSlot[][] {
+  if (res.rows.length === 0) return []
+  if (isMulti) return res.rows
+  if (res.rows.length === 1) return [res.rows[0]!]
+  if (res.ocVariantSuffixes.length > 0 && res.ocVariantSuffixes.length === res.rows.length) {
+    const i = res.ocVariantSuffixes.findIndex(
+      (suf) => focusKey === `${patternId}::${suf}` || focusKey.endsWith(suf),
+    )
+    if (i >= 0) return [res.rows[i]!]
+  }
+  return [res.rows[0]!]
+}
+
+function collectNeededNaturalDefsFromStripRows(rows: SuggestedStripSlot[][]): TileDef[] {
+  const out: TileDef[] = []
+  for (const row of rows) {
+    for (const s of row) {
+      if (s.highlight) continue
+      if (s.displayDef.cat === 'joker') continue
+      out.push(s.displayDef)
+    }
+  }
+  return out
+}
+
+function discardIdsMatchingNeededDefs(
+  discards: readonly TileInstance[],
+  needDefs: readonly TileDef[],
+): Set<string> {
+  const ids = new Set<string>()
+  for (const t of discards) {
+    if (needDefs.some((d) => tileDefsEqual(d, t.def))) {
+      ids.add(t.id)
+    }
+  }
+  return ids
+}
+
+/**
+ * For the same suggested-hand focus as the rack guide, which discard-pile tile ids are naturals
+ * the pattern is still short (non-highlight strip slots) — "dead" copies of tiles you need.
+ * Empty when `focusKey` is null/invalid or the strip cannot be built.
+ */
+export function computeSuggestedDiscardNeedHighlightIds(
+  focusKey: string | null,
+  rack: TileInstance[],
+  discards: readonly TileInstance[],
+  exposureTileIds?: ReadonlySet<string>,
+): Set<string> {
+  if (!focusKey) return new Set()
+  const variantSep = ['::tier::', '::oc::', '::ocall::']
+    .map((s) => focusKey.indexOf(s))
+    .filter((i) => i >= 0)
+    .reduce((m, i) => (m < 0 ? i : Math.min(m, i)), -1)
+  const patternId = variantSep >= 0 ? focusKey.slice(0, variantSep) : focusKey
+  const p = PRACTICE_PATTERNS.find((x) => x.id === patternId)
+  if (!p) return new Set()
+  const greedyUiOpts: GreedyPatternMatchOpts | undefined =
+    exposureTileIds && exposureTileIds.size > 0
+      ? { exposureTileIds }
+      : undefined
+
+  const addFromStripWork = (pinnedP: PracticePattern, isMulti: boolean, fk: string) => {
+    const detail = greedyPatternMatchDetail(rack, pinnedP, greedyUiOpts)
+    const rackIdSet = new Set(rack.map((t) => t.id))
+    const bestIds = isMulti
+      ? new Set(detail.usedOrder.filter((id) => rackIdSet.has(id)))
+      : computeRackPatternHighlightIds(
+          rack,
+          pinnedP,
+          detail,
+          exposureTileIds,
+        )
+    const result = buildSuggestedStripSlotRowsWithVariants(
+      pinnedP,
+      rack,
+      detail.usedOrder,
+      bestIds,
+      detail.usedMeta,
+      exposureTileIds,
+    )
+    const rows = pickStripRowsForFocusKey(p.id, fk, isMulti, result)
+    const needDefs = collectNeededNaturalDefsFromStripRows(rows)
+    return discardIdsMatchingNeededDefs(discards, needDefs)
+  }
+
+  if (variantSep >= 0) {
+    const pinnedPatterns = buildPinnedPatternsFromFocusKey(p, focusKey)
+    if (pinnedPatterns.length > 0) {
+      const isMulti = isMultiComboFocusKey(focusKey)
+      const out = new Set<string>()
+      for (const pinnedP of pinnedPatterns) {
+        for (const id of addFromStripWork(pinnedP, isMulti, focusKey)) {
+          out.add(id)
+        }
+      }
+      return out
+    }
+  }
+  return addFromStripWork(p, false, focusKey)
+}
+
+/**
  * Hand tiles appearing in the greedy “used” set for both `focus` and another line with the same
  * `matchedInHand` + `tilesNeededRough` (contested between two equally-close card lines).
  */
@@ -2950,9 +3062,60 @@ function stripOrderedHandIdsForPattern(
     stripDefs,
     greedyOpts,
   )
+  // `slotTileIdByStripIndex` is in **suggested-hands** line order (after internal permute for
+  // e.g. like-2, consec-6). `patternLinePreviewDefs` is the same left-to-right sequence as the
+  // double-click / strip preview, not the raw `resolveStrip` group order.
+  const displayDefs = patternLinePreviewDefs(pinnedP)
+  const defsByDisplay =
+    displayDefs.length > 0 && displayDefs.length === slotTileIdByStripIndex.length
+      ? displayDefs
+      : stripDefs
+  const jokerEli = patternPreviewJokerEligibleBySlot(pinnedP)
+
+  const slots: (string | null)[] =
+    slotTileIdByStripIndex.length > 0
+      ? [...slotTileIdByStripIndex]
+      : defsByDisplay.map(() => null)
+  const n = Math.min(slots.length, defsByDisplay.length)
+  const byId = new Map(rackForPattern.map((t) => [t.id, t] as const))
+  const inSlots = new Set<string>(slots.filter((x): x is string => x != null))
+
+  // Fill any gaps left by `buildPreviewSlotKindsFromGroups` in **card index** order, using
+  // `detail.usedOrder` only as a tie / priority list — not as the final left-to-right order
+  // (the old `usedOrder` tail put greedy match order first and scrambled FF before consec, etc.).
+  for (let i = 0; i < n; i++) {
+    if (slots[i] != null) continue
+    const d = defsByDisplay[i]!
+    for (const id of detail.usedOrder) {
+      if (inSlots.has(id) || !handIds.has(id) || !bestIds.has(id)) continue
+      const t = byId.get(id)
+      if (!t) continue
+      if (tileDefsEqual(t.def, d) || stripSlotAcceptsNatural(pinnedP, d, t.def)) {
+        slots[i] = id
+        inSlots.add(id)
+        break
+      }
+    }
+  }
+  for (let i = 0; i < n; i++) {
+    if (slots[i] != null) continue
+    const d = defsByDisplay[i]!
+    if (!previewSlotAllowsJoker(d, pinnedP, i, jokerEli)) continue
+    for (const id of detail.usedOrder) {
+      if (inSlots.has(id) || !handIds.has(id) || !bestIds.has(id)) continue
+      const t = byId.get(id)
+      if (t?.def.cat === 'joker') {
+        slots[i] = id
+        inSlots.add(id)
+        break
+      }
+    }
+  }
+
   const orderedIds: string[] = []
   const seen = new Set<string>()
-  for (const id of slotTileIdByStripIndex) {
+  for (let i = 0; i < n; i++) {
+    const id = slots[i]
     if (id == null || !handIds.has(id) || seen.has(id)) continue
     orderedIds.push(id)
     seen.add(id)
@@ -3036,6 +3199,133 @@ export function sortHandForSuggestedPattern(
   // slide the best tiles left without scrambling everything to the right.
   const rest = hand.filter((t) => !seen.has(t.id))
   return [...orderedBest, ...rest]
+}
+
+/**
+ * **Concealed + claim-meld** tiles in one list, left-to-right as on the card strip (same
+ * `computePreviewStripAssignment` order as the suggested-hands line). Use for end-game review
+ * when the rack should read as the full 14, not “melds in table order, then sorted concealed”.
+ */
+export function sortFullRackTilesForPattern(
+  patternId: string,
+  input: RankSuggestedHandsInput,
+  focusKey?: string,
+): TileInstance[] {
+  const basePattern = PRACTICE_PATTERNS.find((x) => x.id === patternId)
+  const playerClaimMelds = input.playerClaimMelds ?? []
+  const rackForPattern = [...input.hand, ...playerClaimMelds.flatMap((e) => e.tiles)]
+  if (!basePattern) return rackForPattern
+
+  const rackIds = new Set(rackForPattern.map((t) => t.id))
+  const exposureTileIds: ReadonlySet<string> | undefined =
+    playerClaimMelds.length > 0
+      ? new Set(playerClaimMelds.flatMap((e) => e.tiles).map((t) => t.id))
+      : undefined
+
+  const pinnedPatterns: PracticePattern[] = focusKey
+    ? buildPinnedPatternsFromFocusKey(basePattern, focusKey)
+    : []
+  const ordered: TileInstance[] = []
+  const seen = new Set<string>()
+
+  const appendStripOrder = (pinned: PracticePattern) => {
+    const { orderedIds } = stripOrderedHandIdsForPattern(
+      pinned,
+      rackForPattern,
+      rackIds,
+      exposureTileIds,
+    )
+    for (const id of orderedIds) {
+      if (seen.has(id)) continue
+      const t = rackForPattern.find((x) => x.id === id)
+      if (t) {
+        ordered.push(t)
+        seen.add(id)
+      }
+    }
+  }
+
+  if (pinnedPatterns.length > 0) {
+    for (const pp of pinnedPatterns) appendStripOrder(pp)
+  } else {
+    appendStripOrder(basePattern)
+  }
+
+  const rest = rackForPattern.filter((t) => !seen.has(t.id))
+  return [...ordered, ...rest]
+}
+
+/**
+ * Suggested-hands `focusKey` for strip sort / match detail (suit-permute stack rows only today).
+ * Mirrors `SuggestedHandsPanel` double-click / tier keys.
+ */
+export function focusKeyForSuggestedHandLine(line: SuggestedHandLine): string | undefined {
+  if (line.consecRanksTier && line.consecRanksTier.combos.length > 0) {
+    return `${line.id}::tier::${line.consecRanksTier.combos
+      .map((c) => `${c.base}:${c.perm.join('-')}`)
+      .join('|')}`
+  }
+  return undefined
+}
+
+/**
+ * Card-order rack + which tile ids “count” toward the line (greedy, same as in-play highlights).
+ * Uses pinned pattern for tiered `id` + `consecRanksTier` when present.
+ */
+export function postGameRackAndHighlights(
+  line: SuggestedHandLine,
+  rankInput: RankSuggestedHandsInput,
+): { fullRack: TileInstance[]; bestIds: Set<string> } {
+  const fk = focusKeyForSuggestedHandLine(line)
+  const fullRack = sortFullRackTilesForPattern(line.id, rankInput, fk)
+  const base = PRACTICE_PATTERNS.find((x) => x.id === line.id)
+  if (!base) return { fullRack, bestIds: new Set() }
+  const playerClaimMelds = rankInput.playerClaimMelds ?? []
+  const rack = [...rankInput.hand, ...playerClaimMelds.flatMap((e) => e.tiles)]
+  const opt: GreedyPatternMatchOpts | undefined =
+    playerClaimMelds.length > 0
+      ? { exposureTileIds: new Set(playerClaimMelds.flatMap((e) => e.tiles).map((t) => t.id)) }
+      : undefined
+  let pForMatch: PracticePattern = base
+  if (fk) {
+    const pinned = buildPinnedPatternsFromFocusKey(base, fk)
+    if (pinned.length > 0) pForMatch = pinned[0]!
+  }
+  const detail = greedyPatternMatchDetail(rack, pForMatch, opt)
+  const rackIdSet = new Set(rack.map((t) => t.id))
+  const bestIds = new Set(detail.usedOrder.filter((id) => rackIdSet.has(id)))
+  if (bestIds.size === 0) {
+    for (const t of rack) {
+      if (pForMatch.matches(t.def)) bestIds.add(t.id)
+    }
+  }
+  return { fullRack, bestIds }
+}
+
+/**
+ * All practice lines that share the best (minimum) `tilesNeededRough` for this rack, ordered with
+ * the same tiebreak as {@link summarizeRackTowardWin} — `[0]` is that function’s `closestLine`.
+ * Post-game: use when several hands tie in distance; offer a chooser to flip strip + highlights.
+ */
+export function suggestedHandsTiedAtBest(input: RankSuggestedHandsInput): {
+  bestTilesAway: number
+  linesAtMin: SuggestedHandLine[]
+} {
+  const lines = rankSuggestedHands(input)
+  if (!lines.length) return { bestTilesAway: 14, linesAtMin: [] }
+  let minAway = 14
+  for (const line of lines) {
+    if (line.tilesNeededRough < minAway) minAway = line.tilesNeededRough
+  }
+  const tied = lines.filter((l) => l.tilesNeededRough === minAway)
+  tied.sort((a, b) => {
+    if (b.matchedInHand !== a.matchedInHand) return b.matchedInHand - a.matchedInHand
+    if (a.visibleDeadMatches !== b.visibleDeadMatches) return a.visibleDeadMatches - b.visibleDeadMatches
+    if (a.section !== b.section) return a.section.localeCompare(b.section)
+    if (a.cardLineNumber !== b.cardLineNumber) return (a.cardLineNumber ?? 0) - (b.cardLineNumber ?? 0)
+    return a.title.localeCompare(b.title)
+  })
+  return { bestTilesAway: minAway, linesAtMin: tied }
 }
 
 /**
@@ -3245,11 +3535,7 @@ export function summarizeRackTowardWin(input: RankSuggestedHandsInput): {
   bestTilesAway: number
   closestLine: SuggestedHandLine | null
 } {
-  const lines = rankSuggestedHands(input)
-  if (!lines.length) return { bestTilesAway: 14, closestLine: null }
-  let closestLine = lines[0]!
-  for (const line of lines) {
-    if (line.tilesNeededRough < closestLine.tilesNeededRough) closestLine = line
-  }
-  return { bestTilesAway: closestLine.tilesNeededRough, closestLine }
+  const { bestTilesAway, linesAtMin } = suggestedHandsTiedAtBest(input)
+  if (!linesAtMin.length) return { bestTilesAway: 14, closestLine: null }
+  return { bestTilesAway, closestLine: linesAtMin[0]! }
 }

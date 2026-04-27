@@ -196,6 +196,13 @@ function applyLeft(
   }
 }
 
+/** Optional bot pass picker: `botIndex` 0 = South, 1 = West, 2 = North. */
+export type CharlestonBotPassPicker = (
+  hand: TileInstance[],
+  n: number,
+  botIndex: 0 | 1 | 2,
+) => TileInstance[]
+
 /**
  * One synchronized Charleston exchange.
  * - Most steps: `eastRackPass` has 3 tiles from the pass strip (not in rack while in slots).
@@ -208,18 +215,21 @@ export function applyCharlestonExchange(
   hands: FourHands,
   eastRackPass: TileInstance[],
   blindCount = 0,
+  opts?: { pickBotPass?: CharlestonBotPassPicker },
 ): FourHands {
+  const botPass = opts?.pickBotPass
+
   if (phase === 'courtesy') {
     const n = eastRackPass.length
-    const southPass = pickRandomPass(hands.south, n)
-    const westPass = pickRandomPass(hands.west, n)
-    const northPass = pickRandomPass(hands.north, n)
+    const southPass = botPass ? botPass(hands.south, n, 0) : pickRandomPass(hands.south, n)
+    const westPass = botPass ? botPass(hands.west, n, 1) : pickRandomPass(hands.west, n)
+    const northPass = botPass ? botPass(hands.north, n, 2) : pickRandomPass(hands.north, n)
     return applyAcross(hands, eastRackPass, southPass, westPass, northPass)
   }
 
-  const southPass = pickRandomPass(hands.south, 3)
-  const westPass = pickRandomPass(hands.west, 3)
-  const northPass = pickRandomPass(hands.north, 3)
+  const southPass = botPass ? botPass(hands.south, 3, 0) : pickRandomPass(hands.south, 3)
+  const westPass = botPass ? botPass(hands.west, 3, 1) : pickRandomPass(hands.west, 3)
+  const northPass = botPass ? botPass(hands.north, 3, 2) : pickRandomPass(hands.north, 3)
 
   let eastPass = eastRackPass
   if ((phase === 'left1' || phase === 'right2') && blindCount > 0) {

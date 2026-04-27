@@ -361,62 +361,108 @@ function pairedDistinctDragonKongs(
   return deltas.length ? { deltas, consume: 2 } : null
 }
 
-function enumerateTotalCaps(groups: PatternGroup[]): Map<string, number>[] {
-  const caps: Map<string, number>[] = []
+/**
+ * All ways to pick one branch map per (possibly paired) group. The merged sum
+ * may collapse the same key from two groups; use this list to recover **separate**
+ * (key, need) slots for meld matching.
+ */
+function enumerateGroupDeltaLists(groups: PatternGroup[]): Map<string, number>[][] {
+  const out: Map<string, number>[][] = []
 
-  function dfs(i: number, cap: Map<string, number>) {
+  function dfs(i: number, acc: Map<string, number>[]) {
     if (i >= groups.length) {
-      caps.push(cap)
+      out.push([...acc])
       return
     }
     const pair = pairedDistinctDragonKongs(groups, i)
     if (pair) {
       for (const d of pair.deltas) {
-        dfs(i + pair.consume, mergeCap(cap, d))
+        dfs(i + pair.consume, [...acc, d])
       }
       return
     }
     const choices = branchesForGroup(groups[i]!)
     if (choices.length === 0) return
     for (const d of choices) {
-      dfs(i + 1, mergeCap(cap, d))
+      dfs(i + 1, [...acc, d])
     }
   }
 
-  dfs(0, new Map())
-  return caps
+  dfs(0, [])
+  return out
 }
 
 /**
- * Each individual exposed meld has a locked size (pung=3, kong=4, quint=5).
- * Return true if every (tileKey, meldSize) pair from this single meld has an
- * exact-count match in some branch of some group in the pattern.
- *
- * This prevents a pung of 3 from satisfying a kong group of 4 — the meld is
- * locked on the table and cannot be extended.
+ * One (tileKey, count) per meld after joker stand-in; every natural in a table meld must
+ * be the same tile, so a single key (flowers aggregate to one `flower` key).
  */
-function eachMeldHasExactGroupMatch(
-  exposures: ReadonlyArray<{ tiles: TileInstance[] }>,
-  groups: PatternGroup[],
-): boolean {
-  for (const exposure of exposures) {
-    const meldDefs = normalizeExposureTiles([exposure])
-    if (meldDefs.length === 0) continue
-    const meldMap = aggregateExposureKeys(meldDefs)
-    for (const [key, count] of meldMap) {
-      let found = false
-      outer: for (const g of groups) {
-        for (const branch of branchesForGroup(g)) {
-          if ((branch.get(key) ?? 0) === count) {
-            found = true
-            break outer
-          }
-        }
+function meldKeyCount(
+  exposure: { tiles: TileInstance[] },
+): { key: string; count: number } | null {
+  const meldDefs = normalizeExposureTiles([exposure])
+  if (meldDefs.length === 0) return null
+  const mm = aggregateExposureKeys(meldDefs)
+  if (mm.size !== 1) return null
+  const [key, count] = [...mm.entries()][0]!
+  return { key, count }
+}
+
+type Slot = { key: string; need: number }
+
+/**
+ * True if we can assign each meld to a **distinct** slot (key + need) with
+ * `meld.key === slot.key` and `meld.count === slot.need` — all melds use one
+ * hand embedding. Slots come from the **per-group** branch maps, not a merged
+ * `Map` (so two 7D pungs from two groups are two 3s, not one 6-bucket).
+ */
+function canMatchMeldsToSlots(sigs: { key: string; count: number }[], slots: Slot[]): boolean {
+  if (sigs.length > slots.length) return false
+  const used = new Array(slots.length).fill(false)
+  const dfs = (i: number): boolean => {
+    if (i >= sigs.length) return true
+    const s = sigs[i]!
+    for (let j = 0; j < slots.length; j++) {
+      if (used[j]) continue
+      const sl = slots[j]!
+      if (s.key === sl.key && s.count === sl.need) {
+        used[j] = true
+        if (dfs(i + 1)) return true
+        used[j] = false
       }
-      if (!found) return false
+    }
+    return false
+  }
+  return dfs(0)
+}
+
+function slotsFromDeltaList(deltaList: ReadonlyArray<Map<string, number>>): Slot[] {
+  const out: Slot[] = []
+  for (const m of deltaList) {
+    for (const [key, need] of m) {
+      out.push({ key, need })
     }
   }
-  return true
+  return out
+}
+
+/**
+ * For one hand embedding (ordered group maps), every exposure matches a
+ * different atomic slot; aggregate counts still fit `exposureFitsCap`.
+ */
+function eachMeldMatchesThisEmbedding(
+  exposures: ReadonlyArray<{ tiles: TileInstance[] }>,
+  merged: Map<string, number>,
+  deltaList: ReadonlyArray<Map<string, number>>,
+  exp: Map<string, number>,
+): boolean {
+  if (!exposureFitsCap(exp, merged)) return false
+  const sigs: { key: string; count: number }[] = []
+  for (const exposure of exposures) {
+    const sig = meldKeyCount(exposure)
+    if (sig == null) return false
+    sigs.push(sig)
+  }
+  return canMatchMeldsToSlots(sigs, slotsFromDeltaList(deltaList))
 }
 
 /**
@@ -436,16 +482,19 @@ export function claimMeldsFitPracticePattern(
     return defs.every((d) => pat.matches(d))
   }
 
-  // Check 1 — aggregate tile counts fit within some valid instantiation of the pattern.
+  // Aggregate + one hand embedding: merged counts fit, and every table meld
+  // matches a **distinct** atomic (key, need) from the per-group branch maps.
+  // Comparing to a merged `Map` alone is wrong when two groups need the same key
+  // (e.g. two 7D pungs); the old per-meld/branch check let mixed embeddings through.
   const exp = aggregateExposureKeys(defs)
-  const caps = enumerateTotalCaps(pat.groups)
-  if (caps.length === 0) return false
-  if (!caps.some((cap) => exposureFitsCap(exp, cap))) return false
-
-  // Check 2 — each individual meld's locked size must exactly match a group.
-  // e.g. an exposed pung (3) of flowers cannot satisfy a kong group (4) even
-  // though 3 ≤ 4 passes the aggregate check above.
-  return eachMeldHasExactGroupMatch(exposures, pat.groups)
+  for (const deltaList of enumerateGroupDeltaLists(pat.groups)) {
+    let merged = new Map<string, number>()
+    for (const d of deltaList) {
+      merged = mergeCap(merged, d)
+    }
+    if (eachMeldMatchesThisEmbedding(exposures, merged, deltaList, exp)) return true
+  }
+  return false
 }
 
 /**
@@ -463,4 +512,81 @@ export function openClaimMeldsFitSomePracticeLine(
     if (p.closed) return false
     return claimMeldsFitPracticePattern(p, melds)
   })
+}
+
+/**
+ * Assigns each hand embedding slot (card group order) to a meld index, if possible.
+ * Prefers the same key/need matching as {@link canMatchMeldsToSlots}, but recovers
+ * the slot index per meld for left-to-right display order.
+ */
+function findMeldToSlotOrder(sigs: { key: string; count: number }[], slots: Slot[]): number[] | null {
+  const n = sigs.length
+  const S = slots.length
+  if (n === 0) return null
+  const used = new Array<boolean>(S).fill(false)
+  const meldToSlot: number[] = new Array(n).fill(-1)
+
+  function dfs(mi: number): boolean {
+    if (mi === n) return true
+    for (let j = 0; j < S; j++) {
+      if (used[j]!) continue
+      const s = sigs[mi]!
+      const sl = slots[j]!
+      if (s.key === sl.key && s.count === sl.need) {
+        used[j] = true
+        meldToSlot[mi] = j
+        if (dfs(mi + 1)) return true
+        used[j] = false
+        meldToSlot[mi] = -1
+      }
+    }
+    return false
+  }
+  if (!dfs(0)) return null
+  return meldToSlot
+}
+
+/**
+ * Reorder East (or any) claim-meld row to match the **left-to-right group order** of one valid
+ * NMJL embedding of `pat`, using the first such embedding in {@link enumerateGroupDeltaLists} order
+ * for which a meld-to-slot bijection exists. If the new order is unchanged, returns `null`.
+ *
+ * The caller should pick `pat` from the closest suggested hand line
+ * (same as {@link rankSuggestedHands} / {@link summarizeRackTowardWin}).
+ */
+export function reorderEastExposuresToPatternGroupOrder(
+  exposures: ReadonlyArray<{ tiles: TileInstance[] }>,
+  pat: PracticePattern,
+): { tiles: TileInstance[] }[] | null {
+  if (exposures.length < 2) return null
+  if (!pat.groups?.length) return null
+  const defs = normalizeExposureTiles([...exposures])
+  if (defs.length === 0) return null
+  const exp = aggregateExposureKeys(defs)
+
+  const sigs: { key: string; count: number }[] = []
+  for (const exposure of exposures) {
+    const sig = meldKeyCount(exposure)
+    if (sig == null) return null
+    sigs.push(sig)
+  }
+
+  for (const deltaList of enumerateGroupDeltaLists(pat.groups)) {
+    let merged = new Map<string, number>()
+    for (const d of deltaList) {
+      merged = mergeCap(merged, d)
+    }
+    if (!exposureFitsCap(exp, merged)) continue
+    if (!eachMeldMatchesThisEmbedding(exposures, merged, deltaList, exp)) continue
+
+    const slots = slotsFromDeltaList(deltaList)
+    const meldToSlot = findMeldToSlotOrder(sigs, slots)
+    if (meldToSlot == null) continue
+
+    const n = sigs.length
+    const orderIdx = [...Array(n).keys()].sort((a, b) => meldToSlot[a]! - meldToSlot[b]!)
+    if (orderIdx.every((i, k) => i === k)) return null
+    return orderIdx.map((i) => exposures[i]!)
+  }
+  return null
 }

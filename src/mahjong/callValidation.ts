@@ -123,26 +123,65 @@ export function simulateEastClaim(
 }
 
 
+function winOnBotDiscardInput(
+  r: CallValidationRoundSlice,
+  called: TileInstance,
+  hand: TileInstance[],
+  eastMelds: EastExposure[],
+): boolean {
+  const discards = r.discardPile.filter((e) => e.tile.id !== called.id).map((e) => e.tile)
+  return (
+    summarizeRackTowardWin({
+      hand,
+      wallRemaining: r.wall.length,
+      discards,
+      exposures: r.botExposures,
+      playerClaimMelds: eastMelds,
+      eastTableClaimMelds: eastMelds,
+    }).bestTilesAway === 0
+  )
+}
+
 /**
- * True when East’s current hand plus the live bot discard completes at least one
- * practice-card line with `tilesNeededRough === 0` (same rack logic as suggestions).
+ * True when East can declare Mah Jongg on the live bot discard: same `summarizeRackTowardWin`
+ * model as the Suggested-hands panel and the Call flow.
+ *
+ * The rack may complete a line when the called tile is **(a)** added to the concealed hand only, or
+ * **(b–d)** used in a new exposure with tiles from the hand. Case (a) alone is not enough: group
+ * matching is exposure-aware, so a win that only appears after forming a 2-tile (or 3+ tile) claim
+ * with the discard would wrongly fail (e.g. flower + flower in exposure vs. both in hand).
  */
 export function hasLegalMahjongOnBotDiscard(r: CallValidationRoundSlice): boolean {
   if (r.mainPhase !== 'bot-turn' && r.mainPhase !== 'call-staging') return false
   if (!r.activeBotDiscard) return false
   if (r.activeBotDiscard.def.cat === 'joker') return false
   const called = r.activeBotDiscard
-  const handWithCalled = [...r.hand, called]
-  const discards = r.discardPile.filter((e) => e.tile.id !== called.id).map((e) => e.tile)
-  const { bestTilesAway } = summarizeRackTowardWin({
-    hand: handWithCalled,
-    wallRemaining: r.wall.length,
-    discards,
-    exposures: r.botExposures,
-    playerClaimMelds: r.eastExposures,
-    eastTableClaimMelds: r.eastExposures,
-  })
-  return bestTilesAway === 0
+
+  // (a) All concealed: 13th tile in hand + called as 14th, no new exposure.
+  if (winOnBotDiscardInput(r, called, [...r.hand, called], r.eastExposures)) return true
+
+  // (b) Same as Call → one tile staged → commit: 2-tile exposure [called, t], claimType pung.
+  const oneFromHand: TileInstance[] = [
+    ...findExactMatches(r.hand, called.def),
+    ...r.hand.filter((t) => t.def.cat === 'joker'),
+  ]
+  for (const t of oneFromHand) {
+    const handNext = r.hand.filter((x) => x.id !== t.id)
+    const exposure: EastExposure = {
+      tiles: [called, t],
+      claimType: 'pung',
+      calledTileId: called.id,
+    }
+    if (winOnBotDiscardInput(r, called, handNext, [...r.eastExposures, exposure])) return true
+  }
+
+  // (c–d) 3+ tile claim melds (pung / kong / quint with 2–4 hand tiles + discard).
+  for (const claimType of ['pung', 'kong', 'quint'] as const) {
+    const sim = simulateEastClaim(r.hand, r.eastExposures, called, claimType)
+    if (sim && winOnBotDiscardInput(r, called, sim.hand, sim.eastMelds)) return true
+  }
+
+  return false
 }
 
 /** Before opening the call-declare UI (from bot-turn). */

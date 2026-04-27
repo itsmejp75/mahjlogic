@@ -1,33 +1,53 @@
-import { useDraggable, useDroppable } from '@dnd-kit/core'
+import type { CSSProperties } from 'react'
+import { useDndContext, useDroppable } from '@dnd-kit/core'
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import type { TileInstance } from '../mahjong/types'
 import { PASS_BOX_ID } from '../mahjong/passTargets'
 import { TileFace } from './TileFace'
 
-function DraggablePassTile({
+function SortablePassTile({
   tile,
   onTileClick,
   inlineTail,
   suggestBest,
+  suggestDim,
 }: {
   tile: TileInstance
   onTileClick: () => void
   inlineTail: boolean
   suggestBest: boolean
+  suggestDim: boolean
 }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+  const { active } = useDndContext()
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({
     id: tile.id,
+    animateLayoutChanges: () => false,
   })
 
-  // DragOverlay handles the floating visual — do NOT translate the wrapper
-  // so the slot stays fixed in the exposure rack row during the drag.
+  // Match SortableHand: neighbors slide while a drag is active; DragOverlay shows the drag preview.
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition:
+      isDragging
+        ? 'none'
+        : active
+          ? 'transform 0.14s cubic-bezier(0.2, 0, 0.2, 1)'
+          : 'none',
+    opacity: isDragging ? 0 : undefined,
+    zIndex: isDragging ? 2 : undefined,
+  }
+
   return (
     <div
       ref={setNodeRef}
+      style={style}
       className={[
         inlineTail ? 'exposure-rack__slot exposure-rack__slot--pass-tail' : '',
         'pass-strip__tile-wrap',
         isDragging ? 'pass-strip__tile-wrap--dragging' : '',
         suggestBest ? 'pass-strip__tile-wrap--suggest-best' : '',
+        suggestDim ? 'pass-strip__tile-wrap--suggest-dim' : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -37,7 +57,6 @@ function DraggablePassTile({
       <button
         type="button"
         className="pass-strip__tile-btn"
-        style={isDragging ? { opacity: 0 } : undefined}
         onClick={(e) => {
           e.stopPropagation()
           onTileClick()
@@ -59,7 +78,10 @@ type Props = {
   onPassBoxClick: () => void
   /** `boxed` = separate gold pass box; `inlineTail` = last three exposure-style slots in the rack row. */
   variant?: 'boxed' | 'inlineTail'
-  /** Tile ids matching the focused suggested hand — highlight those tiles with a white inset ring. */
+  /**
+   * When set (suggested hand is focused), tiles in this set get the white inset ring; other tiles
+   * in the pass strip are dimmed — same idea as the hand rack and exposure tray.
+   */
   suggestedBestIds?: ReadonlySet<string> | null
   /** Charleston: tiles fly out toward this direction while the pass is committing. */
   flyOutFrom?: PassStripFlyOutFrom | null
@@ -96,12 +118,13 @@ export function PassStrip({
     >
       {slots.map((tile, index) =>
         tile ? (
-          <DraggablePassTile
+          <SortablePassTile
             key={tile.id}
             tile={tile}
             inlineTail={inlineTail}
             onTileClick={() => onPassTileClickReturn(index)}
             suggestBest={!!suggestedBestIds?.has(tile.id)}
+            suggestDim={suggestedBestIds != null && !suggestedBestIds.has(tile.id)}
           />
         ) : (
           <div

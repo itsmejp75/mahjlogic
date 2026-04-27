@@ -262,41 +262,42 @@ code {
   color: var(--card-ink-navy);
 }
 
-/* Suggested hands: mini tile faces track official card print colors (`cardInkTileSkin.ts`). */
+/* Suggested hands: mini tile faces track official card print colors (`cardInkTileSkin.ts`);
+   `App.css` sets `--tg-cs-*` on `.app` for menu “Tile graphics” themes. */
 .tile-face.tile-face--card-skin-navy,
 .tile-face.tile-face--card-skin-soap {
-  background: var(--card-tile-skin-blue-bg);
-  color: var(--card-tile-skin-blue-fg);
+  background: var(--tg-cs-navy-bg, var(--card-tile-skin-blue-bg));
+  color: var(--tg-cs-navy-fg, var(--card-tile-skin-blue-fg));
 }
 
 /* Suggested strip: winds / jokers match main rack wind tile (`.tile--wind`). */
 .tile-face.tile-face--card-skin-rack-wind {
-  background: var(--wind-tile-bg);
-  color: #000;
+  background: var(--tg-cs-rack-wind-bg, var(--wind-tile-bg));
+  color: var(--tg-cs-rack-wind-fg, #000);
 }
 
 /* Suggested strip: flowers match main rack flower tile (`.tile--flower`). */
 .tile-face.tile-face--card-skin-rack-flower {
-  background: #ab47bc;
-  color: #000;
+  background: var(--tg-cs-rack-flower-bg, #ab47bc);
+  color: var(--tg-cs-rack-flower-fg, #000);
 }
 
 .tile-face.tile-face--card-skin-honor {
-  background: var(--card-tile-skin-black-bg);
-  color: var(--card-tile-skin-black-fg);
+  background: var(--tg-cs-black-bg, var(--card-tile-skin-black-bg));
+  color: var(--tg-cs-black-fg, var(--card-tile-skin-black-fg));
 }
 
 .tile-face.tile-face--card-skin-red {
-  background: var(--card-tile-skin-red-bg);
-  color: var(--card-tile-skin-red-fg);
+  background: var(--tg-cs-red-bg, var(--card-tile-skin-red-bg));
+  color: var(--tg-cs-red-fg, var(--card-tile-skin-red-fg));
 }
 
 .tile-face.tile-face--card-skin-green {
-  background: var(--card-tile-skin-green-bg);
-  color: var(--card-tile-skin-green-fg);
+  background: var(--tg-cs-green-bg, var(--card-tile-skin-green-bg));
+  color: var(--tg-cs-green-fg, var(--card-tile-skin-green-fg));
 }
 
 .tile-face.tile-face--card-skin-neutral {
-  background: var(--card-tile-skin-neutral-bg);
-  color: var(--card-tile-skin-neutral-fg);
+  background: var(--tg-cs-neutral-bg, var(--card-tile-skin-neutral-bg));
+  color: var(--tg-cs-neutral-fg, var(--card-tile-skin-neutral-fg));
 }
