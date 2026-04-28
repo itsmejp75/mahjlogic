@@ -94,7 +94,7 @@
   --hand-rack-tile-w: max(2.34rem, calc(var(--hand-rack-usable-w) / 14));
   --hand-rack-tile-h: max(3.12rem, calc(var(--hand-rack-usable-w) / 14 * 1.3333));
   /*
-   * Control type tied to tile width: Pass, Menu, CLR, HANDS, rack bar, default `.btn`, menu toggles.
+   * Control type tied to tile width: Pass, Menu, CLR HL, HANDS, rack bar, default `.btn`, menu toggles.
    * Scales with `--hand-rack-tile-w` (same viewport math as the hand) — no separate vw clamps.
    */
   --app-ui-control-fs: clamp(0.62rem, calc(var(--hand-rack-tile-w) * 0.42), 1.26rem);
@@ -140,6 +140,21 @@
 
   /* Rack bottom bar: same type scale as `.btn` (tile-linked). */
   --rack-bottom-action-fs: var(--app-ui-control-fs);
+  /*
+   * Tile-slot actions (Pass, Sort, bot toolbar: Menu / HANDS / CLR HL / HINT):
+   * cap label size to a fraction of the face width so type tracks button size the same way when
+   * the window shrinks. Padding scales too so text stays off the control rim.
+   */
+  --rack-control-label-fs: min(
+    var(--rack-bottom-action-fs),
+    calc(var(--hand-rack-tile-w) * 0.35)
+  );
+  --rack-control-label-fs-tight: min(
+    var(--rack-bottom-action-fs),
+    calc(var(--hand-rack-tile-w) * 0.25)
+  );
+  --rack-control-pad-inline: max(0.1rem, min(0.24rem, calc(var(--hand-rack-tile-w) * 0.08)));
+  --rack-control-pad-block: max(0.1rem, min(0.2rem, calc(var(--hand-rack-tile-w) * 0.05)));
 
   /* Rack action row + bot toolbar (Menu / Clear / Suggested): larger tap targets on phones. */
   --rack-action-touch-min-h: max(48px, calc(var(--hand-rack-tile-h) * 0.52));
@@ -158,6 +173,23 @@
   --dark-tray-rim-shadow-up-2: inset 0 2px 0 color-mix(in srgb, var(--window-inner-surface) 50%, var(--window-surface) 50%);
   --dark-tray-rim-shadow-down-1: inset 0 -1px 0 #4a5568;
   --dark-tray-rim-shadow-down-2: inset 0 -2px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Compress control type when the page / viewport is narrow (all `.btn` and tokens that use these). */
+@media (max-width: 40rem) {
+  :root {
+    --app-ui-control-fs: clamp(0.56rem, calc(var(--hand-rack-tile-w) * 0.38), 1.1rem);
+    --app-ui-control-fs-sm: clamp(0.5rem, calc(var(--hand-rack-tile-w) * 0.32), 0.95rem);
+    --app-ui-control-fs-xs: clamp(0.46rem, calc(var(--hand-rack-tile-w) * 0.28), 0.85rem);
+  }
+}
+
+@media (max-width: 28rem) {
+  :root {
+    --app-ui-control-fs: clamp(0.5rem, calc(var(--hand-rack-tile-w) * 0.32), 0.98rem);
+    --app-ui-control-fs-sm: clamp(0.45rem, calc(var(--hand-rack-tile-w) * 0.27), 0.86rem);
+    --app-ui-control-fs-xs: clamp(0.42rem, calc(var(--hand-rack-tile-w) * 0.25), 0.78rem);
+  }
 }
 
 @supports (width: 100dvi) {
@@ -551,11 +583,12 @@
 .rack-bottom-bar--wall-game .btn.rack-bottom-tile-cell {
   width: 100%;
   max-width: 100%;
-  font-size: var(--rack-bottom-action-fs);
-  line-height: 1.06;
-  padding: 0.14rem 0.05rem;
+  font-size: var(--rack-control-label-fs);
+  line-height: 1.08;
+  padding: var(--rack-control-pad-block) var(--rack-control-pad-inline);
   border-radius: var(--rack-tile-btn-border-radius);
   border: none;
+  letter-spacing: max(0.01em, calc(0.02em + 0.02rem));
 }
 
 /* Same 14-column grid + insets as the main tile action bar; inner-7 wide controls. */
@@ -615,9 +648,9 @@
   min-width: 0;
   min-height: var(--rack-action-touch-min-h);
   font-weight: 500;
-  font-size: var(--rack-bottom-action-fs);
-  line-height: 1.06;
-  padding: 0.2rem 0.05rem;
+  font-size: var(--rack-control-label-fs);
+  line-height: 1.08;
+  padding: var(--rack-control-pad-block) var(--rack-control-pad-inline);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -625,6 +658,7 @@
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
+  letter-spacing: max(0.01em, calc(0.02em + 0.02rem));
   border-radius: 999px;
   overflow: hidden;
 }
@@ -684,8 +718,10 @@
   height: 100%;
   box-sizing: border-box;
   border-radius: inherit;
-  padding: 0.14rem 0.05rem;
-  font-size: min(var(--rack-bottom-action-fs), calc(var(--hand-rack-tile-w) * 0.38));
+  padding: var(--rack-control-pad-block) var(--rack-control-pad-inline);
+  font-size: var(--rack-control-label-fs);
+  line-height: 1.08;
+  letter-spacing: max(0.01em, calc(0.02em + 0.02rem));
 }
 
 .rack-bottom-tile-cell--c10-11 {
@@ -2105,7 +2141,7 @@
   align-items: stretch;
 }
 
-/* In-panel toolbar: optional Menu (wall-game / dead hand / bot MJ) → HANDS → CLR → HINT. */
+/* In-panel toolbar: optional Menu (wall-game / dead hand / bot MJ) → HANDS → CLR HL → HINT. */
 .panel--bot-exposures__toolbar-well .app-menu-anchor {
   position: relative;
   bottom: auto;
@@ -2138,6 +2174,13 @@
   z-index: 2;
 }
 
+.panel--bot-exposures__toolbar-well .btn:not(.btn--label-wrap) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__clear {
   flex: 0 0 auto;
   align-self: center;
@@ -2146,13 +2189,12 @@
   max-width: 100%;
   min-height: var(--rack-action-touch-min-h);
   height: var(--rack-action-touch-min-h);
-  padding: 0.2rem 0.05rem;
-  font-size: var(--rack-bottom-action-fs);
-  line-height: 1.06;
+  padding: var(--rack-control-pad-block) var(--rack-control-pad-inline);
+  font-size: var(--rack-control-label-fs);
+  line-height: 1.08;
   border-radius: var(--rack-tile-btn-border-radius);
   border: none;
   z-index: 2;
-  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2161,6 +2203,20 @@
   box-shadow:
     0 2px 4px color-mix(in srgb, #000 16%, transparent),
     0 1px 2px color-mix(in srgb, #000 10%, transparent);
+  letter-spacing: max(0.01em, calc(0.02em + 0.02rem));
+}
+
+.panel--bot-exposures__toolbar-well .panel--bot-exposures__clear:not(.btn--label-wrap) {
+  white-space: nowrap;
+}
+
+.panel--bot-exposures__toolbar-well .panel--bot-exposures__clear.btn--label-wrap {
+  height: auto;
+  min-height: var(--rack-action-touch-min-h);
+  line-height: 1.1;
+  padding: var(--rack-control-pad-block) var(--rack-control-pad-inline);
+  white-space: normal;
+  overflow: visible;
 }
 
 /* Disabled: no dim — same fill/text as enabled (only pointer feedback differs via global :disabled cursor). */
@@ -2169,7 +2225,7 @@
   filter: none;
 }
 
-/* Same footprint as CLR; toggles joker swap hint (Menu also has a setting). */
+/* Same footprint as CLR HL; toggles joker swap hint (Menu also has a setting). */
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__hint {
   flex: 0 0 auto;
   align-self: center;
@@ -2178,13 +2234,12 @@
   max-width: 100%;
   min-height: var(--rack-action-touch-min-h);
   height: var(--rack-action-touch-min-h);
-  padding: 0.2rem 0.05rem;
-  font-size: var(--rack-bottom-action-fs);
-  line-height: 1.06;
+  padding: var(--rack-control-pad-block) var(--rack-control-pad-inline);
+  font-size: var(--rack-control-label-fs);
+  line-height: 1.08;
   border-radius: var(--rack-tile-btn-border-radius);
   border: none;
   z-index: 2;
-  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2193,12 +2248,16 @@
   font-weight: 500;
   font-family: 'Figtree', var(--sans);
   text-transform: uppercase;
-  letter-spacing: var(--btn-letter-spacing);
+  letter-spacing: max(0.01em, calc(0.02em + 0.02rem));
   box-shadow:
     0 2px 4px color-mix(in srgb, #000 16%, transparent),
     0 1px 2px color-mix(in srgb, #000 10%, transparent);
   cursor: pointer;
   isolation: isolate;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__hint--on {
@@ -2213,10 +2272,13 @@
   align-self: center;
   min-height: var(--rack-action-touch-min-h);
   height: var(--rack-action-touch-min-h);
-  padding: 0.2rem 1px;
+  padding: var(--rack-control-pad-block) var(--rack-control-pad-inline);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  font-size: var(--rack-control-label-fs);
+  line-height: 1.08;
+  letter-spacing: max(0.01em, calc(0.02em + 0.02rem));
 }
 
 .panel--bot-exposures__toolbar-well .app-menu-anchor .app-bottom-center-controls__menu-btn {
@@ -2225,6 +2287,11 @@
   left: 0;
   width: var(--menu-btn-w);
   height: var(--rack-action-touch-min-h);
+  box-sizing: border-box;
+  padding: var(--rack-control-pad-block) var(--rack-control-pad-inline);
+  font-size: var(--rack-control-label-fs);
+  line-height: 1.08;
+  letter-spacing: max(0.01em, calc(0.02em + 0.02rem));
 }
 
 .panel--discard-tracker {
@@ -2829,6 +2896,7 @@
   color: var(--text-h);
   user-select: none;
   -webkit-user-select: none;
+  min-width: 0;
   /* Symmetric drop shadow (centered below) so the rightmost button in the
      bottom bar doesn't bleed past the rack-col's right edge more than the
      leftmost button bleeds past its left edge. Keeps empty space on both
@@ -2838,6 +2906,27 @@
     0 1px 2px color-mix(in srgb, #000 10%, transparent);
   isolation: isolate;
   transition: box-shadow 0.14s ease;
+}
+
+/*
+ * Opt-in: allow the label to wrap inside the button (e.g. “CLR HL” in a narrow tile slot).
+ * Use with `.btn__label` around the text. Other controls use single-line + ellipsis when opted in.
+ */
+.btn--label-wrap {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.12;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.btn--label-wrap .btn__label {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  text-align: center;
 }
 
 .btn--primary {
@@ -2924,21 +3013,22 @@
 /* After `.btn` so padding/radius don’t widen controls past their grid tracks (Pass under 13–14). */
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell {
   min-width: 0;
-  /* Keep global control scale, but cap by tile width so labels keep shrinking on tight screens. */
-  font-size: min(var(--rack-bottom-action-fs), calc(var(--hand-rack-tile-w) * 0.38));
-  line-height: 1.06;
-  padding: 0.14rem 0.05rem;
+  /* Same `min(fs, f×tile-w)` as bot toolbar (see `--rack-control-label-fs` in `:root`). */
+  font-size: var(--rack-control-label-fs);
+  line-height: 1.08;
+  padding: var(--rack-control-pad-block) var(--rack-control-pad-inline);
   border-radius: var(--rack-tile-btn-border-radius);
   border: none;
   white-space: nowrap;
+  letter-spacing: max(0.01em, calc(0.02em + 0.02rem));
   /* Base `.btn` uses a soft drop-shadow that reads as a border next to the tile row */
   box-shadow: none;
 }
 
-/* Sort + Undo need to contract faster than other rack actions on tight widths. */
+/* Sort + Undo: 1-tile slot, slightly tighter than Pass / other actions. */
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1,
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c2 {
-  font-size: min(var(--rack-bottom-action-fs), calc(var(--hand-rack-tile-w) * 0.2673));
+  font-size: var(--rack-control-label-fs-tight);
 }
 
 /* Same inner-face metrics as the general `.rack-bottom-tile-cell` block above (see :root). */
@@ -4495,6 +4585,18 @@
   flex-direction: column;
   max-height: min(22rem, 52dvh);
   min-height: 0;
+  /*
+   * Clip the suggested-hands sheet's negative-margin "rails" (used so the sticky title row's
+   * background fills the panel edge-to-edge). Filter tray slides in from inside the panel.
+   */
+  overflow: hidden;
+  /* Default panel inline padding — used by the sheet to push its rails past this padding. */
+  --hands-panel-pad-x: clamp(0.75rem, 2.2vw, 1.5rem);
+}
+
+.app-play-split__right .panel--hands {
+  /* Match the override `.app-play-split__right .panel--hands { padding-inline: ... }`. */
+  --hands-panel-pad-x: clamp(0.4rem, 1.4vw, 0.82rem);
 }
 
 /* Suggested hands in play split: width cap (height + flex shared with discard tracker above). */
@@ -4667,13 +4769,146 @@
   min-height: 0;
   container-type: inline-size;
   container-name: suggest-hands-panel;
-  /* Wide suggested-hand rows scroll here; grid keeps column tracks aligned. */
-  overflow-x: auto;
+  /*
+   * Sheet uses negative margin-inline rails to extend the title row's background to the
+   * panel edge — must NOT be clipped here. Panel itself (`overflow: hidden`) clips at the
+   * outer panel border, so visual extension stays inside the panel.
+   */
+  overflow-x: visible;
+}
+
+.hands-list-scroll {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  margin-top: 0.12rem;
+  overflow-y: auto;
+  overflow-x: visible;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Column titles — grid + scroll parent are set below (after `.hands-list__row-hit` base). */
+.hands-list__freeze-header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  flex-shrink: 0;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.hands-list__freeze-header .hands-list__header-cell {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: 0.2rem 0.35rem;
+  padding-block: 0.3rem 0.35rem;
+}
+
+.hands-list__freeze-header
+  .hands-list__row-hit--with-tiles
+  > .hands-list__header-cell:not(.hands-list__cell--category) {
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.hands-list__freeze-header .hands-list__header-meta {
+  font-size: 0.62rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  text-align: center;
+  color: color-mix(in srgb, var(--text) 64%, var(--bg) 36%);
+  width: 100%;
+}
+
+.hands-list__freeze-header .hands-list__cell--away {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+  width: 100%;
+  min-width: 0;
+}
+
+.hands-list__freeze-header
+  .hands-list__row-hit--with-tiles
+  > .hands-list__cell--away
+  .hands-list__header-meta {
+  text-align: center;
+}
+
+.hands-panel__content
+  .hands-list__freeze-header
+  .hands-list__row-hit--with-tiles
+  > .hands-list__cell--tiles
+  .hands-list__header-meta {
+  text-align: center;
+  max-width: 100%;
+  margin-inline: auto;
+}
+
+.hands-list__header-category-pair {
+  display: contents;
+}
+
+/*
+ * Hand-only header: one row with two labels over the same `1fr | auto | 1fr` tracks as
+ * `.hands-list--tiles-excel` data (section# left track, hand center track, right balance).
+ * Center the title text within each sub-column, not the cell box left edge.
+ */
+.hands-list__header-category-pair .hands-list__header-pair--category {
+  grid-column: 1;
+  justify-self: center;
+  text-align: center;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 0 0.1rem;
+}
+
+.hands-list__header-category-pair
+  .hands-list__header-meta:not(.hands-list__header-pair--category) {
+  grid-column: 2;
+  justify-self: center;
+  text-align: center;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.hands-list__freeze-header.hands-list__row-hit--with-tiles
+  > .hands-list__cell--category
+  .hands-list__header-meta.hands-list__with-tiles-category {
+  /* Same three-track pattern as any-like-numbers row: one title over the section# column. */
+  grid-column: 1;
+  justify-self: center;
+  text-align: center;
+  width: 100%;
+  color: color-mix(in srgb, var(--text) 64%, var(--bg) 36%);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  align-self: center;
+  box-sizing: border-box;
+  padding: 0 0.1rem;
 }
 
 .hands-panel__list-column .hands-list {
-  flex: 1;
+  margin-top: 0;
+  flex: 0 1 auto;
   min-height: 0;
+  overflow-y: visible;
+  overflow-x: visible;
 }
 
 .hands-panel__categories-wrap {
@@ -5022,6 +5257,42 @@
   border-radius: 0;
   box-sizing: border-box;
   overflow: visible;
+}
+
+/*
+ * Suggested-hands title row: same 2 main tracks as `.hands-panel__content .hands-list.hands-list--tiles-excel`
+ * and the same `gridTemplateAreas` as the body rows, but not inside `<ol class="hands-list">`.
+ * Declared after `.hands-list__row-hit` so `display:grid` and padding are not reverted to block.
+ */
+.hands-list__freeze-header.hands-list__row-hit {
+  display: grid;
+  /* Match the panel list’s main grid (see `.hands-panel__content .hands-list.hands-list--tiles-excel`). */
+  grid-template-columns: minmax(0, 1fr) var(--hands-grid-away-w);
+  padding: 0;
+  margin: 0;
+  border: none;
+  width: 100%;
+  min-width: 0;
+  background: var(--bg-elevated, var(--window-surface, var(--bg)));
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--border) 50%, transparent);
+  color: inherit;
+  cursor: default;
+  text-align: center;
+  overflow: visible;
+}
+
+.hands-list__freeze-header.hands-list__row-hit--with-tiles {
+  column-gap: 0;
+  width: 100%;
+  margin: 0;
+}
+
+.hands-list__freeze-header.hands-list__row-hit:hover,
+.hands-list__freeze-header.hands-list__row-hit:focus-visible,
+.hands-list__freeze-header.hands-list__row-hit:focus {
+  background: var(--bg-elevated, var(--window-surface, var(--bg)));
+  outline: none;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--border) 50%, transparent);
 }
 
 /* Tiles on: row uses parent subgrid (see .hands-list--tiles-excel). */
@@ -5758,7 +6029,7 @@
 }
 
 /* Suggested-hands list typography; tile metrics follow list column width (see @container below). */
-.hands-panel__content .hands-list__row-hit {
+.hands-panel__content .hands-list .hands-list__row-hit {
   padding-block: 0.22rem;
   padding-inline: clamp(0.45rem, 1.65vw, 0.78rem);
 }
@@ -5777,6 +6048,474 @@
   grid-template-columns: minmax(0, 1fr) var(--hands-grid-away-w);
   width: 100%;
   min-width: 0;
+}
+
+/*
+ * Hands-only spreadsheet: one true grid contains the sticky header AND every body row.
+ * Columns auto-size to the widest content (header text or row text), so titles literally share
+ * the same column tracks as data below.
+ */
+.hands-panel__content .hands-list-scroll > .hands-sheet {
+  /* Padding scales with text (em) so cells expand evenly when the panel resizes. */
+  --hands-sheet-cell-pad-y: 0.4em;
+  --hands-sheet-cell-pad-x: 0.65em;
+  --hands-sheet-border: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
+  /*
+   * Shared AWAY column width — locks the third column to the same fixed track in all three
+   * modes (hands-only, tiles-only, tiles+hands) so the `AWAY` header sits exactly above the
+   * row's number. Tiles modes redefine this in `--tiles2` but keep the same value.
+   */
+  --hands-sheet-away-w: 4.4em;
+  /*
+   * Title row "rails": negative margin extends the sheet past the panel's inline padding so
+   * the sticky title row background reaches the panel edge. Panel `overflow: hidden` clips
+   * at the panel border. Outer-column body cells re-inset their content (see below) so data
+   * keeps the same visual spacing it had before.
+   */
+  --hands-sheet-rail: var(--hands-panel-pad-x, 1rem);
+  margin-inline: calc(-1 * var(--hands-sheet-rail));
+  width: calc(100% + 2 * var(--hands-sheet-rail));
+  display: grid;
+  /*
+   * Outer Category column hugs its widest text; middle Hands column starts at `max-content`
+   * and grows with `1fr` to fill the rest of the window. AWAY is fixed at the shared
+   * `--hands-sheet-away-w` so the header / number stay aligned across all modes.
+   */
+  grid-template-columns:
+    max-content
+    minmax(max-content, 1fr)
+    var(--hands-sheet-away-w);
+  min-width: calc(100% + 2 * var(--hands-sheet-rail));
+  box-sizing: border-box;
+  /*
+   * Zoom-with-window: the whole sheet font scales with the panel inline-size (cqi),
+   * so headers, category text, hand text, and the away count all grow/shrink together.
+   */
+  font-size: clamp(0.85rem, 2.4cqi, 3rem);
+  line-height: 1.2;
+}
+
+/*
+ * Re-inset the outer cells (first column / last column) so body data keeps the same visual
+ * spacing it had before the sheet rails were added. Header cells use the same padding so
+ * header *text* stays inset like the data, while the header *background* fills the rails.
+ */
+.hands-sheet > .hands-sheet__cell:first-of-type,
+.hands-sheet > .hands-sheet__rows .hands-sheet__row > *:first-child > .hands-sheet__cell:first-of-type,
+.hands-sheet > .hands-sheet__rows .hands-sheet__row > .hands-sheet__cell:first-of-type {
+  padding-inline-start: calc(var(--hands-sheet-rail) + var(--hands-sheet-cell-pad-x));
+}
+
+.hands-sheet > .hands-sheet__cell--away,
+.hands-sheet > .hands-sheet__rows .hands-sheet__row > *:last-child > .hands-sheet__cell--away,
+.hands-sheet > .hands-sheet__rows .hands-sheet__row > .hands-sheet__cell--away {
+  padding-inline-end: calc(var(--hands-sheet-rail) + var(--hands-sheet-cell-pad-x));
+}
+
+.hands-sheet__rows,
+.hands-sheet__row,
+.hands-sheet__row-btn {
+  display: contents;
+}
+
+.hands-sheet__cell {
+  box-sizing: border-box;
+  padding: var(--hands-sheet-cell-pad-y) var(--hands-sheet-cell-pad-x);
+  border-inline-end: var(--hands-sheet-border);
+  border-block-end: var(--hands-sheet-border);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.hands-sheet__cell--away {
+  justify-content: center;
+  text-align: center;
+  border-inline-end: none;
+  /*
+   * The grid track (`--hands-sheet-away-w`, defined on the sheet) enforces the column width
+   * uniformly across all modes. We intentionally do NOT set a `min-width` / `width` here: the
+   * data cell has `font-size: 1.25em` (see `.hands-sheet__cell:not(--header)`), so a min-width
+   * in `em` would resolve to ~1.25× the value and overflow the fixed grid track.
+   */
+  /* Symmetric horizontal padding so the number stays centered under the AWAY header. */
+  padding-inline: var(--hands-sheet-cell-pad-x);
+}
+
+/* Re-inset rule above (line ~6103) overrides padding-inline-end for the last column;
+   reset it here so AWAY content keeps symmetric padding and stays horizontally centered. */
+.hands-sheet > .hands-sheet__cell--away,
+.hands-sheet > .hands-sheet__rows .hands-sheet__row > *:last-child > .hands-sheet__cell--away,
+.hands-sheet > .hands-sheet__rows .hands-sheet__row > .hands-sheet__cell--away {
+  padding-inline: var(--hands-sheet-cell-pad-x);
+}
+
+/*
+ * Body cells (not the column-title row) read at a slightly larger font than the headers.
+ * Headers continue to use the inherited (sheet) `font-size: 1em` so they stay compact.
+ */
+.hands-sheet__cell:not(.hands-sheet__cell--header) {
+  font-size: 1.25em;
+}
+
+.hands-sheet__cell--header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  justify-content: center;
+  text-align: center;
+  font-weight: 600;
+  /*
+   * Same size as the surrounding cell text (which scales with panel width).
+   * Compact `padding-block` + `line-height: 1` keeps the header row from growing taller.
+   */
+  font-size: 1em;
+  line-height: 1;
+  padding-block: 0.2em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-h, var(--text-muted, rgba(200, 200, 200, 0.9)));
+  background: var(--bg-elevated, var(--window-surface, var(--bg)));
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+.hands-sheet__row-btn {
+  /* Button reset; row-btn is `display: contents`, so its children become grid items. */
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: inherit;
+}
+
+.hands-sheet__row-btn:focus-visible > .hands-sheet__cell {
+  outline: 2px solid var(--coach-teal, currentColor);
+  outline-offset: -2px;
+}
+
+.hands-sheet__row-btn:hover > .hands-sheet__cell {
+  background: color-mix(in srgb, var(--coach-teal, currentColor) 6%, transparent);
+}
+
+.hands-sheet__row--active > .hands-sheet__row-btn > .hands-sheet__cell {
+  background: color-mix(in srgb, var(--coach-teal, currentColor) 10%, transparent);
+}
+
+.hands-sheet__category {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3em;
+  white-space: nowrap;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  /* Smaller than hand text but larger than the title row. */
+  font-size: 0.78em;
+}
+
+.hands-sheet__section-num {
+  font-weight: 400;
+  opacity: 0.75;
+}
+
+.hands-sheet__hand-title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.18rem;
+  white-space: nowrap;
+}
+
+.hands-sheet__paren {
+  margin-inline-start: 0.35em;
+  opacity: 0.7;
+}
+
+.hands-sheet__card-c {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  /* Matches the surrounding hand-title font size so the `C` reads at the same scale. */
+  font-size: 1em;
+  font-weight: 600;
+  line-height: 1;
+  width: 1.15em;
+  height: 1.15em;
+  margin-inline-start: 0.35em;
+  padding: 0;
+  border: 1px solid currentColor;
+  border-radius: 0.18em;
+  color: var(--card-c-color, #e34a4a);
+}
+
+/* Tiles-only spreadsheet: two columns (tiles | away). */
+.hands-panel__content .hands-list-scroll > .hands-sheet.hands-sheet--tiles2 {
+  /*
+   * Tiles column fills available width; Away is sized in `em` so it scales with the sheet
+   * font (which itself scales with panel inline-size) — `AWAY` header never gets clipped.
+   * If the tile strip outgrows the panel, `.hands-list-scroll` scrolls horizontally.
+   */
+  --hands-sheet-away-w: 4.4em;
+  /* Match the main player rack gap so the strip reads at the same density. */
+  --hands-sheet-tile-gap: var(--player-rack-face-gap);
+  --hands-sheet-cell-pad-y: clamp(0.22rem, 1cqi, 0.45rem);
+  /* Tile column width = panel inline-size − away column − cell horizontal padding. */
+  --hands-sheet-tile-col: calc(
+    100cqi - var(--hands-sheet-away-w) - 2 * var(--hands-sheet-cell-pad-x)
+  );
+  /* Fluid tile size from the actual tile column, spread across 14 tiles. */
+  --hands-sheet-tile-w: max(
+    0.85rem,
+    calc((var(--hands-sheet-tile-col) - 13 * var(--hands-sheet-tile-gap)) / 14)
+  );
+  --hands-sheet-tile-h: calc(var(--hands-sheet-tile-w) * 1.3);
+  grid-template-columns: minmax(0, 1fr) var(--hands-sheet-away-w);
+}
+
+.hands-sheet--tiles2 .hands-sheet__cell--tiles:not(.hands-sheet__cell--header) {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  align-items: center;
+  /* Left origin matches category text in the combined (hands+tiles) cell. */
+  justify-content: flex-start;
+  padding-block: var(--hands-sheet-cell-pad-y);
+}
+
+.hands-sheet__tiles-grid {
+  display: flex;
+  gap: var(--hands-sheet-tile-gap);
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.hands-sheet__tile-cell {
+  position: relative;
+  flex: 0 0 auto;
+  width: var(--hands-sheet-tile-w);
+  height: var(--hands-sheet-tile-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: calc(0.116 * var(--hands-sheet-tile-w));
+}
+
+.hands-sheet__tile-cell > * {
+  width: 100%;
+  height: 100%;
+}
+
+/*
+ * Hand TileFace internally derives ALL paint (digits, letters, dots) from `--rack-tile-w` /
+ * `--rack-tile-h`. Setting them on the cell makes the glyphs scale with the tile, like ink
+ * painted onto each tile.
+ */
+.hands-sheet__tile-cell .tile-face {
+  --rack-tile-w: var(--hands-sheet-tile-w);
+  --rack-tile-h: var(--hands-sheet-tile-h);
+  width: var(--hands-sheet-tile-w);
+  height: var(--hands-sheet-tile-h);
+  border-radius: calc(0.116 * var(--hands-sheet-tile-w));
+}
+
+/*
+ * Hands + Tiles spreadsheet: 3-column parent grid (category | hand-title | away). The combined
+ * body cell is a *subgrid* spanning the first two parent columns, so every row's category text
+ * shares one track and every row's hand-title text shares the second track — hand titles all
+ * left-align under one another, after the longest category. The tile strip below spans both
+ * subgrid columns so its size and left edge are unchanged.
+ *
+ * `display: contents` on the headerLine wrapper (and on the variant-stack head button) flattens
+ * those wrappers so `.hands-sheet__category` and `.hands-sheet__hand-title` become direct grid
+ * items of the cell. Click handlers on the head button still fire via event bubbling.
+ */
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet.hands-sheet--tiles2.hands-sheet--tilesHands {
+  grid-template-columns:
+    max-content
+    minmax(max-content, 1fr)
+    var(--hands-sheet-away-w);
+}
+
+.hands-sheet--tilesHands .hands-sheet__cell--combined:not(.hands-sheet__cell--header) {
+  display: grid;
+  grid-column: 1 / span 2;
+  grid-template-columns: subgrid;
+  grid-auto-rows: auto;
+  align-items: baseline;
+  row-gap: 0.18rem;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  text-align: left;
+}
+
+/*
+ * Descendant selectors (not `>`): even though `.hands-sheet__combined-header-line` /
+ * `.hands-sheet__combined-head-btn` are `display: contents` in this mode, CSS selectors still
+ * match against the DOM tree, where category/hand-title are nested inside those wrappers.
+ */
+.hands-sheet--tilesHands .hands-sheet__cell--combined .hands-sheet__category {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: baseline;
+}
+
+.hands-sheet--tilesHands .hands-sheet__cell--combined .hands-sheet__hand-title {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: start;
+  align-self: baseline;
+  /*
+   * Visual breathing room between the category column and the hand text. The category track
+   * width is `max-content` so this moves the hand-title column's left edge inward by exactly
+   * this amount on every row (consistent across all rows).
+   */
+  padding-inline-start: 5ch;
+}
+
+.hands-sheet--tilesHands .hands-sheet__cell--combined .hands-sheet__tiles-grid,
+.hands-sheet--tilesHands .hands-sheet__cell--combined .hands-sheet__tiles-stack {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  /* Re-center the strip horizontally in the merged tile row (hand text has its own column). */
+  justify-self: center;
+  justify-content: center;
+  align-items: center;
+}
+
+.hands-sheet--tilesHands .hands-sheet__cell--combined .hands-sheet__tiles-stack .hands-sheet__tiles-stack-row {
+  justify-content: center;
+  align-self: center;
+}
+
+/* Flatten wrappers so category and hand-title participate directly in the cell's subgrid. */
+.hands-sheet--tilesHands .hands-sheet__combined-header-line,
+.hands-sheet--tilesHands .hands-sheet__combined-head-btn {
+  display: contents;
+}
+
+/* Bullet divider between category and hand-title is no longer needed — the column gap separates them. */
+.hands-sheet--tilesHands .hands-sheet__combined-divider {
+  display: none;
+}
+
+/* Header row: span the first two parent columns so "CATEGORY / HANDS / TILES" sits over both. */
+.hands-sheet--tilesHands .hands-sheet__cell--header.hands-sheet__cell--combined {
+  grid-column: 1 / span 2;
+  align-items: center;
+  text-align: center;
+}
+
+.hands-sheet__combined-header {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.25em;
+  font-weight: 600;
+  /* Inherit the scaled sheet font; compact line-height keeps cell height fixed. */
+  font-size: 1em;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hands-sheet__combined-sep {
+  opacity: 0.55;
+}
+
+.hands-sheet__combined-divider {
+  margin-inline: 0.4em;
+  opacity: 0.5;
+}
+
+.hands-sheet__combined-header-line {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.18rem 0.45rem;
+  min-width: 0;
+}
+
+.hands-sheet__combined-head-btn {
+  display: block;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+.hands-sheet__combined-head-btn:hover {
+  background: color-mix(in srgb, var(--coach-teal, currentColor) 6%, transparent);
+}
+
+.hands-sheet__tiles-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  width: 100%;
+}
+
+.hands-sheet__tiles-stack-row {
+  display: flex;
+  justify-content: flex-start;
+  border-radius: 4px;
+  padding: 0.1rem 0.2rem;
+  cursor: pointer;
+  background: transparent;
+}
+
+.hands-sheet__tiles-stack-row:hover,
+.hands-sheet__tiles-stack-row:focus-visible {
+  background: color-mix(in srgb, var(--coach-teal, currentColor) 6%, transparent);
+  outline: none;
+}
+
+.hands-sheet__tiles-stack-row--active {
+  background: color-mix(in srgb, var(--coach-teal, currentColor) 12%, transparent);
+}
+
+.hands-sheet__tile-cell--suggest-best {
+  outline: 1.5px solid color-mix(in srgb, var(--coach-teal, currentColor) 80%, white);
+  outline-offset: 1px;
+}
+
+.hands-sheet__tile-cell--suggest-joker {
+  outline: 1.5px dashed color-mix(in srgb, var(--coach-teal, currentColor) 60%, white);
+  outline-offset: 1px;
+}
+
+.hands-sheet__tile-cell--suggest-dim {
+  opacity: 0.55;
+}
+
+.hands-sheet__tile-joker-mark {
+  position: absolute;
+  inset: auto 0 -0.05rem 0;
+  font-size: 0.5rem;
+  letter-spacing: 0.05em;
+  text-align: center;
+  color: var(--coach-teal, currentColor);
+  pointer-events: none;
 }
 
 /*
@@ -5801,6 +6540,51 @@
   }
 }
 
+/*
+ * Narrow hands list: category + card hand share one row; hide the section label so the hand line
+ * does not overlap the category when the panel is too small.
+ */
+@container suggest-hands-panel (max-width: 28rem) {
+  .hands-panel__content
+    .hands-list--tiles-excel
+    .hands-list__row-hit--with-category
+    > .hands-list__cell--category
+    .hands-list__with-tiles-category {
+    display: none;
+  }
+
+  .hands-panel__content
+    .hands-list--tiles-excel
+    .hands-list__row-hit--with-category
+    > .hands-list__cell--category
+    .hands-list__category-inline-hand {
+    grid-column: 1 / -1;
+  }
+
+  .hands-panel__content
+    .hands-list__freeze-header
+    .hands-list__row-hit--with-category
+    > .hands-list__cell--category
+    .hands-list__with-tiles-category {
+    display: none;
+  }
+
+  .hands-panel__content
+    .hands-list__freeze-header
+    .hands-list__header-pair--category {
+    display: none;
+  }
+
+  .hands-panel__content
+    .hands-list__freeze-header
+    .hands-list__header-category-pair
+    .hands-list__header-meta:not(.hands-list__header-pair--category) {
+    grid-column: 1 / -1;
+    justify-self: center;
+  }
+
+}
+
 /* Row `grid-template-areas` is set inline from toggles (Categories / Tiles / Hands). */
 
 .hands-panel__content
@@ -5814,22 +6598,41 @@
   display: none;
 }
 
-.hands-panel__content .hands-list--tiles-excel .hands-list__row-hit--with-tiles > .hands-list__cell--category {
+.hands-panel__content
+  .hands-list--tiles-excel
+  .hands-list__row-hit--with-tiles
+  > .hands-list__cell--category {
   min-height: 0;
   padding-block: 0.05rem;
+  align-items: stretch;
+}
+
+.hands-panel__content
+  .hands-list--tiles-excel
+  .hands-list__freeze-header
+  .hands-list__row-hit--with-tiles
+  > .hands-list__cell--category {
+  min-height: 0;
+  padding-block: 0.28rem 0.3rem;
   align-items: stretch;
 }
 
 /*
  * Strip-relative center for card hands: `1fr | auto | 1fr` so the hand column axis matches every row
  * (category length does not shift the hand). Category stays in the left track.
+ * Freeze title row reuses the same subgrid so “Category / Hands / …” line up with data.
  */
-.hands-panel__content .hands-list--tiles-excel .hands-list__row-hit--with-category > .hands-list__cell--category {
+.hands-panel__content .hands-list--tiles-excel .hands-list__row-hit--with-category > .hands-list__cell--category,
+.hands-panel__content
+  .hands-list__freeze-header.hands-list__row-hit--with-category
+  > .hands-list__cell--category {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   column-gap: 0.45rem;
   padding-inline: var(--hands-tiles-cell-pad-x);
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .hands-panel__content
@@ -6099,14 +6902,13 @@
   padding-bottom: 0;
 }
 
-/* East main game: match Charleston exposure strip height */
+/* East main game: fixed slot height (base rule). Do not set `height: auto` here — it let one
+   slot’s fly-in content set the line height; `align-items: stretch` then stretched every slot. */
 .panel--hand .exposure-rack:not(.exposure-rack--charleston-pass) {
-  align-items: stretch;
+  align-items: flex-start;
 }
 
 .panel--hand .exposure-rack:not(.exposure-rack--charleston-pass) .exposure-rack__slot {
-  height: auto;
-  min-height: var(--exposure-slot-h);
   padding-bottom: 0;
 }
 
@@ -7585,9 +8387,13 @@
   pointer-events: none;
 }
 
-/* Inner content area — matches .discard-tracker__content */
+/*
+ * Inner content area — flush under the popup's rounded frame so the sticky column header
+ * background reaches the popup window edges. Border, radius, and inline padding are stripped
+ * here (and again in the `.dark-tray-rim` override below) — the outer `.suggested-hands-popup__user-shift`
+ * still provides the visible frame and rounding via its `border` + `overflow: hidden`.
+ */
 .suggested-hands-popup .panel--hands {
-  border-radius: var(--tile-tray-shell-radius);
   background: var(--window-inner-surface);
   margin: 0;
   max-height: none;
@@ -7598,6 +8404,10 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+  /* Run edge-to-edge under the popup frame; rails on the hands-sheet collapse to 0 below. */
+  padding-inline: 0;
+  border-radius: 0;
+  --hands-panel-pad-x: 0px;
 }
 
 .suggested-hands-popup--open {
@@ -7637,7 +8447,12 @@
   border: 1px solid var(--window-border);
   border-radius: var(--suggested-popup-radius);
   color: var(--window-fg);
-  padding: var(--hand-window-pad-inline);
+  /*
+   * Inline padding is 0 so the hands spreadsheet flows under the popup's rounded frame
+   * (corners are clipped by `overflow: hidden` + `border-radius`). The drag handle below
+   * re-adds inline padding so its title and toolbar buttons stay inset.
+   */
+  padding: var(--hand-window-pad-inline) 0;
   overflow: hidden;
   gap: 0;
   transition: none;
@@ -8008,8 +8823,15 @@
   display: flex;
   align-items: center;
   gap: 0.55rem;
-  /* Flush with panel padding — matches .panel__title-row rhythm */
-  padding: 0 0 calc(var(--hand-window-pad-inline) * 0.75) 0;
+  /*
+   * Inline padding lives here (not on the user-shift) so the title and toolbar buttons stay
+   * inset, while the spreadsheet below can run edge-to-edge under the popup's rounded frame.
+   */
+  padding:
+    0
+    var(--hand-window-pad-inline)
+    calc(var(--hand-window-pad-inline) * 0.75)
+    var(--hand-window-pad-inline);
   margin-bottom: calc(var(--hand-window-pad-inline) * 0.5);
   cursor: grab;
   border-bottom: none;
@@ -8105,7 +8927,10 @@
 }
 
 /* Shared inner-tray rim: full-width shadows follow each tray’s `border-radius`; border top + soft
-   inline edges read against the wrapper; bottom pair matches discard / hand exposure. */
+   inline edges read against the wrapper; bottom pair matches discard / hand exposure.
+   Note: `.suggested-hands-popup .panel--hands` is intentionally excluded — the suggested-hands
+   spreadsheet runs flush under the popup frame, so its inner rim border would interrupt the
+   sticky column header background extending to the popup window edges. */
 .panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass),
 .panel--hand .rack-stage__rack-top .exposure-rack.exposure-rack--charleston-pass,
 .hand-bank,
@@ -8113,8 +8938,7 @@
 .panel--bot-exposures .app-opponents-rail__cell,
 .panel--bot-exposures__toolbar-well,
 .panel--hand .panel-hand-rack__action-well,
-.panel--hand .panel-hand-rack__charleston-actions-well,
-.suggested-hands-popup .panel--hands {
+.panel--hand .panel-hand-rack__charleston-actions-well {
   border-width: 1px;
   border-style: solid;
   border-top-color: var(--dark-tray-rim-border-top);
@@ -8125,6 +8949,16 @@
     var(--dark-tray-rim-shadow-up-2),
     var(--dark-tray-rim-shadow-down-1),
     var(--dark-tray-rim-shadow-down-2);
+}
+
+/*
+ * Suggested-hands popup: panel sits flush under the popup's rounded frame (no inner rim border).
+ * Border + box-shadow are zeroed so the sticky header background can run all the way out to the
+ * outer `.suggested-hands-popup__user-shift` border.
+ */
+.suggested-hands-popup .panel--hands {
+  border: none;
+  box-shadow: none;
 }
 
 @media (prefers-color-scheme: dark) {

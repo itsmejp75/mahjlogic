@@ -64,6 +64,7 @@ import {
   computeSuggestedDiscardNeedHighlightIds,
   type RankSuggestedHandsInput,
 } from './analysis/suggestedHands'
+import { tileInstancesWithClaimMeldJokersResolved } from './analysis/eastExposurePatternFit'
 import { PostGameLoserRackRow } from './components/PostGameLoserRackRow'
 import { IllegalMahjongDialog } from './components/IllegalMahjongDialog'
 import { CardColoredText } from './components/CardColoredText'
@@ -144,14 +145,21 @@ const LS_KEY_SUGGESTED_HANDS_OFFSET_Y = 'mahjlogic.suggestedHandsOffsetY'
 /** @deprecated Migrated to LS_KEY_SUGGESTED_HANDS_REMEMBER_SIZE; removed on read */
 const LS_KEY_SUGGESTED_HANDS_RESIZE_LOCK_LEGACY = 'mahjlogic.suggestedHandsResizeLock'
 const LS_KEY_BOT_DIFFICULTY = 'mahjlogic.botDifficulty'
+/**
+ * Tile face style (`TILE_GRAPHICS` / `data-tile-graphics`). Product default is Prism (`solid-color`).
+ * Today: persisted in localStorage only. When accounts exist, the player’s choice should live in
+ * their server-side settings (and can sync down to replace or seed this key on login).
+ */
 const LS_KEY_TILE_GRAPHICS = 'mahjlogic.tileGraphics'
+/** One-time migration: users who had Classic as the old default are moved to Prism. */
 const LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED = 'mahjlogic.tileGraphicsDefaultMigrated'
 const LS_KEY_JOKER_SWAP_HINT = 'mahjlogic.jokerSwapHintEnabled'
 /** Former “Joker Flash” preference; read once to seed `LS_KEY_JOKER_SWAP_HINT` if missing. */
 const LS_KEY_JOKER_FLASH_LEGACY = 'mahjlogic.jokerFlashEnabled'
 const JOKER_SWAP_HINT_LABEL = 'Joker swap hint'
 
-const TILE_GRAPHICS = ['classic', 'solid-color', 'dark', 'light', 'designer', 'bakelite'] as const
+/** Menu order: Prism first; Ivory (classic) last in the minimalist row. */
+const TILE_GRAPHICS = ['solid-color', 'dark', 'light', 'designer', 'bakelite', 'classic'] as const
 type TileGraphics = (typeof TILE_GRAPHICS)[number]
 
 const TILE_GRAPHICS_LABEL: Record<TileGraphics, string> = {
@@ -190,8 +198,9 @@ function isTileGraphics(s: string): s is TileGraphics {
 function readTileGraphicsFromStorage(): TileGraphics {
   try {
     const v = localStorage.getItem(LS_KEY_TILE_GRAPHICS)
-    // Default tile set is Prism; older sessions may still have Classic saved
-    // from when this menu first landed.
+    // Default for new players / missing key is Prism (`solid-color`). Older sessions may still
+    // have Classic saved from when this menu first landed (see migration below). With login,
+    // prefer the value from the user’s account settings when available.
     if (v === 'classic' && localStorage.getItem(LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED) !== 'true') {
       localStorage.setItem(LS_KEY_TILE_GRAPHICS, 'solid-color')
       localStorage.setItem(LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED, 'true')
@@ -1737,6 +1746,70 @@ function orderEastExposuresForClosestCardLine(
 }
 
 /**
+ * `bestTilesAway` after committing the current staged call meld (pung+), or `null` if the staging
+ * does not form a committable shape (invalid or incomplete mapping).
+ */
+function previewStagedCallBestTilesAway(r: RoundState): number | null {
+  if (r.mainPhase !== 'call-staging' || !r.activeBotDiscard) return null
+  const calledTile = r.activeBotDiscard
+  const stagedTiles = r.stagedCallTileIds
+    .map((id) => r.hand.find((t) => t.id === id))
+    .filter((t): t is TileInstance => !!t)
+  if (stagedTiles.length === 0) return null
+  if (stagedTiles.length > 4) return null
+  if (stagedTiles.length === 1) {
+    const meldOk = stagedTiles.every(
+      (t) => t.def.cat === 'joker' || tileDefsEqual(t.def, calledTile.def),
+    )
+    if (!meldOk) return null
+    const stagedIds = new Set(r.stagedCallTileIds)
+    const handNext = r.hand.filter((t) => !stagedIds.has(t.id))
+    const pileNext = r.discardPile.filter((e) => e.tile.id !== calledTile.id)
+    const exposure: EastExposure = {
+      tiles: [calledTile, ...stagedTiles],
+      claimType: 'pung',
+      calledTileId: calledTile.id,
+    }
+    const eastMelds = [...r.eastExposures, exposure]
+    return summarizeRackTowardWin({
+      hand: handNext,
+      wallRemaining: r.wall.length,
+      discards: pileNext.map((e) => e.tile),
+      exposures: r.botExposures,
+      playerClaimMelds: eastMelds,
+      eastTableClaimMelds: eastMelds,
+    }).bestTilesAway
+  }
+  if (stagedTiles.length < 2) return null
+  const meldIsValid = stagedTiles.every(
+    (t) => t.def.cat === 'joker' || tileDefsEqual(t.def, calledTile.def),
+  )
+  if (!meldIsValid) return null
+  const claimType: ClaimType =
+    stagedTiles.length === 2 ? 'pung' : stagedTiles.length === 3 ? 'kong' : 'quint'
+  const stagedIds = new Set(r.stagedCallTileIds)
+  const handNext = r.hand.filter((t) => !stagedIds.has(t.id))
+  const pileNext = r.discardPile.filter((e) => e.tile.id !== calledTile.id)
+  const exposure: EastExposure = {
+    tiles: [calledTile, ...stagedTiles],
+    claimType,
+    calledTileId: calledTile.id,
+  }
+  const nextEast = orderEastExposuresForClosestCardLine(r, handNext, pileNext, [
+    ...r.eastExposures,
+    exposure,
+  ])
+  return summarizeRackTowardWin({
+    hand: handNext,
+    wallRemaining: r.wall.length,
+    discards: pileNext.map((e) => e.tile),
+    exposures: r.botExposures,
+    playerClaimMelds: nextEast,
+    eastTableClaimMelds: nextEast,
+  }).bestTilesAway
+}
+
+/**
  * During east-discard, tap the committed claim meld to return to call-staging: non-called tiles go
  * back to the hand; the called tile is the live bot discard again.
  */
@@ -1871,6 +1944,34 @@ function applyCommitStagedCall(
     ...r.eastExposures,
     exposure,
   ])
+  const { bestTilesAway: awayOpen } = summarizeRackTowardWin({
+    hand: handNext,
+    wallRemaining: r.wall.length,
+    discards: pileNext.map((e) => e.tile),
+    exposures: r.botExposures,
+    playerClaimMelds: nextEast,
+    eastTableClaimMelds: nextEast,
+  })
+  if (awayOpen === 0) {
+    const botLabel = r.activeBotIndex != null ? (BOT_LABELS[r.activeBotIndex] ?? 'Bot') : 'Bot'
+    return applyBotsJokerSwapsFromEast({
+      ...r,
+      hand: handNext,
+      discardPile: pileNext,
+      eastExposures: nextEast,
+      mainPhase: 'mahjong-declared',
+      activeBotIndex: null,
+      activeBotDiscard: null,
+      botTurnBanner: null,
+      pendingEastDiscardTile: null,
+      drawnTileId: null,
+      selectedHandTileId: null,
+      stagedCallTileIds: [],
+      callAmendableAfterClaimTileId: null,
+      callAmendFromBotIndex: null,
+      playerWinMethod: { type: 'called-discard', botLabel },
+    })
+  }
   const amendFromBot: 0 | 1 | 2 | null =
     r.activeBotIndex === 0 || r.activeBotIndex === 1 || r.activeBotIndex === 2
       ? r.activeBotIndex
@@ -2945,17 +3046,6 @@ export default function App() {
     el.scrollTop = el.scrollHeight
   }, [displayedDiscardPile.length])
 
-  /** Tiles in hand that exactly match the active bot's discard (used for pung/kong/quint eligibility). */
-  const callMatches = useMemo(() => {
-    if (!activeBotDiscard) return []
-    return findExactMatches(hand, activeBotDiscard.def)
-  }, [activeBotDiscard, hand])
-
-  /** Jokers currently in hand (can substitute in any meld). */
-  const handJokers = useMemo(() => hand.filter((t) => t.def.cat === 'joker'), [hand])
-
-  const canKong  = callMatches.length + handJokers.length >= 3
-
   const canCommitStagedCallDone = useMemo(() => {
     if (mainPhase !== 'call-staging' || !activeBotDiscard) return false
     if (stagedCallTileIds.length >= 2) return true
@@ -2983,6 +3073,38 @@ export default function App() {
     discardPile,
   ])
 
+  /**
+   * Hide the Done control when the correct next step is only Mah Jongg: either the discard
+   * completes the hand with no new exposure, or the staged claim would go directly to 0 away.
+   */
+  const shouldHideCallStagingDoneButton = useMemo(() => {
+    if (mainPhase !== 'call-staging' || !activeBotDiscard) return false
+    if (stagedCallTileIds.length === 0) {
+      return hasLegalMahjongOnBotDiscard({
+        mainPhase: 'bot-turn',
+        activeBotDiscard,
+        hand,
+        eastExposures,
+        botExposures,
+        wall,
+        discardPile,
+      })
+    }
+    return previewStagedCallBestTilesAway(round) === 0
+  }, [
+    mainPhase,
+    activeBotDiscard,
+    stagedCallTileIds,
+    hand,
+    eastExposures,
+    botExposures,
+    wall,
+    discardPile,
+    round,
+  ])
+
+  const showCallStagingDoneButton = canCommitStagedCallDone && !shouldHideCallStagingDoneButton
+
   const suggestedRankInput = useMemo(
     (): RankSuggestedHandsInput => ({
       hand,
@@ -3000,9 +3122,7 @@ export default function App() {
     return rankSuggestedHands(suggestedRankInput)
   }, [mainPhase, suggestedRankInput])
 
-  /** Hand + staged tiles + East exposures — same rack as suggested-hands strip and pattern matcher.
-   *  Staged discard and pass-slot tiles are temporarily removed from `hand` but are still "in play",
-   *  so include them so the guide highlight follows them into those slots. */
+  /** Hand + staged tiles + East exposures — tile faces on the rack and strip (jokers stay jokers). */
   const rackForSuggestedHandsUi = useMemo(
     () => [
       ...hand,
@@ -3010,6 +3130,23 @@ export default function App() {
       ...(passSlots.filter(Boolean) as TileInstance[]),
       ...eastExposures.flatMap((e) => e.tiles),
     ],
+    [hand, pendingEastDiscardTile, passSlots, eastExposures],
+  )
+
+  /**
+   * Same ids as `rackForSuggestedHandsUi`, but jokers in open melds use the tile they represent
+   * for distance / strip matching (NMJL) — do not use for `TileFace` (would draw the natural).
+   */
+  const rackForSuggestedPatternMatch = useMemo(
+    () =>
+      tileInstancesWithClaimMeldJokersResolved(
+        [
+          ...hand,
+          ...(pendingEastDiscardTile ? [pendingEastDiscardTile] : []),
+          ...(passSlots.filter(Boolean) as TileInstance[]),
+        ],
+        eastExposures,
+      ),
     [hand, pendingEastDiscardTile, passSlots, eastExposures],
   )
 
@@ -3071,13 +3208,13 @@ export default function App() {
       const pinnedPatterns = buildPinnedPatternsFromFocusKey(p, suggestedFocusHandKey)
       if (pinnedPatterns.length > 0) {
         const isMulti = isMultiComboFocusKey(suggestedFocusHandKey)
-        const rackIdSet = new Set(rackForSuggestedHandsUi.map((t) => t.id))
+        const rackIdSet = new Set(rackForSuggestedPatternMatch.map((t) => t.id))
         const unionIds = new Set<string>()
         for (const pinnedP of pinnedPatterns) {
-          const detail = greedyPatternMatchDetail(rackForSuggestedHandsUi, pinnedP, greedyUiOpts)
+          const detail = greedyPatternMatchDetail(rackForSuggestedPatternMatch, pinnedP, greedyUiOpts)
           if (!isMulti) {
             const ids = computeRackPatternHighlightIds(
-              rackForSuggestedHandsUi,
+              rackForSuggestedPatternMatch,
               pinnedP,
               detail,
               suggestedHandsExposureTileIds,
@@ -3093,15 +3230,15 @@ export default function App() {
       }
     }
 
-    const detail = greedyPatternMatchDetail(rackForSuggestedHandsUi, p, greedyUiOpts)
+    const detail = greedyPatternMatchDetail(rackForSuggestedPatternMatch, p, greedyUiOpts)
     const bestIds = computeRackPatternHighlightIds(
-      rackForSuggestedHandsUi,
+      rackForSuggestedPatternMatch,
       p,
       detail,
       suggestedHandsExposureTileIds,
     )
     return { bestIds }
-  }, [suggestedFocusHandKey, mainPhase, rackForSuggestedHandsUi, suggestedHandsExposureTileIds])
+  }, [suggestedFocusHandKey, mainPhase, rackForSuggestedPatternMatch, suggestedHandsExposureTileIds])
 
   /**
    * Bot-exposure highlights for the focused suggested line: dim tiles that don't fit the line,
@@ -3140,14 +3277,14 @@ export default function App() {
       return null
     return computeSuggestedDiscardNeedHighlightIds(
       suggestedFocusHandKey,
-      rackForSuggestedHandsUi,
+      rackForSuggestedPatternMatch,
       discardTiles,
       suggestedHandsExposureTileIds,
     )
   }, [
     suggestedFocusHandKey,
     mainPhase,
-    rackForSuggestedHandsUi,
+    rackForSuggestedPatternMatch,
     discardTiles,
     suggestedHandsExposureTileIds,
   ])
@@ -3898,6 +4035,54 @@ export default function App() {
         }
         return applyDeclareMahjongSelfDraw(cur)
       }
+      if (cur.mainPhase === 'call-staging' && cur.activeBotDiscard) {
+        if (cur.stagedCallTileIds.length > 0) {
+          const away = previewStagedCallBestTilesAway(cur)
+          if (away === 0) {
+            return applyCommitStagedCall(cur, gameModeRef.current)
+          }
+          const called = cur.activeBotDiscard
+          const rankInput: RankSuggestedHandsInput = {
+            hand: [...cur.hand, called],
+            wallRemaining: cur.wall.length,
+            discards: cur.discardPile.filter((e) => e.tile.id !== called.id).map((e) => e.tile),
+            exposures: cur.botExposures,
+            playerClaimMelds: cur.eastExposures,
+            eastTableClaimMelds: cur.eastExposures,
+          }
+          if (gameModeRef.current === 'training') {
+            queueMicrotask(() => setBlockingDialog({ variant: 'mahjong-dead-warning', rankInput }))
+            return cur
+          }
+          return { ...cur, mainPhase: 'dead-hand' }
+        }
+        const slice: CallValidationRoundSlice = {
+          mainPhase: 'call-staging',
+          activeBotDiscard: cur.activeBotDiscard,
+          hand: cur.hand,
+          eastExposures: cur.eastExposures,
+          botExposures: cur.botExposures,
+          wall: cur.wall,
+          discardPile: cur.discardPile,
+        }
+        if (!hasLegalMahjongOnBotDiscard(slice)) {
+          const called = cur.activeBotDiscard
+          const rankInput: RankSuggestedHandsInput = {
+            hand: [...cur.hand, called],
+            wallRemaining: cur.wall.length,
+            discards: cur.discardPile.filter((e) => e.tile.id !== called.id).map((e) => e.tile),
+            exposures: cur.botExposures,
+            playerClaimMelds: cur.eastExposures,
+            eastTableClaimMelds: cur.eastExposures,
+          }
+          if (gameModeRef.current === 'training') {
+            queueMicrotask(() => setBlockingDialog({ variant: 'mahjong-dead-warning', rankInput }))
+            return cur
+          }
+          return { ...cur, mainPhase: 'dead-hand' }
+        }
+        return applyDeclareMahjong({ ...cur, mainPhase: 'bot-turn' })
+      }
       if (cur.mainPhase !== 'bot-turn' || !cur.activeBotDiscard) return cur
       const slice = {
         mainPhase: cur.mainPhase,
@@ -4005,7 +4190,7 @@ export default function App() {
       setBlockingDialog(null)
       setCallRuleError(null)
       const flags = getCallCapacityFlags(hand, activeBotDiscard)
-      // Stage a pung first (2 from hand): Kong/Quint stay opt-in via the meld buttons.
+      // Stage a pung first (2 from hand) when possible. Player can add tiles to the meld (e.g. kong) by hand before Done.
       // applyAutoSelectCallTiles uses naturals first, then jokers only to fill leftover slots.
       const needed =
         flags.canPung
@@ -4070,11 +4255,6 @@ export default function App() {
       el.removeEventListener('transitionend', done)
     }
   }, [mainPhase, callEntryMagnet])
-
-  /** Auto-fill the staged meld with `needed` tiles (naturals first, then jokers). */
-  const autoSelectCallMeld = useCallback((needed: number) => {
-    pushRound((r) => applyAutoSelectCallTiles(r, needed))
-  }, [pushRound])
 
   /** Commit the staged meld — removes tiles from hand and returns to east-discard. */
   const commitStagedCall = useCallback(() => {
@@ -5426,50 +5606,24 @@ export default function App() {
                                 ) : undefined
                               }
                               suffix={
-                                mainPhase === 'call-staging' ? (
-                                  <>
-                                    {/*
-                                      Optional column after the pung: Kong only if a kong is possible.
-                                      If not, skip this column so Done sits directly after the pung.
-                                      Once 4 tiles are staged for kong, this column is omitted; Done follows the meld.
-                                    */}
-                                    {stagedCallTileIds.length < 3 && canKong && (
-                                      <div className="exposure-rack__slot">
-                                        <button
-                                          type="button"
-                                          className="exposure-rack__call-action-btn"
-                                          onClick={() => autoSelectCallMeld(3)}
-                                          aria-label="Quick-fill Kong (4 tiles)"
-                                        >
-                                          Kong
-                                        </button>
-                                      </div>
-                                    )}
-                                    {/* Done — next slot after pung, or after Kong column when that exists. */}
-                                    <div className="exposure-rack__slot">
-                                      <button
-                                        type="button"
-                                        className={[
-                                          'exposure-rack__call-action-btn',
-                                          canCommitStagedCallDone ? 'exposure-rack__call-action-btn--done' : '',
-                                        ].filter(Boolean).join(' ')}
-                                        disabled={!canCommitStagedCallDone}
-                                        onClick={commitStagedCall}
-                                        aria-label="Commit meld and proceed to discard"
-                                      >
-                                        Done
-                                      </button>
-                                    </div>
-                                  </>
+                                mainPhase === 'call-staging' && showCallStagingDoneButton ? (
+                                  <div className="exposure-rack__slot">
+                                    <button
+                                      type="button"
+                                      className={[
+                                        'exposure-rack__call-action-btn',
+                                        canCommitStagedCallDone ? 'exposure-rack__call-action-btn--done' : '',
+                                      ].filter(Boolean).join(' ')}
+                                      disabled={!canCommitStagedCallDone}
+                                      onClick={commitStagedCall}
+                                      aria-label="Commit meld and proceed to discard"
+                                    >
+                                      Done
+                                    </button>
+                                  </div>
                                 ) : null
                               }
-                              suffixSlotCount={
-                                mainPhase === 'call-staging'
-                                  ? stagedCallTileIds.length < 3 && canKong
-                                    ? 2
-                                    : 1
-                                  : 0
-                              }
+                              suffixSlotCount={mainPhase === 'call-staging' && showCallStagingDoneButton ? 1 : 0}
                             />
                             </EastOwnJokerSwapDropZone>
                             </StagingMeldDropZone>
@@ -5762,12 +5916,12 @@ export default function App() {
                           ) : null}
                           <button
                             type="button"
-                            className="btn btn--rack-neutral panel--bot-exposures__clear"
-                            aria-label="Clear suggested hand focus"
+                            className="btn btn--rack-neutral panel--bot-exposures__clear btn--label-wrap"
+                            aria-label="Clear suggested hand focus and rack highlights"
                             disabled={suggestedFocusHandKey === null}
                             onClick={() => setSuggestedFocusHandKey(null)}
                           >
-                            CLR
+                            <span className="btn__label">CLR HL</span>
                           </button>
                           <button
                             type="button"
@@ -5936,6 +6090,7 @@ export default function App() {
                         onHandsListOnChange={setSuggestedHandsListOn}
                         onTilesGuideOnChange={setSuggestedPanelTilesOn}
                         rackTilesForSuggestedStrip={rackForSuggestedHandsUi}
+                        rackTilesForPatternMatch={rackForSuggestedPatternMatch}
                         exposureTileIdsForSuggestedStrip={suggestedHandsExposureTileIds}
                         filterButtonPortal={filterBtnPortalEl}
                         isOpen={suggestedPanelHandsOn}

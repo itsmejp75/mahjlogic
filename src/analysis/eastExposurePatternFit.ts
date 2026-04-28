@@ -45,6 +45,47 @@ function exposureFitsCap(exp: Map<string, number>, cap: Map<string, number>): bo
  * Expand jokers in each exposure meld using the majority concrete tile (NMJL-style).
  * Omits jokers that cannot be anchored.
  */
+/**
+ * In an open meld, each joker represents the same tile as the naturals in that meld (NMJL).
+ * Returns a full rack list: `hand` tiles first (concealed jokers unchanged), then each claim-meld
+ * tile, with exposure jokers replaced by concrete `TileDef`s so pattern distance / `p.matches`
+ * see the stand-in tile. Tile `id`s are preserved for highlights and strip assignment.
+ */
+export function tileInstancesWithClaimMeldJokersResolved(
+  hand: TileInstance[],
+  claimMelds: ReadonlyArray<{ tiles: TileInstance[] }>,
+): TileInstance[] {
+  if (claimMelds.length === 0) return [...hand]
+  const jokerIdToDef = new Map<string, TileDef>()
+  for (const exp of claimMelds) {
+    const nonJ = exp.tiles.filter((t) => t.def.cat !== 'joker')
+    if (nonJ.length === 0) continue
+    const f = nonJ[0]!.def
+    let valid = false
+    if (f.cat === 'suit') {
+      valid = nonJ.every(
+        (t) => t.def.cat === 'suit' && t.def.suit === f.suit && t.def.rank === f.rank,
+      )
+    } else if (f.cat === 'wind') {
+      valid = nonJ.every((t) => t.def.cat === 'wind' && t.def.wind === f.wind)
+    } else if (f.cat === 'dragon') {
+      valid = nonJ.every((t) => t.def.cat === 'dragon' && t.def.dragon === f.dragon)
+    }
+    if (!valid) continue
+    for (const t of exp.tiles) {
+      if (t.def.cat === 'joker') {
+        jokerIdToDef.set(t.id, f)
+      }
+    }
+  }
+  const mapOne = (t: TileInstance): TileInstance => {
+    if (t.def.cat !== 'joker') return t
+    const d = jokerIdToDef.get(t.id)
+    return d != null ? { ...t, def: d } : t
+  }
+  return [...hand.map(mapOne), ...claimMelds.flatMap((e) => e.tiles.map(mapOne))]
+}
+
 function normalizeExposureTiles(exposures: ReadonlyArray<{ tiles: TileInstance[] }>): TileDef[] {
   const out: TileDef[] = []
   for (const exp of exposures) {

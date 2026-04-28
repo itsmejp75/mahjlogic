@@ -20,7 +20,10 @@ import { suitPermutations } from '../card/nmjlSuitSlots'
 import type { PatternGroup, PracticePattern } from '../card/practicePatterns'
 import type { SuggestedHandLine } from '../training/types'
 import type { BotExposure } from './types'
-import { claimMeldsFitPracticePattern } from './eastExposurePatternFit'
+import {
+  claimMeldsFitPracticePattern,
+  tileInstancesWithClaimMeldJokersResolved,
+} from './eastExposurePatternFit'
 
 /** Discards + all bot melds + East’s face-up claim melds (table visibility for dead-tile math). */
 function tableVisibleTiles(
@@ -33,6 +36,14 @@ function tableVisibleTiles(
     ...botExposures.flatMap((e) => e.tiles),
     ...eastTableClaimMelds.flatMap((e) => e.tiles),
   ]
+}
+
+/** Hand + claim melds for `computeGroupMatch` / greedy detail: exposure jokers use their meld tile. */
+function rackForPatternWithClaimMelds(
+  hand: TileInstance[],
+  playerClaimMelds: ReadonlyArray<{ tiles: TileInstance[] }>,
+): TileInstance[] {
+  return tileInstancesWithClaimMeldJokersResolved(hand, playerClaimMelds)
 }
 
 function pressureLabel(need: number, wall: number): SuggestedHandLine['pressure'] {
@@ -2577,12 +2588,15 @@ function buildSuitPermuteStripVariantRows(
  * Build the single strip-slot row for a consecRanks suit-permute pattern with the suit permutation
  * and base rank pinned to a specific tier combo. Used by the suggested-hands panel to render
  * secondary-tier entries (e.g. "10 away" variant) with the correct suit/rank assignment.
+ * @param rackForMatch — tiles with exposure jokers expanded to their stand-in defs for the matcher.
+ * @param rackForDisplay — optional; same ids, real joker defs for strip faces (defaults to `rackForMatch`).
  */
 export function buildConsecRanksTierStripRow(
   p: PracticePattern,
-  rack: TileInstance[],
+  rackForMatch: TileInstance[],
   tierPerm: Suit[],
   tierBase: number,
+  rackForDisplay: TileInstance[] = rackForMatch,
 ): SuggestedStripSlot[] | null {
   const gi = p.groups?.findIndex((g) => g.kind === 'suit-permute') ?? -1
   if (gi < 0) return null
@@ -2613,19 +2627,19 @@ export function buildConsecRanksTierStripRow(
     ...(p.groups!.slice(gi + 1) as PatternGroup[]),
   ]
   const pinnedP: PracticePattern = { ...p, groups: pinnedGroups }
-  const tierDetail = greedyPatternMatchDetail(rack, pinnedP)
-  const rackIdSet = new Set(rack.map((t) => t.id))
-  let tierBestIds = new Set(tierDetail.usedOrder.filter((id) => rackIdSet.has(id)))
+  const tierDetail = greedyPatternMatchDetail(rackForMatch, pinnedP)
+  const rackIdSet = new Set(rackForMatch.map((t) => t.id))
+  const tierBestIds = new Set(tierDetail.usedOrder.filter((id) => rackIdSet.has(id)))
   if (tierBestIds.size === 0) {
-    for (const t of rack) {
+    for (const t of rackForMatch) {
       if (p.matches(t.def)) tierBestIds.add(t.id)
     }
   }
 
   // Build the overridden strip: start from the primary pattern's resolved strip and
   // overwrite the suit-permute span with concrete suit/rank values for this tier.
-  const primaryUsedMeta = greedyPatternMatchDetail(rack, p).usedMeta ?? []
-  const primaryStrip = resolveStripTargetDefsForGreedyMatch(p, rack, primaryUsedMeta)
+  const primaryUsedMeta = greedyPatternMatchDetail(rackForMatch, p).usedMeta ?? []
+  const primaryStrip = resolveStripTargetDefsForGreedyMatch(p, rackForMatch, primaryUsedMeta)
   const span = groupPreviewIndexSpans(p)?.[gi]
   const strip = [...primaryStrip]
   if (span) {
@@ -2654,7 +2668,7 @@ export function buildConsecRanksTierStripRow(
   // "DDD" dragon group in p, where it can't be placed and would silently fail to highlight.
   return buildSuggestedStripSlotsFromStripDefs(
     pinnedP,
-    rack,
+    rackForDisplay,
     tierDetail.usedOrder,
     tierBestIds,
     tierDetail.usedMeta ?? [],
@@ -3146,7 +3160,7 @@ export function sortHandForSuggestedPattern(
   const basePattern = PRACTICE_PATTERNS.find((x) => x.id === patternId)
   if (!basePattern) return [...hand]
   const playerClaimMelds = input.playerClaimMelds ?? []
-  const rackForPattern = [...hand, ...playerClaimMelds.flatMap((e) => e.tiles)]
+  const rackForPattern = rackForPatternWithClaimMelds(hand, playerClaimMelds)
   const handIds = new Set(hand.map((t) => t.id))
   const exposureTileIds: ReadonlySet<string> | undefined =
     playerClaimMelds.length > 0
@@ -3213,9 +3227,11 @@ export function sortFullRackTilesForPattern(
 ): TileInstance[] {
   const basePattern = PRACTICE_PATTERNS.find((x) => x.id === patternId)
   const playerClaimMelds = input.playerClaimMelds ?? []
-  const rackForPattern = [...input.hand, ...playerClaimMelds.flatMap((e) => e.tiles)]
-  if (!basePattern) return rackForPattern
+  const rackRaw = [...input.hand, ...playerClaimMelds.flatMap((e) => e.tiles)]
+  const rackForPattern = rackForPatternWithClaimMelds(input.hand, playerClaimMelds)
+  if (!basePattern) return rackRaw
 
+  const byIdRaw = new Map(rackRaw.map((t) => [t.id, t] as const))
   const rackIds = new Set(rackForPattern.map((t) => t.id))
   const exposureTileIds: ReadonlySet<string> | undefined =
     playerClaimMelds.length > 0
@@ -3237,7 +3253,7 @@ export function sortFullRackTilesForPattern(
     )
     for (const id of orderedIds) {
       if (seen.has(id)) continue
-      const t = rackForPattern.find((x) => x.id === id)
+      const t = byIdRaw.get(id)
       if (t) {
         ordered.push(t)
         seen.add(id)
@@ -3251,7 +3267,7 @@ export function sortFullRackTilesForPattern(
     appendStripOrder(basePattern)
   }
 
-  const rest = rackForPattern.filter((t) => !seen.has(t.id))
+  const rest = rackRaw.filter((t) => !seen.has(t.id))
   return [...ordered, ...rest]
 }
 
@@ -3281,7 +3297,7 @@ export function postGameRackAndHighlights(
   const base = PRACTICE_PATTERNS.find((x) => x.id === line.id)
   if (!base) return { fullRack, bestIds: new Set() }
   const playerClaimMelds = rankInput.playerClaimMelds ?? []
-  const rack = [...rankInput.hand, ...playerClaimMelds.flatMap((e) => e.tiles)]
+  const rack = rackForPatternWithClaimMelds(rankInput.hand, playerClaimMelds)
   const opt: GreedyPatternMatchOpts | undefined =
     playerClaimMelds.length > 0
       ? { exposureTileIds: new Set(playerClaimMelds.flatMap((e) => e.tiles).map((t) => t.id)) }
@@ -3356,7 +3372,7 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
   const eastTableClaimMelds = input.eastTableClaimMelds ?? input.playerClaimMelds ?? []
   const hasPlayerClaimMelds = playerClaimMelds.length > 0
   /** Concealed hand + this seat’s exposed claim melds — all count toward the 14. */
-  const rackForPattern = [...hand, ...playerClaimMelds.flatMap((e) => e.tiles)]
+  const rackForPattern = rackForPatternWithClaimMelds(hand, playerClaimMelds)
   const exposureTileIds: ReadonlySet<string> | undefined =
     hasPlayerClaimMelds ? new Set(playerClaimMelds.flatMap((e) => e.tiles).map((t) => t.id)) : undefined
   const groupMatchExposureOpts: Pick<GroupMatchOpts, 'exposureTileIds'> =
