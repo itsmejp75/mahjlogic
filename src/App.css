@@ -6286,9 +6286,38 @@
   overflow: visible;
   text-overflow: clip;
   align-items: center;
-  /* Left origin matches category text in the combined (hands+tiles) cell. */
+  /* Default: left origin (hands+tiles combined uses a different cell class). */
   justify-content: flex-start;
   padding-block: var(--hands-sheet-cell-pad-y);
+}
+
+/* Tiles *only* (not hands+tiles): center the strip in the cell. */
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet.hands-sheet--tiles2:not(.hands-sheet--tilesHands)
+  .hands-sheet__cell--tiles:not(.hands-sheet__cell--header) {
+  justify-content: center;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet.hands-sheet--tiles2:not(.hands-sheet--tilesHands)
+  .hands-sheet__tiles-grid,
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet.hands-sheet--tiles2:not(.hands-sheet--tilesHands)
+  .hands-sheet__tiles-stack {
+  justify-content: center;
+  align-items: center;
+  align-self: center;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet.hands-sheet--tiles2:not(.hands-sheet--tilesHands)
+  .hands-sheet__tiles-stack-row {
+  justify-content: center;
+  align-self: center;
 }
 
 .hands-sheet__tiles-grid {
