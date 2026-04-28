@@ -657,6 +657,37 @@
   grid-column: 8 / 10;
 }
 
+/* Menu on the East hand / Charleston action bar (replaces former Mah Jongg slot c4–5). */
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack {
+  position: relative;
+  bottom: auto;
+  right: auto;
+  left: auto;
+  transform: none;
+  z-index: auto;
+  box-sizing: border-box;
+  display: block;
+  width: var(--rack-tile-btn-inner-2);
+  max-width: var(--rack-tile-btn-inner-2);
+  margin-inline-start: var(--rack-tile-face-bw);
+  justify-self: start;
+  min-height: var(--rack-action-touch-min-h);
+  padding: 0;
+  border-radius: var(--rack-tile-btn-border-radius);
+  overflow: hidden;
+}
+
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border-radius: inherit;
+  padding: 0.14rem 0.05rem;
+  font-size: min(var(--rack-bottom-action-fs), calc(var(--hand-rack-tile-w) * 0.38));
+}
+
 .rack-bottom-tile-cell--c10-11 {
   grid-column: 10 / 12;
 }
@@ -776,16 +807,25 @@
   color: #1a1a1a;
   border-radius: var(--rack-tile-btn-border-radius);
   border: none;
-  /* Wall full = designer jewel bam; depletion → designer jewel crak (same as tile preview) */
-  --wall-jewel-bam: #008a56;
-  --wall-jewel-crak: #9b111e;
-  background: color-mix(
-    in oklch,
-    var(--wall-jewel-bam) calc(var(--wall-t, 1) * 100%),
-    var(--wall-jewel-crak) calc((1 - var(--wall-t, 1)) * 100%)
+  /*
+   * Wall “heat”: full wall = Prism bam green (`--card-ink-green`); as the wall runs out,
+   * the view moves through yellow → orange → Prism crak red (`--card-ink-red`). The fill is
+   * a 4-band strip; `background-size` + `background-position` select the current band.
+   */
+  --wall-heat-yellow: #e6e338;
+  --wall-heat-orange: #f28c1a;
+  background: linear-gradient(
+    90deg,
+    var(--card-ink-green) 0% 25%,
+    var(--wall-heat-yellow) 25% 50%,
+    var(--wall-heat-orange) 50% 75%,
+    var(--card-ink-red) 75% 100%
   );
+  background-size: 400% 100%;
+  background-repeat: no-repeat;
+  background-position: calc((1 - var(--wall-t, 1)) * 100%) 0;
   box-shadow: none;
-  transition: background 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-position 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .app-layout[data-animations='off'] .rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell {
@@ -1199,6 +1239,9 @@
   overflow-x: hidden;
   overflow-y: hidden;
   overscroll-behavior-y: contain;
+  /* Avoid browser text-selection highlight when clicking / dragging on tiles and rack buttons. */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* Menu → Animations OFF: strip remaining rack/menu motion (game logic also skips fly-ins / FLIP). */
@@ -1445,6 +1488,90 @@
   box-shadow: inset 0 0 0 1px color-mix(in srgb, #f59e0b 58%, var(--border));
 }
 
+.app-layout[data-joker-swap-hint='on'] .east-own-exposure-swap-wrap--over,
+.app-layout[data-joker-swap-hint='on'] .app-opponents-rail__cell--swap-over {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, #f59e0b 78%, var(--border));
+}
+
+/*
+  Joker swap hint — macOS dock bounce.
+
+  Single shared keyframe + duration so the swappable hand tile and the redeemable
+  exposed jokers bounce in unison (same tempo, same time, exactly 3 bounces).
+
+  Apply the animation on inner wrappers (.tile-face on rack slots; .sortable-tile-wrap__fly
+  in hand) so it doesn't fight DnD `transform`s on the outer drag wrappers.
+
+  Stacking: hand row sits inside `.rack-stage__rack-bottom` (z-index: 1) which is below
+  `.rack-stage__rack-top` (z-index: 2) — bouncing up would otherwise paint behind the
+  exposure rack. Bot exposure cells use `overflow: hidden` and would clip the upward
+  bounce. The `:has()` rules below escape both while a bounce is active.
+*/
+
+@keyframes joker-swap-hint-dock-bounce {
+  0%   { transform: translateY(0);     animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1); }
+  18%  { transform: translateY(-26%);  animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0); }
+  36%  { transform: translateY(0);     animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1); }
+  44%  { transform: translateY(-6%); }
+  52%, 100% { transform: translateY(0); }
+}
+
+.app-layout[data-joker-swap-hint='on'][data-animations='on']
+  :is(
+    .sortable-tile-wrap__fly--joker-swap-hint-bounce,
+    .east-discard-staging__tile--joker-swap-hint-bounce .tile-face,
+    .exposure-rack__slot--joker-swap-hint-bounce .tile-face
+  ) {
+  transform-origin: bottom center;
+  animation: joker-swap-hint-dock-bounce 1.7s ease-in-out 4 both;
+  will-change: transform;
+}
+
+/* Lift the bouncing tile above its sibling slots within the same row. */
+.app-layout[data-joker-swap-hint='on'][data-animations='on']
+  .sortable-tile-wrap:has(.sortable-tile-wrap__fly--joker-swap-hint-bounce),
+.app-layout[data-joker-swap-hint='on'][data-animations='on']
+  .exposure-rack__slot--joker-swap-hint-bounce {
+  z-index: 50;
+}
+
+/* Hand row lives in `.rack-stage__rack-bottom` (z-index: 1), painted under
+   `.rack-stage__rack-top` (z-index: 2). While a hand tile is bouncing, lift the
+   whole bottom column above the rack-top so the arc paints over the exposure rack. */
+.app-layout[data-joker-swap-hint='on'][data-animations='on']
+  .rack-stage__rack-bottom:has(.sortable-tile-wrap__fly--joker-swap-hint-bounce) {
+  z-index: 5;
+}
+
+/* Bot exposure cells + grid use `overflow: hidden`. Open them up only while a
+   redeemable joker is mid-bounce so the tile can poke above the tray edge, and
+   raise the cell above its row neighbors. */
+.app-layout[data-joker-swap-hint='on'][data-animations='on']
+  .panel--bot-exposures
+  .app-opponents-rail__cell:has(.exposure-rack__slot--joker-swap-hint-bounce) {
+  overflow: visible;
+  z-index: 5;
+}
+
+.app-layout[data-joker-swap-hint='on'][data-animations='on']
+  .app-dnd-frame
+  .app-play-split
+  .panel--bot-exposures__body
+  > .bot-exposures__list:has(.exposure-rack__slot--joker-swap-hint-bounce) {
+  overflow: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-layout[data-joker-swap-hint='on']
+    :is(
+      .sortable-tile-wrap__fly--joker-swap-hint-bounce,
+      .east-discard-staging__tile--joker-swap-hint-bounce .tile-face,
+      .exposure-rack__slot--joker-swap-hint-bounce .tile-face
+    ) {
+    animation: none;
+  }
+}
+
 .app-opponents-rail .exposure-rack {
   justify-content: center;
   align-items: center;
@@ -1527,44 +1654,9 @@
   --play-split-lower-box-edge-inset: calc(var(--rack-tray-inset-inline) - var(--hand-rack-tray-inset-inline));
   --play-split-lower-box-left-bleed: 8px;
   --play-split-lower-toolbar-button-gap: var(--player-rack-face-gap);
-  --play-split-lower-toolbar-button-nudge-x: calc(var(--rack-tray-inset-inline) - var(--hand-rack-tray-inset-inline));
   --play-split-lower-toolbar-edge-gap-start: 5px;
   --play-split-lower-toolbar-edge-gap-end: 2px;
-  --play-split-lower-toolbar-align-x: clamp(-1px, calc(22.5px - 2.5vw), 4px);
   --play-split-lower-toolbar-button-group-nudge-x: -2.5px;
-  --play-split-lower-toolbar-after-menu-shift: 1.5px;
-  --play-split-lower-toolbar-hands-right-gap: 3.5px;
-  --play-split-lower-toolbar-menu-nudge-x: 0.5px;
-  --play-split-lower-toolbar-clear-edge-gap: 4.86px;
-  --play-split-lower-toolbar-locked-action-gap: var(--player-rack-face-gap);
-  --play-split-lower-toolbar-menu-w: calc(
-    2 * var(--hand-rack-tile-w)
-    + var(--play-split-lower-toolbar-button-gap)
-    + var(--play-split-lower-toolbar-after-menu-shift)
-  );
-  --play-split-lower-toolbar-menu-right-x: calc(
-    var(--play-split-lower-toolbar-edge-gap-start)
-    + var(--play-split-lower-toolbar-menu-w)
-    + var(--play-split-lower-toolbar-button-group-nudge-x)
-    + var(--play-split-lower-toolbar-menu-nudge-x)
-  );
-  --play-split-lower-toolbar-hands-left-extension: calc(
-    var(--play-split-lower-toolbar-clear-edge-gap) - var(--play-split-lower-toolbar-locked-action-gap)
-  );
-  --play-split-lower-toolbar-hands-w: calc(
-    var(--rack-tile-btn-inner-3) + var(--play-split-lower-toolbar-hands-left-extension)
-  );
-  --play-split-lower-toolbar-hands-left-x: calc(
-    100% - var(--play-split-lower-toolbar-hands-right-gap) - var(--play-split-lower-toolbar-hands-w)
-  );
-  --play-split-lower-toolbar-clear-left-x: calc(
-    var(--play-split-lower-toolbar-menu-right-x) + var(--play-split-lower-toolbar-locked-action-gap)
-  );
-  --play-split-lower-toolbar-clear-w: calc(
-    var(--play-split-lower-toolbar-hands-left-x)
-    - var(--play-split-lower-toolbar-locked-action-gap)
-    - var(--play-split-lower-toolbar-clear-left-x)
-  );
   /* Pull the discard tray’s right edge left (increase to move further left). */
   --discard-tray-right-pull: 0.55rem;
   /* Window strip between discard column and bot column — same as `.bot-exposures__list` row gap. */
@@ -1715,7 +1807,7 @@
   z-index: 2;
 }
 
-/* Same shell as `.app-opponents-rail__cell`: dark tray, radius, rim shadows; holds Menu / Clear / Suggested.
+/* Same shell as `.app-opponents-rail__cell`: dark tray, radius, rim shadows; holds Clear / Suggested.
    Button gap matches Sort↔Undo and the main rack tile-face gap. */
 .panel--bot-exposures__toolbar-well {
   display: flex;
@@ -1742,73 +1834,29 @@
  * and the main hand action row (e.g. discard / ignore when shown in cols 12–14).
  */
 .app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well {
-  display: grid;
-  grid-template-columns: repeat(6, var(--hand-rack-tile-w));
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--play-split-lower-toolbar-button-gap);
   max-width: var(--rack-col-outer-w);
-  width: calc(
-    6 * var(--hand-rack-tile-w)
-    + 5 * var(--play-split-lower-toolbar-button-gap)
-    + var(--play-split-lower-toolbar-edge-gap-start)
-    + var(--play-split-lower-toolbar-edge-gap-end)
-  );
   margin-left: auto;
   margin-right: auto;
-  justify-content: flex-start;
   width: calc(100% - var(--play-split-lower-box-edge-inset) + var(--play-split-lower-box-left-bleed));
   padding-inline-start: var(--play-split-lower-toolbar-edge-gap-start);
   padding-inline-end: var(--play-split-lower-toolbar-edge-gap-end);
-  transform: none;
-}
-
-.app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well > .app-menu-anchor,
-.app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well > .panel--bot-exposures__clear,
-.app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well > .app-bottom-center-controls {
-  min-width: 0;
-  width: 100%;
   transform: translateX(var(--play-split-lower-toolbar-button-group-nudge-x));
+  box-sizing: border-box;
 }
 
-.app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well > .app-menu-anchor {
-  grid-column: 1 / 3;
-  width: calc(100% + var(--play-split-lower-toolbar-after-menu-shift));
-  transform: translateX(calc(
-    var(--play-split-lower-toolbar-button-group-nudge-x)
-    + var(--play-split-lower-toolbar-menu-nudge-x)
-  ));
+.app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well > * {
+  flex: 0 0 auto;
 }
 
-.app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well > .panel--bot-exposures__clear {
-  grid-column: auto;
-  position: absolute;
-  top: 50%;
-  left: var(--play-split-lower-toolbar-clear-left-x);
-  width: var(--play-split-lower-toolbar-clear-w);
-  transform: translateY(-50%);
-}
-
-.app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well > .app-bottom-center-controls {
-  /*
-   * Edge lock: HANDS right edge is anchored to the toolbar shell instead of
-   * inheriting drift from the tile-grid columns during resize.
-   */
-  grid-column: auto;
-  position: absolute;
-  top: 50%;
-  right: var(--play-split-lower-toolbar-hands-right-gap);
-  width: var(--play-split-lower-toolbar-hands-w);
-  transform: translateY(-50%);
-}
-
-.app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well .app-bottom-center-controls__menu-btn,
-.app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well .panel--bot-exposures__clear,
 .app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well .suggested-hands-tab {
   min-width: 0;
-  width: 100%;
   max-width: 100%;
-}
-
-.app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well > .panel--bot-exposures__clear {
-  width: var(--play-split-lower-toolbar-clear-w);
 }
 
 /* Wide side-by-side: bot column is right of a wide discard; keep the well flush to the column’s
@@ -1822,7 +1870,7 @@
 }
 
 /*
- * List starts below the menu row (spacing from `.panel--bot-exposures` grid gap only); flex spacer
+ * List starts below the bot toolbar row (spacing from `.panel--bot-exposures` grid gap only); flex spacer
  * at the end fills the column so the hand/discard play split can still use full height.
  */
 .panel--bot-exposures__body {
@@ -2057,8 +2105,7 @@
   align-items: stretch;
 }
 
-/* In-panel toolbar: Menu | Clear | Suggested — `gap` matches `.rack-bottom-bar--tile-grid` column-gap
-   (same as Mah Jongg ↔ Swap between adjacent controls). */
+/* In-panel toolbar: optional Menu (wall-game / dead hand / bot MJ) → HANDS → CLR → HINT. */
 .panel--bot-exposures__toolbar-well .app-menu-anchor {
   position: relative;
   bottom: auto;
@@ -2120,6 +2167,45 @@
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__clear:disabled {
   opacity: 1;
   filter: none;
+}
+
+/* Same footprint as CLR; toggles joker swap hint (Menu also has a setting). */
+.panel--bot-exposures__toolbar-well .panel--bot-exposures__hint {
+  flex: 0 0 auto;
+  align-self: center;
+  box-sizing: border-box;
+  width: var(--rack-tile-btn-inner-1);
+  max-width: 100%;
+  min-height: var(--rack-action-touch-min-h);
+  height: var(--rack-action-touch-min-h);
+  padding: 0.2rem 0.05rem;
+  font-size: var(--rack-bottom-action-fs);
+  line-height: 1.06;
+  border-radius: var(--rack-tile-btn-border-radius);
+  border: none;
+  z-index: 2;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #3a424d;
+  color: #fff;
+  font-weight: 500;
+  font-family: 'Figtree', var(--sans);
+  text-transform: uppercase;
+  letter-spacing: var(--btn-letter-spacing);
+  box-shadow:
+    0 2px 4px color-mix(in srgb, #000 16%, transparent),
+    0 1px 2px color-mix(in srgb, #000 10%, transparent);
+  cursor: pointer;
+  isolation: isolate;
+}
+
+.panel--bot-exposures__toolbar-well .panel--bot-exposures__hint--on {
+  background: color-mix(in srgb, #22c55e 22%, #3a424d);
+  box-shadow:
+    0 2px 4px color-mix(in srgb, #000 16%, transparent),
+    0 1px 2px color-mix(in srgb, #000 10%, transparent);
 }
 
 .panel--bot-exposures__toolbar-well .app-bottom-center-controls .suggested-hands-tab {
@@ -2741,6 +2827,8 @@
   border: none;
   background: color-mix(in srgb, var(--bg-elevated) 94%, #fff 6%);
   color: var(--text-h);
+  user-select: none;
+  -webkit-user-select: none;
   /* Symmetric drop shadow (centered below) so the rightmost button in the
      bottom bar doesn't bleed past the rack-col's right edge more than the
      leftmost button bleeds past its left edge. Keeps empty space on both
@@ -2791,14 +2879,16 @@
 /* Default buttons only — rack / bot toolbar / menu use flat fills (tweak colors without hover wash). */
 .btn:hover:not(:disabled):not(.rack-bottom-tile-cell):not(.app-bottom-center-controls__menu-btn):not(
     .panel--bot-exposures__clear
-  ):not(.suggested-hands-tab) {
+  ):not(.panel--bot-exposures__hint):not(.suggested-hands-tab) {
   background: color-mix(in srgb, var(--bg-elevated) 86%, #fff 14%);
   box-shadow:
     0 2px 5px color-mix(in srgb, #000 18%, transparent),
     0 1px 3px color-mix(in srgb, #000 12%, transparent);
 }
 
-.btn:active:not(:disabled):not(.rack-bottom-tile-cell):not(.app-bottom-center-controls__menu-btn) {
+.btn:active:not(:disabled):not(.rack-bottom-tile-cell):not(.app-bottom-center-controls__menu-btn):not(
+    .panel--bot-exposures__hint
+  ) {
   transition: none;
   transform: scale(0.98);
   box-shadow:
@@ -3133,14 +3223,16 @@
   max-width: 100%;
   padding: 0.4rem 0.45rem;
   border-radius: 0.38rem;
-  border: 1px solid color-mix(in srgb, var(--coach-teal) 32%, var(--border) 40%, var(--bg-elevated) 28%);
-  background: color-mix(in srgb, var(--coach-teal-bg) 80%, var(--bg-elevated) 20%);
+  /* Solid coach-teal tint (not the translucent token alone) so the box reads on `--window-surface`.
+     3-way mixes with --coach-teal-bg + #fff could collapse to an invisible match with the panel. */
+  border: 1px solid var(--coach-teal-border);
+  background: color-mix(in srgb, var(--coach-teal) 11%, var(--bg-elevated) 89%);
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .pass-box--over {
-  background: color-mix(in srgb, var(--coach-teal) 28%, var(--bg-elevated));
-  border-color: color-mix(in srgb, var(--coach-teal) 40%, var(--border) 34%, var(--bg-elevated) 26%);
+  background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
+  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
   box-shadow: none;
 }
 
@@ -3269,9 +3361,9 @@
   width: calc(3 * var(--rack-tile-w) + 2 * var(--rack-tile-gap));
   flex-shrink: 0;
   box-sizing: border-box;
-  /* Unified 3-tile box — same border + fill as call-initiate */
-  background: color-mix(in srgb, var(--coach-teal-bg) 80%, var(--bg-elevated) 20%);
-  border: 1px solid color-mix(in srgb, var(--coach-teal) 32%, var(--border) 40%, var(--bg-elevated) 28%);
+  /* Unified 3-tile box — same fill/border as `.pass-box` (visible on dark panel chrome). */
+  background: color-mix(in srgb, var(--coach-teal) 11%, var(--bg-elevated) 89%);
+  border: 1px solid var(--coach-teal-border);
   border-radius: 0.38rem;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
@@ -3282,22 +3374,18 @@
   width: calc(3 * var(--rack-tile-w) + 2 * var(--player-rack-face-gap));
 }
 
-/* Brighten only when hovering an actual tile, not empty space */
-.pass-strip-tail__inner:has(.pass-strip__tile-wrap:hover) {
-  background: color-mix(in srgb, var(--coach-teal) 14%, var(--bg-elevated));
-  border-color: color-mix(in srgb, var(--coach-teal) 40%, var(--border) 34%, var(--bg-elevated) 26%);
-}
+/* Pass box chrome only highlights while dragging (see `--over` and `--dragging` below), not on pointer hover. */
 
 /* Drop target: same stronger fill + border as call box --over */
 .pass-strip-tail--over .pass-strip-tail__inner {
-  background: color-mix(in srgb, var(--coach-teal) 28%, var(--bg-elevated));
-  border-color: color-mix(in srgb, var(--coach-teal) 40%, var(--border) 34%, var(--bg-elevated) 26%);
+  background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
+  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
 }
 
 /* Dragging FROM the box: keep it bright */
 .pass-strip-tail__inner:has(.pass-strip__tile-wrap--dragging) {
-  background: color-mix(in srgb, var(--coach-teal) 14%, var(--bg-elevated));
-  border-color: color-mix(in srgb, var(--coach-teal) 40%, var(--border) 34%, var(--bg-elevated) 26%);
+  background: color-mix(in srgb, var(--coach-teal) 18%, var(--bg-elevated) 82%);
+  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
 }
 
 /* Charleston: tiles exit the pass box toward the pass direction before the exchange commits. */
@@ -3994,12 +4082,15 @@
 
 .staging-meld-drop-zone {
   border-radius: 0.5rem;
-  transition: background 0.15s ease, box-shadow 0.15s ease;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+/* Call-staging: same chrome as `.pass-box--over` when a tile is dragged over the exposure rack. */
 .staging-meld-drop-zone--over {
-  background: rgba(245, 158, 11, 0.12);
-  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.5);
+  background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
+  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
+  box-shadow: none;
 }
 
 /* ── Call prompt ── */
@@ -4540,74 +4631,6 @@
   cursor: not-allowed;
   opacity: 0.38;
   box-shadow: none;
-}
-
-.hands-panel__info-wrap {
-  position: relative;
-  flex-shrink: 0;
-}
-
-.hands-panel__info-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.65rem;
-  height: 1.65rem;
-  padding: 0;
-  margin: 0;
-  border: none;
-  border-radius: 999px;
-  background: transparent;
-  color: color-mix(in srgb, var(--text-h) 88%, var(--text) 12%);
-  cursor: pointer;
-  box-sizing: border-box;
-}
-
-.hands-panel__info-btn:hover {
-  color: var(--coach-teal);
-}
-
-.hands-panel__info-btn:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--coach-teal) 55%, transparent);
-  outline-offset: 1px;
-}
-
-.hands-panel__info-icon {
-  display: block;
-}
-
-.hands-panel__hint-popover {
-  position: absolute;
-  top: calc(100% + 0.25rem);
-  left: 0;
-  z-index: 45;
-  width: min(22rem, 92vw);
-  max-width: min(22rem, calc(100vw - 2rem));
-  padding: 0.45rem 0.55rem;
-  border-radius: 0.45rem;
-  border: 1px solid var(--border);
-  background: var(--bg-elevated);
-  box-shadow: var(--shadow);
-  box-sizing: border-box;
-}
-
-.hands-panel__hint-popover__text {
-  margin: 0;
-  font-size: 0.72rem;
-  line-height: 1.45;
-  color: var(--text-h);
-}
-
-.hands-panel__hint-sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
 }
 
 .hands-panel__toolbar {
@@ -5359,22 +5382,23 @@
 
 /*
  * Concealed annotation under "Call" in the rack action well.
- * `position: relative` lets the absolutely-positioned `__note` sit under the centered button label
- * without shifting "Call". The note matches the card's red "C" hue and font.
+ * `position: relative` + extra bottom padding reserve space so a larger CONCEALED line stays
+ * under the centered "Call" label (absolute note is out of flex flow).
  */
-.btn--call-concealed {
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell.btn--call-concealed {
   position: relative;
+  padding-bottom: 0.52rem;
 }
 
 .btn--call-concealed__note {
   position: absolute;
   left: 50%;
-  bottom: 0.18rem;
+  bottom: 0.1rem;
   transform: translateX(-50%);
   font-family: var(--font-concealed-c);
   color: #dc2626;
   font-weight: 700;
-  font-size: 0.62em;
+  font-size: 0.88em;
   letter-spacing: 0.04em;
   line-height: 1;
   pointer-events: none;
@@ -5658,93 +5682,6 @@
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker .tile-face {
   border-radius: clamp(0.1rem, calc(0.12 * var(--hands-strip-em)), 0.35rem);
   --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
-}
-
-/*
- * Joker Flash: dim `__rail` (full loop) + a stack of `__chase-layer` paths whose dashes share a
- * leading edge but trail back varied lengths — composes into a fading comet/train tail. Per-layer
- * `stroke-dasharray`, `stroke-opacity`, `stroke-width` come from `TileFaceSnakeBorder.tsx`.
- */
-.tile-face-snake-border {
-  position: relative;
-  z-index: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 0;
-  vertical-align: top;
-  max-width: 100%;
-}
-
-.tile-face-snake-border__svg {
-  position: absolute;
-  left: 0;
-  top: 0;
-  z-index: 2;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  overflow: visible;
-  box-sizing: border-box;
-}
-
-.tile-face-snake-border__rail,
-.tile-face-snake-border__chase-layer {
-  vector-effect: non-scaling-stroke;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  fill: none;
-}
-
-/* Dim “track” only — not suggest-ring brightness, or it reads as a second border under the train. */
-.tile-face-snake-border__rail {
-  stroke: rgba(255, 255, 255, 0.22);
-  stroke-width: 2px;
-}
-
-/*
- * Each layer is one bright dashed band; `TRAIN_LAYERS` in TileFaceSnakeBorder.tsx sets per-layer
- * `stroke-dasharray`, `stroke-opacity`, and `stroke-width` (so they compose into a fading tail).
- * `paint-order: stroke` keeps stacked strokes additive without weird joins.
- */
-.tile-face-snake-border__chase-layer {
-  stroke: #fff;
-  paint-order: stroke;
-}
-
-/* Replace static white inset while the snake runs (applies to rack + suggested strip). */
-.tile-face-snake-border > .tile-face,
-.tile-face-snake-border .tile-face {
-  position: relative;
-  z-index: 1;
-  --tile-face-highlight-shadow: 0 0 0 0 transparent;
-}
-
-.hands-list__row-hit--with-tiles
-  .hands-list__pattern-tile-cell--suggest-joker
-  .tile-face-snake-border
-  .tile-face,
-.hands-list__row-hit--with-tiles
-  .hands-list__pattern-tile-cell--suggest-best
-  .tile-face-snake-border
-  .tile-face {
-  --tile-face-highlight-shadow: 0 0 0 0 transparent;
-}
-
-.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face-snake-border {
-  border-radius: clamp(0.1rem, calc(0.12 * var(--hands-strip-em)), 0.35rem);
-}
-
-/* rAF pauses; dim the bright chase layers for a static “glow” read */
-.app-layout[data-animations='off'] .tile-face-snake-border__chase-layer,
-.app-layout[data-joker-flash='off'] .tile-face-snake-border__chase-layer {
-  opacity: 0.55;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tile-face-snake-border__chase-layer {
-    opacity: 0.5;
-  }
 }
 
 .hands-list__pattern-joker-mark {
@@ -6138,12 +6075,6 @@
   --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
 }
 
-/* Joker Flash snake supersedes the static suggest / called ring on that face. */
-.exposure-rack__slot .tile-face-snake-border .tile-face {
-  border-radius: 0.35rem;
-  --tile-face-highlight-shadow: 0 0 0 0 transparent;
-}
-
 /* Staged call tiles that can be clicked/dragged back to the hand */
 .exposure-rack__slot--staged-returnable {
   cursor: grab;
@@ -6214,25 +6145,24 @@
 
 .app .panel--hand .exposure-rack__call-initiate-target--near {
   border-radius: 0.35rem;
-  /* Slightly brighter edge than the fill, without a heavy ring */
-  border: 1px solid color-mix(in srgb, var(--coach-teal) 32%, var(--border) 40%, var(--bg-elevated) 28%);
-  background: color-mix(in srgb, var(--coach-teal-bg) 80%, var(--bg-elevated) 20%);
+  /* Match `.pass-box`: solid teal tint on `--window-surface` (same as Charleston pass box). */
+  border: 1px solid var(--coach-teal-border);
+  background: color-mix(in srgb, var(--coach-teal) 11%, var(--bg-elevated) 89%);
   transition: background 0.15s ease, border-color 0.15s ease;
   box-sizing: border-box;
 }
 
 .app .panel--hand .exposure-rack__call-initiate-target--near.exposure-rack__call-initiate-target--over {
-  background: color-mix(in srgb, var(--coach-teal) 28%, var(--bg-elevated));
-  /* Clearer ring on hover / drop, still softer than 50%+ teal */
-  border-color: color-mix(in srgb, var(--coach-teal) 40%, var(--border) 34%, var(--bg-elevated) 26%);
+  background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
+  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
 }
 
-/* Bot-turn incoming discard — same box chrome as call-initiate (no extra ring on the tile) */
+/* Bot-turn incoming discard — same box chrome as call-initiate / pass-box */
 .panel--hand .exposure-rack__slot--incoming-discard {
   justify-content: center;
   box-sizing: border-box;
-  border: 1px solid color-mix(in srgb, var(--coach-teal) 32%, var(--border) 40%, var(--bg-elevated) 28%);
-  background: color-mix(in srgb, var(--coach-teal-bg) 80%, var(--bg-elevated) 20%);
+  border: 1px solid var(--coach-teal-border);
+  background: color-mix(in srgb, var(--coach-teal) 11%, var(--bg-elevated) 89%);
   border-radius: 0.38rem;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
@@ -6347,31 +6277,31 @@
   margin-inline: auto;
 }
 
-/* Inline discard slot: same border + fill as call-initiate / pass-tail */
+/* Inline discard slot: same border + fill as call-initiate / pass-box */
 .exposure-rack__slot--east-discard-slot .east-discard-staging.east-discard-staging--inline {
-  border: 1px solid color-mix(in srgb, var(--coach-teal) 32%, var(--border) 40%, var(--bg-elevated) 28%);
+  border: 1px solid var(--coach-teal-border);
   border-radius: 0.38rem;
-  background: color-mix(in srgb, var(--coach-teal-bg) 80%, var(--bg-elevated) 20%);
+  background: color-mix(in srgb, var(--coach-teal) 11%, var(--bg-elevated) 89%);
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .exposure-rack__slot--east-discard-slot .east-discard-staging.east-discard-staging--inline:has(.east-discard-staging__tile) {
   outline: none;
-  background: color-mix(in srgb, var(--coach-teal-bg) 72%, var(--bg-elevated) 28%);
+  background: color-mix(in srgb, var(--coach-teal) 14%, var(--bg-elevated) 86%);
 }
 
 .exposure-rack__slot--east-discard-slot
   .east-discard-staging.east-discard-staging--inline.east-discard-staging--over:not(:has(.east-discard-staging__tile)) {
   outline: none;
-  background: color-mix(in srgb, var(--coach-teal) 28%, var(--bg-elevated));
-  border-color: color-mix(in srgb, var(--coach-teal) 40%, var(--border) 34%, var(--bg-elevated) 26%);
+  background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
+  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
 }
 
 .exposure-rack__slot--east-discard-slot
   .east-discard-staging.east-discard-staging--inline.east-discard-staging--over:has(.east-discard-staging__tile) {
   box-shadow: none;
-  background: color-mix(in srgb, var(--coach-teal) 28%, var(--bg-elevated));
-  border-color: color-mix(in srgb, var(--coach-teal) 40%, var(--border) 34%, var(--bg-elevated) 26%);
+  background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
+  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
 }
 
 /* Hovering the staged tile should be visibly brighter than the base green slot. */
@@ -7578,7 +7508,7 @@
   width: var(--menu-btn-w);
   padding: 0 0.72rem;
   border-radius: 0.7rem;
-  border: 2px solid color-mix(in srgb, #fff 22%, #0a3a72);
+  border: none;
   background: #0f52ba;
   color: #fff;
   font-family: 'Figtree', var(--sans);
@@ -7591,11 +7521,11 @@
   box-shadow:
     2px 2px 4px color-mix(in srgb, #000 16%, transparent),
     0 1px 2px color-mix(in srgb, #000 10%, transparent);
-  transition: box-shadow 0.14s ease, background 0.14s ease, border-color 0.14s ease;
+  transition: box-shadow 0.14s ease, background 0.14s ease;
   z-index: 2;
 }
 
-/* Unopened Menu: keep hover flat — no extra border/ring. --open below owns the green active rim. */
+/* Unopened Menu: keep hover flat — no rim. */
 .app-bottom-center-controls__menu-btn:hover:not(:disabled):not(.app-bottom-center-controls__menu-btn--open) {
   box-shadow:
     2px 2px 4px color-mix(in srgb, #000 16%, transparent),
@@ -7604,10 +7534,10 @@
 
 .app-bottom-center-controls__menu-btn--open,
 .app-bottom-center-controls__menu-btn--open:hover:not(:disabled) {
-  border-color: #22c55e;
+  background: color-mix(in srgb, #22c55e 16%, #0f52ba);
   box-shadow:
     2px 2px 4px color-mix(in srgb, #000 16%, transparent),
-    0 0 0 2px color-mix(in srgb, #22c55e 50%, #16a34a 50%);
+    0 1px 2px color-mix(in srgb, #000 10%, transparent);
 }
 
 /* When Suggested list is open, keep the same face color; drop shadow for a flatter “pressed” read. */

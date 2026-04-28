@@ -6,14 +6,27 @@ import { tileDefsEqual } from './tileUtils'
 /** Clockwise from East: South, West, North, then East’s own exposures. */
 const JOKER_SWAP_SEAT_ORDER: BotSeat[] = ['South', 'West', 'North']
 
+/**
+ * Jokers in a meld can be exchanged for a natural that appears in the same meld (any order).
+ * Returns every joker in the meld when at least one non-joker matches `naturalDef`.
+ */
+function jokersSwappableWithNaturalInMeld(
+  tiles: TileInstance[],
+  naturalDef: TileDef,
+): TileInstance[] {
+  const hasMatchingNatural = tiles.some(
+    (t) => t.def.cat !== 'joker' && tileDefsEqual(t.def, naturalDef),
+  )
+  if (!hasMatchingNatural) return []
+  return tiles.filter((t) => t.def.cat === 'joker')
+}
+
 function firstSwappableJokerInMeld(
   tiles: TileInstance[],
   naturalDef: TileDef,
 ): TileInstance | null {
-  const rep = tiles.find((t) => t.def.cat !== 'joker')
-  if (!rep || !tileDefsEqual(rep.def, naturalDef)) return null
-  const joker = tiles.find((t) => t.def.cat === 'joker')
-  return joker ?? null
+  const jokers = jokersSwappableWithNaturalInMeld(tiles, naturalDef)
+  return jokers[0] ?? null
 }
 
 export type JokerSwapTargetPick = {
@@ -49,6 +62,22 @@ export function parseBotSeatSwapDropId(oid: string): BotSeat | null {
   return null
 }
 
+/** Drop-zone id prefix for East’s own exposure melds (same joker-swap as bot rows). */
+export const EAST_EXPOSURE_SWAP_PREFIX = 'east-exp-swap-'
+
+export function eastExposureSwapDropId(exposureIdx: number): string {
+  return `${EAST_EXPOSURE_SWAP_PREFIX}${exposureIdx}`
+}
+
+export function parseEastExposureSwapDropId(oid: string): number | null {
+  if (!oid.startsWith(EAST_EXPOSURE_SWAP_PREFIX)) return null
+  const n = parseInt(oid.slice(EAST_EXPOSURE_SWAP_PREFIX.length), 10)
+  return isNaN(n) ? null : n
+}
+
+/** Single drop id for the whole East exposure rail (swap anywhere on your own rack). */
+export const EAST_SEAT_SWAP_ID = 'east-joker-swap-seat'
+
 /**
  * Finds a swap target within a specific bot exposure meld (for drag-to-exposure).
  * Returns null if the exposure has no joker or the natural tile doesn't match.
@@ -63,6 +92,31 @@ export function findJokerSwapTargetAtExposure(
   const joker = firstSwappableJokerInMeld(exp.tiles, naturalDef)
   if (!joker) return null
   return { rack: 'bot', exposureIdx, jokerTileId: joker.id }
+}
+
+/** Redeem a joker in your own (East) exposure. */
+export function findJokerSwapTargetAtEastExposure(
+  eastExposures: EastExposure[],
+  exposureIdx: number,
+  naturalDef: TileDef,
+): JokerSwapTargetPick | null {
+  const exp = eastExposures[exposureIdx]
+  if (!exp) return null
+  const joker = firstSwappableJokerInMeld(exp.tiles, naturalDef)
+  if (!joker) return null
+  return { rack: 'east', exposureIdx, jokerTileId: joker.id }
+}
+
+/** First legal joker swap on your own rack (seat-wide drop). */
+export function findJokerSwapTargetInEastRack(
+  eastExposures: EastExposure[],
+  naturalDef: TileDef,
+): JokerSwapTargetPick | null {
+  for (let i = 0; i < eastExposures.length; i++) {
+    const p = findJokerSwapTargetAtEastExposure(eastExposures, i, naturalDef)
+    if (p) return p
+  }
+  return null
 }
 
 /** Finds the first legal joker swap target in a specific bot seat's exposures. */
@@ -102,4 +156,79 @@ export function findNextJokerSwapTarget(
     if (joker) return { rack: 'east', exposureIdx: ei, jokerTileId: joker.id }
   }
   return null
+}
+
+function uniqueNaturalDefs(tiles: TileInstance[]): TileDef[] {
+  const out: TileDef[] = []
+  for (const t of tiles) {
+    if (t.def.cat === 'joker') continue
+    if (out.some((d) => tileDefsEqual(d, t.def))) continue
+    out.push(t.def)
+  }
+  return out
+}
+
+/**
+ * Inverse of `collectSwappableJokerTileIds`: every East hand tile id whose def matches a
+ * natural already present in some meld that also contains a joker (bot rows and your own
+ * East exposures). These are the rack tiles you could trade for an exposed joker.
+ *
+ * `pendingDiscard` — tile staged in the discard tray (out of `hand`) is included so the joker
+ * train stays on it until the discard is committed.
+ */
+export function collectHandTileIdsSwappableForJokers(
+  hand: TileInstance[],
+  botExposures: BotExposure[],
+  eastExposures: EastExposure[],
+  pendingDiscard?: TileInstance | null,
+): Set<string> {
+  const ids = new Set<string>()
+
+  const addIfSwappable = (tile: TileInstance) => {
+    if (tile.def.cat === 'joker') return
+    const swappable =
+      botExposures.some(
+        (exp) => jokersSwappableWithNaturalInMeld(exp.tiles, tile.def).length > 0,
+      ) ||
+      eastExposures.some(
+        (exp) => jokersSwappableWithNaturalInMeld(exp.tiles, tile.def).length > 0,
+      )
+    if (swappable) ids.add(tile.id)
+  }
+
+  for (const handTile of hand) addIfSwappable(handTile)
+  if (pendingDiscard) addIfSwappable(pendingDiscard)
+  return ids
+}
+
+/**
+ * Every exposed joker tile id the player can currently redeem: for each unique natural
+ * in hand (and staged East discard, if not a joker), any meld that contains both that
+ * natural and a joker (in any order) — bot rows and your own East exposures.
+ */
+export function collectSwappableJokerTileIds(
+  hand: TileInstance[],
+  pendingEastDiscard: TileInstance | null,
+  botExposures: BotExposure[],
+  eastExposures: EastExposure[],
+): Set<string> {
+  const fromPlayer: TileInstance[] = hand.filter((t) => t.def.cat !== 'joker')
+  if (pendingEastDiscard && pendingEastDiscard.def.cat !== 'joker') {
+    fromPlayer.push(pendingEastDiscard)
+  }
+  const defs = uniqueNaturalDefs(fromPlayer)
+  const ids = new Set<string>()
+  for (const naturalDef of defs) {
+    for (const exp of botExposures) {
+      for (const joker of jokersSwappableWithNaturalInMeld(exp.tiles, naturalDef)) {
+        ids.add(joker.id)
+      }
+    }
+    for (const exp of eastExposures) {
+      for (const joker of jokersSwappableWithNaturalInMeld(exp.tiles, naturalDef)) {
+        ids.add(joker.id)
+      }
+    }
+  }
+  return ids
 }

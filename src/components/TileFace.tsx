@@ -18,6 +18,8 @@ type Props = {
    * for that cell (`patternLinePreviewSlots` + `cardInkTileSkin`).
    */
   cardInk?: CardInk
+  /** Your rack: tiny bottom-center mark for tiles just received (Charleston, draw, joker swap) until the turn ends. */
+  rackNewMark?: boolean
 }
 
 /**
@@ -55,7 +57,7 @@ function categoryClass(def: TileDef): string {
   }
 }
 
-export function TileFace({ def, elevated, rackSuitStacked, cardInk }: Props) {
+export function TileFace({ def, elevated, rackSuitStacked, cardInk, rackNewMark }: Props) {
   const skinClass =
     cardInk != null
       ? ['tile-face--card-skin', CARD_INK_TO_TILE_SKIN_CLASS[cardInk]].filter(Boolean).join(' ')
@@ -70,6 +72,7 @@ export function TileFace({ def, elevated, rackSuitStacked, cardInk }: Props) {
         skinClass,
         stackedSuit ? 'tile-face--rack-suit-stack' : '',
         elevated ? 'tile-face--elevated' : '',
+        rackNewMark ? 'tile-face--rack-new-mark' : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -87,6 +90,7 @@ export function TileFace({ def, elevated, rackSuitStacked, cardInk }: Props) {
       ) : (
         <span className="tile-face__glyph">{renderGlyphChars(tileShortLabel(def))}</span>
       )}
+      {rackNewMark ? <span className="tile-face__rack-new-dot" aria-hidden="true" /> : null}
     </div>
   )
 }

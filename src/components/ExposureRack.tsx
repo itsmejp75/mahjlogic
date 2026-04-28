@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import { useDndContext, useDraggable, useDroppable } from '@dnd-kit/core'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -6,11 +7,62 @@ import type { HandTileFlyInFrom } from '../mahjong/handTileFlyIn'
 import type { TileInstance } from '../mahjong/types'
 import { TileFace } from './TileFace'
 
+/** Returns the bounce class when the tile is one of the joker-swap hint targets. */
+function jokerSwapHintBounceClass(
+  bounceTileIds: ReadonlySet<string> | null | undefined,
+  tileId: string,
+): string {
+  return bounceTileIds?.has(tileId) ? 'exposure-rack__slot--joker-swap-hint-bounce' : ''
+}
+
 function findLastNonJokerIndex(tiles: TileInstance[]): number {
   for (let i = tiles.length - 1; i >= 0; i--) {
     if (tiles[i]!.def.cat !== 'joker') return i
   }
   return -1
+}
+
+/** Same drop-in as wall draw / `across` receive: from above the slot (`tile-drop-in` in App.css). */
+function ExposureRackFlyInTile({
+  tileId,
+  animate,
+  children,
+}: {
+  tileId: string
+  animate: boolean
+  children: ReactNode
+}) {
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const flyRef = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    if (!animate) return
+    const el = wrapRef.current
+    const flyEl = flyRef.current
+    if (!el || !flyEl) return
+    const tileRect = el.getBoundingClientRect()
+    const tileCx = tileRect.left + tileRect.width / 2
+    const tileCy = tileRect.top + tileRect.height / 2
+    const h = tileRect.height
+    const ox = tileCx
+    const oy = tileCy - h * 1.2
+    flyEl.style.setProperty('--draw-anim-dx', `${ox - tileCx}px`)
+    flyEl.style.setProperty('--draw-anim-dy', `${oy - tileCy}px`)
+  }, [animate, tileId])
+
+  return (
+    <div ref={wrapRef} className="exposure-rack__tile-fly-wrap">
+      <div
+        ref={flyRef}
+        className={
+          animate
+            ? 'exposure-rack__tile-fly sortable-tile-wrap__fly sortable-tile-wrap--just-drawn'
+            : 'exposure-rack__tile-fly sortable-tile-wrap__fly'
+        }
+      >
+        {children}
+      </div>
+    </div>
+  )
 }
 
 function orderMeldTilesForDisplay(tiles: TileInstance[]): TileInstance[] {
@@ -87,6 +139,11 @@ export type MeldGroup = {
    * return them to their hand (call-staging phase). Called with the tile's id.
    */
   onTileClick?: (tileId: string) => void
+  /**
+   * During east-discard before the player's next discard, tap the meld to re-enter call-staging
+   * and add/remove hand tiles in the claim (the called tile stays fixed after staging resumes).
+   */
+  onAmendCallMeld?: () => void
 }
 
 /** A staged call tile that participates in the shared SortableContext so hand + exposure animate like Charleston/pass. */
@@ -97,7 +154,10 @@ function SortableStagedSlot({
   onTileClick,
   stackSuitTiles,
   suggestBestIds,
+  suggestedTileGuide,
+  botJokerBorderMenuOn,
   suppressDim,
+  jokerSwapHintBounceTileIds = null,
 }: {
   tile: TileInstance
   gi: number
@@ -105,7 +165,10 @@ function SortableStagedSlot({
   onTileClick: (id: string) => void
   stackSuitTiles: boolean
   suggestBestIds: ReadonlySet<string> | null
+  suggestedTileGuide: ExposureSuggestedTileGuide | null
+  botJokerBorderMenuOn: boolean | undefined
   suppressDim: boolean
+  jokerSwapHintBounceTileIds?: ReadonlySet<string> | null
 }) {
   const { active } = useDndContext()
   const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({
@@ -125,8 +188,16 @@ function SortableStagedSlot({
     zIndex: isDragging ? 2 : undefined,
   }
   const isJoker = tile.def.cat === 'joker'
-  const isBest = !!suggestBestIds && suggestBestIds.has(tile.id)
-  const suggestDim = !suppressDim && !!suggestBestIds && !isBest
+  const isBest = slotIsSuggestBest(
+    isJoker,
+    tile.id,
+    suggestBestIds,
+    suggestedTileGuide,
+    botJokerBorderMenuOn,
+  )
+  // Jokers stay lit when a suggested line is focused — they substitute for any tile so dimming
+  // them would falsely imply they don't help. Same rule applies in every meld branch below.
+  const suggestDim = !suppressDim && !!suggestBestIds && !isBest && !isJoker
   return (
     <div
       ref={setNodeRef}
@@ -139,6 +210,7 @@ function SortableStagedSlot({
         isJoker ? 'exposure-rack__slot--joker' : '',
         isBest ? 'exposure-rack__slot--suggest-best' : '',
         suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
+        jokerSwapHintBounceClass(jokerSwapHintBounceTileIds, tile.id),
       ]
         .filter(Boolean)
         .join(' ')}
@@ -155,19 +227,28 @@ function DroppableMeldSlots({
   meld,
   gi,
   suggestBestIds,
+  suggestedTileGuide,
+  botJokerBorderMenuOn,
   suppressDim,
   highlightCalledTile,
   stackSuitTiles,
+  flyInTileIds,
+  jokerSwapHintBounceTileIds = null,
 }: {
   meld: MeldGroup
   gi: number
   suggestBestIds: ReadonlySet<string> | null
+  suggestedTileGuide: ExposureSuggestedTileGuide | null
+  botJokerBorderMenuOn: boolean | undefined
   suppressDim: boolean
   highlightCalledTile: boolean
   stackSuitTiles: boolean
+  flyInTileIds: ReadonlySet<string> | null | undefined
+  jokerSwapHintBounceTileIds?: ReadonlySet<string> | null
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: meld.dropZoneId! })
   const ordered = orderMeldForRack(meld)
+  const onAmend = meld.onAmendCallMeld
   return (
     <div
       ref={setNodeRef}
@@ -182,8 +263,15 @@ function DroppableMeldSlots({
       {ordered.map((tile) => {
         const isCalled = highlightCalledTile && meld.calledTileId === tile.id
         const isJoker = tile.def.cat === 'joker'
-        const isBest = !!suggestBestIds && suggestBestIds.has(tile.id)
-        const suggestDim = !suppressDim && !!suggestBestIds && !isBest
+        const isBest = slotIsSuggestBest(
+          isJoker,
+          tile.id,
+          suggestBestIds,
+          suggestedTileGuide,
+          botJokerBorderMenuOn,
+        )
+        const suggestDim = !suppressDim && !!suggestBestIds && !isBest && !isJoker
+        const flyIn = !!flyInTileIds?.has(tile.id)
         return (
           <div
             key={tile.id}
@@ -194,12 +282,28 @@ function DroppableMeldSlots({
               isJoker ? 'exposure-rack__slot--joker' : '',
               isBest ? 'exposure-rack__slot--suggest-best' : '',
               suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
+              onAmend ? 'exposure-rack__slot--call-amendable' : '',
+              jokerSwapHintBounceClass(jokerSwapHintBounceTileIds, tile.id),
             ]
               .filter(Boolean)
               .join(' ')}
             role="listitem"
+            onClick={
+              onAmend
+                ? (e) => {
+                    e.stopPropagation()
+                    onAmend()
+                  }
+                : undefined
+            }
           >
-            <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
+            {flyIn ? (
+              <ExposureRackFlyInTile tileId={tile.id} animate>
+                <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
+              </ExposureRackFlyInTile>
+            ) : (
+              <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
+            )}
           </div>
         )
       })}
@@ -209,6 +313,30 @@ function DroppableMeldSlots({
 
 export type ExposureSuggestedTileGuide = {
   bestIds: ReadonlySet<string>
+}
+
+/**
+ * White focus ring (suggest-best) per slot:
+ * - Non-jokers: ring when the tile id is in `bestIds` (suggested hand focus for this rack).
+ * - Jokers on the player's (East) rack: only when the id is in `bestIds` (same as before).
+ * - Jokers on bot exposure racks: when `botJokerBorderMenuOn` is set — if true, always; if false, only
+ *   while a suggested hand is focused for this panel (`suggestedTileGuide` non-null).
+ *   Omitted for East: bot-specific behavior stays default.
+ */
+function slotIsSuggestBest(
+  isJoker: boolean,
+  tileId: string,
+  bestIds: ReadonlySet<string> | null | undefined,
+  suggestedTileGuide: ExposureSuggestedTileGuide | null,
+  botJokerBorderMenuOn: boolean | undefined,
+): boolean {
+  if (!isJoker) {
+    return !!bestIds?.has(tileId)
+  }
+  if (botJokerBorderMenuOn === undefined) {
+    return !!bestIds?.has(tileId)
+  }
+  return botJokerBorderMenuOn || suggestedTileGuide != null
 }
 
 type Props = {
@@ -265,6 +393,11 @@ type Props = {
   trailingSuffix?: ReactNode
   /** Extra classes on the rack row (e.g. `exposure-rack--charleston-pass` for fixed tile-height row). */
   className?: string
+  /**
+   * Tile ids that just appeared on this rack (e.g. new bot claim): one-shot drop-in from above,
+   * same easing as a wall-draw tile. Omit for East / Charleston racks.
+   */
+  flyInTileIds?: ReadonlySet<string> | null
   /** Same semantics as `SortableHand` — highlights tiles that count toward the focused suggested line. */
   suggestedTileGuide?: ExposureSuggestedTileGuide | null
   /**
@@ -283,6 +416,13 @@ type Props = {
    * Use for the player's own East exposure tray so its tile format matches the hand.
    */
   stackSuitTiles?: boolean
+  /**
+   * When set, this rack is a bot-exposure row: joker `suggest-best` rings follow the Menu setting
+   * and optional suggested-hand focus. Omit for East. See `slotIsSuggestBest` above.
+   */
+  botJokerBorderMenuOn?: boolean
+  /** Joker swap hint: ids of exposure tiles (jokers) to dock-bounce because they can be redeemed. */
+  jokerSwapHintBounceTileIds?: ReadonlySet<string> | null
 }
 
 export function ExposureRack({
@@ -307,15 +447,28 @@ export function ExposureRack({
   highlightCalledTile = false,
   firstEmptyOverride = null,
   stackSuitTiles = false,
+  flyInTileIds = null,
+  botJokerBorderMenuOn,
+  jokerSwapHintBounceTileIds = null,
 }: Props) {
   const totalExposed = melds.reduce((n, m) => n + m.tiles.length, 0)
   const tailReserved = reserveTrailingSlots + (reserveLastSlotForDiscard ? 1 : 0)
   const emptyCount = Math.max(0, slotCount - totalExposed - suffixSlotCount - tailReserved)
 
   const gLast = suggestedTileGuide
-  const lastSlotIsBest = lastSlotTile && gLast ? gLast.bestIds.has(lastSlotTile.id) : false
-  const lastSlotSuggestDim = !!(lastSlotTile && gLast && !suppressDim && !lastSlotIsBest)
+  const lastSlotIsBest = lastSlotTile
+    ? slotIsSuggestBest(
+        lastSlotTile.def.cat === 'joker',
+        lastSlotTile.id,
+        gLast?.bestIds,
+        gLast,
+        undefined,
+      )
+    : false
   const lastSlotJoker = lastSlotTile?.def.cat === 'joker'
+  // Bot’s incoming discard always stays lit in this slot — player needs full visibility while
+  // deciding to call or ignore (matches the “Ignore / Call” affordance on the action row).
+  const lastSlotSuggestDim = false
 
   return (
     <div
@@ -336,9 +489,13 @@ export function ExposureRack({
               meld={meld}
               gi={gi}
               suggestBestIds={suggestedTileGuide?.bestIds ?? null}
+              suggestedTileGuide={suggestedTileGuide}
+              botJokerBorderMenuOn={botJokerBorderMenuOn}
               suppressDim={suppressDim}
               highlightCalledTile={highlightCalledTile}
               stackSuitTiles={stackSuitTiles}
+              flyInTileIds={flyInTileIds}
+              jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
             />
           )
         }
@@ -350,8 +507,8 @@ export function ExposureRack({
             if (isCalled) {
               const g = suggestedTileGuide
               const isJoker = tile.def.cat === 'joker'
-              const isBest = !!g && g.bestIds.has(tile.id)
-              const suggestDim = !suppressDim && !!g && !isBest
+              const isBest = slotIsSuggestBest(isJoker, tile.id, g?.bestIds, g, botJokerBorderMenuOn)
+              const suggestDim = !suppressDim && !!g && !isBest && !isJoker
               // Called tile is locked — render as a static (non-draggable) slot
               return (
                 <div
@@ -364,6 +521,7 @@ export function ExposureRack({
                     isJoker ? 'exposure-rack__slot--joker' : '',
                     isBest ? 'exposure-rack__slot--suggest-best' : '',
                     suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
+                    jokerSwapHintBounceClass(jokerSwapHintBounceTileIds, tile.id),
                   ]
                     .filter(Boolean)
                     .join(' ')}
@@ -382,8 +540,53 @@ export function ExposureRack({
                 onTileClick={handler}
                 stackSuitTiles={stackSuitTiles}
                 suggestBestIds={suggestedTileGuide?.bestIds ?? null}
+                suggestedTileGuide={suggestedTileGuide}
+                botJokerBorderMenuOn={botJokerBorderMenuOn}
                 suppressDim={suppressDim}
+                jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
               />
+            )
+          })
+        }
+        if (meld.onAmendCallMeld) {
+          const goAmend = meld.onAmendCallMeld
+          return ordered.map((tile) => {
+            const isCalled = highlightCalledTile && meld.calledTileId === tile.id
+            const isJoker = tile.def.cat === 'joker'
+            const g = suggestedTileGuide
+            const isBest = slotIsSuggestBest(isJoker, tile.id, g?.bestIds, g, botJokerBorderMenuOn)
+            const suggestDim = !suppressDim && !!g && !isBest && !isJoker
+            const flyIn = !!flyInTileIds?.has(tile.id)
+            return (
+              <div
+                key={tile.id}
+                data-tile-id={tile.id}
+                className={[
+                  'exposure-rack__slot',
+                  'exposure-rack__slot--call-amendable',
+                  gi > 0 && ordered[0]?.id === tile.id ? 'exposure-rack__slot--meld-start' : '',
+                  isCalled ? 'exposure-rack__slot--called' : '',
+                  isJoker ? 'exposure-rack__slot--joker' : '',
+                  isBest ? 'exposure-rack__slot--suggest-best' : '',
+                  suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
+                  jokerSwapHintBounceClass(jokerSwapHintBounceTileIds, tile.id),
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                role="listitem"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  goAmend()
+                }}
+              >
+                {flyIn ? (
+                  <ExposureRackFlyInTile tileId={tile.id} animate>
+                    <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
+                  </ExposureRackFlyInTile>
+                ) : (
+                  <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
+                )}
+              </div>
             )
           })
         }
@@ -391,8 +594,9 @@ export function ExposureRack({
           const isCalled = highlightCalledTile && meld.calledTileId === tile.id
           const isJoker = tile.def.cat === 'joker'
           const g = suggestedTileGuide
-          const isBest = !!g && g.bestIds.has(tile.id)
-          const suggestDim = !suppressDim && !!g && !isBest
+          const isBest = slotIsSuggestBest(isJoker, tile.id, g?.bestIds, g, botJokerBorderMenuOn)
+          const suggestDim = !suppressDim && !!g && !isBest && !isJoker
+          const flyIn = !!flyInTileIds?.has(tile.id)
           return (
             <div
               key={tile.id}
@@ -404,12 +608,19 @@ export function ExposureRack({
                 isJoker ? 'exposure-rack__slot--joker' : '',
                 isBest ? 'exposure-rack__slot--suggest-best' : '',
                 suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
+                jokerSwapHintBounceClass(jokerSwapHintBounceTileIds, tile.id),
               ]
                 .filter(Boolean)
                 .join(' ')}
               role="listitem"
             >
-              <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
+              {flyIn ? (
+                <ExposureRackFlyInTile tileId={tile.id} animate>
+                  <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
+                </ExposureRackFlyInTile>
+              ) : (
+                <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
+              )}
             </div>
           )
         })

@@ -39,9 +39,6 @@ function stripTileFaceCardInk(def: TileDef, ink: CardInk | undefined): CardInk |
   return ink
 }
 
-const SUGGESTED_HANDS_GUIDE =
-  "Click a line to focus it and highlight tiles you hold toward that line on your rack; click again to clear. Turn on Tiles to show the full winning hand (14 tiles toward Mah Jongg): your tiles where you have them, otherwise the natural tile still needed (no joker faces). When several lines tie on the same tiles-away score, extra strips stack under the first row — click a strip to focus that line. Double-click sorts best tiles left."
-
 const HIDE_CONCEALED_HANDS_STORAGE_KEY = 'mahjlogic:suggested-hands-hide-concealed'
 const UNCHECKED_SECTIONS_STORAGE_KEY = 'mahjlogic:suggested-hands-unchecked-sections'
 
@@ -404,9 +401,6 @@ export function SuggestedHandsPanel({
       {handsListOn || tilesGuideOn ? (
         <div className="hands-panel__content">
           <div className="hands-panel__list-column">
-            <p id="hands-suggest-hint" className="hands-panel__hint-sr-only">
-              {SUGGESTED_HANDS_GUIDE}
-            </p>
             <ol
               className={[
                 'hands-list',
@@ -417,7 +411,6 @@ export function SuggestedHandsPanel({
                 .filter(Boolean)
                 .join(' ')}
               id="hands-list"
-              aria-describedby="hands-suggest-hint"
             >
               {listRowsForHandsPanel.map((h) => {
                 const stripEntry = stripSlotRowsByKey.get(handEntryKey(h))
@@ -681,7 +674,7 @@ export function SuggestedHandsPanel({
           </div>
         </div>
       ) : (
-        <p className="hands-panel__list-off" id="hands-suggest-hint" role="status">
+        <p className="hands-panel__list-off" role="status">
           Hands list is hidden — turn on Hands or Tiles to see suggested lines.
         </p>
       )}

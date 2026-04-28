@@ -3,7 +3,15 @@ import type { CharlestonPhase } from './charleston'
 /** Viewport corner / top-center tiles fly in from (East seat = bottom of screen). */
 export type HandTileFlyInFrom = 'right' | 'across' | 'left'
 
-export type HandTileFlyIn = { ids: readonly string[]; from: HandTileFlyInFrom }
+export type HandTileFlyIn = {
+  ids: readonly string[]
+  from: HandTileFlyInFrom
+  /**
+   * When set, each id in `ids` (in **array order**, left→right on the rack) uses an extra
+   * `animation-delay` of `index * staggerWaveDelayMs` for a wave (opening deal).
+   */
+  staggerWaveDelayMs?: number
+}
 
 /** Charleston step just completed → direction incoming tiles "arrive" from on the table UI. */
 export function handTileFlyInFromCharlestonPhase(phase: CharlestonPhase): HandTileFlyInFrom | null {

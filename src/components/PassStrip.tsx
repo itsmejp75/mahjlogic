@@ -85,6 +85,8 @@ type Props = {
   suggestedBestIds?: ReadonlySet<string> | null
   /** Charleston: tiles fly out toward this direction while the pass is committing. */
   flyOutFrom?: PassStripFlyOutFrom | null
+  /** While this pass tile is registered in the hand sortable list (drag preview), hide its pass-strip sortable. */
+  hiddenSortableTileId?: string | null
 }
 
 export function PassStrip({
@@ -94,6 +96,7 @@ export function PassStrip({
   variant = 'boxed',
   suggestedBestIds,
   flyOutFrom = null,
+  hiddenSortableTileId = null,
 }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: PASS_BOX_ID })
   const inlineTail = variant === 'inlineTail'
@@ -118,14 +121,30 @@ export function PassStrip({
     >
       {slots.map((tile, index) =>
         tile ? (
-          <SortablePassTile
-            key={tile.id}
-            tile={tile}
-            inlineTail={inlineTail}
-            onTileClick={() => onPassTileClickReturn(index)}
-            suggestBest={!!suggestedBestIds?.has(tile.id)}
-            suggestDim={suggestedBestIds != null && !suggestedBestIds.has(tile.id)}
-          />
+          hiddenSortableTileId != null && tile.id === hiddenSortableTileId ? (
+            <div
+              key={tile.id}
+              className={
+                inlineTail
+                  ? 'exposure-rack__slot exposure-rack__slot--empty exposure-rack__slot--pass-tail'
+                  : 'pass-box__cell'
+              }
+              aria-hidden
+            />
+          ) : (
+            <SortablePassTile
+              key={tile.id}
+              tile={tile}
+              inlineTail={inlineTail}
+              onTileClick={() => onPassTileClickReturn(index)}
+              suggestBest={!!suggestedBestIds?.has(tile.id)}
+              suggestDim={
+                suggestedBestIds != null &&
+                !suggestedBestIds.has(tile.id) &&
+                tile.def.cat !== 'joker'
+              }
+            />
+          )
         ) : (
           <div
             key={`pass-empty-${index}`}
