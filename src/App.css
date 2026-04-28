@@ -6400,6 +6400,15 @@
   grid-column: 1;
   grid-row: 1;
   align-self: baseline;
+  /*
+   * The tile strip (row 2) is centered in the combined cell, so the first tile sits inset
+   * from the cell's left edge. Push the category text right by the same amount so each row's
+   * category lines up under the first tile of its strip.
+   * `--hands-sheet-cat-strip-inset` defaults to the cell's horizontal padding (≈ the strip's
+   * left empty space when the strip nearly fills the cell). Bump it if needed.
+   */
+  --hands-sheet-cat-strip-inset: var(--hands-sheet-cell-pad-x);
+  padding-inline-start: var(--hands-sheet-cat-strip-inset);
 }
 
 .hands-sheet--tilesHands .hands-sheet__cell--combined .hands-sheet__hand-title {
