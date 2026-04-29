@@ -567,37 +567,39 @@ export const PRACTICE_PATTERNS: PracticePattern[] = [
     id: 'consec-1', section: 'CONSECUTIVE RUNS', points: 25, closed: false, roughTarget: 14,
     title: '11 22 333 444 5555',
     titleSegments: [n('11 22 333 444 5555')],
-    // All one color = all one suit
+    // All one color = all one suit; printed ranks are consecutive-run offsets.
     groups: [
-      { kind: 'suit-locked', rankNeeds: [{rank:1,need:2},{rank:2,need:2},{rank:3,need:3},{rank:4,need:3},{rank:5,need:4}], dragonCount: 0 },
+      { kind: 'suit-locked-consec-multi', needs: [2, 2, 3, 3, 4], test: anySuit },
     ],
-    matches: suit(1, 2, 3, 4, 5),
+    matches: anySuit,
   },
   {
     id: 'consec-2', section: 'CONSECUTIVE RUNS', points: 25, closed: false, roughTarget: 14,
     title: '55 66 777 888 9999',
     titleSegments: [n('55 66 777 888 9999')],
-    // All one color = all one suit
+    // All one color = all one suit; printed ranks are consecutive-run offsets.
     groups: [
-      { kind: 'suit-locked', rankNeeds: [{rank:5,need:2},{rank:6,need:2},{rank:7,need:3},{rank:8,need:3},{rank:9,need:4}], dragonCount: 0 },
+      { kind: 'suit-locked-consec-multi', needs: [2, 2, 3, 3, 4], test: anySuit },
     ],
-    matches: suit(5, 6, 7, 8, 9),
+    matches: anySuit,
   },
   {
     id: 'consec-3', section: 'CONSECUTIVE RUNS', points: 25, closed: false, roughTarget: 14,
     title: '11 2222 3333 4444',
     titleSegments: [n('11 2222 3333 4444')],
-    // Card: entire line one ink = all one suit. Pair (11) no joker; kongs can use jokers.
+    // Card: entire line one ink = all one suit; printed ranks are consecutive-run offsets.
+    // Pair (first rank) no joker; kongs can use jokers.
     groups: [
-      { kind: 'suit-locked', rankNeeds: [{ rank: 1, need: 2 }, { rank: 2, need: 4 }, { rank: 3, need: 4 }, { rank: 4, need: 4 }], dragonCount: 0 },
+      { kind: 'suit-locked-consec-multi', needs: [2, 4, 4, 4], test: anySuit },
     ],
-    matches: suit(1, 2, 3, 4),
+    matches: anySuit,
   },
   {
     id: 'consec-4', section: 'CONSECUTIVE RUNS', points: 25, closed: false, roughTarget: 14,
     title: '1111 222 3333 DDD',
     titleSegments: [r('1111 222 '), g('3333 DDD')],
-    // Two card colors = two suits. Red slot: 1×4 + 2×3. Green slot: 3×4 + 3 matching dragons.
+    // Two card colors = two suits. Red slot: N×4 + (N+1)×3.
+    // Green slot: (N+2)×4 + 3 matching dragons.
     // Dragons MUST match the green suit's chosen tile type (bam→green, dot→soap, crak→red).
     groups: [
       {
@@ -607,9 +609,10 @@ export const PRACTICE_PATTERNS: PracticePattern[] = [
           [{ rank: 3, need: 4, canUseJoker: true }],
         ],
         colorGroupDragonCounts: [0, 3],
+        consecRanks: true,
       },
     ],
-    matches: or(suit(1, 2, 3), dragon),
+    matches: or(anySuit, dragon),
   },
   {
     id: 'consec-5', section: 'CONSECUTIVE RUNS', points: 25, closed: false, roughTarget: 14,
@@ -629,13 +632,13 @@ export const PRACTICE_PATTERNS: PracticePattern[] = [
         consecRanks: true,
       },
     ],
-    matches: or(flower, suit(1, 2), dragon),
+    matches: or(flower, anySuit, dragon),
   },
   {
     id: 'consec-6', section: 'CONSECUTIVE RUNS', points: 30, closed: false, roughTarget: 14,
     title: '1111 22 22 22 3333',
     titleSegments: [n('1111 '), r('22 '), n('22 '), g('22 '), n('3333')],
-    // Card: outer 1111/3333 + middle 22 black; other two 22 red / green (three suits).
+    // Card: outer NNNN/(N+2)×4 + middle (N+1) pairs in all three suits.
     groups: [
       {
         kind: 'suit-permute',
@@ -644,15 +647,17 @@ export const PRACTICE_PATTERNS: PracticePattern[] = [
           [{ rank: 2, need: 2 }],
           [{ rank: 2, need: 2 }],
         ],
+        consecRanks: true,
       },
     ],
-    matches: suit(1, 2, 3),
+    matches: anySuit,
   },
   {
     id: 'consec-7', section: 'CONSECUTIVE RUNS', points: 30, closed: false, roughTarget: 14,
     title: 'FF 11 222 33 444 DD',
     titleSegments: [fl('FF '), r('11 222 '), g('33 444 '), n('DD')],
-    // 2 flowers; red slot (suit A): 11+222; green slot (suit B): 33+444; DD = opposing/third suit dragon.
+    // 2 flowers; red slot (suit A): NN+(N+1)×3; green slot (suit B): (N+2) pair+(N+3)×3;
+    // DD = opposing/third suit dragon.
     groups: [
       { kind: 'fixed', need: 2, test: flower },
       {
@@ -662,9 +667,10 @@ export const PRACTICE_PATTERNS: PracticePattern[] = [
           [{ rank: 3, need: 2 }, { rank: 4, need: 3, canUseJoker: true }],
         ],
         trailingDragonCount: 2,
+        consecRanks: true,
       },
     ],
-    matches: or(flower, suit(1, 2, 3, 4), dragon),
+    matches: or(flower, anySuit, dragon),
   },
   {
     id: 'consec-8', section: 'CONSECUTIVE RUNS', points: 30, closed: true, roughTarget: 14,

@@ -743,26 +743,42 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
           : [1]
 
         let bestFill = 0
+        let bestExposureFill = -1
         let bestPerm: Suit[] = []
         let bestBase = 1
 
         for (const base of searchBases) {
           for (const perm of suitPermutations(n)) {
             let fill = 0
+            let exposureFill = 0
             for (let ci = 0; ci < n; ci++) {
               const s = perm[ci]!
               for (const sg of g.colorGroups[ci]!) {
                 const rank = sg.rank - 1 + base
-                const count = remaining.filter(
+                const matching = remaining.filter(
                   t => t.def.cat === 'suit' && t.def.suit === s && t.def.rank === rank
-                ).length
+                )
+                const count = matching.length
                 fill += Math.min(count, sg.need)
+                if (opts?.exposureTileIds) {
+                  exposureFill += Math.min(
+                    matching.filter((t) => opts.exposureTileIds!.has(t.id)).length,
+                    sg.need,
+                  )
+                }
               }
               // Count dragons of this slot's assigned suit (e.g. DDDD in a middle color slot).
               const dc = g.colorGroupDragonCounts?.[ci] ?? 0
               if (dc > 0) {
                 const drg = drgForSuitPerm[s]
-                fill += Math.min(remaining.filter(t => t.def.cat === 'dragon' && t.def.dragon === drg).length, dc)
+                const matching = remaining.filter(t => t.def.cat === 'dragon' && t.def.dragon === drg)
+                fill += Math.min(matching.length, dc)
+                if (opts?.exposureTileIds) {
+                  exposureFill += Math.min(
+                    matching.filter((t) => opts.exposureTileIds!.has(t.id)).length,
+                    dc,
+                  )
+                }
               }
             }
             // Count trailing dragons — suit not assigned to any slot in this permutation.
@@ -770,10 +786,22 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
               const trailSuit = SUITS.find(s => !perm.includes(s))
               if (trailSuit) {
                 const drg = drgForSuitPerm[trailSuit]
-                fill += Math.min(remaining.filter(t => t.def.cat === 'dragon' && t.def.dragon === drg).length, tdcPerm)
+                const matching = remaining.filter(t => t.def.cat === 'dragon' && t.def.dragon === drg)
+                fill += Math.min(matching.length, tdcPerm)
+                if (opts?.exposureTileIds) {
+                  exposureFill += Math.min(
+                    matching.filter((t) => opts.exposureTileIds!.has(t.id)).length,
+                    tdcPerm,
+                  )
+                }
               }
             }
-            if (fill > bestFill) { bestFill = fill; bestPerm = perm; bestBase = base }
+            if (exposureFill > bestExposureFill || (exposureFill === bestExposureFill && fill > bestFill)) {
+              bestFill = fill
+              bestExposureFill = exposureFill
+              bestPerm = perm
+              bestBase = base
+            }
           }
         }
 
@@ -1994,6 +2022,7 @@ function resolveStripTargetDefsForGreedyMatch(
           ? Array.from({ length: 9 - maxRankOff }, (_, i) => i + 1)
           : [1]
         let bestFill = 0
+        let bestExposureFill = -1
         let bestPerm: Suit[] = []
         let bestBase = 1
         for (const base of searchBases) {
@@ -2001,30 +2030,44 @@ function resolveStripTargetDefsForGreedyMatch(
             // Skip permutations that reuse a suit already committed by a suit-locked group.
             if (lockedSuits.size > 0 && perm.some((s) => lockedSuits.has(s))) continue
             let fill = 0
+            let exposureFill = 0
             for (let ci = 0; ci < n; ci++) {
               const s = perm[ci]!
               for (const sg of g.colorGroups[ci]) {
                 const rank = sg.rank - 1 + base
-                const count = rem.filter(
+                const matching = rem.filter(
                   (t) => t.def.cat === 'suit' && t.def.suit === s && t.def.rank === rank,
-                ).length
+                )
+                const count = matching.length
                 fill += Math.min(count, sg.need)
+                if (exposureTileIds) {
+                  exposureFill += Math.min(matching.filter((t) => exposureTileIds.has(t.id)).length, sg.need)
+                }
               }
               const dc = g.colorGroupDragonCounts?.[ci] ?? 0
               if (dc > 0) {
                 const drg = drgForSuitPerm[s]
-                fill += Math.min(rem.filter((t) => t.def.cat === 'dragon' && t.def.dragon === drg).length, dc)
+                const matching = rem.filter((t) => t.def.cat === 'dragon' && t.def.dragon === drg)
+                fill += Math.min(matching.length, dc)
+                if (exposureTileIds) {
+                  exposureFill += Math.min(matching.filter((t) => exposureTileIds.has(t.id)).length, dc)
+                }
               }
             }
             if (tdc > 0) {
               const remaining = SUITS.find((s) => !perm.includes(s))
               if (remaining) {
                 const drg = drgForSuitPerm[remaining]
-                fill += Math.min(rem.filter((t) => t.def.cat === 'dragon' && t.def.dragon === drg).length, tdc)
+                const matching = rem.filter((t) => t.def.cat === 'dragon' && t.def.dragon === drg)
+                fill += Math.min(matching.length, tdc)
+                if (exposureTileIds) {
+                  exposureFill += Math.min(matching.filter((t) => exposureTileIds.has(t.id)).length, tdc)
+                }
               }
             }
-            if (fill > bestFill) {
+            if (exposureFill > bestExposureFill || (exposureFill === bestExposureFill && fill > bestFill)) {
               bestFill = fill
+              bestExposureFill = exposureFill
               bestPerm = [...perm]
               bestBase = base
             }

@@ -40,7 +40,6 @@ function stripTileFaceCardInk(def: TileDef, ink: CardInk | undefined): CardInk |
 }
 
 const HIDE_CONCEALED_HANDS_STORAGE_KEY = 'mahjlogic:suggested-hands-hide-concealed'
-const UNCHECKED_SECTIONS_STORAGE_KEY = 'mahjlogic:suggested-hands-unchecked-sections'
 
 function readStoredHideConcealedHands(): boolean {
   try {
@@ -49,17 +48,6 @@ function readStoredHideConcealedHands(): boolean {
     return raw === '1'
   } catch {
     return false
-  }
-}
-
-function readStoredUncheckedSections(): Set<string> {
-  try {
-    const raw = localStorage.getItem(UNCHECKED_SECTIONS_STORAGE_KEY)
-    if (!raw) return new Set()
-    const parsed: unknown = JSON.parse(raw)
-    return Array.isArray(parsed) ? new Set(parsed as string[]) : new Set()
-  } catch {
-    return new Set()
   }
 }
 
@@ -95,6 +83,8 @@ type Props = {
   filterButtonPortal?: HTMLDivElement | null
   /** Tracks whether the containing popup is open — filter tray resets when popup closes. */
   isOpen?: boolean
+  /** Incremented by the parent when a new game starts; resets category filters to All. */
+  categoryResetEpoch?: number
 }
 
 export function SuggestedHandsPanel({
@@ -109,6 +99,7 @@ export function SuggestedHandsPanel({
   exposureTileIdsForSuggestedStrip,
   filterButtonPortal,
   isOpen,
+  categoryResetEpoch = 0,
 }: Props) {
   const sections = useMemo(() => {
     const uniq = Array.from(new Set(hands.map((h) => h.section)))
@@ -123,7 +114,7 @@ export function SuggestedHandsPanel({
     })
   }, [hands])
 
-  const [uncheckedSections, setUncheckedSections] = useState(readStoredUncheckedSections)
+  const [uncheckedSections, setUncheckedSections] = useState<Set<string>>(() => new Set())
   const checkedSections = useMemo(
     () => new Set(sections.filter((s) => !uncheckedSections.has(s))),
     [sections, uncheckedSections],
@@ -132,18 +123,22 @@ export function SuggestedHandsPanel({
   const [filterTrayOpen, setFilterTrayOpen] = useState(false)
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  useEffect(() => {
+    if (sections.length === 0) return
+    if (checkedSections.size > 0) return
+    setUncheckedSections(new Set())
+  }, [sections, checkedSections])
+
+  useEffect(() => {
+    setUncheckedSections(new Set())
+  }, [categoryResetEpoch])
+
   // Reset filter tray whenever the popup is closed
   useEffect(() => {
     if (!isOpen) setFilterTrayOpen(false)
   }, [isOpen])
 
   const allSelected = sections.length > 0 && checkedSections.size === sections.length
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(UNCHECKED_SECTIONS_STORAGE_KEY, JSON.stringify([...uncheckedSections]))
-    } catch { /* ignore */ }
-  }, [uncheckedSections])
 
   useEffect(() => {
     try {

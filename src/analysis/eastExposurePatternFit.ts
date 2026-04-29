@@ -70,6 +70,8 @@ export function tileInstancesWithClaimMeldJokersResolved(
       valid = nonJ.every((t) => t.def.cat === 'wind' && t.def.wind === f.wind)
     } else if (f.cat === 'dragon') {
       valid = nonJ.every((t) => t.def.cat === 'dragon' && t.def.dragon === f.dragon)
+    } else if (f.cat === 'flower') {
+      valid = nonJ.every((t) => t.def.cat === 'flower')
     }
     if (!valid) continue
     for (const t of exp.tiles) {
@@ -125,6 +127,7 @@ function normalizeExposureTiles(exposures: ReadonlyArray<{ tiles: TileInstance[]
     }
     if (f.cat === 'flower') {
       for (const t of nonJ) out.push(t.def)
+      for (let j = 0; j < jokers.length; j++) out.push(f)
     }
   }
   return out
@@ -256,6 +259,23 @@ function suitCountTriples(total: number): [number, number, number][] {
 function branchesForConsec(g: Extract<PatternGroup, { kind: 'consec' }>): Map<string, number>[] {
   const out: Map<string, number>[] = []
   for (let r = 1; r <= 8; r++) {
+    if (g.opposingSuits) {
+      for (const s1 of SUITS) {
+        for (const s2 of SUITS) {
+          if (s1 === s2) continue
+          const d1: TileDef = { cat: 'suit', suit: s1, rank: r }
+          const d2: TileDef = { cat: 'suit', suit: s2, rank: r + 1 }
+          if (!g.test(d1) || !g.test(d2)) continue
+          out.push(
+            new Map([
+              [keyFromDef(d1), g.need1],
+              [keyFromDef(d2), g.need2],
+            ]),
+          )
+        }
+      }
+      continue
+    }
     for (const p1 of suitCountTriples(g.need1)) {
       for (const p2 of suitCountTriples(g.need2)) {
         const m = new Map<string, number>()
@@ -338,16 +358,33 @@ function branchesSuitPermute(
 ): Map<string, number>[] {
   const n = g.colorGroups.length
   const out: Map<string, number>[] = []
+  const maxRankOff =
+    Math.max(...g.colorGroups.flatMap((cg) => cg.map((sg) => sg.rank))) - 1
+  const searchBases = g.consecRanks
+    ? Array.from({ length: 9 - maxRankOff }, (_, i) => i + 1)
+    : [1]
   for (const perm of suitPermutations(n)) {
-    const m = new Map<string, number>()
-    for (let ci = 0; ci < n; ci++) {
-      const s = perm[ci]!
-      for (const sg of g.colorGroups[ci]!) {
-        const def: TileDef = { cat: 'suit', suit: s, rank: sg.rank }
-        inc(m, keyFromDef(def), sg.need)
+    for (const base of searchBases) {
+      const m = new Map<string, number>()
+      for (let ci = 0; ci < n; ci++) {
+        const s = perm[ci]!
+        for (const sg of g.colorGroups[ci]!) {
+          const rank = g.consecRanks ? sg.rank - 1 + base : sg.rank
+          const def: TileDef = { cat: 'suit', suit: s, rank }
+          inc(m, keyFromDef(def), sg.need)
+        }
+        const dragonCount = g.colorGroupDragonCounts?.[ci] ?? 0
+        if (dragonCount > 0) {
+          inc(m, `d:${dragonForSuit(s)}`, dragonCount)
+        }
       }
+      const trailingDragonCount = g.trailingDragonCount ?? 0
+      if (trailingDragonCount > 0) {
+        const trailSuit = SUITS.find((s) => !perm.includes(s))
+        if (trailSuit) inc(m, `d:${dragonForSuit(trailSuit)}`, trailingDragonCount)
+      }
+      out.push(m)
     }
-    out.push(m)
   }
   return out
 }

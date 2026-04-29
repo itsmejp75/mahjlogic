@@ -1023,8 +1023,8 @@
   /* Paired with focus / suggest-best: soft inner light (dim counterpart, “up and out” vs sunken). */
   --suggest-highlight-inset-shadow: inset 0 0 0.5rem color-mix(in srgb, #fff 24%, transparent),
     inset 0 0 0 1px color-mix(in srgb, #fff 28%, transparent);
-  /* Joker swap hint: wait after hand / exposure tile is in place before dock bounce (see keyframes). */
-  --joker-swap-hint-bounce-delay: 1s;
+  /* Joker swap hint: wait from turn start (hint active) before dock bounce (see keyframes). */
+  --joker-swap-hint-bounce-delay: 500ms;
 }
 
 /* Tile graphics: menu presets (override --tg-* only) */
@@ -1595,7 +1595,7 @@
 
   Single shared keyframe + duration so the swappable hand tile and the redeemable
   exposed jokers bounce in unison (same tempo, same time, exactly 3 bounces).   After
-  a tile is in place, `var(--joker-swap-hint-bounce-delay)` passes before the bounce loop starts
+  the hint applies, `var(--joker-swap-hint-bounce-delay)` passes before the bounce loop starts
   (hand fly + bot exposure; longhand `animation-*` so delay is never misparsed).
 
   Apply the animation on inner wrappers (.tile-face on rack slots; .sortable-tile-wrap__fly
@@ -1625,9 +1625,9 @@
   animation-name: joker-swap-hint-dock-bounce;
   animation-duration: 1.7s;
   animation-timing-function: ease-in-out;
-  animation-delay: var(--joker-swap-hint-bounce-delay, 1s);
+  animation-delay: var(--joker-swap-hint-bounce-delay, 500ms);
   animation-iteration-count: 4;
-  animation-fill-mode: both;
+  animation-fill-mode: none;
   will-change: transform;
 }
 
@@ -3797,6 +3797,19 @@
   height: 100%;
 }
 
+.drag-overlay-meld {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--rack-tile-gap);
+  cursor: grabbing;
+  touch-action: none;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.55));
+}
+
+.drag-overlay-meld .drag-overlay-tile {
+  filter: none;
+}
+
 .pass-strip__tile-wrap {
   cursor: grab;
   touch-action: none;
@@ -3861,6 +3874,13 @@
   -webkit-tap-highlight-color: transparent;
   /* Transform transition comes from dnd `useSortable`’s `transition` inline (see
      `SortableTile`) so it doesn’t stack with @dnd-kit’s layout animation + FLIP. */
+}
+
+/* Joker redeemed into the hand: same bottom-up path as call staging; clip so the approach does not
+   paint outside the rack bank (avoids a “double tile” look against the action bar). */
+.sortable-tile-wrap--joker-swap-fly-clip {
+  overflow: hidden;
+  border-radius: 0.35rem;
 }
 
 /* Suppress browser default focus ring on tile wraps — the --selected class provides its own ring. */
@@ -7264,6 +7284,21 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
+}
+
+.exposure-rack__meld-sortable {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--rack-tile-gap);
+  touch-action: none;
+  cursor: grab;
+}
+
+.exposure-rack__meld-sortable--dragging {
+  cursor: grabbing;
 }
 
 /* Inline call-action buttons (Kong / Quint / Done) — tile-face sized, inside a normal slot. */

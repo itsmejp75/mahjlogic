@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { useLayoutEffect, useRef } from 'react'
 import { useDndContext, useDraggable, useDroppable } from '@dnd-kit/core'
-import { useSortable } from '@dnd-kit/sortable'
+import { SortableContext, rectSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { HandTileFlyInFrom } from '../mahjong/handTileFlyIn'
 import type { TileInstance } from '../mahjong/types'
@@ -162,9 +162,52 @@ function orderMeldForRack(meld: MeldGroup): TileInstance[] {
   return [called, ...orderMeldTilesForDisplay(rest)]
 }
 
+function SortableMeldGroup({ id, children }: { id: string; children: ReactNode }) {
+  const { active } = useDndContext()
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({
+    id,
+    animateLayoutChanges: () => false,
+  })
+  const translate = transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined
+  const style: CSSProperties = {
+    // Melds can have different widths; dnd-kit's full transform may include scale,
+    // which makes the locked tiles blur/resize. Move the meld as one rigid block.
+    transform: translate,
+    transition:
+      isDragging
+        ? 'none'
+        : active
+          ? 'transform 0.14s cubic-bezier(0.2, 0, 0.2, 1)'
+          : 'none',
+    // DragOverlay carries the visible meld while dragging; hide the source copy like main-rack tiles
+    // so variable-width meld swaps never show overlapping ghosts.
+    opacity: isDragging ? 0 : undefined,
+    zIndex: isDragging ? 8 : undefined,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={[
+        'exposure-rack__meld-sortable',
+        isDragging ? 'exposure-rack__meld-sortable--dragging' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      {...listeners}
+      {...attributes}
+    >
+      {children}
+    </div>
+  )
+}
+
 export type MeldGroup = {
   tiles: TileInstance[]
   calledTileId?: string
+  /** When provided, the entire committed meld drags/reorders as one group. */
+  sortableMeldId?: string
   /** When provided, renders this meld as a DnD drop zone with the given id. */
   dropZoneId?: string
   /**
@@ -557,6 +600,9 @@ export function ExposureRack({
   // Bot’s incoming discard always stays lit in this slot — player needs full visibility while
   // deciding to call or ignore (matches the “Ignore / Call” affordance on the action row).
   const lastSlotSuggestDim = false
+  const sortableMeldIds = melds
+    .map((meld) => meld.sortableMeldId)
+    .filter((id): id is string => id != null)
 
   return (
     <div
@@ -569,11 +615,19 @@ export function ExposureRack({
           {watermark}
         </div>
       ) : null}
+      <SortableContext items={sortableMeldIds} strategy={rectSortingStrategy}>
       {melds.map((meld, gi) => {
+        const wrapMeldContent = (content: ReactNode) =>
+          meld.sortableMeldId ? (
+            <SortableMeldGroup key={meld.sortableMeldId} id={meld.sortableMeldId}>
+              {content}
+            </SortableMeldGroup>
+          ) : (
+            content
+          )
         if (meld.dropZoneId) {
-          return (
+          return wrapMeldContent(
             <DroppableMeldSlots
-              key={meld.dropZoneId}
               meld={meld}
               gi={gi}
               suggestBestIds={suggestedTileGuide?.bestIds ?? null}
@@ -586,7 +640,7 @@ export function ExposureRack({
               flyInFromRightTileIds={flyInFromRightTileIds}
               jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
               jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
-            />
+            />,
           )
         }
         const ordered = orderMeldForRack(meld)
@@ -677,7 +731,7 @@ export function ExposureRack({
         }
         if (meld.onAmendCallMeld) {
           const goAmend = meld.onAmendCallMeld
-          return ordered.map((tile) => {
+          return wrapMeldContent(ordered.map((tile) => {
             const isCalled = highlightCalledTile && meld.calledTileId === tile.id
             const isJoker = tile.def.cat === 'joker'
             const g = suggestedTileGuide
@@ -720,9 +774,9 @@ export function ExposureRack({
                 )}
               </div>
             )
-          })
+          }))
         }
-        return ordered.map((tile) => {
+        return wrapMeldContent(ordered.map((tile) => {
           const isCalled = highlightCalledTile && meld.calledTileId === tile.id
           const isJoker = tile.def.cat === 'joker'
           const g = suggestedTileGuide
@@ -760,8 +814,9 @@ export function ExposureRack({
               )}
             </div>
           )
-        })
+        }))
       })}
+      </SortableContext>
       {suffix}
       {Array.from({ length: emptyCount }, (_, i) => (
         i === 0 && firstEmptyOverride ? (

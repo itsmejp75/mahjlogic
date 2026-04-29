@@ -1,4 +1,4 @@
-import type { CSSProperties, RefObject } from 'react'
+import type { CSSProperties } from 'react'
 import { Fragment, useRef, useLayoutEffect, useEffect, useState } from 'react'
 import { useDndContext } from '@dnd-kit/core'
 import { useSortable } from '@dnd-kit/sortable'
@@ -19,7 +19,7 @@ function SortableTile({
   isHandFlyIn,
   handTileFlyIn,
   handFlyInWaveDelayMs,
-  drawAnimOriginRef,
+  drawInFromRackBottom,
   rackNewMark: rackNewMarkProp,
   onSelect,
   jokerSwapHintBounce = false,
@@ -41,8 +41,11 @@ function SortableTile({
   handTileFlyIn: HandTileFlyIn | null
   /** Per-tile `animation-delay` for opening-deal wave (ms); omit when no stagger. */
   handFlyInWaveDelayMs?: number
-  /** If set, the draw animation starts from this viewport position instead of above the tile’s rack slot. */
-  drawAnimOriginRef?: RefObject<{ x: number; y: number } | null>
+  /**
+   * When true with `isJustDrawn`, the tile animates up from below this rack slot (same vector as
+   * call tiles into the exposure row), not from the wall or pass direction.
+   */
+  drawInFromRackBottom?: boolean
   rackNewMark: boolean
   onSelect: (id: string) => void
   /** Joker swap hint: macOS-style dock bounce on naturals you can swap for an exposed joker. */
@@ -131,11 +134,11 @@ function SortableTile({
           oy = tileCy - h * 1.2
           break
       }
-    } else if (isJustDrawn && drawAnimOriginRef?.current) {
-      // Joker swap (or other) captured a pixel origin on the exposure rack.
-      ox = drawAnimOriginRef.current.x
-      oy = drawAnimOriginRef.current.y
-      drawAnimOriginRef.current = null
+    } else if (isJustDrawn && drawInFromRackBottom) {
+      // Joker swap: same “wave up” origin as call tiles into exposure (`ExposureRack` `flyOrigin="below"`).
+      const h = tileRect.height
+      ox = tileCx
+      oy = tileCy + h * 1.05
     } else if (isJustDrawn) {
       // Wall draw (no seat fly-in): drop in from above this tile’s slot — same vertical offset as `across` receive.
       const h = tileRect.height
@@ -153,7 +156,7 @@ function SortableTile({
     handTileFlyIn?.from,
     handFlyInIdsKey,
     tile.id,
-    drawAnimOriginRef,
+    drawInFromRackBottom,
   ])
 
   const flyStyle: CSSProperties | undefined =
@@ -165,6 +168,7 @@ function SortableTile({
       style={style}
       className={[
         'sortable-tile-wrap',
+        isJustDrawn && drawInFromRackBottom ? 'sortable-tile-wrap--joker-swap-fly-clip' : '',
         selected ? 'sortable-tile-wrap--selected' : '',
         charlestonGlow ? 'sortable-tile-wrap--charleston-new' : '',
         discardMode ? 'sortable-tile-wrap--discard-mode' : '',
@@ -187,6 +191,7 @@ function SortableTile({
         ref={flyInRef}
         className={[
           runFlyLayout ? 'sortable-tile-wrap__fly sortable-tile-wrap--just-drawn' : 'sortable-tile-wrap__fly',
+          runFlyLayout && isJustDrawn && drawInFromRackBottom ? 'exposure-rack__call-staging-fly-up' : '',
           jokerSwapHintBounce && !runFlyLayout ? 'sortable-tile-wrap__fly--joker-swap-hint-bounce' : '',
         ]
           .filter(Boolean)
@@ -243,6 +248,8 @@ type Props = {
   charlestonGlowTileIds?: ReadonlySet<string>
   /** Fly-in from table direction (Charleston receive, wall draw, Mah Jongg on discard). */
   handTileFlyIn?: HandTileFlyIn | null
+  /** Joker redeemed into the hand: that tile id animates up from below its rack slot. */
+  handJokerSwapFlyInFromBelowId?: string | null
   /** Suggested-hand guide: white inset ring only on tiles in `bestIds` (count toward the focused line). Other tiles stay full brightness. */
   suggestedTileGuide?: {
     bestIds: ReadonlySet<string>
@@ -258,8 +265,6 @@ type Props = {
    * Omitted = no extra mark.
    */
   rackNewMarkTileIds?: ReadonlySet<string> | null
-  /** When set, the next draw-in animation originates from this position (e.g. a joker swap source). */
-  drawAnimOriginRef?: RefObject<{ x: number; y: number } | null>
   /** When false, skip draw / Charleston / Mah Jongg fly-in. Default true. */
   animationsEnabled?: boolean
   /** Joker swap hint: ids of hand tiles to dock-bounce because they can redeem an exposed joker. */
@@ -288,12 +293,12 @@ export function SortableHand({
   highlightedTileId,
   charlestonGlowTileIds,
   handTileFlyIn = null,
+  handJokerSwapFlyInFromBelowId = null,
   suggestedTileGuide,
   discardMode = false,
   slotCount = 14,
   stagedForMeldIds,
   rackNewMarkTileIds = null,
-  drawAnimOriginRef,
   animationsEnabled = true,
   jokerSwapHintBounceTileIds = null,
   jokerSwapHintBounceEpoch = 0,
@@ -394,7 +399,7 @@ export function SortableHand({
                 isHandFlyIn={isHandFlyIn}
                 handTileFlyIn={handTileFlyIn}
                 handFlyInWaveDelayMs={handFlyInWaveDelayMs}
-                drawAnimOriginRef={justDrawnId === tile.id ? drawAnimOriginRef : undefined}
+                drawInFromRackBottom={handJokerSwapFlyInFromBelowId === tile.id}
                 rackNewMark={!!rackNewMarkTileIds?.has(tile.id)}
                 jokerSwapHintBounce={jokerSwapHintBounceTileIds?.has(tile.id) ?? false}
                 jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}

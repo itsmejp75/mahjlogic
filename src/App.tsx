@@ -169,6 +169,10 @@ const LS_KEY_JOKER_SWAP_HINT = 'mahjlogic.jokerSwapHintEnabled'
 /** Former “Joker Flash” preference; read once to seed `LS_KEY_JOKER_SWAP_HINT` if missing. */
 const LS_KEY_JOKER_FLASH_LEGACY = 'mahjlogic.jokerFlashEnabled'
 const JOKER_SWAP_HINT_LABEL = 'Joker swap hint'
+const JOKER_SWAP_HINT_BOUNCE_DELAY_MS = 500
+const JOKER_SWAP_HINT_BOUNCE_DURATION_MS = 1700
+/** The keyframe has returned to translateY(0) at 52%; the rest of the iteration is idle. */
+const JOKER_SWAP_HINT_BOUNCE_VISIBLE_MS = JOKER_SWAP_HINT_BOUNCE_DURATION_MS * 0.52
 
 /** Menu order: Prism first; Ivory (classic) last in the minimalist row. */
 const TILE_GRAPHICS = ['solid-color', 'dark', 'light', 'designer', 'bakelite', 'classic'] as const
@@ -368,6 +372,18 @@ type GameBlockingDialog =
   | { variant: 'discard-dead-warning'; rankInput: RankSuggestedHandsInput }
 
 const CALL_STAGING_DROP_ID = 'call-staging-meld-drop'
+const EAST_EXPOSURE_MELD_SORT_ID_PREFIX = 'east-exposure-meld:'
+
+function eastExposureMeldSortId(exposureIdx: number): string {
+  return `${EAST_EXPOSURE_MELD_SORT_ID_PREFIX}${exposureIdx}`
+}
+
+function parseEastExposureMeldSortId(id: string): number | null {
+  if (!id.startsWith(EAST_EXPOSURE_MELD_SORT_ID_PREFIX)) return null
+  const raw = id.slice(EAST_EXPOSURE_MELD_SORT_ID_PREFIX.length)
+  const parsed = Number(raw)
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : null
+}
 
 /**
  * First empty exposure cell while a bot discard is live — within 3 tile-widths the shell
@@ -669,6 +685,11 @@ type RoundState = {
    * Opening deal uses `from: 'across'` so every hand tile drops in from above its slot.
    */
   handTileFlyIn: HandTileFlyIn | null
+  /**
+   * One hand tile id: play the wall-draw keyframes from **below** that rack slot (same as call tiles
+   * into exposure). Set when a joker is redeemed from the table into your hand; cleared after the fly.
+   */
+  handJokerSwapFlyInFromBelowId: string | null
   /** Ids of hand tiles the player has selected to join the staged call meld (call-staging phase only). */
   stagedCallTileIds: string[]
   /**
@@ -677,10 +698,7 @@ type RoundState = {
    * and change non-called tiles. Cleared when East’s discard is committed.
    */
   callAmendableAfterClaimTileId: string | null
-  /**
-   * Bot whose discard was claimed, saved so re-opening the meld to amend restores
-   * `activeBotDiscard` + context. Cleared with `callAmendableAfterClaimTileId`.
-   */
+  /** Legacy call-amend fields kept null for older saved rounds. */
   callAmendFromBotIndex: 0 | 1 | 2 | null
   /** Non-null when a bot won by self-draw. Drives the bot-mahjong end screen. */
   botWin: { botIndex: 0 | 1 | 2 } | null
@@ -717,6 +735,7 @@ function createNewRound(): RoundState {
       from: 'across',
       staggerWaveDelayMs: 44,
     },
+    handJokerSwapFlyInFromBelowId: null,
     stagedCallTileIds: [],
     callAmendableAfterClaimTileId: null,
     callAmendFromBotIndex: null,
@@ -1161,6 +1180,7 @@ function applyEastNaturalForExposedJoker(
       pendingEastDiscardTile: pendingNext,
       drawnTileId: joker.id,
       handTileFlyIn: null,
+      handJokerSwapFlyInFromBelowId: joker.id,
       selectedHandTileId: null,
     })
   }
@@ -1182,6 +1202,7 @@ function applyEastNaturalForExposedJoker(
     pendingEastDiscardTile: pendingNext,
     drawnTileId: joker.id,
     handTileFlyIn: null,
+    handJokerSwapFlyInFromBelowId: joker.id,
     selectedHandTileId: null,
   })
 }
@@ -1870,44 +1891,11 @@ function previewAutoSelectedCallRankInput(
 }
 
 /**
- * During east-discard, tap the committed claim meld to return to call-staging: non-called tiles go
- * back to the hand; the called tile is the live bot discard again.
- */
-function applyReopenCallMeldForAmend(r: RoundState): RoundState {
-  if (r.mainPhase !== 'east-discard' || !r.callAmendableAfterClaimTileId) return r
-  const targetId = r.callAmendableAfterClaimTileId
-  const savedBot = r.callAmendFromBotIndex
-  const ei = r.eastExposures.findIndex((exp) => exp.calledTileId === targetId)
-  if (ei < 0) {
-    return { ...r, callAmendableAfterClaimTileId: null, callAmendFromBotIndex: null }
-  }
-  const exp = r.eastExposures[ei]!
-  const calledTile = exp.tiles.find((t) => t.id === exp.calledTileId)
-  if (!calledTile) {
-    return { ...r, callAmendableAfterClaimTileId: null, callAmendFromBotIndex: null }
-  }
-  const otherTiles = exp.tiles.filter((t) => t.id !== exp.calledTileId)
-  const eastNext = r.eastExposures.filter((_, i) => i !== ei)
-  const handNext = [...r.hand, ...otherTiles]
-  return {
-    ...r,
-    eastExposures: eastNext,
-    hand: handNext,
-    mainPhase: 'call-staging',
-    activeBotDiscard: calledTile,
-    activeBotIndex: savedBot,
-    stagedCallTileIds: otherTiles.map((t) => t.id),
-    callAmendableAfterClaimTileId: null,
-    callAmendFromBotIndex: null,
-  }
-}
-
-/**
  * Commit the staged meld: remove staged tiles from hand, add the exposure, return to east-discard;
  * or complete Mah Jongg on the live discard (0 staged = tile to hand only; 1 staged = pair exposure win).
  *
- * Training mode: an invalid meld (mismatched non-joker tiles) is committed anyway so the player can
- * tap to amend or sees a warning at discard time. Competition mode kills the hand on commit.
+ * Training mode: an invalid meld (mismatched non-joker tiles) is committed anyway so the player
+ * sees a warning at discard time. Competition mode kills the hand on commit.
  */
 function applyCommitStagedCall(
   r: RoundState,
@@ -1983,7 +1971,7 @@ function applyCommitStagedCall(
   if (stagedTiles.length < 2 || stagedTiles.length > 4) return r
   // Every staged hand tile must exactly match the called tile's def or be a joker. In competition
   // mode an invalid meld kills the hand immediately; training mode commits anyway so the player
-  // can tap the meld to amend (or sees a warning when they try to discard).
+  // sees a warning when they try to discard.
   const meldIsValid = stagedTiles.every(
     (t) => t.def.cat === 'joker' || tileDefsEqual(t.def, calledTile.def),
   )
@@ -2032,10 +2020,6 @@ function applyCommitStagedCall(
       playerWinMethod: { type: 'called-discard', botLabel },
     })
   }
-  const amendFromBot: 0 | 1 | 2 | null =
-    r.activeBotIndex === 0 || r.activeBotIndex === 1 || r.activeBotIndex === 2
-      ? r.activeBotIndex
-      : null
   return applyBotsJokerSwapsFromEast({
     ...r,
     hand: handNext,
@@ -2049,8 +2033,8 @@ function applyCommitStagedCall(
     drawnTileId: null,
     selectedHandTileId: null,
     stagedCallTileIds: [],
-    callAmendableAfterClaimTileId: calledTile.id,
-    callAmendFromBotIndex: amendFromBot,
+    callAmendableAfterClaimTileId: null,
+    callAmendFromBotIndex: null,
   })
 }
 
@@ -2131,6 +2115,7 @@ export default function App() {
   const [round, setRound] = useState<RoundState>(() => createNewRound())
   const [suggestedFocusHandKey, setSuggestedFocusHandKey] = useState<string | null>(null)
   const [suggestedPanelHandsOn, setSuggestedPanelHandsOn] = useState(false)
+  const [suggestedCategoryResetEpoch, setSuggestedCategoryResetEpoch] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuContainerRef = useRef<HTMLDivElement>(null)
   const botExposuresToolbarWellRef = useRef<HTMLDivElement>(null)
@@ -2801,8 +2786,8 @@ export default function App() {
     pendingEastDiscardTile,
     charlestonNewTileIds,
     handTileFlyIn,
+    handJokerSwapFlyInFromBelowId,
     stagedCallTileIds,
-    callAmendableAfterClaimTileId,
     botWin,
     playerWinMethod,
   } = round
@@ -2893,8 +2878,6 @@ export default function App() {
 
   /** Natural dragged into the joker swap slot (next to discards); tap Swap — not a discard. */
   const [pendingJokerSwapTileId, setPendingJokerSwapTileId] = useState<string | null>(null)
-  /** Captured viewport center of the joker's exposure slot, used to origin the draw-in animation. */
-  const drawAnimOriginRef = useRef<{ x: number; y: number } | null>(null)
   const gameModeRef = useRef<'training' | 'competition'>('training')
   const callInitiateBoxRef = useRef<HTMLDivElement | null>(null)
   const callInitiatePointerCleanup = useRef<(() => void) | null>(null)
@@ -2986,6 +2969,15 @@ export default function App() {
     return () => window.clearTimeout(t)
   }, [handTileFlyInKey])
 
+  useEffect(() => {
+    if (!handJokerSwapFlyInFromBelowId) return
+    const id = handJokerSwapFlyInFromBelowId
+    const t = window.setTimeout(() => {
+      setRound((r) => (r.handJokerSwapFlyInFromBelowId === id ? { ...r, handJokerSwapFlyInFromBelowId: null } : r))
+    }, 400)
+    return () => window.clearTimeout(t)
+  }, [handJokerSwapFlyInFromBelowId])
+
   const [botExposureFlyInTileIds, setBotExposureFlyInTileIds] = useState<ReadonlySet<string> | null>(
     null,
   )
@@ -3061,9 +3053,16 @@ export default function App() {
     return findNextJokerSwapTarget(botExposures, eastExposures, candidate.def)
   }, [pendingJokerSwapTileId, pendingEastDiscardTile, hand, botExposures, eastExposures])
 
-  /** Joker swap hint (dock-bounce): which hand naturals + exposed jokers can be swapped right now. */
-  const jokerSwapHintBounceIds = useMemo(() => {
-    if (!jokerSwapHintEnabled || !jokerSwapUiActive || !animationsEnabled) return null
+  /** Joker swap hint (dock-bounce): only starts during East's discard turn. */
+  const activeJokerSwapHintBounceIds = useMemo(() => {
+    if (
+      mainPhase !== 'east-discard' ||
+      !jokerSwapHintEnabled ||
+      !jokerSwapUiActive ||
+      !animationsEnabled
+    ) {
+      return null
+    }
     const hand_ = collectHandTileIdsSwappableForJokers(
       hand,
       botExposures,
@@ -3079,6 +3078,7 @@ export default function App() {
     if (hand_.size === 0 && jokers.size === 0) return null
     return { hand: hand_, jokers }
   }, [
+    mainPhase,
     jokerSwapHintEnabled,
     jokerSwapUiActive,
     animationsEnabled,
@@ -3087,6 +3087,62 @@ export default function App() {
     botExposures,
     eastExposures,
   ])
+
+  const [settlingJokerSwapHintBounceIds, setSettlingJokerSwapHintBounceIds] = useState<{
+    hand: ReadonlySet<string>
+    jokers: ReadonlySet<string>
+  } | null>(null)
+  const prevActiveJokerSwapHintBounceIdsRef = useRef<typeof activeJokerSwapHintBounceIds>(null)
+  const activeJokerSwapHintBounceStartedAtRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (activeJokerSwapHintBounceIds) {
+      prevActiveJokerSwapHintBounceIdsRef.current = activeJokerSwapHintBounceIds
+      if (activeJokerSwapHintBounceStartedAtRef.current == null) {
+        activeJokerSwapHintBounceStartedAtRef.current = performance.now()
+      }
+      setSettlingJokerSwapHintBounceIds(null)
+      return
+    }
+
+    const prior = prevActiveJokerSwapHintBounceIdsRef.current
+    if (!prior) {
+      activeJokerSwapHintBounceStartedAtRef.current = null
+      setSettlingJokerSwapHintBounceIds(null)
+      return
+    }
+
+    const startedAt = activeJokerSwapHintBounceStartedAtRef.current
+    const elapsed = startedAt == null ? Number.POSITIVE_INFINITY : performance.now() - startedAt
+    const afterDelay = elapsed - JOKER_SWAP_HINT_BOUNCE_DELAY_MS
+    const phase =
+      afterDelay >= 0
+        ? afterDelay % JOKER_SWAP_HINT_BOUNCE_DURATION_MS
+        : Number.POSITIVE_INFINITY
+    const settleMs =
+      phase < JOKER_SWAP_HINT_BOUNCE_VISIBLE_MS
+        ? JOKER_SWAP_HINT_BOUNCE_VISIBLE_MS - phase
+        : 0
+
+    if (settleMs <= 0) {
+      prevActiveJokerSwapHintBounceIdsRef.current = null
+      activeJokerSwapHintBounceStartedAtRef.current = null
+      setSettlingJokerSwapHintBounceIds(null)
+      return
+    }
+
+    setSettlingJokerSwapHintBounceIds(prior)
+    const t = window.setTimeout(() => {
+      if (prevActiveJokerSwapHintBounceIdsRef.current === prior) {
+        prevActiveJokerSwapHintBounceIdsRef.current = null
+      }
+      activeJokerSwapHintBounceStartedAtRef.current = null
+      setSettlingJokerSwapHintBounceIds((cur) => (cur === prior ? null : cur))
+    }, settleMs)
+    return () => window.clearTimeout(t)
+  }, [activeJokerSwapHintBounceIds])
+
+  const jokerSwapHintBounceIds = activeJokerSwapHintBounceIds ?? settlingJokerSwapHintBounceIds
 
   /** Increment when your turn starts again so the dock-bounce animation can replay if swap is still available. */
   const [jokerSwapHintBounceEpoch, setJokerSwapHintBounceEpoch] = useState(0)
@@ -3260,15 +3316,21 @@ export default function App() {
    * for distance / strip matching (NMJL) — do not use for `TileFace` (would draw the natural).
    */
   const rackForSuggestedPatternMatch = useMemo(
-    () =>
-      tileInstancesWithClaimMeldJokersResolved(
+    () => {
+      const exposureIds = new Set(eastExposures.flatMap((e) => e.tiles).map((t) => t.id))
+      const rack = tileInstancesWithClaimMeldJokersResolved(
         [
           ...hand,
           ...(pendingEastDiscardTile ? [pendingEastDiscardTile] : []),
           ...(passSlots.filter(Boolean) as TileInstance[]),
         ],
         eastExposures,
-      ),
+      )
+      // Focus/highlight matching should spend matching slots on locked exposure tiles before
+      // identical loose hand tiles. This matters after a bot redeems one of East's exposed jokers:
+      // the replacement natural in the exposure is now committed to that line.
+      return [...rack].sort((a, b) => Number(exposureIds.has(b.id)) - Number(exposureIds.has(a.id)))
+    },
     [hand, pendingEastDiscardTile, passSlots, eastExposures],
   )
 
@@ -3642,6 +3704,7 @@ export default function App() {
   )
 
   const [dragOverlayTile, setDragOverlayTile] = useState<TileInstance | null>(null)
+  const [dragOverlayMeldTiles, setDragOverlayMeldTiles] = useState<TileInstance[] | null>(null)
   const [dragOverlayRackSuitStacked, setDragOverlayRackSuitStacked] = useState(false)
   /** While dragging a Charleston pass tile over the hand, lift it into the hand sortable list so neighbours slide. */
   const [charlestonPassIntoHandPreview, setCharlestonPassIntoHandPreview] = useState<{
@@ -3657,6 +3720,14 @@ export default function App() {
   const tileDragCollisionDetection = useMemo<CollisionDetection>(
     () => (args) => {
       const aid = String(args.active.id)
+      if (parseEastExposureMeldSortId(aid) != null) {
+        const meldContainers = args.droppableContainers.filter(
+          (c) => parseEastExposureMeldSortId(String(c.id)) != null,
+        )
+        return meldContainers.length > 0
+          ? closestCenter({ ...args, droppableContainers: meldContainers })
+          : []
+      }
       const fromPassSlot = passSlots.some((s) => s?.id === aid)
       const fromStagedDiscard = pendingEastDiscardTile?.id === aid
       const hits = pointerWithin(args)
@@ -3776,10 +3847,19 @@ export default function App() {
         globalDragPointerCleanupRef.current = null
       }
       const id = String(e.active.id)
+      const exposureMeldIdx = parseEastExposureMeldSortId(id)
+      if (exposureMeldIdx != null) {
+        const exp = eastExposures[exposureMeldIdx]
+        setDragOverlayTile(null)
+        setDragOverlayMeldTiles(exp ? exp.tiles : null)
+        setDragOverlayRackSuitStacked(true)
+        return
+      }
       const fromHand = hand.find((t) => t.id === id)
       const fromLiveBotDiscard = activeBotDiscard?.id === id
       if (fromHand || fromLiveBotDiscard) {
         setDragOverlayTile(fromHand ?? activeBotDiscard ?? null)
+        setDragOverlayMeldTiles(null)
         setDragOverlayRackSuitStacked(true)
         if (charlestonDone && mainPhase === 'bot-turn' && activeBotDiscard) {
           const onMove = (ev: PointerEvent) => {
@@ -3804,19 +3884,31 @@ export default function App() {
       for (const s of passSlots) {
         if (s?.id === id) {
           setDragOverlayTile(s)
+          setDragOverlayMeldTiles(null)
           setDragOverlayRackSuitStacked(true)
           return
         }
       }
       if (pendingEastDiscardTile?.id === id) {
         setDragOverlayTile(pendingEastDiscardTile)
+        setDragOverlayMeldTiles(null)
         setDragOverlayRackSuitStacked(true)
         return
       }
       setDragOverlayTile(null)
+      setDragOverlayMeldTiles(null)
       setDragOverlayRackSuitStacked(false)
     },
-    [hand, passSlots, pendingEastDiscardTile, endCallInitiateTrack, charlestonDone, mainPhase, activeBotDiscard],
+    [
+      hand,
+      passSlots,
+      pendingEastDiscardTile,
+      endCallInitiateTrack,
+      charlestonDone,
+      mainPhase,
+      activeBotDiscard,
+      eastExposures,
+    ],
   )
 
   const onDragOver = useCallback(
@@ -3891,6 +3983,7 @@ export default function App() {
     setCharlestonPassIntoHandPreview(null)
     setEastDiscardIntoHandPreview(null)
     setDragOverlayTile(null)
+    setDragOverlayMeldTiles(null)
     setDragOverlayRackSuitStacked(false)
   }, [endCallInitiateTrack])
 
@@ -3910,11 +4003,13 @@ export default function App() {
     setCallRuleError(null)
     setBlockingDialog(null)
     setDragOverlayTile(null)
+    setDragOverlayMeldTiles(null)
     setDragOverlayRackSuitStacked(false)
     setCharlestonPassIntoHandPreview(null)
     setEastDiscardIntoHandPreview(null)
     setPassStripFlyOut(null)
     setSuggestedFocusHandKey(null)
+    setSuggestedCategoryResetEpoch((epoch) => epoch + 1)
     if (passStripFlyoutTimerRef.current) {
       clearTimeout(passStripFlyoutTimerRef.current)
       passStripFlyoutTimerRef.current = null
@@ -4250,14 +4345,6 @@ export default function App() {
     })
   }, [pushRound])
 
-  /** Reads the center of a tile's exposure slot from the DOM before state changes it away. */
-  const captureSwapOrigin = useCallback((jokerTileId: string) => {
-    const el = document.querySelector<HTMLElement>(`[data-tile-id="${jokerTileId}"]`)
-    if (!el) return
-    const r = el.getBoundingClientRect()
-    drawAnimOriginRef.current = { x: r.left + r.width / 2, y: r.top + r.height / 2 }
-  }, [])
-
   const executeJokerSwapFromSlot = useCallback(() => {
     if (!jokerSwapUiActive) {
       setBlockingDialog({
@@ -4286,7 +4373,6 @@ export default function App() {
       return
     }
     const pick = jokerSwapPick
-    captureSwapOrigin(pick.jokerTileId)
     setPendingJokerSwapTileId(null)
     pushRound((r) => applyEastNaturalForExposedJoker(r, { ...pick, eastTileId: pid }))
   }, [jokerSwapUiActive, pendingJokerSwapTileId, pendingEastDiscardTile, jokerSwapPick])
@@ -4495,6 +4581,23 @@ export default function App() {
         if (!over) return
         const oid = String(over.id)
 
+        const exposureFromIdx = parseEastExposureMeldSortId(aid)
+        const exposureToIdx = parseEastExposureMeldSortId(oid)
+        if (exposureFromIdx != null && exposureToIdx != null) {
+          if (exposureFromIdx !== exposureToIdx) {
+            pushRound((r) => {
+              if (exposureFromIdx >= r.eastExposures.length || exposureToIdx >= r.eastExposures.length) {
+                return r
+              }
+              return {
+                ...r,
+                eastExposures: arrayMove(r.eastExposures, exposureFromIdx, exposureToIdx),
+              }
+            })
+          }
+          return
+        }
+
         if (oid === CALL_INITIATE_FIRST_SLOT_ID) {
           if (hand.some((t) => t.id === aid) || activeBotDiscard?.id === aid) {
             initiateCall()
@@ -4576,7 +4679,6 @@ export default function App() {
               if (seat) pick = findJokerSwapTargetAtSeat(r.botExposures, seat, natural.def)
             }
             if (!pick) return r
-            captureSwapOrigin(pick.jokerTileId)
             return applyEastNaturalForExposedJoker(r, { ...pick, eastTileId: aid })
           })
           return
@@ -4688,6 +4790,7 @@ export default function App() {
         endCallInitiateTrack()
         globalDragPointerCleanupRef.current?.()
         setDragOverlayTile(null)
+        setDragOverlayMeldTiles(null)
         setDragOverlayRackSuitStacked(false)
         setCharlestonPassIntoHandPreview(null)
         setEastDiscardIntoHandPreview(null)
@@ -5203,7 +5306,7 @@ export default function App() {
                 <p id="game-blocking-error-body" className="charleston-error-dialog__body">
                   {blockingDialog.variant === 'call-exposure-dead-warning'
                     ? 'Calling this tile would expose a meld that does not fit any remaining playable hand on the card. If you proceed, your hand will be officially dead and the game will end immediately.'
-                    : 'Your current exposures do not fit any remaining playable hand on the card. Tap an exposed meld to amend it, or proceed to end the game with a dead hand.'}
+                    : 'Your current exposures do not fit any remaining playable hand on the card. Proceeding will end the game with a dead hand.'}
                 </p>
                 <div className="charleston-error-dialog__actions charleston-error-dialog__actions--spread">
                   <button
@@ -5557,9 +5660,11 @@ export default function App() {
                                     highlightedTileId={drawnTileId}
                                     charlestonGlowTileIds={charlestonGlowTileIds ?? undefined}
                                     handTileFlyIn={animationsEnabled ? handTileFlyIn : null}
+                                    handJokerSwapFlyInFromBelowId={
+                                      animationsEnabled ? handJokerSwapFlyInFromBelowId : null
+                                    }
                                     suggestedTileGuide={suggestedTileGuide}
                                     discardMode={false}
-                                    drawAnimOriginRef={drawAnimOriginRef}
                                     animationsEnabled={animationsEnabled}
                                     rackNewMarkTileIds={rackNewMarkTileIds}
                                     jokerSwapHintBounceTileIds={jokerSwapHintBounceIds?.hand ?? null}
@@ -5685,13 +5790,10 @@ export default function App() {
                                   .map(({ exp, exposureIdx }) => ({
                                     tiles: exp.tiles,
                                     calledTileId: exp.calledTileId,
-                                    onAmendCallMeld:
-                                      mainPhase === 'east-discard' &&
-                                      callAmendableAfterClaimTileId != null &&
-                                      callAmendableAfterClaimTileId === exp.calledTileId
-                                        ? () => {
-                                            pushRound((round) => applyReopenCallMeldForAmend(round))
-                                          }
+                                    sortableMeldId:
+                                      (mainPhase === 'east-discard' || mainPhase === 'bot-turn') &&
+                                      eastExposures.length > 1
+                                        ? eastExposureMeldSortId(exposureIdx)
                                         : undefined,
                                     dropZoneId:
                                       jokerSwapUiActive &&
@@ -5798,9 +5900,11 @@ export default function App() {
                                     highlightedTileId={drawnTileId}
                                     charlestonGlowTileIds={charlestonGlowTileIds ?? undefined}
                                     handTileFlyIn={animationsEnabled ? handTileFlyIn : null}
+                                    handJokerSwapFlyInFromBelowId={
+                                      animationsEnabled ? handJokerSwapFlyInFromBelowId : null
+                                    }
                                     suggestedTileGuide={suggestedTileGuide}
                                     discardMode={false}
-                                    drawAnimOriginRef={drawAnimOriginRef}
                                     animationsEnabled={animationsEnabled}
                                     rackNewMarkTileIds={rackNewMarkTileIds}
                                     jokerSwapHintBounceTileIds={jokerSwapHintBounceIds?.hand ?? null}
@@ -6249,6 +6353,7 @@ export default function App() {
                         exposureTileIdsForSuggestedStrip={suggestedHandsExposureTileIds}
                         filterButtonPortal={filterBtnPortalEl}
                         isOpen={suggestedPanelHandsOn}
+                        categoryResetEpoch={suggestedCategoryResetEpoch}
                       />
                       <div
                         className="suggested-hands-popup__right-edge"
@@ -6334,7 +6439,29 @@ export default function App() {
               </div>
             ) : null}
               <DragOverlay dropAnimation={null}>
-                {dragOverlayTile ? (
+                {dragOverlayMeldTiles ? (
+                  <div className="drag-overlay-meld">
+                    {dragOverlayMeldTiles.map((tile) => (
+                      <div
+                        key={tile.id}
+                        className={[
+                          'drag-overlay-tile',
+                          suggestedTileGuide?.bestIds.has(tile.id)
+                            ? 'sortable-tile-wrap--suggest-best'
+                            : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ')}
+                      >
+                        <TileFace
+                          def={tile.def}
+                          elevated
+                          rackSuitStacked={dragOverlayRackSuitStacked}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : dragOverlayTile ? (
                   <div
                     className={[
                       'drag-overlay-tile',
