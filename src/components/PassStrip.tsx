@@ -11,13 +11,11 @@ function SortablePassTile({
   onTileClick,
   inlineTail,
   suggestBest,
-  suggestDim,
 }: {
   tile: TileInstance
   onTileClick: () => void
   inlineTail: boolean
   suggestBest: boolean
-  suggestDim: boolean
 }) {
   const { active } = useDndContext()
   const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({
@@ -47,7 +45,6 @@ function SortablePassTile({
         'pass-strip__tile-wrap',
         isDragging ? 'pass-strip__tile-wrap--dragging' : '',
         suggestBest ? 'pass-strip__tile-wrap--suggest-best' : '',
-        suggestDim ? 'pass-strip__tile-wrap--suggest-dim' : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -69,7 +66,13 @@ function SortablePassTile({
   )
 }
 
-type PassStripFlyOutFrom = 'left' | 'right' | 'across'
+/** Charleston pass-strip exit direction before the exchange commits (`sendCharlestonPass`). */
+export type PassStripFlyOutFrom =
+  | 'left'
+  | 'right'
+  | 'across'
+  /** Courtesy pass only: tiles lift together out of the top of the pass strip / box. */
+  | 'courtesy-top'
 
 type Props = {
   slots: [TileInstance | null, TileInstance | null, TileInstance | null]
@@ -79,8 +82,8 @@ type Props = {
   /** `boxed` = separate gold pass box; `inlineTail` = last three exposure-style slots in the rack row. */
   variant?: 'boxed' | 'inlineTail'
   /**
-   * When set (suggested hand is focused), tiles in this set get the white inset ring; other tiles
-   * in the pass strip are dimmed — same idea as the hand rack and exposure tray.
+   * When set (suggested hand is focused), tiles in this set get the white inset ring. Pass-box
+   * tiles are not dimmed — they stay full brightness; only `suggestBest` adds the ring.
    */
   suggestedBestIds?: ReadonlySet<string> | null
   /** Charleston: tiles fly out toward this direction while the pass is committing. */
@@ -107,7 +110,9 @@ export function PassStrip({
         ? 'pass-strip-tail--fly-out pass-strip-tail--fly-out-left'
         : flyOutFrom === 'right'
           ? 'pass-strip-tail--fly-out pass-strip-tail--fly-out-right'
-          : 'pass-strip-tail--fly-out pass-strip-tail--fly-out-across'
+          : flyOutFrom === 'courtesy-top'
+            ? 'pass-strip-tail--fly-out pass-strip-tail--fly-out-courtesy-top'
+            : 'pass-strip-tail--fly-out pass-strip-tail--fly-out-across'
 
   const inner = (
     <div
@@ -138,11 +143,6 @@ export function PassStrip({
               inlineTail={inlineTail}
               onTileClick={() => onPassTileClickReturn(index)}
               suggestBest={!!suggestedBestIds?.has(tile.id)}
-              suggestDim={
-                suggestedBestIds != null &&
-                !suggestedBestIds.has(tile.id) &&
-                tile.def.cat !== 'joker'
-              }
             />
           )
         ) : (
@@ -182,7 +182,9 @@ export function PassStrip({
         ? 'pass-box--fly-out pass-box--fly-out-left'
         : flyOutFrom === 'right'
           ? 'pass-box--fly-out pass-box--fly-out-right'
-          : 'pass-box--fly-out pass-box--fly-out-across'
+          : flyOutFrom === 'courtesy-top'
+            ? 'pass-box--fly-out pass-box--fly-out-courtesy-top'
+            : 'pass-box--fly-out pass-box--fly-out-across'
 
   return (
     <div

@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, type ReactNode, type AnimationEvent } from 'react'
 
-/** New discard-tray cell: one-shot drop from above the slot (same `tile-drop-in` as hand / exposure). */
+/** New discard-tray cell: one-shot fly into the grid (`tile-drop-in`). */
 export function DiscardPileFlyInTile({
   tileId,
   animate,

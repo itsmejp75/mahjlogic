@@ -342,13 +342,13 @@
 .panel--hand .panel-hand-rack__hand-tray .hand-row {
   --rack-tile-w: calc(var(--hand-rack-tile-w) * var(--hand-rack-tile-scale));
   --rack-tile-h: calc(var(--hand-rack-tile-h) * var(--hand-rack-tile-scale));
-  /* Fill the hand bank and center the fixed 14-tile strip inside it. */
+  /* Fill the hand bank; tiles pack from the left inside the fixed 14-slot strip. */
   padding-inline: var(--hand-rack-tray-inset-inline);
   box-sizing: border-box;
   margin-left: 0;
   width: 100%;
   max-width: 100%;
-  justify-content: center;
+  justify-content: flex-start;
   flex-shrink: 0;
 }
 
@@ -423,7 +423,7 @@
   );
   letter-spacing: -0.03em;
   line-height: 1;
-  opacity: 0.25;
+  opacity: 0.75;
   pointer-events: none;
   user-select: none;
   white-space: nowrap;
@@ -845,8 +845,9 @@
   border: none;
   /*
    * Wall “heat”: red → orange → yellow → green top-to-bottom in a 4×-tall paint; the visible
-   * window slides with `--wall-t`. Between each former hard band, blend over 12.5% of the full
-   * gradient (half the button’s height in image space) so no sharp edge. Midpoints: `color-mix`.
+   * window slides with `--wall-t` once tiles leave the wall (see `.rack-bottom-wall--full`).
+   * Between each former hard band, blend over 12.5% of the full gradient (half the button’s height
+   * in image space) so no sharp edge. Midpoints: `color-mix`.
    */
   --wall-heat-yellow: #e6e338;
   --wall-heat-orange: #f28c1a;
@@ -872,6 +873,22 @@
   background-position: 0 calc(var(--wall-t, 1) * 100%);
   box-shadow: none;
   transition: background-position 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Opening wall (99 tiles): uniform green — gradient heat begins after the first tile is drawn/discarded. */
+.rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell.rack-bottom-wall--full {
+  background-image: none;
+  background-color: var(--card-ink-green);
+  background-size: auto;
+  background-position: 0 0;
+}
+
+/* Wall dry (0 tiles): full card red — the sliding gradient at `--wall-t: 0` still shows a sliver of warmer band in the window. */
+.rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell.rack-bottom-wall--empty {
+  background-image: none;
+  background-color: var(--card-ink-red);
+  background-size: auto;
+  background-position: 0 0;
 }
 
 .app-layout[data-animations='off'] .rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell {
@@ -1007,7 +1024,7 @@
   --suggest-highlight-inset-shadow: inset 0 0 0.5rem color-mix(in srgb, #fff 24%, transparent),
     inset 0 0 0 1px color-mix(in srgb, #fff 28%, transparent);
   /* Joker swap hint: wait after hand / exposure tile is in place before dock bounce (see keyframes). */
-  --joker-swap-hint-bounce-delay: 500ms;
+  --joker-swap-hint-bounce-delay: 1s;
 }
 
 /* Tile graphics: menu presets (override --tg-* only) */
@@ -1345,16 +1362,21 @@
 
 .app-layout[data-animations='off'] .exposure-rack__incoming-discard-fly--from-right,
 .app-layout[data-animations='off'] .exposure-rack__incoming-discard-fly--from-left,
-.app-layout[data-animations='off'] .exposure-rack__incoming-discard-fly--from-across {
+.app-layout[data-animations='off'] .exposure-rack__incoming-discard-fly--from-across,
+.app-layout[data-animations='off'] .exposure-rack__call-staging-fly-up {
   animation: none;
+  opacity: 1;
+  transform: none;
 }
 
 .app-layout[data-animations='off'] .pass-strip-tail--fly-out-left .pass-strip__tile-wrap,
 .app-layout[data-animations='off'] .pass-strip-tail--fly-out-right .pass-strip__tile-wrap,
 .app-layout[data-animations='off'] .pass-strip-tail--fly-out-across .pass-strip__tile-wrap,
+.app-layout[data-animations='off'] .pass-strip-tail--fly-out-courtesy-top .pass-strip__tile-wrap,
 .app-layout[data-animations='off'] .pass-box--fly-out-left .pass-strip__tile-wrap,
 .app-layout[data-animations='off'] .pass-box--fly-out-right .pass-strip__tile-wrap,
-.app-layout[data-animations='off'] .pass-box--fly-out-across .pass-strip__tile-wrap {
+.app-layout[data-animations='off'] .pass-box--fly-out-across .pass-strip__tile-wrap,
+.app-layout[data-animations='off'] .pass-box--fly-out-courtesy-top .pass-strip__tile-wrap {
   animation: none;
 }
 
@@ -1603,7 +1625,7 @@
   animation-name: joker-swap-hint-dock-bounce;
   animation-duration: 1.7s;
   animation-timing-function: ease-in-out;
-  animation-delay: var(--joker-swap-hint-bounce-delay, 500ms);
+  animation-delay: var(--joker-swap-hint-bounce-delay, 1s);
   animation-iteration-count: 4;
   animation-fill-mode: both;
   will-change: transform;
@@ -2325,6 +2347,20 @@
   font-size: var(--rack-control-label-fs);
   line-height: 1.08;
   letter-spacing: max(0.01em, calc(0.02em + 0.02rem));
+  /* Match global `.btn` drop shadow; lock so :hover / open don’t reflow the label */
+  box-shadow:
+    0 2px 4px color-mix(in srgb, #000 16%, transparent),
+    0 1px 2px color-mix(in srgb, #000 10%, transparent);
+  transform: none;
+}
+
+.panel--bot-exposures__toolbar-well
+  .app-bottom-center-controls
+  .suggested-hands-tab:hover:not(:disabled):not(.suggested-hands-tab--open) {
+  box-shadow:
+    0 2px 4px color-mix(in srgb, #000 16%, transparent),
+    0 1px 2px color-mix(in srgb, #000 10%, transparent);
+  transform: none;
 }
 
 .panel--bot-exposures__toolbar-well .app-menu-anchor .app-bottom-center-controls__menu-btn {
@@ -3148,7 +3184,7 @@
   background: #3a424d;
   color: #fff;
   box-shadow:
-    2px 2px 4px color-mix(in srgb, #000 16%, transparent),
+    0 2px 4px color-mix(in srgb, #000 16%, transparent),
     0 1px 2px color-mix(in srgb, #000 10%, transparent);
 }
 
@@ -3732,6 +3768,12 @@
   animation: charleston-pass-fly-out-across 0.3s ease-in forwards;
 }
 
+/* Courtesy pass: same vertical exit as Charleston across — tiles rise out of the strip toward West. */
+.pass-strip-tail--fly-out-courtesy-top .pass-strip__tile-wrap,
+.pass-box--fly-out-courtesy-top .pass-strip__tile-wrap {
+  animation: charleston-pass-fly-out-across 0.3s ease-in forwards;
+}
+
 .pass-box--fly-out {
   pointer-events: none;
 }
@@ -3834,6 +3876,23 @@
   flex-shrink: 0;
 }
 
+.hand-slot--collapse {
+  box-sizing: border-box;
+  width: calc(var(--rack-tile-w) + var(--player-rack-face-gap, var(--rack-tile-gap)));
+  height: var(--rack-tile-h);
+  flex: 0 0 calc(var(--rack-tile-w) + var(--player-rack-face-gap, var(--rack-tile-gap)));
+  margin-right: calc(-1 * var(--player-rack-face-gap, var(--rack-tile-gap)));
+  pointer-events: none;
+  animation: hand-slot-collapse 0.14s cubic-bezier(0.2, 0, 0.2, 1) forwards;
+}
+
+@keyframes hand-slot-collapse {
+  to {
+    width: 0;
+    flex-basis: 0;
+  }
+}
+
 .sortable-tile-wrap:active {
   cursor: grabbing;
 }
@@ -3843,11 +3902,12 @@
   outline-offset: 2px;
 }
 
+/* Charleston receives: “lit” = no suggest-dim only — no highlight ring here (it read as an extra
+   border). The focused suggested-hand ring comes solely from `.sortable-tile-wrap--suggest-best`
+   below (2px inset; wins when both classes are present). */
 .sortable-tile-wrap--charleston-new .tile-face {
-  /* Flat face: dim white inset ring on the edge — written through the highlight var so
-     `data-tile-graphics` themes (Autumn / Jewel / future) keep their material base shadow. */
-  --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
-  --tile-face-highlight-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.32);
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
 }
 
 /* Suggested-hand dim: uniform `::after` cover. Overlay is always present (opacity 0) so
@@ -3912,6 +3972,13 @@
   /* ~ match other tiles’ 38% black overlay in luminance (ring + J included). */
   --tile-face-suggest-dim-inset: var(--suggest-dim-inset-shadow);
   filter: brightness(0.64);
+}
+
+/* End-game overlays: default `inset: 0` on the dim layer is the padding box, so the face’s 1px border
+   stays undimmed. Pull `::after` out to the border box to match the visible tile edge. */
+.wall-game-dialog .mahjong-win__bots-review-tile .tile-face:not(.tile--joker)::after {
+  inset: calc(-1 * var(--rack-tile-face-bw));
+  border-radius: var(--tile-face-border-radius);
 }
 
 /* Post-game / wall-game modals: tile faces are much smaller than the main rack. The dim hairline
@@ -4013,6 +4080,11 @@
   z-index: 10;
 }
 
+/* Non-call exposure drop-ins use the shared `tile-drop-in`, but without overshoot. */
+.exposure-rack .exposure-rack__tile-fly.sortable-tile-wrap--just-drawn:not(.exposure-rack__call-staging-fly-up) {
+  animation: tile-drop-in 0.36s cubic-bezier(0.22, 0.7, 0.22, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sortable-tile-wrap__fly.sortable-tile-wrap--just-drawn {
     animation-delay: 0s !important;
@@ -4029,8 +4101,22 @@
   min-height: 0;
 }
 
+.exposure-rack__tile-fly-wrap--clip {
+  overflow: hidden;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .exposure-rack .exposure-rack__tile-fly-wrap .sortable-tile-wrap--just-drawn {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .exposure-rack .exposure-rack__tile-fly-wrap .exposure-rack__incoming-discard-fly--from-right {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .exposure-rack .exposure-rack__tile-fly-wrap .exposure-rack__call-staging-fly-up {
     animation: none;
     opacity: 1;
     transform: none;
@@ -4722,6 +4808,11 @@
 .wall-game-dialog__review .mahjong-win__bots-review-tile {
   --rack-tile-w: calc(var(--hand-rack-tile-w) * 0.35);
   --rack-tile-h: calc(var(--hand-rack-tile-h) * 0.35);
+}
+
+.wall-game-dialog--wall-seats .wall-game-dialog__review .mahjong-win__bots-review-tile {
+  --rack-tile-w: var(--wall-game-bots-tile-w);
+  --rack-tile-h: var(--wall-game-bots-tile-h);
 }
 
 .call-prompt__tile {
@@ -7647,7 +7738,7 @@
   overflow: visible;
 }
 
-/* Drop-in from above the grid cell (same `tile-drop-in` keyframes as hand / exposure). */
+/* Drop-in to the grid cell — from above by default; East’s staged discard supplies a measured origin (same `tile-drop-in`). */
 .discard-entry__fly-wrap {
   display: flex;
   align-items: center;
@@ -7714,6 +7805,92 @@
   font-size: 0.98rem;
   line-height: 1.4;
   color: var(--text-h);
+}
+
+.charleston-error-dialog--call-warning {
+  max-width: min(38rem, calc(100vw - 2rem));
+  padding: 1rem 1.2rem 1.15rem;
+  border-radius: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  background: var(--bg-elevated);
+  box-shadow:
+    var(--shadow, 0 8px 32px rgba(0, 0, 0, 0.28)),
+    0 0 0 1px color-mix(in srgb, var(--border) 50%, transparent);
+}
+
+.charleston-error-dialog--call-warning .charleston-error-dialog__message {
+  margin: 0 0 0.9rem;
+  color: var(--text-h);
+}
+
+.charleston-error-dialog--call-warning .btn--primary {
+  min-width: 7.5rem;
+  border: 1px solid color-mix(in srgb, #fff 22%, #1f242a);
+  border-radius: 0.45rem;
+  background: #3a424d;
+  color: #fff;
+  box-shadow: 0 1px 2px color-mix(in srgb, #000 28%, transparent);
+}
+
+.charleston-error-dialog--call-warning .btn--primary:hover:not(:disabled) {
+  border-color: color-mix(in srgb, #fff 28%, #1f2429);
+  background: color-mix(in srgb, #fff 7%, #3a424d);
+  color: #fff;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #fff 12%, transparent),
+    0 2px 6px color-mix(in srgb, #000 20%, transparent);
+}
+
+/*
+ * Dead-hand / illegal MJ / discard-dead confirmations — same elevated shell as menu modals
+ * (not coach felt + gold from --table).
+ */
+.charleston-error-dialog--blocking-neutral {
+  max-width: min(38rem, calc(100vw - 2rem));
+  padding: 1rem 1.2rem 1.15rem;
+  border-radius: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  background: var(--bg-elevated);
+  box-shadow:
+    var(--shadow, 0 8px 32px rgba(0, 0, 0, 0.28)),
+    0 0 0 1px color-mix(in srgb, var(--border) 50%, transparent);
+}
+
+.charleston-error-dialog--blocking-neutral .charleston-error-dialog__title {
+  margin: 0 0 0.65rem;
+  font-family: var(--sans);
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--text-h);
+  letter-spacing: normal;
+}
+
+.charleston-error-dialog--blocking-neutral .charleston-error-dialog__body {
+  margin: 0 0 1rem;
+  font-size: 0.92rem;
+  line-height: 1.48;
+  text-align: center;
+  color: var(--text);
+}
+
+.charleston-error-dialog--blocking-neutral .charleston-error-dialog__actions--spread .btn {
+  min-width: 7rem;
+  border: 1px solid color-mix(in srgb, #fff 22%, #1f242a);
+  border-radius: 0.45rem;
+  background: #3a424d;
+  color: #fff;
+  box-shadow: 0 1px 2px color-mix(in srgb, #000 28%, transparent);
+}
+
+.charleston-error-dialog--blocking-neutral .charleston-error-dialog__actions--spread .btn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, #fff 28%, #1f2429);
+  background: color-mix(in srgb, #fff 7%, #3a424d);
+  color: #fff;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #fff 12%, transparent),
+    0 2px 6px color-mix(in srgb, #000 20%, transparent);
 }
 
 .charleston-error-dialog__actions {
@@ -8036,6 +8213,16 @@
   justify-content: center;
 }
 
+/* Modal shells: no drag-to-select (avoids native blue text highlight on card lines / readouts). */
+.wall-game-overlay,
+.dead-hand-overlay,
+.charleston-error-overlay,
+.app-menu-modal-layer {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
 /* ── Wall Game overlay ── */
 .wall-game-overlay {
   position: fixed;
@@ -8071,6 +8258,67 @@
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   gap: 0.3rem;
+}
+
+/* Wall draw only: one column of seats, scroll inside the review (title + actions stay put). */
+.wall-game-dialog--wall-seats {
+  /* Same face size as right-column bot exposure racks (`.app-play-split` + `.panel--bot-exposures`). */
+  --bot-exposure-slot-scale: 1.05;
+  --bot-exposure-tile-scale: 0.94;
+  --bot-tile-w-ref: max(1rem, calc(
+    ((var(--app-viewport-inline, 100vw) - 2 * var(--app-h-pad)) / 2
+    - 2 * var(--hand-window-pad-inline)
+    - 13 * var(--rack-tile-gap)) / 14 * var(--bot-exposure-slot-scale)
+  ));
+  --bot-tile-h-ref: max(1.34rem, calc(var(--bot-tile-w-ref) * 1.3333));
+  --bot-tile-h-width-fit: calc(var(--bot-tile-h-ref) * var(--bot-exposure-tile-scale));
+  --bot-tile-h-height-fit: var(--bot-tile-h-width-fit);
+  --wall-game-bots-tile-h: min(var(--bot-tile-h-width-fit), var(--bot-tile-h-height-fit));
+  --wall-game-bots-tile-w: calc(var(--wall-game-bots-tile-h) / 1.3333);
+  width: 100%;
+  max-width: min(42rem, calc(100vw - 1rem));
+  height: min(90dvh, 56rem);
+  max-height: min(90dvh, 56rem);
+  padding: 0.9rem 0.85rem 0.8rem;
+  overflow: hidden;
+  gap: 0.4rem;
+}
+
+.wall-game-dialog--wall-seats .wall-game-dialog__review {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+}
+
+/* Center each seat’s header+rack as one block; text and tiles share the same left edge inside the block. */
+.wall-game-dialog--wall-seats .wall-game-dialog__review .mahjong-win__bots-review-card {
+  align-items: center;
+}
+
+.wall-game-dialog--wall-seats .wall-game-dialog__review .mahjong-win__bots-review-inner {
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+  box-sizing: border-box;
+  align-items: flex-start;
+}
+
+.wall-game-dialog--wall-seats .wall-game-dialog__review .mahjong-win__bots-review-title {
+  font-size: 1.02rem;
+}
+
+.wall-game-dialog--wall-seats .wall-game-dialog__review .mahjong-win__bots-review-header {
+  font-size: 1.15rem;
+  line-height: 1.38;
+}
+
+.wall-game-dialog--wall-seats .wall-game-dialog__review .mahjong-win__bots-review-seat,
+.wall-game-dialog--wall-seats .wall-game-dialog__review .mahjong-win__bots-review-away,
+.wall-game-dialog--wall-seats .wall-game-dialog__review .mahjong-win__bots-review-ref {
+  font-size: 1.15rem;
 }
 
 /* Player / bot Mah Jongg end screens: same shell as wall game, accent border from former mahjong win dialogs. */
@@ -8114,7 +8362,7 @@
   margin: 0 0 0.3rem;
 }
 
-/* Four seats: 2×2 so all fit without the dialog body scrolling in normal viewports. */
+/* All seats: 2×2 on wide viewports for Mah Jongg / bot win overlays. Wall Game uses `.wall-game-dialog--wall-seats` for a single column + wide racks. */
 .wall-game-dialog__review .mahjong-win__bots-review-list {
   display: grid;
   grid-template-columns: 1fr;
@@ -8129,6 +8377,11 @@
     grid-template-columns: 1fr 1fr;
     gap: 0.3rem 0.45rem;
   }
+
+  .wall-game-dialog--wall-seats .wall-game-dialog__review .mahjong-win__bots-review-list {
+    grid-template-columns: 1fr;
+    gap: 0.4rem 0.45rem;
+  }
 }
 
 .wall-game-dialog__review .mahjong-win__bots-review-card {
@@ -8139,20 +8392,23 @@
 }
 
 .wall-game-dialog__review .mahjong-win__bots-review-header {
-  font-size: 0.8rem;
-  line-height: 1.3;
+  font-size: 1.15rem;
+  line-height: 1.35;
   gap: 0.2rem 0.45rem;
 }
 
 .wall-game-dialog__review .mahjong-win__bots-review-seat,
 .wall-game-dialog__review .mahjong-win__bots-review-away,
 .wall-game-dialog__review .mahjong-win__bots-review-ref {
-  font-size: 0.8rem;
+  font-size: 1.15rem;
 }
 
+/* Colored card line + tied-line select: same type size as the seat/away row (dropdown list is UA-styled). */
 .wall-game-dialog__review .mahjong-win__bots-review-pattern,
 .wall-game-dialog__review .post-game-tied__select {
-  font-size: 0.78rem;
+  font-size: 1.15rem;
+  line-height: 1.35;
+  font-family: 'Figtree', var(--sans), system-ui, sans-serif;
 }
 
 .wall-game-dialog .mahjong-win__player-tiles {
@@ -8280,6 +8536,8 @@
   padding: 1.25rem 1.5rem;
   box-sizing: border-box;
   overflow-y: auto;
+  /* Avoid centered dialog + scrollbar appearing/disappearing “nudging” content sideways */
+  scrollbar-gutter: stable;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -8305,6 +8563,8 @@
   --app-menu-rim-hairline: color-mix(in srgb, #fff 22%, #1f242a);
   --app-menu-rim-active: #22c55e;
   --app-menu-rim-hover-bright: color-mix(in srgb, #fff 50%, #94a3b8 50%);
+  /* Space between menu rows / sections (slightly under one-third touch target height) */
+  --app-menu-body-gap: max(0.36rem, calc(var(--rack-action-touch-min-h) / 3.5));
 
   position: relative;
   z-index: 1;
@@ -8386,21 +8646,47 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
   padding: 0.85rem 1.2rem 1.15rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0;
+  /* Flex `gap` + some hosts: use sibling margins so toggle rows never stack/overlap */
+}
+.app-menu-modal__body > * + * {
+  margin-top: var(--app-menu-body-gap, max(0.36rem, calc(var(--rack-action-touch-min-h) / 3.5)));
+}
+
+/* Remember size + bot wins / animations / color / joker — one column so every row has the same gap */
+.app-menu-modal__body > .app-menu-modal__body-footer--settings-toggles {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  margin-top: auto;
+  /* ~30% tighter than the standard menu block gap */
+  gap: calc(0.7 * var(--app-menu-body-gap, max(0.36rem, calc(var(--rack-action-touch-min-h) / 3.5))));
+}
+
+/* Override global `.btn { transition: box-shadow }` inside the dialog — animating shadows is a common
+   cause of perceived sideways drift, especially beside a scrollable column. (Slider rows are excluded.) */
+.app-menu-modal .btn:not(.app-menu-tray__item--switch) {
+  transition:
+    border-color 0.14s ease,
+    background-color 0.14s ease,
+    color 0.14s ease,
+    opacity 0.14s ease;
 }
 
 .app-menu-modal__new-game {
   width: 100%;
-  margin-bottom: 0.1rem;
+  margin-bottom: 0;
 }
 
 /* Bot difficulty: sits under New Game — raised tray so the four options read as primary controls */
 .app-menu-modal__diff-block {
-  margin: 0.2rem 0 0.15rem;
-  padding: 0.5rem 0.65rem 0.6rem;
+  margin: 0;
+  padding: 0.4rem 0.55rem 0.5rem;
   border-radius: 0.55rem;
   border: 1px solid color-mix(in srgb, var(--border) 50%, var(--text-muted) 50%);
   background: color-mix(in srgb, var(--fg) 6.5%, var(--bg-elevated) 93.5%);
@@ -8411,7 +8697,7 @@
 }
 
 .app-menu-modal__diff-block .app-menu-modal__subhead {
-  margin: 0 0 0.4rem;
+  margin: 0 0 0.28rem;
   text-align: center;
   color: var(--text-h, var(--fg));
 }
@@ -8429,7 +8715,7 @@
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  margin: 0.05rem 0 0.32rem;
+  margin: 0.02rem 0 0.2rem;
 }
 
 .app-menu-modal__diff-block--tile-graphics .app-menu-modal__tile-graphics-category__line {
@@ -8553,18 +8839,16 @@
 }
 
 /* Game settings: same face as hand Sort (dark gray, white / near-white type) */
-.app-menu-modal .app-menu-tray__item {
+.app-menu-modal .app-menu-tray__item:not(.app-menu-tray__item--switch) {
   box-sizing: border-box;
   border: 1.5px solid var(--app-menu-rim-hairline, color-mix(in srgb, #fff 18%, #1f2429));
   background: var(--app-menu-sort-surface, #3a424d);
   color: #fff;
-  transition:
-    border-color 0.14s ease,
-    background 0.14s ease,
-    box-shadow 0.14s ease;
+  /* Don’t animate box-shadow — repaints during hover read as horizontal nudge next to scrollbar */
+  transition: border-color 0.14s ease, background-color 0.14s ease;
 }
 
-.app-menu-modal .app-menu-tray__item:disabled {
+.app-menu-modal .app-menu-tray__item:not(.app-menu-tray__item--switch):disabled {
   opacity: 0.52;
   filter: none;
 }
@@ -8581,28 +8865,50 @@
   box-shadow: 0 1px 0 color-mix(in srgb, #fff 8%, transparent);
 }
 
-/* Slider switches: no Sort-colored outer frame; track + thumb are the only chrome */
-.app-menu-modal .app-menu-tray__item--switch,
-.app-menu-modal .app-menu-tray__item--switch:hover:not(:disabled),
-.app-menu-modal .app-menu-tray__item--switch[aria-pressed='true'],
-.app-menu-modal .app-menu-tray__item--switch[aria-pressed='true']:hover:not(:disabled) {
-  position: relative;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
+/* Slider: the <button> is an invisible hit pad — only .app-menu-tray__toggle-slider paints (thumb moves).
+   No outer box, outline, radius, or .btn shadow on the host. Keyboard focus rings the pill only. */
+.app-menu-modal .app-menu-tray__item--switch.app-menu-modal__toggle {
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
   color: transparent;
-  padding: 0.2rem 0.15rem;
+  font-size: 0;
+  letter-spacing: 0;
+  line-height: 0;
+  text-transform: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
   min-width: 0;
+  min-height: 0;
+  width: max-content;
+  max-width: 100%;
+  height: auto;
   justify-content: center;
   align-items: center;
+  justify-self: start;
   filter: none;
+  outline: none;
   transition: none;
+  gap: 0;
+  cursor: pointer;
 }
-
-.app-menu-modal .app-menu-tray__item--switch:focus-visible {
+.app-menu-modal .app-menu-tray__item--switch.app-menu-modal__toggle:hover,
+.app-menu-modal .app-menu-tray__item--switch.app-menu-modal__toggle:active,
+.app-menu-modal .app-menu-tray__item--switch.app-menu-modal__toggle:focus,
+.app-menu-modal .app-menu-tray__item--switch.app-menu-modal__toggle:focus-visible {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none;
+  filter: none;
+  outline: none;
+}
+.app-menu-modal .app-menu-tray__item--switch.app-menu-modal__toggle:focus-visible .app-menu-tray__toggle-slider {
   outline: 2px solid #22c55e;
-  outline-offset: 3px;
-  border-radius: 0.5rem;
+  outline-offset: 2px;
 }
 
 /* Visually hidden “On / Off” for screen readers (label column carries the name). */
@@ -8678,7 +8984,7 @@
 }
 
 .app-menu-modal__section-rule {
-  margin: 0.2rem 0 0.15rem;
+  margin: 0;
 }
 
 .app-menu-modal__row {
@@ -8686,21 +8992,30 @@
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   justify-items: start;
+  align-content: center;
   column-gap: 0.9rem;
   min-width: 0;
+  box-sizing: border-box;
 }
 
 .app-menu-modal__row--toggle {
-  padding: 0.1rem 0;
+  flex-shrink: 0;
+  align-self: stretch;
+  width: 100%;
+  min-height: auto;
+  padding-block: 0.24rem;
+  contain: layout;
 }
 
 .app-menu-modal__label {
   font-size: var(--app-ui-control-fs, 0.9rem);
   font-weight: 500;
-  line-height: 1.35;
+  line-height: 1.3;
   text-align: left;
   color: var(--text-h, var(--fg));
   min-width: 0;
+  transform: none;
+  transition: none;
 }
 
 .app-menu-modal__toggle {
@@ -8712,12 +9027,13 @@
   justify-content: center;
 }
 
-.app-menu-modal__toggle.app-menu-tray__item--switch {
-  min-width: auto;
-  width: auto;
-  padding-left: 0.2rem;
-  padding-right: 0.2rem;
-  gap: 0;
+/* Row hovers must not move label or switch (some UAs repaint text on color transition) */
+.app-menu-modal__row--toggle:hover {
+  transform: none;
+}
+.app-menu-modal__row--toggle:hover .app-menu-modal__label {
+  transform: none;
+  color: var(--text-h, var(--fg));
 }
 
 .app-menu-modal__subhead {
@@ -8731,7 +9047,7 @@
 }
 
 .app-menu-modal__diff-row {
-  padding: 0.1rem 0 0.15rem;
+  padding: 0.02rem 0 0.08rem;
   justify-content: flex-end;
 }
 
@@ -8763,8 +9079,8 @@
 .app-menu-modal .app-menu-tray__item--toggle.app-menu-tray__item--switch {
   justify-content: center;
   gap: 0;
-  padding-left: 0.2rem;
-  padding-right: 0.2rem;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .app-menu-tray__toggle-label {
@@ -8841,7 +9157,7 @@
   font-size: max(0.8125rem, var(--app-ui-control-fs-xs));
   font-weight: 700;
   border-radius: 0.42rem;
-  transition: border-color 0.14s ease, background 0.14s ease, box-shadow 0.14s ease, transform 0.12s ease;
+  transition: border-color 0.14s ease, background-color 0.14s ease;
 }
 
 .app-menu-modal .app-menu-tray__diff-btn:not(.app-menu-tray__diff-btn--on) {
@@ -8905,26 +9221,30 @@
   letter-spacing: var(--btn-letter-spacing);
   cursor: pointer;
   isolation: isolate;
+  /* Same as `.btn`: symmetric horizontal shadow so label doesn’t “creep” left vs glow on hover */
   box-shadow:
-    2px 2px 4px color-mix(in srgb, #000 16%, transparent),
+    0 2px 4px color-mix(in srgb, #000 16%, transparent),
     0 1px 2px color-mix(in srgb, #000 10%, transparent);
   transition: box-shadow 0.14s ease, background 0.14s ease;
   z-index: 2;
+  transform: none;
 }
 
 /* Unopened Menu: keep hover flat — no rim. */
 .app-bottom-center-controls__menu-btn:hover:not(:disabled):not(.app-bottom-center-controls__menu-btn--open) {
   box-shadow:
-    2px 2px 4px color-mix(in srgb, #000 16%, transparent),
+    0 2px 4px color-mix(in srgb, #000 16%, transparent),
     0 1px 2px color-mix(in srgb, #000 10%, transparent);
+  transform: none;
 }
 
 .app-bottom-center-controls__menu-btn--open,
 .app-bottom-center-controls__menu-btn--open:hover:not(:disabled) {
   background: color-mix(in srgb, #22c55e 16%, #0f52ba);
   box-shadow:
-    2px 2px 4px color-mix(in srgb, #000 16%, transparent),
+    0 2px 4px color-mix(in srgb, #000 16%, transparent),
     0 1px 2px color-mix(in srgb, #000 10%, transparent);
+  transform: none;
 }
 
 /* When Suggested list is open, keep the same face color; drop shadow for a flatter “pressed” read. */

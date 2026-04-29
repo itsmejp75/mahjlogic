@@ -2117,6 +2117,47 @@ function resolveStripTargetDefsForGreedyMatch(
         }
         break
       }
+      case 'suit-locked-consec-multi': {
+        // QUINTS #1 etc.: same search as `computeGroupMatch` / tiles-away (defaults were all `bam`,
+        // so naturals in the *chosen* suit did not line up and rack highlights were wrong).
+        const rem = rackAfterPriorGroups(rack, usedMeta, gi)
+        const n = g.needs.length
+        const maxStart = 10 - n
+        let bestFill = 0
+        let bestSuit: Suit | null = null
+        let bestStart = -1
+        for (const s of SUITS) {
+          const byRank = new Map<number, number>()
+          for (const t of rem) {
+            if (t.def.cat === 'suit' && t.def.suit === s && g.test(t.def)) {
+              byRank.set(t.def.rank, (byRank.get(t.def.rank) ?? 0) + 1)
+            }
+          }
+          for (let r = 1; r <= maxStart; r++) {
+            let fill = 0
+            for (let i = 0; i < n; i++) {
+              fill += Math.min(byRank.get(r + i) ?? 0, g.needs[i]!)
+            }
+            if (fill > bestFill) {
+              bestFill = fill
+              bestSuit = s
+              bestStart = r
+            }
+          }
+        }
+        if (bestSuit == null || bestStart < 0) break
+        lockedSuits.add(bestSuit)
+        const s = bestSuit
+        let idx = a
+        for (let i = 0; i < n; i++) {
+          const rank = bestStart + i
+          const need = g.needs[i]!
+          for (let k = 0; k < need && idx < b; k++) {
+            out[idx++] = { cat: 'suit', suit: s, rank }
+          }
+        }
+        break
+      }
       default:
         break
     }

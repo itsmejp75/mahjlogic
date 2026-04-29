@@ -15,6 +15,15 @@ function jokerSwapHintBounceClass(
   return bounceTileIds?.has(tileId) ? 'exposure-rack__slot--joker-swap-hint-bounce' : ''
 }
 
+function jokerSwapBounceSlotKey(
+  tileId: string,
+  bounceIds: ReadonlySet<string> | null | undefined,
+  epoch: number,
+): string {
+  if (bounceIds?.has(tileId)) return `jsb-${epoch}-${tileId}`
+  return tileId
+}
+
 function findLastNonJokerIndex(tiles: TileInstance[]): number {
   for (let i = tiles.length - 1; i >= 0; i--) {
     if (tiles[i]!.def.cat !== 'joker') return i
@@ -22,20 +31,26 @@ function findLastNonJokerIndex(tiles: TileInstance[]): number {
   return -1
 }
 
-/** Same drop-in as wall draw / `across` receive: from above the slot (`tile-drop-in` in App.css). */
+/** Same drop-in as wall draw (`above`), slide from discard tray (`right`), or wave up from below (`below`). */
 function ExposureRackFlyInTile({
   tileId,
   animate,
+  flyOrigin = 'above',
+  animationDelayMs,
   children,
 }: {
   tileId: string
   animate: boolean
+  /** `'right'` — claimed discard from the discard-tray side; `'below'` — staged call tiles wave upward. */
+  flyOrigin?: 'above' | 'right' | 'below'
+  /** Opening-deal style stagger (`index * staggerMs`), applied as CSS `animation-delay`. */
+  animationDelayMs?: number
   children: ReactNode
 }) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const flyRef = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
-    if (!animate) return
+    if (!animate || flyOrigin === 'right') return
     const el = wrapRef.current
     const flyEl = flyRef.current
     if (!el || !flyEl) return
@@ -44,21 +59,39 @@ function ExposureRackFlyInTile({
     const tileCy = tileRect.top + tileRect.height / 2
     const h = tileRect.height
     const ox = tileCx
-    const oy = tileCy - h * 1.2
+    const oy = flyOrigin === 'below' ? tileCy + h * 1.05 : tileCy - h * 1.2
     flyEl.style.setProperty('--draw-anim-dx', `${ox - tileCx}px`)
     flyEl.style.setProperty('--draw-anim-dy', `${oy - tileCy}px`)
-  }, [animate, tileId])
+  }, [animate, tileId, flyOrigin])
+
+  const innerClass =
+    flyOrigin === 'right' && animate
+      ? 'exposure-rack__tile-fly exposure-rack__incoming-discard-fly exposure-rack__incoming-discard-fly--from-right'
+      : flyOrigin === 'below' && animate
+        ? 'exposure-rack__tile-fly sortable-tile-wrap__fly sortable-tile-wrap--just-drawn exposure-rack__call-staging-fly-up'
+      : animate && flyOrigin === 'above'
+        ? 'exposure-rack__tile-fly sortable-tile-wrap__fly sortable-tile-wrap--just-drawn'
+        : 'exposure-rack__tile-fly sortable-tile-wrap__fly'
+
+  const delayStyle: CSSProperties | undefined =
+    animate &&
+    animationDelayMs != null &&
+    animationDelayMs > 0 &&
+    (flyOrigin === 'above' || flyOrigin === 'below')
+      ? { animationDelay: `${animationDelayMs}ms` }
+      : undefined
 
   return (
-    <div ref={wrapRef} className="exposure-rack__tile-fly-wrap">
-      <div
-        ref={flyRef}
-        className={
-          animate
-            ? 'exposure-rack__tile-fly sortable-tile-wrap__fly sortable-tile-wrap--just-drawn'
-            : 'exposure-rack__tile-fly sortable-tile-wrap__fly'
-        }
-      >
+    <div
+      ref={wrapRef}
+      className={[
+        'exposure-rack__tile-fly-wrap',
+        flyOrigin === 'below' && animate ? 'exposure-rack__tile-fly-wrap--clip' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <div ref={flyRef} className={innerClass} style={delayStyle}>
         {children}
       </div>
     </div>
@@ -158,6 +191,7 @@ function SortableStagedSlot({
   botJokerBorderMenuOn,
   suppressDim,
   jokerSwapHintBounceTileIds = null,
+  callStagingWave = null,
 }: {
   tile: TileInstance
   gi: number
@@ -169,6 +203,12 @@ function SortableStagedSlot({
   botJokerBorderMenuOn: boolean | undefined
   suppressDim: boolean
   jokerSwapHintBounceTileIds?: ReadonlySet<string> | null
+  /** Rack left→right index among staged (non-called) tiles — wave delay uses opening-deal stagger. */
+  callStagingWave?: {
+    staggerDelayMs: number
+    baseDelayMs: number
+    waveIndex: number
+  } | null
 }) {
   const { active } = useDndContext()
   const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({
@@ -198,6 +238,24 @@ function SortableStagedSlot({
   // Jokers stay lit when a suggested line is focused — they substitute for any tile so dimming
   // them would falsely imply they don't help. Same rule applies in every meld branch below.
   const suggestDim = !suppressDim && !!suggestBestIds && !isBest && !isJoker
+  let waveDelayMs: number | null = null
+  if (callStagingWave) {
+    waveDelayMs =
+      callStagingWave.baseDelayMs + callStagingWave.waveIndex * callStagingWave.staggerDelayMs
+  }
+  const waveFace =
+    waveDelayMs != null ? (
+      <ExposureRackFlyInTile
+        tileId={tile.id}
+        animate
+        flyOrigin="below"
+        animationDelayMs={waveDelayMs}
+      >
+        <TileFace def={tile.def} elevated={isDragging} rackSuitStacked={stackSuitTiles} />
+      </ExposureRackFlyInTile>
+    ) : (
+      <TileFace def={tile.def} elevated={isDragging} rackSuitStacked={stackSuitTiles} />
+    )
   return (
     <div
       ref={setNodeRef}
@@ -218,7 +276,7 @@ function SortableStagedSlot({
       {...listeners}
       {...attributes}
     >
-      <TileFace def={tile.def} elevated={isDragging} rackSuitStacked={stackSuitTiles} />
+      {waveFace}
     </div>
   )
 }
@@ -233,7 +291,9 @@ function DroppableMeldSlots({
   highlightCalledTile,
   stackSuitTiles,
   flyInTileIds,
+  flyInFromRightTileIds = null,
   jokerSwapHintBounceTileIds = null,
+  jokerSwapHintBounceEpoch = 0,
 }: {
   meld: MeldGroup
   gi: number
@@ -244,7 +304,9 @@ function DroppableMeldSlots({
   highlightCalledTile: boolean
   stackSuitTiles: boolean
   flyInTileIds: ReadonlySet<string> | null | undefined
+  flyInFromRightTileIds?: ReadonlySet<string> | null
   jokerSwapHintBounceTileIds?: ReadonlySet<string> | null
+  jokerSwapHintBounceEpoch?: number
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: meld.dropZoneId! })
   const ordered = orderMeldForRack(meld)
@@ -272,9 +334,10 @@ function DroppableMeldSlots({
         )
         const suggestDim = !suppressDim && !!suggestBestIds && !isBest && !isJoker
         const flyIn = !!flyInTileIds?.has(tile.id)
+        const flyFromRight = !!flyInFromRightTileIds?.has(tile.id)
         return (
           <div
-            key={tile.id}
+            key={jokerSwapBounceSlotKey(tile.id, jokerSwapHintBounceTileIds, jokerSwapHintBounceEpoch)}
             data-tile-id={tile.id}
             className={[
               'exposure-rack__slot',
@@ -298,7 +361,11 @@ function DroppableMeldSlots({
             }
           >
             {flyIn ? (
-              <ExposureRackFlyInTile tileId={tile.id} animate>
+              <ExposureRackFlyInTile
+                tileId={tile.id}
+                animate
+                flyOrigin={flyFromRight ? 'right' : 'above'}
+              >
                 <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
               </ExposureRackFlyInTile>
             ) : (
@@ -398,6 +465,11 @@ type Props = {
    * same easing as a wall-draw tile. Omit for East / Charleston racks.
    */
   flyInTileIds?: ReadonlySet<string> | null
+  /**
+   * Subset of `flyInTileIds` that should slide in from the **right** (call discard entering the
+   * exposure slot). Others use the default drop-in from above.
+   */
+  flyInFromRightTileIds?: ReadonlySet<string> | null
   /** Same semantics as `SortableHand` — highlights tiles that count toward the focused suggested line. */
   suggestedTileGuide?: ExposureSuggestedTileGuide | null
   /**
@@ -423,6 +495,19 @@ type Props = {
   botJokerBorderMenuOn?: boolean
   /** Joker swap hint: ids of exposure tiles (jokers) to dock-bounce because they can be redeemed. */
   jokerSwapHintBounceTileIds?: ReadonlySet<string> | null
+  /**
+   * Bumped when returning to your discard phase so dock-bounce can replay on the same nodes.
+   * Default 0.
+   */
+  jokerSwapHintBounceEpoch?: number
+  /**
+   * Staged call tiles (hand picks) fly in upward in a wave after the claimed discard — same stagger
+   * feel as opening deal (`index * staggerDelayMs` after `baseDelayMs`). Indices follow rack order.
+   */
+  callStagingWaveFlyIn?: {
+    staggerDelayMs: number
+    baseDelayMs: number
+  } | null
 }
 
 export function ExposureRack({
@@ -448,8 +533,11 @@ export function ExposureRack({
   firstEmptyOverride = null,
   stackSuitTiles = false,
   flyInTileIds = null,
+  flyInFromRightTileIds = null,
   botJokerBorderMenuOn,
   jokerSwapHintBounceTileIds = null,
+  jokerSwapHintBounceEpoch = 0,
+  callStagingWaveFlyIn = null,
 }: Props) {
   const totalExposed = melds.reduce((n, m) => n + m.tiles.length, 0)
   const tailReserved = reserveTrailingSlots + (reserveLastSlotForDiscard ? 1 : 0)
@@ -495,13 +583,16 @@ export function ExposureRack({
               highlightCalledTile={highlightCalledTile}
               stackSuitTiles={stackSuitTiles}
               flyInTileIds={flyInTileIds}
+              flyInFromRightTileIds={flyInFromRightTileIds}
               jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
+              jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
             />
           )
         }
         const ordered = orderMeldForRack(meld)
         if (meld.onTileClick) {
           const handler = meld.onTileClick
+          let stagedWaveSlotIndex = 0
           return ordered.map((tile, ti) => {
             const isCalled = meld.calledTileId === tile.id
             if (isCalled) {
@@ -509,10 +600,37 @@ export function ExposureRack({
               const isJoker = tile.def.cat === 'joker'
               const isBest = slotIsSuggestBest(isJoker, tile.id, g?.bestIds, g, botJokerBorderMenuOn)
               const suggestDim = !suppressDim && !!g && !isBest && !isJoker
+              const waveTimingCalled =
+                callStagingWaveFlyIn != null
+                  ? {
+                      staggerDelayMs: callStagingWaveFlyIn.staggerDelayMs,
+                      baseDelayMs: callStagingWaveFlyIn.baseDelayMs,
+                      waveIndex: stagedWaveSlotIndex++,
+                    }
+                  : null
+              let waveDelayMsCalled: number | null = null
+              if (waveTimingCalled) {
+                waveDelayMsCalled =
+                  waveTimingCalled.baseDelayMs +
+                  waveTimingCalled.waveIndex * waveTimingCalled.staggerDelayMs
+              }
+              const calledFace =
+                waveDelayMsCalled != null ? (
+                  <ExposureRackFlyInTile
+                    tileId={tile.id}
+                    animate
+                    flyOrigin="below"
+                    animationDelayMs={waveDelayMsCalled}
+                  >
+                    <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
+                  </ExposureRackFlyInTile>
+                ) : (
+                  <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
+                )
               // Called tile is locked — render as a static (non-draggable) slot
               return (
                 <div
-                  key={tile.id}
+                  key={jokerSwapBounceSlotKey(tile.id, jokerSwapHintBounceTileIds, jokerSwapHintBounceEpoch)}
                   data-call-magnet-target=""
                   className={[
                     'exposure-rack__slot',
@@ -527,13 +645,21 @@ export function ExposureRack({
                     .join(' ')}
                   role="listitem"
                 >
-                  <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
+                  {calledFace}
                 </div>
               )
             }
+            const waveTiming =
+              callStagingWaveFlyIn != null
+                ? {
+                    staggerDelayMs: callStagingWaveFlyIn.staggerDelayMs,
+                    baseDelayMs: callStagingWaveFlyIn.baseDelayMs,
+                    waveIndex: stagedWaveSlotIndex++,
+                  }
+                : null
             return (
               <SortableStagedSlot
-                key={tile.id}
+                key={jokerSwapBounceSlotKey(tile.id, jokerSwapHintBounceTileIds, jokerSwapHintBounceEpoch)}
                 tile={tile}
                 gi={gi}
                 isFirst={ti === 0}
@@ -544,6 +670,7 @@ export function ExposureRack({
                 botJokerBorderMenuOn={botJokerBorderMenuOn}
                 suppressDim={suppressDim}
                 jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
+                callStagingWave={waveTiming}
               />
             )
           })
@@ -557,9 +684,10 @@ export function ExposureRack({
             const isBest = slotIsSuggestBest(isJoker, tile.id, g?.bestIds, g, botJokerBorderMenuOn)
             const suggestDim = !suppressDim && !!g && !isBest && !isJoker
             const flyIn = !!flyInTileIds?.has(tile.id)
+            const flyFromRight = !!flyInFromRightTileIds?.has(tile.id)
             return (
               <div
-                key={tile.id}
+                key={jokerSwapBounceSlotKey(tile.id, jokerSwapHintBounceTileIds, jokerSwapHintBounceEpoch)}
                 data-tile-id={tile.id}
                 className={[
                   'exposure-rack__slot',
@@ -580,7 +708,11 @@ export function ExposureRack({
                 }}
               >
                 {flyIn ? (
-                  <ExposureRackFlyInTile tileId={tile.id} animate>
+                  <ExposureRackFlyInTile
+                    tileId={tile.id}
+                    animate
+                    flyOrigin={flyFromRight ? 'right' : 'above'}
+                  >
                     <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
                   </ExposureRackFlyInTile>
                 ) : (
@@ -597,9 +729,10 @@ export function ExposureRack({
           const isBest = slotIsSuggestBest(isJoker, tile.id, g?.bestIds, g, botJokerBorderMenuOn)
           const suggestDim = !suppressDim && !!g && !isBest && !isJoker
           const flyIn = !!flyInTileIds?.has(tile.id)
+          const flyFromRight = !!flyInFromRightTileIds?.has(tile.id)
           return (
             <div
-              key={tile.id}
+              key={jokerSwapBounceSlotKey(tile.id, jokerSwapHintBounceTileIds, jokerSwapHintBounceEpoch)}
               data-tile-id={tile.id}
               className={[
                 'exposure-rack__slot',
@@ -615,7 +748,11 @@ export function ExposureRack({
               role="listitem"
             >
               {flyIn ? (
-                <ExposureRackFlyInTile tileId={tile.id} animate>
+                <ExposureRackFlyInTile
+                  tileId={tile.id}
+                  animate
+                  flyOrigin={flyFromRight ? 'right' : 'above'}
+                >
                   <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
                 </ExposureRackFlyInTile>
               ) : (

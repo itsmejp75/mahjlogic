@@ -1,5 +1,5 @@
 import type { CSSProperties, RefObject } from 'react'
-import { useRef, useLayoutEffect, useEffect, useState } from 'react'
+import { Fragment, useRef, useLayoutEffect, useEffect, useState } from 'react'
 import { useDndContext } from '@dnd-kit/core'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -23,6 +23,7 @@ function SortableTile({
   rackNewMark: rackNewMarkProp,
   onSelect,
   jokerSwapHintBounce = false,
+  jokerSwapHintBounceEpoch = 0,
   externalShift = false,
   externalPreviewActive = false,
 }: {
@@ -46,6 +47,8 @@ function SortableTile({
   onSelect: (id: string) => void
   /** Joker swap hint: macOS-style dock bounce on naturals you can swap for an exposed joker. */
   jokerSwapHintBounce?: boolean
+  /** Bumped when your discard phase starts again so the bounce animation can replay. */
+  jokerSwapHintBounceEpoch?: number
   /** Cross-zone preview gap (e.g. Charleston pass tile hovering over the hand) without remounting sortables. */
   externalShift?: boolean
   /** Ignore dnd-kit transforms while a non-hand tile previews insertion into the rack. */
@@ -176,6 +179,11 @@ function SortableTile({
       onClick={() => onSelect(tile.id)}
     >
       <div
+        key={
+          jokerSwapHintBounce && !runFlyLayout
+            ? `jsb-${jokerSwapHintBounceEpoch}-${tile.id}`
+            : `fly-${tile.id}`
+        }
         ref={flyInRef}
         className={[
           runFlyLayout ? 'sortable-tile-wrap__fly sortable-tile-wrap--just-drawn' : 'sortable-tile-wrap__fly',
@@ -257,6 +265,11 @@ type Props = {
   /** Joker swap hint: ids of hand tiles to dock-bounce because they can redeem an exposed joker. */
   jokerSwapHintBounceTileIds?: ReadonlySet<string> | null
   /**
+   * Bumped when your discard phase starts again so the dock-bounce can replay on the same tiles.
+   * Default 0.
+   */
+  jokerSwapHintBounceEpoch?: number
+  /**
    * When set, render tiles in this order (must match parent `SortableContext` `items`).
    * Used during Charleston when a pass tile id is preview-inserted into the hand list.
    */
@@ -283,14 +296,41 @@ export function SortableHand({
   drawAnimOriginRef,
   animationsEnabled = true,
   jokerSwapHintBounceTileIds = null,
+  jokerSwapHintBounceEpoch = 0,
   sortableOrder,
   charlestonPassPhantomTile = null,
   externalInsertPreviewIndex = null,
 }: Props) {
   const renderIds = sortableOrder ?? tiles.map((t) => t.id)
-  const emptyCount = Math.max(0, slotCount - renderIds.length)
   const g = suggestedTileGuide
   const externalPreviewActive = externalInsertPreviewIndex != null
+  const prevRenderIdsForCollapseRef = useRef<string[]>(renderIds)
+  const collapseGapRef = useRef<{ key: string; index: number } | null>(null)
+  const collapseSeqRef = useRef(0)
+  const [, forceCollapseRender] = useState(0)
+
+  if (animationsEnabled && !externalPreviewActive) {
+    const prev = prevRenderIdsForCollapseRef.current
+    if (prev.length === renderIds.length + 1) {
+      const removedIndex = prev.findIndex((id) => !renderIds.includes(id))
+      if (removedIndex >= 0) {
+        collapseSeqRef.current += 1
+        collapseGapRef.current = {
+          key: `collapse-${prev[removedIndex]}-${collapseSeqRef.current}`,
+          index: removedIndex,
+        }
+      }
+    } else if (prev.length !== renderIds.length) {
+      collapseGapRef.current = null
+    }
+    prevRenderIdsForCollapseRef.current = renderIds
+  } else {
+    collapseGapRef.current = null
+    prevRenderIdsForCollapseRef.current = renderIds
+  }
+
+  const collapseGap = collapseGapRef.current
+  const emptyCount = Math.max(0, slotCount - renderIds.length - (collapseGap ? 1 : 0))
 
   // Track the most-recently drawn tile so we can play a drop-in animation exactly once.
   const [justDrawnId, setJustDrawnId] = useState<string | null>(null)
@@ -306,6 +346,22 @@ export function SortableHand({
       return () => clearTimeout(timer)
     }
   }, [highlightedTileId, animationsEnabled])
+
+  const renderCollapsingGap = (index: number) => {
+    if (!collapseGap || collapseGap.index !== index) return null
+    return (
+      <div
+        key={collapseGap.key}
+        className="hand-slot--collapse"
+        aria-hidden
+        onAnimationEnd={() => {
+          if (collapseGapRef.current?.key !== collapseGap.key) return
+          collapseGapRef.current = null
+          forceCollapseRender((n) => n + 1)
+        }}
+      />
+    )
+  }
 
   return (
     <div className="hand-row" role="list" aria-label="Your hand">
@@ -324,33 +380,42 @@ export function SortableHand({
               ? Math.max(0, handTileFlyIn.ids.indexOf(tile.id)) * waveMs
               : undefined
           return (
-            <SortableTile
-              key={tile.id}
-              tile={tile}
-              selected={selectedTileId === tile.id}
-              charlestonGlow={charlestonGlowTileIds?.has(tile.id) ?? false}
-              discardMode={discardMode}
-              suggestDim={!!g && !isBest && !isNewlyReceived && !isJoker}
-              suggestBest={isBest}
-              stagedForMeld={stagedForMeldIds?.has(tile.id) ?? false}
-              isJustDrawn={animationsEnabled && justDrawnId === tile.id}
-              isHandFlyIn={isHandFlyIn}
-              handTileFlyIn={handTileFlyIn}
-              handFlyInWaveDelayMs={handFlyInWaveDelayMs}
-              drawAnimOriginRef={justDrawnId === tile.id ? drawAnimOriginRef : undefined}
-              rackNewMark={!!rackNewMarkTileIds?.has(tile.id)}
-              jokerSwapHintBounce={jokerSwapHintBounceTileIds?.has(tile.id) ?? false}
-              externalShift={externalPreviewActive && index >= externalInsertPreviewIndex}
-              externalPreviewActive={externalPreviewActive}
-              onSelect={onTileActivate}
-            />
+            <Fragment key={tile.id}>
+              {renderCollapsingGap(index)}
+              <SortableTile
+                tile={tile}
+                selected={selectedTileId === tile.id}
+                charlestonGlow={charlestonGlowTileIds?.has(tile.id) ?? false}
+                discardMode={discardMode}
+                suggestDim={!!g && !isBest && !isNewlyReceived && !isJoker}
+                suggestBest={isBest}
+                stagedForMeld={stagedForMeldIds?.has(tile.id) ?? false}
+                isJustDrawn={animationsEnabled && justDrawnId === tile.id}
+                isHandFlyIn={isHandFlyIn}
+                handTileFlyIn={handTileFlyIn}
+                handFlyInWaveDelayMs={handFlyInWaveDelayMs}
+                drawAnimOriginRef={justDrawnId === tile.id ? drawAnimOriginRef : undefined}
+                rackNewMark={!!rackNewMarkTileIds?.has(tile.id)}
+                jokerSwapHintBounce={jokerSwapHintBounceTileIds?.has(tile.id) ?? false}
+                jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
+                externalShift={externalPreviewActive && index >= externalInsertPreviewIndex}
+                externalPreviewActive={externalPreviewActive}
+                onSelect={onTileActivate}
+              />
+            </Fragment>
           )
         }
         if (charlestonPassPhantomTile && id === charlestonPassPhantomTile.id) {
-          return <CharlestonPassHandPhantomSortable key={id} tile={charlestonPassPhantomTile} />
+          return (
+            <Fragment key={id}>
+              {renderCollapsingGap(index)}
+              <CharlestonPassHandPhantomSortable tile={charlestonPassPhantomTile} />
+            </Fragment>
+          )
         }
-        return null
+        return renderCollapsingGap(index)
       })}
+      {renderCollapsingGap(renderIds.length)}
       {Array.from({ length: emptyCount }, (_, i) => (
         <div key={`empty-${i}`} className="hand-slot--empty" aria-hidden />
       ))}
