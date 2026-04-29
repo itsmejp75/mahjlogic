@@ -386,7 +386,7 @@ function pushBoolRun(flags: boolean[], n: number, v: boolean) {
 
 /**
  * NMJL joker flags in **title order** (matches `buildPreviewSlotsFromTitleSegments` / card ink).
- * Runs of 3+ identical suit tiles or 3+ dragons allow jokers; winds/flowers/singles do not.
+ * Runs of 3+ like tiles (suits, dragons, or FFFF) allow jokers; singles, pairs, and winds in 1s do not.
  */
 function appendTitleSegmentJokerEligible(flags: boolean[], seg: CardTextSeg): void {
   const t = seg.t

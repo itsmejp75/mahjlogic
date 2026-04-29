@@ -90,13 +90,6 @@ function isGenericAllDragonsFixedGroup(g: PatternGroup): boolean {
   )
 }
 
-const SAMPLE_SUIT_DEF: TileDef = { cat: 'suit', suit: 'bam', rank: 1 }
-
-/** Flowers-only `fixed` groups never take jokers (NMJL). */
-function fixedGroupIsFlowersOnly(test: (d: TileDef) => boolean): boolean {
-  return test({ cat: 'flower', flower: 1 }) && !test(SAMPLE_SUIT_DEF)
-}
-
 /** One tile consumed by `computeGroupMatch` (natural or joker fill), for preview-strip alignment. */
 export type GroupUsedMeta = {
   id: string
@@ -167,9 +160,9 @@ function forcedSharedRankSuitsRankFromExposures(
  * Each tile can only be used once (greedy left-to-right allocation).
  *
  * **Jokers** (aligned with [I Love Mahj — Using jokers](https://ilovemahj.com/american-mahjong-getting-started)):
- * substitute only in **3+ identical** combinations (pung / kong / quint / sextet); never singles,
- * pairs, flowers, or “fake runs” like NEWS / year digits (those are singles in code via `fixed` / small `need`).
- * Flowers-only `fixed` groups never receive joker fill.
+ * substitute only in **3+ identical** combinations (pung / kong / quint / sextet), including a
+ * flower pung/kong when the card shows FFF/FFFF; never singles, pairs, or “fake runs” like NEWS /
+ * year digits (those are singles in code via `fixed` / small `need`). Pairs of flowers (FF) get no jokers.
  */
 function countGroupPreviewSlots(g: PatternGroup): number {
   switch (g.kind) {
@@ -360,7 +353,7 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
         }
         const m = take(pred, g.need)
         total += m
-        noteJokerSlots(g.need, m, fixedGroupIsFlowersOnly(g.test))
+        noteJokerSlots(g.need, m)
         break
       }
 
