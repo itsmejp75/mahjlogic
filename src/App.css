@@ -844,22 +844,32 @@
   border-radius: var(--rack-tile-btn-border-radius);
   border: none;
   /*
-   * Wall “heat”: full wall = Prism bam green (`--card-ink-green`); as the wall runs out,
-   * the view moves through yellow → orange → Prism crak red (`--card-ink-red`). The fill is
-   * a 4-band strip; `background-size` + `background-position` select the current band.
+   * Wall “heat”: red → orange → yellow → green top-to-bottom in a 4×-tall paint; the visible
+   * window slides with `--wall-t`. Between each former hard band, blend over 12.5% of the full
+   * gradient (half the button’s height in image space) so no sharp edge. Midpoints: `color-mix`.
    */
   --wall-heat-yellow: #e6e338;
   --wall-heat-orange: #f28c1a;
+  --wall-heat-mix-1: color-mix(in srgb, var(--card-ink-red) 50%, var(--wall-heat-orange) 50%);
+  --wall-heat-mix-2: color-mix(in srgb, var(--wall-heat-orange) 50%, var(--wall-heat-yellow) 50%);
+  --wall-heat-mix-3: color-mix(in srgb, var(--wall-heat-yellow) 50%, var(--card-ink-green) 50%);
   background: linear-gradient(
-    90deg,
-    var(--card-ink-green) 0% 25%,
-    var(--wall-heat-yellow) 25% 50%,
-    var(--wall-heat-orange) 50% 75%,
-    var(--card-ink-red) 75% 100%
+    180deg,
+    var(--card-ink-red) 0%,
+    var(--card-ink-red) 18.75%,
+    var(--wall-heat-mix-1) 25%,
+    var(--wall-heat-orange) 31.25%,
+    var(--wall-heat-orange) 43.75%,
+    var(--wall-heat-mix-2) 50%,
+    var(--wall-heat-yellow) 56.25%,
+    var(--wall-heat-yellow) 68.75%,
+    var(--wall-heat-mix-3) 75%,
+    var(--card-ink-green) 81.25%,
+    var(--card-ink-green) 100%
   );
-  background-size: 400% 100%;
+  background-size: 100% 400%;
   background-repeat: no-repeat;
-  background-position: calc((1 - var(--wall-t, 1)) * 100%) 0;
+  background-position: 0 calc(var(--wall-t, 1) * 100%);
   box-shadow: none;
   transition: background-position 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -988,10 +998,20 @@
   --tg-cs-rack-flower-fg: #000;
   /* Suggested-hand dim: flat `::after` cover (see rules below; no gradient). */
   --suggest-dim-overlay: rgba(0, 0, 0, 0.38);
+  /* Soft inner vignette only (used alone in small post-game modals; see “Wall game dialog” dim). */
+  --suggest-dim-inset-vignette: inset 0 0 0.5rem color-mix(in srgb, #000 22%, transparent);
+  /* Paired with dim: soft inner vignette + hairline; hairline is omitted in wall-game dialog at small tile scale. */
+  --suggest-dim-inset-shadow: var(--suggest-dim-inset-vignette),
+    inset 0 0 0 1px color-mix(in srgb, #000 14%, transparent);
+  /* Paired with focus / suggest-best: soft inner light (dim counterpart, “up and out” vs sunken). */
+  --suggest-highlight-inset-shadow: inset 0 0 0.5rem color-mix(in srgb, #fff 24%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, #fff 28%, transparent);
+  /* Joker swap hint: wait after hand / exposure tile is in place before dock bounce (see keyframes). */
+  --joker-swap-hint-bounce-delay: 500ms;
 }
 
 /* Tile graphics: menu presets (override --tg-* only) */
-/* Ivory (data-tile-graphics `classic`): warm ivory; #1A1A1A numerals, wind letters, joker ring; index letters per suit */
+/* Ivory (data-tile-graphics `classic`): warm ivory; rank/letters match dot-bam-crak spot colors; winds/dragons as below; joker ring #1A1A1A */
 .app[data-tile-graphics='classic'] {
   --tg-ivory-face: #f9f6ee;
   --tg-bam: var(--tg-ivory-face);
@@ -1021,18 +1041,26 @@
   --tg-cs-rack-wind-fg: #1a1a1a;
   --tg-cs-rack-flower-bg: #ab47bc;
   --tg-cs-rack-flower-fg: #000;
-  /* Index letters: custom dot / bam / crak; F (flower); R/G from crak/bam; soap “0” = num, see rules below */
+  /* Spot colors: rank + B/D/C and DOT/BAM/CRAK bar use the same bam / crak / dot inks */
   --tg-classic-letter-bam: #2d6a4f;
   --tg-classic-letter-crak: #a4161a;
   --tg-classic-letter-dot: #004b93;
   --tg-classic-letter-wind: #1a1a1a;
   --tg-classic-letter-dragon-gray: #455a64;
-  --tg-classic-letter-orchid: #a4161a;
+  --tg-classic-letter-flower: #3d0f4d;
 }
 
-.app[data-tile-graphics='classic'] .tile-face__glyph-num,
-.app[data-tile-graphics='classic'] .tile-face.tile-face--rack-suit-stack .tile-face__rank {
-  color: #1a1a1a;
+.app[data-tile-graphics='classic'] .tile--bam .tile-face__glyph-num,
+.app[data-tile-graphics='classic'] .tile--bam.tile-face--rack-suit-stack .tile-face__rank {
+  color: var(--tg-classic-letter-bam);
+}
+.app[data-tile-graphics='classic'] .tile--crak .tile-face__glyph-num,
+.app[data-tile-graphics='classic'] .tile--crak.tile-face--rack-suit-stack .tile-face__rank {
+  color: var(--tg-classic-letter-crak);
+}
+.app[data-tile-graphics='classic'] .tile--dot .tile-face__glyph-num,
+.app[data-tile-graphics='classic'] .tile--dot.tile-face--rack-suit-stack .tile-face__rank {
+  color: var(--tg-classic-letter-dot);
 }
 
 .app[data-tile-graphics='classic'] .tile--bam .tile-face__glyph-letter {
@@ -1053,16 +1081,17 @@
 .app[data-tile-graphics='classic'] .tile--dragon-green .tile-face__glyph-letter {
   color: var(--tg-classic-letter-bam);
 }
-/* Soap “0” is a numeral; any soap letter edge case: same #1A1A1A (not dot blue) */
+/* Soap “0” = numeral: dot-spot color (faces soap as a dot-family tile) */
 .app[data-tile-graphics='classic'] .tile--dragon-soap .tile-face__glyph-num,
 .app[data-tile-graphics='classic'] .tile--dragon-soap .tile-face__glyph-letter {
-  color: #1a1a1a;
+  color: var(--tg-classic-letter-dot);
 }
 .app[data-tile-graphics='classic'] .tile--dragon-any .tile-face__glyph-letter {
   color: var(--tg-classic-letter-dragon-gray);
 }
+.app[data-tile-graphics='classic'] .tile--flower .tile-face__glyph-num,
 .app[data-tile-graphics='classic'] .tile--flower .tile-face__glyph-letter {
-  color: var(--tg-classic-letter-orchid);
+  color: var(--tg-classic-letter-flower);
 }
 
 .app[data-tile-graphics='classic'] .tile--bam .tile-face__suit-text {
@@ -1291,12 +1320,22 @@
   animation: none;
 }
 
-.app-layout[data-animations='off'] .sortable-tile-wrap--suggest-dim .tile-face::after,
-.app-layout[data-animations='off'] .pass-strip__tile-wrap--suggest-dim .tile-face::after,
-.app-layout[data-animations='off'] .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim .tile-face::after,
-.app-layout[data-animations='off'] .exposure-rack__slot--suggest-dim .tile-face::after,
-.app-layout[data-animations='off'] .discard-entry--suggest-dim .tile-face::after,
-.app-layout[data-animations='off'] .mahjong-win__bots-review-tile--dim .tile-face::after {
+.app-layout[data-animations='off'] .sortable-tile-wrap .tile-face:not(.tile--joker)::after,
+.app-layout[data-animations='off'] .pass-strip__tile-wrap .tile-face:not(.tile--joker)::after,
+.app-layout[data-animations='off'] .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face:not(.tile--joker)::after,
+.app-layout[data-animations='off'] .exposure-rack__slot .tile-face:not(.tile--joker)::after,
+.app-layout[data-animations='off'] .discard-entry .tile-face:not(.tile--joker)::after,
+.app-layout[data-animations='off'] .mahjong-win__bots-review-tile .tile-face:not(.tile--joker)::after,
+.app-layout[data-animations='off'] .sortable-tile-wrap .tile-face.tile--joker,
+.app-layout[data-animations='off'] .pass-strip__tile-wrap .tile-face.tile--joker,
+.app-layout[data-animations='off'] .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face.tile--joker,
+.app-layout[data-animations='off'] .exposure-rack__slot .tile-face.tile--joker,
+.app-layout[data-animations='off'] .discard-entry .tile-face.tile--joker,
+.app-layout[data-animations='off'] .mahjong-win__bots-review-tile .tile-face.tile--joker {
+  transition: none;
+}
+
+.app-layout[data-animations='off'] .hands-sheet__tile-cell {
   transition: none;
 }
 
@@ -1533,7 +1572,9 @@
   Joker swap hint — macOS dock bounce.
 
   Single shared keyframe + duration so the swappable hand tile and the redeemable
-  exposed jokers bounce in unison (same tempo, same time, exactly 3 bounces).
+  exposed jokers bounce in unison (same tempo, same time, exactly 3 bounces).   After
+  a tile is in place, `var(--joker-swap-hint-bounce-delay)` passes before the bounce loop starts
+  (hand fly + bot exposure; longhand `animation-*` so delay is never misparsed).
 
   Apply the animation on inner wrappers (.tile-face on rack slots; .sortable-tile-wrap__fly
   in hand) so it doesn't fight DnD `transform`s on the outer drag wrappers.
@@ -1559,7 +1600,12 @@
     .exposure-rack__slot--joker-swap-hint-bounce .tile-face
   ) {
   transform-origin: bottom center;
-  animation: joker-swap-hint-dock-bounce 1.7s ease-in-out 4 both;
+  animation-name: joker-swap-hint-dock-bounce;
+  animation-duration: 1.7s;
+  animation-timing-function: ease-in-out;
+  animation-delay: var(--joker-swap-hint-bounce-delay, 500ms);
+  animation-iteration-count: 4;
+  animation-fill-mode: both;
   will-change: transform;
 }
 
@@ -2965,10 +3011,164 @@
   color: #fff;
 }
 
+/*
+ * Menu → Color buttons OFF: match Sort / `btn--rack-neutral` — single dark gray for strong actions
+ * (teal pass, purple Mah Jongg / HANDS, Menu blue, etc.). Menu modal controls use Sort-style
+ * grays in their own rules; this block is for the main table only.
+ */
+.app[data-color-buttons='off'] .btn--mahjong:not(:disabled),
+.app[data-color-buttons='off'] .btn--mahjong:disabled {
+  background: #3a424d;
+  color: #fff;
+  filter: none;
+}
+
+.app[data-color-buttons='off'] .btn--danger:not(:disabled),
+.app[data-color-buttons='off'] .btn--danger:disabled {
+  background: #3a424d;
+  color: #fff;
+  border: none;
+  filter: none;
+}
+
+.app[data-color-buttons='off'] .btn--discard:not(:disabled),
+.app[data-color-buttons='off'] .btn--discard:disabled {
+  background: #3a424d;
+  color: #fff;
+  filter: none;
+}
+
+/* Main hand rack: Ignore–Discard, Swap, Mah Jongg (above also covers MJ). */
+.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:not(:disabled),
+.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:disabled:not(.btn--discard),
+.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14.btn--discard:disabled {
+  background: #3a424d;
+  color: #fff;
+}
+
+.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7:not(:disabled),
+.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7:disabled {
+  background: #3a424d;
+  color: #fff;
+}
+
+/* Charleston: Pass (teal / HANDS purple) + Stop. */
+.app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):not(:disabled),
+.app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):disabled {
+  background: #3a424d;
+  color: #fff;
+  filter: none;
+  opacity: 1;
+  cursor: inherit;
+}
+
+.app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn.suggested-hands-tab:not(:disabled) {
+  background: #3a424d;
+  color: #fff;
+  filter: none;
+}
+
+.app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn.suggested-hands-tab:disabled {
+  background: #3a424d;
+  color: #fff;
+  filter: none;
+  opacity: 0.5;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.app[data-color-buttons='off'] .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c9-11.charleston-stop-btn:not(:disabled) {
+  background: #3a424d;
+  color: #fff;
+}
+
+.app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open {
+  background: #3a424d;
+  color: #fff;
+  box-shadow: none;
+}
+
+/* Wall game hand bar: New Game. */
+.app[data-color-buttons='off'] .panel--hand .rack-bottom-bar--wall-game .btn.btn--primary:not(:disabled),
+.app[data-color-buttons='off'] .panel--hand .rack-bottom-bar--wall-game .btn.btn--primary:disabled {
+  background: #3a424d;
+  color: #fff;
+  filter: none;
+}
+
+/* End-game + wall overlay actions. */
+.app[data-color-buttons='off'] .wall-game-dialog__actions .btn--primary:not(:disabled),
+.app[data-color-buttons='off'] .wall-game-dialog__actions .btn--primary:disabled {
+  background: #3a424d;
+  color: #fff;
+  filter: none;
+}
+
+.app[data-color-buttons='off'] .charleston-error-dialog .btn--primary:not(:disabled),
+.app[data-color-buttons='off'] .charleston-error-dialog .btn--primary:disabled {
+  background: #3a424d;
+  color: #fff;
+  filter: none;
+}
+
+.app[data-color-buttons='off'] .wall-game-dialog__actions .btn--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, #3a424d 86%, #fff 14%);
+  color: #fff;
+}
+
+.app[data-color-buttons='off'] .charleston-error-dialog .btn--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, #3a424d 86%, #fff 14%);
+  color: #fff;
+}
+
+/* Bot column: clear (amber) + joker-swap hint toggle. */
+.app[data-color-buttons='off'] .panel--bot-exposures__toolbar-well .panel--bot-exposures__clear {
+  background: #3a424d;
+  color: #fff;
+  border: none;
+}
+
+.app[data-color-buttons='off'] .panel--bot-exposures__toolbar-well .panel--bot-exposures__hint--on {
+  background: #3a424d;
+  color: #fff;
+  box-shadow:
+    0 2px 4px color-mix(in srgb, #000 16%, transparent),
+    0 1px 2px color-mix(in srgb, #000 10%, transparent);
+}
+
+/* Menu (blue) + open tint — align with neutral rack. */
+.app[data-color-buttons='off'] .app-bottom-center-controls__menu-btn:not(:disabled),
+.app[data-color-buttons='off'] .app-bottom-center-controls__menu-btn:disabled {
+  background: #3a424d;
+  color: #fff;
+}
+
+.app[data-color-buttons='off'] .app-bottom-center-controls__menu-btn--open,
+.app[data-color-buttons='off'] .app-bottom-center-controls__menu-btn--open:hover:not(:disabled) {
+  background: #3a424d;
+  color: #fff;
+  box-shadow:
+    2px 2px 4px color-mix(in srgb, #000 16%, transparent),
+    0 1px 2px color-mix(in srgb, #000 10%, transparent);
+}
+
+/* Exposure: Kong / Quint / Done — no green or amber emphasis. */
+.app[data-color-buttons='off'] .exposure-rack__call-action-btn--active {
+  border-color: color-mix(in srgb, var(--text-h) 28%, var(--border));
+  color: var(--text-h);
+  background: color-mix(in srgb, var(--border) 14%, transparent);
+}
+
+.app[data-color-buttons='off'] .exposure-rack__call-action-btn--done:not(:disabled) {
+  border-color: color-mix(in srgb, var(--text-h) 28%, var(--border));
+  color: var(--text-h);
+  background: color-mix(in srgb, var(--border) 14%, transparent);
+}
+
 /* Default buttons only — rack / bot toolbar / menu use flat fills (tweak colors without hover wash). */
 .btn:hover:not(:disabled):not(.rack-bottom-tile-cell):not(.app-bottom-center-controls__menu-btn):not(
     .panel--bot-exposures__clear
-  ):not(.panel--bot-exposures__hint):not(.suggested-hands-tab) {
+  ):not(.panel--bot-exposures__hint):not(.suggested-hands-tab):not(.app-menu-tray__item) {
   background: color-mix(in srgb, var(--bg-elevated) 86%, #fff 14%);
   box-shadow:
     0 2px 5px color-mix(in srgb, #000 18%, transparent),
@@ -2977,7 +3177,7 @@
 
 .btn:active:not(:disabled):not(.rack-bottom-tile-cell):not(.app-bottom-center-controls__menu-btn):not(
     .panel--bot-exposures__hint
-  ) {
+  ):not(.app-menu-tray__item) {
   transition: none;
   transform: scale(0.98);
   box-shadow:
@@ -3646,26 +3846,31 @@
 .sortable-tile-wrap--charleston-new .tile-face {
   /* Flat face: dim white inset ring on the edge — written through the highlight var so
      `data-tile-graphics` themes (Autumn / Jewel / future) keep their material base shadow. */
+  --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
   --tile-face-highlight-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.32);
 }
 
-/* Suggested-hand dim: uniform semi-transparent cover (flat — no vertical gradient). */
-.sortable-tile-wrap--suggest-dim .tile-face,
-.pass-strip__tile-wrap--suggest-dim .tile-face,
-.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim .tile-face,
-.exposure-rack__slot--suggest-dim .tile-face,
-.discard-entry--suggest-dim .tile-face,
-.mahjong-win__bots-review-tile--dim .tile-face {
+/* Suggested-hand dim: uniform `::after` cover. Overlay is always present (opacity 0) so
+   dim on/off cross-fades instead of snapping when the parent class toggles. */
+.sortable-tile-wrap .tile-face,
+.pass-strip__tile-wrap .tile-face,
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face,
+.exposure-rack__slot .tile-face,
+.discard-entry .tile-face,
+.mahjong-win__bots-review-tile .tile-face {
   position: relative;
-  opacity: 1;
 }
 
-.sortable-tile-wrap--suggest-dim .tile-face::after,
-.pass-strip__tile-wrap--suggest-dim .tile-face::after,
-.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim .tile-face::after,
-.exposure-rack__slot--suggest-dim .tile-face::after,
-.discard-entry--suggest-dim .tile-face::after,
-.mahjong-win__bots-review-tile--dim .tile-face::after {
+/* Non-jokers: dim on `::after`. Jokers use `::after` for the inscribed ring — if we also paint the
+   dim on `::after`, the cascade merges properties and breaks the ring. We exclude jokers from the
+   overlay, then dim jokers with `filter` (avoids taking `::before`, which the designer theme uses
+   for lustre). */
+.sortable-tile-wrap .tile-face:not(.tile--joker)::after,
+.pass-strip__tile-wrap .tile-face:not(.tile--joker)::after,
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face:not(.tile--joker)::after,
+.exposure-rack__slot .tile-face:not(.tile--joker)::after,
+.discard-entry .tile-face:not(.tile--joker)::after,
+.mahjong-win__bots-review-tile .tile-face:not(.tile--joker)::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -3673,16 +3878,74 @@
   pointer-events: none;
   z-index: 1;
   background: var(--suggest-dim-overlay);
-  transition: opacity 0.16s ease;
+  box-shadow: var(--suggest-dim-inset-shadow);
+  opacity: 0;
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.sortable-tile-wrap--suggest-dim.sortable-tile-wrap--selected .tile-face::after,
-.sortable-tile-wrap--suggest-dim.sortable-tile-wrap--suggest-best .tile-face::after,
-.pass-strip__tile-wrap--suggest-dim.pass-strip__tile-wrap--suggest-best .tile-face::after,
-.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim.hands-list__pattern-tile-cell--suggest-best .tile-face::after,
-.exposure-rack__slot--suggest-dim.exposure-rack__slot--suggest-best .tile-face::after,
-.discard-entry--suggest-dim.discard-entry--suggest-need .tile-face::after {
+.sortable-tile-wrap .tile-face.tile--joker,
+.pass-strip__tile-wrap .tile-face.tile--joker,
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face.tile--joker,
+.exposure-rack__slot .tile-face.tile--joker,
+.discard-entry .tile-face.tile--joker,
+.mahjong-win__bots-review-tile .tile-face.tile--joker {
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+  transition: filter 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: none;
+}
+
+.sortable-tile-wrap--suggest-dim .tile-face:not(.tile--joker)::after,
+.pass-strip__tile-wrap--suggest-dim .tile-face:not(.tile--joker)::after,
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim .tile-face:not(.tile--joker)::after,
+.exposure-rack__slot--suggest-dim .tile-face:not(.tile--joker)::after,
+.discard-entry--suggest-dim .tile-face:not(.tile--joker)::after,
+.mahjong-win__bots-review-tile--dim .tile-face:not(.tile--joker)::after {
+  opacity: 1;
+}
+
+.sortable-tile-wrap--suggest-dim .tile-face.tile--joker,
+.pass-strip__tile-wrap--suggest-dim .tile-face.tile--joker,
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim .tile-face.tile--joker,
+.exposure-rack__slot--suggest-dim .tile-face.tile--joker,
+.discard-entry--suggest-dim .tile-face.tile--joker,
+.mahjong-win__bots-review-tile--dim .tile-face.tile--joker {
+  /* ~ match other tiles’ 38% black overlay in luminance (ring + J included). */
+  --tile-face-suggest-dim-inset: var(--suggest-dim-inset-shadow);
+  filter: brightness(0.64);
+}
+
+/* Post-game / wall-game modals: tile faces are much smaller than the main rack. The dim hairline
+   in `--suggest-dim-inset-shadow` reads as a second border next to the face’s 1px border; use the
+   same soft vignette as the rack/discard dim layer, without the extra 1px inset. */
+.wall-game-dialog .mahjong-win__bots-review-tile--dim .tile-face:not(.tile--joker)::after {
+  box-shadow: var(--suggest-dim-inset-vignette);
+}
+
+.wall-game-dialog .mahjong-win__bots-review-tile--dim .tile-face.tile--joker {
+  --tile-face-suggest-dim-inset: var(--suggest-dim-inset-vignette);
+}
+
+.sortable-tile-wrap--suggest-dim.sortable-tile-wrap--selected .tile-face:not(.tile--joker)::after,
+.sortable-tile-wrap--suggest-dim.sortable-tile-wrap--suggest-best .tile-face:not(.tile--joker)::after,
+.pass-strip__tile-wrap--suggest-dim.pass-strip__tile-wrap--suggest-best .tile-face:not(.tile--joker)::after,
+.hands-list__row-hit--with-tiles
+  .hands-list__pattern-tile-cell--suggest-dim.hands-list__pattern-tile-cell--suggest-best
+  .tile-face:not(.tile--joker)::after,
+.exposure-rack__slot--suggest-dim.exposure-rack__slot--suggest-best .tile-face:not(.tile--joker)::after,
+.discard-entry--suggest-dim.discard-entry--suggest-need .tile-face:not(.tile--joker)::after {
   opacity: 0;
+}
+
+.sortable-tile-wrap--suggest-dim.sortable-tile-wrap--selected .tile-face.tile--joker,
+.sortable-tile-wrap--suggest-dim.sortable-tile-wrap--suggest-best .tile-face.tile--joker,
+.pass-strip__tile-wrap--suggest-dim.pass-strip__tile-wrap--suggest-best .tile-face.tile--joker,
+.hands-list__row-hit--with-tiles
+  .hands-list__pattern-tile-cell--suggest-dim.hands-list__pattern-tile-cell--suggest-best
+  .tile-face.tile--joker,
+.exposure-rack__slot--suggest-dim.exposure-rack__slot--suggest-best .tile-face.tile--joker,
+.discard-entry--suggest-dim.discard-entry--suggest-need .tile-face.tile--joker {
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+  filter: none;
 }
 
 .sortable-tile-wrap--suggest-dim.sortable-tile-wrap--selected .tile-face,
@@ -3692,6 +3955,7 @@
 
 .sortable-tile-wrap--suggest-best .tile-face {
   border-radius: 0.35rem;
+  --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
   --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
 }
 
@@ -3699,6 +3963,7 @@
 .pass-strip__tile-wrap--suggest-best .tile-face,
 .east-discard-staging__tile--suggest-best .tile-face {
   border-radius: 0.35rem;
+  --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
   --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
 }
 
@@ -3829,19 +4094,25 @@
   /* Single scale for all tile ink (numerals + letters) — always follows this face’s `--rack-tile-w`. */
   --tile-face-glyph-fs: calc(var(--rack-tile-w) * 1.03 / 2.65 * 1.5);
   /*
-   * Tile face shadow stack — split into two CSS vars so themes and highlight states compose
+   * Tile face shadow stack — split into CSS vars so themes and highlight states compose
    * cleanly without specificity battles:
-   *   --tile-face-base-shadow      Material look (set by `data-tile-graphics` themes — Autumn,
-   *                                 Jewel, etc). Any future theme can set this and everything
-   *                                 else (including the focus / suggest-best / called rings)
-   *                                 keeps working unchanged.
-   *   --tile-face-highlight-shadow  Border-highlight ring driven by parent state classes
-   *                                 (suggest-best, called, charleston-new, hover rings, etc).
-   * Both default to a zero-spread transparent shadow so the rule below is always valid CSS.
+   *   --tile-face-base-shadow         Material look (set by `data-tile-graphics` themes — Autumn,
+   *                                    Jewel, etc). Any future theme can set this and everything
+   *                                    else (including the focus / suggest-best / called rings)
+   *                                    keeps working unchanged.
+   *   --tile-face-highlight-inset   Soft inner light on focused / suggest-best (parallel to
+   *                                    --suggest-dim-inset-shadow, brighter direction).
+   *   --tile-face-highlight-shadow   Crisp border-highlight ring (suggest-best, called, etc).
+   *   --tile-face-suggest-dim-inset  Extra inner edge on suggest-dimmed jokers; non-jokers get
+   *                                    the same look on the dim `::after` layer.
+   * All default to a zero-spread transparent shadow so the rule below is always valid CSS.
    */
   --tile-face-base-shadow: 0 0 0 0 transparent;
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
   --tile-face-highlight-shadow: 0 0 0 0 transparent;
-  box-shadow: var(--tile-face-base-shadow), var(--tile-face-highlight-shadow);
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+  box-shadow: var(--tile-face-base-shadow), var(--tile-face-highlight-inset), var(--tile-face-highlight-shadow),
+    var(--tile-face-suggest-dim-inset);
   border-radius: var(--tile-face-border-radius);
   border: 1px solid color-mix(in srgb, #000 22%, transparent);
   display: flex;
@@ -4005,6 +4276,7 @@
 .tile-face.tile--joker::after {
   content: '';
   position: absolute;
+  z-index: 0;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
@@ -4072,12 +4344,20 @@
 }
 
 /* Match primary numeral (stacked) / honor glyph color per menu tile graphics preset. */
-.app[data-tile-graphics='classic'] .tile-face.tile--bam.tile-face--rack-new-mark .tile-face__rack-new-dot,
-.app[data-tile-graphics='classic'] .tile-face.tile--crak.tile-face--rack-new-mark .tile-face__rack-new-dot,
-.app[data-tile-graphics='classic'] .tile-face.tile--dot.tile-face--rack-new-mark .tile-face__rack-new-dot,
-.app[data-tile-graphics='classic'] .tile-face.tile--wind.tile-face--rack-new-mark .tile-face__rack-new-dot,
-.app[data-tile-graphics='classic'] .tile-face.tile--dragon-soap.tile-face--rack-new-mark .tile-face__rack-new-dot {
+.app[data-tile-graphics='classic'] .tile-face.tile--bam.tile-face--rack-new-mark .tile-face__rack-new-dot {
+  background: var(--tg-classic-letter-bam);
+}
+.app[data-tile-graphics='classic'] .tile-face.tile--crak.tile-face--rack-new-mark .tile-face__rack-new-dot {
+  background: var(--tg-classic-letter-crak);
+}
+.app[data-tile-graphics='classic'] .tile-face.tile--dot.tile-face--rack-new-mark .tile-face__rack-new-dot {
+  background: var(--tg-classic-letter-dot);
+}
+.app[data-tile-graphics='classic'] .tile-face.tile--wind.tile-face--rack-new-mark .tile-face__rack-new-dot {
   background: #1a1a1a;
+}
+.app[data-tile-graphics='classic'] .tile-face.tile--dragon-soap.tile-face--rack-new-mark .tile-face__rack-new-dot {
+  background: var(--tg-classic-letter-dot);
 }
 
 .app[data-tile-graphics='classic'] .tile-face.tile--dragon-red.tile-face--rack-new-mark .tile-face__rack-new-dot {
@@ -4090,7 +4370,7 @@
   background: var(--tg-classic-letter-dragon-gray);
 }
 .app[data-tile-graphics='classic'] .tile-face.tile--flower.tile-face--rack-new-mark .tile-face__rack-new-dot {
-  background: var(--tg-classic-letter-orchid);
+  background: var(--tg-classic-letter-flower);
 }
 .app[data-tile-graphics='classic'] .tile-face.tile--joker.tile-face--rack-new-mark .tile-face__rack-new-dot {
   background: #000;
@@ -4204,89 +4484,7 @@
   color: #b91c1c;
 }
 
-/* ── Mah Jongg win overlay ── */
-
-.mahjong-win-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 500;
-  display: flex;
-  /* Top-align so the outcome line (“Mah Jongg!”, “Wall game”, who won) stays in view; vertical
-     centering clips tall end-game content on short viewports. */
-  align-items: flex-start;
-  justify-content: center;
-  padding: max(0.75rem, env(safe-area-inset-top, 0px)) 1rem max(0.75rem, env(safe-area-inset-bottom, 0px));
-  background: color-mix(in srgb, #0a0a0a 72%, transparent);
-  backdrop-filter: blur(3px);
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.mahjong-win-dialog {
-  width: fit-content;
-  min-width: min(32rem, calc(100vw - 2rem));
-  max-width: calc(100vw - 1.5rem);
-  /* Cap height so the dialog scrolls as a unit; inner “Other seats” can scroll after. */
-  max-height: min(92dvh, calc(100dvh - 1.25rem));
-  min-height: 0;
-  margin-block: 0.25rem 0.75rem;
-  padding: 1.1rem 1.35rem 0.9rem;
-  border-radius: 0.75rem;
-  background: var(--bg-panel, #1a1a1a);
-  border: 2px solid #d97706;
-  box-shadow:
-    0 0 0 1px rgba(217, 119, 6, 0.25),
-    0 12px 40px rgba(0, 0, 0, 0.7);
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-  /* Inner `.mahjong-win__bots-review` usually scrolls; this catches edge cases. */
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.mahjong-win-dialog--bot {
-  border-color: #dc2626;
-  box-shadow:
-    0 0 0 1px rgba(220, 38, 38, 0.25),
-    0 12px 40px rgba(0, 0, 0, 0.7);
-}
-
-.mahjong-win-dialog__actions {
-  display: flex;
-  justify-content: center;
-  padding-top: 0.4rem;
-  flex-shrink: 0;
-}
-
-.mahjong-win__new-game-btn {
-  width: var(--rack-tile-btn-inner-2);
-  min-height: var(--rack-action-touch-min-h);
-  font-size: var(--rack-bottom-action-fs);
-  font-weight: 600;
-}
-
-.mahjong-win {
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
-}
-
-.mahjong-win__headline {
-  margin: 0;
-  font-family: var(--heading);
-  font-size: clamp(1.4rem, 4.2vw, 2.1rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: #d97706;
-  text-align: center;
-  flex-shrink: 0;
-}
-
-.mahjong-win__headline--bot {
-  color: #dc2626;
-}
+/* Mah Jongg win / bot win: `wall-game-overlay` + `wall-game-dialog` (see “Wall Game overlay” below). */
 
 .mahjong-win__bot-winner-info {
   display: flex;
@@ -4319,18 +4517,6 @@
   font-weight: 600;
   color: #b45309;
   font-size: 1.06rem;
-}
-
-/* Row: pattern · win method · points */
-.mahjong-win__player-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: center;
-  gap: 0.2rem 0.55rem;
-  font-size: 0.98rem;
-  line-height: 1.4;
-  flex-shrink: 0;
 }
 
 .mahjong-win__note {
@@ -4515,10 +4701,6 @@
 }
 
 /* Wall game dialog: practice rack matches one row (no wrap); smaller faces; pan on narrow viewports */
-.wall-game-dialog__review .mahjong-win__bots-review-card {
-  align-items: stretch;
-}
-
 .wall-game-dialog__review .mahjong-win__bots-review-inner {
   width: 100%;
   max-width: 100%;
@@ -4538,8 +4720,8 @@
 }
 
 .wall-game-dialog__review .mahjong-win__bots-review-tile {
-  --rack-tile-w: calc(var(--hand-rack-tile-w) * 0.48);
-  --rack-tile-h: calc(var(--hand-rack-tile-h) * 0.48);
+  --rack-tile-w: calc(var(--hand-rack-tile-w) * 0.35);
+  --rack-tile-h: calc(var(--hand-rack-tile-h) * 0.35);
 }
 
 .call-prompt__tile {
@@ -5947,11 +6129,13 @@
 /* Match rack `sortable-tile-wrap--suggest-*` for the focused suggested line. */
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-best .tile-face {
   border-radius: clamp(0.1rem, calc(0.12 * var(--hands-strip-em)), 0.35rem);
+  --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
   --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
 }
 
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker .tile-face {
   border-radius: clamp(0.1rem, calc(0.12 * var(--hands-strip-em)), 0.35rem);
+  --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
   --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
 }
 
@@ -6339,6 +6523,7 @@
   align-items: center;
   justify-content: center;
   border-radius: calc(0.116 * var(--hands-sheet-tile-w));
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .hands-sheet__tile-cell > * {
@@ -7040,6 +7225,7 @@
 .exposure-rack__slot--suggest-best .tile-face,
 .exposure-rack__slot--called .tile-face {
   border-radius: 0.35rem;
+  --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
   --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
 }
 
@@ -7492,6 +7678,7 @@
 /* Suggested-hand focus: ring discards that match a natural you’re still short (same as rack). */
 .discard-entry--suggest-need .tile-face {
   border-radius: 0.35rem;
+  --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
   --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
 }
 
@@ -7866,11 +8053,11 @@
 
 .wall-game-dialog {
   width: 100%;
-  max-width: min(42rem, calc(100vw - 1.5rem));
-  max-height: min(92dvh, calc(100dvh - 1.25rem));
+  max-width: min(44rem, calc(100vw - 1.25rem));
+  max-height: min(100dvh - 0.35rem, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
   min-height: 0;
-  margin-block: 0.25rem 0.75rem;
-  padding: 1.1rem 1.25rem 0.95rem;
+  margin-block: 0.2rem 0.45rem;
+  padding: 0.85rem 0.9rem 0.75rem;
   border-radius: 0.75rem;
   background: var(--window-surface, #16202e);
   border: 2px solid var(--border, #334);
@@ -7880,9 +8067,18 @@
   flex-direction: column;
   align-items: stretch;
   overflow-x: hidden;
+  /* Prefer fitting four seat rows on screen; scroll only on very small viewports. */
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  gap: 0.4rem;
+  gap: 0.3rem;
+}
+
+/* Player / bot Mah Jongg end screens: same shell as wall game, accent border from former mahjong win dialogs. */
+.wall-game-dialog--bot-mahjong {
+  border-color: #dc2626;
+  box-shadow:
+    0 0 0 1px rgba(220, 38, 38, 0.25),
+    0 12px 40px rgba(0, 0, 0, 0.7);
 }
 
 .wall-game-dialog__intro {
@@ -7890,8 +8086,8 @@
   max-width: 36rem;
   margin-inline: auto;
   font-family: var(--sans);
-  font-size: 0.86rem;
-  line-height: 1.4;
+  font-size: 0.8rem;
+  line-height: 1.32;
   font-weight: 500;
   color: color-mix(in srgb, var(--window-fg, #e8eaf0) 88%, transparent);
   text-align: center;
@@ -7900,12 +8096,78 @@
 
 .wall-game-dialog__review {
   margin: 0;
-  padding-inline: 0.15rem;
+  padding-inline: 0.05rem;
   text-align: left;
+  flex: 0 1 auto;
+  min-height: 0;
+}
+
+.wall-game-dialog .mahjong-win__bots-review {
+  margin-top: 0.15rem;
+  margin-bottom: 0;
+  padding: 0.3rem 0.35rem 0.35rem;
+}
+
+.wall-game-dialog__review .mahjong-win__bots-review-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0 0 0.3rem;
+}
+
+/* Four seats: 2×2 so all fit without the dialog body scrolling in normal viewports. */
+.wall-game-dialog__review .mahjong-win__bots-review-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.28rem;
+  align-content: start;
+  overflow: visible;
+  background: color-mix(in srgb, #000 18%, var(--window-surface));
+}
+
+@media (min-width: 24rem) {
+  .wall-game-dialog__review .mahjong-win__bots-review-list {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.3rem 0.45rem;
+  }
+}
+
+.wall-game-dialog__review .mahjong-win__bots-review-card {
+  align-items: stretch;
+  min-width: 0;
+  padding: 0.3rem 0.35rem 0.32rem;
+  gap: 0.2rem;
+}
+
+.wall-game-dialog__review .mahjong-win__bots-review-header {
+  font-size: 0.8rem;
+  line-height: 1.3;
+  gap: 0.2rem 0.45rem;
+}
+
+.wall-game-dialog__review .mahjong-win__bots-review-seat,
+.wall-game-dialog__review .mahjong-win__bots-review-away,
+.wall-game-dialog__review .mahjong-win__bots-review-ref {
+  font-size: 0.8rem;
+}
+
+.wall-game-dialog__review .mahjong-win__bots-review-pattern,
+.wall-game-dialog__review .post-game-tied__select {
+  font-size: 0.78rem;
+}
+
+.wall-game-dialog .mahjong-win__player-tiles {
+  gap: 2px;
+  padding: 0.2rem 0 0.1rem;
+}
+
+/* Match review tiles: keep win strip compact so 4 review rows can stay on screen. */
+.wall-game-dialog .mahjong-win__player-tiles .mahjong-win__bots-review-tile {
+  --rack-tile-w: calc(var(--hand-rack-tile-w) * 0.4);
+  --rack-tile-h: calc(var(--hand-rack-tile-h) * 0.4);
 }
 
 .wall-game-dialog__title {
-  margin: 0 0 0.35rem;
+  margin: 0 0 0.2rem;
   font-family: var(--sans);
   font-size: clamp(1.25rem, 4.2vw, 1.85rem);
   font-weight: 800;
@@ -7914,19 +8176,59 @@
   flex-shrink: 0;
 }
 
-.wall-game-dialog__actions {
+.wall-game-dialog__title--mahjong-win {
+  font-family: var(--heading);
+  font-size: clamp(1.4rem, 4.2vw, 2.1rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #d97706;
+}
+
+.wall-game-dialog__title--bot-mahjong {
+  color: #dc2626;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.wall-game-dialog .mahjong-win__bot-winner-info {
+  font-size: 0.82rem;
+  line-height: 1.3;
+  gap: 0.15rem 0.45rem;
+}
+
+.wall-game-dialog__win-meta {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-top: 0.2rem;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.2rem 0.55rem;
+  font-size: 0.82rem;
+  line-height: 1.32;
   flex-shrink: 0;
+  max-width: 36rem;
+  margin-inline: auto;
+  padding-bottom: 0.05rem;
+}
+
+/* New Game full width; Review and Replay side by side (same order as in markup). */
+.wall-game-dialog__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem 0.5rem;
+  margin-top: 0.1rem;
+  padding-top: 0.1rem;
+  flex-shrink: 0;
+}
+
+.wall-game-dialog__actions > .btn:first-child {
+  grid-column: 1 / -1;
 }
 
 .wall-game-dialog__actions .btn {
   width: 100%;
   justify-content: center;
-  padding-block: 0.52rem;
-  font-size: calc(var(--btn-font-size) * 1.05);
+  padding-block: 0.45rem;
+  font-size: calc(var(--btn-font-size) * 0.98);
   line-height: var(--btn-line-height);
 }
 
@@ -7995,10 +8297,14 @@
 }
 
 .app-menu-modal {
-  /* Selected / on-state rim for menu controls */
+  /* Same as hand Sort (`.btn--rack-neutral`): #3a424d + white type */
+  --app-menu-sort-surface: #3a424d;
+  --app-menu-sort-surface-hover: color-mix(in srgb, #fff 7%, #3a424d);
+  --app-menu-sort-surface-emphasis: color-mix(in srgb, #fff 12%, #3a424d);
+  /* Subtle top edge on Sort-style menu controls */
+  --app-menu-rim-hairline: color-mix(in srgb, #fff 22%, #1f242a);
   --app-menu-rim-active: #22c55e;
-  /* Unselected control hover: brighter than the default rim so hover reads clearly */
-  --app-menu-rim-hover-bright: color-mix(in srgb, #fff 82%, #e2e8f0 18%);
+  --app-menu-rim-hover-bright: color-mix(in srgb, #fff 50%, #94a3b8 50%);
 
   position: relative;
   z-index: 1;
@@ -8049,26 +8355,26 @@
   min-height: 2.75rem;
   margin: 0;
   padding: 0;
-  border: 2px solid color-mix(in srgb, #fff 32%, var(--text-muted) 68%);
+  border: 1px solid var(--app-menu-rim-hairline, color-mix(in srgb, #fff 20%, #1a1d22));
   border-radius: 0.45rem;
-  background: color-mix(in srgb, var(--fg) 5%, var(--bg-elevated) 95%);
+  background: var(--app-menu-sort-surface, #3a424d);
   font: inherit;
   font-size: 1.6rem;
   line-height: 1;
   font-weight: 600;
-  color: var(--text-muted, var(--fg));
+  color: #fff;
   cursor: pointer;
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--fg) 8%, transparent);
+  box-shadow: 0 1px 2px color-mix(in srgb, #000 28%, transparent);
   transition: background 0.12s, color 0.12s, border-color 0.12s, box-shadow 0.12s;
 }
 
 .app-menu-modal__close:hover {
-  background: color-mix(in srgb, #fff 6%, var(--bg-elevated) 94%);
-  color: var(--text-h, var(--fg));
-  border-color: color-mix(in srgb, #fff 80%, #e5e7eb 20%);
+  background: var(--app-menu-sort-surface-hover, color-mix(in srgb, #fff 7%, #3a424d));
+  color: #fff;
+  border-color: color-mix(in srgb, #fff 28%, #1f2429);
   box-shadow:
-    0 0 0 1px color-mix(in srgb, #fff 18%, transparent),
-    0 2px 8px color-mix(in srgb, #000 12%, transparent);
+    0 0 0 1px color-mix(in srgb, #fff 12%, transparent),
+    0 2px 6px color-mix(in srgb, #000 20%, transparent);
 }
 
 .app-menu-modal__close:focus-visible {
@@ -8246,27 +8552,129 @@
   padding-bottom: 0.58rem;
 }
 
-/* Game settings: clear frame on each control; hover = light rim; On / selected = green rim */
+/* Game settings: same face as hand Sort (dark gray, white / near-white type) */
 .app-menu-modal .app-menu-tray__item {
   box-sizing: border-box;
-  border: 1.5px solid color-mix(in srgb, var(--border) 72%, var(--fg) 28%);
-  background: color-mix(in srgb, var(--fg) 5%, var(--bg-elevated) 95%);
+  border: 1.5px solid var(--app-menu-rim-hairline, color-mix(in srgb, #fff 18%, #1f2429));
+  background: var(--app-menu-sort-surface, #3a424d);
+  color: #fff;
   transition:
     border-color 0.14s ease,
     background 0.14s ease,
     box-shadow 0.14s ease;
 }
 
-/* Toggles with ON, or any row: — keep green rim on hover; unselected get a brighter hover rim */
-.app-menu-modal .app-menu-tray__item:hover:not(:disabled):not([aria-pressed='true']) {
-  border-color: var(--app-menu-rim-hover-bright);
-  box-shadow: 0 0 0 1px color-mix(in srgb, #fff 24%, transparent);
+.app-menu-modal .app-menu-tray__item:disabled {
+  opacity: 0.52;
+  filter: none;
 }
 
-.app-menu-modal .app-menu-tray__item--toggle[aria-pressed='true'],
-.app-menu-modal .app-menu-tray__item--toggle[aria-pressed='true']:hover:not(:disabled) {
-  border-color: var(--app-menu-rim-active);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--app-menu-rim-active) 30%, transparent);
+/* Excludes .app-menu-tray__item--switch: for toggles, aria-pressed is false when off, so
+   the old :not([aria-pressed='true']) matched and outranked the switch’s transparent hover,
+   re-applying border + background + box-shadow (hover “box” + 1px layout wobble). */
+.app-menu-modal
+  .app-menu-tray__item:hover:not(:disabled):not([aria-pressed='true']):not(
+    .app-menu-tray__item--switch
+  ) {
+  border-color: color-mix(in srgb, #fff 32%, #2d3339);
+  background: var(--app-menu-sort-surface-hover, color-mix(in srgb, #fff 7%, #3a424d));
+  box-shadow: 0 1px 0 color-mix(in srgb, #fff 8%, transparent);
+}
+
+/* Slider switches: no Sort-colored outer frame; track + thumb are the only chrome */
+.app-menu-modal .app-menu-tray__item--switch,
+.app-menu-modal .app-menu-tray__item--switch:hover:not(:disabled),
+.app-menu-modal .app-menu-tray__item--switch[aria-pressed='true'],
+.app-menu-modal .app-menu-tray__item--switch[aria-pressed='true']:hover:not(:disabled) {
+  position: relative;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: transparent;
+  padding: 0.2rem 0.15rem;
+  min-width: 0;
+  justify-content: center;
+  align-items: center;
+  filter: none;
+  transition: none;
+}
+
+.app-menu-modal .app-menu-tray__item--switch:focus-visible {
+  outline: 2px solid #22c55e;
+  outline-offset: 3px;
+  border-radius: 0.5rem;
+}
+
+/* Visually hidden “On / Off” for screen readers (label column carries the name). */
+.app-menu-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.app-menu-tray__toggle-slider {
+  --_menu-switch-w: 2.8rem;
+  --_menu-switch-h: 1.55rem;
+  --_menu-switch-thumb: 1.1rem;
+  --_menu-switch-pad: 0.2rem;
+  position: relative;
+  display: block;
+  width: var(--_menu-switch-w);
+  height: var(--_menu-switch-h);
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: #d1d5db;
+  border: 1px solid color-mix(in srgb, #6b7280 55%, #9ca3af 45%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 50%, transparent);
+  transition: background 0.2s ease, border-color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.app-menu-tray__toggle-slider--on {
+  background: #22c55e;
+  border-color: color-mix(in srgb, #15803d 60%, #16a34a 40%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 20%, transparent);
+}
+
+.app-menu-tray__toggle-slider__thumb {
+  position: absolute;
+  top: 50%;
+  left: var(--_menu-switch-pad);
+  width: var(--_menu-switch-thumb);
+  height: var(--_menu-switch-thumb);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 0.5px 1px color-mix(in srgb, #000 8%, transparent),
+    0 1px 3px color-mix(in srgb, #000 22%, transparent);
+  transform: translate(0, -50%);
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.app-menu-tray__toggle-slider--on .app-menu-tray__toggle-slider__thumb {
+  transform: translate(
+    calc(var(--_menu-switch-w) - 2 * var(--_menu-switch-pad) - var(--_menu-switch-thumb)),
+    -50%
+  );
+}
+
+.app[data-animations='off'] .app-menu-tray__toggle-slider,
+.app[data-animations='off'] .app-menu-tray__toggle-slider__thumb {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-menu-tray__toggle-slider,
+  .app-menu-tray__toggle-slider__thumb {
+    transition: none;
+  }
 }
 
 .app-menu-modal__section-rule {
@@ -8275,9 +8683,10 @@
 
 .app-menu-modal__row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 0.75rem 1rem;
+  justify-items: start;
+  column-gap: 0.9rem;
   min-width: 0;
 }
 
@@ -8289,18 +8698,26 @@
   font-size: var(--app-ui-control-fs, 0.9rem);
   font-weight: 500;
   line-height: 1.35;
-  text-align: right;
+  text-align: left;
   color: var(--text-h, var(--fg));
   min-width: 0;
 }
 
 .app-menu-modal__toggle {
-  /* Label is in the left column; only the ON/OFF pill is inside the control. */
+  /* Switch first (left), label in the next column. */
   width: auto;
-  min-width: 5.6rem;
-  padding-left: 0.6rem;
-  padding-right: 0.5rem;
+  min-width: 0;
+  padding-left: 0;
+  padding-right: 0;
   justify-content: center;
+}
+
+.app-menu-modal__toggle.app-menu-tray__item--switch {
+  min-width: auto;
+  width: auto;
+  padding-left: 0.2rem;
+  padding-right: 0.2rem;
+  gap: 0;
 }
 
 .app-menu-modal__subhead {
@@ -8335,12 +8752,19 @@
   letter-spacing: var(--btn-letter-spacing);
 }
 
-/* Toggle row variant */
+/* Toggle row variant (slider controls override padding in modal rules above) */
 .app-menu-tray__item--toggle {
   justify-content: space-between;
   gap: 0.55rem;
   padding-left: 0.55rem;
   padding-right: 0.45rem;
+}
+
+.app-menu-modal .app-menu-tray__item--toggle.app-menu-tray__item--switch {
+  justify-content: center;
+  gap: 0;
+  padding-left: 0.2rem;
+  padding-right: 0.2rem;
 }
 
 .app-menu-tray__toggle-label {
@@ -8421,46 +8845,42 @@
 }
 
 .app-menu-modal .app-menu-tray__diff-btn:not(.app-menu-tray__diff-btn--on) {
-  background: color-mix(in srgb, var(--fg) 11%, var(--bg-elevated) 89%);
-  color: var(--text-h, var(--fg));
-  border: 1.5px solid color-mix(in srgb, var(--border) 45%, var(--text-muted) 55%);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #fff 16%, transparent),
-    0 2px 5px color-mix(in srgb, #000 12%, transparent),
-    0 1px 2px color-mix(in srgb, #000 8%, transparent);
+  background: var(--app-menu-sort-surface, #3a424d);
+  color: #fff;
+  border: 1.5px solid var(--app-menu-rim-hairline, color-mix(in srgb, #fff 18%, #1f2429));
+  text-shadow: none;
+  box-shadow: 0 1px 2px color-mix(in srgb, #000 22%, transparent);
 }
 
-/* Unselected: brighter rim on hover; slight lift (selected omits this selector — border stays green) */
+/* Unselected: same family as Sort, lighter on hover */
 .app-menu-modal .app-menu-tray__diff-btn:hover:not(:disabled):not(.app-menu-tray__diff-btn--on) {
-  border-color: var(--app-menu-rim-hover-bright);
-  background: color-mix(in srgb, #fff 5%, color-mix(in srgb, var(--fg) 12%, var(--bg-elevated) 88%) 95%);
+  border-color: color-mix(in srgb, #fff 32%, #2d3339);
+  background: var(--app-menu-sort-surface-hover, color-mix(in srgb, #fff 7%, #3a424d));
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #fff 24%, transparent),
-    0 0 0 1px color-mix(in srgb, #fff 20%, transparent),
-    0 3px 10px color-mix(in srgb, #000 14%, transparent);
-  transform: translateY(-1px);
+    0 0 0 1px color-mix(in srgb, #fff 10%, transparent),
+    0 2px 5px color-mix(in srgb, #000 16%, transparent);
+  transform: none;
 }
 
-/* Selected: green rim + deep shadow (modal-only — beats :not rules above) */
+/* Selected: lighter “lit” cap on the same base (no green) */
 .app-menu-modal .app-menu-tray__diff-btn.app-menu-tray__diff-btn--on,
 .app-menu-modal .app-menu-tray__diff-btn.app-menu-tray__diff-btn--on:hover:not(:disabled) {
-  background: var(--primary);
+  background: var(--app-menu-sort-surface-emphasis, color-mix(in srgb, #fff 12%, #3a424d));
   color: #fff;
-  border: 2px solid var(--app-menu-rim-active, #22c55e);
-  text-shadow: 0 1px 0 color-mix(in srgb, #000 30%, transparent);
+  border: 1.5px solid color-mix(in srgb, #fff 34%, #3d4650);
+  text-shadow: 0 1px 0 color-mix(in srgb, #000 22%, transparent);
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #fff 22%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--app-menu-rim-active, #22c55e) 45%, transparent),
-    0 3px 8px color-mix(in srgb, #000 22%, transparent),
-    0 1px 0 color-mix(in srgb, var(--app-menu-rim-active) 25%, #000 75%);
+    inset 0 1px 0 color-mix(in srgb, #fff 14%, transparent),
+    0 0 0 1px color-mix(in srgb, #fff 12%, transparent),
+    0 2px 6px color-mix(in srgb, #000 20%, transparent);
   transform: none;
 }
 
 .app-menu-modal .app-menu-tray__diff-btn.app-menu-tray__diff-btn--on:hover:not(:disabled) {
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #fff 28%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--app-menu-rim-active, #22c55e) 52%, transparent),
-    0 5px 14px color-mix(in srgb, #000 24%, transparent);
+    inset 0 1px 0 color-mix(in srgb, #fff 18%, transparent),
+    0 0 0 1px color-mix(in srgb, #fff 16%, transparent),
+    0 3px 8px color-mix(in srgb, #000 24%, transparent);
 }
 
 .app-bottom-center-controls__menu-btn {

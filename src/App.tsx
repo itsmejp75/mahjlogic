@@ -133,8 +133,10 @@ const SUGGESTED_HANDS_REMEMBER_SIZE_LABEL = 'Remember hands window size'
 const LS_KEY_BOT_WINS = 'mahjlogic.botWinsEnabled'
 
 const BOT_WINS_LABEL = 'Bot wins'
-const LS_KEY_BOTS_CALL_EAST_DEAD = 'mahjlogic.botsCallDeadEnabled'
 const LS_KEY_ANIMATIONS = 'mahjlogic.animationsEnabled'
+/** When false, rack / table action buttons use neutral gray (like Sort) instead of teal, purple, etc. */
+const LS_KEY_COLOR_BUTTONS = 'mahjlogic.colorButtonsEnabled'
+const COLOR_BUTTONS_LABEL = 'Color buttons'
 /** When true, height/width of Suggested hands panel are saved when closed and restored on next open. */
 const LS_KEY_SUGGESTED_HANDS_REMEMBER_SIZE = 'mahjlogic.suggestedHandsRememberSize'
 const LS_KEY_SUGGESTED_HANDS_PANEL_HEIGHT = 'mahjlogic.suggestedHandsPanelHeight'
@@ -222,18 +224,19 @@ function readBotWinsEnabledFromStorage(): boolean {
   }
 }
 
-function readBotsCallEastDeadFromStorage(): boolean {
-  try {
-    const v = localStorage.getItem(LS_KEY_BOTS_CALL_EAST_DEAD)
-    return v === 'true' || v === '1'
-  } catch {
-    return false
-  }
-}
-
 function readAnimationsEnabledFromStorage(): boolean {
   try {
     const v = localStorage.getItem(LS_KEY_ANIMATIONS)
+    if (v === null) return true
+    return v === 'true' || v === '1'
+  } catch {
+    return true
+  }
+}
+
+function readColorButtonsFromStorage(): boolean {
+  try {
+    const v = localStorage.getItem(LS_KEY_COLOR_BUTTONS)
     if (v === null) return true
     return v === 'true' || v === '1'
   } catch {
@@ -2036,6 +2039,37 @@ function applyDeclareMahjongSelfDraw(r: RoundState): RoundState {
   }
 }
 
+/** Settings menu: horizontal on/off switch (see `.app-menu-tray__toggle-slider` in `App.css`). */
+function AppMenuSettingSwitch({
+  labelId,
+  pressed,
+  onToggle,
+}: {
+  labelId: string
+  pressed: boolean
+  onToggle: () => void
+}) {
+  return (
+    <button
+      type="button"
+      className="btn app-menu-tray__item app-menu-tray__item--toggle app-menu-tray__item--switch app-menu-modal__toggle"
+      aria-labelledby={labelId}
+      aria-pressed={pressed}
+      onClick={onToggle}
+    >
+      <span className="app-menu-sr-only">{pressed ? 'On' : 'Off'}</span>
+      <span
+        className={['app-menu-tray__toggle-slider', pressed ? 'app-menu-tray__toggle-slider--on' : '']
+          .filter(Boolean)
+          .join(' ')}
+        aria-hidden="true"
+      >
+        <span className="app-menu-tray__toggle-slider__thumb" />
+      </span>
+    </button>
+  )
+}
+
 export default function App() {
   const [round, setRound] = useState<RoundState>(() => createNewRound())
   const [suggestedFocusHandKey, setSuggestedFocusHandKey] = useState<string | null>(null)
@@ -2045,6 +2079,8 @@ export default function App() {
   const botExposuresToolbarWellRef = useRef<HTMLDivElement>(null)
   const [suggestedHandsListOn, setSuggestedHandsListOn] = useState(true)
   const [wallGameReviewing, setWallGameReviewing] = useState(false)
+  const [mahjongWinReviewing, setMahjongWinReviewing] = useState(false)
+  const [botMahjongWinReviewing, setBotMahjongWinReviewing] = useState(false)
   const [suggestedPanelTilesOn, setSuggestedPanelTilesOn] = useState(false)
   const [filterBtnPortalEl, setFilterBtnPortalEl] = useState<HTMLDivElement | null>(null)
   const setFilterButtonPortalRef = useCallback((el: HTMLDivElement | null) => {
@@ -2053,8 +2089,8 @@ export default function App() {
 
   // ── Game options (persisted) ──────────────────────────────────────────────
   const [botWinsEnabled, setBotWinsEnabled] = useState<boolean>(() => readBotWinsEnabledFromStorage())
-  const [botsCallDeadEnabled, setBotsCallDeadEnabled] = useState<boolean>(() => readBotsCallEastDeadFromStorage())
   const [animationsEnabled, setAnimationsEnabled] = useState<boolean>(() => readAnimationsEnabledFromStorage())
+  const [colorButtonsEnabled, setColorButtonsEnabled] = useState<boolean>(() => readColorButtonsFromStorage())
   const [suggestedHandsRememberSize, setSuggestedHandsRememberSize] = useState<boolean>(() =>
     readSuggestedHandsRememberSizeFromStorage(),
   )
@@ -2095,11 +2131,12 @@ export default function App() {
       return next
     })
   }, [])
-  const toggleBotsCallDead = useCallback(() => {
-    setBotsCallDeadEnabled((v) => {
+
+  const toggleAnimations = useCallback(() => {
+    setAnimationsEnabled((v) => {
       const next = !v
       try {
-        localStorage.setItem(LS_KEY_BOTS_CALL_EAST_DEAD, next ? 'true' : 'false')
+        localStorage.setItem(LS_KEY_ANIMATIONS, next ? 'true' : 'false')
       } catch {
         /* ignore */
       }
@@ -2107,11 +2144,11 @@ export default function App() {
     })
   }, [])
 
-  const toggleAnimations = useCallback(() => {
-    setAnimationsEnabled((v) => {
+  const toggleColorButtons = useCallback(() => {
+    setColorButtonsEnabled((v) => {
       const next = !v
       try {
-        localStorage.setItem(LS_KEY_ANIMATIONS, next ? 'true' : 'false')
+        localStorage.setItem(LS_KEY_COLOR_BUTTONS, next ? 'true' : 'false')
       } catch {
         /* ignore */
       }
@@ -2166,13 +2203,13 @@ export default function App() {
     const w = readBotWinsEnabledFromStorage()
     setBotWinsEnabled((prev) => (prev === w ? prev : w))
     botWinsEnabledRef.current = w
-    setBotsCallDeadEnabled((prev) => {
-      const b = readBotsCallEastDeadFromStorage()
-      return prev === b ? prev : b
-    })
     setAnimationsEnabled((prev) => {
       const a = readAnimationsEnabledFromStorage()
       return prev === a ? prev : a
+    })
+    setColorButtonsEnabled((prev) => {
+      const c = readColorButtonsFromStorage()
+      return prev === c ? prev : c
     })
     setSuggestedHandsRememberSize((prev) => {
       const s = readSuggestedHandsRememberSizeFromStorage()
@@ -2201,15 +2238,14 @@ export default function App() {
         const on = e.newValue === 'true' || e.newValue === '1'
         setBotWinsEnabled(on)
         botWinsEnabledRef.current = on
-      } else if (e.key === LS_KEY_BOTS_CALL_EAST_DEAD) {
-        if (e.newValue == null) return
-        const on = e.newValue === 'true' || e.newValue === '1'
-        setBotsCallDeadEnabled(on)
       } else if (e.key === LS_KEY_ANIMATIONS) {
         if (e.newValue == null) return
         const on = e.newValue === 'true' || e.newValue === '1'
         setAnimationsEnabled(on)
         animationsEnabledRef.current = on
+      } else if (e.key === LS_KEY_COLOR_BUTTONS) {
+        if (e.newValue == null) return
+        setColorButtonsEnabled(e.newValue === 'true' || e.newValue === '1')
       } else if (e.key === LS_KEY_SUGGESTED_HANDS_REMEMBER_SIZE) {
         if (e.newValue == null) return
         setSuggestedHandsRememberSize(e.newValue === 'true' || e.newValue === '1')
@@ -3336,7 +3372,22 @@ export default function App() {
 
   const postGameBotReview = useMemo(() => {
     if (mainPhase !== 'mahjong-declared') return null
-    return BOT_LABELS.map((label, idx) => {
+    const eastRankInput: RankSuggestedHandsInput = {
+      hand,
+      wallRemaining: wall.length,
+      discards: discardTiles,
+      exposures: botExposures,
+      playerClaimMelds: eastExposures,
+      eastTableClaimMelds: eastExposures,
+    }
+    const { bestTilesAway: eastAway, linesAtMin: eastLines } = suggestedHandsTiedAtBest(eastRankInput)
+    const eastRow = {
+      label: 'You (East)',
+      bestTilesAway: eastAway,
+      linesAtMin: eastLines,
+      rankInput: eastRankInput,
+    }
+    const botRows = BOT_LABELS.map((label, idx) => {
       const botHand = bots[idx] ?? []
       const playerClaims = botExposures.filter((e) => e.seat === label)
       const rankInput: RankSuggestedHandsInput = {
@@ -3350,7 +3401,8 @@ export default function App() {
       const { bestTilesAway, linesAtMin } = suggestedHandsTiedAtBest(rankInput)
       return { label, bestTilesAway, linesAtMin, rankInput }
     })
-  }, [mainPhase, bots, wall.length, discardTiles, botExposures, eastExposures])
+    return [eastRow, ...botRows]
+  }, [mainPhase, bots, hand, wall.length, discardTiles, botExposures, eastExposures])
 
   /**
    * On win: full 14 (concealed + exposures) left-to-right in the order of the winning
@@ -3782,6 +3834,8 @@ export default function App() {
       passStripFlyoutTimerRef.current = null
     }
     setWallGameReviewing(false)
+    setMahjongWinReviewing(false)
+    setBotMahjongWinReviewing(false)
     historyRef.current = []
     sortModeRef.current = null
     setCanUndo(false)
@@ -3792,10 +3846,6 @@ export default function App() {
     const w = readBotWinsEnabledFromStorage()
     setBotWinsEnabled((prev) => (prev === w ? prev : w))
     botWinsEnabledRef.current = w
-    setBotsCallDeadEnabled((prev) => {
-      const b = readBotsCallEastDeadFromStorage()
-      return prev === b ? prev : b
-    })
     setRound(createNewRound())
   }, [])
 
@@ -4673,7 +4723,12 @@ export default function App() {
       : undefined
 
   return (
-    <div className="app" data-tile-graphics={tileGraphics}>
+    <div
+      className="app"
+      data-tile-graphics={tileGraphics}
+      data-color-buttons={colorButtonsEnabled ? 'on' : 'off'}
+      data-animations={animationsEnabled ? 'on' : 'off'}
+    >
       {menuOpen ? (
         <div
           className="app-menu-modal-layer"
@@ -4816,105 +4871,63 @@ export default function App() {
               </div>
               <div className="app-menu-tray__divider app-menu-modal__section-rule" role="separator" />
               <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                <AppMenuSettingSwitch
+                  labelId="app-menu-label-bot-wins"
+                  pressed={botWinsEnabled}
+                  onToggle={toggleBotWins}
+                />
                 <span
                   className="app-menu-modal__label"
                   id="app-menu-label-bot-wins"
                 >
                   {BOT_WINS_LABEL}
                 </span>
-                <button
-                  type="button"
-                  className="btn app-menu-tray__item app-menu-tray__item--toggle app-menu-modal__toggle"
-                  aria-labelledby="app-menu-label-bot-wins"
-                  aria-pressed={botWinsEnabled}
-                  onClick={toggleBotWins}
-                >
-                  <span
-                    className={['app-menu-tray__toggle-pill', botWinsEnabled ? 'app-menu-tray__toggle-pill--on' : ''].filter(Boolean).join(' ')}
-                    aria-hidden="true"
-                  >
-                    {botWinsEnabled ? 'ON' : 'OFF'}
-                  </span>
-                </button>
               </div>
               <div className="app-menu-modal__row app-menu-modal__row--toggle">
-                <span className="app-menu-modal__label" id="app-menu-label-bots-dead">
-                  Bots call East dead
-                </span>
-                <button
-                  type="button"
-                  className="btn app-menu-tray__item app-menu-tray__item--toggle app-menu-modal__toggle"
-                  aria-labelledby="app-menu-label-bots-dead"
-                  aria-pressed={botsCallDeadEnabled}
-                  onClick={toggleBotsCallDead}
-                >
-                  <span
-                    className={['app-menu-tray__toggle-pill', botsCallDeadEnabled ? 'app-menu-tray__toggle-pill--on' : ''].filter(Boolean).join(' ')}
-                    aria-hidden="true"
-                  >
-                    {botsCallDeadEnabled ? 'ON' : 'OFF'}
-                  </span>
-                </button>
-              </div>
-              <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                <AppMenuSettingSwitch
+                  labelId="app-menu-label-anim"
+                  pressed={animationsEnabled}
+                  onToggle={toggleAnimations}
+                />
                 <span className="app-menu-modal__label" id="app-menu-label-anim">
                   Animations
                 </span>
-                <button
-                  type="button"
-                  className="btn app-menu-tray__item app-menu-tray__item--toggle app-menu-modal__toggle"
-                  aria-labelledby="app-menu-label-anim"
-                  aria-pressed={animationsEnabled}
-                  onClick={toggleAnimations}
-                >
-                  <span
-                    className={['app-menu-tray__toggle-pill', animationsEnabled ? 'app-menu-tray__toggle-pill--on' : ''].filter(Boolean).join(' ')}
-                    aria-hidden="true"
-                  >
-                    {animationsEnabled ? 'ON' : 'OFF'}
-                  </span>
-                </button>
               </div>
               <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                <AppMenuSettingSwitch
+                  labelId="app-menu-label-color-buttons"
+                  pressed={colorButtonsEnabled}
+                  onToggle={toggleColorButtons}
+                />
+                <span
+                  className="app-menu-modal__label"
+                  id="app-menu-label-color-buttons"
+                >
+                  {COLOR_BUTTONS_LABEL}
+                </span>
+              </div>
+              <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                <AppMenuSettingSwitch
+                  labelId="app-menu-label-joker-swap-hint"
+                  pressed={jokerSwapHintEnabled}
+                  onToggle={toggleJokerSwapHint}
+                />
                 <span
                   className="app-menu-modal__label"
                   id="app-menu-label-joker-swap-hint"
                 >
                   {JOKER_SWAP_HINT_LABEL}
                 </span>
-                <button
-                  type="button"
-                  className="btn app-menu-tray__item app-menu-tray__item--toggle app-menu-modal__toggle"
-                  aria-labelledby="app-menu-label-joker-swap-hint"
-                  aria-pressed={jokerSwapHintEnabled}
-                  onClick={toggleJokerSwapHint}
-                >
-                  <span
-                    className={['app-menu-tray__toggle-pill', jokerSwapHintEnabled ? 'app-menu-tray__toggle-pill--on' : ''].filter(Boolean).join(' ')}
-                    aria-hidden="true"
-                  >
-                    {jokerSwapHintEnabled ? 'ON' : 'OFF'}
-                  </span>
-                </button>
               </div>
               <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                <AppMenuSettingSwitch
+                  labelId="app-menu-label-remember-hands-size"
+                  pressed={suggestedHandsRememberSize}
+                  onToggle={toggleSuggestedHandsRememberSize}
+                />
                 <span className="app-menu-modal__label" id="app-menu-label-remember-hands-size">
                   {SUGGESTED_HANDS_REMEMBER_SIZE_LABEL}
                 </span>
-                <button
-                  type="button"
-                  className="btn app-menu-tray__item app-menu-tray__item--toggle app-menu-modal__toggle"
-                  aria-labelledby="app-menu-label-remember-hands-size"
-                  aria-pressed={suggestedHandsRememberSize}
-                  onClick={toggleSuggestedHandsRememberSize}
-                >
-                  <span
-                    className={['app-menu-tray__toggle-pill', suggestedHandsRememberSize ? 'app-menu-tray__toggle-pill--on' : ''].filter(Boolean).join(' ')}
-                    aria-hidden="true"
-                  >
-                    {suggestedHandsRememberSize ? 'ON' : 'OFF'}
-                  </span>
-                </button>
               </div>
             </div>
           </div>
@@ -5211,20 +5224,24 @@ export default function App() {
           </div>
         </div>
       ) : null}
-      {charlestonDone && mainPhase === 'mahjong-declared' && (
-        <div className="mahjong-win-overlay" role="dialog" aria-modal="true" aria-labelledby="mj-win-title">
-          <div className="mahjong-win-dialog" onClick={(e) => e.stopPropagation()}>
-            <p id="mj-win-title" className="mahjong-win__headline">Mah Jongg!</p>
+      {charlestonDone && mainPhase === 'mahjong-declared' && !mahjongWinReviewing && (
+        <div className="wall-game-overlay" role="dialog" aria-modal="true" aria-labelledby="mj-win-title">
+          <div className="wall-game-dialog" onClick={(e) => e.stopPropagation()}>
+            <h2 id="mj-win-title" className="wall-game-dialog__title wall-game-dialog__title--mahjong-win">Mah Jongg!</h2>
+            <p className="wall-game-dialog__intro">
+              Your winning hand, how the hand was completed, and every seat&apos;s closest line on the practice
+              card.
+            </p>
             {winHandSortedTiles && (
-                <div className="mahjong-win__player-tiles">
-                  {winHandSortedTiles.map((tile) => (
-                    <div key={tile.id} className="mahjong-win__bots-review-tile">
-                      <TileFace def={tile.def} />
-                    </div>
-                  ))}
-                </div>
+              <div className="mahjong-win__player-tiles">
+                {winHandSortedTiles.map((tile) => (
+                  <div key={tile.id} className="mahjong-win__bots-review-tile">
+                    <TileFace def={tile.def} />
+                  </div>
+                ))}
+              </div>
             )}
-            <div className="mahjong-win__player-meta">
+            <div className="wall-game-dialog__win-meta">
               {playerWinPattern ? (
                 <span className="mahjong-win__note">
                   {playerWinPattern.section && playerWinPattern.cardLineNumber != null
@@ -5249,9 +5266,9 @@ export default function App() {
               <span className="mahjong-win__points">Points: TBD</span>
             </div>
             {postGameBotReview ? (
-              <div className="mahjong-win__bots-review" aria-labelledby="bots-review-heading">
+              <div className="wall-game-dialog__review mahjong-win__bots-review" aria-labelledby="bots-review-heading">
                 <h3 id="bots-review-heading" className="mahjong-win__bots-review-title">
-                  Other seats (practice card)
+                  All seats (practice card)
                 </h3>
                 <ul className="mahjong-win__bots-review-list">
                   {postGameBotReview.map((row) => (
@@ -5271,19 +5288,34 @@ export default function App() {
                 </ul>
               </div>
             ) : null}
-            <div className="mahjong-win-dialog__actions">
-              <button type="button" className="btn btn--primary mahjong-win__new-game-btn" onClick={newHand}>
+            <div className="wall-game-dialog__actions">
+              <button type="button" className="btn btn--primary" onClick={newHand}>
                 New Game
+              </button>
+              <button type="button" className="btn" onClick={() => setMahjongWinReviewing(true)}>
+                Review
+              </button>
+              <button type="button" className="btn" onClick={newHand}>
+                Replay
               </button>
             </div>
           </div>
         </div>
       )}
-      {charlestonDone && mainPhase === 'bot-mahjong' && postGameBotMahjongReview && (
-        <div className="mahjong-win-overlay mahjong-win-overlay--bot" role="dialog" aria-modal="true" aria-labelledby="bot-mj-win-title">
-          <div className="mahjong-win-dialog mahjong-win-dialog--bot" onClick={(e) => e.stopPropagation()}>
-            <p id="bot-mj-win-title" className="mahjong-win__headline mahjong-win__headline--bot">
+      {charlestonDone && mainPhase === 'bot-mahjong' && postGameBotMahjongReview && !botMahjongWinReviewing && (
+        <div className="wall-game-overlay" role="dialog" aria-modal="true" aria-labelledby="bot-mj-win-title">
+          <div
+            className="wall-game-dialog wall-game-dialog--bot-mahjong"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2
+              id="bot-mj-win-title"
+              className="wall-game-dialog__title wall-game-dialog__title--bot-mahjong"
+            >
               {postGameBotMahjongReview.winner.label} got Mah Jongg!
+            </h2>
+            <p className="wall-game-dialog__intro">
+              Winning hand and how they won, then each other seat&apos;s result on the practice card.
             </p>
             <div className="mahjong-win__bot-winner-info">
               <span className="mahjong-win__bot-winner-hand">
@@ -5294,7 +5326,7 @@ export default function App() {
               <span className="mahjong-win__bot-winner-how"> · Mah Jongg · Drew Own Tile</span>
               <span className="mahjong-win__bot-winner-pts">+TBD pts</span>
             </div>
-            <div className="mahjong-win__bots-review" aria-labelledby="bot-mj-others-heading">
+            <div className="wall-game-dialog__review mahjong-win__bots-review" aria-labelledby="bot-mj-others-heading">
               <h3 id="bot-mj-others-heading" className="mahjong-win__bots-review-title">
                 Other seats
               </h3>
@@ -5315,9 +5347,15 @@ export default function App() {
                 ))}
               </ul>
             </div>
-            <div className="mahjong-win-dialog__actions">
-              <button type="button" className="btn btn--primary mahjong-win__new-game-btn" onClick={newHand}>
+            <div className="wall-game-dialog__actions">
+              <button type="button" className="btn btn--primary" onClick={newHand}>
                 New Game
+              </button>
+              <button type="button" className="btn" onClick={() => setBotMahjongWinReviewing(true)}>
+                Review
+              </button>
+              <button type="button" className="btn" onClick={newHand}>
+                Replay
               </button>
             </div>
           </div>
