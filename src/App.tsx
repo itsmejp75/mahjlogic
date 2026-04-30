@@ -83,6 +83,8 @@ import {
 import {
   getCallInitiateBlockMessage,
   getCallCapacityFlags,
+  maxOpenClaimHandTiles,
+  claimTypeForHandTilesFromDiscard,
   BLOCKING_TITLE_SWAP_ERROR,
   hasLegalMahjongOnBotDiscard,
   MSG_CALL_DEAD_JOKER,
@@ -701,7 +703,7 @@ type RoundState = {
   /** Legacy call-amend fields kept null for older saved rounds. */
   callAmendFromBotIndex: 0 | 1 | 2 | null
   /** Non-null when a bot won by self-draw. Drives the bot-mahjong end screen. */
-  botWin: { botIndex: 0 | 1 | 2 } | null
+  botWin: { botIndex: 0 | 1 | 2; how: 'self-draw' | 'east-discard' } | null
   /** How the player won Mah Jongg (set when mainPhase becomes 'mahjong-declared'). */
   playerWinMethod: { type: 'self-draw' } | { type: 'called-discard'; botLabel: string } | null
 }
@@ -953,17 +955,12 @@ function autoDrawFromWall(
 }
 
 /**
- * One bot's random willingness to claim a discard (quint / kong / pung).
- * Jokers in the bot's hand count toward quint/kong/pung totals.
- */
-/**
  * Check if a bot can form a meld from `discard` + their hand tiles.
  * `strategicProb` (0–1) scales all call thresholds: bots are far more likely
  * to call tiles that advance their best hand than tiles that don't.
  *
- * NMJL: you may only open with pung (3+ tiles) / kong / quint — not a pair from the discard.
- * So we require ≥2 tiles from hand (naturals + jokers) plus the called tile. Flowers follow
- * the same rule: jokers may fill the meld as long as the exposure is 3+ tiles total.
+ * NMJL-style opens: pung through sextet (≥2 tiles from hand + discard). Not a pair from the discard.
+ * Jokers in the bot's hand count toward larger melds.
  *
  * A separate gate (`openClaimMeldsFitSomePracticeLine` in the find* callers) requires that
  * the new exposure, together with this bot’s prior exposures, fits at least one non–closed
@@ -979,6 +976,11 @@ function trySingleBotCall(
   const jokers = botHand.filter((t) => t.def.cat === 'joker')
   const total = realMatches.length + jokers.length
 
+  if (total >= 5 && Math.random() < strategicProb) {
+    const realsToUse = realMatches.slice(0, Math.min(5, realMatches.length))
+    const jokersToUse = jokers.slice(0, 5 - realsToUse.length)
+    return { claimType: 'sextet', matches: [...realsToUse, ...jokersToUse] }
+  }
   if (total >= 4 && Math.random() < strategicProb) {
     const realsToUse = realMatches.slice(0, Math.min(4, realMatches.length))
     const jokersToUse = jokers.slice(0, 4 - realsToUse.length)
@@ -1328,7 +1330,7 @@ function commitEastDiscardWithHand(
       drawnTileId: null,
       handTileFlyIn: null,
       selectedHandTileId: null,
-      botWin: { botIndex: mjBot },
+      botWin: { botIndex: mjBot, how: 'east-discard' },
     })
   }
 
@@ -1460,7 +1462,7 @@ function commitEastDiscardWithHand(
       pendingEastDiscardTile: null,
       drawnTileId: null,
       selectedHandTileId: null,
-      botWin: { botIndex: 0 },
+      botWin: { botIndex: 0, how: 'self-draw' },
     }
   }
 
@@ -1575,7 +1577,7 @@ function applySkipBotDiscard(
       drawnTileId: null,
       handTileFlyIn: null,
       selectedHandTileId: null,
-      botWin: { botIndex: mjCaller },
+      botWin: { botIndex: mjCaller, how: 'east-discard' },
     })
   }
 
@@ -1693,7 +1695,7 @@ function applySkipBotDiscard(
       pendingEastDiscardTile: null,
       drawnTileId: null,
       selectedHandTileId: null,
-      botWin: { botIndex: nextBotIndex as 0 | 1 | 2 },
+      botWin: { botIndex: nextBotIndex as 0 | 1 | 2, how: 'self-draw' },
     }
   }
 
@@ -1761,7 +1763,7 @@ function applyToggleStagedCallTile(r: RoundState, tileId: string): RoundState {
   }
   const tile = r.hand.find((t) => t.id === tileId)
   if (!tile) return r
-  if (r.stagedCallTileIds.length >= 4) return r
+  if (r.stagedCallTileIds.length >= 5) return r
   return { ...r, stagedCallTileIds: [...r.stagedCallTileIds, tileId] }
 }
 
@@ -1800,7 +1802,7 @@ function previewStagedCallBestTilesAway(r: RoundState): number | null {
     .map((id) => r.hand.find((t) => t.id === id))
     .filter((t): t is TileInstance => !!t)
   if (stagedTiles.length === 0) return null
-  if (stagedTiles.length > 4) return null
+  if (stagedTiles.length > 5) return null
   if (stagedTiles.length === 1) {
     const meldOk = stagedTiles.every(
       (t) => t.def.cat === 'joker' || tileDefsEqual(t.def, calledTile.def),
@@ -1829,8 +1831,8 @@ function previewStagedCallBestTilesAway(r: RoundState): number | null {
     (t) => t.def.cat === 'joker' || tileDefsEqual(t.def, calledTile.def),
   )
   if (!meldIsValid) return null
-  const claimType: ClaimType =
-    stagedTiles.length === 2 ? 'pung' : stagedTiles.length === 3 ? 'kong' : 'quint'
+  const claimType = claimTypeForHandTilesFromDiscard(stagedTiles.length)
+  if (!claimType) return null
   const stagedIds = new Set(r.stagedCallTileIds)
   const handNext = r.hand.filter((t) => !stagedIds.has(t.id))
   const pileNext = r.discardPile.filter((e) => e.tile.id !== calledTile.id)
@@ -1858,7 +1860,7 @@ function previewAutoSelectedCallRankInput(
   needed: number,
 ): RankSuggestedHandsInput | null {
   if (r.mainPhase !== 'bot-turn' || !r.activeBotDiscard) return null
-  if (needed < 2 || needed > 4) return null
+  if (needed < 2 || needed > 5) return null
   const calledTile = r.activeBotDiscard
   const naturals = findExactMatches(r.hand, calledTile.def)
   const jokers = r.hand.filter((t) => t.def.cat === 'joker')
@@ -1868,8 +1870,8 @@ function previewAutoSelectedCallRankInput(
   const stagedIds = new Set(stagedTiles.map((t) => t.id))
   const handNext = r.hand.filter((t) => !stagedIds.has(t.id))
   const pileNext = r.discardPile.filter((e) => e.tile.id !== calledTile.id)
-  const claimType: ClaimType =
-    needed === 2 ? 'pung' : needed === 3 ? 'kong' : 'quint'
+  const claimType = claimTypeForHandTilesFromDiscard(needed)
+  if (!claimType) return null
   const exposure: EastExposure = {
     tiles: [calledTile, ...stagedTiles],
     claimType,
@@ -1968,7 +1970,7 @@ function applyCommitStagedCall(
     })
   }
 
-  if (stagedTiles.length < 2 || stagedTiles.length > 4) return r
+  if (stagedTiles.length < 2 || stagedTiles.length > 5) return r
   // Every staged hand tile must exactly match the called tile's def or be a joker. In competition
   // mode an invalid meld kills the hand immediately; training mode commits anyway so the player
   // sees a warning when they try to discard.
@@ -1978,8 +1980,8 @@ function applyCommitStagedCall(
   if (!meldIsValid && gameMode !== 'training') {
     return { ...r, mainPhase: 'dead-hand' }
   }
-  const claimType: ClaimType =
-    stagedTiles.length === 2 ? 'pung' : stagedTiles.length === 3 ? 'kong' : 'quint'
+  const claimType = claimTypeForHandTilesFromDiscard(stagedTiles.length)
+  if (!claimType) return r
   const stagedIds = new Set(r.stagedCallTileIds)
   const handNext = r.hand.filter((t) => !stagedIds.has(t.id))
   const pileNext = r.discardPile.filter((e) => e.tile.id !== calledTile.id)
@@ -3552,6 +3554,12 @@ export default function App() {
     return [eastRow, ...botRows]
   }, [mainPhase, bots, hand, wall.length, discardTiles, botExposures, eastExposures])
 
+  /** Losing seats only — winner (East) is shown in the hero. */
+  const postGameOtherSeats = useMemo(() => {
+    if (!postGameBotReview) return null
+    return postGameBotReview.filter((row) => row.label !== 'You (East)')
+  }, [postGameBotReview])
+
   /**
    * On win: full 14 (concealed + exposures) left-to-right in the order of the winning
    * practice line — same rack model as in-play suggestions (`hand` + claim melds).
@@ -3593,7 +3601,7 @@ export default function App() {
    */
   const postGameBotMahjongReview = useMemo(() => {
     if (mainPhase !== 'bot-mahjong' || !botWin) return null
-    const { botIndex } = botWin
+    const { botIndex, how } = botWin
     const winnerLabel = BOT_LABELS[botIndex]!
     const winnerHand = bots[botIndex] ?? []
     const winnerExposures = botExposures.filter((e) => e.seat === winnerLabel)
@@ -3606,6 +3614,15 @@ export default function App() {
       eastTableClaimMelds: eastExposures,
     }
     const { closestLine: winnerLine } = summarizeRackTowardWin(winnerRankInput)
+
+    const winnerSortedTiles =
+      winnerLine != null
+        ? sortFullRackTilesForPattern(
+            winnerLine.id,
+            winnerRankInput,
+            focusKeyForSuggestedHandLine(winnerLine),
+          )
+        : [...winnerHand, ...winnerExposures.flatMap((e) => e.tiles)]
 
     const winner = {
       label: `Bot ${botIndex + 1} (${winnerLabel})`,
@@ -3647,7 +3664,7 @@ export default function App() {
       return [{ label: `Bot ${idx + 1} (${label})`, bestTilesAway, linesAtMin, rankInput }]
     })
 
-    return { winner, rows: [eastRow, ...otherRows], winnerLine }
+    return { winner, winnerSortedTiles, how, rows: [eastRow, ...otherRows], winnerLine }
   }, [mainPhase, botWin, bots, hand, wall.length, discardTiles, botExposures, eastExposures])
 
   /**
@@ -4412,9 +4429,8 @@ export default function App() {
       setBlockingDialog(null)
       setCallRuleError(null)
       const flags = getCallCapacityFlags(hand, activeBotDiscard)
-      // Stage a pung first (2 from hand) when possible. Player can add tiles to the meld (e.g. kong) by hand before Done.
-      // applyAutoSelectCallTiles uses naturals first, then jokers only to fill leftover slots.
-      const needed =
+      const maxClaimHand = maxOpenClaimHandTiles(flags)
+      const stagingNeeded =
         flags.canPung
           ? 2
           : hasLegalMahjongOnBotDiscard({
@@ -4427,14 +4443,34 @@ export default function App() {
               discardPile,
             })
             ? 0
-          : 2
-      const callPreviewRankInput = previewAutoSelectedCallRankInput(roundRef.current, needed)
-      if (gameModeRef.current === 'training' && callPreviewRankInput) {
-        const { closestLine } = summarizeRackTowardWin(callPreviewRankInput)
-        if (!closestLine) {
+            : 2
+      // Training: warn only when **every** exposure size you could legally commit with this discard
+      // fits no playable line. If a pung satisfies part of the card but a kong would not, no warning.
+      // Conversely, if the card needs a kong for that meld and you can only form a pung, every preview fails → warning.
+      const rankInputWorstCase =
+        gameModeRef.current === 'training' && flags.canPung
+          ? previewAutoSelectedCallRankInput(roundRef.current, maxClaimHand)
+          : null
+      if (gameModeRef.current === 'training' && flags.canPung) {
+        const candidateSizes: Array<2 | 3 | 4 | 5> = []
+        if (flags.canPung) candidateSizes.push(2)
+        if (flags.canKong) candidateSizes.push(3)
+        if (flags.canQuint) candidateSizes.push(4)
+        if (flags.canSextet) candidateSizes.push(5)
+
+        let anyCallableLineFits = false
+        for (const n of candidateSizes) {
+          const input = previewAutoSelectedCallRankInput(roundRef.current, n)
+          if (!input) continue
+          if (summarizeRackTowardWin(input).closestLine) {
+            anyCallableLineFits = true
+            break
+          }
+        }
+        if (!anyCallableLineFits && rankInputWorstCase) {
           setBlockingDialog({
             variant: 'call-exposure-dead-warning',
-            rankInput: callPreviewRankInput,
+            rankInput: rankInputWorstCase,
           })
           return
         }
@@ -4447,7 +4483,7 @@ export default function App() {
             }
           : null,
       )
-      pushRound((r) => applyAutoSelectCallTiles(applyInitiateCall(r), needed))
+      pushRound((r) => applyAutoSelectCallTiles(applyInitiateCall(r), stagingNeeded))
     }
   }, [
     mainPhase,
@@ -5442,52 +5478,56 @@ export default function App() {
       ) : null}
       {charlestonDone && mainPhase === 'mahjong-declared' && !mahjongWinReviewing && (
         <div className="wall-game-overlay" role="dialog" aria-modal="true" aria-labelledby="mj-win-title">
-          <div className="wall-game-dialog" onClick={(e) => e.stopPropagation()}>
-            <h2 id="mj-win-title" className="wall-game-dialog__title wall-game-dialog__title--mahjong-win">Mah Jongg!</h2>
-            <p className="wall-game-dialog__intro">
-              Your winning hand, how the hand was completed, and every seat&apos;s closest line on the practice
-              card.
-            </p>
-            {winHandSortedTiles && (
-              <div className="mahjong-win__player-tiles">
-                {winHandSortedTiles.map((tile) => (
-                  <div key={tile.id} className="mahjong-win__bots-review-tile">
-                    <TileFace def={tile.def} />
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="wall-game-dialog__win-meta">
-              {playerWinPattern ? (
-                <span className="mahjong-win__note">
-                  {playerWinPattern.section && playerWinPattern.cardLineNumber != null
-                    ? `${playerWinPattern.section} #${playerWinPattern.cardLineNumber} · `
-                    : ''}
-                  {playerWinPattern.titleSegments
-                    ? <CardColoredText segments={playerWinPattern.titleSegments} />
-                    : playerWinPattern.title}
-                </span>
-              ) : (
-                <span className="mahjong-win__note">Hand validated</span>
+          <div
+            className="wall-game-dialog wall-game-dialog--mj-summary"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mahjong-win__hero">
+              <h2 id="mj-win-title" className="wall-game-dialog__title wall-game-dialog__title--mahjong-win">
+                Mah Jongg!
+              </h2>
+              <p className="wall-game-dialog__intro wall-game-dialog__intro--mj-hero">You (East) — winning hand</p>
+              {winHandSortedTiles && (
+                <div className="mahjong-win__player-tiles mahjong-win__hero-tiles">
+                  {winHandSortedTiles.map((tile) => (
+                    <div key={tile.id} className="mahjong-win__bots-review-tile">
+                      <TileFace def={tile.def} />
+                    </div>
+                  ))}
+                </div>
               )}
-              <span className="mahjong-win__player-meta-divider">·</span>
-              <span className="mahjong-win__win-method">
-                {playerWinMethod?.type === 'self-draw'
-                  ? 'Drew own tile'
-                  : playerWinMethod?.type === 'called-discard'
-                    ? `Called ${playerWinMethod.botLabel}'s discard`
-                    : null}
-              </span>
-              <span className="mahjong-win__player-meta-divider">·</span>
-              <span className="mahjong-win__points">Points: TBD</span>
+              <div className="wall-game-dialog__win-meta wall-game-dialog__win-meta--hero">
+                {playerWinPattern ? (
+                  <span className="mahjong-win__note">
+                    {playerWinPattern.section && playerWinPattern.cardLineNumber != null
+                      ? `${playerWinPattern.section} #${playerWinPattern.cardLineNumber} · `
+                      : ''}
+                    {playerWinPattern.titleSegments
+                      ? <CardColoredText segments={playerWinPattern.titleSegments} />
+                      : playerWinPattern.title}
+                  </span>
+                ) : (
+                  <span className="mahjong-win__note">Hand validated</span>
+                )}
+                <span className="mahjong-win__player-meta-divider">·</span>
+                <span className="mahjong-win__win-method">
+                  {playerWinMethod?.type === 'self-draw'
+                    ? 'Drew own tile'
+                    : playerWinMethod?.type === 'called-discard'
+                      ? `Called ${playerWinMethod.botLabel}'s discard`
+                      : null}
+                </span>
+                <span className="mahjong-win__player-meta-divider">·</span>
+                <span className="mahjong-win__points">Points: TBD</span>
+              </div>
             </div>
-            {postGameBotReview ? (
+            {postGameOtherSeats && postGameOtherSeats.length > 0 ? (
               <div className="wall-game-dialog__review mahjong-win__bots-review" aria-labelledby="bots-review-heading">
                 <h3 id="bots-review-heading" className="mahjong-win__bots-review-title">
-                  All seats (practice card)
+                  Other players
                 </h3>
                 <ul className="mahjong-win__bots-review-list">
-                  {postGameBotReview.map((row) => (
+                  {postGameOtherSeats.map((row) => (
                     <li key={row.label} className="mahjong-win__bots-review-card">
                       <PostGameLoserRackRow
                         rowId={`mj-win-bots-${row.label}`}
@@ -5521,30 +5561,41 @@ export default function App() {
       {charlestonDone && mainPhase === 'bot-mahjong' && postGameBotMahjongReview && !botMahjongWinReviewing && (
         <div className="wall-game-overlay" role="dialog" aria-modal="true" aria-labelledby="bot-mj-win-title">
           <div
-            className="wall-game-dialog wall-game-dialog--bot-mahjong"
+            className="wall-game-dialog wall-game-dialog--bot-mahjong wall-game-dialog--mj-summary"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2
-              id="bot-mj-win-title"
-              className="wall-game-dialog__title wall-game-dialog__title--bot-mahjong"
-            >
-              {postGameBotMahjongReview.winner.label} got Mah Jongg!
-            </h2>
-            <p className="wall-game-dialog__intro">
-              Winning hand and how they won, then each other seat&apos;s result on the practice card.
-            </p>
-            <div className="mahjong-win__bot-winner-info">
-              <span className="mahjong-win__bot-winner-hand">
-                {postGameBotMahjongReview.winner.titleSegments
-                  ? <CardColoredText segments={postGameBotMahjongReview.winner.titleSegments} />
-                  : postGameBotMahjongReview.winner.closestTitle}
-              </span>
-              <span className="mahjong-win__bot-winner-how"> · Mah Jongg · Drew Own Tile</span>
-              <span className="mahjong-win__bot-winner-pts">+TBD pts</span>
+            <div className="mahjong-win__hero">
+              <h2
+                id="bot-mj-win-title"
+                className="wall-game-dialog__title wall-game-dialog__title--bot-mahjong"
+              >
+                {postGameBotMahjongReview.winner.label} — Mah Jongg
+              </h2>
+              <p className="wall-game-dialog__intro wall-game-dialog__intro--mj-hero">
+                {postGameBotMahjongReview.how === 'self-draw'
+                  ? 'Self-draw win'
+                  : 'Won on East&apos;s discard'}
+              </p>
+              <div className="mahjong-win__player-tiles mahjong-win__hero-tiles">
+                {postGameBotMahjongReview.winnerSortedTiles.map((tile) => (
+                  <div key={tile.id} className="mahjong-win__bots-review-tile">
+                    <TileFace def={tile.def} />
+                  </div>
+                ))}
+              </div>
+              <div className="wall-game-dialog__win-meta wall-game-dialog__win-meta--hero mahjong-win__bot-winner-meta">
+                <span className="mahjong-win__note mahjong-win__bot-winner-hand">
+                  {postGameBotMahjongReview.winner.titleSegments
+                    ? <CardColoredText segments={postGameBotMahjongReview.winner.titleSegments} />
+                    : postGameBotMahjongReview.winner.closestTitle}
+                </span>
+                <span className="mahjong-win__player-meta-divider">·</span>
+                <span className="mahjong-win__points">Points: TBD</span>
+              </div>
             </div>
             <div className="wall-game-dialog__review mahjong-win__bots-review" aria-labelledby="bot-mj-others-heading">
               <h3 id="bot-mj-others-heading" className="mahjong-win__bots-review-title">
-                Other seats
+                Other players
               </h3>
               <ul className="mahjong-win__bots-review-list">
                 {postGameBotMahjongReview.rows.map((row) => (
@@ -5556,7 +5607,7 @@ export default function App() {
                       linesAtMin={row.linesAtMin}
                       rankInput={row.rankInput}
                       showTiedLinePicker={row.linesAtMin.length > 1}
-                      cardVariant="flat"
+                      cardVariant="wrapped"
                       trailingLabel="bot-mj-loss-pts"
                     />
                   </li>

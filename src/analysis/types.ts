@@ -6,5 +6,5 @@ export type BotSeat = 'South' | 'West' | 'North'
 export type BotExposure = {
   seat: BotSeat
   tiles: TileInstance[]
-  claimType: 'pung' | 'kong' | 'quint'
+  claimType: 'pung' | 'kong' | 'quint' | 'sextet'
 }

@@ -20,7 +20,8 @@ export type TileInstance = { id: string; def: TileDef }
 
 export type DiscardEntry = { tile: TileInstance; seat: Seat }
 
-export type ClaimType = 'pung' | 'kong' | 'quint'
+/** Hand tiles taken from rack + discarded tile completes meld (pung 2 … sextet 5). */
+export type ClaimType = 'pung' | 'kong' | 'quint' | 'sextet'
 
 export type EastExposure = {
   /** All tiles in the meld, matched hand tiles first then the called discard. */

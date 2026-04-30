@@ -3,7 +3,7 @@ import type { BotExposure } from '../analysis/types'
 import type { ClaimType, DiscardEntry, EastExposure, TileInstance } from './types'
 import { findExactMatches } from './tileUtils'
 
-/** Not enough naturals + jokers to form any pung / kong / quint with this discard. */
+/** Not enough naturals + jokers to form any pung / kong / quint / sextet with this discard. */
 export const MSG_CALL_INSUFFICIENT_TILES =
   'You do not have the required tiles to call this tile.'
 
@@ -63,6 +63,46 @@ export type CallCapacityFlags = {
   canPung: boolean
   canKong: boolean
   canQuint: boolean
+  /** Six identical (five tiles from hand + called discard). Forward-compatible before card lines exist. */
+  canSextet: boolean
+}
+
+/** Largest count of tiles this seat may take from hand when claiming `called` (2–5). Uses naturals matching `called` plus all hand jokers — same rule as forming the exposure. */
+export function maxOpenClaimHandTiles(flags: CallCapacityFlags): 0 | 2 | 3 | 4 | 5 {
+  if (flags.canSextet) return 5
+  if (flags.canQuint) return 4
+  if (flags.canKong) return 3
+  if (flags.canPung) return 2
+  return 0
+}
+
+function handTilesNeededForClaimType(claimType: ClaimType): number {
+  switch (claimType) {
+    case 'pung':
+      return 2
+    case 'kong':
+      return 3
+    case 'quint':
+      return 4
+    case 'sextet':
+      return 5
+  }
+}
+
+/** Tiles taken from hand when claiming a discard (not counting the picked-up discard). */
+export function claimTypeForHandTilesFromDiscard(handTileCount: number): ClaimType | null {
+  switch (handTileCount) {
+    case 2:
+      return 'pung'
+    case 3:
+      return 'kong'
+    case 4:
+      return 'quint'
+    case 5:
+      return 'sextet'
+    default:
+      return null
+  }
 }
 
 export function getCallCapacityFlags(
@@ -70,16 +110,17 @@ export function getCallCapacityFlags(
   called: TileInstance | null,
 ): CallCapacityFlags {
   if (!called || called.def.cat === 'joker') {
-    return { canPung: false, canKong: false, canQuint: false }
+    return { canPung: false, canKong: false, canQuint: false, canSextet: false }
   }
   const callMatches = findExactMatches(hand, called.def)
   const handJokers = hand.filter((t) => t.def.cat === 'joker')
-  /* Pung+ = at least 2 tiles from hand + discard (3+ total). Jokers count; flowers too. */
+  /* Matching naturals + jokers can fill the meld (flowers never match a suit/honor discard). */
   const total = callMatches.length + handJokers.length
   const canPung = total >= 2
   const canKong = total >= 3
   const canQuint = total >= 4
-  return { canPung, canKong, canQuint }
+  const canSextet = total >= 5
+  return { canPung, canKong, canQuint, canSextet }
 }
 
 function pickHandTilesForClaim(
@@ -108,7 +149,7 @@ export function simulateEastClaim(
   claimType: ClaimType,
 ): { hand: TileInstance[]; eastMelds: EastExposure[] } | null {
   if (calledTile.def.cat === 'joker') return null
-  const needed = claimType === 'pung' ? 2 : claimType === 'kong' ? 3 : 4
+  const needed = handTilesNeededForClaimType(claimType)
   const usedTiles = pickHandTilesForClaim(hand, calledTile.def, needed)
   if (!usedTiles) return null
 
@@ -175,8 +216,8 @@ export function hasLegalMahjongOnBotDiscard(r: CallValidationRoundSlice): boolea
     if (winOnBotDiscardInput(r, called, handNext, [...r.eastExposures, exposure])) return true
   }
 
-  // (c–d) 3+ tile claim melds (pung / kong / quint with 2–4 hand tiles + discard).
-  for (const claimType of ['pung', 'kong', 'quint'] as const) {
+  // (c–d) 3+ tile claim melds (pung … sextet with 2–5 hand tiles + discard).
+  for (const claimType of ['pung', 'kong', 'quint', 'sextet'] as const) {
     const sim = simulateEastClaim(r.hand, r.eastExposures, called, claimType)
     if (sim && winOnBotDiscardInput(r, called, sim.hand, sim.eastMelds)) return true
   }
@@ -189,8 +230,8 @@ export function getCallInitiateBlockMessage(r: CallValidationRoundSlice): string
   if (r.mainPhase !== 'bot-turn' || !r.activeBotDiscard) return null
   if (r.activeBotDiscard.def.cat === 'joker') return MSG_CALL_DEAD_JOKER
   const flags = getCallCapacityFlags(r.hand, r.activeBotDiscard)
-  if (!flags.canPung && !flags.canKong && !flags.canQuint) {
-    // No pung/kong/quint from hand + discard — still OK if this discard completes Mah Jongg
+  if (!flags.canPung && !flags.canKong && !flags.canQuint && !flags.canSextet) {
+    // No open claim from hand + discard — still OK if this discard completes Mah Jongg
     // (including “pair” or single 14th tile); player may use Call → Done with 0–1 staged tiles.
     if (hasLegalMahjongOnBotDiscard(r)) return null
     return MSG_CALL_INSUFFICIENT_TILES
@@ -198,7 +239,7 @@ export function getCallInitiateBlockMessage(r: CallValidationRoundSlice): string
   return null
 }
 
-/** Before committing a specific pung / kong / quint (from call-declare). */
+/** Before committing a specific pung / kong / quint / sextet (from call-declare). */
 export function getDeclareCallBlockMessage(
   r: CallValidationRoundSlice,
   claimType: ClaimType,
@@ -208,7 +249,13 @@ export function getDeclareCallBlockMessage(
   const called = r.activeBotDiscard
   const flags = getCallCapacityFlags(r.hand, called)
   const allowed =
-    claimType === 'pung' ? flags.canPung : claimType === 'kong' ? flags.canKong : flags.canQuint
+    claimType === 'pung'
+      ? flags.canPung
+      : claimType === 'kong'
+        ? flags.canKong
+        : claimType === 'quint'
+          ? flags.canQuint
+          : flags.canSextet
   if (!allowed) return MSG_CALL_INSUFFICIENT_TILES
 
   const sim = simulateEastClaim(r.hand, r.eastExposures, called, claimType)
