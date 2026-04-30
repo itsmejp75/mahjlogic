@@ -1,0 +1,53 @@
+
+
+/* Suggested-hands: same steel ring as other panels, on the **dragged** inner shell (not the fixed outer). */
+.suggested-hands-popup__user-shift::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  box-sizing: border-box;
+  background: linear-gradient(to bottom, #4a5568 0%, transparent 10%);
+  -webkit-mask:
+    linear-gradient(var(--color-white) 0 0) content-box,
+    linear-gradient(var(--color-white) 0 0);
+  mask:
+    linear-gradient(var(--color-white) 0 0) content-box,
+    linear-gradient(var(--color-white) 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.suggested-hands-popup__user-shift::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border-radius: var(--suggested-popup-radius, 0.75rem);
+  padding: 1px;
+  box-sizing: border-box;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.07) 0%, transparent 10%);
+  -webkit-mask:
+    linear-gradient(var(--color-white) 0 0) content-box,
+    linear-gradient(var(--color-white) 0 0);
+  mask:
+    linear-gradient(var(--color-white) 0 0) content-box,
+    linear-gradient(var(--color-white) 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Panels with no border-radius: suppress the curved gradient ring and use a flat
+   inset box-shadow instead so the highlight shows only on the top edge. */
+.app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker::before,
+.app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker::after,
+.app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures::before,
+.app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures::after,
+.app-rack-stage .panel--hand::before,
+.app-rack-stage .panel--hand::after {
+  content: none;
+}

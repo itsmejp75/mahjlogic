@@ -8,9 +8,13 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "export-logo": "node assets/fonts/export-mahjlogic-brand.mjs"
+    "export-logo": "node assets/fonts/export-mahjlogic-brand.mjs",
+    "split-css": "node scripts/split-app-css.mjs",
+    "dedupe-flex": "node scripts/dedupe-flex-clusters.mjs"
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.1",
+    "@capacitor/ios": "^8.3.1",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
@@ -19,6 +23,7 @@
     "react-dom": "^19.2.4"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.3.1",
     "@eslint/js": "^9.39.4",
     "@types/node": "^24.12.2",
     "@types/react": "^19.2.14",

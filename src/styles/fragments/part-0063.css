@@ -1,0 +1,13 @@
+
+
+.app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker,
+.app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures {
+  box-shadow: none;
+}
+
+/* Headings line up with inner tray content (tray border + inner pad, same as tile area). */
+.panel--discard-tracker > .panel__title-row .panel__title,
+.panel--bot-exposures__body > .panel__title-row .panel__title {
+  padding-inline-start: calc(1px + var(--bot-exposure-inner-pad));
+  text-align: left;
+}

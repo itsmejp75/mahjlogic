@@ -1,0 +1,9 @@
+
+
+/* During Charleston the exposure row packs 11 empty slots + the 3-tile pass-tail
+   to span cols 1–14. The main rack only has 11 tiles, so centering it leaves a
+   gap between the last rack tile (col 11) and the first pass tile (col 12). Pack
+   from the left so the main rack and pass-tail meet flush. */
+.panel--hand .rack-stage--charleston .hand-bank {
+  justify-content: flex-start;
+}

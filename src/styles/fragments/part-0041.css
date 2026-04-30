@@ -1,0 +1,5 @@
+
+
+.app-play-split__right .panel--hands {
+  padding: var(--rack-stack-gap-y) clamp(0.4rem, 1.4vw, 0.82rem) 0.48rem;
+}

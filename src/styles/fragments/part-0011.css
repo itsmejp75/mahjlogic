@@ -1,0 +1,9 @@
+
+
+/* Charleston + main East: same column (exposure / pass row → hand tray) */
+.rack-stage__rack-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rack-tile-gap);
+  min-width: 0;
+}

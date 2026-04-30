@@ -1,0 +1,14 @@
+
+
+/* Shared: full-width flex column shell (deduped from 6 rules) */
+.panel--hand,
+.rack-stage--charleston,
+.rack-stage--main-rack,
+.panel--bot-exposures .app-opponents-rail__cell,
+.app-menu-modal,
+.suggested-hands-popup__user-shift {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}

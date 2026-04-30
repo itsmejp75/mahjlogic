@@ -1,0 +1,23 @@
+
+
+/* Exposure row fills the shared column width — centering is handled by rack-stage__rack-col. */
+.panel--hand .rack-stage__rack-top {
+  align-self: stretch;
+  width: 100%;
+}
+
+.panel--hand .rack-stage__rack-top .exposure-rack {
+  --rack-tile-w: calc(var(--hand-rack-tile-w) * var(--hand-rack-tile-scale));
+  --rack-tile-h: calc(var(--hand-rack-tile-h) * var(--hand-rack-tile-scale));
+  position: relative;
+  z-index: 1;
+}
+
+.panel--hand .rack-stage__rack-top .exposure-rack__watermark {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}

@@ -1,0 +1,7 @@
+
+
+.rack-stage__rack-top {
+  min-width: 0;
+  position: relative;
+  z-index: 2;
+}

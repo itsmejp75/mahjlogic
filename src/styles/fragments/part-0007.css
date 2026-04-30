@@ -1,0 +1,24 @@
+
+
+.panel-hand-rack {
+  width: 100%;
+  min-width: 0;
+}
+
+.panel-hand-rack__column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 100%;
+  /* Rare extra siblings; vertical tray dividers use `--play-tray-h-divider`. */
+  gap: var(--play-tray-h-divider);
+}
+
+/* Hand row + tile-aligned action bar share one width (matches mock). */
+.panel-hand-rack__hand-tray {
+  width: 100%;
+  max-width: 100%;
+  align-self: stretch;
+  gap: var(--rack-tile-gap);
+}

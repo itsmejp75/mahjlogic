@@ -1,0 +1,31 @@
+
+
+/* Same 14-column grid + insets as the main tile action bar; inner-7 wide controls. */
+.panel--hand .rack-bottom-bar--wall-game {
+  display: grid;
+  grid-template-columns: repeat(14, var(--hand-rack-tile-w));
+  column-gap: var(--player-rack-face-gap);
+  row-gap: 0;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  padding-inline: var(--hand-rack-tray-inset-inline);
+  margin: 0;
+  align-items: center;
+  transform: translateX(var(--hand-rack-action-row-nudge-x));
+}
+
+.panel--hand .rack-bottom-bar--wall-game > * {
+  grid-row: 1;
+}
+
+.panel--hand .rack-bottom-bar--wall-game .rack-bottom-tile-cell {
+  flex: none;
+}
+
+.panel--hand .rack-bottom-bar--wall-game .btn.rack-bottom-tile-cell {
+  width: var(--rack-tile-btn-inner-7);
+  max-width: var(--rack-tile-btn-inner-7);
+  margin-inline-start: var(--rack-tile-face-bw);
+  justify-self: start;
+}

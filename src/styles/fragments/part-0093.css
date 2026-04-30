@@ -1,0 +1,35 @@
+
+
+/* ── Joined tray: player exposure rack (non-charleston) ── */
+.panel--hand .exposure-rack:not(.exposure-rack--charleston-pass) {
+  background: var(--window-inner-surface);
+  border: 1px solid var(--window-border);
+  border-radius: 0.38rem;
+}
+
+/* Keep Charleston exposure row in the same visible tray container. */
+.panel--hand .exposure-rack.exposure-rack--charleston-pass {
+  background: var(--window-inner-surface);
+  border: 1px solid var(--window-border);
+  border-radius: 0.38rem;
+  /* Same inner vertical pad as post-Charleston `.panel--hand .exposure-rack` (`--hand-rack-tray-inset-block`). */
+  padding-block: var(--hand-rack-tray-inset-block);
+  justify-content: flex-start;
+  /* Same inter-face gap as `.hand-row` (cols 1–14 share one grid). */
+  gap: var(--player-rack-face-gap);
+  /* Match `.panel-hand-rack__hand-tray .hand-row` horizontal inset so slot 12 / pass-tail lines up with the 12th tile face; do not use `--rack-tray-inset-inline` here (it shifts the pass box vs the hand). */
+  padding-inline: var(--hand-rack-tray-inset-inline);
+}
+
+.panel--hand .exposure-rack.exposure-rack--charleston-pass .exposure-rack__slot--east-discard-slot .tile-face,
+.panel--hand .exposure-rack.exposure-rack--charleston-pass .exposure-rack__slot--incoming-discard .tile-face {
+  outline: none;
+}
+
+/* ── Joined tray: bot exposures ── */
+.panel--bot-exposures .exposure-rack {
+  background: transparent;
+  border-radius: 0;
+  position: relative;
+  z-index: 2;
+}

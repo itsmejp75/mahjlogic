@@ -1,0 +1,11 @@
+
+
+/* Wide side-by-side: bot column is right of a wide discard; keep the well flush to the column’s
+   trailing edge (same as East rack + action bar right edge) instead of re-centering in a narrow sub-column. */
+@media (min-width: 36.01rem) {
+  .app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well {
+    margin-left: calc(-1 * var(--play-split-lower-box-left-bleed));
+    margin-right: 0;
+    align-self: flex-start;
+  }
+}

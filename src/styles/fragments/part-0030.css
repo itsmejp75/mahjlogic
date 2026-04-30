@@ -1,0 +1,50 @@
+
+
+/* iPhone homescreen / very narrow portrait: give one extra notch of compression. */
+@media (max-width: 26rem) {
+  :root {
+    --app-h-pad-base: clamp(0.24rem, 1.8vw, 0.5rem);
+    --hand-rack-tile-w: max(1.5rem, calc(var(--hand-rack-usable-w) / 14));
+    --hand-rack-tile-h: max(2rem, calc(var(--hand-rack-usable-w) / 14 * 1.3333));
+  }
+}
+
+/*
+ * iPhone home-screen landscape behaves like a short, wide desktop viewport.
+ * Shrink core rhythm together (tiles + controls + spacing) so the whole page
+ * scales proportionally instead of individual parts clipping first.
+ */
+@media (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) {
+  :root {
+    /* Tile + control type scale from `--hand-rack-tile-w` only; avoid a second `html` font-size scale. */
+    --app-h-pad-base: clamp(0.06rem, 0.45vw, 0.16rem);
+    --app-v-pad: clamp(0.12rem, 0.6dvb, 0.22rem);
+    --hand-window-pad-inline: clamp(0.08rem, 0.5vw, 0.18rem);
+    --rack-tray-inset-inline: 0.16rem;
+    --rack-tray-inset-block: 0.18rem;
+    --hand-rack-tile-w: max(1.28rem, calc(var(--hand-rack-usable-w) / 14));
+    --hand-rack-tile-h: max(1.72rem, calc(var(--hand-rack-usable-w) / 14 * 1.3333));
+    --player-rack-face-gap: 1px;
+    --btn-letter-spacing: calc(0.008em + 0.008rem);
+  }
+
+  .app-main__scroll {
+    max-height: min(20dvb, 6.5rem);
+  }
+
+  /*
+   * On phone landscape, remove desktop sub-pixel nudges (+1/-2px) so rack math
+   * resolves exactly to viewport width and the right edge no longer clips.
+   */
+  .panel--hand .panel-hand-rack__hand-tray .hand-row {
+    padding-inline: var(--rack-tray-inset-inline);
+    margin-left: 0;
+  }
+
+  .panel--hand .rack-bottom-bar--tile-grid,
+  .panel--hand .rack-bottom-bar--wall-game {
+    width: 100%;
+    padding-inline: var(--rack-tray-inset-inline);
+    margin-left: 0;
+  }
+}

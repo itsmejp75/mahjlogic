@@ -1,0 +1,13 @@
+
+
+.panel--hand .rack-stage__rack-col {
+  gap: var(--play-tray-h-divider);
+  /* Pin the column to exactly 14 tile-widths so exposure rack, hand, and
+     button bar all share the same coordinate origin and never center separately.
+     `.rack-stage` is now flex+align-items:center (see below), so align-self
+     handles horizontal centering. margin-inline auto is redundant but harmless. */
+  width: calc(14 * var(--rack-tile-w) + 13 * var(--player-rack-face-gap) + 2 * var(--hand-rack-tray-inset-inline));
+  max-width: 100%;
+  margin-inline: auto;
+  align-self: center;
+}

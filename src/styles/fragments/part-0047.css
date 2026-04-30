@@ -1,0 +1,19 @@
+
+
+/*
+ * List starts below the bot toolbar row (spacing from `.panel--bot-exposures` grid gap only); flex spacer
+ * at the end fills the column so the hand/discard play split can still use full height.
+ */
+.panel--bot-exposures__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  /* Racks + list use global `--rack-tile-gap` (same 1px as `.discard-pile`); do not override here. */
+  /* Toolbar↔first bot row spacing comes only from `.panel--bot-exposures` grid gap (`--play-tray-h-divider`). */
+  padding-top: 0;
+  padding-bottom: 0;
+}

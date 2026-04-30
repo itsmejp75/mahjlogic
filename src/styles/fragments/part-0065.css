@@ -1,0 +1,30 @@
+
+
+.app-rack-stage {
+  /* Only as tall as the hand panel — no extra flex stretch above the rack */
+  flex: 0 0 auto;
+  min-height: 0;
+  justify-content: flex-end;
+  width: 100%;
+  max-width: var(--app-play-fit-inline);
+  margin-inline: auto;
+  box-sizing: border-box;
+  padding-inline: var(--app-h-pad);
+  /* Flat fill — top air comes from `.app-main` padding, not a gradient band. */
+  background: var(--window-surface);
+  position: relative;
+}
+
+/* Rack stage itself stays clean; bottom inset shadow lives on the inner hand wrapper. */
+.app-dnd-frame .app-rack-stage {
+  box-shadow: none;
+}
+
+.app-rack-stage .panel--hand {
+  width: 100%;
+  max-width: 100%;
+  align-self: stretch;
+  margin-bottom: 0;
+  border: none;
+  border-radius: 0;
+}

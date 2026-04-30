@@ -1,0 +1,7 @@
+
+
+/* Inset from discard column — small left gutter so bot column doesn't sit flush against the discard tray.
+   `--play-split-discard-bot-join-pad` is kept for formulas (e.g., `--bot-panel-outer-w`). */
+.app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures {
+  padding-inline-start: 20px;
+}

@@ -1,0 +1,15 @@
+
+
+@media (max-width: 28rem) {
+  :root {
+    --app-ui-control-fs: clamp(0.5rem, calc(var(--hand-rack-tile-w) * 0.32), 0.98rem);
+    --app-ui-control-fs-sm: clamp(0.45rem, calc(var(--hand-rack-tile-w) * 0.27), 0.86rem);
+    --app-ui-control-fs-xs: clamp(0.42rem, calc(var(--hand-rack-tile-w) * 0.25), 0.78rem);
+  }
+}
+
+@supports (width: 100dvi) {
+  :root {
+    --app-play-fit-inline-from-block: 195dvb;
+  }
+}

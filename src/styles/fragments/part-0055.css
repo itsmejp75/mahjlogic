@@ -1,0 +1,11 @@
+
+
+/* Right column: controls on top, bot exposures bottom-aligned with discard tracker. */
+.app-play-split__right-stack {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  width: var(--bot-panel-outer-w);
+  align-items: stretch;
+}

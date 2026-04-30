@@ -1,0 +1,5 @@
+
+
+.app-layout[data-animations='off'] .suggested-hands-popup__resize-corner::after {
+  transition: none;
+}

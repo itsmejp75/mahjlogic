@@ -1,0 +1,21 @@
+
+
+/* Each row: discrete tray like `.panel--hand .rack-stage__rack-top .exposure-rack` — base border
+   here; shared `--dark-tray-rim-*` block below matches hand-bank rim. List row↔row gap uses
+   `--play-tray-h-divider` (same as East rack tray strips; horizontal discard↔bot offset unchanged). */
+.panel--bot-exposures .app-opponents-rail__cell {
+  justify-content: center;
+  align-items: flex-start;
+  position: relative;
+  max-width: none;
+  flex: 1 1 0;
+  /* Close the tray evenly around the tiles, matching the discard tray's simple inner inset. */
+  padding-top: var(--bot-exposure-inner-pad);
+  padding-bottom: var(--bot-exposure-inner-pad);
+  padding-inline: var(--bot-exposure-inner-pad);
+  min-height: 0;
+  background: var(--window-inner-surface);
+  border: 1px solid var(--window-border);
+  border-radius: var(--tile-tray-shell-radius);
+  overflow: hidden;
+}

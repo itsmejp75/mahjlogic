@@ -1,0 +1,5 @@
+
+
+.app-layout[data-animations='off'] .rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell {
+  transition: none;
+}

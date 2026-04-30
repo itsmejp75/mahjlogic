@@ -1,0 +1,12 @@
+
+
+/* Charleston: rack only (wall + exposure / hand); actions on bar below */
+.rack-stage--charleston {
+  /* Flex-center the inner rack-col to guarantee symmetric left/right empty space
+     regardless of sub-pixel rounding or stray horizontal margins upstream. */
+  align-items: center;
+}
+
+.rack-stage--main-rack {
+  align-items: center;
+}

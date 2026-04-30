@@ -1,0 +1,6 @@
+
+
+.panel--hand .rack-stage__rack-top .exposure-rack .exposure-rack__slot {
+  position: relative;
+  z-index: 1;
+}

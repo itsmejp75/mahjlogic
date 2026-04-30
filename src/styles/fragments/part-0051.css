@@ -1,0 +1,16 @@
+
+
+.app-dnd-frame .app-play-split .panel--bot-exposures .app-opponents-rail__cell {
+  width: calc(100% - var(--play-split-lower-box-edge-inset) + var(--play-split-lower-box-left-bleed));
+  margin-left: calc(-1 * var(--play-split-lower-box-left-bleed));
+}
+
+/* After base cell shadow above — merge joker-swap ring without losing tray highlight. */
+.panel--bot-exposures .app-opponents-rail__cell--swap-over {
+  box-shadow:
+    var(--dark-tray-rim-shadow-up-1),
+    var(--dark-tray-rim-shadow-up-2),
+    var(--dark-tray-rim-shadow-down-1),
+    var(--dark-tray-rim-shadow-down-2),
+    inset 0 0 0 1px color-mix(in srgb, #f59e0b 58%, var(--border));
+}

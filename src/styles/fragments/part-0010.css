@@ -1,0 +1,24 @@
+
+
+
+/* Hand tray: side inset lives on .hand-row so left/right tile-edge gaps stay symmetric. */
+.panel--hand .panel-hand-rack__hand-tray .hand-bank {
+  padding-block: var(--hand-rack-tray-inset-block);
+  padding-inline: 0;
+  box-sizing: border-box;
+  min-height: calc(var(--rack-tile-h) + 2 * var(--hand-rack-tray-inset-block));
+  /* Bank is the dark tray — tiles sit at natural width so padding shows on all sides */
+}
+
+.panel--hand .panel-hand-rack__hand-tray .hand-row {
+  --rack-tile-w: calc(var(--hand-rack-tile-w) * var(--hand-rack-tile-scale));
+  --rack-tile-h: calc(var(--hand-rack-tile-h) * var(--hand-rack-tile-scale));
+  /* Fill the hand bank; tiles pack from the left inside the fixed 14-slot strip. */
+  padding-inline: var(--hand-rack-tray-inset-inline);
+  box-sizing: border-box;
+  margin-left: 0;
+  width: 100%;
+  max-width: 100%;
+  justify-content: flex-start;
+  flex-shrink: 0;
+}

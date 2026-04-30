@@ -1,0 +1,19 @@
+
+
+.app-dnd-frame .app-play-split .panel--bot-exposures__body > .bot-exposures__list {
+  flex: 1 1 0;
+  min-height: 0;
+  box-sizing: border-box;
+  width: calc(100% + var(--play-split-lower-box-left-bleed));
+  margin-left: calc(-1 * var(--play-split-lower-box-left-bleed));
+  padding-left: var(--play-split-lower-box-left-bleed);
+  display: grid;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  align-content: stretch;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
+.app-dnd-frame .app-play-split .panel--bot-exposures__body-fill {
+  display: none;
+}

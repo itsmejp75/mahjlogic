@@ -119,7 +119,7 @@ import {
   openClaimMeldsFitSomePracticeLine,
   reorderEastExposuresToPatternGroupOrder,
 } from './analysis/eastExposurePatternFit'
-import './App.css'
+import './styles/style.css'
 
 /** Tiles in wall after opening deal (`dealOpeningFour`); meter stays flat green until below this. */
 const OPENING_WALL_TILES = 99
@@ -2080,7 +2080,7 @@ function applyDeclareMahjongSelfDraw(r: RoundState): RoundState {
   }
 }
 
-/** Settings menu: horizontal on/off switch (see `.app-menu-tray__toggle-slider` in `App.css`). */
+/** Settings menu: horizontal on/off switch (see `.app-menu-tray__toggle-slider` in `src/styles`). */
 function AppMenuSettingSwitch({
   labelId,
   pressed,

@@ -1,0 +1,264 @@
+
+
+/* Shared: border-box for rack cells + bot toolbar controls (Rank 3 cluster) */
+.rack-bottom-tile-cell,
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn,
+.panel--bot-exposures__toolbar-well .panel--bot-exposures__clear,
+.panel--bot-exposures__toolbar-well .panel--bot-exposures__hint,
+.panel--bot-exposures__toolbar-well .app-menu-anchor .app-bottom-center-controls__menu-btn {
+  box-sizing: border-box;
+}
+
+.flex-center,
+.app-menu-modal-layer,
+.app-menu-tray__item,
+.charleston-error-overlay,
+.dead-hand-overlay,
+.discard-entry__fly-wrap,
+.east-discard-staging,
+.exposure-rack__call-action-btn,
+.exposure-rack__incoming-discard-drag,
+.exposure-rack__incoming-discard-fly,
+.exposure-rack__tile-fly-wrap,
+.hands-list__freeze-header .hands-list__cell--away,
+.hands-list__pattern-joker-mark,
+.hands-list__pattern-tile-cell,
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face,
+.hands-sheet__tile-cell,
+.panel--bot-exposures__toolbar-well .app-bottom-center-controls,
+.panel--bot-exposures__toolbar-well .app-menu-anchor,
+.panel--hand .panel-hand-rack__hand-tray .hand-bank,
+.panel--hand .rack-stage__rack-top .exposure-rack__watermark,
+.pass-strip__tile-btn,
+.rack-hand-tools__wall,
+.tile-face,
+.tile-face.tile-face--rack-suit-stack .tile-face__suit-band {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inline-flex-center,
+.app__header .app__menu-btn,
+.app__mode-btn,
+.app-bottom-center-controls__menu-btn,
+.app-menu-modal__close,
+.btn--label-wrap,
+.charleston-error-dialog__dismiss,
+.hands-list__card-c,
+.hands-sheet__card-c,
+.mahjong-blocked-modal__c-mark,
+.panel--bot-exposures__toolbar-well .app-bottom-center-controls .suggested-hands-tab,
+.panel--bot-exposures__toolbar-well .panel--bot-exposures__clear,
+.panel--bot-exposures__toolbar-well .panel--bot-exposures__hint,
+.rack-bottom-tile-cell,
+.suggested-hands-popup__close,
+.suggested-hands-popup__header-controls .hands-panel__display-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-col-stretch,
+.app,
+.app-dnd-frame,
+.app-main,
+.app-rack-stage,
+.hands-panel__content,
+.mahjong-blocked-modal__field,
+.panel--bot-exposures__toolbar,
+.panel--hand .panel-hand-rack__action-well,
+.panel--hand .panel-hand-rack__charleston-actions-well,
+.panel-hand-rack__hand-tray,
+.rack-stack,
+.wall-game-dialog {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* Hand / exposure / Charleston pass — single tile geometry */
+:root {
+  --rack-tile-w: 2.65rem;
+  --rack-tile-h: 3.53rem;
+  --rack-tile-gap: 1px;
+  /* Used by `.tile-face` and dark tray shells that frame those faces (discard, bot rows). */
+  --tile-face-border-radius: 0.35rem;
+  /* DnD subtree re-declares; concentric with tile faces where faces sit `inner-pad` inside the shell. */
+  --bot-exposure-inner-pad: 4px;
+  /* R_outer = R_tile + padding — same concentric look as the toolbar well around Menu / Suggested. */
+  --tile-tray-shell-radius: calc(var(--tile-face-border-radius) + var(--bot-exposure-inner-pad));
+  /* Base face border width on default `.tile-face` (used in gap/inner-width math). */
+  --rack-tile-face-bw: 1px;
+  /* Visible gap used by the player rack / player exposure row once tile borders are removed. */
+  --player-rack-face-gap: calc(var(--rack-tile-gap) + var(--rack-tile-face-bw));
+  /* Horizontal inset so exposure row and hand row share one column grid */
+  --rack-panel-inset: 0.45rem;
+  /* Exposure row slot height (tile face). Charleston pass row overrides per rack. */
+  --exposure-slot-h: var(--rack-tile-h);
+
+  /*
+   * Locked vertical offset for the play column (`.app-dnd-frame`: bot rail + rack + suggested hands / discard).
+   * Move that stack together by editing only this value — avoid extra margin-top on inner sections
+   * so header / prompt strip layout does not fight this placement.
+   */
+  --app-dnd-rack-hands-margin-top: 0;
+  /* Bot exposure card: inset from border (see `--rack-stack-gap-y` for East rack vertical rhythm). */
+  --rack-card-padding-block: 0.22rem;
+  --rack-card-padding-inline: 0.38rem;
+  /* Main rack window inline padding (match discard tracker side padding). */
+  --hand-window-pad-inline: clamp(0.28rem, 0.9vw, 0.55rem);
+  /**
+   * One vertical rhythm for: bot rail ↔ East rack ↔ lower panels, and inside East rack
+   * (panel inset, exposure↔hand, hand↔actions). Same value Charleston + main play.
+   */
+  --rack-stack-gap-y: 0.22rem;
+  /*
+   * Vertical strip between main dark trays (East exposure↔hand, hand↔action, bot toolbar↔body,
+   * bot row↔row ×2). Modeled as four gaps at `--rack-stack-gap-y` plus two at `+ 4px` (old bot
+   * list step); uniform thickness = arithmetic mean `(6 * S + 8px) / 6` = `S + 8px/6`.
+   * Does not replace `--rack-stack-gap-y` everywhere — tray insets / horizontal split unchanged.
+   */
+  --play-tray-h-divider: calc((6 * var(--rack-stack-gap-y) + 8px) / 6);
+  /* Pass/Sort/Clear etc. — wells use `+ var(--bot-exposure-inner-pad)` so inner corners match the buttons. */
+  --rack-tile-btn-border-radius: 0.68rem;
+  --rack-tray-inset-inline: 0.44rem;
+  /*
+   * Locked top-rack geometry: hand tiles, East exposure tiles, and the action buttons
+   * share these values. Do not reuse them for the lower discard/menu/bot layout.
+   */
+  --hand-rack-tray-inset-inline: var(--bot-exposure-inner-pad);
+  --hand-rack-tray-inset-block: 3px;
+  --hand-rack-tile-scale: 0.999;
+  --hand-rack-action-row-nudge-x: -1px;
+  --rack-tray-inset-block: 0.3rem;
+  /* Suggested-hands panel top inset — alias of rack stack gap. */
+  --hands-panel-padding-top: var(--rack-stack-gap-y);
+  /* Discard tracker + bot exposures below rack: shared max height. */
+  /* `dvb` matches html --app-viewport-block so lower panels don’t outgrow a short window independently of the hand row. */
+  --play-split-panel-max-h: clamp(12.5rem, 53dvb, 32rem);
+  /*
+   * Main East rack tile sizing — fills the play column at every viewport size.
+   * `html { --app-viewport-inline: 100dvi }` (index.css) keeps hand / bot / discard math aligned.
+   * --app-h-pad: horizontal inset on `.app-rack-stage` / `.app-play-split` (one side); mobile override below.
+   * --app-v-pad: bottom inset on `.app-main` (top is flush). Use **dvb** (not vw) so only height changes
+   *   reflow vertical rhythm; horizontal resizes should not act like vertical compression.
+   * Usable width = that inline minus 2× this inset, 2× panel inline padding, and the 13 inter-tile gaps.
+   * Tile width = usable ÷ 14 (no upper cap so the rack always spans edge-to-edge).
+   */
+  /* Safe-area aware side inset for notch devices (iPhone landscape/portrait). */
+  --app-safe-inline: max(env(safe-area-inset-left), env(safe-area-inset-right));
+  /*
+   * Effective play width. On short/wide windows, height is allowed to pull the sides inward
+   * so the rack + lower board keep one ratio and compress toward the center instead of
+   * dumping all shrink into the lower half.
+   */
+  --app-play-fit-inline-from-block: 195vh;
+  --app-play-fit-inline: min(
+    var(--app-viewport-inline, 100vw),
+    var(--app-play-fit-inline-from-block)
+  );
+  /* Slightly tighter min than before so rack + lower strip reclaim horizontal room
+     after the top header band / safe-area padding (matches East 14-slot usable width). */
+  --app-h-pad-base: clamp(0.3rem, 1.65vw, 1.35rem);
+  --app-h-pad: calc(var(--app-h-pad-base) + var(--app-safe-inline));
+  --app-v-pad: var(--app-h-pad-base);
+  --hand-rack-usable-w: calc(
+    var(--app-play-fit-inline)
+    - 2 * var(--app-h-pad)
+    - 2 * var(--hand-window-pad-inline)
+    - 2 * var(--rack-tray-inset-inline)
+    - 13 * var(--player-rack-face-gap)
+  );
+  --hand-rack-tile-w: max(2.34rem, calc(var(--hand-rack-usable-w) / 14));
+  --hand-rack-tile-h: max(3.12rem, calc(var(--hand-rack-usable-w) / 14 * 1.3333));
+  /*
+   * Control type tied to tile width: Pass, Menu, CLR HL, HANDS, rack bar, default `.btn`, menu toggles.
+   * Scales with `--hand-rack-tile-w` (same viewport math as the hand) — no separate vw clamps.
+   */
+  --app-ui-control-fs: clamp(0.62rem, calc(var(--hand-rack-tile-w) * 0.42), 1.26rem);
+  --app-ui-control-fs-sm: clamp(0.55rem, calc(var(--hand-rack-tile-w) * 0.36), 1.05rem);
+  --app-ui-control-fs-xs: clamp(0.48rem, calc(var(--hand-rack-tile-w) * 0.3), 0.88rem);
+  /* Match `.tile-face` inner (border-box face width) — all rack actions use these at every viewport. */
+  --rack-tile-btn-inner-1: calc(var(--hand-rack-tile-w) - 2 * var(--rack-tile-face-bw));
+  --rack-tile-btn-inner-2: calc(2 * var(--hand-rack-tile-w) + var(--player-rack-face-gap) - 2 * var(--rack-tile-face-bw));
+  --rack-tile-btn-inner-3: calc(3 * var(--hand-rack-tile-w) + 2 * var(--player-rack-face-gap) - 2 * var(--rack-tile-face-bw));
+  --rack-tile-btn-inner-7: calc(7 * var(--hand-rack-tile-w) + 6 * var(--player-rack-face-gap) - 2 * var(--rack-tile-face-bw));
+  /* East rack column outer width; Pass (cols 12–14) left edge inside that column (tile-grid + insets). */
+  --rack-col-outer-w: calc(
+    14 * var(--hand-rack-tile-w) + 13 * var(--player-rack-face-gap) + 2 * var(--rack-tray-inset-inline)
+  );
+  --rack-pass-btn-left-from-rack-col: calc(
+    var(--rack-tray-inset-inline) + 1px
+    + 11 * var(--hand-rack-tile-w) + 11 * var(--player-rack-face-gap)
+    + var(--rack-tile-face-bw)
+  );
+  /*
+   * Main action bar (`.panel--hand .rack-bottom-bar--tile-grid`): horizontal center of Swap
+   * (`grid-column: 6 / 8`, two face-width slots) from the same origin as play-split inner-left
+   * (after `--app-h-pad`): hand + discard panel inline pad, bar pad + -2px/+1px nudge, then 6
+   * tile tracks + 5.5 gaps to the span midpoint.
+   */
+  --rack-swap-center-x-from-stage-content: calc(
+    var(--hand-window-pad-inline)
+    + var(--rack-tray-inset-inline)
+    - 1px
+    + 6 * var(--hand-rack-tile-w)
+    + 5.5 * var(--player-rack-face-gap)
+  );
+  /* Menu: 2 columns — inner face (matches bottom action bar) */
+  --menu-btn-w: var(--rack-tile-btn-inner-2);
+
+  /* Default `.btn` text — follows rack tile width (see `--app-ui-control-fs`). */
+  --btn-font-size: var(--app-ui-control-fs);
+  --btn-line-height: 1.22;
+  /* Prior tight track + 0.05rem extra tracking (see `.btn`, mode toggle, menu, suggested tab, call buttons). */
+  --btn-letter-spacing: calc(0.03em + 0.05rem);
+  --btn-pad-block: 0.44rem;
+  --btn-pad-inline: 0.82rem;
+
+  /* Rack bottom bar: same type scale as `.btn` (tile-linked). */
+  --rack-bottom-action-fs: var(--app-ui-control-fs);
+  /*
+   * Tile-slot actions (Pass, Sort, bot toolbar: Menu / HANDS / CLR HL / HINT):
+   * cap label size to a fraction of the face width so type tracks button size the same way when
+   * the window shrinks. Padding scales too so text stays off the control rim.
+   */
+  --rack-control-label-fs: min(
+    var(--rack-bottom-action-fs),
+    calc(var(--hand-rack-tile-w) * 0.35)
+  );
+  --rack-control-label-fs-tight: min(
+    var(--rack-bottom-action-fs),
+    calc(var(--hand-rack-tile-w) * 0.25)
+  );
+  --rack-control-pad-inline: max(0.1rem, min(0.24rem, calc(var(--hand-rack-tile-w) * 0.08)));
+  --rack-control-pad-block: max(0.1rem, min(0.2rem, calc(var(--hand-rack-tile-w) * 0.05)));
+
+  /* Rack action row + bot toolbar (Menu / Clear / Suggested): larger tap targets on phones. */
+  --rack-action-touch-min-h: max(48px, calc(var(--hand-rack-tile-h) * 0.52));
+  --suggested-tab-h: var(--rack-action-touch-min-h);
+
+  /* Inner dark trays: East exposure, hand bank, discard well, bot exposure rows, suggested-hands body. */
+  --dark-tray-rim-border-top: color-mix(in srgb, var(--window-border) 22%, color-mix(in srgb, var(--window-surface) 46%, var(--color-black) 54%) 78%);
+  --dark-tray-rim-border-inline: color-mix(in srgb, var(--window-border) 56%, transparent 44%);
+  --dark-tray-rim-border-bottom: var(--window-border);
+  /* Rim fully INSET so trays read as recessed panels — dark on top, bright on bottom — matching the
+     inset look of the action buttons. Outer shadows were clipped by `overflow-y: auto` (discard)
+     and bled into inter-row gaps (bot exposures).
+     Top rim color = midpoint gray between the tray interior (`--window-inner-surface`) and the
+     outer gray wrapper (`--window-surface`), so the recessed look reads symmetrically. */
+  --dark-tray-rim-shadow-up-1: inset 0 1px 0 color-mix(in srgb, var(--window-inner-surface) 50%, var(--window-surface) 50%);
+  --dark-tray-rim-shadow-up-2: inset 0 2px 0 color-mix(in srgb, var(--window-inner-surface) 50%, var(--window-surface) 50%);
+  --dark-tray-rim-shadow-down-1: inset 0 -1px 0 #4a5568;
+  --dark-tray-rim-shadow-down-2: inset 0 -2px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Compress control type when the page / viewport is narrow (all `.btn` and tokens that use these). */
+@media (max-width: 40rem) {
+  :root {
+    --app-ui-control-fs: clamp(0.56rem, calc(var(--hand-rack-tile-w) * 0.38), 1.1rem);
+    --app-ui-control-fs-sm: clamp(0.5rem, calc(var(--hand-rack-tile-w) * 0.32), 0.95rem);
+    --app-ui-control-fs-xs: clamp(0.46rem, calc(var(--hand-rack-tile-w) * 0.28), 0.85rem);
+  }
+}

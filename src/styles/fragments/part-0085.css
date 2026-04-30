@@ -1,0 +1,31 @@
+
+
+/* ── Suggested hands panel (below rack in main area) ── */
+/* Title + category dropdown on one row; list scrolls inside the panel. */
+
+.panel--hands {
+  border-color: var(--border);
+  display: flex;
+  flex-direction: column;
+  max-height: min(22rem, 52dvh);
+  min-height: 0;
+  /*
+   * Clip the suggested-hands sheet's negative-margin "rails" (used so the sticky title row's
+   * background fills the panel edge-to-edge). Filter tray slides in from inside the panel.
+   */
+  overflow: hidden;
+  /* Default panel inline padding — used by the sheet to push its rails past this padding. */
+  --hands-panel-pad-x: clamp(0.75rem, 2.2vw, 1.5rem);
+}
+
+.app-play-split__right .panel--hands {
+  /* Match the override `.app-play-split__right .panel--hands { padding-inline: ... }`. */
+  --hands-panel-pad-x: clamp(0.4rem, 1.4vw, 0.82rem);
+}
+
+/* Suggested hands in play split: width cap (height + flex shared with discard tracker above). */
+.app-dnd-frame .panel--hands {
+  max-width: 100%;
+  min-width: 0;
+  margin-bottom: 0;
+}

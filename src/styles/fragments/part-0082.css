@@ -1,0 +1,8 @@
+
+
+/* Only lift the single-line glyph above `::before` lustre. Stacked suit (rank + band) must keep
+   `position: absolute` from `.tile-face--rack-suit-stack` — a generic `> *` was overriding it. */
+.app[data-tile-graphics='designer'] .tile-face > .tile-face__glyph {
+  position: relative;
+  z-index: 1;
+}

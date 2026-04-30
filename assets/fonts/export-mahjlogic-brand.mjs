@@ -1,5 +1,5 @@
 /**
- * Writes canonical MahjLogic logo files to assets/brand/ (matches App.css rack watermark).
+ * Writes canonical MahjLogic logo files to assets/brand/ (matches src/styles rack watermark).
  * - mahjlogic-logo.svg  : vector paths (no font files required to view)
  * - mahjlogic-logo.png  : transparent PNG
  *

@@ -1,0 +1,6 @@
+
+
+.panel--hand .panel-hand-rack__hand-tray {
+  /* Match the vertical strip between exposure rack and hand (same as `.rack-stage__rack-col`). */
+  gap: var(--play-tray-h-divider);
+}

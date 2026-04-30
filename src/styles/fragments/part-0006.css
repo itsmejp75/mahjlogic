@@ -1,0 +1,31 @@
+
+
+/* Exposure + hand: one vertical stack, no extra margin between rows */
+
+/* After Charleston: exposure + hand column, vertical actions to the right */
+
+/* Main East rack: mid-size tiles (between compact + near-full-screen passes); rack centered via rack-stage */
+.panel--hand {
+  /* Slightly wider formula + higher caps → bigger tiles; h capped vs w so panel doesn’t grow tall. */
+  /* ~8% larger than base — drives tiles, exposure row, and bottom bar grid (alignment unchanged). */
+  --rack-tile-w: var(--hand-rack-tile-w);
+  --rack-tile-h: var(--hand-rack-tile-h);
+  --rack-panel-inset: clamp(0.54rem, 1.28vw, 1.02rem);
+  /* Visible dark tray around tile rows (all sides). */
+  --rack-tray-inset-inline: 0.44rem;
+  --rack-tray-inset-block: 0.3rem;
+  /* Match Charleston pass row height. */
+  --exposure-slot-h: var(--rack-tile-h);
+  max-width: 100%;
+  margin-inline: auto;
+  margin-bottom: 1rem;
+  /* Frame only — height follows rack content (tiles / exposures / bar unchanged). */
+}
+
+.panel--hand > .panel-hand-rack {
+  flex: 0 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}

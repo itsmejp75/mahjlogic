@@ -1,0 +1,29 @@
+
+
+/* Menu on the East hand / Charleston action bar (replaces former Mah Jongg slot c4–5). */
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack {
+  position: relative;
+  bottom: auto;
+  right: auto;
+  left: auto;
+  transform: none;
+  z-index: auto;
+  box-sizing: border-box;
+  display: block;
+  width: var(--rack-tile-btn-inner-2);
+  max-width: var(--rack-tile-btn-inner-2);
+  margin-inline-start: var(--rack-tile-face-bw);
+  justify-self: start;
+  min-height: var(--rack-action-touch-min-h);
+  padding: 0;
+  border-radius: var(--rack-tile-btn-border-radius);
+  overflow: hidden;
+}
+
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+}

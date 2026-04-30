@@ -1,0 +1,451 @@
+
+
+.panel--hand .rack-stack__column {
+  gap: var(--rack-tile-gap);
+}
+
+.panel--hand .rack-bottom-tile-cell {
+  font-size: var(--rack-bottom-action-fs);
+}
+
+.panel--hand .rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell {
+  font-size: min(1.792rem, calc(var(--rack-bottom-action-fs) * 2.048));
+  font-family: 'Noto Sans Arabic', var(--sans);
+  font-weight: 600;
+  color: var(--color-off-black);
+}
+
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell {
+  padding: 0.14rem 0.05rem;
+}
+
+.rack-stack .exposure-rack,
+.rack-stage__rack-top .exposure-rack {
+  margin-bottom: 0;
+}
+
+.rack-stack .hand-bank,
+.rack-stage__rack-bottom .hand-bank {
+  padding-block: var(--rack-tray-inset-block);
+  padding-inline: var(--rack-tray-inset-inline);
+}
+
+/* Root shell: flush to the viewport (no padding). Vertical inset for the play column
+   lives on `.app-main` (top + bottom). Horizontal inset lives on `.app-rack-stage` /
+   `.app-play-split` only. */
+.app {
+  min-width: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  margin: 0 auto;
+  padding: 0;
+  box-sizing: border-box;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--window-surface);
+  /* Tile graphics: base --tg-* (overridden by `data-tile-graphics` on `.app`) */
+  --tg-bam: var(--card-ink-green);
+  --tg-crak: var(--card-ink-red);
+  --tg-dot: var(--card-ink-navy);
+  --tg-wind: var(--wind-tile-bg);
+  --tg-dragon-red: var(--card-ink-red);
+  --tg-dragon-green: var(--card-ink-green);
+  --tg-dragon-soap: var(--card-ink-navy);
+  --tg-dragon-any: #5c6470;
+  --tg-flower: #ab47bc;
+  --tg-joker: #ab47bc;
+  --tg-ink: var(--color-black);
+  --tg-suit-band-ink: var(--color-black);
+  --tg-joker-ring: var(--color-black);
+  --tg-cs-navy-bg: var(--card-tile-skin-blue-bg);
+  --tg-cs-navy-fg: var(--card-tile-skin-blue-fg);
+  --tg-cs-black-bg: var(--card-tile-skin-black-bg);
+  --tg-cs-black-fg: var(--card-tile-skin-black-fg);
+  --tg-cs-red-bg: var(--card-tile-skin-red-bg);
+  --tg-cs-red-fg: var(--card-tile-skin-red-fg);
+  --tg-cs-green-bg: var(--card-tile-skin-green-bg);
+  --tg-cs-green-fg: var(--card-tile-skin-green-fg);
+  --tg-cs-neutral-bg: var(--card-tile-skin-neutral-bg);
+  --tg-cs-neutral-fg: var(--card-tile-skin-neutral-fg);
+  --tg-cs-rack-wind-bg: var(--wind-tile-bg);
+  --tg-cs-rack-wind-fg: var(--color-black);
+  --tg-cs-rack-flower-bg: #ab47bc;
+  --tg-cs-rack-flower-fg: var(--color-black);
+  /* Suggested-hand dim: flat `::after` cover (see rules below; no gradient). */
+  --suggest-dim-overlay: rgba(0, 0, 0, 0.38);
+  /* Soft inner vignette only (used alone in small post-game modals; see “Wall game dialog” dim). */
+  --suggest-dim-inset-vignette: inset 0 0 0.5rem color-mix(in srgb, var(--color-black) 22%, transparent);
+  /* Paired with dim: soft inner vignette + hairline; hairline is omitted in wall-game dialog at small tile scale. */
+  --suggest-dim-inset-shadow: var(--suggest-dim-inset-vignette),
+    inset 0 0 0 1px color-mix(in srgb, var(--color-black) 14%, transparent);
+  /* Paired with focus / suggest-best: soft inner light (dim counterpart, “up and out” vs sunken). */
+  --suggest-highlight-inset-shadow: inset 0 0 0.5rem color-mix(in srgb, var(--color-white) 24%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--color-white) 28%, transparent);
+  /* Joker swap hint: wait from turn start (hint active) before dock bounce (see keyframes). */
+  --joker-swap-hint-bounce-delay: 500ms;
+}
+
+/* Tile graphics: menu presets (override --tg-* only) */
+/* Ivory (data-tile-graphics `classic`): warm ivory; rank/letters match dot-bam-crak spot colors; winds/dragons as below; joker ring var(--color-off-black) */
+.app[data-tile-graphics='classic'] {
+  --tg-ivory-face: #f9f6ee;
+  --tg-bam: var(--tg-ivory-face);
+  --tg-crak: var(--tg-ivory-face);
+  --tg-dot: var(--tg-ivory-face);
+  --tg-wind: var(--tg-ivory-face);
+  --tg-dragon-red: var(--tg-ivory-face);
+  --tg-dragon-green: var(--tg-ivory-face);
+  --tg-dragon-soap: var(--tg-ivory-face);
+  --tg-dragon-any: var(--tg-ivory-face);
+  --tg-flower: var(--tg-ivory-face);
+  --tg-joker: var(--tg-ivory-face);
+  --tg-ink: var(--color-black);
+  --tg-suit-band-ink: var(--color-black);
+  --tg-joker-ring: var(--color-off-black);
+  --tg-cs-navy-bg: var(--card-tile-skin-blue-bg);
+  --tg-cs-navy-fg: var(--card-tile-skin-blue-fg);
+  --tg-cs-black-bg: var(--card-tile-skin-black-bg);
+  --tg-cs-black-fg: var(--card-tile-skin-black-fg);
+  --tg-cs-red-bg: var(--card-tile-skin-red-bg);
+  --tg-cs-red-fg: var(--card-tile-skin-red-fg);
+  --tg-cs-green-bg: var(--card-tile-skin-green-bg);
+  --tg-cs-green-fg: var(--card-tile-skin-green-fg);
+  --tg-cs-neutral-bg: var(--card-tile-skin-neutral-bg);
+  --tg-cs-neutral-fg: var(--card-tile-skin-neutral-fg);
+  --tg-cs-rack-wind-bg: var(--wind-tile-bg);
+  --tg-cs-rack-wind-fg: var(--color-off-black);
+  --tg-cs-rack-flower-bg: #ab47bc;
+  --tg-cs-rack-flower-fg: var(--color-black);
+  /* Spot colors: rank + B/D/C and DOT/BAM/CRAK bar use the same bam / crak / dot inks */
+  --tg-classic-letter-bam: #2d6a4f;
+  --tg-classic-letter-crak: #a4161a;
+  --tg-classic-letter-dot: #004b93;
+  --tg-classic-letter-wind: var(--color-off-black);
+  --tg-classic-letter-dragon-gray: #455a64;
+  --tg-classic-letter-flower: #3d0f4d;
+}
+
+.app[data-tile-graphics='classic'] .tile--bam .tile-face__glyph-num,
+.app[data-tile-graphics='classic'] .tile--bam.tile-face--rack-suit-stack .tile-face__rank {
+  color: var(--tg-classic-letter-bam);
+}
+.app[data-tile-graphics='classic'] .tile--crak .tile-face__glyph-num,
+.app[data-tile-graphics='classic'] .tile--crak.tile-face--rack-suit-stack .tile-face__rank {
+  color: var(--tg-classic-letter-crak);
+}
+.app[data-tile-graphics='classic'] .tile--dot .tile-face__glyph-num,
+.app[data-tile-graphics='classic'] .tile--dot.tile-face--rack-suit-stack .tile-face__rank {
+  color: var(--tg-classic-letter-dot);
+}
+
+.app[data-tile-graphics='classic'] .tile--bam .tile-face__glyph-letter {
+  color: var(--tg-classic-letter-bam);
+}
+.app[data-tile-graphics='classic'] .tile--crak .tile-face__glyph-letter {
+  color: var(--tg-classic-letter-crak);
+}
+.app[data-tile-graphics='classic'] .tile--dot .tile-face__glyph-letter {
+  color: var(--tg-classic-letter-dot);
+}
+.app[data-tile-graphics='classic'] .tile--wind .tile-face__glyph-letter {
+  color: var(--tg-classic-letter-wind);
+}
+.app[data-tile-graphics='classic'] .tile--dragon-red .tile-face__glyph-letter {
+  color: var(--tg-classic-letter-crak);
+}
+.app[data-tile-graphics='classic'] .tile--dragon-green .tile-face__glyph-letter {
+  color: var(--tg-classic-letter-bam);
+}
+/* Soap “0” = numeral: dot-spot color (faces soap as a dot-family tile) */
+.app[data-tile-graphics='classic'] .tile--dragon-soap .tile-face__glyph-num,
+.app[data-tile-graphics='classic'] .tile--dragon-soap .tile-face__glyph-letter {
+  color: var(--tg-classic-letter-dot);
+}
+.app[data-tile-graphics='classic'] .tile--dragon-any .tile-face__glyph-letter {
+  color: var(--tg-classic-letter-dragon-gray);
+}
+.app[data-tile-graphics='classic'] .tile--flower .tile-face__glyph-num,
+.app[data-tile-graphics='classic'] .tile--flower .tile-face__glyph-letter {
+  color: var(--tg-classic-letter-flower);
+}
+
+.app[data-tile-graphics='classic'] .tile--bam .tile-face__suit-text {
+  color: var(--tg-classic-letter-bam);
+}
+.app[data-tile-graphics='classic'] .tile--crak .tile-face__suit-text {
+  color: var(--tg-classic-letter-crak);
+}
+.app[data-tile-graphics='classic'] .tile--dot .tile-face__suit-text {
+  color: var(--tg-classic-letter-dot);
+}
+
+/* Ivory: joker “J” stays black; ring alone is var(--color-off-black) (see --tg-joker-ring) */
+.app[data-tile-graphics='classic'] .tile-face.tile--joker .tile-face__glyph {
+  color: var(--color-black);
+}
+
+/* Prism (data-tile-graphics `solid-color`): saturated suit fills; near-black ink #080808 on face + card strip */
+.app[data-tile-graphics='solid-color'] {
+  --tg-bam: var(--card-ink-green);
+  --tg-crak: var(--card-ink-red);
+  --tg-dot: var(--card-ink-navy);
+  --tg-wind: #d1d5db;
+  --tg-dragon-red: var(--card-ink-red);
+  --tg-dragon-green: var(--card-ink-green);
+  --tg-dragon-soap: var(--card-ink-navy);
+  --tg-dragon-any: #5c6470;
+  --tg-flower: #ab47bc;
+  --tg-joker: #ffc107;
+  --tg-ink: #080808;
+  --tg-suit-band-ink: #080808;
+  --tg-joker-ring: #333333;
+  --tg-cs-navy-bg: var(--card-tile-skin-blue-bg);
+  --tg-cs-navy-fg: #080808;
+  --tg-cs-black-bg: var(--card-tile-skin-black-bg);
+  --tg-cs-black-fg: #080808;
+  --tg-cs-red-bg: var(--card-tile-skin-red-bg);
+  --tg-cs-red-fg: #080808;
+  --tg-cs-green-bg: var(--card-tile-skin-green-bg);
+  --tg-cs-green-fg: #080808;
+  --tg-cs-neutral-bg: var(--card-tile-skin-neutral-bg);
+  --tg-cs-neutral-fg: #080808;
+  --tg-cs-rack-wind-bg: #d1d5db;
+  --tg-cs-rack-wind-fg: #080808;
+  --tg-cs-rack-flower-bg: #ab47bc;
+  --tg-cs-rack-flower-fg: #080808;
+}
+
+/* Prism: joker “J” uses the same ink as the rest of the set; ring stays --tg-joker-ring */
+.app[data-tile-graphics='solid-color'] .tile-face.tile--joker .tile-face__glyph {
+  color: var(--tg-ink, var(--color-black));
+}
+
+/* Obsidian (data-tile-graphics `dark`): dark glass, suit-tinted — a step brighter so faces read in UI */
+.app[data-tile-graphics='dark'] {
+  --tg-bam: #1a3d2a;
+  --tg-crak: #3a1e24;
+  --tg-dot: #0f2a40;
+  --tg-wind: #1a1a1d;
+  --tg-dragon-red: var(--tg-crak);
+  --tg-dragon-green: #1a3d2a;
+  --tg-dragon-soap: var(--tg-dot);
+  --tg-dragon-any: #2c343e;
+  --tg-flower: #3e2a4d;
+  --tg-joker: #5e4c2a;
+  /* Lighter inlay: center ranks/glyphs; suit band (DOT/BAM/CRAK) + joker ring = #B0B0B0 in rules below */
+  --tg-ink: var(--color-gray-mid);
+  --tg-suit-band-ink: #b0b0b0;
+  --tg-joker-ring: #b0b0b0;
+  --tg-cs-navy-bg: #1a3a50;
+  --tg-cs-navy-fg: var(--color-gray-mid);
+  --tg-cs-black-bg: #1a2028;
+  --tg-cs-black-fg: var(--color-gray-mid);
+  --tg-cs-red-bg: #3a1e24;
+  --tg-cs-red-fg: var(--color-gray-mid);
+  --tg-cs-green-bg: #1a3d2c;
+  --tg-cs-green-fg: var(--color-gray-mid);
+  --tg-cs-neutral-bg: #2e343e;
+  --tg-cs-neutral-fg: var(--color-gray-mid);
+  --tg-cs-rack-wind-bg: #1a1a1d;
+  --tg-cs-rack-wind-fg: var(--color-gray-mid);
+  --tg-cs-rack-flower-bg: #3e2a4d;
+  --tg-cs-rack-flower-fg: var(--color-gray-mid);
+}
+
+/* Obsidian: compact 3B-style — B / D / C keep #B0B0B0; joker “J” inlay = var(--color-gray-mid), ring = --tg-joker-ring */
+.app[data-tile-graphics='dark'] .tile--suit .tile-face__glyph-letter {
+  color: #B0B0B0;
+}
+
+.app[data-tile-graphics='dark'] .tile-face.tile--joker .tile-face__glyph {
+  color: var(--color-gray-mid);
+}
+
+/* Sorbet (data-tile-graphics `light`): cool dessert tints, punchier than the old hazy pastels */
+.app[data-tile-graphics='light'] {
+  --tg-bam: #5cb87c;
+  --tg-crak: #f08080;
+  --tg-dot: #5c9ce6;
+  --tg-wind: #d1d5db;
+  --tg-dragon-red: var(--tg-crak);
+  --tg-dragon-green: var(--tg-bam);
+  --tg-dragon-soap: var(--tg-dot);
+  --tg-dragon-any: #6c7d92;
+  --tg-flower: #b07cc6;
+  --tg-joker: #ffdb93;
+  --tg-ink: var(--color-off-black);
+  --tg-suit-band-ink: var(--color-off-black);
+  --tg-joker-ring: var(--color-off-black);
+  --tg-cs-navy-bg: #4a9ad8;
+  --tg-cs-navy-fg: #0a1118;
+  --tg-cs-black-bg: #7a8d9a;
+  --tg-cs-black-fg: #0b0b0b;
+  --tg-cs-red-bg: #f08080;
+  --tg-cs-red-fg: #1a080c;
+  --tg-cs-green-bg: #5eb888;
+  --tg-cs-green-fg: #05180e;
+  --tg-cs-neutral-bg: #b8a090;
+  --tg-cs-neutral-fg: var(--color-off-black);
+  --tg-cs-rack-wind-bg: #d1d5db;
+  --tg-cs-rack-wind-fg: #111008;
+  --tg-cs-rack-flower-bg: #b07cc6;
+  --tg-cs-rack-flower-fg: #160a18;
+}
+
+/* Jewel (data-tile-graphics `designer`): premium gem glass — “power” hue set: sapphire, ruby, amethyst, emerald */
+.app[data-tile-graphics='designer'] {
+  /* Dots = sapphire; bams = vivid emerald; purples nudged up in chroma to match #9B111E punch */
+  --tg-bam: #008a56;
+  --tg-crak: #9b111e;
+  --tg-dot: #0f52ba;
+  /* Winds: cool deep slate (not a hue) so silver inlay reads pewter / polished metal vs. gem suiting */
+  --tg-wind: #2a2f37;
+  --tg-dragon-red: #9b111e;
+  --tg-dragon-green: #008a56;
+  --tg-dragon-soap: var(--tg-dot);
+  --tg-dragon-any: #40444b;
+  --tg-flower: #751fa5;
+  /* Gold joker: dark letter + ring so type stays legible (white inlay on this yellow has poor contrast) */
+  --tg-joker: #f59f09;
+  /* Inlay: slightly softer than pure white; joker J + ring use --tg-joker-ring, not this */
+  --tg-ink: #e8e8e8;
+  --tg-suit-band-ink: #e8e8e8;
+  --tg-joker-ring: #2b1b17;
+  --tg-cs-navy-bg: #0c468c;
+  --tg-cs-navy-fg: #e8e8e8;
+  --tg-cs-black-bg: #31353c;
+  --tg-cs-black-fg: #e8e8e8;
+  --tg-cs-red-bg: #9b111e;
+  --tg-cs-red-fg: #e8e8e8;
+  --tg-cs-green-bg: #008a56;
+  --tg-cs-green-fg: #e8e8e8;
+  --tg-cs-neutral-bg: #494d55;
+  --tg-cs-neutral-fg: #e8e8e8;
+  --tg-cs-rack-wind-bg: #2a2f37;
+  --tg-cs-rack-wind-fg: #e8e8e8;
+  --tg-cs-rack-flower-bg: #5f1894;
+  --tg-cs-rack-flower-fg: #e8e8e8;
+}
+
+/* Autumn (data-tile-graphics `bakelite`): moss, rust, dusk, ochre joker — winds = desaturated slate/pewter (not competing hue) */
+.app[data-tile-graphics='bakelite'] {
+  --tg-bam: #4a5632;
+  --tg-crak: #944230;
+  --tg-dot: #2a3c4c;
+  /* Match depth of dot/bam; gray enough to read as material, not a “color” */
+  --tg-wind: #2a2826;
+  --tg-dragon-red: var(--tg-crak);
+  --tg-dragon-green: var(--tg-bam);
+  --tg-dragon-soap: var(--tg-dot);
+  --tg-dragon-any: #4a3c2c;
+  --tg-flower: #4a1a32;
+  /* Former wind mustard/ochre: reads as a warm accent (bakelite) vs. the gem suits */
+  --tg-joker: #b09056;
+  --tg-ink: #f5f5dc;
+  --tg-suit-band-ink: #f5f5dc;
+  --tg-joker-ring: #3a2418;
+  --tg-cs-navy-bg: #2a3c4e;
+  --tg-cs-navy-fg: #f5f5dc;
+  --tg-cs-black-bg: #2a1e14;
+  --tg-cs-black-fg: #f5f5dc;
+  --tg-cs-red-bg: #7a2c20;
+  --tg-cs-red-fg: #f5f5dc;
+  --tg-cs-green-bg: #3a4630;
+  --tg-cs-green-fg: #f5f5dc;
+  --tg-cs-neutral-bg: #6a5840;
+  --tg-cs-neutral-fg: #f5f5dc;
+  --tg-cs-rack-wind-bg: #2a2826;
+  --tg-cs-rack-wind-fg: #f5f5dc;
+  --tg-cs-rack-flower-bg: #3a1028;
+  --tg-cs-rack-flower-fg: #f5f5dc;
+}
+
+.app[data-tile-graphics='bakelite'] .tile-face {
+  /* Material shadow flows through `--tile-face-base-shadow` so the highlight ring (set via
+     `--tile-face-highlight-shadow` from parent state classes) layers on top without losing
+     the material look — same pattern future themes should follow. */
+  --tile-face-base-shadow:
+    0 1px 3px color-mix(in srgb, #0f0804 25%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #d4a060 18%, transparent);
+}
+
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1 1 0;
+  min-height: 0;
+  align-items: stretch;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  overscroll-behavior-y: contain;
+  /* Avoid browser text-selection highlight when clicking / dragging on tiles and rack buttons. */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Menu → Animations OFF: strip remaining rack/menu motion (game logic also skips fly-ins / FLIP). */
+.app-layout[data-animations='off'] .sortable-tile-wrap,
+.app-layout[data-animations='off'] .pass-strip__tile-wrap,
+.app-layout[data-animations='off'] .exposure-rack__slot--staged-returnable {
+  transition: none !important;
+}
+
+.app-layout[data-animations='off'] .sortable-tile-wrap--just-drawn {
+  animation: none;
+}
+
+.app-layout[data-animations='off'] .sortable-tile-wrap .tile-face:not(.tile--joker)::after,
+.app-layout[data-animations='off'] .pass-strip__tile-wrap .tile-face:not(.tile--joker)::after,
+.app-layout[data-animations='off'] .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face:not(.tile--joker)::after,
+.app-layout[data-animations='off'] .exposure-rack__slot .tile-face:not(.tile--joker)::after,
+.app-layout[data-animations='off'] .discard-entry .tile-face:not(.tile--joker)::after,
+.app-layout[data-animations='off'] .mahjong-win__bots-review-tile .tile-face:not(.tile--joker)::after,
+.app-layout[data-animations='off'] .sortable-tile-wrap .tile-face.tile--joker,
+.app-layout[data-animations='off'] .pass-strip__tile-wrap .tile-face.tile--joker,
+.app-layout[data-animations='off'] .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face.tile--joker,
+.app-layout[data-animations='off'] .exposure-rack__slot .tile-face.tile--joker,
+.app-layout[data-animations='off'] .discard-entry .tile-face.tile--joker,
+.app-layout[data-animations='off'] .mahjong-win__bots-review-tile .tile-face.tile--joker {
+  transition: none;
+}
+
+.app-layout[data-animations='off'] .hands-sheet__tile-cell {
+  transition: none;
+}
+
+.app-layout[data-animations='off'] .app-menu-modal {
+  animation: none;
+}
+
+.app-layout[data-animations='off'] .exposure-rack__incoming-discard-fly--from-right,
+.app-layout[data-animations='off'] .exposure-rack__incoming-discard-fly--from-left,
+.app-layout[data-animations='off'] .exposure-rack__incoming-discard-fly--from-across,
+.app-layout[data-animations='off'] .exposure-rack__call-staging-fly-up {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
+.app-layout[data-animations='off'] .pass-strip-tail--fly-out-left .pass-strip__tile-wrap,
+.app-layout[data-animations='off'] .pass-strip-tail--fly-out-right .pass-strip__tile-wrap,
+.app-layout[data-animations='off'] .pass-strip-tail--fly-out-across .pass-strip__tile-wrap,
+.app-layout[data-animations='off'] .pass-strip-tail--fly-out-courtesy-top .pass-strip__tile-wrap,
+.app-layout[data-animations='off'] .pass-box--fly-out-left .pass-strip__tile-wrap,
+.app-layout[data-animations='off'] .pass-box--fly-out-right .pass-strip__tile-wrap,
+.app-layout[data-animations='off'] .pass-box--fly-out-across .pass-strip__tile-wrap,
+.app-layout[data-animations='off'] .pass-box--fly-out-courtesy-top .pass-strip__tile-wrap {
+  animation: none;
+}
+
+.app-main {
+  min-width: 0;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  /* Match bottom breathing room (`--app-v-pad`) so the rack isn’t glued to the top edge. */
+  padding-top: var(--app-v-pad);
+  padding-bottom: var(--app-v-pad);
+}

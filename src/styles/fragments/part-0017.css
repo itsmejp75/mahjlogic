@@ -1,0 +1,11 @@
+
+
+.rack-stage__rack-top .exposure-rack {
+  margin-bottom: 0;
+}
+
+.rack-stage__rack-bottom {
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}

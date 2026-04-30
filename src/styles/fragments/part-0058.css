@@ -1,0 +1,7 @@
+
+
+.panel--bot-exposures__body > .panel__title-row {
+  background: transparent;
+  margin-bottom: 0;
+  justify-content: flex-start;
+}

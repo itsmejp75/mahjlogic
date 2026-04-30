@@ -1,0 +1,19 @@
+
+
+.panel--hand .exposure-rack {
+  justify-content: center;
+  padding-block: var(--hand-rack-tray-inset-block);
+  padding-inline: var(--hand-rack-tray-inset-inline);
+  width: 100%;
+  min-height: calc(var(--rack-tile-h) + 2 * var(--hand-rack-tray-inset-block));
+  box-sizing: border-box;
+}
+
+.panel--hand .hand-bank {
+  display: flex;
+  justify-content: center;
+}
+
+.panel--hand .hand-row {
+  justify-content: flex-start;
+}

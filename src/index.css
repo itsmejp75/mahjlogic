@@ -157,7 +157,7 @@
 html {
   height: 100%;
   /*
-   * Single source for layout math in App.css: dynamic viewport inlines/blocks
+   * Single source for layout math in src/styles (see thematic/base.css): dynamic viewport inlines/blocks
    * track the *visible* area (avoids 100vw vs scrollbar + matches notched / resized windows).
    */
   --app-viewport-inline: 100vw;
@@ -263,7 +263,7 @@ code {
 }
 
 /* Suggested hands: mini tile faces track official card print colors (`cardInkTileSkin.ts`);
-   `App.css` sets `--tg-cs-*` on `.app` for menu “Tile graphics” themes. */
+   `src/styles` sets `--tg-cs-*` on `.app` for menu “Tile graphics” themes. */
 .tile-face.tile-face--card-skin-navy,
 .tile-face.tile-face--card-skin-soap {
   background: var(--tg-cs-navy-bg, var(--card-tile-skin-blue-bg));

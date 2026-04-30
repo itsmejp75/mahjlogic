@@ -1,0 +1,18 @@
+
+
+@media (max-width: 47.99rem) {
+  :root {
+    --app-h-pad-base: clamp(0.35rem, 2.2vw, 0.75rem);
+    /* --app-v-pad: inherited; do not set from vw here or horizontal resizes look like vertical reflow. */
+    /*
+     * Phone fit: allow smaller tile minimum so the full 14-slot rack + controls
+     * can fit without clipping/awkward squeeze.
+     */
+    --hand-rack-tile-w: max(1.62rem, calc(var(--hand-rack-usable-w) / 14));
+    --hand-rack-tile-h: max(2.16rem, calc(var(--hand-rack-usable-w) / 14 * 1.3333));
+    --hand-window-pad-inline: clamp(0.2rem, 1.2vw, 0.35rem);
+    --rack-tray-inset-inline: 0.3rem;
+    /* --app-ui-control-fs follows --hand-rack-tile-w; no separate font clamp here. */
+    --btn-letter-spacing: calc(0.01em + 0.01rem);
+  }
+}

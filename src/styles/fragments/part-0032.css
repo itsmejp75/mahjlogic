@@ -1,0 +1,10 @@
+
+
+/* Inner wrapper: shrinks to tile content and centers in the cell as a unit.
+   Header then left-aligns with the first tile regardless of rack fill. */
+
+/* Seat name above each opponent rack. */
+
+.app-opponents-rail__cell--swap-drop {
+  border-radius: var(--tile-tray-shell-radius);
+}
