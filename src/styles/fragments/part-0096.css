@@ -681,7 +681,7 @@
   margin: 0 0 0.3rem;
 }
 
-/* All seats: 2×2 on wide viewports for Mah Jongg / bot win overlays. Wall Game uses `.wall-game-dialog--wall-seats` for a single column + wide racks. */
+/* Wide viewports: 2×2 grid for overlays that omit `--wall-seats`. Wall Game + Mah Jongg use `--wall-seats` → single column + `--wall-game-bots-tile-*` racks. */
 .wall-game-dialog__review .mahjong-win__bots-review-list {
   display: grid;
   grid-template-columns: 1fr;
@@ -689,6 +689,26 @@
   align-content: start;
   overflow: visible;
   background: color-mix(in srgb, var(--color-black) 18%, var(--window-surface));
+}
+
+/* Full-width hairline between East vs bots (wall game) or winner vs losers (Mah Jongg). */
+.mahjong-win__bots-review-separator {
+  list-style: none;
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 0.22rem 0 0.12rem;
+  min-height: 0;
+  border: none;
+  background: transparent;
+  pointer-events: none;
+}
+
+.mahjong-win__bots-review-separator::before {
+  content: '';
+  display: block;
+  height: 0;
+  margin-inline: 0.12rem;
+  border-top: 1px solid color-mix(in srgb, var(--window-fg, #e8eaf0) 24%, var(--window-surface, #16202e));
 }
 
 @media (min-width: 24rem) {

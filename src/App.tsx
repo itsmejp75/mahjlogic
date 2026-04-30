@@ -67,7 +67,6 @@ import {
 import { tileInstancesWithClaimMeldJokersResolved } from './analysis/eastExposurePatternFit'
 import { PostGameLoserRackRow } from './components/PostGameLoserRackRow'
 import { IllegalMahjongDialog } from './components/IllegalMahjongDialog'
-import { CardColoredText } from './components/CardColoredText'
 import { SuggestedHandsPanel } from './components/SuggestedHandsPanel'
 import type { BotExposure, BotSeat } from './analysis/types'
 import {
@@ -2791,7 +2790,6 @@ export default function App() {
     handJokerSwapFlyInFromBelowId,
     stagedCallTileIds,
     botWin,
-    playerWinMethod,
   } = round
   const charlestonDone = charlestonPhase === 'done'
 
@@ -3554,12 +3552,6 @@ export default function App() {
     return [eastRow, ...botRows]
   }, [mainPhase, bots, hand, wall.length, discardTiles, botExposures, eastExposures])
 
-  /** Losing seats only — winner (East) is shown in the hero. */
-  const postGameOtherSeats = useMemo(() => {
-    if (!postGameBotReview) return null
-    return postGameBotReview.filter((row) => row.label !== 'You (East)')
-  }, [postGameBotReview])
-
   /**
    * On win: full 14 (concealed + exposures) left-to-right in the order of the winning
    * practice line — same rack model as in-play suggestions (`hand` + claim melds).
@@ -3580,57 +3572,16 @@ export default function App() {
     return sortFullRackTilesForPattern(closestLine.id, rankInput, focusKeyForSuggestedHandLine(closestLine))
   }, [mainPhase, hand, eastExposures, wall.length, discardTiles, botExposures])
 
-  /** Winning pattern info shown on the player win screen. */
-  const playerWinPattern = useMemo(() => {
-    if (mainPhase !== 'mahjong-declared') return null
-    const rankInput: RankSuggestedHandsInput = {
-      hand,
-      wallRemaining: wall.length,
-      discards: discardTiles,
-      exposures: botExposures,
-      playerClaimMelds: eastExposures,
-      eastTableClaimMelds: eastExposures,
-    }
-    const { closestLine } = summarizeRackTowardWin(rankInput)
-    return closestLine ?? null
-  }, [mainPhase, hand, eastExposures, wall.length, discardTiles, botExposures])
-
   /**
-   * Bot-mahjong end screen: winner row + all other players (East + remaining bots)
-   * each with tiles sorted toward their closest hand and tiles-away count.
+   * Bot-mahjong end screen: same per-seat layout as Wall Game (East + three bots).
    */
   const postGameBotMahjongReview = useMemo(() => {
     if (mainPhase !== 'bot-mahjong' || !botWin) return null
     const { botIndex, how } = botWin
-    const winnerLabel = BOT_LABELS[botIndex]!
-    const winnerHand = bots[botIndex] ?? []
-    const winnerExposures = botExposures.filter((e) => e.seat === winnerLabel)
-    const winnerRankInput: RankSuggestedHandsInput = {
-      hand: winnerHand,
-      wallRemaining: wall.length,
-      discards: discardTiles,
-      exposures: botExposures,
-      playerClaimMelds: winnerExposures,
-      eastTableClaimMelds: eastExposures,
-    }
-    const { closestLine: winnerLine } = summarizeRackTowardWin(winnerRankInput)
+    const winnerSeat = BOT_LABELS[botIndex]!
+    const winnerLabel = `Bot ${botIndex + 1} (${winnerSeat})`
 
-    const winnerSortedTiles =
-      winnerLine != null
-        ? sortFullRackTilesForPattern(
-            winnerLine.id,
-            winnerRankInput,
-            focusKeyForSuggestedHandLine(winnerLine),
-          )
-        : [...winnerHand, ...winnerExposures.flatMap((e) => e.tiles)]
-
-    const winner = {
-      label: `Bot ${botIndex + 1} (${winnerLabel})`,
-      closestTitle: winnerLine?.title ?? '—',
-      titleSegments: winnerLine?.titleSegments,
-    }
-
-    type LoserRow = {
+    type SeatRow = {
       label: string
       bestTilesAway: number
       linesAtMin: ReturnType<typeof suggestedHandsTiedAtBest>['linesAtMin']
@@ -3646,10 +3597,14 @@ export default function App() {
       eastTableClaimMelds: eastExposures,
     }
     const { bestTilesAway: eastAway, linesAtMin: eastLines } = suggestedHandsTiedAtBest(eastRankInput)
-    const eastRow: LoserRow = { label: 'You (East)', bestTilesAway: eastAway, linesAtMin: eastLines, rankInput: eastRankInput }
+    const eastRow: SeatRow = {
+      label: 'You (East)',
+      bestTilesAway: eastAway,
+      linesAtMin: eastLines,
+      rankInput: eastRankInput,
+    }
 
-    const otherRows: LoserRow[] = BOT_LABELS.flatMap((label, idx) => {
-      if (idx === botIndex) return []
+    const botRows: SeatRow[] = BOT_LABELS.map((label, idx) => {
       const botHand = bots[idx] ?? []
       const claims = botExposures.filter((e) => e.seat === label)
       const rankInput: RankSuggestedHandsInput = {
@@ -3661,10 +3616,16 @@ export default function App() {
         eastTableClaimMelds: eastExposures,
       }
       const { bestTilesAway, linesAtMin } = suggestedHandsTiedAtBest(rankInput)
-      return [{ label: `Bot ${idx + 1} (${label})`, bestTilesAway, linesAtMin, rankInput }]
+      return { label: `Bot ${idx + 1} (${label})`, bestTilesAway, linesAtMin, rankInput }
     })
 
-    return { winner, winnerSortedTiles, how, rows: [eastRow, ...otherRows], winnerLine }
+    const winnerRow = botRows[botIndex]!
+    const loserRows: SeatRow[] = [
+      eastRow,
+      ...botRows.filter((_, idx) => idx !== botIndex),
+    ]
+
+    return { how, winnerLabel, winnerRow, loserRows }
   }, [mainPhase, botWin, bots, hand, wall.length, discardTiles, botExposures, eastExposures])
 
   /**
@@ -5424,8 +5385,7 @@ export default function App() {
           >
             <h2 id="wall-game-title" className="wall-game-dialog__title">Wall Game</h2>
             <p className="wall-game-dialog__intro">
-              The wall ran out — no one drew a winning tile. Below is each seat&apos;s closest card line
-              (fewest tiles away), tiles away, and full rack in that line&apos;s left-to-right card order.
+              The wall ran out — no one drew a winning tile.
             </p>
             {postGameWallGameReview ? (
               <div className="wall-game-dialog__review mahjong-win__bots-review" aria-labelledby="wall-game-review-heading">
@@ -5433,7 +5393,24 @@ export default function App() {
                   All seats (practice card)
                 </h3>
                 <ul className="mahjong-win__bots-review-list">
-                  {postGameWallGameReview.rows.map((row) => (
+                  {postGameWallGameReview.rows[0] ? (
+                    <li key={postGameWallGameReview.rows[0].label} className="mahjong-win__bots-review-card">
+                      <PostGameLoserRackRow
+                        rowId={`wall-${postGameWallGameReview.rows[0].label}`}
+                        label={postGameWallGameReview.rows[0].label}
+                        bestTilesAway={postGameWallGameReview.rows[0].bestTilesAway}
+                        linesAtMin={postGameWallGameReview.rows[0].linesAtMin}
+                        rankInput={postGameWallGameReview.rows[0].rankInput}
+                        showTiedLinePicker={postGameWallGameReview.rows[0].linesAtMin.length > 1}
+                        cardVariant="wrapped"
+                        trailingLabel="none"
+                      />
+                    </li>
+                  ) : null}
+                  {postGameWallGameReview.rows.length > 1 ? (
+                    <li key="wall-east-bot-divider" className="mahjong-win__bots-review-separator" aria-hidden />
+                  ) : null}
+                  {postGameWallGameReview.rows.slice(1).map((row) => (
                     <li key={row.label} className="mahjong-win__bots-review-card">
                       <PostGameLoserRackRow
                         rowId={`wall-${row.label}`}
@@ -5479,58 +5456,42 @@ export default function App() {
       {charlestonDone && mainPhase === 'mahjong-declared' && !mahjongWinReviewing && (
         <div className="wall-game-overlay" role="dialog" aria-modal="true" aria-labelledby="mj-win-title">
           <div
-            className="wall-game-dialog wall-game-dialog--mj-summary"
+            className="wall-game-dialog wall-game-dialog--wall-seats"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mahjong-win__hero">
-              <h2 id="mj-win-title" className="wall-game-dialog__title wall-game-dialog__title--mahjong-win">
-                Mah Jongg!
-              </h2>
-              <p className="wall-game-dialog__intro wall-game-dialog__intro--mj-hero">You (East) — winning hand</p>
-              {winHandSortedTiles && (
-                <div className="mahjong-win__player-tiles mahjong-win__hero-tiles">
-                  {winHandSortedTiles.map((tile) => (
-                    <div key={tile.id} className="mahjong-win__bots-review-tile">
-                      <TileFace def={tile.def} />
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="wall-game-dialog__win-meta wall-game-dialog__win-meta--hero">
-                {playerWinPattern ? (
-                  <span className="mahjong-win__note">
-                    {playerWinPattern.section && playerWinPattern.cardLineNumber != null
-                      ? `${playerWinPattern.section} #${playerWinPattern.cardLineNumber} · `
-                      : ''}
-                    {playerWinPattern.titleSegments
-                      ? <CardColoredText segments={playerWinPattern.titleSegments} />
-                      : playerWinPattern.title}
-                  </span>
-                ) : (
-                  <span className="mahjong-win__note">Hand validated</span>
-                )}
-                <span className="mahjong-win__player-meta-divider">·</span>
-                <span className="mahjong-win__win-method">
-                  {playerWinMethod?.type === 'self-draw'
-                    ? 'Drew own tile'
-                    : playerWinMethod?.type === 'called-discard'
-                      ? `Called ${playerWinMethod.botLabel}'s discard`
-                      : null}
-                </span>
-                <span className="mahjong-win__player-meta-divider">·</span>
-                <span className="mahjong-win__points">Points: TBD</span>
-              </div>
-            </div>
-            {postGameOtherSeats && postGameOtherSeats.length > 0 ? (
-              <div className="wall-game-dialog__review mahjong-win__bots-review" aria-labelledby="bots-review-heading">
-                <h3 id="bots-review-heading" className="mahjong-win__bots-review-title">
-                  Other players
+            <h2 id="mj-win-title" className="wall-game-dialog__title">
+              Mah Jongg!
+            </h2>
+            <p className="wall-game-dialog__intro">
+              You won. Below is each seat&apos;s closest card line (fewest tiles away), tiles away, and full rack in that line&apos;s left-to-right card order.
+            </p>
+            {postGameBotReview ? (
+              <div className="wall-game-dialog__review mahjong-win__bots-review" aria-labelledby="mj-review-heading">
+                <h3 id="mj-review-heading" className="mahjong-win__bots-review-title">
+                  All seats (practice card)
                 </h3>
                 <ul className="mahjong-win__bots-review-list">
-                  {postGameOtherSeats.map((row) => (
+                  {postGameBotReview[0] ? (
+                    <li key={postGameBotReview[0].label} className="mahjong-win__bots-review-card">
+                      <PostGameLoserRackRow
+                        rowId={`mj-win-${postGameBotReview[0].label}`}
+                        label={postGameBotReview[0].label}
+                        bestTilesAway={postGameBotReview[0].bestTilesAway}
+                        linesAtMin={postGameBotReview[0].linesAtMin}
+                        rankInput={postGameBotReview[0].rankInput}
+                        showTiedLinePicker={postGameBotReview[0].linesAtMin.length > 1}
+                        cardVariant="wrapped"
+                        trailingLabel="none"
+                      />
+                    </li>
+                  ) : null}
+                  {postGameBotReview.length > 1 ? (
+                    <li key="mj-win-winner-losers-divider" className="mahjong-win__bots-review-separator" aria-hidden />
+                  ) : null}
+                  {postGameBotReview.slice(1).map((row) => (
                     <li key={row.label} className="mahjong-win__bots-review-card">
                       <PostGameLoserRackRow
-                        rowId={`mj-win-bots-${row.label}`}
+                        rowId={`mj-win-${row.label}`}
                         label={row.label}
                         bestTilesAway={row.bestTilesAway}
                         linesAtMin={row.linesAtMin}
@@ -5561,54 +5522,50 @@ export default function App() {
       {charlestonDone && mainPhase === 'bot-mahjong' && postGameBotMahjongReview && !botMahjongWinReviewing && (
         <div className="wall-game-overlay" role="dialog" aria-modal="true" aria-labelledby="bot-mj-win-title">
           <div
-            className="wall-game-dialog wall-game-dialog--bot-mahjong wall-game-dialog--mj-summary"
+            className="wall-game-dialog wall-game-dialog--wall-seats wall-game-dialog--bot-mahjong"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mahjong-win__hero">
-              <h2
-                id="bot-mj-win-title"
-                className="wall-game-dialog__title wall-game-dialog__title--bot-mahjong"
-              >
-                {postGameBotMahjongReview.winner.label} — Mah Jongg
-              </h2>
-              <p className="wall-game-dialog__intro wall-game-dialog__intro--mj-hero">
-                {postGameBotMahjongReview.how === 'self-draw'
-                  ? 'Self-draw win'
-                  : 'Won on East&apos;s discard'}
-              </p>
-              <div className="mahjong-win__player-tiles mahjong-win__hero-tiles">
-                {postGameBotMahjongReview.winnerSortedTiles.map((tile) => (
-                  <div key={tile.id} className="mahjong-win__bots-review-tile">
-                    <TileFace def={tile.def} />
-                  </div>
-                ))}
-              </div>
-              <div className="wall-game-dialog__win-meta wall-game-dialog__win-meta--hero mahjong-win__bot-winner-meta">
-                <span className="mahjong-win__note mahjong-win__bot-winner-hand">
-                  {postGameBotMahjongReview.winner.titleSegments
-                    ? <CardColoredText segments={postGameBotMahjongReview.winner.titleSegments} />
-                    : postGameBotMahjongReview.winner.closestTitle}
-                </span>
-                <span className="mahjong-win__player-meta-divider">·</span>
-                <span className="mahjong-win__points">Points: TBD</span>
-              </div>
-            </div>
-            <div className="wall-game-dialog__review mahjong-win__bots-review" aria-labelledby="bot-mj-others-heading">
-              <h3 id="bot-mj-others-heading" className="mahjong-win__bots-review-title">
-                Other players
+            <h2 id="bot-mj-win-title" className="wall-game-dialog__title">
+              Mah Jongg
+            </h2>
+            <p className="wall-game-dialog__intro">
+              {postGameBotMahjongReview.winnerLabel}
+              {postGameBotMahjongReview.how === 'self-draw'
+                ? ' won on a self-draw. '
+                : ' won on East\'s discard. '}
+              Below is each seat&apos;s closest card line (fewest tiles away), tiles away, and full rack in that line&apos;s left-to-right card order.
+            </p>
+            <div className="wall-game-dialog__review mahjong-win__bots-review" aria-labelledby="bot-mj-review-heading">
+              <h3 id="bot-mj-review-heading" className="mahjong-win__bots-review-title">
+                All seats (practice card)
               </h3>
               <ul className="mahjong-win__bots-review-list">
-                {postGameBotMahjongReview.rows.map((row) => (
+                <li key={postGameBotMahjongReview.winnerRow.label} className="mahjong-win__bots-review-card">
+                  <PostGameLoserRackRow
+                    rowId={`bot-mj-${postGameBotMahjongReview.winnerRow.label}`}
+                    label={postGameBotMahjongReview.winnerRow.label}
+                    bestTilesAway={postGameBotMahjongReview.winnerRow.bestTilesAway}
+                    linesAtMin={postGameBotMahjongReview.winnerRow.linesAtMin}
+                    rankInput={postGameBotMahjongReview.winnerRow.rankInput}
+                    showTiedLinePicker={postGameBotMahjongReview.winnerRow.linesAtMin.length > 1}
+                    cardVariant="wrapped"
+                    trailingLabel="none"
+                  />
+                </li>
+                {postGameBotMahjongReview.loserRows.length > 0 ? (
+                  <li key="bot-mj-winner-losers-divider" className="mahjong-win__bots-review-separator" aria-hidden />
+                ) : null}
+                {postGameBotMahjongReview.loserRows.map((row) => (
                   <li key={row.label} className="mahjong-win__bots-review-card">
                     <PostGameLoserRackRow
-                      rowId={`bot-mj-lose-${row.label}`}
+                      rowId={`bot-mj-${row.label}`}
                       label={row.label}
                       bestTilesAway={row.bestTilesAway}
                       linesAtMin={row.linesAtMin}
                       rankInput={row.rankInput}
                       showTiedLinePicker={row.linesAtMin.length > 1}
                       cardVariant="wrapped"
-                      trailingLabel="bot-mj-loss-pts"
+                      trailingLabel="none"
                     />
                   </li>
                 ))}
