@@ -98,7 +98,8 @@
   letter-spacing: 0.01em;
   color-scheme: light;
   color: var(--text);
-  background-color: var(--bg);
+  /* Match app chrome (--window-inner-surface) so safe-area / scrollbar gutters aren’t creamy. */
+  background-color: var(--window-inner-surface);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -156,6 +157,7 @@
 
 html {
   height: 100%;
+  background-color: var(--window-inner-surface);
   /*
    * Single source for layout math in src/styles (see thematic/base.css): dynamic viewport inlines/blocks
    * track the *visible* area (avoids 100vw vs scrollbar + matches notched / resized windows).
@@ -197,6 +199,7 @@ body {
   overflow: hidden;
   overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
+  background-color: var(--window-inner-surface);
 }
 
 h1,

@@ -162,7 +162,16 @@ function orderMeldForRack(meld: MeldGroup): TileInstance[] {
   return [called, ...orderMeldTilesForDisplay(rest)]
 }
 
-function SortableMeldGroup({ id, children }: { id: string; children: ReactNode }) {
+function SortableMeldGroup({
+  id,
+  children,
+  slotSpan = 1,
+}: {
+  id: string
+  children: ReactNode
+  /** Proportional flex share on `.panel--bot-exposures` racks (tile count in this meld group). */
+  slotSpan?: number
+}) {
   const { active } = useDndContext()
   const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({
     id,
@@ -170,6 +179,7 @@ function SortableMeldGroup({ id, children }: { id: string; children: ReactNode }
   })
   const translate = transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined
   const style: CSSProperties = {
+    ['--bot-meld-slot-span' as string]: Math.max(1, slotSpan),
     // Melds can have different widths; dnd-kit's full transform may include scale,
     // which makes the locked tiles blur/resize. Move the meld as one rigid block.
     transform: translate,
@@ -357,6 +367,11 @@ function DroppableMeldSlots({
   return (
     <div
       ref={setNodeRef}
+      style={
+        {
+          ['--bot-meld-slot-span' as string]: Math.max(1, ordered.length),
+        } as CSSProperties
+      }
       className={[
         'exposure-rack__meld-drop',
         gi > 0 ? 'exposure-rack__slot--meld-start' : '',
@@ -617,15 +632,16 @@ export function ExposureRack({
       ) : null}
       <SortableContext items={sortableMeldIds} strategy={rectSortingStrategy}>
       {melds.map((meld, gi) => {
-        const wrapMeldContent = (content: ReactNode) =>
+        const wrapMeldContent = (content: ReactNode, slotSpan = 1) =>
           meld.sortableMeldId ? (
-            <SortableMeldGroup key={meld.sortableMeldId} id={meld.sortableMeldId}>
+            <SortableMeldGroup key={meld.sortableMeldId} id={meld.sortableMeldId} slotSpan={slotSpan}>
               {content}
             </SortableMeldGroup>
           ) : (
             content
           )
         if (meld.dropZoneId) {
+          const dropSpan = Math.max(1, orderMeldForRack(meld).length)
           return wrapMeldContent(
             <DroppableMeldSlots
               meld={meld}
@@ -641,6 +657,7 @@ export function ExposureRack({
               jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
               jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
             />,
+            dropSpan,
           )
         }
         const ordered = orderMeldForRack(meld)
@@ -774,7 +791,7 @@ export function ExposureRack({
                 )}
               </div>
             )
-          }))
+          }), Math.max(1, ordered.length))
         }
         return wrapMeldContent(ordered.map((tile) => {
           const isCalled = highlightCalledTile && meld.calledTileId === tile.id
@@ -814,7 +831,7 @@ export function ExposureRack({
               )}
             </div>
           )
-        }))
+        }), Math.max(1, ordered.length))
       })}
       </SortableContext>
       {suffix}
