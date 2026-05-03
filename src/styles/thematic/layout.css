@@ -2215,3 +2215,24 @@
 .app-layout[data-animations='off'] .suggested-hands-popup__resize-corner::after {
   transition: none;
 }
+
+.panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass)::after,
+.panel--hand .rack-stage__rack-top .exposure-rack.exposure-rack--charleston-pass::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
+  box-sizing: border-box;
+  border-width: 1px;
+  border-style: solid;
+  border-top-color: var(--dark-tray-rim-border-top);
+  border-inline-color: var(--dark-tray-rim-border-inline);
+  border-bottom-color: var(--dark-tray-rim-border-bottom);
+  box-shadow:
+    var(--dark-tray-rim-shadow-up-1),
+    var(--dark-tray-rim-shadow-up-2),
+    var(--dark-tray-rim-shadow-down-1),
+    var(--dark-tray-rim-shadow-down-2);
+}

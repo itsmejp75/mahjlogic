@@ -1,0 +1,11 @@
+
+
+/* Override global `.btn { transition: box-shadow }` inside the dialog — animating shadows is a common
+   cause of perceived sideways drift, especially beside a scrollable column. (Slider rows are excluded.) */
+.app-menu-modal .btn:not(.app-menu-tray__item--switch) {
+  transition:
+    border-color 0.14s ease,
+    background-color 0.14s ease,
+    color 0.14s ease,
+    opacity 0.14s ease;
+}

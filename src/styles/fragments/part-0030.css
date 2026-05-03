@@ -28,7 +28,7 @@
     --btn-letter-spacing: calc(0.008em + 0.008rem);
   }
 
-  .app-main__scroll:not(.app-main__scroll--collapsed) {
+  .app-main__scroll {
     max-height: min(20dvb, 6.5rem);
   }
 

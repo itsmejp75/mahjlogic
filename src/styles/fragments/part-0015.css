@@ -1,14 +1,6 @@
 
 
 /* MahjLogic watermark — behind tray rim ::after (z-index 1) and tiles (z-index 2). */
-.panel--hand .rack-stage__rack-top .exposure-rack__watermark .rack-logo-watermark {
-  /* Parent uses shared `.flex-center` — without this, the span shrink-wraps to the SVG’s intrinsic size. */
-  flex: 1 1 auto;
-  align-self: stretch;
-  width: 100%;
-  min-width: 0;
-}
-
 .rack-logo-watermark {
   display: flex;
   align-items: center;

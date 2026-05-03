@@ -12,7 +12,9 @@
     "split-css": "node scripts/split-app-css.mjs",
     "dedupe-flex": "node scripts/dedupe-flex-clusters.mjs",
     "ios:sim": "npm run build && npx cap sync ios && cd ios/App && xcodebuild -project App.xcodeproj -scheme App -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17' -derivedDataPath /tmp/MahjLogicXcodeBuild build && xcrun simctl boot \"iPhone 17\" 2>/dev/null || true && open -a Simulator && xcrun simctl install booted /tmp/MahjLogicXcodeBuild/Build/Products/Debug-iphonesimulator/App.app && xcrun simctl launch booted com.jason.mahjlogic",
-    "sync:all": "bash scripts/sync-splash-native.sh && npx cap sync && npm run ios:sim"
+    "sync:all": "bash scripts/sync-splash-native.sh && npx cap sync && npm run ios:sim",
+    "icons:from-svg": "node scripts/rasterize-icon-from-svg.mjs",
+    "splash:from-svg": "node scripts/rasterize-splash-from-svg.mjs && bash scripts/sync-splash-native.sh"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.1",

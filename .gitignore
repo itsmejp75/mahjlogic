@@ -24,3 +24,6 @@ dist-ssr
 *.sln
 *.sw?
 .cache/
+
+# Transient output from scripts/rasterize-icon-from-svg.mjs if interrupted
+.tmp-app-icon-master.png

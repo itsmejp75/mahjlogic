@@ -2,8 +2,6 @@
 
 /* Cascade-ordered quarter of fragment imports (not the same as thematic/base — see thematic/base.css). */
 
-@import "./fragments/part-0061.css";
-@import "./fragments/part-0062.css";
 @import "./fragments/part-0063.css";
 @import "./fragments/part-0064.css";
 @import "./fragments/part-0065.css";
@@ -32,3 +30,6 @@
 @import "./fragments/part-0088.css";
 @import "./fragments/part-0089.css";
 @import "./fragments/part-0090.css";
+@import "./fragments/part-0091.css";
+@import "./fragments/part-0092.css";
+@import "./fragments/part-0093.css";

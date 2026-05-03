@@ -1,0 +1,144 @@
+
+
+.pass-strip-tail--fly-out-left .pass-strip__tile-wrap,
+.pass-box--fly-out-left .pass-strip__tile-wrap {
+  animation: charleston-pass-fly-out-left 0.3s ease-in forwards;
+}
+
+.pass-strip-tail--fly-out-right .pass-strip__tile-wrap,
+.pass-box--fly-out-right .pass-strip__tile-wrap {
+  animation: charleston-pass-fly-out-right 0.3s ease-in forwards;
+}
+
+.pass-strip-tail--fly-out-across .pass-strip__tile-wrap,
+.pass-box--fly-out-across .pass-strip__tile-wrap {
+  animation: charleston-pass-fly-out-across 0.3s ease-in forwards;
+}
+
+/* Courtesy pass: same vertical exit as Charleston across — tiles rise out of the strip toward West. */
+.pass-strip-tail--fly-out-courtesy-top .pass-strip__tile-wrap,
+.pass-box--fly-out-courtesy-top .pass-strip__tile-wrap {
+  animation: charleston-pass-fly-out-across 0.3s ease-in forwards;
+}
+
+/* DragOverlay sits outside `.panel--hand` — same tile size as the rack (see `--hand-rack-tile-*`). */
+.drag-overlay-tile {
+  --rack-tile-w: var(--hand-rack-tile-w);
+  --rack-tile-h: var(--hand-rack-tile-h);
+  width: var(--rack-tile-w);
+  height: var(--rack-tile-h);
+  flex-shrink: 0;
+  cursor: grabbing;
+  touch-action: none;
+  transform: scale(1.05);
+  transform-origin: center;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.55));
+}
+
+.drag-overlay-tile .tile-face {
+  width: 100%;
+  height: 100%;
+}
+
+.drag-overlay-meld {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--rack-tile-gap);
+  cursor: grabbing;
+  touch-action: none;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.55));
+}
+
+.drag-overlay-meld .drag-overlay-tile {
+  filter: none;
+}
+
+.pass-strip__tile-wrap {
+  cursor: grab;
+  touch-action: none;
+  width: var(--rack-tile-w);
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+/* Boxed pass strip: wrap is not an exposure slot — fix cell height here */
+.pass-strip__tile-wrap:not(.exposure-rack__slot) {
+  height: var(--rack-tile-h);
+}
+
+.pass-strip__tile-wrap:active {
+  cursor: grabbing;
+}
+
+.pass-strip__tile-btn {
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 0.35rem;
+  width: 100%;
+  height: 100%;
+  line-height: 0;
+  box-sizing: border-box;
+}
+
+.hand-bank {
+  margin-top: 0;
+  padding: var(--rack-panel-inset);
+  background: var(--window-inner-surface);
+  border-radius: 0.55rem;
+}
+
+.hand-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--rack-tile-gap);
+  touch-action: none;
+}
+
+.sortable-tile-wrap {
+  position: relative;
+  cursor: grab;
+  touch-action: none;
+  flex-shrink: 0;
+  width: var(--rack-tile-w);
+  height: var(--rack-tile-h);
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  /* Transform transition comes from dnd `useSortable`’s `transition` inline (see
+     `SortableTile`) so it doesn’t stack with @dnd-kit’s layout animation + FLIP. */
+}
+
+/* Joker redeemed into the hand: same bottom-up path as call staging; clip so the approach does not
+   paint outside the rack bank (avoids a “double tile” look against the action bar). */
+.sortable-tile-wrap--joker-swap-fly-clip {
+  overflow: hidden;
+  border-radius: 0.35rem;
+}
+
+/* Suppress browser default focus ring on tile wraps — the --selected class provides its own ring. */
+.sortable-tile-wrap:focus,
+.sortable-tile-wrap:focus-visible {
+  outline: none;
+}
+
+.hand-slot--empty {
+  box-sizing: border-box;
+  width: var(--rack-tile-w);
+  height: var(--rack-tile-h);
+  flex-shrink: 0;
+}
+
+.hand-slot--collapse {
+  box-sizing: border-box;
+  width: calc(var(--rack-tile-w) + var(--player-rack-face-gap, var(--rack-tile-gap)));
+  height: var(--rack-tile-h);
+  flex: 0 0 calc(var(--rack-tile-w) + var(--player-rack-face-gap, var(--rack-tile-gap)));
+  margin-right: calc(-1 * var(--player-rack-face-gap, var(--rack-tile-gap)));
+  pointer-events: none;
+  animation: hand-slot-collapse 0.14s cubic-bezier(0.2, 0, 0.2, 1) forwards;
+}
