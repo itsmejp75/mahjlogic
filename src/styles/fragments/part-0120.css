@@ -375,6 +375,48 @@ html[data-native-app] .app-play-split {
 
 /*
  * ============================================================================
+ * Collapse empty `.app-main__scroll` (was reserving ≈118 px of dead space)
+ * ============================================================================
+ *
+ * `App.tsx` renders `<div class="app-main__scroll" />` (no children) during normal
+ * play and only applies `.app-main__scroll--collapsed` during specific phases
+ * (`!charlestonDone || east-discard || bot-mahjong`). The base CSS in
+ * `src/styles/fragments/part-0031.css` / `thematic/layout.css` gives the element
+ * `flex: 0 1 auto; max-height: min(30dvb, 15rem)`, so during normal play the
+ * empty wrapper still reserves up to ≈118 px of vertical space at the top of
+ * `.app-main` — pushing rack-stage and play-split downward and squishing the
+ * lower panels (visible as "compressed bot rows + dark band at bottom" on iPhone
+ * landscape and the iOS PWA / Capacitor simulator).
+ *
+ * 1. `:empty` collapse — zero-height when no children render. React strips
+ *    whitespace-only text nodes between sibling JSX, so an empty element matches.
+ *    Self-correcting: if anything is rendered inside, the normal height returns.
+ * 2. Native / PWA force-collapse — the scroll container is never used in the
+ *    Capacitor app or "Add to Home Screen" PWA, so always zero its budget there.
+ *    Belt-and-suspenders in case any non-empty placeholder ever sneaks in.
+ */
+.app-main__scroll:empty {
+  flex: 0 0 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  overflow: hidden !important;
+}
+
+html[data-native-app] .app-main__scroll {
+  flex: 0 0 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  overflow: hidden !important;
+}
+
+/*
+ * ============================================================================
  * Container-query sizing for the entire hand panel + bot panel
  * ============================================================================
  *
