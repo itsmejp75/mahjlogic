@@ -15,10 +15,23 @@
       rel="stylesheet"
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!--
+      iOS PWA: without `apple-mobile-web-app-capable`, "Add to Home Screen" creates a Safari-wrapped
+      shortcut that opens at a wrong default scale (small content + black gutters). With it, iOS
+      launches us in standalone mode at full screen and the viewport meta below applies natively.
+      `user-scalable=no` + `maximum-scale=1` lock layout to our CSS instead of a pinch-zoom level.
+    -->
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MahjLogic" />
+    <meta name="theme-color" content="#1a1a1a" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <!--
       Set before any bundled CSS/JS so first layout uses `html[data-native-app]` rules (avoids
       flash: full width → squished). Mirrors @capacitor/core getPlatformId — no module import.
@@ -27,12 +40,16 @@
       (function () {
         try {
           var w = window;
-          if (
-            w.androidBridge ||
-            (w.webkit &&
-              w.webkit.messageHandlers &&
-              w.webkit.messageHandlers.bridge)
-          ) {
+          var nav = w.navigator || {};
+          var isCapacitor =
+            !!w.androidBridge ||
+            !!(w.webkit && w.webkit.messageHandlers && w.webkit.messageHandlers.bridge);
+          var isIosStandalone = nav.standalone === true;
+          var isDisplayStandalone =
+            typeof w.matchMedia === 'function' &&
+            (w.matchMedia('(display-mode: standalone)').matches ||
+              w.matchMedia('(display-mode: fullscreen)').matches);
+          if (isCapacitor || isIosStandalone || isDisplayStandalone) {
             document.documentElement.setAttribute('data-native-app', '');
           }
         } catch (e) {}
