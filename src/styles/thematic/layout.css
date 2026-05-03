@@ -107,9 +107,15 @@
   z-index: 0;
 }
 
+/* Melds/slots above tray rim ::after (z-index 1); see part-0120. */
+.panel--hand .rack-stage__rack-top .exposure-rack > *:not(.exposure-rack__watermark) {
+  position: relative;
+  z-index: 2;
+}
+
 .panel--hand .rack-stage__rack-top .exposure-rack .exposure-rack__slot {
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 /* Charleston: rack only (wall + exposure / hand); actions on bar below */

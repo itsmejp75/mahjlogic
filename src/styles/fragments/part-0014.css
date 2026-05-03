@@ -21,3 +21,9 @@
   user-select: none;
   z-index: 0;
 }
+
+/* Melds/slots above tray rim ::after (z-index 1); see part-0120. */
+.panel--hand .rack-stage__rack-top .exposure-rack > *:not(.exposure-rack__watermark) {
+  position: relative;
+  z-index: 2;
+}
