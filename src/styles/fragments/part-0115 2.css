@@ -1,0 +1,5 @@
+
+
+.app-layout[data-animations='off'] .suggested-hands-popup__bottom-edge::after {
+  transition: none;
+}

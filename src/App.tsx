@@ -48,6 +48,7 @@ import { PassStrip, type PassStripFlyOutFrom } from './components/PassStrip'
 import { HandBank, HAND_BANK_ID } from './components/HandBank'
 import { TileFace } from './components/TileFace'
 import { ExposureRack } from './components/ExposureRack'
+import { RackLogoWatermark } from './components/RackLogoWatermark'
 import { DiscardPileFlyInTile } from './components/DiscardPileFlyInTile'
 import { PRACTICE_PATTERNS } from './card/practicePatterns'
 import {
@@ -5630,12 +5631,7 @@ export default function App() {
                                 tiles: exp.tiles,
                                 calledTileId: exp.calledTileId,
                               }))}
-                              watermark={(
-                                <span className="rack-logo-watermark">
-                                  <span className="rack-logo-watermark__mahj">Mahj</span>
-                                  <span className="rack-logo-watermark__logic">Logic</span>
-                                </span>
-                              )}
+                              watermark={<RackLogoWatermark />}
                               suggestedTileGuide={suggestedTileGuide}
                               slotCount={14}
                               reserveTrailingSlots={3}
@@ -5824,12 +5820,7 @@ export default function App() {
                               }
                               suggestedTileGuide={suggestedTileGuide}
                               highlightCalledTile={mainPhase === 'call-staging'}
-                              watermark={(
-                                <span className="rack-logo-watermark">
-                                  <span className="rack-logo-watermark__mahj">Mahj</span>
-                                  <span className="rack-logo-watermark__logic">Logic</span>
-                                </span>
-                              )}
+                              watermark={<RackLogoWatermark />}
                               ariaLabel="Your exposures"
                               reserveLastSlotForDiscard={mainPhase !== 'call-staging' && mainPhase !== 'mahjong-declared' && mainPhase !== 'bot-mahjong'}
                               lastSlotTile={

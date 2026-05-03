@@ -1,0 +1,23 @@
+
+
+/* Sample row under the mode strip — same stacked suit layout as the main hand rack.
+   Geometry: same face ratio as hand rack (h / w = 1.3333). Gap matches main-rack visible spacing. */
+.app-menu-modal__tile-graphics-preview {
+  --menu-tile-g: var(--player-rack-face-gap);
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  container-type: inline-size;
+  /* Ten equal columns; tiles fill each column with the same gap as the main rack. */
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  column-gap: var(--menu-tile-g);
+  row-gap: 0;
+  place-items: center;
+  margin-top: 0.55rem;
+  /* Lock all four container edges to the same distance as the inter-tile gap. */
+  padding: var(--menu-tile-g);
+  border-radius: 0.45rem;
+  background: color-mix(in srgb, var(--color-black) 22%, var(--bg-elevated) 78%);
+  border: 1px solid color-mix(in srgb, var(--border) 45%, var(--color-black) 25%);
+}

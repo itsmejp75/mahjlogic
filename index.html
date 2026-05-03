@@ -2,6 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- First paint before bundled CSS (Capacitor WKWebView + splash handoff). -->
+    <style>
+      html {
+        background-color: #1a1a1a;
+      }
+    </style>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -11,12 +17,40 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
+    <!--
+      Set before any bundled CSS/JS so first layout uses `html[data-native-app]` rules (avoids
+      flash: full width → squished). Mirrors @capacitor/core getPlatformId — no module import.
+    -->
+    <script>
+      (function () {
+        try {
+          var w = window;
+          if (
+            w.androidBridge ||
+            (w.webkit &&
+              w.webkit.messageHandlers &&
+              w.webkit.messageHandlers.bridge)
+          ) {
+            document.documentElement.setAttribute('data-native-app', '');
+          }
+        } catch (e) {}
+      })();
+    </script>
     <title>MahjLogic — Practice</title>
   </head>
   <body>
     <div id="root"></div>
+    <!--
+      Removed the previous `document.body.style.height = window.innerHeight + 'px'` boot script.
+      On iOS WKWebView with `viewport-fit=cover`, `window.innerHeight` returns the layout viewport
+      (excludes safe-area extensions) while CSS `body { height: 100dvh }` measures the visual
+      viewport (full WebView). Setting body to the smaller `innerHeight` value clipped #root /
+      .app-main below the WebView’s actual bottom edge, leaving an unfilled dark band beneath
+      the lower play-split. CSS `body { height: 100dvh !important }` in src/index.css now wins
+      uncontested and grows with the WebView (incl. dynamic chrome on iPhone Safari).
+    -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

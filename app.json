@@ -1,0 +1,19 @@
+{
+  "splash": {
+    "image": "./public/Splash page - MahjLogic.png",
+    "backgroundColor": "#1a1a1a",
+    "resizeMode": "contain"
+  },
+  "ios": {
+    "splash": {
+      "image": "./public/Splash page - MahjLogic.png",
+      "backgroundColor": "#1a1a1a"
+    }
+  },
+  "android": {
+    "splash": {
+      "image": "./public/Splash page - MahjLogic.png",
+      "backgroundColor": "#1a1a1a"
+    }
+  }
+}

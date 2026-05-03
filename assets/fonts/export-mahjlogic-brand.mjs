@@ -25,10 +25,10 @@ const trackLogicEm = -0.02;
 const BASELINE_Y = 600;
 
 const noto = loadSync(
-  path.join(__dirname, 'Noto_Serif_Bengali/static/NotoSerifBengali-Black.ttf'),
+  path.join(__dirname, 'Noto_Serif/static/NotoSerif-Black.ttf'),
 );
 const fig = loadSync(
-  path.join(__dirname, 'Figtree/static/Figtree-SemiBold.ttf'),
+  path.join(__dirname, 'Figtree/static/Figtree-Medium.ttf'),
 );
 
 /**

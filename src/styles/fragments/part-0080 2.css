@@ -1,0 +1,481 @@
+
+
+.sortable-tile-wrap:active {
+  cursor: grabbing;
+}
+
+.sortable-tile-wrap--selected .tile-face {
+  outline: 3px solid var(--coach-teal);
+  outline-offset: 2px;
+}
+
+/* Charleston receives: “lit” = no suggest-dim only — no highlight ring here (it read as an extra
+   border). The focused suggested-hand ring comes solely from `.sortable-tile-wrap--suggest-best`
+   below (2px inset; wins when both classes are present). */
+.sortable-tile-wrap--charleston-new .tile-face {
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
+}
+
+/* Suggested-hand dim: uniform `::after` cover. Overlay is always present (opacity 0) so
+   dim on/off cross-fades instead of snapping when the parent class toggles. */
+.sortable-tile-wrap .tile-face,
+.pass-strip__tile-wrap .tile-face,
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face,
+.exposure-rack__slot .tile-face,
+.discard-entry .tile-face,
+.mahjong-win__bots-review-tile .tile-face {
+  position: relative;
+}
+
+/* Non-jokers: dim on `::after`. Jokers use `::after` for the inscribed ring — if we also paint the
+   dim on `::after`, the cascade merges properties and breaks the ring. We exclude jokers from the
+   overlay, then dim jokers with `filter` (avoids taking `::before`, which the designer theme uses
+   for lustre). */
+.sortable-tile-wrap .tile-face:not(.tile--joker)::after,
+.pass-strip__tile-wrap .tile-face:not(.tile--joker)::after,
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face:not(.tile--joker)::after,
+.exposure-rack__slot .tile-face:not(.tile--joker)::after,
+.discard-entry .tile-face:not(.tile--joker)::after,
+.mahjong-win__bots-review-tile .tile-face:not(.tile--joker)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
+  background: var(--suggest-dim-overlay);
+  box-shadow: var(--suggest-dim-inset-shadow);
+  opacity: 0;
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sortable-tile-wrap .tile-face.tile--joker,
+.pass-strip__tile-wrap .tile-face.tile--joker,
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face.tile--joker,
+.exposure-rack__slot .tile-face.tile--joker,
+.discard-entry .tile-face.tile--joker,
+.mahjong-win__bots-review-tile .tile-face.tile--joker {
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+  transition: filter 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: none;
+}
+
+.sortable-tile-wrap--suggest-dim .tile-face:not(.tile--joker)::after,
+.pass-strip__tile-wrap--suggest-dim .tile-face:not(.tile--joker)::after,
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim .tile-face:not(.tile--joker)::after,
+.exposure-rack__slot--suggest-dim .tile-face:not(.tile--joker)::after,
+.discard-entry--suggest-dim .tile-face:not(.tile--joker)::after,
+.mahjong-win__bots-review-tile--dim .tile-face:not(.tile--joker)::after {
+  opacity: 1;
+}
+
+.sortable-tile-wrap--suggest-dim .tile-face.tile--joker,
+.pass-strip__tile-wrap--suggest-dim .tile-face.tile--joker,
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim .tile-face.tile--joker,
+.exposure-rack__slot--suggest-dim .tile-face.tile--joker,
+.discard-entry--suggest-dim .tile-face.tile--joker,
+.mahjong-win__bots-review-tile--dim .tile-face.tile--joker {
+  /* ~ match other tiles’ 38% black overlay in luminance (ring + J included). */
+  --tile-face-suggest-dim-inset: var(--suggest-dim-inset-shadow);
+  filter: brightness(0.64);
+}
+
+/* End-game overlays: default `inset: 0` on the dim layer is the padding box, so the face’s 1px border
+   stays undimmed. Pull `::after` out to the border box to match the visible tile edge. */
+.wall-game-dialog .mahjong-win__bots-review-tile .tile-face:not(.tile--joker)::after {
+  inset: calc(-1 * var(--rack-tile-face-bw));
+  border-radius: var(--tile-face-border-radius);
+}
+
+/* Post-game / wall-game modals: tile faces are much smaller than the main rack. The dim hairline
+   in `--suggest-dim-inset-shadow` reads as a second border next to the face’s 1px border; use the
+   same soft vignette as the rack/discard dim layer, without the extra 1px inset. */
+.wall-game-dialog .mahjong-win__bots-review-tile--dim .tile-face:not(.tile--joker)::after {
+  box-shadow: var(--suggest-dim-inset-vignette);
+}
+
+.wall-game-dialog .mahjong-win__bots-review-tile--dim .tile-face.tile--joker {
+  --tile-face-suggest-dim-inset: var(--suggest-dim-inset-vignette);
+}
+
+.sortable-tile-wrap--suggest-dim.sortable-tile-wrap--selected .tile-face:not(.tile--joker)::after,
+.sortable-tile-wrap--suggest-dim.sortable-tile-wrap--suggest-best .tile-face:not(.tile--joker)::after,
+.pass-strip__tile-wrap--suggest-dim.pass-strip__tile-wrap--suggest-best .tile-face:not(.tile--joker)::after,
+.hands-list__row-hit--with-tiles
+  .hands-list__pattern-tile-cell--suggest-dim.hands-list__pattern-tile-cell--suggest-best
+  .tile-face:not(.tile--joker)::after,
+.exposure-rack__slot--suggest-dim.exposure-rack__slot--suggest-best .tile-face:not(.tile--joker)::after,
+.discard-entry--suggest-dim.discard-entry--suggest-need .tile-face:not(.tile--joker)::after {
+  opacity: 0;
+}
+
+.sortable-tile-wrap--suggest-dim.sortable-tile-wrap--selected .tile-face.tile--joker,
+.sortable-tile-wrap--suggest-dim.sortable-tile-wrap--suggest-best .tile-face.tile--joker,
+.pass-strip__tile-wrap--suggest-dim.pass-strip__tile-wrap--suggest-best .tile-face.tile--joker,
+.hands-list__row-hit--with-tiles
+  .hands-list__pattern-tile-cell--suggest-dim.hands-list__pattern-tile-cell--suggest-best
+  .tile-face.tile--joker,
+.exposure-rack__slot--suggest-dim.exposure-rack__slot--suggest-best .tile-face.tile--joker,
+.discard-entry--suggest-dim.discard-entry--suggest-need .tile-face.tile--joker {
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+  filter: none;
+}
+
+.sortable-tile-wrap--suggest-dim.sortable-tile-wrap--selected .tile-face,
+.sortable-tile-wrap--suggest-dim.sortable-tile-wrap--suggest-best .tile-face {
+  opacity: 1;
+}
+
+.sortable-tile-wrap--suggest-best .tile-face {
+  border-radius: 0.35rem;
+  --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
+  --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
+}
+
+/* Pass slot and discard staging tiles that belong to the focused suggested hand */
+.pass-strip__tile-wrap--suggest-best .tile-face,
+.east-discard-staging__tile--suggest-best .tile-face {
+  border-radius: 0.35rem;
+  --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
+  --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
+}
+
+.sortable-tile-wrap--discard-mode {
+  cursor: pointer;
+}
+
+/* Tile selected to join a call meld (call-staging phase) — amber ring */
+.sortable-tile-wrap--staged-meld .tile-face {
+  outline: 3px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+.sortable-tile-wrap--discard-mode:hover .tile-face {
+  outline: 2px solid #ef4444;
+  outline-offset: 2px;
+}
+
+/* ── Drawn tile drop-in animation ── */
+/* --draw-anim-dx / --draw-anim-dy are set at runtime to the offset from the tile's
+   final rest position back to the animation origin (rack-local wall draw, joker-swap capture, etc.). */
+@keyframes tile-drop-in {
+  0% {
+    transform: translate(var(--draw-anim-dx, 0px), var(--draw-anim-dy, -3rem));
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+}
+
+/* Inner wrapper: fly-in keyframes run here so dnd-kit's inline `transform` on the outer
+   `.sortable-tile-wrap` does not override the animation. */
+.sortable-tile-wrap__fly {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.sortable-tile-wrap--just-drawn {
+  animation: tile-drop-in 0.34s cubic-bezier(0.34, 1.28, 0.64, 1) both;
+  position: relative;
+  z-index: 10;
+}
+
+/* Non-call exposure drop-ins use the shared `tile-drop-in`, but without overshoot. */
+.exposure-rack .exposure-rack__tile-fly.sortable-tile-wrap--just-drawn:not(.exposure-rack__call-staging-fly-up) {
+  animation: tile-drop-in 0.36s cubic-bezier(0.22, 0.7, 0.22, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sortable-tile-wrap__fly.sortable-tile-wrap--just-drawn {
+    animation-delay: 0s !important;
+  }
+}
+
+/* Bot exposure rail: same drop-in wrapper as hand tiles (measurement target for --draw-anim-*). */
+.exposure-rack__tile-fly-wrap {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.exposure-rack__tile-fly-wrap--clip {
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .exposure-rack .exposure-rack__tile-fly-wrap .sortable-tile-wrap--just-drawn {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .exposure-rack .exposure-rack__tile-fly-wrap .exposure-rack__incoming-discard-fly--from-right {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .exposure-rack .exposure-rack__tile-fly-wrap .exposure-rack__call-staging-fly-up {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Bot list ── */
+
+
+.tile-face {
+  box-sizing: border-box;
+  width: var(--rack-tile-w);
+  height: var(--rack-tile-h);
+  /* Single scale for all tile ink (numerals + letters) — always follows this face’s `--rack-tile-w`. */
+  --tile-face-glyph-fs: calc(var(--rack-tile-w) * 1.03 / 2.65 * 1.5);
+  /*
+   * Tile face shadow stack — split into CSS vars so themes and highlight states compose
+   * cleanly without specificity battles:
+   *   --tile-face-base-shadow         Material look (set by `data-tile-graphics` themes — Autumn,
+   *                                    Jewel, etc). Any future theme can set this and everything
+   *                                    else (including the focus / suggest-best / called rings)
+   *                                    keeps working unchanged.
+   *   --tile-face-highlight-inset   Soft inner light on focused / suggest-best (parallel to
+   *                                    --suggest-dim-inset-shadow, brighter direction).
+   *   --tile-face-highlight-shadow   Crisp border-highlight ring (suggest-best, called, etc).
+   *   --tile-face-suggest-dim-inset  Extra inner edge on suggest-dimmed jokers; non-jokers get
+   *                                    the same look on the dim `::after` layer.
+   * All default to a zero-spread transparent shadow so the rule below is always valid CSS.
+   */
+  --tile-face-base-shadow: 0 0 0 0 transparent;
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+  box-shadow: var(--tile-face-base-shadow), var(--tile-face-highlight-inset), var(--tile-face-highlight-shadow),
+    var(--tile-face-suggest-dim-inset);
+  border-radius: var(--tile-face-border-radius);
+  border: 1px solid color-mix(in srgb, var(--color-black) 22%, transparent);
+  flex-shrink: 0;
+  user-select: none;
+  background: var(--border);
+  color: var(--tg-ink, var(--color-black));
+}
+
+.tile-face--elevated {
+  opacity: 0.98;
+}
+
+/* Inherits `--tile-face-glyph-fs` from `.tile-face` (driven by local `--rack-tile-w`). */
+.tile-face__glyph {
+  font-weight: 700;
+  font-size: var(--tile-face-glyph-fs);
+  letter-spacing: 0.02em;
+  color: var(--tg-ink, var(--color-black));
+}
+
+/* Tile glyph splits digits vs letters so numerals render in Noto Sans Arabic (per design),
+   while suit letters (B / D / C / F / J / winds / dragons) stay in Figtree. Applies everywhere
+   `.tile-face__glyph` renders: hand racks, exposures, bot rows, discard tracker, pass strip,
+   suggested-hand mini tiles, dialogs, drag overlays. */
+.tile-face__glyph-num {
+  font-family: 'Noto Sans Arabic', var(--sans);
+}
+
+.tile-face__glyph-letter {
+  font-family: 'Figtree', var(--sans);
+}
+
+/* Main hand + staged discard (`TileFace` `rackSuitStacked`): rank at tile center; suit band fills
+   from below the numeral to the bottom face, with DOT/BAM/CRAK centered in that band (same fs as Mah Jongg btn). */
+.tile-face.tile-face--rack-suit-stack {
+  --tile-face-rank-fs: var(--tile-face-glyph-fs);
+  position: relative;
+  padding: 0;
+  line-height: 1;
+}
+
+.tile-face.tile-face--rack-suit-stack .tile-face__rank {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  font-weight: 700;
+  /* Numerals use Noto Sans Arabic across all tile surfaces (hand rack stacked layout here). */
+  font-family: 'Noto Sans Arabic', var(--sans);
+  /* Match scaled `.tile-face__glyph` (stacked suit rank). */
+  font-size: var(--tile-face-rank-fs);
+  letter-spacing: 0.02em;
+  color: var(--tg-ink, var(--color-black));
+  line-height: 1;
+  text-align: center;
+}
+
+/* Band from just below the **visible bottom of the numeral ink** (≈ baseline, ~0.3 × rank-fs
+   below center — digits have no descender) to the tile face bottom. Using 0.5 × rank-fs (full
+   line-box bottom) left a strip of invisible descender slack above the band, so DOT / BAM / CRAK
+   appeared lower than the true visual gap. Tight flex centering with zero block padding ensures
+   the text sits dead-center in that visible gap regardless of any inherited tile-face padding. */
+.tile-face.tile-face--rack-suit-stack .tile-face__suit-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(50% + var(--tile-face-rank-fs) * 0.3);
+  bottom: 0;
+  box-sizing: border-box;
+  padding-inline: 0.1rem;
+  padding-block: 0;
+}
+
+/* Wrapper: line-height 0 so the grid/flex “center” is the text ink, not the strut. */
+.tile-face.tile-face--rack-suit-stack .tile-face__suit-name {
+  line-height: 0;
+  display: inline-block;
+  max-width: 100%;
+  text-align: center;
+}
+
+/* Actual DOT/BAM/CRAK — metrics live here; vertically centered in `.tile-face__suit-band` */
+.tile-face.tile-face--rack-suit-stack .tile-face__suit-text {
+  font-family: 'Figtree', var(--sans);
+  font-weight: 700;
+  /*
+   * “CRAK” is the widest line — cap size to inner tile width so the label always scales down
+   * (no ellipsis); pair with a slightly tighter track than global buttons.
+   */
+  --suit-tile-w: max(0.5rem, calc(var(--rack-tile-w) - 0.35rem));
+  font-size: min(
+    calc(var(--rack-bottom-action-fs) * 0.96),
+    calc(var(--suit-tile-w) * 0.23)
+  );
+  letter-spacing: 0.045em;
+  line-height: 1;
+  color: var(--tg-suit-band-ink, var(--color-black));
+  text-align: center;
+  text-transform: uppercase;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow: visible;
+}
+
+.tile-face.tile--bam {
+  background: var(--tg-bam, var(--card-ink-green));
+}
+
+.tile-face.tile--crak {
+  background: var(--tg-crak, var(--card-ink-red));
+}
+
+.tile-face.tile--dot {
+  background: var(--tg-dot, var(--card-ink-navy));
+}
+
+.tile-face.tile--wind {
+  background: var(--tg-wind, var(--wind-tile-bg));
+}
+
+.tile-face.tile--dragon-red {
+  background: var(--tg-dragon-red, var(--card-ink-red));
+}
+
+.tile-face.tile--dragon-green {
+  background: var(--tg-dragon-green, var(--card-ink-green));
+}
+
+.tile-face.tile--dragon-soap {
+  background: var(--tg-dragon-soap, var(--card-ink-navy));
+}
+
+.tile-face.tile--dragon-any {
+  background: var(--tg-dragon-any, #5c6470);
+}
+
+.tile-face.tile--flower {
+  background: var(--tg-flower, #ab47bc);
+}
+
+.tile-face.tile--joker {
+  position: relative;
+  background: var(--tg-joker, #ab47bc);
+}
+
+/*
+ * Joker ring: do not use cqw/cqh here — a size container on an ancestor (e.g. bot-exposures panel)
+ * can steal query resolution so the ring looks different in the hand / East exposure row vs bot.
+ * Padding-bottom % is always against the tile’s own width, giving a square inscribed on portrait
+ * faces (our tiles are always wider-aspect short edge = width).
+ */
+.tile-face.tile--joker::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 62%;
+  height: 0;
+  padding-bottom: 62%;
+  border-radius: 50%;
+  border: 2px solid var(--tg-joker-ring, var(--color-black));
+  box-sizing: content-box;
+  pointer-events: none;
+}
+
+.tile-face.tile--joker .tile-face__glyph {
+  position: relative;
+  z-index: 1;
+  /* Match the inscribed ring (`::after` border) so J and circle are one “piece” of ink. */
+  color: var(--tg-joker-ring, var(--tg-ink, var(--color-black)));
+}
+
+/* Your rack: new-tile hint (Charleston / draw / joker swap) — does not move rank / glyph layout. */
+.tile-face.tile-face--rack-new-mark {
+  position: relative;
+}
+
+.tile-face__rack-new-dot {
+  /* ≈ “1” stroke width — a bit under the old 2× size, above the tiniest pin */
+  --tile-rack-new-dot-size: min(0.3rem, calc(var(--rack-tile-w) * 0.08));
+  --tile-rack-new-dot-r: calc(var(--tile-rack-new-dot-size) * 0.5);
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  /*
+   * Honor / flower / joker (compact glyph): a bit above the lower edge, under the main glyph.
+   */
+  bottom: calc(17% - var(--tile-rack-new-dot-r));
+  width: var(--tile-rack-new-dot-size);
+  height: var(--tile-rack-new-dot-size);
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: var(--tg-ink, var(--color-black));
+  box-sizing: content-box;
+  pointer-events: none;
+}
+
+/*
+ * Stacked suit: in the band below the rank, sit the dot in the space under CRAK/BAM/DOT
+ * (a bit below the label, roughly halfway to the bevel) — not up toward the band’s midline.
+ * Band height = 50% − 0.3×rank; ~13% of that is the gap between text and tile bottom, centered.
+ */
+.tile-face.tile-face--rack-suit-stack.tile-face--rack-new-mark .tile-face__rack-new-dot {
+  bottom: calc(
+    (50% - var(--tile-face-rank-fs) * 0.3) * 0.155 - var(--tile-rack-new-dot-r)
+  );
+}
+
+/*
+ * Winds / dragons: same vertical slot as suit new-dot (band gap under primary ink). Stacked suit
+ * uses --tile-face-rank-fs == --tile-face-glyph-fs; honors use the glyph size for the same calc.
+ */
+.tile-face.tile--wind.tile-face--rack-new-mark .tile-face__rack-new-dot,
+.tile-face.tile--dragon.tile-face--rack-new-mark .tile-face__rack-new-dot {
+  bottom: calc(
+    (50% - var(--tile-face-glyph-fs) * 0.3) * 0.155 - var(--tile-rack-new-dot-r)
+  );
+}
