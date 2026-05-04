@@ -21,7 +21,7 @@ const root = path.join(__dirname, '..')
 const svgPath = path.resolve(process.argv[2] ?? path.join(root, 'src', 'assets', 'mahjlogic-icon-logo.svg'))
 const masterPng = path.join(root, '.tmp-app-icon-master.png')
 /** Padding on each edge of the raster (percent of canvas). Increase if Dock still clips corners. */
-const SAFE_INSET_PERCENT = Number(process.env.ICON_SAFE_INSET_PERCENT ?? 5)
+const SAFE_INSET_PERCENT = Number(process.env.ICON_SAFE_INSET_PERCENT ?? 8)
 
 function sipsZ(w, h, input, output) {
   execFileSync('sips', ['-z', String(h), String(w), input, '--out', output], { stdio: 'inherit' })
