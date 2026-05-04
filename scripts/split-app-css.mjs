@@ -2,6 +2,19 @@
  * Splits a full app stylesheet into src/styles/fragments/part-XXXX.css (one file per
  * consecutive same-category run; global order preserved).
  *
+ * ⚠️  DESTRUCTIVE: Deletes **all** existing `src/styles/fragments/part-*.css` and
+ * regenerates `base.css` / `layout.css` / `components.css` / `animations.css` /
+ * `style.css` / `thematic/*.css` from the input file. **Vite + localhost use those
+ * fragments** — if your truth is Git / edited fragments, running this without first
+ * syncing `backup folder/safe_backup.css` to match will revert your work.
+ *
+ * To refresh the backup from what you have on disk (matches pushed fragments):
+ *   npm run export-css-backup
+ * Then (only if you need a full re-split): npm run split-css
+ *
+ * For day-to-day UI work: edit `src/styles/fragments/part-*.css` directly and
+ * **do not run split-css** unless you intentionally regenerate from backup.
+ *
  * style.css imports base.css → layout.css → components.css → animations.css. Each of
  * those files lists ~¼ of the fragment @imports in original order (quarters for bundling,
  * not semantic “theme” boundaries — see thematic/*.css for concat-by-classifier copies).
@@ -25,6 +38,17 @@ const text = fs.readFileSync(srcPath, 'utf8')
 if (!text.trim()) {
   console.error('split-app-css: empty or missing input:', srcPath)
   process.exit(1)
+}
+
+if (!process.env.SPLIT_CSS_I_KNOW) {
+  console.warn(
+    '\n⚠️  split-app-css — OVERWRITES src/styles/fragments/* and barrel files.\n' +
+      '   Input: ' +
+      srcPath +
+      '\n' +
+      '   To align backup with current fragments first:  npm run export-css-backup\n' +
+      '   To suppress this warning:  SPLIT_CSS_I_KNOW=1 npm run split-css\n',
+  )
 }
 
 function splitTopLevel(css) {

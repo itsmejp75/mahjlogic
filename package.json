@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "export-logo": "node assets/fonts/export-mahjlogic-brand.mjs",
     "split-css": "node scripts/split-app-css.mjs",
+    "export-css-backup": "node scripts/export-css-backup-from-barrels.mjs",
     "dedupe-flex": "node scripts/dedupe-flex-clusters.mjs",
     "ios:sim": "npm run build && npx cap sync ios && cd ios/App && xcodebuild -project App.xcodeproj -scheme App -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17' -derivedDataPath /tmp/MahjLogicXcodeBuild build && xcrun simctl boot \"iPhone 17\" 2>/dev/null || true && open -a Simulator && xcrun simctl install booted /tmp/MahjLogicXcodeBuild/Build/Products/Debug-iphonesimulator/App.app && xcrun simctl launch booted com.jason.mahjlogic",
     "sync:all": "bash scripts/sync-splash-native.sh && npx cap sync && npm run ios:sim"
