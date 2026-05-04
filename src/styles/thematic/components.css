@@ -6497,22 +6497,3 @@
     max-height: min(30dvb, 15rem);
   }
 }
-
-/*
- * Wider than the phone / tight-landscape band (`max-width: 932px` above): use the full window width
- * for the play column. The default `min(100dvi, 195dvh)` intentionally letterboxes short+wide shells,
- * but desktop and macOS installed web apps often open in a short frame — that reads as huge side gutters
- * (see issue vs a full-height browser tab). `display-mode: standalone` is unreliable on macOS, so we
- * key only on width, mutually exclusive with the `max-width: 932px` rules.
- */
-@media (min-width: 933px) {
-  :root {
-    --app-play-fit-inline-from-block: 100vw;
-  }
-
-  @supports (width: 100dvi) {
-    :root {
-      --app-play-fit-inline-from-block: 100dvi;
-    }
-  }
-}

@@ -5600,15 +5600,17 @@ export default function App() {
         data-joker-swap-hint={jokerSwapHintEnabled ? 'on' : 'off'}
       >
         <div className="app-main">
-          {/*
-            This column is reserved for optional future “main” scroll chrome. Today it has no
-            children. When it is not collapsed, CSS gives it up to min(30dvb, 15rem) height —
-            ~118 px on iPhone landscape — which steals vertical space from `.app-dnd-frame` and
-            squashes the lower play-split. Media queries in part-0120 / part-0030 further raised
-            that max-height and accidentally overrode `.app-main__scroll--collapsed` (same
-            specificity, later wins). Keep it permanently collapsed until real content exists.
-          */}
-          <div className="app-main__scroll app-main__scroll--collapsed" aria-hidden />
+          <div
+            className={[
+              'app-main__scroll',
+              charlestonDone && mainPhase !== 'east-discard' && mainPhase !== 'bot-mahjong'
+                ? ''
+                : 'app-main__scroll--collapsed',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
+          </div>
 
             <div className="app-dnd-frame">
               <div className="app-rack-stage">

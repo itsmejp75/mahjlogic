@@ -1,0 +1,24 @@
+
+
+.panel--hand .exposure-rack .tile-face,
+.panel--bot-exposures .exposure-rack .tile-face {
+  border: none;
+}
+
+/* Match bot exposure tiles' cleaner edge without changing tile size. */
+.panel--hand .hand-row .tile-face,
+.panel--discard-tracker .discard-pile .tile-face {
+  border: none;
+}
+
+/* Match bot exposure inter-tile spacing in the exact main-rack / discard / player-exposure rows. */
+.panel--hand .panel-hand-rack__hand-tray .hand-row,
+.panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass),
+.panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass) .exposure-rack__meld-drop {
+  gap: var(--player-rack-face-gap);
+}
+
+/* Pass-tail tiles keep their bordered look so Charleston still reads as a distinct strip. */
+.panel--hand .exposure-rack--charleston-pass .exposure-rack__slot--pass-tail .tile-face {
+  border: 1px solid color-mix(in srgb, var(--color-black) 22%, transparent);
+}

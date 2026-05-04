@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # Canonical splash source (edit this file only):
 #   src/assets/Splash page - MahjLogic.png
-# Vector master (optional): src/assets/splash-logo-master.svg — run `npm run splash:from-svg` to rasterize + sync.
 # Do not copy splash into dist/ by hand — dist/ is Vite output; public/ is synced from here.
 #
 # Copies into: public/, iOS Assets.xcassets/Splash.imageset/splash-2732x2732.png, Android res/**/splash.png
