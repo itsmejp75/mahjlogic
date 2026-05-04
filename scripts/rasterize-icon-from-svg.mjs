@@ -5,6 +5,10 @@
  *
  * Usage: node scripts/rasterize-icon-from-svg.mjs [path/to/icon.svg]
  * Default: src/assets/mahjlogic-icon-logo.svg
+ *
+ * Inset: macOS Dock / iOS use a squircle mask; artwork that touches the square’s edges reads as
+ * “clipped” vs phone icons (adaptive-icon safe zone, different chrome). We letterbox ~11% inset
+ * so the mark matches the calmer mobile presentation.
  */
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
@@ -16,6 +20,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
 const svgPath = path.resolve(process.argv[2] ?? path.join(root, 'src', 'assets', 'mahjlogic-icon-logo.svg'))
 const masterPng = path.join(root, '.tmp-app-icon-master.png')
+/** Padding on each edge of the raster (percent of canvas). Increase if Dock still clips corners. */
+const SAFE_INSET_PERCENT = Number(process.env.ICON_SAFE_INSET_PERCENT ?? 11)
 
 function sipsZ(w, h, input, output) {
   execFileSync('sips', ['-z', String(h), String(w), input, '--out', output], { stdio: 'inherit' })
@@ -43,9 +49,10 @@ async function rasterMaster() {
   })
   const page = await browser.newPage()
   await page.setViewport({ width: 1024, height: 1024, deviceScaleFactor: 1 })
+  const pad = `${SAFE_INSET_PERCENT}%`
   await page.setContent(
-    `<!DOCTYPE html><html><body style="margin:0;background:#1a1a1a;display:flex;align-items:center;justify-content:center;width:1024px;height:1024px;">
-<img src="${dataUrl}" alt="" width="1024" height="1024" style="width:100%;height:100%;object-fit:contain"/></body></html>`,
+    `<!DOCTYPE html><html><body style="margin:0;background:#1a1a1a;box-sizing:border-box;width:1024px;height:1024px;padding:${pad};display:flex;align-items:center;justify-content:center;">
+<img src="${dataUrl}" alt="" style="width:100%;height:100%;object-fit:contain;object-position:center center"/></body></html>`,
     { waitUntil: 'networkidle0' },
   )
   await new Promise((r) => setTimeout(r, 150))

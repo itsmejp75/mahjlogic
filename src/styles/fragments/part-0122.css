@@ -64,3 +64,22 @@
     max-height: min(30dvb, 15rem);
   }
 }
+
+/*
+ * Installed PWA / fullscreen shell on a wide window: use full inline width like a browser tab.
+ * Otherwise `min(100dvi, 195dvb)` letterboxes short+wide windows (Chrome’s default PWA frame), so
+ * the board reads ~¾ of the display vs opening the same URL in a maximized tab.
+ */
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  @media (min-width: 48rem) {
+    :root {
+      --app-play-fit-inline-from-block: 100vw;
+    }
+
+    @supports (width: 100dvi) {
+      :root {
+        --app-play-fit-inline-from-block: 100dvi;
+      }
+    }
+  }
+}
