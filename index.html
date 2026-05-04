@@ -5,23 +5,17 @@
     <!-- First paint before bundled CSS (Capacitor WKWebView + splash handoff). -->
     <style>
       html {
-        background-color: #1a1a1a;
+        background-color: #1a1e24;
       }
     </style>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600&family=Nunito:wght@700&family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,500;600;800;900&display=swap"
-      rel="stylesheet"
-    />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
     <!--
-      Set before any bundled CSS/JS so first layout uses `html[data-native-app]` rules (avoids
-      flash: full width → squished). Mirrors @capacitor/core getPlatformId — no module import.
+      Set before any bundled CSS/JS so first layout uses `html[data-native-app]` rules
+      (avoids flash: full width → squished). Mirrors @capacitor/core getPlatformId.
     -->
     <script>
       (function () {

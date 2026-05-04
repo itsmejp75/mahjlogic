@@ -7,8 +7,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Match LaunchScreen / splash art (#1a1a1a) so any window chrome before the web layer is not system white.
-        window?.backgroundColor = UIColor(red: 26 / 255, green: 26 / 255, blue: 26 / 255, alpha: 1)
+        // Match the app shell so any window chrome before the web layer is not system white.
+        window?.backgroundColor = UIColor(red: 26 / 255, green: 30 / 255, blue: 36 / 255, alpha: 1)
         return true
     }
 

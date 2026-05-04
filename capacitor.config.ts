@@ -1,3 +1,5 @@
+/// <reference types="@capacitor/splash-screen" />
+
 import type { CapacitorConfig } from '@capacitor/cli';
 
 /**
@@ -13,12 +15,22 @@ const config: MahjCapacitorConfig = {
   appId: 'com.jason.mahjlogic',
   appName: 'MahjLogic',
   webDir: 'dist',
-  /** Matches splash / LaunchScreen (#1a1a1a) so iOS/Android WebViews are not system white before CSS loads. */
-  backgroundColor: '#1a1a1a',
+  /** Matches the app shell so iOS/Android WebViews are not system white before CSS loads. */
+  backgroundColor: '#1a1e24',
   orientation: 'landscape',
   ios: {
     /** Avoids WKWebView scroll view automatic safe-area insets (side “letterboxing”). */
     contentInset: 'never',
+  },
+  plugins: {
+    SplashScreen: {
+      launchAutoHide: false,
+      launchFadeOutDuration: 250,
+      backgroundColor: '#1a1a1a',
+      androidSplashResourceName: 'splash',
+      androidScaleType: 'CENTER_CROP',
+      showSpinner: false,
+    },
   },
 };
 
