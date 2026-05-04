@@ -5732,9 +5732,7 @@ export default function App() {
                                   className="btn btn--mahjong rack-bottom-tile-cell rack-bottom-tile-cell--c6-7"
                                   onClick={declareMahjong}
                                 >
-                                  Mah
-                                  <br />
-                                  Jongg
+                                  MAHJ
                                 </button>
                               ) : null}
                               {awaitingSecondCharlestonChoice ? (
@@ -5990,9 +5988,7 @@ export default function App() {
                                   disabled={!mahjongButtonEnabled}
                                   onClick={declareMahjong}
                                 >
-                                  Mah
-                                  <br />
-                                  Jongg
+                                  MAHJ
                                 </button>
                                 <button
                                   type="button"
@@ -6173,12 +6169,12 @@ export default function App() {
                           ) : null}
                           <button
                             type="button"
-                            className="btn btn--rack-neutral panel--bot-exposures__clear btn--label-wrap"
+                            className="btn btn--rack-neutral panel--bot-exposures__clear"
                             aria-label="Clear suggested hand focus and rack highlights"
                             disabled={suggestedFocusHandKey === null}
                             onClick={() => setSuggestedFocusHandKey(null)}
                           >
-                            <span className="btn__label">CLR HL</span>
+                            CLR
                           </button>
                           <button
                             type="button"

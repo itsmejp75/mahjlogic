@@ -7,8 +7,8 @@
  * Default: src/assets/mahjlogic-icon-logo.svg
  *
  * Inset: macOS Dock / iOS use a squircle mask; artwork that touches the square’s edges reads as
- * “clipped” vs phone icons (adaptive-icon safe zone, different chrome). We letterbox ~11% inset
- * so the mark matches the calmer mobile presentation.
+ * “clipped” vs phone icons (adaptive-icon safe zone, different chrome). We letterbox with a
+ * small inset so the mark stays clear of the rounded mask while remaining readable on mobile.
  */
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
@@ -21,7 +21,7 @@ const root = path.join(__dirname, '..')
 const svgPath = path.resolve(process.argv[2] ?? path.join(root, 'src', 'assets', 'mahjlogic-icon-logo.svg'))
 const masterPng = path.join(root, '.tmp-app-icon-master.png')
 /** Padding on each edge of the raster (percent of canvas). Increase if Dock still clips corners. */
-const SAFE_INSET_PERCENT = Number(process.env.ICON_SAFE_INSET_PERCENT ?? 11)
+const SAFE_INSET_PERCENT = Number(process.env.ICON_SAFE_INSET_PERCENT ?? 5)
 
 function sipsZ(w, h, input, output) {
   execFileSync('sips', ['-z', String(h), String(w), input, '--out', output], { stdio: 'inherit' })

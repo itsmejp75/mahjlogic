@@ -64,3 +64,86 @@
     max-height: min(30dvb, 15rem);
   }
 }
+
+/*
+ * Final native short-landscape override (iPhone + simulator).
+ * Keep the board full-width and let the lower split consume remaining height; do not
+ * alter row/container internals that are sized by their tiles/pass/discard contents.
+ */
+@media (max-height: 31.25rem) and (orientation: landscape) {
+  html[data-native-app] {
+    --app-play-fit-inline-from-block: 100dvi;
+    --app-h-pad-base: clamp(0.06rem, 0.45dvi, 0.16rem);
+    --app-h-pad: calc(
+      var(--app-h-pad-base) + (env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px)) * 0.275
+    );
+    --app-v-pad: clamp(0.08rem, 0.45dvb, 0.18rem);
+    --hand-window-pad-inline: clamp(0.08rem, 0.5dvi, 0.18rem);
+    --rack-tray-inset-inline: 0.16rem;
+    --rack-tray-inset-block: 0.18rem;
+    --player-rack-face-gap: 1px;
+    --rack-action-touch-min-h: calc(var(--hand-rack-tile-h) * 0.48);
+    --suggested-tab-h: var(--rack-action-touch-min-h);
+    --btn-line-height: 1.08;
+    --btn-letter-spacing: calc(0.008em + 0.008rem);
+    --native-lower-edge-pull-down: clamp(1.8rem, 8dvb, 2.45rem);
+  }
+
+  html[data-native-app] .app-layout {
+    height: 100%;
+    min-height: 0;
+    gap: 0;
+  }
+
+  html[data-native-app] .app,
+  html[data-native-app] .app-main {
+    height: 100dvb;
+    min-height: 0;
+  }
+
+  html[data-native-app] .app-main {
+    box-sizing: border-box;
+    padding-top: var(--app-v-pad);
+    padding-bottom: var(--app-v-pad);
+  }
+
+  html[data-native-app] .app-dnd-frame {
+    flex: 1 1 0;
+    height: 100%;
+    min-height: 0;
+    justify-content: flex-start;
+  }
+
+  html[data-native-app] .app-rack-stage {
+    min-height: 0;
+  }
+
+  html[data-native-app] .app-rack-stage,
+  html[data-native-app] .app-play-split {
+    padding-inline-start: calc(var(--app-h-pad-base) + env(safe-area-inset-left, 0px) * 0.55);
+    padding-inline-end: calc(var(--app-h-pad-base) + env(safe-area-inset-right, 0px) * 0.55);
+  }
+
+  html[data-native-app] .app-play-split {
+    flex: 1 1 0;
+    max-height: none;
+    min-height: 0;
+    align-self: stretch;
+    height: auto;
+  }
+
+  html[data-native-app] .app-play-split__left,
+  html[data-native-app] .app-play-split__right,
+  html[data-native-app] .app-play-split__right-stack,
+  html[data-native-app] .app-play-split > .app-play-split__left > .panel--discard-tracker,
+  html[data-native-app] .app-play-split > .app-play-split__right .panel--bot-exposures {
+    height: 100%;
+    min-height: 0;
+  }
+
+  html[data-native-app] .app-play-split > .app-play-split__left > .panel--discard-tracker,
+  html[data-native-app] .app-play-split > .app-play-split__right .panel--bot-exposures {
+    flex: 0 0 calc(100% + var(--native-lower-edge-pull-down));
+    height: calc(100% + var(--native-lower-edge-pull-down));
+  }
+}
