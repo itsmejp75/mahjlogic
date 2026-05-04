@@ -5,14 +5,30 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 
+type NavigatorWithStandalone = Navigator & { standalone?: boolean }
+
+function isStandaloneWebApp() {
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (navigator as NavigatorWithStandalone).standalone === true
+  )
+}
+
 /* index.html may have set this already for first paint; keep for dev / parity. */
 if (Capacitor.isNativePlatform()) {
   document.documentElement.setAttribute('data-native-app', '')
+} else if (isStandaloneWebApp()) {
+  document.documentElement.setAttribute('data-home-screen-app', '')
 }
 
 function AppWithNativeSplashHandoff() {
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return
+    if (!Capacitor.isNativePlatform()) {
+      if (isStandaloneWebApp()) {
+        void window.screen.orientation?.lock?.('landscape-primary').catch(() => undefined)
+      }
+      return
+    }
 
     let cancelled = false
     let firstFrame = 0
