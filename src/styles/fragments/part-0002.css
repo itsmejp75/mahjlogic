@@ -1,16 +1,18 @@
 
 
-/* Shared: rack-aligned control typography (deduped from 8 rules) */
-.rack-bottom-bar--wall-game .btn.rack-bottom-tile-cell,
-.rack-bottom-tile-cell,
-.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn,
-.panel--bot-exposures__toolbar-well .panel--bot-exposures__clear,
-.panel--bot-exposures__toolbar-well .panel--bot-exposures__hint,
-.panel--bot-exposures__toolbar-well .app-bottom-center-controls .suggested-hands-tab,
-.panel--bot-exposures__toolbar-well .app-menu-anchor .app-bottom-center-controls__menu-btn,
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell {
-  font-size: var(--rack-control-label-fs);
-  letter-spacing: max(0.01em, calc(0.02em + 0.02rem));
-  line-height: 1.08;
-  padding: var(--rack-control-pad-block) var(--rack-control-pad-inline);
+/* ---- part-0003.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* Shared: full-width flex column shell (deduped from 6 rules) */
+.panel--hand,
+.rack-stage--charleston,
+.rack-stage--main-rack,
+.panel--bot-exposures .app-opponents-rail__cell,
+.app-menu-modal,
+.suggested-hands-popup__user-shift {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
 }

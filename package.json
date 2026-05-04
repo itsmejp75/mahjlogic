@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "export-logo": "node assets/fonts/export-mahjlogic-brand.mjs",
+    "icon:from-png": "node scripts/rasterize-icon-from-png.mjs",
     "split-css": "node scripts/split-app-css.mjs",
     "export-css-backup": "node scripts/export-css-backup-from-barrels.mjs",
     "dedupe-flex": "node scripts/dedupe-flex-clusters.mjs",

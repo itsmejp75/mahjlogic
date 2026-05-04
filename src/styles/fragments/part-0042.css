@@ -1,40 +1,64 @@
 
 
+/* ---- part-0044.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /*
- * Discard panel: full column width. Tray width uses `--discard-tray-gap-to-bot` (horizontal nudge only).
+ * Toolbar is only as tall as the well (no flex growth). Spacing to the exposure list uses
+ * `.panel--bot-exposures` `gap` (same token as East exposure ↔ hand).
  */
-.app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker {
-  --discard-tray-gap-to-bot: 0px;
-  flex: 1 1 0;
+.panel--bot-exposures__toolbar {
+  flex: 0 0 auto;
   min-height: 0;
-  /* Separator strip to bot + `--discard-tray-right-pull` (tune on `.app-play-split`). */
-  align-self: flex-start;
-  width: calc(100% - var(--play-split-discard-bot-separator) - var(--discard-tray-right-pull));
-  max-width: 100%;
-  padding-inline-end: 0;
-  max-height: none;
-  overflow-y: auto;
+  justify-content: flex-start;
+  width: 100%;
   box-sizing: border-box;
-  border: none;
-  border-radius: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  position: relative;
+  z-index: 2;
 }
 
-/* Bot exposures: fill column height. Grid (toolbar auto row + body `minmax(0, 1fr)` row)
-   guarantees the body cell has a definite height to shrink into. */
-.app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures {
-  flex: 1 1 0;
-  min-height: 0;
-  width: var(--bot-panel-outer-w);
-  max-height: none;
-  /* Let `.panel--bot-exposures__body` be the only clip surface so the menu tray can pop above
-     the toolbar (absolute; `bottom: calc(100% + …)`) without being cut off. */
-  overflow: visible;
+/* Same shell as `.app-opponents-rail__cell`: dark tray, radius, rim shadows; holds Clear / Suggested.
+   Button gap matches Sort↔Undo and the main rack tile-face gap. */
+.panel--bot-exposures__toolbar-well {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--play-split-lower-toolbar-button-gap);
+  width: 100%;
   box-sizing: border-box;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--play-tray-h-divider);
+  padding: var(--bot-exposure-inner-pad);
+  position: relative;
+  z-index: 2;
+  background: var(--window-inner-surface);
+  border-radius: calc(var(--rack-tile-btn-border-radius) + var(--bot-exposure-inner-pad));
+  /* Must not clip: the Menu control sits in this shell. */
+  overflow: visible;
+  min-height: calc(2 * var(--bot-exposure-inner-pad) + var(--rack-action-touch-min-h));
+}
+
+/*
+ * Match the hand rack column: same width as 14 face slots + insets, centered like `.rack-stage__rack-col`
+ * so the trailing control (Suggested Hands) right-aligns with the right edge of tile 14, the pass cluster,
+ * and the main hand action row (e.g. discard / ignore when shown in cols 12–14).
+ */
+.app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--play-split-lower-toolbar-button-gap);
+  max-width: var(--rack-col-outer-w);
+  margin-left: auto;
+  margin-right: auto;
+  width: calc(100% - var(--play-split-lower-box-edge-inset) + var(--play-split-lower-box-left-bleed));
+  padding-inline-start: var(--play-split-lower-toolbar-edge-gap-start);
+  padding-inline-end: var(--play-split-lower-toolbar-edge-gap-end);
+  transform: translateX(var(--play-split-lower-toolbar-button-group-nudge-x));
+  box-sizing: border-box;
 }

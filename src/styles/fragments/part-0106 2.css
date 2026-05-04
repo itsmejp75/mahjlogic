@@ -1,8 +1,0 @@
-
-
-@media (prefers-reduced-motion: reduce) {
-  .app-menu-tray__toggle-slider,
-  .app-menu-tray__toggle-slider__thumb {
-    transition: none;
-  }
-}

@@ -1,26 +1,23 @@
 
 
-/*
-  Joker swap hint — macOS dock bounce.
+/* ---- part-0038.css (from base.css, layout.css, components.css, animations.css) ---- */
 
-  Single shared keyframe + duration so the swappable hand tile and the redeemable
-  exposed jokers bounce in unison (same tempo, same time, exactly 3 bounces).   After
-  the hint applies, `var(--joker-swap-hint-bounce-delay)` passes before the bounce loop starts
-  (hand fly + bot exposure; longhand `animation-*` so delay is never misparsed).
 
-  Apply the animation on inner wrappers (.tile-face on rack slots; .sortable-tile-wrap__fly
-  in hand) so it doesn't fight DnD `transform`s on the outer drag wrappers.
 
-  Stacking: hand row sits inside `.rack-stage__rack-bottom` (z-index: 1) which is below
-  `.rack-stage__rack-top` (z-index: 2) — bouncing up would otherwise paint behind the
-  exposure rack. Bot exposure cells use `overflow: hidden` and would clip the upward
-  bounce. The `:has()` rules below escape both while a bounce is active.
-*/
+/* Hand row lives in `.rack-stage__rack-bottom` (z-index: 1), painted under
+   `.rack-stage__rack-top` (z-index: 2). While a hand tile is bouncing, lift the
+   whole bottom column above the rack-top so the arc paints over the exposure rack. */
+.app-layout[data-joker-swap-hint='on'][data-animations='on']
+  .rack-stage__rack-bottom:has(.sortable-tile-wrap__fly--joker-swap-hint-bounce) {
+  z-index: 5;
+}
 
-@keyframes joker-swap-hint-dock-bounce {
-  0%   { transform: translateY(0);     animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1); }
-  18%  { transform: translateY(-26%);  animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0); }
-  36%  { transform: translateY(0);     animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1); }
-  44%  { transform: translateY(-6%); }
-  52%, 100% { transform: translateY(0); }
+/* Bot exposure cells + grid use `overflow: hidden`. Open them up only while a
+   redeemable joker is mid-bounce so the tile can poke above the tray edge, and
+   raise the cell above its row neighbors. */
+.app-layout[data-joker-swap-hint='on'][data-animations='on']
+  .panel--bot-exposures
+  .app-opponents-rail__cell:has(.exposure-rack__slot--joker-swap-hint-bounce) {
+  overflow: visible;
+  z-index: 5;
 }

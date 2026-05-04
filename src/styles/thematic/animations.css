@@ -2,18 +2,6 @@
 
 
 
-@keyframes charleston-pass-fly-out-left {
-  from {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  to {
-    /* % is of the tile wrap’s own width — works in Charleston hand + pass-tail layouts */
-    transform: translateX(-220%);
-    opacity: 0;
-  }
-}
-
 @keyframes charleston-pass-fly-out-right {
   from {
     transform: translateX(0);
@@ -36,24 +24,6 @@
   }
 }
 
-@keyframes hand-slot-collapse {
-  to {
-    width: 0;
-    flex-basis: 0;
-  }
-}
-
-@keyframes exposure-incoming-discard-fly-in-right {
-  from {
-    transform: translateX(220%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
 @keyframes exposure-incoming-discard-fly-in-left {
   from {
     transform: translateX(-220%);
@@ -73,16 +43,5 @@
   to {
     transform: translateY(0);
     opacity: 1;
-  }
-}
-
-@keyframes app-menu-modal-in {
-  from {
-    opacity: 0;
-    transform: translateY(0.4rem) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
   }
 }

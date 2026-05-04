@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a memory-friendly splash JPEG for iOS Assets.xcassets from the master PNG."""
+"""Build JPEG for iOS Assets.xcassets/Splash.imageset from splash artwork."""
 from __future__ import annotations
 
 import io
@@ -8,14 +8,21 @@ import sys
 
 from PIL import Image
 
-# Max side keeps decoded bitmap smaller for the asset compiler (2732² is heavy).
-MAX_SIDE = 2048
-TARGET_BYTES = 500 * 1024
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
+
+from splash_raster_prep import flatten_rgba, prepare_splash_source_rgb  # noqa: E402
+
+# Large enough for a sharp centered logo JPEG at ~2732 px without mushy quantization.
+TARGET_BYTES = 3 * 1024 * 1024
 
 
 def main() -> int:
     root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    src = os.path.join(root, "src", "assets", "Splash page - MahjLogic.png")
+    default_src = os.path.join(root, "src", "assets", "Splash page - MahjLogic.png")
+    src = sys.argv[1] if len(sys.argv) > 1 else default_src
+
     out_dir = os.path.join(
         root,
         "ios",
@@ -30,19 +37,16 @@ def main() -> int:
         print(f"build-ios-splash-image: missing {src}", file=sys.stderr)
         return 1
 
-    img = Image.open(src).convert("RGBA")
-    bg = Image.new("RGB", img.size, (26, 26, 26))
-    bg.paste(img, mask=img.split()[3])
-    img = bg
-
-    w, h = img.size
-    if max(w, h) > MAX_SIDE:
-        img = img.resize((MAX_SIDE, MAX_SIDE), Image.Resampling.LANCZOS)
+    if len(sys.argv) > 1:
+        img = Image.open(src).convert("RGB")
+    else:
+        rgb = flatten_rgba(Image.open(src))
+        img = prepare_splash_source_rgb(rgb)
 
     best_data: bytes | None = None
-    for q in range(95, 39, -3):
+    for q in range(96, 70, -2):
         buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=q, optimize=True, subsampling=1)
+        img.save(buf, format="JPEG", quality=q, optimize=True, subsampling=0)
         data = buf.getvalue()
         if len(data) <= TARGET_BYTES:
             best_data = data
@@ -54,7 +58,6 @@ def main() -> int:
     with open(out_jpg, "wb") as f:
         f.write(best_data)
 
-    # Drop legacy PNG slot file if present
     for legacy in ("splash-2732x2732.png", "Splash.png"):
         p = os.path.join(out_dir, legacy)
         if os.path.isfile(p):

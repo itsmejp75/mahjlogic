@@ -198,6 +198,16 @@ html {
   background: #1a1e24;
 }
 
+/*
+ * @dnd-kit exposes `aria-roledescription` (e.g. “draggable”, “sortable”).
+ * Safari/iOS sometimes lets that label participate in tap-to-select —
+ * suppress selection on draggable handles inside the shell.
+ */
+#root .app-layout [aria-roledescription] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 body {
   height: 100dvh !important;
   width: 100vw !important;

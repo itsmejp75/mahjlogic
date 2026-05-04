@@ -1,101 +1,31 @@
 
 
-/* ── Filter tray (slides in from right inside .panel--hands) ── */
-.suggested-hands-filter-tray {
+/* ---- part-0114.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+.suggested-hands-popup__bottom-edge {
   position: absolute;
-  top: 0;
-  right: 0;
   bottom: 0;
-  width: min(13rem, 62%);
-  display: flex;
-  flex-direction: column;
-  background: var(--window-surface);
-  border-left: 1px solid var(--window-border);
-  transform: translateX(100%);
-  transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 5;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-
-.suggested-hands-filter-tray--open {
-  transform: translateX(0);
-}
-
-.suggested-hands-filter-tray__inner {
-  padding: 0.45rem 0.4rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.22rem;
-}
-
-
-/* Tray items — same vertical height as the Hands/Tiles/Filter header chips */
-.suggested-hands-filter-tray__item.btn {
-  width: 100%;
-  text-align: left;
-  justify-content: flex-start;
-  font-size: var(--app-ui-control-fs);
-  font-weight: 600;
-  padding: 0.38rem 0.65rem;
-  border-radius: 0.7rem;
-  /* Off: 32% opacity text — matches app-wide inactive button standard */
-  color: color-mix(in srgb, var(--text-h) 32%, transparent);
-}
-
-.suggested-hands-filter-tray__item.btn:hover:not(:disabled) {
-  color: color-mix(in srgb, var(--text-h) 65%, transparent);
-}
-
-/* "On" = section is included in filter results */
-.suggested-hands-filter-tray__item--on.btn {
-  background: color-mix(in srgb, var(--coach-teal) 13%, var(--bg-elevated));
-  color: var(--coach-teal);
-  box-shadow:
-    inset 2px 2px 5px rgba(0, 0, 0, 0.3),
-    inset -1px -1px 3px rgba(255, 255, 255, 0.10);
-}
-
-.suggested-hands-filter-tray__item--on.btn:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--coach-teal) 18%, var(--bg-elevated));
-  box-shadow:
-    inset 2px 2px 5px rgba(0, 0, 0, 0.3),
-    inset -1px -1px 3px rgba(255, 255, 255, 0.10);
-}
-
-.suggested-hands-filter-tray__item.btn:active:not(:disabled) {
-  transition: none;
-  transform: scale(0.97);
-  box-shadow:
-    inset 3px 3px 7px rgba(0, 0, 0, 0.35),
-    inset -2px -2px 5px rgba(255, 255, 255, 0.12);
-}
-
-/* Widen / narrow: drag the strip at the right edge; width resets when the panel closes. */
-.suggested-hands-popup__right-edge {
-  position: absolute;
-  top: 0;
+  left: 0;
   right: 0;
-  bottom: 0;
-  width: 0.5rem;
+  height: 0.5rem;
   z-index: 7;
-  cursor: ew-resize;
+  cursor: ns-resize;
   user-select: none;
   touch-action: none;
-  /* Hit area a bit past the border so the resize affordance is easy to grab. */
-  margin-right: -0.12rem;
+  margin-bottom: -0.12rem;
   box-sizing: content-box;
-  padding: 0 0.1rem 0 0.18rem;
+  padding: 0.18rem 0 0.14rem;
 }
 
-.suggested-hands-popup__right-edge::after {
+.suggested-hands-popup__bottom-edge::after {
   content: '';
   position: absolute;
-  /* Skip the quarter circles at the corners; lines meet the corner arcs. */
-  top: var(--suggested-popup-radius);
-  right: var(--suggested-popup-edge-inset);
-  bottom: var(--suggested-popup-radius);
-  width: var(--suggested-popup-resize-stroke);
+  bottom: var(--suggested-popup-edge-inset);
+  left: var(--suggested-popup-radius);
+  right: var(--suggested-popup-radius);
+  height: var(--suggested-popup-resize-stroke);
   border-radius: 1px;
   background: color-mix(in srgb, var(--text-h) 25%, transparent);
   opacity: 0.5;
@@ -103,7 +33,7 @@
   transition: opacity 0.15s ease, background 0.15s ease;
 }
 
-.suggested-hands-popup__right-edge:hover::after {
+.suggested-hands-popup__bottom-edge:hover::after {
   opacity: 0.85;
   background: color-mix(in srgb, var(--coach-teal) 50%, var(--text-h) 20%);
 }

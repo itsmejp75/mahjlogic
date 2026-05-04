@@ -1,25 +1,17 @@
 
 
-.panel--discard-tracker::after,
-.panel--hand::after,
-.panel--charleston::after,
-.panel--main-game::after,
-.panel--bot-exposures::after {
-  content: '';
-  position: absolute;
-  inset: 1px;
-  border-radius: 0.75rem;
-  padding: 1px;
-  box-sizing: border-box;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.07) 0%, transparent 10%);
-  -webkit-mask:
-    linear-gradient(var(--color-white) 0 0) content-box,
-    linear-gradient(var(--color-white) 0 0);
-  mask:
-    linear-gradient(var(--color-white) 0 0) content-box,
-    linear-gradient(var(--color-white) 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-  z-index: 10;
+/* ---- part-0063.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+.app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker,
+.app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures {
+  box-shadow: none;
+}
+
+/* Headings line up with inner tray content (tray border + inner pad, same as tile area). */
+.panel--discard-tracker > .panel__title-row .panel__title,
+.panel--bot-exposures__body > .panel__title-row .panel__title {
+  padding-inline-start: calc(1px + var(--bot-exposure-inner-pad));
+  text-align: left;
 }

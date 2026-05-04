@@ -1,5 +1,14 @@
 
 
-.app-layout[data-animations='off'] .suggested-hands-popup__left-edge::after {
-  transition: none;
+html[data-native-app] .app-main {
+  /* Match top to bottom (both = --app-v-pad). Adding env(safe-area-inset-top) made the top look bigger
+     than the bottom on landscape phones; the WebView already accounts for the notch via viewport-fit. */
+  padding-top: var(--app-v-pad);
+  padding-bottom: var(--app-v-pad);
+}
+
+html[data-native-app] .app-rack-stage,
+html[data-native-app] .app-play-split {
+  padding-inline-start: calc(var(--app-h-pad-base) + env(safe-area-inset-left, 0px));
+  padding-inline-end: calc(var(--app-h-pad-base) + env(safe-area-inset-right, 0px));
 }

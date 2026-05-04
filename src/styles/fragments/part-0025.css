@@ -1,14 +1,23 @@
 
 
-.rack-hand-tools__wall {
-  border-radius: var(--rack-tile-btn-border-radius);
-  border: none;
-  background: color-mix(in srgb, var(--bg-elevated) 94%, var(--color-white) 6%);
-  color: var(--text-h);
-  font-family: 'Figtree', var(--sans);
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
+/* ---- part-0026.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+.panel--hand .exposure-rack {
+  justify-content: center;
+  padding-block: var(--hand-rack-tray-inset-block);
+  padding-inline: var(--hand-rack-tray-inset-inline);
+  width: 100%;
+  min-height: calc(var(--rack-tile-h) + 2 * var(--hand-rack-tray-inset-block));
   box-sizing: border-box;
-  flex-shrink: 0;
+}
+
+.panel--hand .hand-bank {
+  display: flex;
+  justify-content: center;
+}
+
+.panel--hand .hand-row {
+  justify-content: flex-start;
 }

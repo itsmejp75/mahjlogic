@@ -1,6 +1,6 @@
-import watermarkSrc from '../assets/mahjlogic-watermark.svg?url'
+import watermarkSrc from '../assets/mahjlogic-watermark.png?url'
 
-/** Exposure-rack backdrop mark (SVG); styled in `part-0015.css`. Bundled with content hash so mobile WebViews do not keep a stale `public/*.svg` cache. */
+/** Exposure-rack backdrop mark; styled in `part-0015.css` / `components.css`. Bundled with content hash so mobile WebViews do not keep a stale cache. */
 export function RackLogoWatermark() {
   return (
     <span className="rack-logo-watermark">

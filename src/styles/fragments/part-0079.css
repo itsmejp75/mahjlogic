@@ -1,8 +1,14 @@
 
 
-@keyframes hand-slot-collapse {
-  to {
-    width: 0;
-    flex-basis: 0;
-  }
+/* ---- part-0083.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* Joker ring between polish and letter: keep ring above lustre, glyph above ring. */
+.app[data-tile-graphics='designer'] .tile-face.tile--joker::after {
+  z-index: 1;
+}
+
+.app[data-tile-graphics='designer'] .tile-face.tile--joker .tile-face__glyph {
+  z-index: 2;
 }

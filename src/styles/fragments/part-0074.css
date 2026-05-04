@@ -1,59 +1,40 @@
 
 
-/* HANDS — solid purple (#9A5FAB). */
-.btn.btn--primary.charleston-pass-btn.suggested-hands-tab:not(:disabled) {
-  background: #9a5fab;
-  color: var(--color-white);
+/* ---- part-0076.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* Pass box chrome only highlights while dragging (see `--over` and `--dragging` below), not on pointer hover. */
+
+/* Drop target: same stronger fill + border as call box --over */
+.pass-strip-tail--over .pass-strip-tail__inner {
+  background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
+  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
 }
 
-.btn.btn--primary.charleston-pass-btn.suggested-hands-tab:disabled {
-  background: #9a5fab;
-  color: var(--color-white);
-  opacity: 0.5;
-  filter: none;
-  box-shadow: none;
+/* Dragging FROM the box: keep it bright */
+.pass-strip-tail__inner:has(.pass-strip__tile-wrap--dragging) {
+  background: color-mix(in srgb, var(--coach-teal) 18%, var(--bg-elevated) 82%);
+  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
 }
 
-.charleston-stop-btn {
-  font-weight: 500;
-  flex-shrink: 0;
-  white-space: nowrap;
+/* Charleston: tiles exit the pass box toward the pass direction before the exchange commits. */
+.pass-strip-tail.pass-strip-tail--fly-out {
+  pointer-events: none;
 }
 
-/* Stop Charleston only (c9-11); Undo (c2 + rack-neutral) stays dark gray. */
-.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c9-11.charleston-stop-btn:not(:disabled) {
-  background: #9b1b30;
-  color: var(--color-white);
-}
+/* ---- part-0077.css (from base.css, layout.css, components.css, animations.css) ---- */
 
-.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c2.btn.btn--rack-neutral.charleston-stop-btn:not(:disabled) {
-  background: var(--color-slate-mid);
-  color: var(--color-white);
-}
 
-/* Keeps column height when Stop is inactive so the pass strip does not jump */
 
-.pass-strip-tail {
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  justify-content: flex-start;
-}
-
-.pass-strip-tail__inner {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: var(--rack-tile-gap);
-  cursor: default;
-  /* Pin to exactly 3 tile widths + 2 gaps so children cannot get squeezed
-     by sub-pixel rounding or parent flex constraints. */
-  width: calc(3 * var(--rack-tile-w) + 2 * var(--rack-tile-gap));
-  flex-shrink: 0;
-  box-sizing: border-box;
-  /* Unified 3-tile box — same fill/border as `.pass-box` (visible on dark panel chrome). */
-  background: color-mix(in srgb, var(--coach-teal) 11%, var(--bg-elevated) 89%);
-  border: 1px solid var(--coach-teal-border);
-  border-radius: 0.38rem;
-  transition: background 0.15s ease, border-color 0.15s ease;
+@keyframes charleston-pass-fly-out-left {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    /* % is of the tile wrap’s own width — works in Charleston hand + pass-tail layouts */
+    transform: translateX(-220%);
+    opacity: 0;
+  }
 }

@@ -1,11 +1,23 @@
 
 
-/* Right column: controls on top, bot exposures bottom-aligned with discard tracker. */
-.app-play-split__right-stack {
-  display: flex;
-  flex-direction: column;
+/* ---- part-0057.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+.panel--discard-tracker {
   flex: 1 1 0;
   min-height: 0;
-  width: var(--bot-panel-outer-w);
-  align-items: stretch;
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Dark inner content box — same formula as bot exposure rack cells */
+.panel--discard-tracker > .panel__title-row {
+  flex-shrink: 0;
+  z-index: 1;
+  background: transparent;
+  margin-bottom: 0;
 }

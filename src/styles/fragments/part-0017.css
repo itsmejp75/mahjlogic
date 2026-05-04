@@ -1,11 +1,16 @@
 
 
-.rack-stage__rack-top .exposure-rack {
-  margin-bottom: 0;
+/* ---- part-0018.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* Charleston: rack only (wall + exposure / hand); actions on bar below */
+.rack-stage--charleston {
+  /* Flex-center the inner rack-col to guarantee symmetric left/right empty space
+     regardless of sub-pixel rounding or stray horizontal margins upstream. */
+  align-items: center;
 }
 
-.rack-stage__rack-bottom {
-  min-width: 0;
-  position: relative;
-  z-index: 1;
+.rack-stage--main-rack {
+  align-items: center;
 }

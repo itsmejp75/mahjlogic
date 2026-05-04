@@ -1,64 +1,86 @@
 
 
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:hover:not(:disabled) {
+/* ---- part-0072.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+.panel__title {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+}
+
+.panel__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.panel__title-row .panel__title {
+  margin: 0;
+}
+
+/* One rectangle sized for three rack tiles side by side (same chrome as call-initiate / pass-tail) */
+.pass-box {
+  box-sizing: border-box;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.4rem 0.45rem;
+  border-radius: 0.38rem;
+  /* Solid coach-teal tint (not the translucent token alone) so the box reads on `--window-surface`.
+     3-way mixes with --coach-teal-bg + var(--color-white) could collapse to an invisible match with the panel. */
+  border: 1px solid var(--coach-teal-border);
+  background: color-mix(in srgb, var(--coach-teal) 11%, var(--bg-elevated) 89%);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.pass-box--over {
+  background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
+  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
   box-shadow: none;
 }
 
-/* No pressed/inset or hover tint — true fills stay visible while you tune palette. */
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:active:not(:disabled) {
-  transform: none;
-  box-shadow: none;
+.pass-box__inner {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rack-tile-gap);
+  min-height: var(--rack-tile-h);
+  cursor: default;
 }
 
-/* Unavailable: lighter opacity only, no gray filter, keep label readable on colored faces. */
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:disabled {
-  opacity: 0.5;
-  filter: none;
-  border: none;
-  box-shadow: none;
+.pass-box__cell {
+  width: var(--rack-tile-w);
+  height: var(--rack-tile-h);
+  flex-shrink: 0;
+  border-radius: 0.35rem;
+  border: 1px dashed color-mix(in srgb, var(--border) 55%, transparent);
+  background: color-mix(in srgb, var(--border) 06%, transparent);
+  box-sizing: border-box;
 }
 
-/* Charleston PASS only: keep full brightness when not passable (overrides rule above; HANDS stays dimmed when disabled). */
-.rack-bottom-bar--charleston .btn.charleston-pass-btn.rack-bottom-tile-cell:disabled:not(.suggested-hands-tab) {
+/* Charleston pass: last three slots inline on the exposure rack row */
+
+.charleston-pass-btn {
+  font-weight: 500;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Charleston Pass on rack: solid teal (#006767). HANDS: purple (`.suggested-hands-tab` below). */
+.btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):not(:disabled) {
+  background: #006767;
+  color: var(--color-white);
+}
+
+/* Disabled while not passable: same bright fill for now; cursor still shows not-allowed via .btn:disabled. */
+.btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):disabled {
+  background: #006767;
+  color: var(--color-white);
   opacity: 1;
-}
-
-/* Main rack: Ignore / Discard — same teal as Pass (#007791). */
-.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:not(:disabled) {
-  background: #007791;
-  color: var(--color-white);
-}
-
-/* Inactive: dim Ignore only — Discard (`.btn--discard`, east-discard) stays full-strength. */
-.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:disabled:not(.btn--discard) {
-  background: #007791;
-  color: var(--color-white);
-  opacity: 0.5;
-}
-
-.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14.btn--discard:disabled {
-  background: #007791;
-  color: var(--color-white);
-  opacity: 1;
   filter: none;
-}
-
-/* Main rack: Swap (joker swap) — #6A0DAD */
-.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7:not(:disabled) {
-  background: #6a0dad;
-  color: var(--color-white);
-}
-
-.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7:disabled {
-  background: #6a0dad;
-  color: var(--color-white);
-  opacity: 0.5;
-}
-
-.panel {
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  padding: 1rem clamp(0.75rem, 2.2vw, 1.5rem);
-  margin-bottom: 1rem;
-  background: var(--bg-elevated);
+  box-shadow: none;
+  cursor: not-allowed;
 }

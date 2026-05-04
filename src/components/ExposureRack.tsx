@@ -123,7 +123,11 @@ function IncomingBotDiscardDraggable({
   stackSuitTiles: boolean
   incomingBotDiscardFlyFrom: HandTileFlyInFrom | null
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: tile.id })
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: tile.id,
+    /** Avoid `aria-roledescription="draggable"` (dnd-kit default); iOS can surface it as stray selectable text near the viewport edge. */
+    attributes: { roleDescription: 'tile' },
+  })
   const dragStyle: CSSProperties = {
     ...(transform ? { transform: CSS.Transform.toString(transform) } : {}),
     opacity: isDragging ? 0 : 1,

@@ -26,7 +26,7 @@ const config: MahjCapacitorConfig = {
     SplashScreen: {
       launchAutoHide: false,
       launchFadeOutDuration: 250,
-      backgroundColor: '#1a1a1a',
+      backgroundColor: '#000000',
       androidSplashResourceName: 'splash',
       androidScaleType: 'CENTER_CROP',
       showSpinner: false,

@@ -1,11 +1,49 @@
 
 
-/* Override global `.btn { transition: box-shadow }` inside the dialog — animating shadows is a common
-   cause of perceived sideways drift, especially beside a scrollable column. (Slider rows are excluded.) */
-.app-menu-modal .btn:not(.app-menu-tray__item--switch) {
-  transition:
-    border-color 0.14s ease,
-    background-color 0.14s ease,
-    color 0.14s ease,
-    opacity 0.14s ease;
+/* ---- part-0104.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* Excludes .app-menu-tray__item--switch: for toggles, aria-pressed is false when off, so
+   the old :not([aria-pressed='true']) matched and outranked the switch’s transparent hover,
+   re-applying border + background + box-shadow (hover “box” + 1px layout wobble). */
+.app-menu-modal
+  .app-menu-tray__item:hover:not(:disabled):not([aria-pressed='true']):not(
+    .app-menu-tray__item--switch
+  ) {
+  border-color: color-mix(in srgb, var(--color-white) 32%, #2d3339);
+  background: var(--app-menu-sort-surface-hover, color-mix(in srgb, var(--color-white) 7%, var(--color-slate-mid)));
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--color-white) 8%, transparent);
+}
+
+/* Slider: the <button> is an invisible hit pad — only .app-menu-tray__toggle-slider paints (thumb moves).
+   No outer box, outline, radius, or .btn shadow on the host. Keyboard focus rings the pill only. */
+.app-menu-modal .app-menu-tray__item--switch.app-menu-modal__toggle {
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: transparent;
+  font-size: 0;
+  letter-spacing: 0;
+  line-height: 0;
+  text-transform: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  min-width: 0;
+  min-height: 0;
+  width: max-content;
+  max-width: 100%;
+  height: auto;
+  justify-content: center;
+  align-items: center;
+  justify-self: start;
+  filter: none;
+  outline: none;
+  transition: none;
+  gap: 0;
+  cursor: pointer;
 }

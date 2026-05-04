@@ -1,33 +1,25 @@
 
 
-/* Play-split only: the body is the clipped shell; the list fills it completely so the lowest bot
-   tray stays locked to the wrapper edge like the discard tray. */
-.app-dnd-frame .app-play-split .panel--bot-exposures__body {
+/* ---- part-0050.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* Each row: discrete tray like `.panel--hand .rack-stage__rack-top .exposure-rack` — base border
+   here; shared `--dark-tray-rim-*` block below matches hand-bank rim. List row↔row gap uses
+   `--play-tray-h-divider` (same as East rack tray strips; horizontal discard↔bot offset unchanged). */
+.panel--bot-exposures .app-opponents-rail__cell {
+  justify-content: center;
+  align-items: flex-start;
+  position: relative;
+  max-width: none;
   flex: 1 1 0;
-  box-sizing: border-box;
-  width: calc(100% + var(--play-split-lower-box-left-bleed));
-  margin-left: calc(-1 * var(--play-split-lower-box-left-bleed));
-  padding-left: var(--play-split-lower-box-left-bleed);
-  overflow: hidden;
-}
-
-.panel--bot-exposures__body-fill {
-  flex: 1 1 auto;
-  min-width: 0;
+  /* Close the tray evenly around the tiles, matching the discard tray's simple inner inset. */
+  padding-top: var(--bot-exposure-inner-pad);
+  padding-bottom: var(--bot-exposure-inner-pad);
+  padding-inline: var(--bot-exposure-inner-pad);
   min-height: 0;
-  width: 100%;
-}
-
-.bot-exposures__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  /* Same vertical strip thickness as East rack (`--play-tray-h-divider`). */
-  gap: var(--play-tray-h-divider);
-}
-
-.panel--bot-exposures__body > .bot-exposures__list {
-  flex: 0 0 auto;
+  background: var(--window-inner-surface);
+  border: 1px solid var(--window-border);
+  border-radius: var(--tile-tray-shell-radius);
+  overflow: hidden;
 }

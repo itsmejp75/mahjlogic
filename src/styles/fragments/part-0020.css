@@ -1,31 +1,47 @@
 
 
-/* Same 14-column grid + insets as the main tile action bar; inner-7 wide controls. */
-.panel--hand .rack-bottom-bar--wall-game {
-  display: grid;
-  grid-template-columns: repeat(14, var(--hand-rack-tile-w));
-  column-gap: var(--player-rack-face-gap);
-  row-gap: 0;
+/* ---- part-0021.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* Charleston inline pass info — sits in the grid bar between wall count and pass cluster. */
+
+/* Charleston: Stop cols 9–11, Pass cols 12–14 — direct grid children, no wrapper needed */
+
+.rack-bottom-tile-cell {
   width: 100%;
-  max-width: none;
-  box-sizing: border-box;
-  padding-inline: var(--hand-rack-tray-inset-inline);
-  margin: 0;
-  align-items: center;
-  transform: translateX(var(--hand-rack-action-row-nudge-x));
+  max-width: 100%;
+  min-width: 0;
+  min-height: var(--rack-action-touch-min-h);
+  font-weight: 500;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  border-radius: 999px;
+  overflow: hidden;
 }
 
-.panel--hand .rack-bottom-bar--wall-game > * {
-  grid-row: 1;
+.rack-bottom-tile-cell--c1 {
+  grid-column: 1 / 2;
 }
 
-.panel--hand .rack-bottom-bar--wall-game .rack-bottom-tile-cell {
-  flex: none;
+.rack-bottom-tile-cell--c2 {
+  grid-column: 2 / 3;
 }
 
-.panel--hand .rack-bottom-bar--wall-game .btn.rack-bottom-tile-cell {
-  width: var(--rack-tile-btn-inner-7);
-  max-width: var(--rack-tile-btn-inner-7);
-  margin-inline-start: var(--rack-tile-face-bw);
-  justify-self: start;
+.rack-bottom-tile-cell--c3 {
+  grid-column: 3 / 4;
+}
+
+.rack-bottom-tile-cell--c4-5 {
+  grid-column: 4 / 6;
+}
+
+.rack-bottom-tile-cell--c6-7 {
+  grid-column: 6 / 8;
+}
+
+.rack-bottom-tile-cell--c8-9 {
+  grid-column: 8 / 10;
 }

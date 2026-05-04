@@ -1,5 +1,27 @@
 
 
-.app-play-split__right .panel--hands {
-  padding: var(--rack-stack-gap-y) clamp(0.4rem, 1.4vw, 0.82rem) 0.48rem;
+/* ---- part-0043.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* ── Bot exposures side panel (right of discard tracker) ── */
+.panel--bot-exposures {
+  display: flex;
+  flex-direction: column;
+  gap: var(--play-tray-h-divider);
+  --bot-exposure-row-count: 3;
+  --bot-toolbar-track-h: calc(2 * var(--bot-exposure-inner-pad) + var(--rack-action-touch-min-h));
+  --bot-body-top-pad: 0px;
+  --bot-body-bottom-pad: 0px;
+  /* Row↔row gaps match East rack tray dividers (`--play-tray-h-divider`). */
+  --bot-body-gap: var(--play-tray-h-divider);
+  /* `--bot-exposure-tile-scale` is set on `.app-play-split` (drives bot column + these faces). */
+  /* Small extra only — large bleed was crowding the tray rim / shadows vs tile height. */
+  --bot-exposure-tray-vert-bleed: 0.08rem;
+  --bot-tile-h-width-fit: calc(var(--bot-tile-h-ref) * var(--bot-exposure-tile-scale));
+  --bot-tile-h-height-fit: var(--bot-tile-h-width-fit);
+  --rack-tile-h: min(var(--bot-tile-h-width-fit), var(--bot-tile-h-height-fit));
+  --rack-tile-w: calc(var(--rack-tile-h) / 1.3333);
+  --rack-panel-inset: 0;
+  --exposure-slot-h: var(--rack-tile-h);
 }

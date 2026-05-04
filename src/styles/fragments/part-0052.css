@@ -1,22 +1,37 @@
 
 
+/* ---- part-0054.css (from base.css, layout.css, components.css, animations.css) ---- */
 
-.bot-exposure-row__watermark {
-  position: absolute;
-  top: 50%;
-  right: 0.5rem;
-  transform: translateY(-50%);
-  font-family: 'Figtree', var(--sans);
-  font-size: min(calc(var(--hand-rack-tile-w) * 0.58), 1.65rem);
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  text-transform: uppercase;
-  color: #94a3b8;
-  opacity: 0.12;
-  pointer-events: none;
-  user-select: none;
-  white-space: nowrap;
-  line-height: 1;
-  /* Above the <li> background, below the rack tiles (z-index: 2). */
-  z-index: 1;
+
+
+/* Side-by-side: discard right edge is `--play-split-discard-bot-separator` from the visible bot
+   left edge (same as horizontal gaps between bot exposure row trays). Formula:
+     discard_width = left-col 100% − bot-stack-nudge − gap
+   (bot-stack-nudge is the leftward shift on __right-stack that defines the visible panel origin). */
+@media (min-width: 36.01rem) {
+  .app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker {
+    width: calc(
+      100%
+      - var(--bot-toolbar-exposure-nudge-left)
+      - var(--play-split-discard-bot-separator)
+      - var(--discard-tray-right-pull)
+      + 8px
+    );
+  }
+
+  .app-dnd-frame .app-play-split > .app-play-split__right .app-play-split__right-stack {
+    margin-left: calc(-1 * var(--bot-toolbar-exposure-nudge-left));
+    /* Match discard column height: fill stretched `.app-play-split__right` so the bot panel’s outer
+       bottom lines up with `.panel--discard-tracker` (row `align-items: stretch`). */
+    width: var(--bot-panel-outer-w);
+    min-height: 100%;
+    height: 100%;
+    box-sizing: border-box;
+  }
+
+  .app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures {
+    height: 100%;
+    min-height: 0;
+    transform: none;
+  }
 }

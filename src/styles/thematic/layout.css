@@ -2,6 +2,10 @@
 
 
 
+/* ---- part-0003.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* Shared: full-width flex column shell (deduped from 6 rules) */
 .panel--hand,
 .rack-stage--charleston,
@@ -14,6 +18,10 @@
   flex-direction: column;
   width: 100%;
 }
+
+/* ---- part-0006.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* Exposure + hand: one vertical stack, no extra margin between rows */
 
@@ -45,10 +53,18 @@
   justify-content: flex-end;
 }
 
+/* ---- part-0008.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 .panel--hand .panel-hand-rack__hand-tray {
   /* Match the vertical strip between exposure rack and hand (same as `.rack-stage__rack-col`). */
   gap: var(--play-tray-h-divider);
 }
+
+/* ---- part-0010.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 
 /* Hand tray: side inset lives on .hand-row so left/right tile-edge gaps stay symmetric. */
@@ -73,6 +89,10 @@
   flex-shrink: 0;
 }
 
+/* ---- part-0012.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 .panel--hand .rack-stage__rack-col {
   gap: var(--play-tray-h-divider);
   /* Pin the column to exactly 14 tile-widths so exposure rack, hand, and
@@ -84,6 +104,10 @@
   margin-inline: auto;
   align-self: center;
 }
+
+/* ---- part-0014.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* Exposure row fills the shared column width — centering is handled by rack-stage__rack-col. */
 .panel--hand .rack-stage__rack-top {
@@ -113,10 +137,31 @@
   z-index: 2;
 }
 
+/* ---- part-0015.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* MahjLogic watermark — behind exposure tiles (see `.exposure-rack__slot` z-index). */
+.panel--hand .rack-stage__rack-top .exposure-rack__watermark .rack-logo-watermark {
+  /* Parent uses shared `.flex-center` — without this, the span shrink-wraps to the SVG’s intrinsic size. */
+  flex: 1 1 auto;
+  align-self: stretch;
+  width: 100%;
+  min-width: 0;
+}
+
+/* ---- part-0016.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 .panel--hand .rack-stage__rack-top .exposure-rack .exposure-rack__slot {
   position: relative;
   z-index: 2;
 }
+
+/* ---- part-0018.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* Charleston: rack only (wall + exposure / hand); actions on bar below */
 .rack-stage--charleston {
@@ -128,6 +173,10 @@
 .rack-stage--main-rack {
   align-items: center;
 }
+
+/* ---- part-0020.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* Same 14-column grid + insets as the main tile action bar; inner-7 wide controls. */
 .panel--hand .rack-bottom-bar--wall-game {
@@ -159,6 +208,10 @@
   justify-self: start;
 }
 
+/* ---- part-0022.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* Menu on the East hand / Charleston action bar (replaces former Mah Jongg slot c4–5). */
 .panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack {
   position: relative;
@@ -187,9 +240,17 @@
   border-radius: inherit;
 }
 
+/* ---- part-0024.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 .app-layout[data-animations='off'] .rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell {
   transition: none;
 }
+
+/* ---- part-0026.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 .panel--hand .exposure-rack {
   justify-content: center;
@@ -208,6 +269,10 @@
 .panel--hand .hand-row {
   justify-content: flex-start;
 }
+
+/* ---- part-0028.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 .panel--hand .rack-stack__column {
   gap: var(--rack-tile-gap);
@@ -659,6 +724,10 @@
   padding-bottom: var(--app-v-pad);
 }
 
+/* ---- part-0031.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 .app-main__scroll {
   flex: 0 1 auto;
   min-height: 0;
@@ -696,14 +765,26 @@
   align-items: center;
 }
 
+/* ---- part-0033.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 .app-opponents-rail__cell--swap-over {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, #f59e0b 58%, var(--border));
 }
+
+/* ---- part-0035.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 .app-layout[data-joker-swap-hint='on'] .east-own-exposure-swap-wrap--over,
 .app-layout[data-joker-swap-hint='on'] .app-opponents-rail__cell--swap-over {
   box-shadow: inset 0 0 0 2px color-mix(in srgb, #f59e0b 78%, var(--border));
 }
+
+/* ---- part-0037.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 .app-layout[data-joker-swap-hint='on'][data-animations='on']
   :is(
@@ -728,6 +809,10 @@
   .exposure-rack__slot--joker-swap-hint-bounce {
   z-index: 50;
 }
+
+/* ---- part-0039.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 .app-layout[data-joker-swap-hint='on'][data-animations='on']
   .app-dnd-frame
@@ -881,9 +966,17 @@
   margin-bottom: 0;
 }
 
+/* ---- part-0041.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 .app-play-split__right .panel--hands {
   padding: var(--rack-stack-gap-y) clamp(0.4rem, 1.4vw, 0.82rem) 0.48rem;
 }
+
+/* ---- part-0043.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ── Bot exposures side panel (right of discard tracker) ── */
 .panel--bot-exposures {
@@ -907,6 +1000,10 @@
   --exposure-slot-h: var(--rack-tile-h);
 }
 
+/* ---- part-0045.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 .app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well > * {
   flex: 0 0 auto;
 }
@@ -915,6 +1012,10 @@
   min-width: 0;
   max-width: 100%;
 }
+
+/* ---- part-0047.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /*
  * List starts below the bot toolbar row (spacing from `.panel--bot-exposures` grid gap only); flex spacer
@@ -934,6 +1035,10 @@
   padding-bottom: 0;
 }
 
+/* ---- part-0049.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 .app-dnd-frame .app-play-split .panel--bot-exposures__body > .bot-exposures__list {
   flex: 1 1 0;
   min-height: 0;
@@ -952,6 +1057,10 @@
   display: none;
 }
 
+/* ---- part-0051.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 .app-dnd-frame .app-play-split .panel--bot-exposures .app-opponents-rail__cell {
   width: calc(100% - var(--play-split-lower-box-edge-inset) + var(--play-split-lower-box-left-bleed));
   margin-left: calc(-1 * var(--play-split-lower-box-left-bleed));
@@ -966,6 +1075,10 @@
     var(--dark-tray-rim-shadow-down-2),
     inset 0 0 0 1px color-mix(in srgb, #f59e0b 58%, var(--border));
 }
+
+/* ---- part-0053.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* South / West / North: deep ink seat labels; stamped shadow like panel headers. */
 .panel--bot-exposures .bot-exposure-row__watermark {
@@ -1033,6 +1146,10 @@
   align-items: stretch;
 }
 
+/* ---- part-0055.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* Right column: controls on top, bot exposures bottom-aligned with discard tracker. */
 .app-play-split__right-stack {
   display: flex;
@@ -1042,6 +1159,10 @@
   width: var(--bot-panel-outer-w);
   align-items: stretch;
 }
+
+/* ---- part-0057.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 .panel--discard-tracker {
   flex: 1 1 0;
@@ -1061,6 +1182,10 @@
   margin-bottom: 0;
 }
 
+/* ---- part-0059.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* Hide bot/discard panel headings while keeping tray layout intact. */
 .panel--discard-tracker > .panel__title-row,
 .panel--bot-exposures__body > .panel__title-row,
@@ -1076,6 +1201,10 @@
 .panel--bot-exposures {
   position: relative;
 }
+
+/* ---- part-0061.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 .panel--discard-tracker::after,
 .panel--hand::after,
@@ -1101,6 +1230,10 @@
   z-index: 10;
 }
 
+/* ---- part-0063.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 .app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker,
 .app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures {
   box-shadow: none;
@@ -1112,6 +1245,10 @@
   padding-inline-start: calc(1px + var(--bot-exposure-inner-pad));
   text-align: left;
 }
+
+/* ---- part-0065.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 .app-rack-stage {
   /* Only as tall as the hand panel — no extra flex stretch above the rack */
@@ -1141,6 +1278,10 @@
   border: none;
   border-radius: 0;
 }
+
+/* ---- part-0067.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 .app[data-color-buttons='off'] .btn--danger:not(:disabled),
 .app[data-color-buttons='off'] .btn--danger:disabled {
@@ -1284,6 +1425,10 @@
   background: color-mix(in srgb, var(--border) 14%, transparent);
 }
 
+/* ---- part-0069.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 .panel--hand .rack-bottom-bar--wall-game > .rack-bottom-tile-cell,
 .panel--hand .rack-bottom-bar--wall-game > .btn.rack-bottom-tile-cell {
   width: 100%;
@@ -1291,6 +1436,10 @@
   margin-inline-start: 0;
   justify-self: stretch;
 }
+
+/* ---- part-0071.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* Sides/top use window inset; bottom strip matches other tray dividers (`--play-tray-h-divider`). */
 .panel.panel--hand {
@@ -1348,16 +1497,28 @@
   box-shadow: none;
 }
 
+/* ---- part-0073.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* Lock the Charleston Pass button itself in place; align wrappers/trays around it, not this control. */
 .panel--hand .rack-bottom-bar--charleston .charleston-pass-btn.rack-bottom-tile-cell--c12-14 {
   transform: none;
 }
+
+/* ---- part-0075.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* Same span as hand slots 12–14: `--player-rack-face-gap` matches `.panel-hand-rack__hand-tray .hand-row`. */
 .panel--hand .pass-strip-tail__inner {
   gap: var(--player-rack-face-gap);
   width: calc(3 * var(--rack-tile-w) + 2 * var(--player-rack-face-gap));
 }
+
+/* ---- part-0081.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* Match primary numeral (stacked) / honor glyph color per menu tile graphics preset. */
 .app[data-tile-graphics='classic'] .tile-face.tile--bam.tile-face--rack-new-mark .tile-face__rack-new-dot {
@@ -1433,6 +1594,10 @@
   opacity: 0.9;
 }
 
+/* ---- part-0083.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* Joker ring between polish and letter: keep ring above lustre, glyph above ring. */
 .app[data-tile-graphics='designer'] .tile-face.tile--joker::after {
   z-index: 1;
@@ -1441,6 +1606,10 @@
 .app[data-tile-graphics='designer'] .tile-face.tile--joker .tile-face__glyph {
   z-index: 2;
 }
+
+/* ---- part-0085.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ── Suggested hands panel (below rack in main area) ── */
 /* Title + category dropdown on one row; list scrolls inside the panel. */
@@ -1472,9 +1641,17 @@
   margin-bottom: 0;
 }
 
+/* ---- part-0087.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 .panel--hand .exposure-rack:not(.exposure-rack--charleston-pass) .exposure-rack__slot {
   padding-bottom: 0;
 }
+
+/* ---- part-0089.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* Training: when dragging a hand tile within range, first empty cell shows Call affordance (teal, like pass / discard) */
 .app .panel--hand .exposure-rack__call-initiate-target--near.exposure-rack__slot--empty::before {
@@ -1505,6 +1682,10 @@
   border-radius: 0.38rem;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
+
+/* ---- part-0093.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ── Joined tray: player exposure rack (non-charleston) ── */
 .panel--hand .exposure-rack:not(.exposure-rack--charleston-pass) {
@@ -1540,6 +1721,10 @@
   z-index: 2;
 }
 
+/* ---- part-0095.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 .panel--hand .exposure-rack .tile-face,
 .panel--bot-exposures .exposure-rack .tile-face {
   border: none;
@@ -1562,6 +1747,10 @@
 .panel--hand .exposure-rack--charleston-pass .exposure-rack__slot--pass-tail .tile-face {
   border: 1px solid color-mix(in srgb, var(--color-black) 22%, transparent);
 }
+
+/* ---- part-0097.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 .app-menu-anchor {
   position: fixed;
@@ -1637,6 +1826,10 @@
   animation: app-menu-modal-in 0.2s cubic-bezier(0.34, 1.2, 0.64, 1) both;
 }
 
+/* ---- part-0099.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 .app-menu-modal__header {
   position: relative;
   flex: 0 0 auto;
@@ -1706,6 +1899,10 @@
   /* ~30% tighter than the standard menu block gap */
   gap: calc(0.7 * var(--app-menu-body-gap, max(0.36rem, calc(var(--rack-action-touch-min-h) / 3.5))));
 }
+
+/* ---- part-0101.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 .app-menu-modal__new-game {
   width: 100%;
@@ -1802,6 +1999,10 @@
   box-sizing: border-box;
 }
 
+/* ---- part-0103.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* Illustrative: same outer tray + 10-up grid; invisible aspect boxes reserve height until real tiles are added. */
 .app-menu-modal__tile-graphics-preview--illustrative
   .app-menu-modal__tile-graphics-preview__sizer {
@@ -1859,6 +2060,10 @@
   opacity: 0.52;
   filter: none;
 }
+
+/* ---- part-0105.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 .app-menu-modal .app-menu-tray__item--switch.app-menu-modal__toggle:hover,
 .app-menu-modal .app-menu-tray__item--switch.app-menu-modal__toggle:active,
 .app-menu-modal .app-menu-tray__item--switch.app-menu-modal__toggle:focus,
@@ -1938,6 +2143,10 @@
 .app[data-animations='off'] .app-menu-tray__toggle-slider__thumb {
   transition: none;
 }
+
+/* ---- part-0107.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 .app-menu-modal__section-rule {
   margin: 0;
@@ -2163,6 +2372,10 @@
   transform: none;
 }
 
+/* ---- part-0109.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /*
  * Visible “window”: matches .panel--discard-tracker shell; `transform` is the user drag
  * nudge. Outer .suggested-hands-popup is slide-only (translateY) so open/close stays a straight vertical move.
@@ -2196,25 +2409,88 @@
   transition: none;
 }
 
+/* ---- part-0111.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 .app-layout[data-animations='off'] .suggested-hands-popup__right-edge::after {
   transition: none;
 }
+
+/* ---- part-0113.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 .app-layout[data-animations='off'] .suggested-hands-popup__top-edge::after {
   transition: none;
 }
 
+/* ---- part-0115.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 .app-layout[data-animations='off'] .suggested-hands-popup__bottom-edge::after {
   transition: none;
 }
+
+/* ---- part-0117.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 .app-layout[data-animations='off'] .suggested-hands-popup__left-edge::after {
   transition: none;
 }
 
+/* ---- part-0119.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 .app-layout[data-animations='off'] .suggested-hands-popup__resize-corner::after {
   transition: none;
 }
+
+html[data-native-app] .app-main {
+  /* Match top to bottom (both = --app-v-pad). Adding env(safe-area-inset-top) made the top look bigger
+     than the bottom on landscape phones; the WebView already accounts for the notch via viewport-fit. */
+  padding-top: var(--app-v-pad);
+  padding-bottom: var(--app-v-pad);
+}
+
+html[data-native-app] .app-rack-stage,
+html[data-native-app] .app-play-split {
+  padding-inline-start: calc(var(--app-h-pad-base) + env(safe-area-inset-left, 0px));
+  padding-inline-end: calc(var(--app-h-pad-base) + env(safe-area-inset-right, 0px));
+}
+
+.panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass),
+.panel--hand .panel-hand-rack__hand-tray .hand-row {
+  --rack-tile-w: calc((100cqi - 13 * var(--player-rack-face-gap)) / 14);
+  --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
+}
+
+.panel--bot-exposures .bot-exposures__list .app-opponents-rail__cell .exposure-rack {
+  --rack-tile-w: calc((100cqi - 13 * var(--rack-tile-gap)) / 14);
+  --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
+  --exposure-slot-h: var(--rack-tile-h);
+}
+
+.app-dnd-frame .app-play-split > .app-play-split__right .app-play-split__right-stack {
+  margin-left: calc(-1 * var(--bot-toolbar-exposure-nudge-left));
+  width: var(--bot-panel-outer-w);
+  min-height: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures {
+  height: 100%;
+  min-height: 0;
+  transform: none;
+}
+
+/* ---- part-0121.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 .panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass)::after,
 .panel--hand .rack-stage__rack-top .exposure-rack.exposure-rack--charleston-pass::after {

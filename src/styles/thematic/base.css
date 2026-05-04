@@ -1,40 +1,9 @@
 /* Thematic concat (classifier: base/layout/components/animations). Not imported — use ../style.css. */
 
-:root {
-  --color-white: #ffffff;
-  --color-black: #000000;
-  --color-slate-mid: #3a424d;
-  --color-off-black: #1a1a1a;
-  --color-gray-mid: #d4d4d4;
-}
 
-@media (max-width: 28rem) {
-  :root {
-    --app-ui-control-fs: clamp(0.5rem, calc(var(--hand-rack-tile-w) * 0.32), 0.98rem);
-    --app-ui-control-fs-sm: clamp(0.45rem, calc(var(--hand-rack-tile-w) * 0.27), 0.86rem);
-    --app-ui-control-fs-xs: clamp(0.42rem, calc(var(--hand-rack-tile-w) * 0.25), 0.78rem);
-  }
-}
 
 @supports (width: 100dvi) {
   :root {
     --app-play-fit-inline-from-block: 195dvb;
-  }
-}
-
-@media (max-width: 47.99rem) {
-  :root {
-    --app-h-pad-base: clamp(0.35rem, 2.2vw, 0.75rem);
-    /* --app-v-pad: inherited; do not set from vw here or horizontal resizes look like vertical reflow. */
-    /*
-     * Phone fit: allow smaller tile minimum so the full 14-slot rack + controls
-     * can fit without clipping/awkward squeeze.
-     */
-    --hand-rack-tile-w: max(1.62rem, calc(var(--hand-rack-usable-w) / 14));
-    --hand-rack-tile-h: max(2.16rem, calc(var(--hand-rack-usable-w) / 14 * 1.3333));
-    --hand-window-pad-inline: clamp(0.2rem, 1.2vw, 0.35rem);
-    --rack-tray-inset-inline: 0.3rem;
-    /* --app-ui-control-fs follows --hand-rack-tile-w; no separate font clamp here. */
-    --btn-letter-spacing: calc(0.01em + 0.01rem);
   }
 }

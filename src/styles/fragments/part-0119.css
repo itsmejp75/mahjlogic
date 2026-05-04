@@ -1,5 +1,7 @@
 
 
-.app-layout[data-animations='off'] .suggested-hands-popup__resize-corner::after {
-  transition: none;
+.panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass),
+.panel--hand .panel-hand-rack__hand-tray .hand-row {
+  --rack-tile-w: calc((100cqi - 13 * var(--player-rack-face-gap)) / 14);
+  --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
 }

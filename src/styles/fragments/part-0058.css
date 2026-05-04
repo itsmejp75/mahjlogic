@@ -1,7 +1,31 @@
 
 
-.panel--bot-exposures__body > .panel__title-row {
-  background: transparent;
-  margin-bottom: 0;
-  justify-content: flex-start;
+/* ---- part-0060.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* Curved top highlight: gradient ring that follows each panel's border-radius.
+   Bright at the top edge + corners, fades out ~10% down the vertical sides. */
+.panel--discard-tracker::before,
+.panel--hand::before,
+.panel--charleston::before,
+.panel--main-game::before,
+.panel--bot-exposures::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  box-sizing: border-box;
+  background: linear-gradient(to bottom, #4a5568 0%, transparent 10%);
+  -webkit-mask:
+    linear-gradient(var(--color-white) 0 0) content-box,
+    linear-gradient(var(--color-white) 0 0);
+  mask:
+    linear-gradient(var(--color-white) 0 0) content-box,
+    linear-gradient(var(--color-white) 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 10;
 }

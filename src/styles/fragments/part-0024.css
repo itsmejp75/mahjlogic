@@ -1,5 +1,18 @@
 
 
-.app-layout[data-animations='off'] .rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell {
-  transition: none;
+/* ---- part-0025.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+.rack-hand-tools__wall {
+  border-radius: var(--rack-tile-btn-border-radius);
+  border: none;
+  background: color-mix(in srgb, var(--bg-elevated) 94%, var(--color-white) 6%);
+  color: var(--text-h);
+  font-family: 'Figtree', var(--sans);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }

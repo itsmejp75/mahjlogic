@@ -1,53 +1,89 @@
 
 
-/* Suggested-hands: same steel ring as other panels, on the **dragged** inner shell (not the fixed outer). */
-.suggested-hands-popup__user-shift::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  box-sizing: border-box;
-  background: linear-gradient(to bottom, #4a5568 0%, transparent 10%);
-  -webkit-mask:
-    linear-gradient(var(--color-white) 0 0) content-box,
-    linear-gradient(var(--color-white) 0 0);
-  mask:
-    linear-gradient(var(--color-white) 0 0) content-box,
-    linear-gradient(var(--color-white) 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-  z-index: 10;
+/* ---- part-0064.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+.panel__title-row--discard-tracker {
+  gap: 0.5rem;
+  align-items: baseline;
 }
 
-.suggested-hands-popup__user-shift::after {
-  content: '';
-  position: absolute;
-  inset: 1px;
-  border-radius: var(--suggested-popup-radius, 0.75rem);
-  padding: 1px;
-  box-sizing: border-box;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.07) 0%, transparent 10%);
-  -webkit-mask:
-    linear-gradient(var(--color-white) 0 0) content-box,
-    linear-gradient(var(--color-white) 0 0);
-  mask:
-    linear-gradient(var(--color-white) 0 0) content-box,
-    linear-gradient(var(--color-white) 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-  z-index: 10;
+.discard-tracker__status {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-inline-end: calc(1px + var(--bot-exposure-inner-pad));
+  font-size: 0.78rem;
+  line-height: 1.35;
+  font-weight: 600;
+  color: var(--text-h);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* Panels with no border-radius: suppress the curved gradient ring and use a flat
-   inset box-shadow instead so the highlight shows only on the top edge. */
-.app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker::before,
-.app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker::after,
-.app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures::before,
-.app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures::after,
-.app-rack-stage .panel--hand::before,
-.app-rack-stage .panel--hand::after {
-  content: none;
+.discard-tracker__content {
+  flex: 1 1 0;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  background: var(--window-inner-surface);
+  border-radius: var(--tile-tray-shell-radius);
+}
+
+/*
+ * Play-split discard tray: width + bot gutter; container so 15 tiles + gaps fill inner tray evenly
+ * (drop zone uses same --bot-exposure-inner-pad as tile↔tray edge).
+ */
+.app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker .discard-tracker__content {
+  box-sizing: border-box;
+  width: calc(100% - var(--discard-tray-gap-to-bot) - var(--play-split-lower-box-edge-inset));
+  margin-inline-start: var(--play-split-lower-box-edge-inset);
+  /* Slight negative margin nudges the tray content a few px past its panel's
+     trailing edge so the tray rim sits flush against the column gutter. */
+  margin-inline-end: calc(var(--discard-tray-gap-to-bot) - 5px);
+  container-type: inline-size;
+  container-name: discard-tray;
+}
+
+/*
+ * Fallback when container queries are unavailable: blend bot ref with a hand-tied cap
+ * (15 slots in a 14-wide row → ~14/15 of `--hand-rack-tile-w` at equal track width).
+ */
+.panel--discard-tracker .discard-pile {
+  --rack-tile-w: min(var(--bot-tile-w-ref), calc(var(--hand-rack-tile-w) * 14 / 15));
+  --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
+}
+
+/* 15 columns + 14 gaps across tray inner width; symmetric inset via drop-zone inset. */
+@container discard-tray (min-width: 0px) {
+  .panel--discard-tracker .discard-pile {
+    /* Fit tray; cap by the same hand scale so tiles resize with the East rack, not a separate curve. */
+    --rack-tile-w: min(
+      max(
+        1px,
+        calc(
+          (
+            100cqw
+            - 2 * var(--bot-exposure-inner-pad)
+            - 14 * var(--rack-tile-gap)
+          ) / 15
+        )
+      ),
+      calc(var(--hand-rack-tile-w) * 14 / 15)
+    );
+    --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
+  }
+}
+
+.discard-tracker__content .discard-pile-drop-zone {
+  position: absolute;
+  inset: var(--bot-exposure-inner-pad);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  z-index: 1;
 }

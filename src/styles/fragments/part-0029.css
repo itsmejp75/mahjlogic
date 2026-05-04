@@ -1,18 +1,42 @@
 
 
-@media (max-width: 47.99rem) {
-  :root {
-    --app-h-pad-base: clamp(0.35rem, 2.2vw, 0.75rem);
-    /* --app-v-pad: inherited; do not set from vw here or horizontal resizes look like vertical reflow. */
-    /*
-     * Phone fit: allow smaller tile minimum so the full 14-slot rack + controls
-     * can fit without clipping/awkward squeeze.
-     */
-    --hand-rack-tile-w: max(1.62rem, calc(var(--hand-rack-usable-w) / 14));
-    --hand-rack-tile-h: max(2.16rem, calc(var(--hand-rack-usable-w) / 14 * 1.3333));
-    --hand-window-pad-inline: clamp(0.2rem, 1.2vw, 0.35rem);
-    --rack-tray-inset-inline: 0.3rem;
-    /* --app-ui-control-fs follows --hand-rack-tile-w; no separate font clamp here. */
-    --btn-letter-spacing: calc(0.01em + 0.01rem);
-  }
+/* ---- part-0031.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+.app-main__scroll {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: min(30dvb, 15rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.app-main__scroll--collapsed {
+  flex: 0 0 0;
+  max-height: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
+  gap: 0;
+  border: none;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+/* Bot exposures: same chrome as `.panel` (rounded card, not a square strip). */
+
+.app-opponents-rail__cell {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
 }

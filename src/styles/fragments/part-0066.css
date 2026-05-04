@@ -1,209 +1,121 @@
 
 
-/* ── Controls bar: fixed lower-right overlay ── */
+/* ---- part-0068.css (from base.css, layout.css, components.css, animations.css) ---- */
 
-/* ── Mode switcher (Training / Competition) ── */
 
-/*
- * Same pill shape + bar metrics as Charleston Pass (rack-bottom-tile-cell + tile-grid btn).
- * Slightly wider than two hand slots so “New Game” fits; min-width never smaller than Pass.
- */
 
-.coach-panel {
-  display: flex;
-  border-radius: 0.85rem;
-  overflow: hidden;
-  border: 1px solid var(--coach-teal-border);
-  background: var(--bg-elevated);
-  box-shadow: var(--shadow);
-}
-
-.coach-panel__stripe {
-  width: 0.35rem;
-  flex-shrink: 0;
-  background: linear-gradient(180deg, var(--coach-teal), var(--accent));
-}
-
-.coach-panel__body {
-  padding: 0.85rem 1rem 1rem;
-  min-width: 0;
-}
-
-.coach-panel__title {
-  font-family: var(--heading);
-  font-size: 1.12rem;
-  margin: 0 0 0.35rem;
-}
-
-.coach-panel__mode {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin: 0 0 0.5rem;
-  opacity: 0.88;
-}
-
-.coach-panel__mode-value {
-  font-family: var(--mono);
-  text-transform: none;
-  letter-spacing: 0;
-  color: var(--coach-teal);
-}
-
-.coach-panel__headline {
-  font-weight: 600;
-  color: var(--text-h);
-  margin: 0 0 0.6rem;
-  line-height: 1.35;
-}
-
-.coach-panel__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-}
-
-.coach-panel__item {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  column-gap: 0.5rem;
-  row-gap: 0.2rem;
-  padding: 0.55rem 0.6rem;
-  border-radius: 0.5rem;
-  background: color-mix(in srgb, var(--coach-teal-bg) 55%, transparent);
-  border: 1px solid color-mix(in srgb, var(--coach-teal-border) 55%, transparent);
-}
-
-.coach-panel__band {
-  grid-row: 1 / span 2;
-  align-self: start;
-  font-size: 0.66rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 0.15rem 0.35rem;
-  border-radius: 0.25rem;
-  background: var(--code-bg);
-  color: var(--text-h);
-}
-
-.coach-panel__label {
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--text-h);
-}
-
-.coach-panel__detail {
-  grid-column: 2;
-  font-size: 0.84rem;
-  line-height: 1.42;
-  opacity: 0.95;
-}
-
-.coach-panel__item--blunder .coach-panel__band {
-  background: color-mix(in srgb, var(--accent) 28%, var(--code-bg));
-}
-
-.coach-panel__item--inaccuracy .coach-panel__band {
-  background: color-mix(in srgb, var(--accent) 14%, var(--code-bg));
-}
-
-.coach-panel__item--close .coach-panel__band {
-  background: color-mix(in srgb, var(--coach-teal) 18%, var(--code-bg));
-}
-
-.btn {
-  font-family: 'Figtree', var(--sans);
-  font-size: var(--btn-font-size);
-  font-weight: 500;
-  line-height: var(--btn-line-height);
-  text-transform: uppercase;
-  letter-spacing: var(--btn-letter-spacing);
-  cursor: pointer;
-  border-radius: 0.7rem;
-  padding: var(--btn-pad-block) var(--btn-pad-inline);
-  border: none;
-  background: color-mix(in srgb, var(--bg-elevated) 94%, var(--color-white) 6%);
-  color: var(--text-h);
-  user-select: none;
-  -webkit-user-select: none;
-  min-width: 0;
-  /* Symmetric drop shadow (centered below) so the rightmost button in the
-     bottom bar doesn't bleed past the rack-col's right edge more than the
-     leftmost button bleeds past its left edge. Keeps empty space on both
-     sides of the rack visually equal. */
-  box-shadow:
-    0 2px 4px color-mix(in srgb, var(--color-black) 16%, transparent),
-    0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);
-  isolation: isolate;
-  transition: box-shadow 0.14s ease;
-}
-
-/*
- * Opt-in: allow the label to wrap inside the button (e.g. “CLR HL” in a narrow tile slot).
- * Use with `.btn__label` around the text. Other controls use single-line + ellipsis when opted in.
- */
-.btn--label-wrap {
-  white-space: normal;
-  overflow-wrap: anywhere;
-  line-height: 1.12;
-  text-align: center;
-}
-
-.btn--label-wrap .btn__label {
-  display: block;
-  min-width: 0;
-  max-width: 100%;
-  text-align: center;
-}
-
-.btn--primary {
-  background: color-mix(in srgb, var(--bg-elevated) 94%, var(--color-white) 6%);
-  color: var(--text-h);
-}
-
-.btn--primary:hover:not(.rack-bottom-tile-cell):not(.suggested-hands-tab) {
+/* Default buttons only — rack / bot toolbar / menu use flat fills (tweak colors without hover wash). */
+.btn:hover:not(:disabled):not(.rack-bottom-tile-cell):not(.app-bottom-center-controls__menu-btn):not(
+    .panel--bot-exposures__clear
+  ):not(.panel--bot-exposures__hint):not(.suggested-hands-tab):not(.app-menu-tray__item) {
   background: color-mix(in srgb, var(--bg-elevated) 86%, var(--color-white) 14%);
   box-shadow:
     0 2px 5px color-mix(in srgb, var(--color-black) 18%, transparent),
     0 1px 3px color-mix(in srgb, var(--color-black) 12%, transparent);
 }
 
-.btn--danger {
-  border: none;
-  background: color-mix(in srgb, #c0392b 14%, var(--bg-elevated));
-  color: #e74c3c;
-}
-
-.btn--danger:hover {
-  background: color-mix(in srgb, #c0392b 22%, var(--bg-elevated));
+.btn:active:not(:disabled):not(.rack-bottom-tile-cell):not(.app-bottom-center-controls__menu-btn):not(
+    .panel--bot-exposures__hint
+  ):not(.app-menu-tray__item) {
+  transition: none;
+  transform: scale(0.98);
   box-shadow:
-    0 2px 5px color-mix(in srgb, var(--color-black) 18%, transparent),
-    0 1px 3px color-mix(in srgb, var(--color-black) 12%, transparent);
+    inset 3px 3px 7px rgba(0, 0, 0, 0.35),
+    inset -2px -2px 5px rgba(255, 255, 255, 0.12);
 }
 
-/* Same solid purple as HANDS (`.suggested-hands-tab` / `.charleston-pass-btn.suggested-hands-tab`). */
-.btn--mahjong {
-  background: #9a5fab;
-  color: var(--color-white);
+.btn:disabled,
+.btn--primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  box-shadow: none;
+  filter: grayscale(0.35);
 }
 
-.btn--rack-neutral {
-  background: var(--color-slate-mid);
-  color: var(--color-white);
+/* Bot toolbar + menu: skip global .btn:disabled wash so palette stays readable. */
+.panel--bot-exposures__toolbar-well .btn:disabled:not(.panel--bot-exposures__clear),
+.app-bottom-center-controls__menu-btn:disabled {
+  opacity: 0.5;
+  filter: none;
+}
+
+.btn--primary:disabled:hover {
+  box-shadow: none;
+}
+
+/* Discard-phase: default fill overridden on main rack (teal c12-14 rule below). */
+.btn--discard {
+  background: var(--code-bg);
+  color: var(--text-h);
+}
+
+/* After `.btn` so padding/radius don’t widen controls past their grid tracks (Pass under 13–14). */
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell {
+  min-width: 0;
+  /* Same `min(fs, f×tile-w)` as bot toolbar (see `--rack-control-label-fs` in `:root`). */
+  border-radius: var(--rack-tile-btn-border-radius);
+  border: none;
+  white-space: nowrap;
+  /* Base `.btn` uses a soft drop-shadow that reads as a border next to the tile row */
+  box-shadow: none;
+}
+
+/* Sort + Undo: 1-tile slot, slightly tighter than Pass / other actions. */
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c2 {
+  font-size: var(--rack-control-label-fs-tight);
+}
+
+/* Same inner-face metrics as the general `.rack-bottom-tile-cell` block above (see :root). */
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c2,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c3 {
+  width: var(--rack-tile-btn-inner-1);
+  max-width: var(--rack-tile-btn-inner-1);
+  margin-inline-start: var(--rack-tile-face-bw);
+  justify-self: start;
+}
+
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c4-5,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c8-9,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c10-11,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c7-8,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c9-10,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c11-12,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c13-14 {
+  width: var(--rack-tile-btn-inner-2);
+  max-width: var(--rack-tile-btn-inner-2);
+  margin-inline-start: var(--rack-tile-face-bw);
+  justify-self: start;
+}
+
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c3-5,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c9-11,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14 {
+  width: var(--rack-tile-btn-inner-3);
+  max-width: var(--rack-tile-btn-inner-3);
+  margin-inline-start: var(--rack-tile-face-bw);
+  justify-self: start;
+}
+
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1-7,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c8-14 {
+  width: var(--rack-tile-btn-inner-7);
+  max-width: var(--rack-tile-btn-inner-7);
+  margin-inline-start: var(--rack-tile-face-bw);
+  justify-self: start;
 }
 
 /*
- * Menu → Color buttons OFF: match Sort / `btn--rack-neutral` — single dark gray for strong actions
- * (teal pass, purple Mah Jongg / HANDS, Menu blue, etc.). Menu modal controls use Sort-style
- * grays in their own rules; this block is for the main table only.
+ * Hand row: hand tiles are borderless and fill each slot (--rack-tile-w). The rules above size
+ * buttons to the *inner* face of a bordered .tile-face; in the hand panel, stretch to the full
+ * grid area so left/right edges line up with the tile faces in the hand row.
  */
-.app[data-color-buttons='off'] .btn--mahjong:not(:disabled),
-.app[data-color-buttons='off'] .btn--mahjong:disabled {
-  background: var(--color-slate-mid);
-  color: var(--color-white);
-  filter: none;
+.panel--hand .rack-bottom-bar--tile-grid > .rack-bottom-tile-cell,
+.panel--hand .rack-bottom-bar--tile-grid > .btn.rack-bottom-tile-cell {
+  width: 100%;
+  max-width: none;
+  margin-inline-start: 0;
+  justify-self: stretch;
 }

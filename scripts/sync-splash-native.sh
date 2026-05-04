@@ -1,26 +1,36 @@
 #!/usr/bin/env bash
-# Canonical splash source (edit this file only):
+# Canonical authored splash master (PNG):
 #   src/assets/Splash page - MahjLogic.png
-# Do not copy splash into dist/ by hand — dist/ is Vite output; public/ is synced from here.
 #
-# Copies into: public/, iOS Assets.xcassets/Splash.imageset/splash-2732x2732.png, Android res/**/splash.png
+# Pipeline writes a sharpened/intermediate raster (normalized min longest side ~2732px) to
+# `.splash-prepared.png` — then mirrors that to public + iOS + Android so low-res PNG artwork
+# is not blurry when scaled onto device splash pixels.
+#
+# Outputs: public/Splash page - MahjLogic.png, Splash.imageset JPEG, Android res/**/splash.png,
+#          public/startup/apple-splash-*.png
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SRC="$ROOT/src/assets/Splash page - MahjLogic.png"
+PREPARED="$ROOT/.splash-prepared.png"
 if [[ ! -f "$SRC" ]]; then
   echo "sync-splash-native: missing source file: $SRC" >&2
   exit 1
 fi
 
-echo "sync-splash-native: copying master to public + building compressed iOS splash JPEG…"
-cp "$SRC" "$ROOT/public/Splash page - MahjLogic.png"
-python3 "$ROOT/scripts/build-ios-splash-image.py"
+echo "sync-splash-native: normalizing resolution (splash_raster_prep)…"
+python3 "$ROOT/scripts/stage-prepared-splash.py" "$SRC" "$PREPARED"
+
+echo "sync-splash-native: syncing prepared PNG → public…"
+cp "$PREPARED" "$ROOT/public/Splash page - MahjLogic.png"
+
+echo "sync-splash-native: building compressed iOS splash JPEG…"
+python3 "$ROOT/scripts/build-ios-splash-image.py" "$PREPARED"
 
 echo "sync-splash-native: resizing for Android drawable buckets…"
 python3 <<PY
 import os, re, subprocess
 
-src = r"$SRC"
+src = r"$PREPARED"
 root = os.path.join(r"$ROOT", "android", "app", "src", "main", "res")
 for dirpath, _, files in os.walk(root):
     if "splash.png" not in files:
@@ -36,5 +46,8 @@ for dirpath, _, files in os.walk(root):
     )
     print(" ", dest, "->", w, "x", h)
 PY
+
+echo "sync-splash-native: PWA iOS startup PNGs…"
+python3 "$ROOT/scripts/regenerate-pwa-startup-images.py" "$PREPARED"
 
 echo "sync-splash-native: done."

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Rasterize splash artwork SVG → `src/assets/Splash page - MahjLogic.png` (then run `sync-splash-native.sh`).
- * Matches `build-ios-splash-image.py` max side (2048) for JPEG quality headroom.
+ * Matches splash normalization (~2732 px longest side) for sharp device scaling.
  *
  * Usage: node scripts/rasterize-splash-from-svg.mjs [path/to/splash.svg]
  * Default: src/assets/splash-logo-master.svg
@@ -16,7 +16,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
 const svgPath = path.resolve(process.argv[2] ?? path.join(root, 'src', 'assets', 'splash-logo-master.svg'))
 const outPng = path.join(root, 'src', 'assets', 'Splash page - MahjLogic.png')
-const PX = 2048
+const PX = 2732
 
 async function main() {
   if (!fs.existsSync(svgPath)) {

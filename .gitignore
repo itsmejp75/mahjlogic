@@ -27,3 +27,4 @@ dist-ssr
 
 # Transient output from scripts/rasterize-icon-from-svg.mjs if interrupted
 .tmp-app-icon-master.png
+.splash-prepared.png

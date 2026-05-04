@@ -1,6 +1,11 @@
 
 
-/* Lock the Charleston Pass button itself in place; align wrappers/trays around it, not this control. */
-.panel--hand .rack-bottom-bar--charleston .charleston-pass-btn.rack-bottom-tile-cell--c12-14 {
-  transform: none;
+/* ---- part-0075.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* Same span as hand slots 12–14: `--player-rack-face-gap` matches `.panel-hand-rack__hand-tray .hand-row`. */
+.panel--hand .pass-strip-tail__inner {
+  gap: var(--player-rack-face-gap);
+  width: calc(3 * var(--rack-tile-w) + 2 * var(--player-rack-face-gap));
 }
