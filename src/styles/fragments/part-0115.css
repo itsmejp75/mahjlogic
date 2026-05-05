@@ -340,19 +340,20 @@
  */
 html[data-native-app] {
   /*
-   * `90dvi`: tile-w formula (`--hand-rack-usable-w / 14`) only subtracts explicit paddings —
-   * `--app-h-pad`, `--hand-window-pad-inline`, `--rack-tray-inset-inline`, `--player-rack-face-gap`.
-   * It does NOT subtract tile-face borders, action-button rims (SORT/UNDO/99/MENU/PASS), or the
-   * dark-tray box-shadow rim, which together add ~6–10px PER side. At 100dvi or 96dvi, those
-   * extras pushed tiles past the dark tray edge (visible spill in the screenshot). 90dvi reserves
-   * ~5% margin per side (≈47px on a 932-wide WebView) which absorbs every rim/border the formula
-   * doesn’t see, and the gray surface still reads as edge-to-edge because the safe-area gutter
-   * (~21px home-indicator inset on iPhone landscape) is part of that margin.
+   * EDGE-TO-EDGE FIRST. Previously `90dvi` (5% gutter per side) + safe-area-inset contribution
+   * to `--app-h-pad`, on the theory that the rack tile formula (`--hand-rack-usable-w / 14`)
+   * doesn't subtract tile-face borders / button rims so a 5% margin absorbed the overflow.
+   * Symptom on iPhone 12 Pro Max (926×428 landscape, when the height-gated
+   * `(max-height: 31.25rem)` rule wasn't applied — typically because the device build was
+   * stale): visible ~46 px black bands on each side. Going full-bleed (`100dvi` + zero
+   * safe-area contribution to `--app-h-pad`) makes the native shell extend to the physical
+   * screen edges on every iPhone, independent of any height media query firing. If a 14-tile
+   * rack ever spills past the tray rim at 100dvi, re-introduce the gutter at the rack-stage
+   * level (not here) so the lower play-split keeps its full-bleed look. Notch-aware insets
+   * handled separately later.
    */
-  --app-play-fit-inline-from-block: 90dvi;
-  --app-h-pad: calc(
-    var(--app-h-pad-base) + (env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px)) * 0.5
-  );
+  --app-play-fit-inline-from-block: 100dvi;
+  --app-h-pad: var(--app-h-pad-base);
 
   /*
    * Bot toolbar / bot rows / bot panel body intentionally bleed 8 px LEFT of the

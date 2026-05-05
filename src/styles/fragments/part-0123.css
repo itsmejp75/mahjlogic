@@ -110,10 +110,8 @@
   html[data-native-app] {
     --app-play-fit-inline-from-block: 100dvi;
     --app-h-pad-base: clamp(0.06rem, 0.45dvi, 0.16rem);
-    --app-h-pad: calc(
-      var(--app-h-pad-base) +
-        (env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px)) * 0.275
-    );
+    /* Notch-aware safe-area inset addition removed during edge-to-edge pass. */
+    --app-h-pad: var(--app-h-pad-base);
     --app-v-pad: clamp(0.08rem, 0.45dvb, 0.18rem);
     --hand-window-pad-inline: clamp(0.08rem, 0.5dvi, 0.18rem);
     --rack-tray-inset-inline: 0.16rem;
@@ -160,14 +158,17 @@
     min-height: 0;
   }
 
+  /*
+   * Edge-to-edge first: drop the `safe-area-inset-* * 0.55` contribution that previously
+   * reserved ~26 px on each side for the notch in landscape. That gutter was the visible
+   * "side padding" preventing the rack and lower play-split from filling the WebView width
+   * on iPhone 12 Pro Max. Re-introduce notch-aware insets later as a focused pass once the
+   * full-bleed look is dialed in.
+   */
   html[data-native-app] .app-rack-stage,
   html[data-native-app] .app-play-split {
-    padding-inline-start: calc(
-      var(--app-h-pad-base) + env(safe-area-inset-left, 0px) * 0.55
-    );
-    padding-inline-end: calc(
-      var(--app-h-pad-base) + env(safe-area-inset-right, 0px) * 0.55
-    );
+    padding-inline-start: var(--app-h-pad-base);
+    padding-inline-end: var(--app-h-pad-base);
   }
 
   html[data-native-app] .app-play-split {

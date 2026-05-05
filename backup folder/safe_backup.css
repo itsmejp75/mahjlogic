@@ -9829,19 +9829,20 @@
  */
 html[data-native-app] {
   /*
-   * `90dvi`: tile-w formula (`--hand-rack-usable-w / 14`) only subtracts explicit paddings —
-   * `--app-h-pad`, `--hand-window-pad-inline`, `--rack-tray-inset-inline`, `--player-rack-face-gap`.
-   * It does NOT subtract tile-face borders, action-button rims (SORT/UNDO/99/MENU/PASS), or the
-   * dark-tray box-shadow rim, which together add ~6–10px PER side. At 100dvi or 96dvi, those
-   * extras pushed tiles past the dark tray edge (visible spill in the screenshot). 90dvi reserves
-   * ~5% margin per side (≈47px on a 932-wide WebView) which absorbs every rim/border the formula
-   * doesn’t see, and the gray surface still reads as edge-to-edge because the safe-area gutter
-   * (~21px home-indicator inset on iPhone landscape) is part of that margin.
+   * EDGE-TO-EDGE FIRST. Previously `90dvi` (5% gutter per side) + safe-area-inset contribution
+   * to `--app-h-pad`, on the theory that the rack tile formula (`--hand-rack-usable-w / 14`)
+   * doesn't subtract tile-face borders / button rims so a 5% margin absorbed the overflow.
+   * Symptom on iPhone 12 Pro Max (926×428 landscape, when the height-gated
+   * `(max-height: 31.25rem)` rule wasn't applied — typically because the device build was
+   * stale): visible ~46 px black bands on each side. Going full-bleed (`100dvi` + zero
+   * safe-area contribution to `--app-h-pad`) makes the native shell extend to the physical
+   * screen edges on every iPhone, independent of any height media query firing. If a 14-tile
+   * rack ever spills past the tray rim at 100dvi, re-introduce the gutter at the rack-stage
+   * level (not here) so the lower play-split keeps its full-bleed look. Notch-aware insets
+   * handled separately later.
    */
-  --app-play-fit-inline-from-block: 90dvi;
-  --app-h-pad: calc(
-    var(--app-h-pad-base) + (env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px)) * 0.5
-  );
+  --app-play-fit-inline-from-block: 100dvi;
+  --app-h-pad: var(--app-h-pad-base);
 
   /*
    * Bot toolbar / bot rows / bot panel body intentionally bleed 8 px LEFT of the
@@ -10247,10 +10248,8 @@ html[data-native-app] .app-play-split {
   html[data-native-app] {
     --app-play-fit-inline-from-block: 100dvi;
     --app-h-pad-base: clamp(0.06rem, 0.45dvi, 0.16rem);
-    --app-h-pad: calc(
-      var(--app-h-pad-base) +
-        (env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px)) * 0.275
-    );
+    /* Notch-aware safe-area inset addition removed during edge-to-edge pass. */
+    --app-h-pad: var(--app-h-pad-base);
     --app-v-pad: clamp(0.08rem, 0.45dvb, 0.18rem);
     --hand-window-pad-inline: clamp(0.08rem, 0.5dvi, 0.18rem);
     --rack-tray-inset-inline: 0.16rem;
@@ -10297,14 +10296,17 @@ html[data-native-app] .app-play-split {
     min-height: 0;
   }
 
+  /*
+   * Edge-to-edge first: drop the `safe-area-inset-* * 0.55` contribution that previously
+   * reserved ~26 px on each side for the notch in landscape. That gutter was the visible
+   * "side padding" preventing the rack and lower play-split from filling the WebView width
+   * on iPhone 12 Pro Max. Re-introduce notch-aware insets later as a focused pass once the
+   * full-bleed look is dialed in.
+   */
   html[data-native-app] .app-rack-stage,
   html[data-native-app] .app-play-split {
-    padding-inline-start: calc(
-      var(--app-h-pad-base) + env(safe-area-inset-left, 0px) * 0.55
-    );
-    padding-inline-end: calc(
-      var(--app-h-pad-base) + env(safe-area-inset-right, 0px) * 0.55
-    );
+    padding-inline-start: var(--app-h-pad-base);
+    padding-inline-end: var(--app-h-pad-base);
   }
 
   html[data-native-app] .app-play-split {
