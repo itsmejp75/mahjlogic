@@ -1,0 +1,12 @@
+
+
+@keyframes exposure-incoming-discard-fly-in-across {
+  from {
+    transform: translateY(-220%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

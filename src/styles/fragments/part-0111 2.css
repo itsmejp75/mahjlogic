@@ -1,0 +1,43 @@
+
+
+/* ---- part-0112.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* ---- part-0116.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+.suggested-hands-popup__left-edge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 0.5rem;
+  z-index: 7;
+  cursor: ew-resize;
+  user-select: none;
+  touch-action: none;
+  margin-left: -0.12rem;
+  box-sizing: content-box;
+  padding: 0.18rem 0.1rem 0.18rem 0;
+}
+
+.suggested-hands-popup__left-edge::after {
+  content: '';
+  position: absolute;
+  top: var(--suggested-popup-radius);
+  bottom: var(--suggested-popup-radius);
+  left: var(--suggested-popup-edge-inset);
+  width: var(--suggested-popup-resize-stroke);
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--text-h) 25%, transparent);
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.suggested-hands-popup__left-edge:hover::after {
+  opacity: 0.85;
+  background: color-mix(in srgb, var(--coach-teal) 50%, var(--text-h) 20%);
+}

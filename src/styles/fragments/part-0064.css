@@ -121,17 +121,25 @@
     0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);
 }
 
-/* Menu (blue) + open tint — align with neutral rack. */
+/* Menu chip + open tint — align with neutral rack while keeping the bird glyph. */
 .app[data-color-buttons='off'] .app-bottom-center-controls__menu-btn:not(:disabled),
 .app[data-color-buttons='off'] .app-bottom-center-controls__menu-btn:disabled {
-  background: var(--color-slate-mid);
-  color: var(--color-white);
+  background-color: var(--color-slate-mid);
+  background-image: url(../../assets/mahjlogic-app-icon-button.svg);
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: 72%;
+  color: transparent;
 }
 
 .app[data-color-buttons='off'] .app-bottom-center-controls__menu-btn--open,
 .app[data-color-buttons='off'] .app-bottom-center-controls__menu-btn--open:hover:not(:disabled) {
-  background: var(--color-slate-mid);
-  color: var(--color-white);
+  background-color: var(--color-slate-mid);
+  background-image: url(../../assets/mahjlogic-app-icon-button.svg);
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: 72%;
+  color: transparent;
   box-shadow:
     0 2px 4px color-mix(in srgb, var(--color-black) 16%, transparent),
     0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);

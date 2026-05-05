@@ -1,0 +1,11 @@
+
+
+/* ---- part-0121.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+.panel--bot-exposures .bot-exposures__list .app-opponents-rail__cell .exposure-rack {
+  --rack-tile-w: calc((100cqi - 13 * var(--rack-tile-gap)) / 14);
+  --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
+  --exposure-slot-h: var(--rack-tile-h);
+}

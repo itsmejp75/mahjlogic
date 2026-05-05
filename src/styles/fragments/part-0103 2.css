@@ -1,0 +1,88 @@
+
+
+/* ---- part-0104.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* ---- part-0108.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* When Suggested list is open, keep the same face color; drop shadow for a flatter “pressed” read. */
+.btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open {
+  background: #9a5fab;
+  color: var(--color-white);
+  box-shadow: none;
+}
+
+/* ── Suggested Hands: outer = fixed slot (slide Y only). Painted shell = .suggested-hands-popup__user-shift (moves with drag). */
+.suggested-hands-popup {
+  position: fixed;
+  /* `left` / `right` are set in JS so the left can include a drag offset (see `suggestedPanelLeftDelta`). */
+  right: calc(var(--app-h-pad) + var(--bot-panel-outer-w));
+  /* `top` from the bottom edge of the rack action shell (or discard top as fallback);
+     `bottom` from discardTrackerPanelRef. No CSS fallback — avoids a full-viewport flash. */
+  z-index: 300;
+  /* Tokens (inherit to inner shell and children) */
+  --text-h: var(--window-fg);
+  --text: var(--window-fg-muted);
+  --bg: var(--window-surface);
+  --bg-elevated: var(--window-surface);
+  --border: var(--window-border);
+  --code-bg: color-mix(in srgb, var(--window-fg) 11%, var(--window-surface));
+  --panel-lower-header-fade-h: clamp(3rem, 11vw, 4.5rem);
+  /* Shared by resize handles (inner box is the border for arc math). */
+  --suggested-popup-radius: 0.75rem;
+  --suggested-popup-resize-stroke: 2px;
+  --suggested-popup-edge-inset: 0.14rem;
+  --suggested-popup-fillet-r: calc(
+    var(--suggested-popup-radius) - var(--suggested-popup-edge-inset)
+  );
+  --suggested-popup-resize-inset: 0.12rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  /* Hidden below viewport until --open */
+  transform: translateY(calc(100% + 2rem));
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.18s ease,
+    visibility 0s linear 0.3s;
+  pointer-events: none;
+}
+
+/*
+ * Inner content area — flush under the popup's rounded frame so the sticky column header
+ * background reaches the popup window edges. Border, radius, and inline padding are stripped
+ * here (and again in the `.dark-tray-rim` override below) — the outer `.suggested-hands-popup__user-shift`
+ * still provides the visible frame and rounding via its `border` + `overflow: hidden`.
+ */
+.suggested-hands-popup .panel--hands {
+  background: var(--window-inner-surface);
+  margin: 0;
+  max-height: none;
+  /* Positioning context for the right-slide filter tray */
+  position: relative;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Run edge-to-edge under the popup frame; rails on the hands-sheet collapse to 0 below. */
+  padding-inline: 0;
+  border-radius: 0;
+  --hands-panel-pad-x: 0px;
+}
+
+.suggested-hands-popup--open {
+  transform: translateY(0);
+  opacity: 1;
+  visibility: visible;
+  transition:
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.22s ease,
+    visibility 0s linear 0s;
+  pointer-events: auto;
+}

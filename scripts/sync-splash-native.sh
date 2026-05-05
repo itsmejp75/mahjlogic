@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Canonical authored splash master (PNG):
-#   src/assets/Splash page - MahjLogic.png
+# Canonical splash master (PNG), rasterized from `src/assets/mahjlogic-watermark.svg`:
+#   node scripts/rasterize-splash-from-svg.mjs && bash scripts/sync-splash-native.sh
 #
 # Pipeline writes a sharpened/intermediate raster (normalized min longest side ~2732px) to
 # `.splash-prepared.png` — then mirrors that to public + iOS + Android so low-res PNG artwork

@@ -194,23 +194,23 @@
   box-sizing: border-box;
   height: var(--suggested-tab-h);
   width: var(--menu-btn-w);
-  padding: 0 0.72rem;
+  padding: 0;
   border-radius: 0.7rem;
   border: none;
-  background: #0f52ba;
-  color: var(--color-white);
-  font-family: 'Figtree', var(--sans);
-  font-size: var(--app-ui-control-fs);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: var(--btn-letter-spacing);
+  background-color: #121419;
+  background-image: url(../../assets/mahjlogic-app-icon-button.svg);
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: 72%;
+  color: transparent;
+  font-size: 0;
   cursor: pointer;
   isolation: isolate;
   /* Same as `.btn`: symmetric horizontal shadow so label doesn’t “creep” left vs glow on hover */
   box-shadow:
     0 2px 4px color-mix(in srgb, var(--color-black) 16%, transparent),
     0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);
-  transition: box-shadow 0.14s ease, background 0.14s ease;
+  transition: box-shadow 0.14s ease, background-color 0.14s ease;
   z-index: 2;
   transform: none;
 }
@@ -225,7 +225,7 @@
 
 .app-bottom-center-controls__menu-btn--open,
 .app-bottom-center-controls__menu-btn--open:hover:not(:disabled) {
-  background: color-mix(in srgb, #22c55e 16%, #0f52ba);
+  background-color: color-mix(in srgb, #22c55e 16%, #121419);
   box-shadow:
     0 2px 4px color-mix(in srgb, var(--color-black) 16%, transparent),
     0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);

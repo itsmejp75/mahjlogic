@@ -7,93 +7,12 @@
       html {
         background-color: #1a1e24;
       }
-      /*
-       * Orientation lock for touch devices. The app is landscape-only, but on iOS
-       * Safari PWAs the OS won't honor manifest `orientation: landscape`, so we
-       * fall back to a full-screen "rotate your phone" overlay that's controlled
-       * purely by CSS media queries (no JS, so it works before React mounts and
-       * before the bundled CSS loads).
-       *
-       * Gates:
-       *   - `(orientation: portrait) and (pointer: coarse)` — only phones/tablets
-       *     held portrait; desktop (`pointer: fine`) never sees it.
-       *   - Hidden on `html[data-native-app]` — the Capacitor build is already
-       *     OS-locked to landscape via Info.plist, so the overlay must never
-       *     appear there.
-       */
-      #orientation-lock {
-        display: none;
-      }
-      @media (orientation: portrait) and (pointer: coarse) {
-        #orientation-lock {
-          display: flex;
-          position: fixed;
-          inset: 0;
-          z-index: 2147483647;
-          align-items: center;
-          justify-content: center;
-          padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
-          background: #1a1e24;
-          color: #eae8e4;
-          font:
-            500 17px/1.4 'Figtree',
-            system-ui,
-            -apple-system,
-            'Segoe UI',
-            Roboto,
-            sans-serif;
-          letter-spacing: 0.01em;
-          text-align: center;
-          -webkit-user-select: none;
-          user-select: none;
-          -webkit-tap-highlight-color: transparent;
-        }
-      }
-      html[data-native-app] #orientation-lock {
-        display: none !important;
-      }
-      .orientation-lock__inner {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 22px;
-        max-width: 300px;
-      }
-      .orientation-lock__icon {
-        width: 96px;
-        height: 96px;
-        color: #eae8e4;
-        transform-origin: 50% 50%;
-        animation: orientation-lock-rotate 2.6s ease-in-out infinite;
-      }
-      .orientation-lock__text {
-        margin: 0;
-      }
-      @keyframes orientation-lock-rotate {
-        0%,
-        20% {
-          transform: rotate(0deg);
-        }
-        50%,
-        70% {
-          transform: rotate(-90deg);
-        }
-        100% {
-          transform: rotate(0deg);
-        }
-      }
-      @media (prefers-reduced-motion: reduce) {
-        .orientation-lock__icon {
-          animation: none;
-          transform: rotate(-90deg);
-        }
-      }
     </style>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=13" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=13" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png?v=13" />
-    <link rel="manifest" href="/manifest.webmanifest?v=13" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=13" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=14" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=14" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png?v=14" />
+    <link rel="manifest" href="/manifest.webmanifest?v=14" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=14" />
     <meta name="theme-color" content="#121419" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -101,20 +20,9 @@
     <meta name="apple-mobile-web-app-title" content="Mahj Logic" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <!--
-      Landscape-only Apple startup images.
-
-      Why no portrait entries:
-      The app is landscape-only (native build is OS-locked via Info.plist; PWA
-      uses the CSS overlay below). When a phone is held landscape at launch,
-      iOS was briefly matching the device's portrait entry before the webview
-      settled on the landscape orientation, producing a visible "portrait flash
-      → landscape splash" flip-glitch at launch. Removing the portrait entries
-      eliminates the flip: iOS can only pick a landscape image, period.
-
-      Consequence when the phone is held portrait at launch: no startup image
-      matches, so iOS shows a plain `theme-color` screen (no branded splash)
-      until the bundle loads and the #orientation-lock overlay takes over and
-      prompts the user to rotate. That is the accepted trade-off.
+      Apple startup images — landscape only (primary play orientation).
+      Portrait entries were omitted so iOS does not briefly show a portrait
+      splash then flip to landscape at launch.
     -->
     <link
       rel="apple-touch-startup-image"
@@ -188,7 +96,7 @@
     <!--
       Installed PWA windows (Chrome on macOS, etc.) often show "{manifest short_name} - {document.title}".
       Keep browser-tab bookmarks reading "Mahj Logic", but clear the title in standalone so the window
-      caption is only the manifest/app name (avoids "MahjLogic - Mahj Logic"). Skip Capacitor WebViews.
+      caption is only the manifest/app name. Skip Capacitor WebViews.
     -->
     <script>
       (function () {
@@ -208,55 +116,6 @@
     </script>
   </head>
   <body>
-    <!--
-      Landscape-only overlay. Sibling of #root (not inside it) so it survives any
-      React unmount/re-render and paints before the React bundle evaluates. All
-      visibility logic lives in the inline <style> above (pure CSS media query);
-      this element is inert otherwise. role="alertdialog" + aria-modal so screen
-      readers announce the prompt when the device is portrait.
-    -->
-    <div
-      id="orientation-lock"
-      role="alertdialog"
-      aria-modal="true"
-      aria-labelledby="orientation-lock-text"
-    >
-      <div class="orientation-lock__inner">
-        <svg
-          class="orientation-lock__icon"
-          viewBox="0 0 64 64"
-          aria-hidden="true"
-          focusable="false"
-        >
-          <g
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <rect x="22" y="8" width="20" height="38" rx="3.5" />
-            <line x1="28" y1="12" x2="36" y2="12" />
-            <circle cx="32" cy="42" r="1.5" fill="currentColor" stroke="none" />
-          </g>
-          <g
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            opacity="0.85"
-          >
-            <path d="M12 52 a22 22 0 0 0 40 0" />
-            <path d="M8 48 l4 4 4 -4" />
-            <path d="M56 48 l-4 4 -4 -4" />
-          </g>
-        </svg>
-        <p id="orientation-lock-text" class="orientation-lock__text">
-          Rotate your phone to landscape to play Mahj Logic.
-        </p>
-      </div>
-    </div>
     <div id="root"></div>
     <!--
       Removed the previous `document.body.style.height = window.innerHeight + 'px'` boot script.

@@ -1,0 +1,21 @@
+
+
+/* ---- part-0090.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* ---- part-0094.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/*
+ * Player exposure row + Bot Exposures: dark empty wells, no border.
+ * Charleston pass-tail empties and pass-strip tile wraps keep bordered styling (see rules above).
+ * East discard staging slot unchanged (bordered .east-discard-staging--inline).
+ */
+.panel--hand .exposure-rack .exposure-rack__slot--empty:not(.exposure-rack__slot--pass-tail)::before,
+.panel--bot-exposures .exposure-rack .exposure-rack__slot--empty::before {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}

@@ -4,7 +4,7 @@
  * Matches splash normalization (~2732 px longest side) for sharp device scaling.
  *
  * Usage: node scripts/rasterize-splash-from-svg.mjs [path/to/splash.svg]
- * Default: src/assets/Splash page - MahjLogic.svg
+ * Default: src/assets/mahjlogic-watermark.svg (same artwork as `RackLogoWatermark`).
  */
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
@@ -15,7 +15,7 @@ import puppeteer from 'puppeteer'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
 const svgPath = path.resolve(
-  process.argv[2] ?? path.join(root, 'src', 'assets', 'Splash page - MahjLogic.svg'),
+  process.argv[2] ?? path.join(root, 'src', 'assets', 'mahjlogic-watermark.svg'),
 )
 const outPng = path.join(root, 'src', 'assets', 'Splash page - MahjLogic.png')
 const PX = 2732

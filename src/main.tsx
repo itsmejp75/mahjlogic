@@ -21,42 +21,9 @@ if (Capacitor.isNativePlatform()) {
   document.documentElement.setAttribute('data-home-screen-app', '')
 }
 
-async function tryLockLandscapeStandalone() {
-  const o = window.screen.orientation
-  if (!o?.lock) return
-  try {
-    await o.lock('landscape')
-    return
-  } catch {
-    /* Chrome/iOS differ on accepted lock types; portrait-primary-only PWAs often need a gesture. */
-  }
-  try {
-    await o.lock('landscape-primary')
-  } catch {
-    /* iOS standalone Safari usually rejects lock(); manifest + native Android still handle those cases. */
-  }
-}
-
 function AppWithNativeSplashHandoff() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) {
-      if (isStandaloneWebApp()) {
-        void tryLockLandscapeStandalone()
-        const retryOnGesture = () => {
-          void tryLockLandscapeStandalone()
-        }
-        window.addEventListener('pointerdown', retryOnGesture, { capture: true, once: true })
-        window.addEventListener('touchend', retryOnGesture, { capture: true, once: true })
-        const onVisible = () => {
-          if (document.visibilityState === 'visible') void tryLockLandscapeStandalone()
-        }
-        document.addEventListener('visibilitychange', onVisible)
-        window.addEventListener('pageshow', onVisible)
-        return () => {
-          document.removeEventListener('visibilitychange', onVisible)
-          window.removeEventListener('pageshow', onVisible)
-        }
-      }
       return
     }
 
