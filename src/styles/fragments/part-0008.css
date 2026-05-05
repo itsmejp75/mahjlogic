@@ -4,40 +4,29 @@
 
 
 
-/*
- * Same shell + outer height as `.panel--bot-exposures__toolbar-well`: full inner pad on the
- * tray + min inner row = `--suggested-tab-h` (Menu / Clear row). Horizontal padding stays 0 so
- * the 14-column bar still lines up with tiles; `--bot-exposure-inner-pad` comes from `.app-dnd-frame`.
- */
-.panel--hand .panel-hand-rack__action-well {
-  justify-content: center;
-  width: 100%;
-  box-sizing: border-box;
-  padding-block: var(--bot-exposure-inner-pad);
+/* ---- part-0010.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+
+/* Hand tray: side inset lives on .hand-row so left/right tile-edge gaps stay symmetric. */
+.panel--hand .panel-hand-rack__hand-tray .hand-bank {
+  padding-block: var(--hand-rack-tray-inset-block);
   padding-inline: 0;
-  min-height: calc(2 * var(--bot-exposure-inner-pad) + var(--suggested-tab-h));
-  position: relative;
-  z-index: 1;
-  background: var(--window-inner-surface);
-  border-radius: calc(var(--rack-tile-btn-border-radius) + var(--bot-exposure-inner-pad));
-  overflow: hidden;
+  box-sizing: border-box;
+  min-height: calc(var(--rack-tile-h) + 2 * var(--hand-rack-tray-inset-block));
+  /* Bank is the dark tray — tiles sit at natural width so padding shows on all sides */
 }
 
-/*
- * Charleston Sort→Pass row: same min-height rhythm as `.panel--bot-exposures__toolbar-well`.
- * Keep top/bottom inset symmetric so the gap below Pass matches the space above it.
- */
-.panel--hand .panel-hand-rack__charleston-actions-well {
-  justify-content: center;
-  width: 100%;
+.panel--hand .panel-hand-rack__hand-tray .hand-row {
+  --rack-tile-w: calc(var(--hand-rack-tile-w) * var(--hand-rack-tile-scale));
+  --rack-tile-h: calc(var(--hand-rack-tile-h) * var(--hand-rack-tile-scale));
+  /* Fill the hand bank; tiles pack from the left inside the fixed 14-slot strip. */
+  padding-inline: var(--hand-rack-tray-inset-inline);
   box-sizing: border-box;
-  padding-top: var(--bot-exposure-inner-pad);
-  padding-inline: 0;
-  padding-bottom: var(--bot-exposure-inner-pad);
-  min-height: calc(2 * var(--bot-exposure-inner-pad) + var(--rack-action-touch-min-h));
-  position: relative;
-  z-index: 1;
-  background: var(--window-inner-surface);
-  border-radius: calc(var(--rack-tile-btn-border-radius) + var(--bot-exposure-inner-pad));
-  overflow: hidden;
+  margin-left: 0;
+  width: 100%;
+  max-width: 100%;
+  justify-content: flex-start;
+  flex-shrink: 0;
 }

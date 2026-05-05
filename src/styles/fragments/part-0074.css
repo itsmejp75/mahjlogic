@@ -1,40 +1,12 @@
 
 
-/* ---- part-0076.css (from base.css, layout.css, components.css, animations.css) ---- */
-
-
-
-/* Pass box chrome only highlights while dragging (see `--over` and `--dragging` below), not on pointer hover. */
-
-/* Drop target: same stronger fill + border as call box --over */
-.pass-strip-tail--over .pass-strip-tail__inner {
-  background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
-  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
-}
-
-/* Dragging FROM the box: keep it bright */
-.pass-strip-tail__inner:has(.pass-strip__tile-wrap--dragging) {
-  background: color-mix(in srgb, var(--coach-teal) 18%, var(--bg-elevated) 82%);
-  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
-}
-
-/* Charleston: tiles exit the pass box toward the pass direction before the exchange commits. */
-.pass-strip-tail.pass-strip-tail--fly-out {
-  pointer-events: none;
-}
-
-/* ---- part-0077.css (from base.css, layout.css, components.css, animations.css) ---- */
-
-
-
-@keyframes charleston-pass-fly-out-left {
+@keyframes charleston-pass-fly-out-across {
   from {
-    transform: translateX(0);
+    transform: translateY(0);
     opacity: 1;
   }
   to {
-    /* % is of the tile wrap’s own width — works in Charleston hand + pass-tail layouts */
-    transform: translateX(-220%);
+    transform: translateY(-220%);
     opacity: 0;
   }
 }

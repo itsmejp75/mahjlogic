@@ -1,119 +1,15 @@
 
 
-/* ---- part-0068.css (from base.css, layout.css, components.css, animations.css) ---- */
+/* ---- part-0067.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
 
-/* Default buttons only — rack / bot toolbar / menu use flat fills (tweak colors without hover wash). */
-.btn:hover:not(:disabled):not(.rack-bottom-tile-cell):not(.app-bottom-center-controls__menu-btn):not(
-    .panel--bot-exposures__clear
-  ):not(.panel--bot-exposures__hint):not(.suggested-hands-tab):not(.app-menu-tray__item) {
-  background: color-mix(in srgb, var(--bg-elevated) 86%, var(--color-white) 14%);
-  box-shadow:
-    0 2px 5px color-mix(in srgb, var(--color-black) 18%, transparent),
-    0 1px 3px color-mix(in srgb, var(--color-black) 12%, transparent);
-}
+/* ---- part-0069.css (from base.css, layout.css, components.css, animations.css) ---- */
 
-.btn:active:not(:disabled):not(.rack-bottom-tile-cell):not(.app-bottom-center-controls__menu-btn):not(
-    .panel--bot-exposures__hint
-  ):not(.app-menu-tray__item) {
-  transition: none;
-  transform: scale(0.98);
-  box-shadow:
-    inset 3px 3px 7px rgba(0, 0, 0, 0.35),
-    inset -2px -2px 5px rgba(255, 255, 255, 0.12);
-}
 
-.btn:disabled,
-.btn--primary:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-  box-shadow: none;
-  filter: grayscale(0.35);
-}
 
-/* Bot toolbar + menu: skip global .btn:disabled wash so palette stays readable. */
-.panel--bot-exposures__toolbar-well .btn:disabled:not(.panel--bot-exposures__clear),
-.app-bottom-center-controls__menu-btn:disabled {
-  opacity: 0.5;
-  filter: none;
-}
-
-.btn--primary:disabled:hover {
-  box-shadow: none;
-}
-
-/* Discard-phase: default fill overridden on main rack (teal c12-14 rule below). */
-.btn--discard {
-  background: var(--code-bg);
-  color: var(--text-h);
-}
-
-/* After `.btn` so padding/radius don’t widen controls past their grid tracks (Pass under 13–14). */
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell {
-  min-width: 0;
-  /* Same `min(fs, f×tile-w)` as bot toolbar (see `--rack-control-label-fs` in `:root`). */
-  border-radius: var(--rack-tile-btn-border-radius);
-  border: none;
-  white-space: nowrap;
-  /* Base `.btn` uses a soft drop-shadow that reads as a border next to the tile row */
-  box-shadow: none;
-}
-
-/* Sort + Undo: 1-tile slot, slightly tighter than Pass / other actions. */
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1,
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c2 {
-  font-size: var(--rack-control-label-fs-tight);
-}
-
-/* Same inner-face metrics as the general `.rack-bottom-tile-cell` block above (see :root). */
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1,
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c2,
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c3 {
-  width: var(--rack-tile-btn-inner-1);
-  max-width: var(--rack-tile-btn-inner-1);
-  margin-inline-start: var(--rack-tile-face-bw);
-  justify-self: start;
-}
-
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c4-5,
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7,
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c8-9,
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c10-11,
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c7-8,
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c9-10,
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c11-12,
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c13-14 {
-  width: var(--rack-tile-btn-inner-2);
-  max-width: var(--rack-tile-btn-inner-2);
-  margin-inline-start: var(--rack-tile-face-bw);
-  justify-self: start;
-}
-
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c3-5,
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c9-11,
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14 {
-  width: var(--rack-tile-btn-inner-3);
-  max-width: var(--rack-tile-btn-inner-3);
-  margin-inline-start: var(--rack-tile-face-bw);
-  justify-self: start;
-}
-
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1-7,
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c8-14 {
-  width: var(--rack-tile-btn-inner-7);
-  max-width: var(--rack-tile-btn-inner-7);
-  margin-inline-start: var(--rack-tile-face-bw);
-  justify-self: start;
-}
-
-/*
- * Hand row: hand tiles are borderless and fill each slot (--rack-tile-w). The rules above size
- * buttons to the *inner* face of a bordered .tile-face; in the hand panel, stretch to the full
- * grid area so left/right edges line up with the tile faces in the hand row.
- */
-.panel--hand .rack-bottom-bar--tile-grid > .rack-bottom-tile-cell,
-.panel--hand .rack-bottom-bar--tile-grid > .btn.rack-bottom-tile-cell {
+.panel--hand .rack-bottom-bar--wall-game > .rack-bottom-tile-cell,
+.panel--hand .rack-bottom-bar--wall-game > .btn.rack-bottom-tile-cell {
   width: 100%;
   max-width: none;
   margin-inline-start: 0;

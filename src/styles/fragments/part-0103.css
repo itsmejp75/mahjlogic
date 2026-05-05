@@ -1,229 +1,88 @@
 
 
-/* ---- part-0107.css (from base.css, layout.css, components.css, animations.css) ---- */
+/* ---- part-0104.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
 
-.app-menu-modal__section-rule {
-  margin: 0;
+/* ---- part-0108.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* When Suggested list is open, keep the same face color; drop shadow for a flatter “pressed” read. */
+.btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open {
+  background: #9a5fab;
+  color: var(--color-white);
+  box-shadow: none;
 }
 
-.app-menu-modal__row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  justify-items: start;
-  align-content: center;
-  column-gap: 0.9rem;
-  min-width: 0;
-  box-sizing: border-box;
-}
-
-.app-menu-modal__row--toggle {
-  flex-shrink: 0;
-  align-self: stretch;
-  width: 100%;
-  min-height: auto;
-  padding-block: 0.24rem;
-  contain: layout;
-}
-
-.app-menu-modal__label {
-  font-size: var(--app-ui-control-fs, 0.9rem);
-  font-weight: 500;
-  line-height: 1.3;
-  text-align: left;
-  color: var(--text-h, var(--fg));
-  min-width: 0;
-  transform: none;
-  transition: none;
-}
-
-.app-menu-modal__toggle {
-  /* Switch first (left), label in the next column. */
-  width: auto;
-  min-width: 0;
-  padding-left: 0;
-  padding-right: 0;
-  justify-content: center;
-}
-
-/* Row hovers must not move label or switch (some UAs repaint text on color transition) */
-.app-menu-modal__row--toggle:hover {
-  transform: none;
-}
-.app-menu-modal__row--toggle:hover .app-menu-modal__label {
-  transform: none;
-  color: var(--text-h, var(--fg));
-}
-
-.app-menu-modal__subhead {
-  margin: 0.35rem 0 0.1rem;
-  font-size: var(--app-ui-control-fs-xs);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-muted, var(--window-fg-muted));
-  line-height: 1.3;
-}
-
-.app-menu-modal__diff-row {
-  padding: 0.02rem 0 0.08rem;
-  justify-content: flex-end;
-}
-
-.app-menu-tray__item {
-  width: 100%;
-  font-family: 'Figtree', var(--sans);
-  min-height: var(--rack-action-touch-min-h);
-  padding: 0.2rem 0.3rem;
-  font-size: var(--rack-bottom-action-fs);
-  font-weight: 500;
-  border-radius: var(--rack-tile-btn-border-radius);
-  white-space: nowrap;
-  line-height: var(--btn-line-height);
-  text-transform: uppercase;
-  letter-spacing: var(--btn-letter-spacing);
-}
-
-/* Toggle row variant (slider controls override padding in modal rules above) */
-.app-menu-tray__item--toggle {
-  justify-content: space-between;
-  gap: 0.55rem;
-  padding-left: 0.55rem;
-  padding-right: 0.45rem;
-}
-
-.app-menu-modal .app-menu-tray__item--toggle.app-menu-tray__item--switch {
-  justify-content: center;
-  gap: 0;
-  padding-left: 0;
-  padding-right: 0;
-}
-
-.app-menu-tray__divider {
-  height: 1px;
-  background: color-mix(in srgb, var(--border) 60%, transparent);
-  margin: 0.15rem 0.15rem;
-}
-
-.app-menu-tray__diff-row {
+/* ── Suggested Hands: outer = fixed slot (slide Y only). Painted shell = .suggested-hands-popup__user-shift (moves with drag). */
+.suggested-hands-popup {
+  position: fixed;
+  /* `left` / `right` are set in JS so the left can include a drag offset (see `suggestedPanelLeftDelta`). */
+  right: calc(var(--app-h-pad) + var(--bot-panel-outer-w));
+  /* `top` from the bottom edge of the rack action shell (or discard top as fallback);
+     `bottom` from discardTrackerPanelRef. No CSS fallback — avoids a full-viewport flash. */
+  z-index: 300;
+  /* Tokens (inherit to inner shell and children) */
+  --text-h: var(--window-fg);
+  --text: var(--window-fg-muted);
+  --bg: var(--window-surface);
+  --bg-elevated: var(--window-surface);
+  --border: var(--window-border);
+  --code-bg: color-mix(in srgb, var(--window-fg) 11%, var(--window-surface));
+  --panel-lower-header-fade-h: clamp(3rem, 11vw, 4.5rem);
+  /* Shared by resize handles (inner box is the border for arc math). */
+  --suggested-popup-radius: 0.75rem;
+  --suggested-popup-resize-stroke: 2px;
+  --suggested-popup-edge-inset: 0.14rem;
+  --suggested-popup-fillet-r: calc(
+    var(--suggested-popup-radius) - var(--suggested-popup-edge-inset)
+  );
+  --suggested-popup-resize-inset: 0.12rem;
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-  padding: 0.1rem 0.1rem 0.25rem;
+  flex-direction: column;
+  min-height: 0;
+  /* Hidden below viewport until --open */
+  transform: translateY(calc(100% + 2rem));
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.18s ease,
+    visibility 0s linear 0.3s;
+  pointer-events: none;
 }
 
-.app-menu-tray__diff-btn {
-  box-sizing: border-box;
-  flex: 1 1 20%;
-  min-width: 0;
-  font-size: var(--app-ui-control-fs-xs);
-  font-weight: 600;
-  padding: 0.35rem 0.2rem;
-  line-height: 1.2;
-  text-transform: none;
-  letter-spacing: 0.02em;
-  background: color-mix(in srgb, var(--fg) 8%, transparent);
-  color: var(--fg);
-  border: 1.5px solid color-mix(in srgb, var(--border) 60%, var(--fg) 18%);
-  transition: border-color 0.14s ease, background 0.14s ease, box-shadow 0.14s ease, transform 0.12s ease;
+/*
+ * Inner content area — flush under the popup's rounded frame so the sticky column header
+ * background reaches the popup window edges. Border, radius, and inline padding are stripped
+ * here (and again in the `.dark-tray-rim` override below) — the outer `.suggested-hands-popup__user-shift`
+ * still provides the visible frame and rounding via its `border` + `overflow: hidden`.
+ */
+.suggested-hands-popup .panel--hands {
+  background: var(--window-inner-surface);
+  margin: 0;
+  max-height: none;
+  /* Positioning context for the right-slide filter tray */
+  position: relative;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Run edge-to-edge under the popup frame; rails on the hands-sheet collapse to 0 below. */
+  padding-inline: 0;
+  border-radius: 0;
+  --hands-panel-pad-x: 0px;
 }
 
-.app-menu-tray__diff-btn:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--fg) 12%, transparent);
-}
-
-/* In settings modal: all four options share size; unselected vs selected paint split below (specificity) */
-.app-menu-modal .app-menu-tray__diff-btn {
-  min-height: 2.5rem;
-  padding: 0.42rem 0.3rem;
-  font-size: max(0.8125rem, var(--app-ui-control-fs-xs));
-  font-weight: 700;
-  border-radius: 0.42rem;
-  transition: border-color 0.14s ease, background-color 0.14s ease;
-}
-
-.app-menu-modal .app-menu-tray__diff-btn:not(.app-menu-tray__diff-btn--on) {
-  background: var(--app-menu-sort-surface, var(--color-slate-mid));
-  color: var(--color-white);
-  border: 1.5px solid var(--app-menu-rim-hairline, color-mix(in srgb, var(--color-white) 18%, #1f2429));
-  text-shadow: none;
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--color-black) 22%, transparent);
-}
-
-/* Unselected: same family as Sort, lighter on hover */
-.app-menu-modal .app-menu-tray__diff-btn:hover:not(:disabled):not(.app-menu-tray__diff-btn--on) {
-  border-color: color-mix(in srgb, var(--color-white) 32%, #2d3339);
-  background: var(--app-menu-sort-surface-hover, color-mix(in srgb, var(--color-white) 7%, var(--color-slate-mid)));
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--color-white) 10%, transparent),
-    0 2px 5px color-mix(in srgb, var(--color-black) 16%, transparent);
-  transform: none;
-}
-
-/* Selected: lighter “lit” cap on the same base (no green) */
-.app-menu-modal .app-menu-tray__diff-btn.app-menu-tray__diff-btn--on,
-.app-menu-modal .app-menu-tray__diff-btn.app-menu-tray__diff-btn--on:hover:not(:disabled) {
-  background: var(--app-menu-sort-surface-emphasis, color-mix(in srgb, var(--color-white) 12%, var(--color-slate-mid)));
-  color: var(--color-white);
-  border: 1.5px solid color-mix(in srgb, var(--color-white) 34%, #3d4650);
-  text-shadow: 0 1px 0 color-mix(in srgb, var(--color-black) 22%, transparent);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--color-white) 14%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--color-white) 12%, transparent),
-    0 2px 6px color-mix(in srgb, var(--color-black) 20%, transparent);
-  transform: none;
-}
-
-.app-menu-modal .app-menu-tray__diff-btn.app-menu-tray__diff-btn--on:hover:not(:disabled) {
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--color-white) 18%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--color-white) 16%, transparent),
-    0 3px 8px color-mix(in srgb, var(--color-black) 24%, transparent);
-}
-
-.app-bottom-center-controls__menu-btn {
-  position: absolute;
-  top: 0;
-  left: 0;
-  box-sizing: border-box;
-  height: var(--suggested-tab-h);
-  width: var(--menu-btn-w);
-  padding: 0 0.72rem;
-  border-radius: 0.7rem;
-  border: none;
-  background: #0f52ba;
-  color: var(--color-white);
-  font-family: 'Figtree', var(--sans);
-  font-size: var(--app-ui-control-fs);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: var(--btn-letter-spacing);
-  cursor: pointer;
-  isolation: isolate;
-  /* Same as `.btn`: symmetric horizontal shadow so label doesn’t “creep” left vs glow on hover */
-  box-shadow:
-    0 2px 4px color-mix(in srgb, var(--color-black) 16%, transparent),
-    0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);
-  transition: box-shadow 0.14s ease, background 0.14s ease;
-  z-index: 2;
-  transform: none;
-}
-
-/* Unopened Menu: keep hover flat — no rim. */
-.app-bottom-center-controls__menu-btn:hover:not(:disabled):not(.app-bottom-center-controls__menu-btn--open) {
-  box-shadow:
-    0 2px 4px color-mix(in srgb, var(--color-black) 16%, transparent),
-    0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);
-  transform: none;
-}
-
-.app-bottom-center-controls__menu-btn--open,
-.app-bottom-center-controls__menu-btn--open:hover:not(:disabled) {
-  background: color-mix(in srgb, #22c55e 16%, #0f52ba);
-  box-shadow:
-    0 2px 4px color-mix(in srgb, var(--color-black) 16%, transparent),
-    0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);
-  transform: none;
+.suggested-hands-popup--open {
+  transform: translateY(0);
+  opacity: 1;
+  visibility: visible;
+  transition:
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.22s ease,
+    visibility 0s linear 0s;
+  pointer-events: auto;
 }

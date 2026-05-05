@@ -4,8 +4,47 @@
 
 
 
-.rack-stage__rack-top {
-  min-width: 0;
+/* ---- part-0014.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* Exposure row fills the shared column width — centering is handled by rack-stage__rack-col. */
+.panel--hand .rack-stage__rack-top {
+  align-self: stretch;
+  width: 100%;
+}
+
+.panel--hand .rack-stage__rack-top .exposure-rack {
+  --rack-tile-w: calc(var(--hand-rack-tile-w) * var(--hand-rack-tile-scale));
+  --rack-tile-h: calc(var(--hand-rack-tile-h) * var(--hand-rack-tile-scale));
+  position: relative;
+  z-index: 1;
+}
+
+.panel--hand .rack-stage__rack-top .exposure-rack__watermark {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}
+
+/* Melds/slots above tray rim ::after (z-index 1); see part-0120. */
+.panel--hand .rack-stage__rack-top .exposure-rack > *:not(.exposure-rack__watermark) {
   position: relative;
   z-index: 2;
+}
+
+/* ---- part-0015.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* MahjLogic watermark — behind exposure tiles (see `.exposure-rack__slot` z-index). */
+.panel--hand .rack-stage__rack-top .exposure-rack__watermark .rack-logo-watermark {
+  /* Parent uses shared `.flex-center` — without this, the span shrink-wraps to the SVG’s intrinsic size. */
+  flex: 1 1 auto;
+  align-self: stretch;
+  width: 100%;
+  min-width: 0;
 }

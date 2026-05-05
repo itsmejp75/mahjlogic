@@ -1,68 +1,65 @@
 
 
-/* ---- part-0070.css (from base.css, layout.css, components.css, animations.css) ---- */
+/* ---- part-0069.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
 
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:hover:not(:disabled) {
+/* ---- part-0071.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* Sides/top use window inset; bottom strip matches other tray dividers (`--play-tray-h-divider`). */
+.panel.panel--hand {
+  padding:
+    var(--hand-window-pad-inline)
+    var(--hand-window-pad-inline)
+    var(--play-tray-h-divider);
+}
+
+/* Discard + bot: one token from `.app-play-split` (see `--play-split-tray-panel-padding-bottom`). */
+.app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker,
+.app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures {
+  padding-bottom: var(--play-split-tray-panel-padding-bottom);
+}
+
+/* Dark gray panel shells in the app; scoped tokens for type and controls. Tile faces keep suit colors. */
+.app .panel,
+.app .app-opponents-rail,
+.app .coach-panel {
+  --text-h: var(--window-fg);
+  --text: var(--window-fg-muted);
+  --bg: var(--window-surface);
+  --bg-elevated: var(--window-surface);
+  --border: var(--window-border);
+  --code-bg: color-mix(in srgb, var(--window-fg) 11%, var(--window-surface));
+  background: var(--window-surface);
+  border-color: var(--window-border);
+  color: var(--window-fg);
+}
+
+.app .panel.panel--charleston {
+  background: var(--window-surface);
+}
+
+.app .panel.panel--main-game {
+  background: var(--window-surface);
+}
+
+/* Hand + discard + bot panels: flat surface (no top fade band above the exposure row). */
+.app .panel.panel--discard-tracker,
+.app .panel.panel--bot-exposures,
+.app .panel.panel--hand {
+  background: var(--window-surface);
+}
+
+.app .tile-face.tile--wind {
+  background: var(--tg-wind, var(--wind-tile-bg));
+}
+
+/* Empty tile wells (not the flat window fill). */
+.app .panel .exposure-rack__slot--empty::before,
+.app .app-opponents-rail .exposure-rack__slot--empty::before {
+  border-color: color-mix(in srgb, var(--color-white) 15%, var(--window-border));
+  background: color-mix(in srgb, var(--color-black) 12%, var(--window-surface));
   box-shadow: none;
-}
-
-/* No pressed/inset or hover tint — true fills stay visible while you tune palette. */
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:active:not(:disabled) {
-  transform: none;
-  box-shadow: none;
-}
-
-/* Unavailable: lighter opacity only, no gray filter, keep label readable on colored faces. */
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:disabled {
-  opacity: 0.5;
-  filter: none;
-  border: none;
-  box-shadow: none;
-}
-
-/* Charleston PASS only: keep full brightness when not passable (overrides rule above; HANDS stays dimmed when disabled). */
-.rack-bottom-bar--charleston .btn.charleston-pass-btn.rack-bottom-tile-cell:disabled:not(.suggested-hands-tab) {
-  opacity: 1;
-}
-
-/* Main rack: Ignore / Discard — same teal as Pass (#007791). */
-.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:not(:disabled) {
-  background: #007791;
-  color: var(--color-white);
-}
-
-/* Inactive: dim Ignore only — Discard (`.btn--discard`, east-discard) stays full-strength. */
-.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:disabled:not(.btn--discard) {
-  background: #007791;
-  color: var(--color-white);
-  opacity: 0.5;
-}
-
-.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14.btn--discard:disabled {
-  background: #007791;
-  color: var(--color-white);
-  opacity: 1;
-  filter: none;
-}
-
-/* Main rack: Swap (joker swap) — #6A0DAD */
-.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7:not(:disabled) {
-  background: #6a0dad;
-  color: var(--color-white);
-}
-
-.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7:disabled {
-  background: #6a0dad;
-  color: var(--color-white);
-  opacity: 0.5;
-}
-
-.panel {
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  padding: 1rem clamp(0.75rem, 2.2vw, 1.5rem);
-  margin-bottom: 1rem;
-  background: var(--bg-elevated);
 }

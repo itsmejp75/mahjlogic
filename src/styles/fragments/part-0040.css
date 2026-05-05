@@ -1,44 +1,31 @@
 
 
-/* ---- part-0042.css (from base.css, layout.css, components.css, animations.css) ---- */
+/* ---- part-0041.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
 
-/*
- * Discard panel: full column width. Tray width uses `--discard-tray-gap-to-bot` (horizontal nudge only).
- */
-.app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker {
-  --discard-tray-gap-to-bot: 0px;
-  flex: 1 1 0;
-  min-height: 0;
-  /* Separator strip to bot + `--discard-tray-right-pull` (tune on `.app-play-split`). */
-  align-self: flex-start;
-  width: calc(100% - var(--play-split-discard-bot-separator) - var(--discard-tray-right-pull));
-  max-width: 100%;
-  padding-inline-end: 0;
-  max-height: none;
-  overflow-y: auto;
-  box-sizing: border-box;
-  border: none;
-  border-radius: 0;
-}
+/* ---- part-0043.css (from base.css, layout.css, components.css, animations.css) ---- */
 
-/* Bot exposures: fill column height. Grid (toolbar auto row + body `minmax(0, 1fr)` row)
-   guarantees the body cell has a definite height to shrink into. */
-.app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures {
-  flex: 1 1 0;
-  min-height: 0;
-  width: var(--bot-panel-outer-w);
-  max-height: none;
-  /* Let `.panel--bot-exposures__body` be the only clip surface so the menu tray can pop above
-     the toolbar (absolute; `bottom: calc(100% + …)`) without being cut off. */
-  overflow: visible;
-  box-sizing: border-box;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  grid-template-columns: minmax(0, 1fr);
+
+
+/* ── Bot exposures side panel (right of discard tracker) ── */
+.panel--bot-exposures {
+  display: flex;
+  flex-direction: column;
   gap: var(--play-tray-h-divider);
+  --bot-exposure-row-count: 3;
+  --bot-toolbar-track-h: calc(2 * var(--bot-exposure-inner-pad) + var(--rack-action-touch-min-h));
+  --bot-body-top-pad: 0px;
+  --bot-body-bottom-pad: 0px;
+  /* Row↔row gaps match East rack tray dividers (`--play-tray-h-divider`). */
+  --bot-body-gap: var(--play-tray-h-divider);
+  /* `--bot-exposure-tile-scale` is set on `.app-play-split` (drives bot column + these faces). */
+  /* Small extra only — large bleed was crowding the tray rim / shadows vs tile height. */
+  --bot-exposure-tray-vert-bleed: 0.08rem;
+  --bot-tile-h-width-fit: calc(var(--bot-tile-h-ref) * var(--bot-exposure-tile-scale));
+  --bot-tile-h-height-fit: var(--bot-tile-h-width-fit);
+  --rack-tile-h: min(var(--bot-tile-h-width-fit), var(--bot-tile-h-height-fit));
+  --rack-tile-w: calc(var(--rack-tile-h) / 1.3333);
+  --rack-panel-inset: 0;
+  --exposure-slot-h: var(--rack-tile-h);
 }

@@ -2,17 +2,6 @@
 
 
 
-@keyframes charleston-pass-fly-out-right {
-  from {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateX(220%);
-    opacity: 0;
-  }
-}
-
 @keyframes charleston-pass-fly-out-across {
   from {
     transform: translateY(0);
@@ -21,17 +10,6 @@
   to {
     transform: translateY(-220%);
     opacity: 0;
-  }
-}
-
-@keyframes exposure-incoming-discard-fly-in-left {
-  from {
-    transform: translateX(-220%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
   }
 }
 

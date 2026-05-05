@@ -2,13 +2,14 @@
 /**
  * Rasterize SVG → PNGs via Puppeteer + macOS `sips`.
  *
- * App icons (default): PWA + Capacitor — uses src/assets/mahjlogic-app-icon.svg by default
- * (Splash: “Mahj Logic Icon.svg”). Tight inset so the mark fills launcher tiles; override with
- * APP_ICON_SAFE_INSET_PERCENT or ICON_SAFE_INSET_PERCENT.
+ * App icons (default): PWA + Capacitor — uses src/assets/mahjlogic-app-icon.svg (same artwork as
+ * the tab favicon SVG; keep in sync with mahjlogic-favicon.svg). Raster canvas background is
+ * always #1a1a1a so manifest / install UI icons match the brand chrome.
  *
- * Tab favicon only: --favicon-only uses src/assets/mahjlogic-favicon.svg by default
- * (Splash: “MahjLogic logo only.svg”). Minimal inset so the wordmark is as large as possible in
- * the tab; override with FAVICON_SAFE_INSET_PERCENT or ICON_SAFE_INSET_PERCENT.
+ * Tab favicon only: --favicon-only uses src/assets/mahjlogic-favicon.svg; copies to
+ * public/favicon.svg (typically transparent). PNG fallbacks come from the same raster step.
+ *
+ * Inset: Favicon defaults (FAVICON_SAFE_INSET_PERCENT) vs app (APP_ICON_SAFE_INSET_PERCENT).
  *
  *   npm run icon:app
  *   npm run icon:favicon
@@ -35,8 +36,10 @@ const svgPath = path.resolve(
     ),
 )
 const masterPng = path.join(root, '.tmp-app-icon-master.png')
+/** Install / launcher PNG background (matches manifest theme_color treatment). */
+const ICON_CANVAS_BG = '#1a1a1a'
 
-/** Edge padding (% of 1024 master). Favicon defaults smaller for max tab size; app defaults tighter than legacy 8% to fill tiles. */
+/** Edge padding (% of 1024 master). Favicon defaults smaller for max tab size; app inset leaves a slim margin so icons don’t kiss launcher / install-chip edges. */
 function safeInsetPercent() {
   if (faviconOnly) {
     return Number(
@@ -44,7 +47,7 @@ function safeInsetPercent() {
     )
   }
   return Number(
-    process.env.APP_ICON_SAFE_INSET_PERCENT ?? process.env.ICON_SAFE_INSET_PERCENT ?? 3,
+    process.env.APP_ICON_SAFE_INSET_PERCENT ?? process.env.ICON_SAFE_INSET_PERCENT ?? 5,
   )
 }
 function sipsZ(w, h, input, output) {
@@ -76,7 +79,7 @@ async function rasterMaster() {
   const inset = safeInsetPercent()
   const pad = `${inset}%`
   await page.setContent(
-    `<!DOCTYPE html><html><body style="margin:0;background:#1a1a1a;box-sizing:border-box;width:1024px;height:1024px;padding:${pad};display:flex;align-items:center;justify-content:center;">
+    `<!DOCTYPE html><html><body style="margin:0;background:${ICON_CANVAS_BG};box-sizing:border-box;width:1024px;height:1024px;padding:${pad};display:flex;align-items:center;justify-content:center;">
 <img src="${dataUrl}" alt="" style="width:100%;height:100%;object-fit:contain;object-position:center center"/></body></html>`,
     { waitUntil: 'networkidle0' },
   )

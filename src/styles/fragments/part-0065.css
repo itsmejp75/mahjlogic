@@ -1,147 +1,125 @@
 
 
-/* ---- part-0067.css (from base.css, layout.css, components.css, animations.css) ---- */
+/* ---- part-0066.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
 
-.app[data-color-buttons='off'] .btn--danger:not(:disabled),
-.app[data-color-buttons='off'] .btn--danger:disabled {
-  background: var(--color-slate-mid);
-  color: var(--color-white);
-  border: none;
-  filter: none;
+/* ---- part-0068.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* Default buttons only — rack / bot toolbar / menu use flat fills (tweak colors without hover wash). */
+.btn:hover:not(:disabled):not(.rack-bottom-tile-cell):not(.app-bottom-center-controls__menu-btn):not(
+    .panel--bot-exposures__clear
+  ):not(.panel--bot-exposures__hint):not(.suggested-hands-tab):not(.app-menu-tray__item) {
+  background: color-mix(in srgb, var(--bg-elevated) 86%, var(--color-white) 14%);
+  box-shadow:
+    0 2px 5px color-mix(in srgb, var(--color-black) 18%, transparent),
+    0 1px 3px color-mix(in srgb, var(--color-black) 12%, transparent);
 }
 
-.app[data-color-buttons='off'] .btn--discard:not(:disabled),
-.app[data-color-buttons='off'] .btn--discard:disabled {
-  background: var(--color-slate-mid);
-  color: var(--color-white);
-  filter: none;
+.btn:active:not(:disabled):not(.rack-bottom-tile-cell):not(.app-bottom-center-controls__menu-btn):not(
+    .panel--bot-exposures__hint
+  ):not(.app-menu-tray__item) {
+  transition: none;
+  transform: scale(0.98);
+  box-shadow:
+    inset 3px 3px 7px rgba(0, 0, 0, 0.35),
+    inset -2px -2px 5px rgba(255, 255, 255, 0.12);
 }
 
-/* Main hand rack: Ignore–Discard, Swap, Mah Jongg (above also covers MJ). */
-.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:not(:disabled),
-.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:disabled:not(.btn--discard),
-.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14.btn--discard:disabled {
-  background: var(--color-slate-mid);
-  color: var(--color-white);
-}
-
-.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7:not(:disabled),
-.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7:disabled {
-  background: var(--color-slate-mid);
-  color: var(--color-white);
-}
-
-/* Charleston: Pass (teal / HANDS purple) + Stop. */
-.app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):not(:disabled),
-.app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):disabled {
-  background: var(--color-slate-mid);
-  color: var(--color-white);
-  filter: none;
-  opacity: 1;
-  cursor: inherit;
-}
-
-.app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn.suggested-hands-tab:not(:disabled) {
-  background: var(--color-slate-mid);
-  color: var(--color-white);
-  filter: none;
-}
-
-.app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn.suggested-hands-tab:disabled {
-  background: var(--color-slate-mid);
-  color: var(--color-white);
-  filter: none;
-  opacity: 0.5;
-  box-shadow: none;
+.btn:disabled,
+.btn--primary:disabled {
   cursor: not-allowed;
+  opacity: 0.45;
+  box-shadow: none;
+  filter: grayscale(0.35);
 }
 
-.app[data-color-buttons='off'] .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c9-11.charleston-stop-btn:not(:disabled) {
-  background: var(--color-slate-mid);
-  color: var(--color-white);
+/* Bot toolbar + menu: skip global .btn:disabled wash so palette stays readable. */
+.panel--bot-exposures__toolbar-well .btn:disabled:not(.panel--bot-exposures__clear),
+.app-bottom-center-controls__menu-btn:disabled {
+  opacity: 0.5;
+  filter: none;
 }
 
-.app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open {
-  background: var(--color-slate-mid);
-  color: var(--color-white);
+.btn--primary:disabled:hover {
   box-shadow: none;
 }
 
-/* Wall game hand bar: New Game. */
-.app[data-color-buttons='off'] .panel--hand .rack-bottom-bar--wall-game .btn.btn--primary:not(:disabled),
-.app[data-color-buttons='off'] .panel--hand .rack-bottom-bar--wall-game .btn.btn--primary:disabled {
-  background: var(--color-slate-mid);
-  color: var(--color-white);
-  filter: none;
+/* Discard-phase: default fill overridden on main rack (teal c12-14 rule below). */
+.btn--discard {
+  background: var(--code-bg);
+  color: var(--text-h);
 }
 
-/* End-game + wall overlay actions. */
-.app[data-color-buttons='off'] .wall-game-dialog__actions .btn--primary:not(:disabled),
-.app[data-color-buttons='off'] .wall-game-dialog__actions .btn--primary:disabled {
-  background: var(--color-slate-mid);
-  color: var(--color-white);
-  filter: none;
-}
-
-.app[data-color-buttons='off'] .charleston-error-dialog .btn--primary:not(:disabled),
-.app[data-color-buttons='off'] .charleston-error-dialog .btn--primary:disabled {
-  background: var(--color-slate-mid);
-  color: var(--color-white);
-  filter: none;
-}
-
-.app[data-color-buttons='off'] .wall-game-dialog__actions .btn--primary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-slate-mid) 86%, var(--color-white) 14%);
-  color: var(--color-white);
-}
-
-.app[data-color-buttons='off'] .charleston-error-dialog .btn--primary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-slate-mid) 86%, var(--color-white) 14%);
-  color: var(--color-white);
-}
-
-/* Bot column: clear (amber) + joker-swap hint toggle. */
-.app[data-color-buttons='off'] .panel--bot-exposures__toolbar-well .panel--bot-exposures__clear {
-  background: var(--color-slate-mid);
-  color: var(--color-white);
+/* After `.btn` so padding/radius don’t widen controls past their grid tracks (Pass under 13–14). */
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell {
+  min-width: 0;
+  /* Same `min(fs, f×tile-w)` as bot toolbar (see `--rack-control-label-fs` in `:root`). */
+  border-radius: var(--rack-tile-btn-border-radius);
   border: none;
+  white-space: nowrap;
+  /* Base `.btn` uses a soft drop-shadow that reads as a border next to the tile row */
+  box-shadow: none;
 }
 
-.app[data-color-buttons='off'] .panel--bot-exposures__toolbar-well .panel--bot-exposures__hint--on {
-  background: var(--color-slate-mid);
-  color: var(--color-white);
-  box-shadow:
-    0 2px 4px color-mix(in srgb, var(--color-black) 16%, transparent),
-    0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);
+/* Sort + Undo: 1-tile slot, slightly tighter than Pass / other actions. */
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c2 {
+  font-size: var(--rack-control-label-fs-tight);
 }
 
-/* Menu (blue) + open tint — align with neutral rack. */
-.app[data-color-buttons='off'] .app-bottom-center-controls__menu-btn:not(:disabled),
-.app[data-color-buttons='off'] .app-bottom-center-controls__menu-btn:disabled {
-  background: var(--color-slate-mid);
-  color: var(--color-white);
+/* Same inner-face metrics as the general `.rack-bottom-tile-cell` block above (see :root). */
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c2,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c3 {
+  width: var(--rack-tile-btn-inner-1);
+  max-width: var(--rack-tile-btn-inner-1);
+  margin-inline-start: var(--rack-tile-face-bw);
+  justify-self: start;
 }
 
-.app[data-color-buttons='off'] .app-bottom-center-controls__menu-btn--open,
-.app[data-color-buttons='off'] .app-bottom-center-controls__menu-btn--open:hover:not(:disabled) {
-  background: var(--color-slate-mid);
-  color: var(--color-white);
-  box-shadow:
-    0 2px 4px color-mix(in srgb, var(--color-black) 16%, transparent),
-    0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c4-5,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c8-9,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c10-11,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c7-8,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c9-10,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c11-12,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c13-14 {
+  width: var(--rack-tile-btn-inner-2);
+  max-width: var(--rack-tile-btn-inner-2);
+  margin-inline-start: var(--rack-tile-face-bw);
+  justify-self: start;
 }
 
-/* Exposure: Kong / Quint / Done — no green or amber emphasis. */
-.app[data-color-buttons='off'] .exposure-rack__call-action-btn--active {
-  border-color: color-mix(in srgb, var(--text-h) 28%, var(--border));
-  color: var(--text-h);
-  background: color-mix(in srgb, var(--border) 14%, transparent);
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c3-5,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c9-11,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14 {
+  width: var(--rack-tile-btn-inner-3);
+  max-width: var(--rack-tile-btn-inner-3);
+  margin-inline-start: var(--rack-tile-face-bw);
+  justify-self: start;
 }
 
-.app[data-color-buttons='off'] .exposure-rack__call-action-btn--done:not(:disabled) {
-  border-color: color-mix(in srgb, var(--text-h) 28%, var(--border));
-  color: var(--text-h);
-  background: color-mix(in srgb, var(--border) 14%, transparent);
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1-7,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c8-14 {
+  width: var(--rack-tile-btn-inner-7);
+  max-width: var(--rack-tile-btn-inner-7);
+  margin-inline-start: var(--rack-tile-face-bw);
+  justify-self: start;
+}
+
+/*
+ * Hand row: hand tiles are borderless and fill each slot (--rack-tile-w). The rules above size
+ * buttons to the *inner* face of a bordered .tile-face; in the hand panel, stretch to the full
+ * grid area so left/right edges line up with the tile faces in the hand row.
+ */
+.panel--hand .rack-bottom-bar--tile-grid > .rack-bottom-tile-cell,
+.panel--hand .rack-bottom-bar--tile-grid > .btn.rack-bottom-tile-cell {
+  width: 100%;
+  max-width: none;
+  margin-inline-start: 0;
+  justify-self: stretch;
 }

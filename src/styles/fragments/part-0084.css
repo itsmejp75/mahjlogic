@@ -1,32 +1,39 @@
 
 
-/* ---- part-0088.css (from base.css, layout.css, components.css, animations.css) ---- */
+/* ---- part-0085.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
 
-/* Meld boundaries: rely on parent `gap: var(--player-rack-face-gap)` (same as `.hand-row`) — no extra margin. */
-.exposure-rack__slot--meld-start {
-  margin-left: 0;
+/* ---- part-0089.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* Training: when dragging a hand tile within range, first empty cell shows Call affordance (teal, like pass / discard) */
+.app .panel--hand .exposure-rack__call-initiate-target--near.exposure-rack__slot--empty::before {
+  opacity: 0;
+  transition: opacity 0.12s ease;
 }
 
-.exposure-rack__slot--empty {
-  flex-shrink: 0;
-  border: none;
-  background: transparent;
-}
-
-.exposure-rack__slot--empty::before {
-  content: '';
-  display: block;
-  width: var(--rack-tile-w);
-  height: var(--rack-tile-h);
+.app .panel--hand .exposure-rack__call-initiate-target--near {
   border-radius: 0.35rem;
-  border: 1px solid color-mix(in srgb, var(--text-h) 35%, var(--border));
-  background: color-mix(in srgb, var(--color-black) 6%, var(--bg-elevated));
-  flex: 0 0 auto;
+  /* Match `.pass-box`: solid teal tint on `--window-surface` (same as Charleston pass box). */
+  border: 1px solid var(--coach-teal-border);
+  background: color-mix(in srgb, var(--coach-teal) 11%, var(--bg-elevated) 89%);
+  transition: background 0.15s ease, border-color 0.15s ease;
+  box-sizing: border-box;
 }
 
-/* Replaced first empty cell: wrapper must not add an extra flex item */
-.exposure-rack__first-empty-override {
-  display: contents;
+.app .panel--hand .exposure-rack__call-initiate-target--near.exposure-rack__call-initiate-target--over {
+  background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
+  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
+}
+
+/* Bot-turn incoming discard — same box chrome as call-initiate / pass-box */
+.panel--hand .exposure-rack__slot--incoming-discard {
+  justify-content: center;
+  box-sizing: border-box;
+  border: 1px solid var(--coach-teal-border);
+  background: color-mix(in srgb, var(--coach-teal) 11%, var(--bg-elevated) 89%);
+  border-radius: 0.38rem;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }

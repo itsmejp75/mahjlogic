@@ -1,57 +1,11 @@
 
 
-/*
- * ============================================================================
- * Container-query sizing for the entire hand panel + bot panel
- * ============================================================================
- *
- * Bug: `--hand-rack-tile-w = max(min, --hand-rack-usable-w / 14)` is viewport-derived
- *   (`play-fit-inline − 2*app-h-pad − 2*hand-window-pad-inline − 2*--rack-tray-inset-inline
- *   − 13*--player-rack-face-gap) / 14`). But the panel's rendered chrome uses different
- *   padding tokens (`--hand-rack-tray-inset-inline = 4 px` ≠ `--rack-tray-inset-inline =
- *   0.16–0.44 rem`) plus sub-pixel rounding, so 14 tiles + 13 gaps ends up wider than
- *   the actual rack rim. Same drift cascades into:
- *     - PASS / SORT / UNDO / 99 / MENU buttons (action-well buttons sized via `--app-ui-control-fs`
- *       and positioned via `--rack-pass-btn-left-from-rack-col`, both built from `--hand-rack-tile-w`)
- *     - Charleston pass-strip-tail green box (`width: 3 * --rack-tile-w + 2 * gap`)
- *     - Inline discard slot inside the Charleston row (`--rack-tile-w` driven)
- *     - HANDS / CLR HL / HINT toolbar (`max-width: --rack-col-outer-w` from `--hand-rack-tile-w`)
- *     - SOUTH / WEST / NORTH bot exposure tile rows (`--bot-tile-w-ref` from a similar viewport formula)
- *
- * Fix: each panel becomes a `container-type: inline-size` query container; the tile-size
- *   tokens become `100cqi`-based math. Then everything that derives from those tokens
- *   (button typography, button positions, panel widths) auto-aligns with the panel's
- *   *actual* inline width — no formula drift, no spill, every chrome resizes proportionally.
- *
- * Same pattern is already used by the suggested-hands tiles cell (see comment in
- *   `part-0086.css`: "Tile width = (combined-cell inline-size − 13 gaps) / 14").
- *
- * --- Hand panel ------------------------------------------------------------
- * `.panel--hand` is the natural container — its content box (`100cqi`) spans the
- * full play-column width that the rack, hand row, action well, and Charleston row
- * all share. Subtract the rack's own `padding-inline` (`--hand-rack-tray-inset-inline`,
- * 4 px each side) and 13 inter-tile gaps; divide by 14 for tile-w.
- */
-.panel--hand {
-  container-type: inline-size;
-  --hand-rack-tile-w: calc(
-    (100cqi - 2 * var(--hand-rack-tray-inset-inline) - 13 * var(--player-rack-face-gap)) / 14
-  );
-  --hand-rack-tile-h: calc(var(--hand-rack-tile-w) * 1.3333);
-}
+/* ---- part-0119.css (from base.css, layout.css, components.css, animations.css) ---- */
 
-/*
- * Per-row exact-fit overrides (defense-in-depth + handles the two-different-gap case):
- *   - Non-charleston rack + .hand-row use gap = `--player-rack-face-gap` (= 2 px).
- *   - Charleston-pass rack uses gap = `--rack-tile-gap` (= 1 px) — `:not(...)` in
- *     part-0095.css excludes Charleston from the player-rack-face-gap override.
- *
- * Setting `--rack-tile-w` here (in addition to the panel-level `--hand-rack-tile-w`)
- * locks each row to its own exact tile width and absorbs any sub-pixel drift between
- * `--hand-rack-tile-w * --hand-rack-tile-scale` (existing `.exposure-rack` rule) and
- * the row's inline content size.
- */
-.panel--hand .rack-stage__rack-top .exposure-rack,
+
+
+.panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass),
 .panel--hand .panel-hand-rack__hand-tray .hand-row {
-  container-type: inline-size;
+  --rack-tile-w: calc((100cqi - 13 * var(--player-rack-face-gap)) / 14);
+  --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
 }

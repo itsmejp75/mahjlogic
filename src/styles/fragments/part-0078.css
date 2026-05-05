@@ -1,12 +1,18 @@
 
 
-/* ---- part-0082.css (from base.css, layout.css, components.css, animations.css) ---- */
+/* ---- part-0079.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
 
-/* Only lift the single-line glyph above `::before` lustre. Stacked suit (rank + band) must keep
-   `position: absolute` from `.tile-face--rack-suit-stack` — a generic `> *` was overriding it. */
-.app[data-tile-graphics='designer'] .tile-face > .tile-face__glyph {
-  position: relative;
+/* ---- part-0083.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* Joker ring between polish and letter: keep ring above lustre, glyph above ring. */
+.app[data-tile-graphics='designer'] .tile-face.tile--joker::after {
   z-index: 1;
+}
+
+.app[data-tile-graphics='designer'] .tile-face.tile--joker .tile-face__glyph {
+  z-index: 2;
 }

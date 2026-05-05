@@ -1,71 +1,41 @@
 
 
-/* ---- part-0053.css (from base.css, layout.css, components.css, animations.css) ---- */
+/* ---- part-0052.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
 
-/* South / West / North: deep ink seat labels; stamped shadow like panel headers. */
-.panel--bot-exposures .bot-exposure-row__watermark {
-  right: 0;
-  padding-right: 12px;
-  text-align: right;
-  font-family: 'Figtree', var(--sans);
-  font-size: min(calc(var(--hand-rack-tile-w) * 0.64), 1.85rem);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #1e2329;
-  opacity: 1;
-  -webkit-text-stroke: 0;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
-  z-index: 2;
-}
+/* ---- part-0054.css (from base.css, layout.css, components.css, animations.css) ---- */
 
-.panel--bot-exposures .exposure-rack {
-  flex-wrap: nowrap;
-  justify-content: flex-start;
-  gap: var(--bot-exposure-tile-gap);
-  padding: 0;
-  margin-bottom: 0;
-  width: fit-content;
-  max-width: 100%;
-  position: relative;
-  z-index: 1;
-}
 
-.panel--bot-exposures .exposure-rack__slot {
-  justify-content: center;
-  align-items: center;
-  box-sizing: border-box;
-}
 
-/* Droppable meld wrappers (joker-swap active): use same inter-tile gap as the outer rack. */
-.panel--bot-exposures .exposure-rack__meld-drop {
-  gap: var(--bot-exposure-tile-gap);
-}
+/* Side-by-side: discard right edge is `--play-split-discard-bot-separator` from the visible bot
+   left edge (same as horizontal gaps between bot exposure row trays). Formula:
+     discard_width = left-col 100% − bot-stack-nudge − gap
+   (bot-stack-nudge is the leftward shift on __right-stack that defines the visible panel origin). */
+@media (min-width: 36.01rem) {
+  .app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker {
+    width: calc(
+      100%
+      - var(--bot-toolbar-exposure-nudge-left)
+      - var(--play-split-discard-bot-separator)
+      - var(--discard-tray-right-pull)
+      + 8px
+    );
+  }
 
-.app-play-split__left {
-  flex: 1 1 0;
-  width: 0; /* fills remaining space after the fixed-width bot panel */
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  box-sizing: content-box;
-  padding-left: 0px;
-  padding-right: 0px;
-  margin-left: 0px;
-  margin-right: -12px;
-  text-align: center;
-}
+  .app-dnd-frame .app-play-split > .app-play-split__right .app-play-split__right-stack {
+    margin-left: calc(-1 * var(--bot-toolbar-exposure-nudge-left));
+    /* Match discard column height: fill stretched `.app-play-split__right` so the bot panel’s outer
+       bottom lines up with `.panel--discard-tracker` (row `align-items: stretch`). */
+    width: var(--bot-panel-outer-w);
+    min-height: 100%;
+    height: 100%;
+    box-sizing: border-box;
+  }
 
-.app-play-split__right {
-  flex: 0 0 auto; /* bot column: fixed width; inner stack fills height */
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  /* `stretch` so `.app-play-split__right-stack` can use `height: 100%` and match the discard column’s
-     stretched cross-size; `flex-end` kept the stack short of the row height on some layouts. */
-  align-items: stretch;
+  .app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures {
+    height: 100%;
+    min-height: 0;
+    transform: none;
+  }
 }

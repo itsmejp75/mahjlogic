@@ -1,89 +1,38 @@
 
 
-/* ---- part-0064.css (from base.css, layout.css, components.css, animations.css) ---- */
+/* ---- part-0063.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
 
-.panel__title-row--discard-tracker {
-  gap: 0.5rem;
-  align-items: baseline;
-}
+/* ---- part-0065.css (from base.css, layout.css, components.css, animations.css) ---- */
 
-.discard-tracker__status {
-  margin: 0;
-  flex: 1 1 auto;
-  min-width: 0;
-  padding-inline-end: calc(1px + var(--bot-exposure-inner-pad));
-  font-size: 0.78rem;
-  line-height: 1.35;
-  font-weight: 600;
-  color: var(--text-h);
-  text-align: right;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 
-.discard-tracker__content {
-  flex: 1 1 0;
+
+.app-rack-stage {
+  /* Only as tall as the hand panel — no extra flex stretch above the rack */
+  flex: 0 0 auto;
   min-height: 0;
-  position: relative;
-  overflow: hidden;
-  background: var(--window-inner-surface);
-  border-radius: var(--tile-tray-shell-radius);
-}
-
-/*
- * Play-split discard tray: width + bot gutter; container so 15 tiles + gaps fill inner tray evenly
- * (drop zone uses same --bot-exposure-inner-pad as tile↔tray edge).
- */
-.app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker .discard-tracker__content {
+  justify-content: flex-end;
+  width: 100%;
+  max-width: var(--app-play-fit-inline);
+  margin-inline: auto;
   box-sizing: border-box;
-  width: calc(100% - var(--discard-tray-gap-to-bot) - var(--play-split-lower-box-edge-inset));
-  margin-inline-start: var(--play-split-lower-box-edge-inset);
-  /* Slight negative margin nudges the tray content a few px past its panel's
-     trailing edge so the tray rim sits flush against the column gutter. */
-  margin-inline-end: calc(var(--discard-tray-gap-to-bot) - 5px);
-  container-type: inline-size;
-  container-name: discard-tray;
+  padding-inline: var(--app-h-pad);
+  /* Flat fill — top air comes from `.app-main` padding, not a gradient band. */
+  background: var(--window-surface);
+  position: relative;
 }
 
-/*
- * Fallback when container queries are unavailable: blend bot ref with a hand-tied cap
- * (15 slots in a 14-wide row → ~14/15 of `--hand-rack-tile-w` at equal track width).
- */
-.panel--discard-tracker .discard-pile {
-  --rack-tile-w: min(var(--bot-tile-w-ref), calc(var(--hand-rack-tile-w) * 14 / 15));
-  --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
+/* Rack stage itself stays clean; bottom inset shadow lives on the inner hand wrapper. */
+.app-dnd-frame .app-rack-stage {
+  box-shadow: none;
 }
 
-/* 15 columns + 14 gaps across tray inner width; symmetric inset via drop-zone inset. */
-@container discard-tray (min-width: 0px) {
-  .panel--discard-tracker .discard-pile {
-    /* Fit tray; cap by the same hand scale so tiles resize with the East rack, not a separate curve. */
-    --rack-tile-w: min(
-      max(
-        1px,
-        calc(
-          (
-            100cqw
-            - 2 * var(--bot-exposure-inner-pad)
-            - 14 * var(--rack-tile-gap)
-          ) / 15
-        )
-      ),
-      calc(var(--hand-rack-tile-w) * 14 / 15)
-    );
-    --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
-  }
-}
-
-.discard-tracker__content .discard-pile-drop-zone {
-  position: absolute;
-  inset: var(--bot-exposure-inner-pad);
-  overflow-y: auto;
-  overflow-x: hidden;
-  overscroll-behavior-y: contain;
-  -webkit-overflow-scrolling: touch;
-  z-index: 1;
+.app-rack-stage .panel--hand {
+  width: 100%;
+  max-width: 100%;
+  align-self: stretch;
+  margin-bottom: 0;
+  border: none;
+  border-radius: 0;
 }

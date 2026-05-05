@@ -4,25 +4,11 @@
 
 
 
-.panel-hand-rack {
-  width: 100%;
-  min-width: 0;
-}
+/* ---- part-0008.css (from base.css, layout.css, components.css, animations.css) ---- */
 
-.panel-hand-rack__column {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-  max-width: 100%;
-  /* Rare extra siblings; vertical tray dividers use `--play-tray-h-divider`. */
+
+
+.panel--hand .panel-hand-rack__hand-tray {
+  /* Match the vertical strip between exposure rack and hand (same as `.rack-stage__rack-col`). */
   gap: var(--play-tray-h-divider);
-}
-
-/* Hand row + tile-aligned action bar share one width (matches mock). */
-.panel-hand-rack__hand-tray {
-  width: 100%;
-  max-width: 100%;
-  align-self: stretch;
-  gap: var(--rack-tile-gap);
 }

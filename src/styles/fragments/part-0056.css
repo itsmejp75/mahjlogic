@@ -1,11 +1,25 @@
 
 
-/* ---- part-0058.css (from base.css, layout.css, components.css, animations.css) ---- */
+/* ---- part-0057.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
 
-.panel--bot-exposures__body > .panel__title-row {
-  background: transparent;
-  margin-bottom: 0;
-  justify-content: flex-start;
+/* ---- part-0059.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* Hide bot/discard panel headings while keeping tray layout intact. */
+.panel--discard-tracker > .panel__title-row,
+.panel--bot-exposures__body > .panel__title-row,
+.discard-tracker__status {
+  display: none;
+}
+
+/* Steel highlight on the top edge of every outer panel wrapper (inset by border-radius so corners stay clean). */
+.panel--discard-tracker,
+.panel--hand,
+.panel--charleston,
+.panel--main-game,
+.panel--bot-exposures {
+  position: relative;
 }

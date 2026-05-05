@@ -1,42 +1,18 @@
 
 
-/* ---- part-0031.css (from base.css, layout.css, components.css, animations.css) ---- */
+/* ---- part-0030.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
 
-.app-main__scroll {
-  flex: 0 1 auto;
-  min-height: 0;
-  max-height: min(30dvb, 15rem);
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
-  -webkit-overflow-scrolling: touch;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
+/* ---- part-0032.css (from base.css, layout.css, components.css, animations.css) ---- */
 
-.app-main__scroll--collapsed {
-  flex: 0 0 0;
-  max-height: 0;
-  min-height: 0;
-  overflow: hidden;
-  padding: 0;
-  margin: 0;
-  gap: 0;
-  border: none;
-  pointer-events: none;
-  visibility: hidden;
-}
 
-/* Bot exposures: same chrome as `.panel` (rounded card, not a square strip). */
 
-.app-opponents-rail__cell {
-  flex: 1 1 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: center;
+/* Inner wrapper: shrinks to tile content and centers in the cell as a unit.
+   Header then left-aligns with the first tile regardless of rack fill. */
+
+/* Seat name above each opponent rack. */
+
+.app-opponents-rail__cell--swap-drop {
+  border-radius: var(--tile-tray-shell-radius);
 }

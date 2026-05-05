@@ -1,75 +1,43 @@
 
 
-/* ---- part-0092.css (from base.css, layout.css, components.css, animations.css) ---- */
+/* ---- part-0089.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
 
-/* Slot 14: East discard staging (same column as incoming bot discard when not staging). */
-.exposure-rack__slot--east-discard-slot {
-  justify-content: center;
-}
+/* ---- part-0093.css (from base.css, layout.css, components.css, animations.css) ---- */
 
-.exposure-rack__slot--east-discard-slot .east-discard-staging--inline {
-  margin-inline: auto;
-}
 
-/* Inline discard slot: same border + fill as call-initiate / pass-box */
-.exposure-rack__slot--east-discard-slot .east-discard-staging.east-discard-staging--inline {
-  border: 1px solid var(--coach-teal-border);
+
+/* ── Joined tray: player exposure rack (non-charleston) ── */
+.panel--hand .exposure-rack:not(.exposure-rack--charleston-pass) {
+  background: var(--window-inner-surface);
+  border: 1px solid var(--window-border);
   border-radius: 0.38rem;
-  background: color-mix(in srgb, var(--coach-teal) 11%, var(--bg-elevated) 89%);
-  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.exposure-rack__slot--east-discard-slot .east-discard-staging.east-discard-staging--inline:has(.east-discard-staging__tile) {
+/* Keep Charleston exposure row in the same visible tray container. */
+.panel--hand .exposure-rack.exposure-rack--charleston-pass {
+  background: var(--window-inner-surface);
+  border: 1px solid var(--window-border);
+  border-radius: 0.38rem;
+  /* Same inner vertical pad as post-Charleston `.panel--hand .exposure-rack` (`--hand-rack-tray-inset-block`). */
+  padding-block: var(--hand-rack-tray-inset-block);
+  justify-content: flex-start;
+  /* Same inter-face gap as `.hand-row` (cols 1–14 share one grid). */
+  gap: var(--player-rack-face-gap);
+  /* Match `.panel-hand-rack__hand-tray .hand-row` horizontal inset so slot 12 / pass-tail lines up with the 12th tile face; do not use `--rack-tray-inset-inline` here (it shifts the pass box vs the hand). */
+  padding-inline: var(--hand-rack-tray-inset-inline);
+}
+
+.panel--hand .exposure-rack.exposure-rack--charleston-pass .exposure-rack__slot--east-discard-slot .tile-face,
+.panel--hand .exposure-rack.exposure-rack--charleston-pass .exposure-rack__slot--incoming-discard .tile-face {
   outline: none;
-  background: color-mix(in srgb, var(--coach-teal) 14%, var(--bg-elevated) 86%);
 }
 
-.exposure-rack__slot--east-discard-slot
-  .east-discard-staging.east-discard-staging--inline.east-discard-staging--over:not(:has(.east-discard-staging__tile)) {
-  outline: none;
-  background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
-  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
-}
-
-.exposure-rack__slot--east-discard-slot
-  .east-discard-staging.east-discard-staging--inline.east-discard-staging--over:has(.east-discard-staging__tile) {
-  box-shadow: none;
-  background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
-  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
-}
-
-/* Hovering the staged tile should be visibly brighter than the base green slot. */
-.exposure-rack__slot--east-discard-slot
-  .east-discard-staging.east-discard-staging--inline:has(.east-discard-staging__tile:hover) {
-  background: color-mix(in srgb, var(--coach-teal-bg) 92%, var(--bg-elevated) 8%);
-  border-color: color-mix(in srgb, var(--coach-teal) 40%, var(--border) 34%, var(--bg-elevated) 26%);
-}
-
-/* Pass tail cells use the same geometry as the rest of the Charleston exposure row */
-.exposure-rack__slot--pass-tail {
-  padding-bottom: 0;
-}
-
-/* Pass-tail slots are transparent — the unified box on pass-strip-tail__inner provides the bg */
-.exposure-rack--charleston-pass .exposure-rack__slot--pass-tail.exposure-rack__slot--empty::before {
-  border-color: transparent;
+/* ── Joined tray: bot exposures ── */
+.panel--bot-exposures .exposure-rack {
   background: transparent;
-  box-shadow: none;
-}
-
-.exposure-rack--charleston-pass .exposure-rack__slot--pass-tail.pass-strip__tile-wrap {
   border-radius: 0;
-  outline: none;
-  background: transparent;
-}
-
-.exposure-rack--charleston-pass .exposure-rack__slot--pass-tail.pass-strip__tile-wrap--dragging {
-  background: transparent;
-}
-
-.exposure-rack__slot.pass-strip__tile-wrap {
-  padding-bottom: 0;
-  justify-content: center;
+  position: relative;
+  z-index: 2;
 }

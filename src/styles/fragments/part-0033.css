@@ -1,10 +1,34 @@
 
 
-/* ---- part-0035.css (from base.css, layout.css, components.css, animations.css) ---- */
+/* ---- part-0034.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
 
-.app-layout[data-joker-swap-hint='on'] .east-own-exposure-swap-wrap--over,
-.app-layout[data-joker-swap-hint='on'] .app-opponents-rail__cell--swap-over {
-  box-shadow: inset 0 0 0 2px color-mix(in srgb, #f59e0b 78%, var(--border));
+/* ---- part-0036.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/*
+  Joker swap hint — macOS dock bounce.
+
+  Single shared keyframe + duration so the swappable hand tile and the redeemable
+  exposed jokers bounce in unison (same tempo, same time, exactly 3 bounces).   After
+  the hint applies, `var(--joker-swap-hint-bounce-delay)` passes before the bounce loop starts
+  (hand fly + bot exposure; longhand `animation-*` so delay is never misparsed).
+
+  Apply the animation on inner wrappers (.tile-face on rack slots; .sortable-tile-wrap__fly
+  in hand) so it doesn't fight DnD `transform`s on the outer drag wrappers.
+
+  Stacking: hand row sits inside `.rack-stage__rack-bottom` (z-index: 1) which is below
+  `.rack-stage__rack-top` (z-index: 2) — bouncing up would otherwise paint behind the
+  exposure rack. Bot exposure cells use `overflow: hidden` and would clip the upward
+  bounce. The `:has()` rules below escape both while a bounce is active.
+*/
+
+@keyframes joker-swap-hint-dock-bounce {
+  0%   { transform: translateY(0);     animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1); }
+  18%  { transform: translateY(-26%);  animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0); }
+  36%  { transform: translateY(0);     animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1); }
+  44%  { transform: translateY(-6%); }
+  52%, 100% { transform: translateY(0); }
 }

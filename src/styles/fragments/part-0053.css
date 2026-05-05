@@ -1,15 +1,142 @@
 
 
-/* ---- part-0055.css (from base.css, layout.css, components.css, animations.css) ---- */
+/* ---- part-0054.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
 
-/* Right column: controls on top, bot exposures bottom-aligned with discard tracker. */
-.app-play-split__right-stack {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 0;
-  min-height: 0;
-  width: var(--bot-panel-outer-w);
-  align-items: stretch;
+/* ---- part-0056.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* In-panel toolbar: optional Menu (wall-game / dead hand / bot MJ) → HANDS → CLR HL → HINT. */
+.panel--bot-exposures__toolbar-well .app-menu-anchor {
+  position: relative;
+  bottom: auto;
+  right: auto;
+  left: auto;
+  transform: none;
+  flex: 0 0 auto;
+  align-self: center;
+  width: var(--menu-btn-w);
+  height: var(--rack-action-touch-min-h);
+  min-height: var(--rack-action-touch-min-h);
+  z-index: 2;
+  margin-left: 0;
+}
+
+.panel--bot-exposures__toolbar-well .app-bottom-center-controls {
+  position: relative;
+  bottom: auto;
+  right: auto;
+  left: auto;
+  flex: 0 0 auto;
+  align-self: center;
+  width: var(--rack-tile-btn-inner-3);
+  z-index: 2;
+}
+
+.panel--bot-exposures__toolbar-well .btn:not(.btn--label-wrap) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.panel--bot-exposures__toolbar-well .panel--bot-exposures__clear {
+  flex: 0 0 auto;
+  align-self: center;
+  width: var(--rack-tile-btn-inner-1);
+  max-width: 100%;
+  min-height: var(--rack-action-touch-min-h);
+  height: var(--rack-action-touch-min-h);
+  border-radius: var(--rack-tile-btn-border-radius);
+  border: none;
+  z-index: 2;
+  background: #c76e00;
+  color: var(--color-white);
+  box-shadow:
+    0 2px 4px color-mix(in srgb, var(--color-black) 16%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);
+}
+
+.panel--bot-exposures__toolbar-well .panel--bot-exposures__clear:not(.btn--label-wrap) {
+  white-space: nowrap;
+}
+
+.panel--bot-exposures__toolbar-well .panel--bot-exposures__clear.btn--label-wrap {
+  height: auto;
+  min-height: var(--rack-action-touch-min-h);
+  line-height: 1.1;
+  padding: var(--rack-control-pad-block) var(--rack-control-pad-inline);
+  white-space: normal;
+  overflow: visible;
+}
+
+/* Disabled: no dim — same fill/text as enabled (only pointer feedback differs via global :disabled cursor). */
+.panel--bot-exposures__toolbar-well .panel--bot-exposures__clear:disabled {
+  opacity: 1;
+  filter: none;
+}
+
+/* Same footprint as CLR HL; toggles joker swap hint (Menu also has a setting). */
+.panel--bot-exposures__toolbar-well .panel--bot-exposures__hint {
+  flex: 0 0 auto;
+  align-self: center;
+  width: var(--rack-tile-btn-inner-1);
+  max-width: 100%;
+  min-height: var(--rack-action-touch-min-h);
+  height: var(--rack-action-touch-min-h);
+  border-radius: var(--rack-tile-btn-border-radius);
+  border: none;
+  z-index: 2;
+  background: var(--color-slate-mid);
+  color: var(--color-white);
+  font-weight: 500;
+  font-family: 'Figtree', var(--sans);
+  text-transform: uppercase;
+  box-shadow:
+    0 2px 4px color-mix(in srgb, var(--color-black) 16%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);
+  cursor: pointer;
+  isolation: isolate;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.panel--bot-exposures__toolbar-well .panel--bot-exposures__hint--on {
+  background: color-mix(in srgb, #22c55e 22%, var(--color-slate-mid));
+  box-shadow:
+    0 2px 4px color-mix(in srgb, var(--color-black) 16%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);
+}
+
+.panel--bot-exposures__toolbar-well .app-bottom-center-controls .suggested-hands-tab {
+  flex: 0 0 auto;
+  align-self: center;
+  min-height: var(--rack-action-touch-min-h);
+  height: var(--rack-action-touch-min-h);
+  /* Match global `.btn` drop shadow; lock so :hover / open don’t reflow the label */
+  box-shadow:
+    0 2px 4px color-mix(in srgb, var(--color-black) 16%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);
+  transform: none;
+}
+
+.panel--bot-exposures__toolbar-well
+  .app-bottom-center-controls
+  .suggested-hands-tab:hover:not(:disabled):not(.suggested-hands-tab--open) {
+  box-shadow:
+    0 2px 4px color-mix(in srgb, var(--color-black) 16%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);
+  transform: none;
+}
+
+.panel--bot-exposures__toolbar-well .app-menu-anchor .app-bottom-center-controls__menu-btn {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--menu-btn-w);
+  height: var(--rack-action-touch-min-h);
 }

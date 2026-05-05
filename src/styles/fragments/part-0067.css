@@ -1,13 +1,72 @@
 
 
-/* ---- part-0069.css (from base.css, layout.css, components.css, animations.css) ---- */
+/* ---- part-0068.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
 
-.panel--hand .rack-bottom-bar--wall-game > .rack-bottom-tile-cell,
-.panel--hand .rack-bottom-bar--wall-game > .btn.rack-bottom-tile-cell {
-  width: 100%;
-  max-width: none;
-  margin-inline-start: 0;
-  justify-self: stretch;
+/* ---- part-0070.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:hover:not(:disabled) {
+  box-shadow: none;
+}
+
+/* No pressed/inset or hover tint — true fills stay visible while you tune palette. */
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:active:not(:disabled) {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Unavailable: lighter opacity only, no gray filter, keep label readable on colored faces. */
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:disabled {
+  opacity: 0.5;
+  filter: none;
+  border: none;
+  box-shadow: none;
+}
+
+/* Charleston PASS only: keep full brightness when not passable (overrides rule above; HANDS stays dimmed when disabled). */
+.rack-bottom-bar--charleston .btn.charleston-pass-btn.rack-bottom-tile-cell:disabled:not(.suggested-hands-tab) {
+  opacity: 1;
+}
+
+/* Main rack: Ignore / Discard — same teal as Pass (#007791). */
+.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:not(:disabled) {
+  background: #007791;
+  color: var(--color-white);
+}
+
+/* Inactive: dim Ignore only — Discard (`.btn--discard`, east-discard) stays full-strength. */
+.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:disabled:not(.btn--discard) {
+  background: #007791;
+  color: var(--color-white);
+  opacity: 0.5;
+}
+
+.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14.btn--discard:disabled {
+  background: #007791;
+  color: var(--color-white);
+  opacity: 1;
+  filter: none;
+}
+
+/* Main rack: Swap (joker swap) — #6A0DAD */
+.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7:not(:disabled) {
+  background: #6a0dad;
+  color: var(--color-white);
+}
+
+.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7:disabled {
+  background: #6a0dad;
+  color: var(--color-white);
+  opacity: 0.5;
+}
+
+.panel {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1rem clamp(0.75rem, 2.2vw, 1.5rem);
+  margin-bottom: 1rem;
+  background: var(--bg-elevated);
 }

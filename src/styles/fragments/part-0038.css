@@ -1,11 +1,13 @@
 
 
-/* ---- part-0040.css (from base.css, layout.css, components.css, animations.css) ---- */
+/* ---- part-0039.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
 
-/* Inset from discard column — small left gutter so bot column doesn't sit flush against the discard tray.
-   `--play-split-discard-bot-join-pad` is kept for formulas (e.g., `--bot-panel-outer-w`). */
-.app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures {
-  padding-inline-start: 20px;
+/* ---- part-0041.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+.app-play-split__right .panel--hands {
+  padding: var(--rack-stack-gap-y) clamp(0.4rem, 1.4vw, 0.82rem) 0.48rem;
 }

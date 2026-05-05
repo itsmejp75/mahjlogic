@@ -4,78 +4,36 @@
 
 
 
-.rack-bottom-bar {
-  width: 100%;
-  box-sizing: border-box;
-}
+/* ---- part-0020.css (from base.css, layout.css, components.css, animations.css) ---- */
 
-/* 14 hand slots: Sort=1, Undo=2, empty 3, MJ 4–5, Swap 6–7, Call 8–9, wall=10, empty 11, primary 12–14
-   (primary matches Charleston pass width: three slots). Fixed column widths (same as tiles). */
-.rack-bottom-bar--tile-grid {
-  --rack-hand-slot-count: 14;
+
+
+/* Same 14-column grid + insets as the main tile action bar; inner-7 wide controls. */
+.panel--hand .rack-bottom-bar--wall-game {
   display: grid;
-  grid-template-columns: repeat(14, var(--rack-tile-w));
+  grid-template-columns: repeat(14, var(--hand-rack-tile-w));
   column-gap: var(--player-rack-face-gap);
-  width: calc(14 * var(--rack-tile-w) + 13 * var(--player-rack-face-gap));
-  max-width: none;
-  margin-inline: auto;
-  box-sizing: border-box;
-  justify-items: stretch;
-}
-
-.rack-bottom-bar--tile-grid > * {
-  grid-row: 1;
-}
-
-/* Same horizontal origin as the 14 hand slots: `.hand-row` uses this inset + 2px nudge (see
-   above). A plain `14 * tile + 13 * gap` bar centered in the tray is shifted by ~0.44rem, so
-   every column and every multi-tile control looked one tile off or “too small”. */
-.panel--hand .rack-bottom-bar--tile-grid {
+  row-gap: 0;
   width: 100%;
   max-width: none;
   box-sizing: border-box;
   padding-inline: var(--hand-rack-tray-inset-inline);
-  /* Clear base `margin-inline: auto` so the grid tracks line up with the tile-face edges above. */
   margin: 0;
+  align-items: center;
   transform: translateX(var(--hand-rack-action-row-nudge-x));
 }
 
-/*
- * Wall-game action row: buttons vertically centered in the visible gap between the
- * tile rack above and the discard tracker below.
- *
- * Root cause of earlier misalignment: .panel--hand has margin-bottom + padding below
- * the button row, but the hand-tray only puts --rack-stack-gap-y above it — so the
- * buttons hugged the tile rack with lots of empty space below them.
- *
- * padding-top on this row adds matching breathing room above the buttons so they
- * sit visually centered in the region, without touching the panel layout.
- *
- * width: 100% fills rack-stage__rack-col — same outer edge as the exposure rack above.
- * No horizontal padding — buttons stretch edge-to-edge to match the rack borders above.
- */
-.rack-bottom-bar--wall-game {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: var(--rack-stack-gap-y);
-  width: 100%;
-  padding-inline: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-  margin: 0;
-  box-sizing: border-box;
+.panel--hand .rack-bottom-bar--wall-game > * {
+  grid-row: 1;
 }
 
-.rack-bottom-bar--wall-game .rack-bottom-tile-cell {
-  flex: 1 1 0;
-  min-width: 0;
+.panel--hand .rack-bottom-bar--wall-game .rack-bottom-tile-cell {
+  flex: none;
 }
 
-/* Match normal action-row button metrics (non–panel-hand / legacy flex). */
-.rack-bottom-bar--wall-game .btn.rack-bottom-tile-cell {
-  width: 100%;
-  max-width: 100%;
-  border-radius: var(--rack-tile-btn-border-radius);
-  border: none;
+.panel--hand .rack-bottom-bar--wall-game .btn.rack-bottom-tile-cell {
+  width: var(--rack-tile-btn-inner-7);
+  max-width: var(--rack-tile-btn-inner-7);
+  margin-inline-start: var(--rack-tile-face-bw);
+  justify-self: start;
 }

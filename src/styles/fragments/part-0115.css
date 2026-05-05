@@ -1,9 +1,369 @@
 
 
-/* ---- part-0119.css (from base.css, layout.css, components.css, animations.css) ---- */
+/* ---- part-0116.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
 
-.app-layout[data-animations='off'] .suggested-hands-popup__resize-corner::after {
-  transition: none;
+/* ---- part-0120.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+.suggested-hands-popup__resize-corner--tr {
+  top: 0;
+  right: 0;
+  cursor: nesw-resize;
+  margin: -0.04rem -0.04rem 0 0;
+  padding: 0.1rem 0.1rem 0 0;
+  box-sizing: content-box;
+}
+
+.suggested-hands-popup__resize-corner--tr::after {
+  top: var(--suggested-popup-edge-inset);
+  right: var(--suggested-popup-edge-inset);
+  border: none;
+  border-top: var(--suggested-popup-resize-stroke) solid
+    color-mix(in srgb, var(--text-h) 32%, transparent);
+  border-right: var(--suggested-popup-resize-stroke) solid
+    color-mix(in srgb, var(--text-h) 32%, transparent);
+  border-top-right-radius: var(--suggested-popup-fillet-r);
+}
+
+.suggested-hands-popup__resize-corner--tr:hover::after {
+  border-top-color: color-mix(in srgb, var(--coach-teal) 50%, var(--text-h) 20%);
+  border-right-color: color-mix(in srgb, var(--coach-teal) 50%, var(--text-h) 20%);
+}
+
+.suggested-hands-popup__resize-corner--tl {
+  top: 0;
+  left: 0;
+  cursor: nwse-resize;
+  margin: -0.04rem 0 0 -0.04rem;
+  padding: 0.1rem 0 0 0.1rem;
+  box-sizing: content-box;
+}
+
+.suggested-hands-popup__resize-corner--tl::after {
+  top: var(--suggested-popup-edge-inset);
+  left: var(--suggested-popup-edge-inset);
+  border: none;
+  border-top: var(--suggested-popup-resize-stroke) solid
+    color-mix(in srgb, var(--text-h) 32%, transparent);
+  border-left: var(--suggested-popup-resize-stroke) solid
+    color-mix(in srgb, var(--text-h) 32%, transparent);
+  border-top-left-radius: var(--suggested-popup-fillet-r);
+}
+
+.suggested-hands-popup__resize-corner--tl:hover::after {
+  border-top-color: color-mix(in srgb, var(--coach-teal) 50%, var(--text-h) 20%);
+  border-left-color: color-mix(in srgb, var(--coach-teal) 50%, var(--text-h) 20%);
+}
+
+.suggested-hands-popup__resize-corner--br {
+  bottom: 0;
+  right: 0;
+  cursor: nwse-resize;
+  margin: 0 -0.04rem -0.04rem 0;
+  padding: 0 0.1rem 0.1rem 0;
+  box-sizing: content-box;
+}
+
+.suggested-hands-popup__resize-corner--br::after {
+  bottom: var(--suggested-popup-edge-inset);
+  right: var(--suggested-popup-edge-inset);
+  border: none;
+  border-bottom: var(--suggested-popup-resize-stroke) solid
+    color-mix(in srgb, var(--text-h) 32%, transparent);
+  border-right: var(--suggested-popup-resize-stroke) solid
+    color-mix(in srgb, var(--text-h) 32%, transparent);
+  border-bottom-right-radius: var(--suggested-popup-fillet-r);
+}
+
+.suggested-hands-popup__resize-corner--br:hover::after {
+  border-bottom-color: color-mix(in srgb, var(--coach-teal) 50%, var(--text-h) 20%);
+  border-right-color: color-mix(in srgb, var(--coach-teal) 50%, var(--text-h) 20%);
+}
+
+.suggested-hands-popup__resize-corner--bl {
+  bottom: 0;
+  left: 0;
+  cursor: nesw-resize;
+  margin: 0 0 -0.04rem -0.04rem;
+  padding: 0 0 0.1rem 0.1rem;
+  box-sizing: content-box;
+}
+
+.suggested-hands-popup__resize-corner--bl::after {
+  bottom: var(--suggested-popup-edge-inset);
+  left: var(--suggested-popup-edge-inset);
+  border: none;
+  border-bottom: var(--suggested-popup-resize-stroke) solid
+    color-mix(in srgb, var(--text-h) 32%, transparent);
+  border-left: var(--suggested-popup-resize-stroke) solid
+    color-mix(in srgb, var(--text-h) 32%, transparent);
+  border-bottom-left-radius: var(--suggested-popup-fillet-r);
+}
+
+.suggested-hands-popup__resize-corner--bl:hover::after {
+  border-bottom-color: color-mix(in srgb, var(--coach-teal) 50%, var(--text-h) 20%);
+  border-left-color: color-mix(in srgb, var(--coach-teal) 50%, var(--text-h) 20%);
+}
+
+.suggested-hands-popup__drag-handle {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  /*
+   * Inline padding lives here (not on the user-shift) so the title and toolbar buttons stay
+   * inset, while the spreadsheet below can run edge-to-edge under the popup's rounded frame.
+   */
+  padding:
+    0
+    var(--hand-window-pad-inline)
+    calc(var(--hand-window-pad-inline) * 0.75)
+    var(--hand-window-pad-inline);
+  margin-bottom: calc(var(--hand-window-pad-inline) * 0.5);
+  cursor: grab;
+  border-bottom: none;
+  user-select: none;
+  touch-action: none;
+}
+
+.suggested-hands-popup__drag-handle:active {
+  cursor: grabbing;
+}
+
+.suggested-hands-popup__drag-pip {
+  display: block;
+  width: 1.5rem;
+  height: 0.22rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-h) 22%, transparent);
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.suggested-hands-popup__drag-label {
+  flex: 1;
+  font-size: var(--app-ui-control-fs);
+  font-weight: 600;
+  color: var(--text-h);
+  pointer-events: none;
+}
+
+.suggested-hands-popup__header-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  --hands-header-chip-py: 0.38rem;
+  --hands-header-chip-px: 1rem;
+  --hands-header-chip-fs: var(--app-ui-control-fs);
+  --hands-header-chip-lh: 1.22;
+}
+
+.suggested-hands-popup__header-controls .hands-panel__display-toggle {
+  padding: var(--hands-header-chip-py) var(--hands-header-chip-px);
+  font-size: var(--hands-header-chip-fs);
+  font-weight: 600;
+  line-height: var(--hands-header-chip-lh);
+  min-height: calc(
+    2 * var(--hands-header-chip-py) + var(--hands-header-chip-lh) * var(--hands-header-chip-fs) + 2px
+  );
+}
+
+.suggested-hands-popup__filter-portal {
+  display: contents;
+}
+
+.suggested-hands-popup__close {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0;
+  border: 2px solid color-mix(in srgb, var(--color-white) 32%, var(--text-muted) 68%);
+  border-radius: 0.45rem;
+  background: color-mix(in srgb, var(--fg) 5%, var(--bg-elevated) 95%);
+  cursor: pointer;
+  font-size: 1.6rem;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--text-muted);
+  z-index: 1;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--fg) 8%, transparent);
+  transition: background 0.12s, color 0.12s, border-color 0.12s, box-shadow 0.12s;
+}
+
+.suggested-hands-popup__close:hover {
+  background: color-mix(in srgb, var(--color-white) 6%, var(--bg-elevated) 94%);
+  color: var(--text-h);
+  border-color: color-mix(in srgb, var(--color-white) 80%, #e5e7eb 20%);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-white) 18%, transparent),
+    0 2px 8px color-mix(in srgb, var(--color-black) 12%, transparent);
+}
+
+.suggested-hands-popup__close:focus-visible {
+  outline: 2px solid var(--primary, #0f52ba);
+  outline-offset: 2px;
+}
+
+/* Shared inner-tray rim: full-width shadows follow each tray’s `border-radius`; border top + soft
+   inline edges read against the wrapper; bottom pair matches discard / hand exposure.
+   Note: `.suggested-hands-popup .panel--hands` is intentionally excluded — the suggested-hands
+   spreadsheet runs flush under the popup frame, so its inner rim border would interrupt the
+   sticky column header background extending to the popup window edges. */
+.panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass),
+.panel--hand .rack-stage__rack-top .exposure-rack.exposure-rack--charleston-pass,
+.hand-bank,
+.discard-tracker__content,
+.panel--bot-exposures .app-opponents-rail__cell,
+.panel--bot-exposures__toolbar-well,
+.panel--hand .panel-hand-rack__action-well,
+.panel--hand .panel-hand-rack__charleston-actions-well {
+  border-width: 1px;
+  border-style: solid;
+  border-top-color: var(--dark-tray-rim-border-top);
+  border-inline-color: var(--dark-tray-rim-border-inline);
+  border-bottom-color: var(--dark-tray-rim-border-bottom);
+  box-shadow:
+    var(--dark-tray-rim-shadow-up-1),
+    var(--dark-tray-rim-shadow-up-2),
+    var(--dark-tray-rim-shadow-down-1),
+    var(--dark-tray-rim-shadow-down-2);
+}
+
+/*
+ * Suggested-hands popup: panel sits flush under the popup's rounded frame (no inner rim border).
+ * Border + box-shadow are zeroed so the sticky header background can run all the way out to the
+ * outer `.suggested-hands-popup__user-shift` border.
+ */
+.suggested-hands-popup .panel--hands {
+  border: none;
+  box-shadow: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .tile-face {
+    border-color: color-mix(in srgb, var(--color-black) 35%, transparent);
+  }
+
+  .exposure-rack__slot--empty::before {
+    background: color-mix(in srgb, var(--color-black) 12%, var(--bg-elevated));
+    box-shadow: none;
+    border-color: color-mix(in srgb, var(--border) 60%, transparent);
+  }
+}
+
+/*
+ * Capacitor / narrow viewports (e.g. iPhone landscape < 900px): use full width for `--hand-rack-usable-w`
+ * so the 14-tile row isn’t squeezed by the base `min(100dvi, 195dvb)` play column. Move top safe-area
+ * into `.app-main` so the rack band clears the notch; reset the short-landscape coarse-pointer rack
+ * tokens when both rules apply. Viewports ≥900px are unaffected.
+ */
+ @media (max-width: 932px) {
+  :root {
+    --app-play-fit-inline-from-block: 100vw;
+  }
+
+  :root {
+    /* Same rhythm as @media (max-width: 47.99rem); neutralize tight phone-landscape overrides. */
+    --app-h-pad-base: clamp(0.35rem, 2.2vw, 0.75rem);
+    --app-v-pad: var(--app-h-pad-base);
+    --hand-window-pad-inline: clamp(0.2rem, 1.2vw, 0.35rem);
+    --rack-tray-inset-inline: 0.3rem;
+    --rack-tray-inset-block: 0.3rem;
+    --player-rack-face-gap: calc(var(--rack-tile-gap) + var(--rack-tile-face-bw));
+    --btn-letter-spacing: calc(0.01em + 0.01rem);
+    --hand-rack-tile-w: max(1.62rem, calc(var(--hand-rack-usable-w) / 14));
+    --hand-rack-tile-h: max(2.16rem, calc(var(--hand-rack-usable-w) / 14 * 1.3333));
+  }
+
+  @supports (width: 100dvi) {
+    :root {
+      --app-play-fit-inline-from-block: 92dvi;
+    }
+  }
+
+  #root {
+    padding-top: 0;
+  }
+
+  .app-main {
+    /*
+     * Top: include safe-area (notch in portrait; ~0 in landscape — harmless).
+     * Bottom: keep `--app-v-pad` only — adding `safe-area-inset-bottom` (≈21px home-indicator strip)
+     *   visibly squashed the lower split on iPhone landscape vs. the top.
+     */
+    padding-top: calc(var(--app-v-pad) + env(safe-area-inset-top, 0px));
+  }
+
+  .app-main__scroll {
+    max-height: min(30dvb, 15rem);
+  }
+}
+
+/*
+ * Capacitor / native shell only (`data-native-app` from `main.tsx`).
+ *
+ * Width token (`--app-play-fit-inline-from-block`):
+ *   - Browser narrow viewport uses `92dvi` (8% margin, never edge-to-edge).
+ *   - Native default of `100dvi` makes tiles 8% wider AND 8% taller (1.333× ratio), which inflates
+ *     the rack zone enough that buttons / charleston / discard / bot trays look oversized vs. their
+ *     dark inner containers. `96dvi` keeps the look "edge-to-edge" (≈10–12px margin per side on
+ *     iPhone landscape — sits inside the safe-area gutter anyway) while bringing tile size back
+ *     ≈4% so the rack stays proportional to the lower play split.
+ *
+ * `--app-h-pad`: native exposes `env(safe-area-inset-*)` on BOTH sides as max(L,R) by default
+ *   (2× safe-area). Average per side so total horizontal inset = 2×base + L + R (same as browser).
+ */
+html[data-native-app] {
+  /*
+   * `90dvi`: tile-w formula (`--hand-rack-usable-w / 14`) only subtracts explicit paddings —
+   * `--app-h-pad`, `--hand-window-pad-inline`, `--rack-tray-inset-inline`, `--player-rack-face-gap`.
+   * It does NOT subtract tile-face borders, action-button rims (SORT/UNDO/99/MENU/PASS), or the
+   * dark-tray box-shadow rim, which together add ~6–10px PER side. At 100dvi or 96dvi, those
+   * extras pushed tiles past the dark tray edge (visible spill in the screenshot). 90dvi reserves
+   * ~5% margin per side (≈47px on a 932-wide WebView) which absorbs every rim/border the formula
+   * doesn’t see, and the gray surface still reads as edge-to-edge because the safe-area gutter
+   * (~21px home-indicator inset on iPhone landscape) is part of that margin.
+   */
+  --app-play-fit-inline-from-block: 90dvi;
+  --app-h-pad: calc(
+    var(--app-h-pad-base) + (env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px)) * 0.5
+  );
+
+  /*
+   * Bot toolbar / bot rows / bot panel body intentionally bleed 8 px LEFT of the
+   * play-split column on desktop so the dark tray aligns with the rack column above
+   * (`--play-split-lower-box-left-bleed: 8px` from `src/styles/thematic/layout.css` /
+   * `part-0039.css`). Each consumer subtracts the bleed from its margin-left and
+   * widens by the bleed:
+   *   - `.app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well`
+   *     (`components.css` ≈ line 917): width `100% − edge-inset + bleed`, margin-left `−bleed`
+   *   - `.app-dnd-frame .app-play-split .panel--bot-exposures__body`,
+   *     `.bot-exposures__list`, `.app-opponents-rail__cell` — same shape
+   *
+   * On iPhone landscape the WebView sits flush against the safe-area gutter, so the
+   * 8 px left bleed pushes the toolbar-well visibly OUT of its parent toolbar and out
+   * of the play-split column (user-reported: toolbar-well left=408 vs toolbar
+   * left=419, i.e. 11 px overflow). Zeroing the token in the native shell keeps
+   * every chrome surface flush with the column without touching desktop.
+   */
+  --play-split-lower-box-left-bleed: 0px;
+}
+
+/*
+ * Native: lower play-split fills *all* remaining vertical space below the rack so no dark strip
+ * appears between the bot rows / discard tracker and the WebView bottom. The base rule caps split
+ * at `clamp(12.5rem, 53dvb, 32rem)` (≈228px on a 430-tall WebView); switching to `flex: 1 1 0` +
+ * `max-height: none` lets it consume 100% of the leftover. `.app-dnd-frame` keeps its default
+ * `justify-content: center`: when split fills, there's no leftover for centering to act on, and
+ * if the WebView is tall enough that there *is* leftover, equal top + bottom gaps look balanced.
+ */
+html[data-native-app] .app-play-split {
+  flex: 1 1 0;
+  max-height: none;
 }

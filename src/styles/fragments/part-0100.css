@@ -1,49 +1,88 @@
 
 
-/* ---- part-0104.css (from base.css, layout.css, components.css, animations.css) ---- */
+/* ---- part-0101.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
 
-/* Excludes .app-menu-tray__item--switch: for toggles, aria-pressed is false when off, so
-   the old :not([aria-pressed='true']) matched and outranked the switch’s transparent hover,
-   re-applying border + background + box-shadow (hover “box” + 1px layout wobble). */
-.app-menu-modal
-  .app-menu-tray__item:hover:not(:disabled):not([aria-pressed='true']):not(
-    .app-menu-tray__item--switch
-  ) {
-  border-color: color-mix(in srgb, var(--color-white) 32%, #2d3339);
-  background: var(--app-menu-sort-surface-hover, color-mix(in srgb, var(--color-white) 7%, var(--color-slate-mid)));
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--color-white) 8%, transparent);
-}
+/* ---- part-0105.css (from base.css, layout.css, components.css, animations.css) ---- */
 
-/* Slider: the <button> is an invisible hit pad — only .app-menu-tray__toggle-slider paints (thumb moves).
-   No outer box, outline, radius, or .btn shadow on the host. Keyboard focus rings the pill only. */
-.app-menu-modal .app-menu-tray__item--switch.app-menu-modal__toggle {
-  padding: 0;
-  margin: 0;
-  border: none;
-  border-radius: 0;
+
+.app-menu-modal .app-menu-tray__item--switch.app-menu-modal__toggle:hover,
+.app-menu-modal .app-menu-tray__item--switch.app-menu-modal__toggle:active,
+.app-menu-modal .app-menu-tray__item--switch.app-menu-modal__toggle:focus,
+.app-menu-modal .app-menu-tray__item--switch.app-menu-modal__toggle:focus-visible {
   background: transparent !important;
   box-shadow: none !important;
-  color: transparent;
-  font-size: 0;
-  letter-spacing: 0;
-  line-height: 0;
-  text-transform: none;
-  appearance: none;
-  -webkit-appearance: none;
-  -webkit-tap-highlight-color: transparent;
-  min-width: 0;
-  min-height: 0;
-  width: max-content;
-  max-width: 100%;
-  height: auto;
-  justify-content: center;
-  align-items: center;
-  justify-self: start;
+  border: none;
   filter: none;
   outline: none;
+}
+.app-menu-modal .app-menu-tray__item--switch.app-menu-modal__toggle:focus-visible .app-menu-tray__toggle-slider {
+  outline: 2px solid #22c55e;
+  outline-offset: 2px;
+}
+
+/* Visually hidden “On / Off” for screen readers (label column carries the name). */
+.app-menu-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.app-menu-tray__toggle-slider {
+  --_menu-switch-w: 2.8rem;
+  --_menu-switch-h: 1.55rem;
+  --_menu-switch-thumb: 1.1rem;
+  --_menu-switch-pad: 0.2rem;
+  position: relative;
+  display: block;
+  width: var(--_menu-switch-w);
+  height: var(--_menu-switch-h);
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: #d1d5db;
+  border: 1px solid color-mix(in srgb, #6b7280 55%, #9ca3af 45%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-white) 50%, transparent);
+  transition: background 0.2s ease, border-color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.app-menu-tray__toggle-slider--on {
+  background: #22c55e;
+  border-color: color-mix(in srgb, #15803d 60%, #16a34a 40%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-white) 20%, transparent);
+}
+
+.app-menu-tray__toggle-slider__thumb {
+  position: absolute;
+  top: 50%;
+  left: var(--_menu-switch-pad);
+  width: var(--_menu-switch-thumb);
+  height: var(--_menu-switch-thumb);
+  border-radius: 50%;
+  background: var(--color-white);
+  box-shadow:
+    0 0.5px 1px color-mix(in srgb, var(--color-black) 8%, transparent),
+    0 1px 3px color-mix(in srgb, var(--color-black) 22%, transparent);
+  transform: translate(0, -50%);
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.app-menu-tray__toggle-slider--on .app-menu-tray__toggle-slider__thumb {
+  transform: translate(
+    calc(var(--_menu-switch-w) - 2 * var(--_menu-switch-pad) - var(--_menu-switch-thumb)),
+    -50%
+  );
+}
+
+.app[data-animations='off'] .app-menu-tray__toggle-slider,
+.app[data-animations='off'] .app-menu-tray__toggle-slider__thumb {
   transition: none;
-  gap: 0;
-  cursor: pointer;
 }

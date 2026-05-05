@@ -2,6 +2,10 @@
 
 
 
+/* ---- part-0002.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0003.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -18,6 +22,10 @@
   flex-direction: column;
   width: 100%;
 }
+
+/* ---- part-0005.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0006.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -53,6 +61,10 @@
   justify-content: flex-end;
 }
 
+/* ---- part-0007.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0008.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -61,6 +73,10 @@
   /* Match the vertical strip between exposure rack and hand (same as `.rack-stage__rack-col`). */
   gap: var(--play-tray-h-divider);
 }
+
+/* ---- part-0009.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0010.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -89,6 +105,10 @@
   flex-shrink: 0;
 }
 
+/* ---- part-0011.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0012.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -104,6 +124,10 @@
   margin-inline: auto;
   align-self: center;
 }
+
+/* ---- part-0013.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0014.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -150,6 +174,10 @@
   min-width: 0;
 }
 
+/* ---- part-0015.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0016.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -158,6 +186,10 @@
   position: relative;
   z-index: 2;
 }
+
+/* ---- part-0017.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0018.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -173,6 +205,10 @@
 .rack-stage--main-rack {
   align-items: center;
 }
+
+/* ---- part-0019.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0020.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -208,6 +244,10 @@
   justify-self: start;
 }
 
+/* ---- part-0021.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0022.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -240,6 +280,10 @@
   border-radius: inherit;
 }
 
+/* ---- part-0023.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0024.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -247,6 +291,10 @@
 .app-layout[data-animations='off'] .rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell {
   transition: none;
 }
+
+/* ---- part-0025.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0026.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -269,6 +317,10 @@
 .panel--hand .hand-row {
   justify-content: flex-start;
 }
+
+/* ---- part-0027.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0028.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -724,6 +776,10 @@
   padding-bottom: var(--app-v-pad);
 }
 
+/* ---- part-0029.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0031.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -765,6 +821,10 @@
   align-items: center;
 }
 
+/* ---- part-0031.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0033.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -772,6 +832,10 @@
 .app-opponents-rail__cell--swap-over {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, #f59e0b 58%, var(--border));
 }
+
+/* ---- part-0033.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0035.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -781,6 +845,10 @@
 .app-layout[data-joker-swap-hint='on'] .app-opponents-rail__cell--swap-over {
   box-shadow: inset 0 0 0 2px color-mix(in srgb, #f59e0b 78%, var(--border));
 }
+
+/* ---- part-0035.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0037.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -809,6 +877,10 @@
   .exposure-rack__slot--joker-swap-hint-bounce {
   z-index: 50;
 }
+
+/* ---- part-0037.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0039.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -966,6 +1038,10 @@
   margin-bottom: 0;
 }
 
+/* ---- part-0039.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0041.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -973,6 +1049,10 @@
 .app-play-split__right .panel--hands {
   padding: var(--rack-stack-gap-y) clamp(0.4rem, 1.4vw, 0.82rem) 0.48rem;
 }
+
+/* ---- part-0041.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0043.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -1000,6 +1080,10 @@
   --exposure-slot-h: var(--rack-tile-h);
 }
 
+/* ---- part-0043.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0045.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -1012,6 +1096,10 @@
   min-width: 0;
   max-width: 100%;
 }
+
+/* ---- part-0045.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0047.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -1035,6 +1123,10 @@
   padding-bottom: 0;
 }
 
+/* ---- part-0047.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0049.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -1057,6 +1149,10 @@
   display: none;
 }
 
+/* ---- part-0049.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0051.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -1075,6 +1171,10 @@
     var(--dark-tray-rim-shadow-down-2),
     inset 0 0 0 1px color-mix(in srgb, #f59e0b 58%, var(--border));
 }
+
+/* ---- part-0051.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0053.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -1146,6 +1246,10 @@
   align-items: stretch;
 }
 
+/* ---- part-0053.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0055.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -1159,6 +1263,10 @@
   width: var(--bot-panel-outer-w);
   align-items: stretch;
 }
+
+/* ---- part-0055.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0057.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -1182,6 +1290,10 @@
   margin-bottom: 0;
 }
 
+/* ---- part-0057.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0059.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -1201,6 +1313,10 @@
 .panel--bot-exposures {
   position: relative;
 }
+
+/* ---- part-0059.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0061.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -1230,6 +1346,10 @@
   z-index: 10;
 }
 
+/* ---- part-0061.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0063.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -1245,6 +1365,10 @@
   padding-inline-start: calc(1px + var(--bot-exposure-inner-pad));
   text-align: left;
 }
+
+/* ---- part-0063.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0065.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -1278,6 +1402,10 @@
   border: none;
   border-radius: 0;
 }
+
+/* ---- part-0065.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0067.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -1425,6 +1553,10 @@
   background: color-mix(in srgb, var(--border) 14%, transparent);
 }
 
+/* ---- part-0067.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0069.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -1436,6 +1568,10 @@
   margin-inline-start: 0;
   justify-self: stretch;
 }
+
+/* ---- part-0069.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0071.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -1497,6 +1633,10 @@
   box-shadow: none;
 }
 
+/* ---- part-0071.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0073.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -1505,6 +1645,10 @@
 .panel--hand .rack-bottom-bar--charleston .charleston-pass-btn.rack-bottom-tile-cell--c12-14 {
   transform: none;
 }
+
+/* ---- part-0073.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0075.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -1515,6 +1659,10 @@
   gap: var(--player-rack-face-gap);
   width: calc(3 * var(--rack-tile-w) + 2 * var(--player-rack-face-gap));
 }
+
+/* ---- part-0077.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0081.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -1594,6 +1742,10 @@
   opacity: 0.9;
 }
 
+/* ---- part-0079.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0083.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -1606,6 +1758,10 @@
 .app[data-tile-graphics='designer'] .tile-face.tile--joker .tile-face__glyph {
   z-index: 2;
 }
+
+/* ---- part-0081.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0085.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -1641,6 +1797,10 @@
   margin-bottom: 0;
 }
 
+/* ---- part-0083.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0087.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -1648,6 +1808,10 @@
 .panel--hand .exposure-rack:not(.exposure-rack--charleston-pass) .exposure-rack__slot {
   padding-bottom: 0;
 }
+
+/* ---- part-0085.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0089.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -1682,6 +1846,10 @@
   border-radius: 0.38rem;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
+
+/* ---- part-0089.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0093.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -1721,6 +1889,10 @@
   z-index: 2;
 }
 
+/* ---- part-0091.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0095.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -1747,6 +1919,10 @@
 .panel--hand .exposure-rack--charleston-pass .exposure-rack__slot--pass-tail .tile-face {
   border: 1px solid color-mix(in srgb, var(--color-black) 22%, transparent);
 }
+
+/* ---- part-0093.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0097.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -1826,6 +2002,10 @@
   animation: app-menu-modal-in 0.2s cubic-bezier(0.34, 1.2, 0.64, 1) both;
 }
 
+/* ---- part-0095.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0099.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -1899,6 +2079,10 @@
   /* ~30% tighter than the standard menu block gap */
   gap: calc(0.7 * var(--app-menu-body-gap, max(0.36rem, calc(var(--rack-action-touch-min-h) / 3.5))));
 }
+
+/* ---- part-0097.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0101.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -1999,6 +2183,10 @@
   box-sizing: border-box;
 }
 
+/* ---- part-0099.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0103.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -2060,6 +2248,10 @@
   opacity: 0.52;
   filter: none;
 }
+
+/* ---- part-0101.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0105.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -2143,6 +2335,10 @@
 .app[data-animations='off'] .app-menu-tray__toggle-slider__thumb {
   transition: none;
 }
+
+/* ---- part-0103.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0107.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -2372,6 +2568,10 @@
   transform: none;
 }
 
+/* ---- part-0105.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0109.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -2409,6 +2609,10 @@
   transition: none;
 }
 
+/* ---- part-0107.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0111.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -2416,6 +2620,10 @@
 .app-layout[data-animations='off'] .suggested-hands-popup__right-edge::after {
   transition: none;
 }
+
+/* ---- part-0109.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0113.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -2425,6 +2633,10 @@
   transition: none;
 }
 
+/* ---- part-0111.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0115.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -2432,6 +2644,10 @@
 .app-layout[data-animations='off'] .suggested-hands-popup__bottom-edge::after {
   transition: none;
 }
+
+/* ---- part-0113.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 /* ---- part-0117.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -2441,6 +2657,10 @@
   transition: none;
 }
 
+/* ---- part-0115.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 /* ---- part-0119.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
@@ -2448,6 +2668,10 @@
 .app-layout[data-animations='off'] .suggested-hands-popup__resize-corner::after {
   transition: none;
 }
+
+/* ---- part-0117.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 html[data-native-app] .app-main {
   /* Match top to bottom (both = --app-v-pad). Adding env(safe-area-inset-top) made the top look bigger
@@ -2462,17 +2686,29 @@ html[data-native-app] .app-play-split {
   padding-inline-end: calc(var(--app-h-pad-base) + env(safe-area-inset-right, 0px));
 }
 
+/* ---- part-0119.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 .panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass),
 .panel--hand .panel-hand-rack__hand-tray .hand-row {
   --rack-tile-w: calc((100cqi - 13 * var(--player-rack-face-gap)) / 14);
   --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
 }
 
+/* ---- part-0121.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
 .panel--bot-exposures .bot-exposures__list .app-opponents-rail__cell .exposure-rack {
   --rack-tile-w: calc((100cqi - 13 * var(--rack-tile-gap)) / 14);
   --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
   --exposure-slot-h: var(--rack-tile-h);
 }
+
+/* ---- part-0123.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
 
 .app-dnd-frame .app-play-split > .app-play-split__right .app-play-split__right-stack {
   margin-left: calc(-1 * var(--bot-toolbar-exposure-nudge-left));

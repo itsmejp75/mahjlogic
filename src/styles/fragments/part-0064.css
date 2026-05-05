@@ -1,213 +1,151 @@
 
 
-/* ---- part-0066.css (from base.css, layout.css, components.css, animations.css) ---- */
+/* ---- part-0065.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
 
-/* ── Controls bar: fixed lower-right overlay ── */
+/* ---- part-0067.css (from base.css, layout.css, components.css, animations.css) ---- */
 
-/* ── Mode switcher (Training / Competition) ── */
 
-/*
- * Same pill shape + bar metrics as Charleston Pass (rack-bottom-tile-cell + tile-grid btn).
- * Slightly wider than two hand slots so “New Game” fits; min-width never smaller than Pass.
- */
 
-.coach-panel {
-  display: flex;
-  border-radius: 0.85rem;
-  overflow: hidden;
-  border: 1px solid var(--coach-teal-border);
-  background: var(--bg-elevated);
-  box-shadow: var(--shadow);
-}
-
-.coach-panel__stripe {
-  width: 0.35rem;
-  flex-shrink: 0;
-  background: linear-gradient(180deg, var(--coach-teal), var(--accent));
-}
-
-.coach-panel__body {
-  padding: 0.85rem 1rem 1rem;
-  min-width: 0;
-}
-
-.coach-panel__title {
-  font-family: var(--heading);
-  font-size: 1.12rem;
-  margin: 0 0 0.35rem;
-}
-
-.coach-panel__mode {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin: 0 0 0.5rem;
-  opacity: 0.88;
-}
-
-.coach-panel__mode-value {
-  font-family: var(--mono);
-  text-transform: none;
-  letter-spacing: 0;
-  color: var(--coach-teal);
-}
-
-.coach-panel__headline {
-  font-weight: 600;
-  color: var(--text-h);
-  margin: 0 0 0.6rem;
-  line-height: 1.35;
-}
-
-.coach-panel__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-}
-
-.coach-panel__item {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  column-gap: 0.5rem;
-  row-gap: 0.2rem;
-  padding: 0.55rem 0.6rem;
-  border-radius: 0.5rem;
-  background: color-mix(in srgb, var(--coach-teal-bg) 55%, transparent);
-  border: 1px solid color-mix(in srgb, var(--coach-teal-border) 55%, transparent);
-}
-
-.coach-panel__band {
-  grid-row: 1 / span 2;
-  align-self: start;
-  font-size: 0.66rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 0.15rem 0.35rem;
-  border-radius: 0.25rem;
-  background: var(--code-bg);
-  color: var(--text-h);
-}
-
-.coach-panel__label {
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--text-h);
-}
-
-.coach-panel__detail {
-  grid-column: 2;
-  font-size: 0.84rem;
-  line-height: 1.42;
-  opacity: 0.95;
-}
-
-.coach-panel__item--blunder .coach-panel__band {
-  background: color-mix(in srgb, var(--accent) 28%, var(--code-bg));
-}
-
-.coach-panel__item--inaccuracy .coach-panel__band {
-  background: color-mix(in srgb, var(--accent) 14%, var(--code-bg));
-}
-
-.coach-panel__item--close .coach-panel__band {
-  background: color-mix(in srgb, var(--coach-teal) 18%, var(--code-bg));
-}
-
-.btn {
-  font-family: 'Figtree', var(--sans);
-  font-size: var(--btn-font-size);
-  font-weight: 500;
-  line-height: var(--btn-line-height);
-  text-transform: uppercase;
-  letter-spacing: var(--btn-letter-spacing);
-  cursor: pointer;
-  border-radius: 0.7rem;
-  padding: var(--btn-pad-block) var(--btn-pad-inline);
-  border: none;
-  background: color-mix(in srgb, var(--bg-elevated) 94%, var(--color-white) 6%);
-  color: var(--text-h);
-  user-select: none;
-  -webkit-user-select: none;
-  min-width: 0;
-  /* Symmetric drop shadow (centered below) so the rightmost button in the
-     bottom bar doesn't bleed past the rack-col's right edge more than the
-     leftmost button bleeds past its left edge. Keeps empty space on both
-     sides of the rack visually equal. */
-  box-shadow:
-    0 2px 4px color-mix(in srgb, var(--color-black) 16%, transparent),
-    0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);
-  isolation: isolate;
-  transition: box-shadow 0.14s ease;
-}
-
-/*
- * Opt-in: allow the label to wrap inside the button (e.g. “CLR HL” in a narrow tile slot).
- * Use with `.btn__label` around the text. Other controls use single-line + ellipsis when opted in.
- */
-.btn--label-wrap {
-  white-space: normal;
-  overflow-wrap: anywhere;
-  line-height: 1.12;
-  text-align: center;
-}
-
-.btn--label-wrap .btn__label {
-  display: block;
-  min-width: 0;
-  max-width: 100%;
-  text-align: center;
-}
-
-.btn--primary {
-  background: color-mix(in srgb, var(--bg-elevated) 94%, var(--color-white) 6%);
-  color: var(--text-h);
-}
-
-.btn--primary:hover:not(.rack-bottom-tile-cell):not(.suggested-hands-tab) {
-  background: color-mix(in srgb, var(--bg-elevated) 86%, var(--color-white) 14%);
-  box-shadow:
-    0 2px 5px color-mix(in srgb, var(--color-black) 18%, transparent),
-    0 1px 3px color-mix(in srgb, var(--color-black) 12%, transparent);
-}
-
-.btn--danger {
-  border: none;
-  background: color-mix(in srgb, #c0392b 14%, var(--bg-elevated));
-  color: #e74c3c;
-}
-
-.btn--danger:hover {
-  background: color-mix(in srgb, #c0392b 22%, var(--bg-elevated));
-  box-shadow:
-    0 2px 5px color-mix(in srgb, var(--color-black) 18%, transparent),
-    0 1px 3px color-mix(in srgb, var(--color-black) 12%, transparent);
-}
-
-/* Same solid purple as HANDS (`.suggested-hands-tab` / `.charleston-pass-btn.suggested-hands-tab`). */
-.btn--mahjong {
-  background: #9a5fab;
-  color: var(--color-white);
-}
-
-.btn--rack-neutral {
+.app[data-color-buttons='off'] .btn--danger:not(:disabled),
+.app[data-color-buttons='off'] .btn--danger:disabled {
   background: var(--color-slate-mid);
   color: var(--color-white);
+  border: none;
+  filter: none;
 }
 
-/*
- * Menu → Color buttons OFF: match Sort / `btn--rack-neutral` — single dark gray for strong actions
- * (teal pass, purple Mah Jongg / HANDS, Menu blue, etc.). Menu modal controls use Sort-style
- * grays in their own rules; this block is for the main table only.
- */
-.app[data-color-buttons='off'] .btn--mahjong:not(:disabled),
-.app[data-color-buttons='off'] .btn--mahjong:disabled {
+.app[data-color-buttons='off'] .btn--discard:not(:disabled),
+.app[data-color-buttons='off'] .btn--discard:disabled {
   background: var(--color-slate-mid);
   color: var(--color-white);
   filter: none;
+}
+
+/* Main hand rack: Ignore–Discard, Swap, Mah Jongg (above also covers MJ). */
+.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:not(:disabled),
+.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:disabled:not(.btn--discard),
+.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14.btn--discard:disabled {
+  background: var(--color-slate-mid);
+  color: var(--color-white);
+}
+
+.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7:not(:disabled),
+.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7:disabled {
+  background: var(--color-slate-mid);
+  color: var(--color-white);
+}
+
+/* Charleston: Pass (teal / HANDS purple) + Stop. */
+.app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):not(:disabled),
+.app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):disabled {
+  background: var(--color-slate-mid);
+  color: var(--color-white);
+  filter: none;
+  opacity: 1;
+  cursor: inherit;
+}
+
+.app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn.suggested-hands-tab:not(:disabled) {
+  background: var(--color-slate-mid);
+  color: var(--color-white);
+  filter: none;
+}
+
+.app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn.suggested-hands-tab:disabled {
+  background: var(--color-slate-mid);
+  color: var(--color-white);
+  filter: none;
+  opacity: 0.5;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.app[data-color-buttons='off'] .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c9-11.charleston-stop-btn:not(:disabled) {
+  background: var(--color-slate-mid);
+  color: var(--color-white);
+}
+
+.app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open {
+  background: var(--color-slate-mid);
+  color: var(--color-white);
+  box-shadow: none;
+}
+
+/* Wall game hand bar: New Game. */
+.app[data-color-buttons='off'] .panel--hand .rack-bottom-bar--wall-game .btn.btn--primary:not(:disabled),
+.app[data-color-buttons='off'] .panel--hand .rack-bottom-bar--wall-game .btn.btn--primary:disabled {
+  background: var(--color-slate-mid);
+  color: var(--color-white);
+  filter: none;
+}
+
+/* End-game + wall overlay actions. */
+.app[data-color-buttons='off'] .wall-game-dialog__actions .btn--primary:not(:disabled),
+.app[data-color-buttons='off'] .wall-game-dialog__actions .btn--primary:disabled {
+  background: var(--color-slate-mid);
+  color: var(--color-white);
+  filter: none;
+}
+
+.app[data-color-buttons='off'] .charleston-error-dialog .btn--primary:not(:disabled),
+.app[data-color-buttons='off'] .charleston-error-dialog .btn--primary:disabled {
+  background: var(--color-slate-mid);
+  color: var(--color-white);
+  filter: none;
+}
+
+.app[data-color-buttons='off'] .wall-game-dialog__actions .btn--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-slate-mid) 86%, var(--color-white) 14%);
+  color: var(--color-white);
+}
+
+.app[data-color-buttons='off'] .charleston-error-dialog .btn--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-slate-mid) 86%, var(--color-white) 14%);
+  color: var(--color-white);
+}
+
+/* Bot column: clear (amber) + joker-swap hint toggle. */
+.app[data-color-buttons='off'] .panel--bot-exposures__toolbar-well .panel--bot-exposures__clear {
+  background: var(--color-slate-mid);
+  color: var(--color-white);
+  border: none;
+}
+
+.app[data-color-buttons='off'] .panel--bot-exposures__toolbar-well .panel--bot-exposures__hint--on {
+  background: var(--color-slate-mid);
+  color: var(--color-white);
+  box-shadow:
+    0 2px 4px color-mix(in srgb, var(--color-black) 16%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);
+}
+
+/* Menu (blue) + open tint — align with neutral rack. */
+.app[data-color-buttons='off'] .app-bottom-center-controls__menu-btn:not(:disabled),
+.app[data-color-buttons='off'] .app-bottom-center-controls__menu-btn:disabled {
+  background: var(--color-slate-mid);
+  color: var(--color-white);
+}
+
+.app[data-color-buttons='off'] .app-bottom-center-controls__menu-btn--open,
+.app[data-color-buttons='off'] .app-bottom-center-controls__menu-btn--open:hover:not(:disabled) {
+  background: var(--color-slate-mid);
+  color: var(--color-white);
+  box-shadow:
+    0 2px 4px color-mix(in srgb, var(--color-black) 16%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);
+}
+
+/* Exposure: Kong / Quint / Done — no green or amber emphasis. */
+.app[data-color-buttons='off'] .exposure-rack__call-action-btn--active {
+  border-color: color-mix(in srgb, var(--text-h) 28%, var(--border));
+  color: var(--text-h);
+  background: color-mix(in srgb, var(--border) 14%, transparent);
+}
+
+.app[data-color-buttons='off'] .exposure-rack__call-action-btn--done:not(:disabled) {
+  border-color: color-mix(in srgb, var(--text-h) 28%, var(--border));
+  color: var(--text-h);
+  background: color-mix(in srgb, var(--border) 14%, transparent);
 }

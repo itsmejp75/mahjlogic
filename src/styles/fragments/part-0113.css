@@ -1,9 +1,38 @@
 
 
-/* ---- part-0117.css (from base.css, layout.css, components.css, animations.css) ---- */
+/* ---- part-0114.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
 
-.app-layout[data-animations='off'] .suggested-hands-popup__left-edge::after {
-  transition: none;
+/* ---- part-0118.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/*
+ * Corner drags: one quarter-arc (two borders) on a fillet-r square so endpoints meet
+ * the top/right/bottom/left ::after segments (see --suggested-popup-fillet-r).
+ */
+.suggested-hands-popup__resize-corner {
+  position: absolute;
+  z-index: 8;
+  width: calc(var(--suggested-popup-fillet-r) + 0.2rem);
+  height: calc(var(--suggested-popup-fillet-r) + 0.2rem);
+  user-select: none;
+  touch-action: none;
+}
+
+.suggested-hands-popup__resize-corner::after {
+  content: '';
+  position: absolute;
+  width: var(--suggested-popup-fillet-r);
+  height: var(--suggested-popup-fillet-r);
+  box-sizing: border-box;
+  pointer-events: none;
+  opacity: 0.58;
+  transition: opacity 0.15s ease, border-color 0.15s ease;
+  background: none;
+}
+
+.suggested-hands-popup__resize-corner:hover::after {
+  opacity: 0.9;
 }

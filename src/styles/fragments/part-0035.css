@@ -1,29 +1,27 @@
 
 
-/* ---- part-0037.css (from base.css, layout.css, components.css, animations.css) ---- */
+/* ---- part-0036.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
 
+/* ---- part-0038.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* Hand row lives in `.rack-stage__rack-bottom` (z-index: 1), painted under
+   `.rack-stage__rack-top` (z-index: 2). While a hand tile is bouncing, lift the
+   whole bottom column above the rack-top so the arc paints over the exposure rack. */
 .app-layout[data-joker-swap-hint='on'][data-animations='on']
-  :is(
-    .sortable-tile-wrap__fly--joker-swap-hint-bounce,
-    .east-discard-staging__tile--joker-swap-hint-bounce .tile-face,
-    .exposure-rack__slot--joker-swap-hint-bounce .tile-face
-  ) {
-  transform-origin: bottom center;
-  animation-name: joker-swap-hint-dock-bounce;
-  animation-duration: 1.7s;
-  animation-timing-function: ease-in-out;
-  animation-delay: var(--joker-swap-hint-bounce-delay, 500ms);
-  animation-iteration-count: 4;
-  animation-fill-mode: none;
-  will-change: transform;
+  .rack-stage__rack-bottom:has(.sortable-tile-wrap__fly--joker-swap-hint-bounce) {
+  z-index: 5;
 }
 
-/* Lift the bouncing tile above its sibling slots within the same row. */
+/* Bot exposure cells + grid use `overflow: hidden`. Open them up only while a
+   redeemable joker is mid-bounce so the tile can poke above the tray edge, and
+   raise the cell above its row neighbors. */
 .app-layout[data-joker-swap-hint='on'][data-animations='on']
-  .sortable-tile-wrap:has(.sortable-tile-wrap__fly--joker-swap-hint-bounce),
-.app-layout[data-joker-swap-hint='on'][data-animations='on']
-  .exposure-rack__slot--joker-swap-hint-bounce {
-  z-index: 50;
+  .panel--bot-exposures
+  .app-opponents-rail__cell:has(.exposure-rack__slot--joker-swap-hint-bounce) {
+  overflow: visible;
+  z-index: 5;
 }

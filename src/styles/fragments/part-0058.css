@@ -1,23 +1,25 @@
 
 
-/* ---- part-0060.css (from base.css, layout.css, components.css, animations.css) ---- */
+/* ---- part-0059.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
 
-/* Curved top highlight: gradient ring that follows each panel's border-radius.
-   Bright at the top edge + corners, fades out ~10% down the vertical sides. */
-.panel--discard-tracker::before,
-.panel--hand::before,
-.panel--charleston::before,
-.panel--main-game::before,
-.panel--bot-exposures::before {
+/* ---- part-0061.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+.panel--discard-tracker::after,
+.panel--hand::after,
+.panel--charleston::after,
+.panel--main-game::after,
+.panel--bot-exposures::after {
   content: '';
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
+  inset: 1px;
+  border-radius: 0.75rem;
   padding: 1px;
   box-sizing: border-box;
-  background: linear-gradient(to bottom, #4a5568 0%, transparent 10%);
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.07) 0%, transparent 10%);
   -webkit-mask:
     linear-gradient(var(--color-white) 0 0) content-box,
     linear-gradient(var(--color-white) 0 0);

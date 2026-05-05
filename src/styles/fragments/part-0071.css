@@ -1,10 +1,67 @@
 
 
-/* ---- part-0073.css (from base.css, layout.css, components.css, animations.css) ---- */
+/* ---- part-0072.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
 
-/* Lock the Charleston Pass button itself in place; align wrappers/trays around it, not this control. */
-.panel--hand .rack-bottom-bar--charleston .charleston-pass-btn.rack-bottom-tile-cell--c12-14 {
-  transform: none;
+/* ---- part-0074.css (from base.css, layout.css, components.css, animations.css) ---- */
+
+
+
+/* HANDS — solid purple (#9A5FAB). */
+.btn.btn--primary.charleston-pass-btn.suggested-hands-tab:not(:disabled) {
+  background: #9a5fab;
+  color: var(--color-white);
+}
+
+.btn.btn--primary.charleston-pass-btn.suggested-hands-tab:disabled {
+  background: #9a5fab;
+  color: var(--color-white);
+  opacity: 0.5;
+  filter: none;
+  box-shadow: none;
+}
+
+.charleston-stop-btn {
+  font-weight: 500;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Stop Charleston only (c9-11); Undo (c2 + rack-neutral) stays dark gray. */
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c9-11.charleston-stop-btn:not(:disabled) {
+  background: #9b1b30;
+  color: var(--color-white);
+}
+
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c2.btn.btn--rack-neutral.charleston-stop-btn:not(:disabled) {
+  background: var(--color-slate-mid);
+  color: var(--color-white);
+}
+
+/* Keeps column height when Stop is inactive so the pass strip does not jump */
+
+.pass-strip-tail {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  justify-content: flex-start;
+}
+
+.pass-strip-tail__inner {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--rack-tile-gap);
+  cursor: default;
+  /* Pin to exactly 3 tile widths + 2 gaps so children cannot get squeezed
+     by sub-pixel rounding or parent flex constraints. */
+  width: calc(3 * var(--rack-tile-w) + 2 * var(--rack-tile-gap));
+  flex-shrink: 0;
+  box-sizing: border-box;
+  /* Unified 3-tile box — same fill/border as `.pass-box` (visible on dark panel chrome). */
+  background: color-mix(in srgb, var(--coach-teal) 11%, var(--bg-elevated) 89%);
+  border: 1px solid var(--coach-teal-border);
+  border-radius: 0.38rem;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }

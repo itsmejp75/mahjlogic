@@ -1,9 +1,3 @@
 /* Thematic concat (classifier: base/layout/components/animations). Not imported — use ../style.css. */
 
 
-
-@supports (width: 100dvi) {
-  :root {
-    --app-play-fit-inline-from-block: 195dvb;
-  }
-}

@@ -1,55 +1,12 @@
 
 
-/* ---- part-0090.css (from base.css, layout.css, components.css, animations.css) ---- */
-
-
-
-.exposure-rack__slot--incoming-discard {
-  justify-content: center;
-}
-
-/* After drag-to-Call, the called tile “snaps” from the release point into the exposure slot */
-.exposure-rack__call-magnet-anim {
-  will-change: transform;
-  z-index: 4;
-  transform: translate(var(--call-magnet-tx, 0px), var(--call-magnet-ty, 0px));
-  transition: transform 0.42s cubic-bezier(0.2, 0.82, 0.18, 1);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .exposure-rack__call-magnet-anim {
-    transition: transform 0.1s ease;
-  }
-}
-
-/* Bot-turn last slot: inbound fly-in from discarding seat (same 220% / 0.3s / ease-in as Charleston pass fly-out). */
-.exposure-rack__incoming-discard-drag {
-  width: 100%;
-  height: 100%;
-  cursor: grab;
-  touch-action: none;
-}
-
-.exposure-rack__incoming-discard-drag:active {
-  cursor: grabbing;
-}
-
-.exposure-rack__incoming-discard-fly {
-  width: 100%;
-  height: 100%;
-}
-
-/* ---- part-0091.css (from base.css, layout.css, components.css, animations.css) ---- */
-
-
-
-@keyframes exposure-incoming-discard-fly-in-right {
+@keyframes exposure-incoming-discard-fly-in-across {
   from {
-    transform: translateX(220%);
+    transform: translateY(-220%);
     opacity: 0;
   }
   to {
-    transform: translateX(0);
+    transform: translateY(0);
     opacity: 1;
   }
 }
