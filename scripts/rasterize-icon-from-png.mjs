@@ -72,6 +72,7 @@ canvas.save(out, optimize=True)
 function main() {
   buildMaster()
 
+  sipsZ(192, 192, masterPng, path.join(root, 'public', 'icon-192.png'))
   sipsZ(180, 180, masterPng, path.join(root, 'public', 'apple-touch-icon.png'))
   sipsZ(512, 512, masterPng, path.join(root, 'public', 'icon-512.png'))
   fs.copyFileSync(

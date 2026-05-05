@@ -11,6 +11,10 @@
  *
  * Inset: Favicon defaults (FAVICON_SAFE_INSET_PERCENT) vs app (APP_ICON_SAFE_INSET_PERCENT).
  *
+ * Desktop Chrome often keeps using old bitmaps for the omnibox “Open in app” chip even after you
+ * regenerate PNGs. Bump the `?v=` query on manifest `icons[].src` (and `apple-touch-icon` in
+ * index.html) when artwork or inset changes so clients refetch.
+ *
  *   npm run icon:app
  *   npm run icon:favicon
  *   npm run icons
@@ -47,7 +51,7 @@ function safeInsetPercent() {
     )
   }
   return Number(
-    process.env.APP_ICON_SAFE_INSET_PERCENT ?? process.env.ICON_SAFE_INSET_PERCENT ?? 5,
+    process.env.APP_ICON_SAFE_INSET_PERCENT ?? process.env.ICON_SAFE_INSET_PERCENT ?? 7,
   )
 }
 function sipsZ(w, h, input, output) {
@@ -109,6 +113,7 @@ async function main() {
     sipsZ(32, 32, masterPng, path.join(root, 'public', 'favicon-32.png'))
     sipsZ(16, 16, masterPng, path.join(root, 'public', 'favicon-16.png'))
   } else {
+    sipsZ(192, 192, masterPng, path.join(root, 'public', 'icon-192.png'))
     sipsZ(180, 180, masterPng, path.join(root, 'public', 'apple-touch-icon.png'))
     sipsZ(512, 512, masterPng, path.join(root, 'public', 'icon-512.png'))
     fs.copyFileSync(
