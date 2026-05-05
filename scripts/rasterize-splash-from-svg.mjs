@@ -49,7 +49,7 @@ async function main() {
   const page = await browser.newPage()
   await page.setViewport({ width: PX, height: PX, deviceScaleFactor: 1 })
   await page.setContent(
-    `<!DOCTYPE html><html><body style="margin:0;background:#1a1a1a;display:flex;align-items:center;justify-content:center;width:${PX}px;height:${PX}px;">
+    `<!DOCTYPE html><html><body style="margin:0;background:#121419;display:flex;align-items:center;justify-content:center;width:${PX}px;height:${PX}px;">
 <img src="${dataUrl}" alt="" width="${PX}" height="${PX}" style="width:100%;height:100%;object-fit:contain"/></body></html>`,
     { waitUntil: 'networkidle0' },
   )

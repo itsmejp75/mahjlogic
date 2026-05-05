@@ -2,14 +2,15 @@
 /**
  * Rasterize SVG → PNGs via Puppeteer + macOS `sips`.
  *
- * App icons (default): PWA + Capacitor — uses src/assets/mahjlogic-app-icon.svg (same artwork as
- * the tab favicon SVG; keep in sync with mahjlogic-favicon.svg). Raster canvas background is
- * always #1a1a1a so manifest / install UI icons match the brand chrome.
+ * App icons (default): PWA + Capacitor — uses src/assets/mahjlogic-app-icon.svg (Mahj Logic bird+M v4;
+ * matches the in-app menu chip). Tab favicon copies mahjlogic-favicon.svg (same mark + #121419 + pad).
  *
- * Tab favicon only: --favicon-only uses src/assets/mahjlogic-favicon.svg; copies to
- * public/favicon.svg (typically transparent). PNG fallbacks come from the same raster step.
+ * Tab favicon only: copies src/assets/mahjlogic-favicon.svg → public/favicon.svg (expanded
+ * viewBox so the tab glyph matches install-chip padding). Raster PNG fallbacks use
+ * mahjlogic-app-icon.svg + the same 7% inset as manifest icons — identical pipeline to icon-192.
  *
- * Inset: Favicon defaults (FAVICON_SAFE_INSET_PERCENT) vs app (APP_ICON_SAFE_INSET_PERCENT).
+ * Inset: Tab favicon raster defaults match app icons (7%) so omnibox/tab PNGs align with the
+ * install-chip artwork; override with FAVICON_SAFE_INSET_PERCENT. App icons: APP_ICON_SAFE_INSET_PERCENT.
  *
  * Desktop Chrome often keeps using old bitmaps for the omnibox “Open in app” chip even after you
  * regenerate PNGs. Bump the `?v=` query on manifest `icons[].src` (and `apple-touch-icon` in
@@ -30,24 +31,22 @@ const root = path.join(__dirname, '..')
 const argv = process.argv.slice(2)
 const faviconOnly = argv.includes('--favicon-only')
 const positional = argv.filter((a) => a !== '--favicon-only')
-const svgPath = path.resolve(
-  positional[0] ??
-    path.join(
-      root,
-      'src',
-      'assets',
-      faviconOnly ? 'mahjlogic-favicon.svg' : 'mahjlogic-app-icon.svg',
-    ),
-)
-const masterPng = path.join(root, '.tmp-app-icon-master.png')
-/** Install / launcher PNG background (matches manifest theme_color treatment). */
-const ICON_CANVAS_BG = '#1a1a1a'
+const faviconSvgSrc = path.join(root, 'src', 'assets', 'mahjlogic-favicon.svg')
+const appIconSvgSrc = path.join(root, 'src', 'assets', 'mahjlogic-app-icon.svg')
+const positionalPath = positional[0]
 
-/** Edge padding (% of 1024 master). Favicon defaults smaller for max tab size; app inset leaves a slim margin so icons don’t kiss launcher / install-chip edges. */
+const svgPath = path.resolve(positionalPath ?? (faviconOnly ? faviconSvgSrc : appIconSvgSrc))
+/** SVG file read for Puppeteer raster (may differ from svgPath when copying padded favicon.svg). */
+const rasterSvgPath = positionalPath ? svgPath : faviconOnly ? appIconSvgSrc : svgPath
+const masterPng = path.join(root, '.tmp-app-icon-master.png')
+/** Install / launcher PNG background (matches menu app-icon chip). */
+const ICON_CANVAS_BG = '#121419'
+
+/** Edge padding (% of 1024 master). Favicon raster defaults match app icons (7%). */
 function safeInsetPercent() {
   if (faviconOnly) {
     return Number(
-      process.env.FAVICON_SAFE_INSET_PERCENT ?? process.env.ICON_SAFE_INSET_PERCENT ?? 2,
+      process.env.FAVICON_SAFE_INSET_PERCENT ?? process.env.ICON_SAFE_INSET_PERCENT ?? 7,
     )
   }
   return Number(
@@ -59,7 +58,7 @@ function sipsZ(w, h, input, output) {
 }
 
 async function rasterMaster() {
-  const svg = fs.readFileSync(svgPath, 'utf8')
+  const svg = fs.readFileSync(rasterSvgPath, 'utf8')
   const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)
   const chromeCandidates = [
     process.env.CHROME_PATH,
@@ -100,6 +99,10 @@ async function rasterMaster() {
 async function main() {
   if (!fs.existsSync(svgPath)) {
     console.error('rasterize-icon-from-svg: missing', svgPath)
+    process.exit(1)
+  }
+  if (!fs.existsSync(rasterSvgPath)) {
+    console.error('rasterize-icon-from-svg: missing raster source', rasterSvgPath)
     process.exit(1)
   }
   if (faviconOnly) {

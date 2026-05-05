@@ -5722,9 +5722,7 @@ export default function App() {
                                   aria-expanded={menuOpen}
                                   aria-controls={menuOpen ? 'app-menu-modal' : undefined}
                                   onClick={() => setMenuOpen((v) => !v)}
-                                >
-                                  Menu
-                                </button>
+                                />
                               </div>
                               {mahjongButtonEnabled ? (
                                 <button
@@ -5978,9 +5976,7 @@ export default function App() {
                                     aria-expanded={menuOpen}
                                     aria-controls={menuOpen ? 'app-menu-modal' : undefined}
                                     onClick={() => setMenuOpen((v) => !v)}
-                                  >
-                                    Menu
-                                  </button>
+                                  />
                                 </div>
                                 <button
                                   type="button"
@@ -6148,9 +6144,7 @@ export default function App() {
                                 aria-expanded={menuOpen}
                                 aria-controls={menuOpen ? 'app-menu-modal' : undefined}
                                 onClick={() => setMenuOpen((v) => !v)}
-                              >
-                                Menu
-                              </button>
+                              />
                             </div>
                           ) : null}
                           {showSuggestedHandsPanel ? (
