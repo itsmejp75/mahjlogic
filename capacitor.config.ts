@@ -13,7 +13,7 @@ type MahjCapacitorConfig = CapacitorConfig & {
 
 const config: MahjCapacitorConfig = {
   appId: 'com.jason.mahjlogic',
-  appName: 'MahjLogic',
+  appName: 'Mahj Logic',
   webDir: 'dist',
   /** Matches the app shell so iOS/Android WebViews are not system white before CSS loads. */
   backgroundColor: '#1a1e24',
