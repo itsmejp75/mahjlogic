@@ -2,12 +2,12 @@
 /**
  * Rasterize SVG → PNGs via Puppeteer + macOS `sips`.
  *
- * App icons (default): PWA + Capacitor — uses src/assets/mahjlogic-app-icon.svg (Mahj Logic bird+M v4;
- * matches the in-app menu chip). Tab favicon copies mahjlogic-favicon.svg (same mark + #121419 + pad).
+ * App icons (default): PWA + Capacitor — uses src/assets/mahjlogic-app-icon-button.svg (same bird+M as
+ * the in-app menu chip). Tab favicon copies mahjlogic-favicon.svg (same mark + #121419 + pad).
  *
  * Tab favicon only: copies src/assets/mahjlogic-favicon.svg → public/favicon.svg (expanded
  * viewBox so the tab glyph matches install-chip padding). Raster PNG fallbacks use
- * mahjlogic-app-icon.svg + the same 7% inset as manifest icons — identical pipeline to icon-192.
+ * mahjlogic-app-icon-button.svg + the same 7% inset as manifest icons — identical pipeline to icon-192.
  *
  * Inset: Tab favicon raster defaults match app icons (7%) so omnibox/tab PNGs align with the
  * install-chip artwork; override with FAVICON_SAFE_INSET_PERCENT. App icons: APP_ICON_SAFE_INSET_PERCENT.
@@ -32,7 +32,7 @@ const argv = process.argv.slice(2)
 const faviconOnly = argv.includes('--favicon-only')
 const positional = argv.filter((a) => a !== '--favicon-only')
 const faviconSvgSrc = path.join(root, 'src', 'assets', 'mahjlogic-favicon.svg')
-const appIconSvgSrc = path.join(root, 'src', 'assets', 'mahjlogic-app-icon.svg')
+const appIconSvgSrc = path.join(root, 'src', 'assets', 'mahjlogic-app-icon-button.svg')
 const positionalPath = positional[0]
 
 const svgPath = path.resolve(positionalPath ?? (faviconOnly ? faviconSvgSrc : appIconSvgSrc))

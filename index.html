@@ -89,11 +89,11 @@
         }
       }
     </style>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=10" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=10" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png?v=10" />
-    <link rel="manifest" href="/manifest.webmanifest?v=11" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=10" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=13" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=13" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png?v=13" />
+    <link rel="manifest" href="/manifest.webmanifest?v=13" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=13" />
     <meta name="theme-color" content="#121419" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -184,7 +184,28 @@
         } catch (e) {}
       })();
     </script>
-    <title>Mahj Logic — Practice</title>
+    <title>Mahj Logic</title>
+    <!--
+      Installed PWA windows (Chrome on macOS, etc.) often show "{manifest short_name} - {document.title}".
+      Keep browser-tab bookmarks reading "Mahj Logic", but clear the title in standalone so the window
+      caption is only the manifest/app name (avoids "MahjLogic - Mahj Logic"). Skip Capacitor WebViews.
+    -->
+    <script>
+      (function () {
+        try {
+          if (document.documentElement.hasAttribute('data-native-app')) return;
+          var q = window.matchMedia('(display-mode: standalone)');
+          function apply() {
+            var standalone =
+              q.matches ||
+              (window.navigator && window.navigator.standalone === true);
+            if (standalone) document.title = '';
+          }
+          apply();
+          q.addEventListener('change', apply);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <!--
