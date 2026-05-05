@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Rasterize a square app icon PNG (PWA + Capacitor Android / iOS).
- * Mirrors `rasterize-icon-from-svg.mjs` outputs; letterboxes with inset so the mark clears squircle masks.
+ * App icons only — does not touch favicon PNGs/SVG (use `npm run icon:favicon`).
  *
  * Usage: node scripts/rasterize-icon-from-png.mjs [path/to/icon.png]
  * Default: src/assets/mahjlogic-app-icon.png
@@ -74,8 +74,6 @@ function main() {
 
   sipsZ(180, 180, masterPng, path.join(root, 'public', 'apple-touch-icon.png'))
   sipsZ(512, 512, masterPng, path.join(root, 'public', 'icon-512.png'))
-  sipsZ(32, 32, masterPng, path.join(root, 'public', 'favicon-32.png'))
-  sipsZ(16, 16, masterPng, path.join(root, 'public', 'favicon-16.png'))
   fs.copyFileSync(
     masterPng,
     path.join(root, 'ios', 'App', 'App', 'Assets.xcassets', 'AppIcon.appiconset', 'AppIcon-512@2x.png'),
