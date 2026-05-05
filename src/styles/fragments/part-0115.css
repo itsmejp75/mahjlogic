@@ -294,14 +294,33 @@
   .app-main {
     /*
      * Top: include safe-area (notch in portrait; ~0 in landscape — harmless).
-     * Bottom: keep `--app-v-pad` only — adding `safe-area-inset-bottom` (≈21px home-indicator strip)
-     *   visibly squashed the lower split on iPhone landscape vs. the top.
+     * Bottom 0: lower play-split (discard tracker + bot exposures) must sit flush
+     *   against the WebView bottom edge so it lands at the same Y as the
+     *   `.suggested-hands-popup` (positioned in JS via `innerHeight - discardRect.bottom`).
+     * Mirrors the `html[data-native-app]` override but lives here so iPhone landscape
+     *   gets the flush-bottom layout regardless of whether the Capacitor bridge attr
+     *   resolved at first paint.
      */
     padding-top: calc(var(--app-v-pad) + env(safe-area-inset-top, 0px));
+    padding-bottom: 0;
   }
 
   .app-main__scroll {
     max-height: min(30dvb, 15rem);
+  }
+
+  /*
+   * Lower play-split fills *all* remaining vertical space below the rack so no dark strip
+   * appears between the bot rows / discard tracker and the WebView bottom. Base rule caps
+   * at `clamp(12.5rem, 53dvb, 32rem)` (≈208–228 px on a 393–430-tall WebView, leaving a
+   * ~60 px / "1/7 of the viewport" gap on iPhone Pro Max landscape when the rack is
+   * compact); switching to `flex: 1 1 0` + `max-height: none` lets it consume 100 % of
+   * the leftover. Duplicates the `html[data-native-app] .app-play-split` rule so the
+   * cap is removed even if the native attribute hasn't been applied to `<html>` yet.
+   */
+  .app-play-split {
+    flex: 1 1 0;
+    max-height: none;
   }
 }
 

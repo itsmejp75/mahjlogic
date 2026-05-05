@@ -9783,14 +9783,33 @@
   .app-main {
     /*
      * Top: include safe-area (notch in portrait; ~0 in landscape — harmless).
-     * Bottom: keep `--app-v-pad` only — adding `safe-area-inset-bottom` (≈21px home-indicator strip)
-     *   visibly squashed the lower split on iPhone landscape vs. the top.
+     * Bottom 0: lower play-split (discard tracker + bot exposures) must sit flush
+     *   against the WebView bottom edge so it lands at the same Y as the
+     *   `.suggested-hands-popup` (positioned in JS via `innerHeight - discardRect.bottom`).
+     * Mirrors the `html[data-native-app]` override but lives here so iPhone landscape
+     *   gets the flush-bottom layout regardless of whether the Capacitor bridge attr
+     *   resolved at first paint.
      */
     padding-top: calc(var(--app-v-pad) + env(safe-area-inset-top, 0px));
+    padding-bottom: 0;
   }
 
   .app-main__scroll {
     max-height: min(30dvb, 15rem);
+  }
+
+  /*
+   * Lower play-split fills *all* remaining vertical space below the rack so no dark strip
+   * appears between the bot rows / discard tracker and the WebView bottom. Base rule caps
+   * at `clamp(12.5rem, 53dvb, 32rem)` (≈208–228 px on a 393–430-tall WebView, leaving a
+   * ~60 px / "1/7 of the viewport" gap on iPhone Pro Max landscape when the rack is
+   * compact); switching to `flex: 1 1 0` + `max-height: none` lets it consume 100 % of
+   * the leftover. Duplicates the `html[data-native-app] .app-play-split` rule so the
+   * cap is removed even if the native attribute hasn't been applied to `<html>` yet.
+   */
+  .app-play-split {
+    flex: 1 1 0;
+    max-height: none;
   }
 }
 
@@ -9862,10 +9881,19 @@ html[data-native-app] .app-play-split {
 
 
 html[data-native-app] .app-main {
-  /* Match top to bottom (both = --app-v-pad). Adding env(safe-area-inset-top) made the top look bigger
-     than the bottom on landscape phones; the WebView already accounts for the notch via viewport-fit. */
+  /*
+   * Top: keep `--app-v-pad` so the rack still has breathing room from the WebView top.
+   * Bottom: 0 — the lower play-split (discard tracker + bot exposures) must sit flush
+   *   against the WebView bottom edge so it visually lands at the same Y as the
+   *   `.suggested-hands-popup` (positioned in JS via `innerHeight - discardRect.bottom`).
+   *   With any nonzero `padding-bottom`, the panels stop above the screen edge and read
+   *   as "squished from the bottom" while the popup's rounded border still anchors at
+   *   that gap, so the asymmetry between popup vs lower panels was visible to the user.
+   *   In landscape iPhone the home-indicator strip overlays harmlessly on top of the
+   *   tray (no UI controls live in the bottom 21 px of either panel).
+   */
   padding-top: var(--app-v-pad);
-  padding-bottom: var(--app-v-pad);
+  padding-bottom: 0;
 }
 
 html[data-native-app] .app-rack-stage,
@@ -10174,10 +10202,137 @@ html[data-native-app] .app-play-split {
   }
 
   .app-main {
+    /*
+     * Bottom 0 + cap removal mirrored from the earlier `@media (max-width: 932px)` block
+     * so iPhone landscape always gets the flush-bottom layout (independent of
+     * `data-native-app`). See that block's comment for the full rationale.
+     */
     padding-top: calc(var(--app-v-pad) + env(safe-area-inset-top, 0px));
+    padding-bottom: 0;
   }
 
   .app-main__scroll {
     max-height: min(30dvb, 15rem);
+  }
+
+  .app-play-split {
+    flex: 1 1 0;
+    max-height: none;
+  }
+}
+
+/*
+ * ============================================================================
+ * Native iPhone landscape — true full-screen layout (RESTORED)
+ * ============================================================================
+ *
+ * Originally added by commit `4195698 Tune native layout and rack labels` and
+ * accidentally wiped out by commit `78c9e29 all logo changes with sparrow`
+ * (a `npm run split-css` regeneration from a stale `safe_backup.css`).
+ *
+ * Without this block the lower play-split (discard tracker + bot exposures)
+ * stops at `app-main`'s padding-bottom, leaving a visible dark strip above
+ * the home-indicator. Restoring the `--native-lower-edge-pull-down` trick
+ * pulls the inner panels ~30 px past the play-split's bottom so they extend
+ * into the home-indicator overlay zone — visually edge-to-edge, matching the
+ * "couple of updates ago full screen" baseline the user remembers.
+ *
+ * Gates:
+ *   - `(max-height: 31.25rem)` ≈ 500 px → only fires on iPhone landscape
+ *     (≤430 px tall). iPad landscape (768–1024 tall) and desktop are unaffected.
+ *   - `html[data-native-app]` → only inside the Capacitor WebView; the regular
+ *     PWA / browser layout stays as-is.
+ */
+@media (max-height: 31.25rem) and (orientation: landscape) {
+  html[data-native-app] {
+    --app-play-fit-inline-from-block: 100dvi;
+    --app-h-pad-base: clamp(0.06rem, 0.45dvi, 0.16rem);
+    --app-h-pad: calc(
+      var(--app-h-pad-base) +
+        (env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px)) * 0.275
+    );
+    --app-v-pad: clamp(0.08rem, 0.45dvb, 0.18rem);
+    --hand-window-pad-inline: clamp(0.08rem, 0.5dvi, 0.18rem);
+    --rack-tray-inset-inline: 0.16rem;
+    --rack-tray-inset-block: 0.18rem;
+    --player-rack-face-gap: 1px;
+    --rack-action-touch-min-h: calc(var(--hand-rack-tile-h) * 0.48);
+    --suggested-tab-h: var(--rack-action-touch-min-h);
+    --btn-line-height: 1.08;
+    --btn-letter-spacing: calc(0.008em + 0.008rem);
+    /*
+     * How far the inner panels overflow past `.app-play-split`'s bottom edge.
+     * 1.8–2.45rem (~28–39 px) covers the home-indicator strip on iPhone Pro Max
+     * landscape (~21 px) plus a few px of breathing room so no dark band shows.
+     */
+    --native-lower-edge-pull-down: clamp(1.8rem, 8dvb, 2.45rem);
+  }
+
+  html[data-native-app] .app-layout {
+    height: 100%;
+    min-height: 0;
+    gap: 0;
+  }
+
+  html[data-native-app] .app,
+  html[data-native-app] .app-main {
+    height: 100dvb;
+    min-height: 0;
+  }
+
+  html[data-native-app] .app-main {
+    box-sizing: border-box;
+    padding-top: var(--app-v-pad);
+    padding-bottom: var(--app-v-pad);
+  }
+
+  html[data-native-app] .app-dnd-frame {
+    flex: 1 1 0;
+    height: 100%;
+    min-height: 0;
+    justify-content: flex-start;
+  }
+
+  html[data-native-app] .app-rack-stage {
+    min-height: 0;
+  }
+
+  html[data-native-app] .app-rack-stage,
+  html[data-native-app] .app-play-split {
+    padding-inline-start: calc(
+      var(--app-h-pad-base) + env(safe-area-inset-left, 0px) * 0.55
+    );
+    padding-inline-end: calc(
+      var(--app-h-pad-base) + env(safe-area-inset-right, 0px) * 0.55
+    );
+  }
+
+  html[data-native-app] .app-play-split {
+    flex: 1 1 0;
+    max-height: none;
+    min-height: 0;
+    align-self: stretch;
+    height: auto;
+  }
+
+  html[data-native-app] .app-play-split__left,
+  html[data-native-app] .app-play-split__right,
+  html[data-native-app] .app-play-split__right-stack,
+  html[data-native-app] .app-play-split > .app-play-split__left > .panel--discard-tracker,
+  html[data-native-app] .app-play-split > .app-play-split__right .panel--bot-exposures {
+    height: 100%;
+    min-height: 0;
+  }
+
+  /*
+   * The actual full-screen trick: panels are sized 100% + ~30 px so they
+   * deliberately overflow the play-split's bottom into the home-indicator
+   * overlay. Combined with `viewport-fit=cover` and `contentInset: 'never'`
+   * in `capacitor.config.ts`, the content reaches the physical screen edge.
+   */
+  html[data-native-app] .app-play-split > .app-play-split__left > .panel--discard-tracker,
+  html[data-native-app] .app-play-split > .app-play-split__right .panel--bot-exposures {
+    flex: 0 0 calc(100% + var(--native-lower-edge-pull-down));
+    height: calc(100% + var(--native-lower-edge-pull-down));
   }
 }

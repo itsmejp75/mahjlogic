@@ -5,10 +5,19 @@
 
 
 html[data-native-app] .app-main {
-  /* Match top to bottom (both = --app-v-pad). Adding env(safe-area-inset-top) made the top look bigger
-     than the bottom on landscape phones; the WebView already accounts for the notch via viewport-fit. */
+  /*
+   * Top: keep `--app-v-pad` so the rack still has breathing room from the WebView top.
+   * Bottom: 0 — the lower play-split (discard tracker + bot exposures) must sit flush
+   *   against the WebView bottom edge so it visually lands at the same Y as the
+   *   `.suggested-hands-popup` (positioned in JS via `innerHeight - discardRect.bottom`).
+   *   With any nonzero `padding-bottom`, the panels stop above the screen edge and read
+   *   as "squished from the bottom" while the popup's rounded border still anchors at
+   *   that gap, so the asymmetry between popup vs lower panels was visible to the user.
+   *   In landscape iPhone the home-indicator strip overlays harmlessly on top of the
+   *   tray (no UI controls live in the bottom 21 px of either panel).
+   */
   padding-top: var(--app-v-pad);
-  padding-bottom: var(--app-v-pad);
+  padding-bottom: 0;
 }
 
 html[data-native-app] .app-rack-stage,
