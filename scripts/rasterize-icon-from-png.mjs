@@ -74,6 +74,8 @@ function main() {
 
   sipsZ(180, 180, masterPng, path.join(root, 'public', 'apple-touch-icon.png'))
   sipsZ(512, 512, masterPng, path.join(root, 'public', 'icon-512.png'))
+  sipsZ(32, 32, masterPng, path.join(root, 'public', 'favicon-32.png'))
+  sipsZ(16, 16, masterPng, path.join(root, 'public', 'favicon-16.png'))
   fs.copyFileSync(
     masterPng,
     path.join(root, 'ios', 'App', 'App', 'Assets.xcassets', 'AppIcon.appiconset', 'AppIcon-512@2x.png'),
