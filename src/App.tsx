@@ -50,7 +50,17 @@ import { TileFace } from './components/TileFace'
 import { ExposureRack } from './components/ExposureRack'
 import { RackLogoWatermark } from './components/RackLogoWatermark'
 import { DiscardPileFlyInTile } from './components/DiscardPileFlyInTile'
-import { PRACTICE_PATTERNS } from './card/practicePatterns'
+import {
+  PLAYABLE_CARD_IDS,
+  PLAYABLE_CARD_LABEL,
+  type PlayableCardId,
+  cardSectionOrderFromPatterns,
+  patternsForCard,
+  playableCardShortLabel,
+  readPlayableCardFromStorage,
+  writePlayableCardToStorage,
+} from './card/cardCatalog'
+import { getActiveCardPatterns, setActiveCardPatterns } from './card/activeCardPatternsScope'
 import {
   buildPinnedPatternsFromFocusKey,
   computeRackPatternHighlightIds,
@@ -69,6 +79,21 @@ import { tileInstancesWithClaimMeldJokersResolved } from './analysis/eastExposur
 import { PostGameLoserRackRow } from './components/PostGameLoserRackRow'
 import { IllegalMahjongDialog } from './components/IllegalMahjongDialog'
 import { SuggestedHandsPanel } from './components/SuggestedHandsPanel'
+import {
+  HIDE_CONCEALED_HANDS_STORAGE_KEY,
+  readHideConcealedHandsFromStorage,
+  writeHideConcealedHandsToStorage,
+  readUncheckedSectionsFromStorage,
+  writeUncheckedSectionsToStorage,
+  suggestedHandsFilterMenuColumns,
+  SUGGESTED_HANDS_FONT_SIZE_OPTIONS,
+  SUGGESTED_HANDS_FONT_SIZE_STORAGE_KEY,
+  readSuggestedHandsFontSizeFromStorage,
+  writeSuggestedHandsFontSizeToStorage,
+  SUGGESTED_HANDS_UNCHECKED_SECTIONS_KEY,
+  suggestedHandSectionMenuLabel,
+  type SuggestedHandsFontSize,
+} from './suggestedHands/filterSettings'
 import type { BotExposure, BotSeat } from './analysis/types'
 import {
   BOT_DIFFICULTIES,
@@ -152,6 +177,10 @@ const COLOR_BUTTONS_LABEL = 'Color buttons'
 /** When true, height/width of Suggested hands panel are saved when closed and restored on next open. */
 const LS_KEY_SUGGESTED_HANDS_REMEMBER_SIZE = 'mahjlogic.suggestedHandsRememberSize'
 const LS_KEY_SUGGESTED_HANDS_PANEL_HEIGHT = 'mahjlogic.suggestedHandsPanelHeight'
+/** When "1", explicit height was set by bottom-edge / bottom-corner drag — layout uses fixed `top` + `height` (grow downward). */
+const LS_KEY_SUGGESTED_HANDS_HEIGHT_PIN_TOP = 'mahjlogic.suggestedHandsHeightPinTop'
+/** Viewport Y of the outer popup top when {@link LS_KEY_SUGGESTED_HANDS_HEIGHT_PIN_TOP} is set. */
+const LS_KEY_SUGGESTED_HANDS_PANEL_PINNED_TOP = 'mahjlogic.suggestedHandsPanelPinnedTop'
 const LS_KEY_SUGGESTED_HANDS_RIGHT_DELTA = 'mahjlogic.suggestedHandsRightDelta'
 const LS_KEY_SUGGESTED_HANDS_LEFT_DELTA = 'mahjlogic.suggestedHandsLeftDelta'
 const LS_KEY_SUGGESTED_HANDS_OFFSET_X = 'mahjlogic.suggestedHandsOffsetX'
@@ -171,6 +200,12 @@ const LS_KEY_JOKER_SWAP_HINT = 'mahjlogic.jokerSwapHintEnabled'
 /** Former “Joker Flash” preference; read once to seed `LS_KEY_JOKER_SWAP_HINT` if missing. */
 const LS_KEY_JOKER_FLASH_LEGACY = 'mahjlogic.jokerFlashEnabled'
 const JOKER_SWAP_HINT_LABEL = 'Joker swap hint'
+/** Training / practice: confirm before dead hand from bad call, bad Mah Jongg, or hopeless discard. */
+const LS_KEY_DEAD_HAND_WARNINGS = 'mahjlogic.deadHandWarningsEnabled'
+const DEAD_HAND_WARNINGS_LABEL = 'Dead hand warnings'
+/** Highlight the Mah Jongg rack button when a declaration would succeed (self-draw or on a live discard). */
+const LS_KEY_MAHJONG_HINT = 'mahjlogic.mahjongHintEnabled'
+const MAHJONG_HINT_LABEL = 'Mah Jongg hint'
 const JOKER_SWAP_HINT_BOUNCE_DELAY_MS = 500
 const JOKER_SWAP_HINT_BOUNCE_DURATION_MS = 1700
 /** The keyframe has returned to translateY(0) at 52%; the rest of the iteration is idle. */
@@ -288,6 +323,25 @@ function readSuggestedPanelHeightFromStorage(): number | null {
   }
 }
 
+function readSuggestedPanelHeightPinTopFromStorage(): boolean {
+  try {
+    return localStorage.getItem(LS_KEY_SUGGESTED_HANDS_HEIGHT_PIN_TOP) === '1'
+  } catch {
+    return false
+  }
+}
+
+function readSuggestedPanelPinnedTopPxFromStorage(): number | null {
+  try {
+    const v = localStorage.getItem(LS_KEY_SUGGESTED_HANDS_PANEL_PINNED_TOP)
+    if (v == null) return null
+    const n = parseFloat(v)
+    return Number.isFinite(n) ? n : null
+  } catch {
+    return null
+  }
+}
+
 function readSuggestedPanelRightDeltaFromStorage(): number | null {
   try {
     const v = localStorage.getItem(LS_KEY_SUGGESTED_HANDS_RIGHT_DELTA)
@@ -351,6 +405,26 @@ function readJokerSwapHintFromStorage(): boolean {
   return true
 }
 
+function readDeadHandWarningsFromStorage(): boolean {
+  try {
+    const v = localStorage.getItem(LS_KEY_DEAD_HAND_WARNINGS)
+    if (v === null) return true
+    return v === 'true' || v === '1'
+  } catch {
+    return true
+  }
+}
+
+function readMahjongHintFromStorage(): boolean {
+  try {
+    const v = localStorage.getItem(LS_KEY_MAHJONG_HINT)
+    if (v === null) return true
+    return v === 'true' || v === '1'
+  } catch {
+    return true
+  }
+}
+
 /**
  * east-discard      East has 14 tiles and must discard one.
  * bot-turn          A bot just drew and discarded; player can Call (claim discard), declare Mah Jongg, or skip.
@@ -372,6 +446,7 @@ type GameBlockingDialog =
   | { variant: 'mahjong-dead-warning'; rankInput: RankSuggestedHandsInput }
   | { variant: 'call-exposure-dead-warning'; rankInput: RankSuggestedHandsInput }
   | { variant: 'discard-dead-warning'; rankInput: RankSuggestedHandsInput }
+  | { variant: 'new-game-pending-card'; nextCardId: PlayableCardId }
 
 const CALL_STAGING_DROP_ID = 'call-staging-meld-drop'
 const EAST_EXPOSURE_MELD_SORT_ID_PREFIX = 'east-exposure-meld:'
@@ -892,6 +967,7 @@ function runOneBotTurn(
     exposures: swapped.botExposures,
     playerClaimMelds: thisBotExposures,
     eastTableClaimMelds: swapped.eastExposures,
+    patterns: getActiveCardPatterns(),
   }
   if (summarizeRackTowardWin(mjRankInput).bestTilesAway === 0) {
     if (botWinsEnabled) {
@@ -1094,6 +1170,7 @@ function botTilesAwayWithCalledDiscard(
     exposures: r.botExposures,
     playerClaimMelds: thisBotExposures,
     eastTableClaimMelds: r.eastExposures,
+    patterns: getActiveCardPatterns(),
   }).bestTilesAway
 }
 
@@ -1782,9 +1859,10 @@ function orderEastExposuresForClosestCardLine(
     exposures: r.botExposures,
     playerClaimMelds: nextEast,
     eastTableClaimMelds: nextEast,
+    patterns: getActiveCardPatterns(),
   })
   if (!closestLine) return nextEast
-  const pat = PRACTICE_PATTERNS.find((p) => p.id === closestLine.id)
+  const pat = getActiveCardPatterns().find((p) => p.id === closestLine.id)
   if (!pat) return nextEast
   const reordered = reorderEastExposuresToPatternGroupOrder(nextEast, pat)
   if (!reordered) return nextEast
@@ -1889,6 +1967,7 @@ function previewAutoSelectedCallRankInput(
     exposures: r.botExposures,
     playerClaimMelds: eastMelds,
     eastTableClaimMelds: eastMelds,
+    patterns: getActiveCardPatterns(),
   }
 }
 
@@ -2119,6 +2198,7 @@ export default function App() {
   const [suggestedPanelHandsOn, setSuggestedPanelHandsOn] = useState(false)
   const [suggestedCategoryResetEpoch, setSuggestedCategoryResetEpoch] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
+  const menuOpenPrevRef = useRef(false)
   const menuContainerRef = useRef<HTMLDivElement>(null)
   const botExposuresToolbarWellRef = useRef<HTMLDivElement>(null)
   const [suggestedHandsListOn, setSuggestedHandsListOn] = useState(true)
@@ -2126,10 +2206,15 @@ export default function App() {
   const [mahjongWinReviewing, setMahjongWinReviewing] = useState(false)
   const [botMahjongWinReviewing, setBotMahjongWinReviewing] = useState(false)
   const [suggestedPanelTilesOn, setSuggestedPanelTilesOn] = useState(false)
-  const [filterBtnPortalEl, setFilterBtnPortalEl] = useState<HTMLDivElement | null>(null)
-  const setFilterButtonPortalRef = useCallback((el: HTMLDivElement | null) => {
-    setFilterBtnPortalEl((prev) => (prev === el ? prev : el))
-  }, [])
+  const [suggestedHandsUncheckedSections, setSuggestedHandsUncheckedSections] = useState<Set<string>>(
+    () => readUncheckedSectionsFromStorage(),
+  )
+  const [suggestedHandsHideConcealed, setSuggestedHandsHideConcealed] = useState<boolean>(() =>
+    readHideConcealedHandsFromStorage(),
+  )
+  const [suggestedHandsFontSize, setSuggestedHandsFontSize] = useState<SuggestedHandsFontSize>(() =>
+    readSuggestedHandsFontSizeFromStorage(),
+  )
 
   // ── Game options (persisted) ──────────────────────────────────────────────
   const [botWinsEnabled, setBotWinsEnabled] = useState<boolean>(() => readBotWinsEnabledFromStorage())
@@ -2143,8 +2228,34 @@ export default function App() {
   const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>(() => readBotDifficultyFromStorage())
   const botDifficultyRef = useRef(botDifficulty)
   botDifficultyRef.current = botDifficulty
+  const [committedCardId, setCommittedCardId] = useState<PlayableCardId>(() => {
+    const id = readPlayableCardFromStorage()
+    setActiveCardPatterns(patternsForCard(id))
+    return id
+  })
+  const [menuCardId, setMenuCardId] = useState<PlayableCardId>(() => readPlayableCardFromStorage())
+  const committedCardIdRef = useRef(committedCardId)
+  const menuCardIdRef = useRef(menuCardId)
+  committedCardIdRef.current = committedCardId
+  menuCardIdRef.current = menuCardId
+  const cardPatterns = useMemo(() => patternsForCard(committedCardId), [committedCardId])
+  const cardSectionOrder = useMemo(() => [...cardSectionOrderFromPatterns(cardPatterns)], [cardPatterns])
+
+  const suggestedHandsFilterColumns = useMemo(
+    () => suggestedHandsFilterMenuColumns(cardSectionOrder),
+    [cardSectionOrder],
+  )
+
+  useLayoutEffect(() => {
+    setActiveCardPatterns(cardPatterns)
+  }, [cardPatterns])
+
   const [tileGraphics, setTileGraphics] = useState<TileGraphics>(() => readTileGraphicsFromStorage())
   const [jokerSwapHintEnabled, setJokerSwapHintEnabled] = useState<boolean>(() => readJokerSwapHintFromStorage())
+  const [deadHandWarningsEnabled, setDeadHandWarningsEnabled] = useState<boolean>(() =>
+    readDeadHandWarningsFromStorage(),
+  )
+  const [mahjongHintEnabled, setMahjongHintEnabled] = useState<boolean>(() => readMahjongHintFromStorage())
   const setTileGraphicsMode = useCallback((g: TileGraphics) => {
     setTileGraphics(g)
     try {
@@ -2153,6 +2264,11 @@ export default function App() {
     } catch {
       /* ignore */
     }
+  }, [])
+
+  const setSuggestedHandsFontSizeTier = useCallback((tier: SuggestedHandsFontSize) => {
+    setSuggestedHandsFontSize(tier)
+    writeSuggestedHandsFontSizeToStorage(tier)
   }, [])
 
   const setBotDifficultyLevel = useCallback((d: BotDifficulty) => {
@@ -2207,6 +2323,8 @@ export default function App() {
         localStorage.setItem(LS_KEY_SUGGESTED_HANDS_REMEMBER_SIZE, next ? 'true' : 'false')
         if (!next) {
           localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_PANEL_HEIGHT)
+          localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_HEIGHT_PIN_TOP)
+          localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_PANEL_PINNED_TOP)
           localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_RIGHT_DELTA)
           localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_LEFT_DELTA)
           localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_OFFSET_X)
@@ -2231,6 +2349,30 @@ export default function App() {
     })
   }, [])
 
+  const toggleDeadHandWarnings = useCallback(() => {
+    setDeadHandWarningsEnabled((v) => {
+      const next = !v
+      try {
+        localStorage.setItem(LS_KEY_DEAD_HAND_WARNINGS, next ? 'true' : 'false')
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }, [])
+
+  const toggleMahjongHint = useCallback(() => {
+    setMahjongHintEnabled((v) => {
+      const next = !v
+      try {
+        localStorage.setItem(LS_KEY_MAHJONG_HINT, next ? 'true' : 'false')
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }, [])
+
   // Keep a ref so pure-function callbacks always see the current setting value.
   const botWinsEnabledRef = useRef(botWinsEnabled)
   useEffect(() => {
@@ -2241,6 +2383,11 @@ export default function App() {
   useEffect(() => {
     animationsEnabledRef.current = animationsEnabled
   }, [animationsEnabled])
+
+  const deadHandWarningsEnabledRef = useRef(deadHandWarningsEnabled)
+  useEffect(() => {
+    deadHandWarningsEnabledRef.current = deadHandWarningsEnabled
+  }, [deadHandWarningsEnabled])
 
   /** Re-read on mount: guarantees UI matches `localStorage` after refresh. */
   useEffect(() => {
@@ -2271,7 +2418,37 @@ export default function App() {
       const h = readJokerSwapHintFromStorage()
       return prev === h ? prev : h
     })
+    setDeadHandWarningsEnabled((prev) => {
+      const d = readDeadHandWarningsFromStorage()
+      return prev === d ? prev : d
+    })
+    setMahjongHintEnabled((prev) => {
+      const m = readMahjongHintFromStorage()
+      return prev === m ? prev : m
+    })
+    setSuggestedHandsUncheckedSections(() => readUncheckedSectionsFromStorage())
+    setSuggestedHandsHideConcealed((prev) => {
+      const h = readHideConcealedHandsFromStorage()
+      return prev === h ? prev : h
+    })
+    setSuggestedHandsFontSize((prev) => {
+      const f = readSuggestedHandsFontSizeFromStorage()
+      return prev === f ? prev : f
+    })
   }, [])
+
+  useEffect(() => {
+    writeUncheckedSectionsToStorage(suggestedHandsUncheckedSections)
+  }, [suggestedHandsUncheckedSections])
+
+  useEffect(() => {
+    writeHideConcealedHandsToStorage(suggestedHandsHideConcealed)
+  }, [suggestedHandsHideConcealed])
+
+  useEffect(() => {
+    if (suggestedCategoryResetEpoch === 0) return
+    setSuggestedHandsUncheckedSections(new Set())
+  }, [suggestedCategoryResetEpoch])
 
   /** If another tab changes a preference, stay in sync. */
   useEffect(() => {
@@ -2302,6 +2479,23 @@ export default function App() {
       } else if (e.key === LS_KEY_JOKER_SWAP_HINT) {
         if (e.newValue == null) return
         setJokerSwapHintEnabled(e.newValue === 'true' || e.newValue === '1')
+      } else if (e.key === LS_KEY_DEAD_HAND_WARNINGS) {
+        if (e.newValue == null) return
+        const on = e.newValue === 'true' || e.newValue === '1'
+        setDeadHandWarningsEnabled(on)
+        deadHandWarningsEnabledRef.current = on
+      } else if (e.key === LS_KEY_MAHJONG_HINT) {
+        if (e.newValue == null) return
+        setMahjongHintEnabled(e.newValue === 'true' || e.newValue === '1')
+      } else if (e.key === SUGGESTED_HANDS_UNCHECKED_SECTIONS_KEY) {
+        if (e.newValue == null) return
+        setSuggestedHandsUncheckedSections(readUncheckedSectionsFromStorage())
+      } else if (e.key === HIDE_CONCEALED_HANDS_STORAGE_KEY) {
+        if (e.newValue == null) return
+        setSuggestedHandsHideConcealed(readHideConcealedHandsFromStorage())
+      } else if (e.key === SUGGESTED_HANDS_FONT_SIZE_STORAGE_KEY) {
+        if (e.newValue == null) return
+        setSuggestedHandsFontSize(readSuggestedHandsFontSizeFromStorage())
       }
     }
     window.addEventListener('storage', onStorage)
@@ -2316,6 +2510,15 @@ export default function App() {
   const [suggestedPopupBottom, setSuggestedPopupBottom] = useState<number | null>(null)
   const [suggestedPopupRight, setSuggestedPopupRight] = useState<number | null>(null)
   const [suggestedPanelHeight, setSuggestedPanelHeight] = useState<number | null>(null)
+  /**
+   * When true, explicit height uses fixed viewport `top` + `height` (omit `bottom`) so bottom-edge /
+   * bottom-corner drags grow the window downward instead of upward from the discard anchor.
+   */
+  const [suggestedPanelHeightPinsTop, setSuggestedPanelHeightPinsTop] = useState(false)
+  const suggestedPanelHeightPinsTopRef = useRef(false)
+  useEffect(() => {
+    suggestedPanelHeightPinsTopRef.current = suggestedPanelHeightPinsTop
+  }, [suggestedPanelHeightPinsTop])
   /** Pixels added to the measured `right` (larger = narrower; smaller = wider). Cleared on panel close. */
   const [suggestedPanelRightDelta, setSuggestedPanelRightDelta] = useState<number | null>(null)
   /** Pixels added to `var(--app-h-pad)` on the left — drag the left edge or top-left / bottom-left corners. Cleared on close. */
@@ -2343,6 +2546,8 @@ export default function App() {
         edge: 'top' | 'bottom'
         startY: number
         startHeight: number
+        /** When resizing the top edge while {@link suggestedPanelHeightPinsTop} is true, move `top` with height. */
+        startOuterTop?: number
         moved: boolean
       }
     | {
@@ -2378,6 +2583,8 @@ export default function App() {
     startRect: DOMRect
     leftBound: number
     moved: boolean
+    /** `outer.getBoundingClientRect().top` at pointerdown — br/bl only; committed once drag crosses threshold. */
+    startOuterTop?: number
   } | null>(null)
 
   const onDragHandlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
@@ -2404,13 +2611,14 @@ export default function App() {
     e.stopPropagation()
     const popup = suggestedPopupRef.current
     if (!popup) return
-    const shellH =
-      popup.parentElement?.getBoundingClientRect().height ?? popup.getBoundingClientRect().height
+    const outer = popup.parentElement ?? popup
+    const shellH = outer.getBoundingClientRect().height
     suggestedPanelDragRef.current = {
       kind: 'resizeHeight',
       edge: 'top',
       startY: e.clientY,
       startHeight: shellH,
+      startOuterTop: suggestedPanelHeightPinsTopRef.current ? outer.getBoundingClientRect().top : undefined,
       moved: false,
     }
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
@@ -2422,13 +2630,16 @@ export default function App() {
     e.stopPropagation()
     const popup = suggestedPopupRef.current
     if (!popup) return
-    const shellH =
-      popup.parentElement?.getBoundingClientRect().height ?? popup.getBoundingClientRect().height
+    const outer = popup.parentElement ?? popup
+    const r = outer.getBoundingClientRect()
+    const shellH = r.height
+    /* Defer pin + height until the pointer actually moves — avoids a subpixel “snap” on press/hover noise. */
     suggestedPanelDragRef.current = {
       kind: 'resizeHeight',
       edge: 'bottom',
       startY: e.clientY,
       startHeight: shellH,
+      startOuterTop: r.top,
       moved: false,
     }
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
@@ -2440,11 +2651,23 @@ export default function App() {
     if (drag.kind === 'resizeHeight') {
       const delta =
         drag.edge === 'top' ? drag.startY - e.clientY : e.clientY - drag.startY
-      if (Math.abs(delta) > 4) drag.moved = true
+      if (Math.abs(delta) > 4) {
+        if (!drag.moved) {
+          drag.moved = true
+          if (drag.edge === 'bottom' && drag.startOuterTop !== undefined) {
+            setSuggestedPanelHeightPinsTop(true)
+            setSuggestedPopupTop(drag.startOuterTop)
+          }
+        }
+      }
       if (!drag.moved) return
       const minH = 120
       const maxH = window.innerHeight
-      setSuggestedPanelHeight(Math.max(minH, Math.min(maxH, drag.startHeight + delta)))
+      const newH = Math.max(minH, Math.min(maxH, drag.startHeight + delta))
+      setSuggestedPanelHeight(newH)
+      if (drag.edge === 'top' && drag.startOuterTop !== undefined) {
+        setSuggestedPopupTop(drag.startOuterTop - (newH - drag.startHeight))
+      }
       return
     }
     if (drag.kind === 'move') {
@@ -2492,7 +2715,9 @@ export default function App() {
     e.stopPropagation()
     const el = suggestedPopupRef.current
     if (!el) return
-    const r = el.getBoundingClientRect()
+    /* `right` / `left` apply to the fixed outer shell; inner has drag `transform` — use outer geometry. */
+    const outer = el.parentElement ?? el
+    const r = outer.getBoundingClientRect()
     rightEdgeDragRef.current = {
       startX: e.clientX,
       startRightCss: window.innerWidth - r.right,
@@ -2527,7 +2752,8 @@ export default function App() {
     e.stopPropagation()
     const el = suggestedPopupRef.current
     if (!el) return
-    const r = el.getBoundingClientRect()
+    const outer = el.parentElement ?? el
+    const r = outer.getBoundingClientRect()
     leftEdgeDragRef.current = {
       startX: e.clientX,
       startLeftDelta: suggestedPanelLeftDeltaRef.current,
@@ -2562,21 +2788,23 @@ export default function App() {
       'data-suggested-resize-corner',
     ) as 'tr' | 'tl' | 'br' | 'bl' | null
     if (which == null) return
-    const popup = suggestedPopupRef.current
-    if (!popup) return
-    const r = popup.getBoundingClientRect()
-    const shellH =
-      popup.parentElement?.getBoundingClientRect().height ?? r.height
+    const inner = suggestedPopupRef.current
+    if (!inner) return
+    const outer = inner.parentElement ?? inner
+    const rOuter = outer.getBoundingClientRect()
+    const shellH = rOuter.height
+    /* Pin + explicit height only after pointer moves (see onCornerPointerMove) — no jump on mere press/hover. */
     cornerResizeRef.current = {
       which,
       startX: e.clientX,
       startY: e.clientY,
       startHeight: shellH,
-      startRightCss: window.innerWidth - r.right,
+      startRightCss: window.innerWidth - rOuter.right,
       startLeftDelta: suggestedPanelLeftDeltaRef.current,
-      startRect: r,
-      leftBound: r.left,
+      startRect: rOuter,
+      leftBound: rOuter.left,
       moved: false,
+      startOuterTop: which === 'br' || which === 'bl' ? rOuter.top : undefined,
     }
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
   }, [])
@@ -2586,8 +2814,17 @@ export default function App() {
     if (!c) return
     const dx = e.clientX - c.startX
     const dyy = e.clientY - c.startY
-    if (Math.abs(dx) > 3 || Math.abs(dyy) > 4) c.moved = true
-    if (!c.moved) return
+    const crossed = Math.abs(dx) > 3 || Math.abs(dyy) > 4
+    if (!c.moved) {
+      if (!crossed) return
+      c.moved = true
+      if (c.which === 'br' || c.which === 'bl') {
+        setSuggestedPanelHeightPinsTop(true)
+        if (c.startOuterTop !== undefined) setSuggestedPopupTop(c.startOuterTop)
+      } else {
+        setSuggestedPanelHeightPinsTop(false)
+      }
+    }
     const minH = 120
     const maxH = window.innerHeight
     const dyFromTop = c.startY - e.clientY
@@ -2648,6 +2885,8 @@ export default function App() {
     l: 0,
     px: 0,
     py: 0,
+    pinTop: false,
+    pinTopY: null as number | null,
   })
   panelSizeOnLatestRenderRef.current = {
     h: suggestedPanelHeight,
@@ -2655,6 +2894,8 @@ export default function App() {
     l: suggestedPanelLeftDelta,
     px: suggestedPanelPositionOffset.x,
     py: suggestedPanelPositionOffset.y,
+    pinTop: suggestedPanelHeightPinsTop,
+    pinTopY: suggestedPopupTop,
   }
 
   useEffect(() => {
@@ -2679,13 +2920,22 @@ export default function App() {
   useEffect(() => {
     const wasOpen = lastSuggestedPanelOpenRef.current
     if (wasOpen && !suggestedPanelHandsOn) {
-      const { h, d, l, px, py } = panelSizeOnLatestRenderRef.current
+      const { h, d, l, px, py, pinTop, pinTopY } = panelSizeOnLatestRenderRef.current
       if (suggestedHandsRememberSizeRef.current) {
         try {
           if (h != null) {
             localStorage.setItem(LS_KEY_SUGGESTED_HANDS_PANEL_HEIGHT, String(h))
+            if (pinTop && pinTopY != null) {
+              localStorage.setItem(LS_KEY_SUGGESTED_HANDS_HEIGHT_PIN_TOP, '1')
+              localStorage.setItem(LS_KEY_SUGGESTED_HANDS_PANEL_PINNED_TOP, String(pinTopY))
+            } else {
+              localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_HEIGHT_PIN_TOP)
+              localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_PANEL_PINNED_TOP)
+            }
           } else {
             localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_PANEL_HEIGHT)
+            localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_HEIGHT_PIN_TOP)
+            localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_PANEL_PINNED_TOP)
           }
           if (d != null) {
             localStorage.setItem(LS_KEY_SUGGESTED_HANDS_RIGHT_DELTA, String(d))
@@ -2710,6 +2960,8 @@ export default function App() {
       } else {
         try {
           localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_PANEL_HEIGHT)
+          localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_HEIGHT_PIN_TOP)
+          localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_PANEL_PINNED_TOP)
           localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_RIGHT_DELTA)
           localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_LEFT_DELTA)
           localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_OFFSET_X)
@@ -2724,6 +2976,7 @@ export default function App() {
       }
       const resetLayout = () => {
         setSuggestedPanelHeight(null)
+        setSuggestedPanelHeightPinsTop(false)
         setSuggestedPanelRightDelta(null)
         setSuggestedPanelLeftDelta(0)
         setSuggestedPanelPositionOffset({ x: 0, y: 0 })
@@ -2741,8 +2994,18 @@ export default function App() {
         const d0 = readSuggestedPanelRightDeltaFromStorage()
         const l0 = readSuggestedPanelLeftDeltaFromStorage()
         const pos0 = readSuggestedPanelPositionOffsetFromStorage()
+        const pinTop0 = readSuggestedPanelHeightPinTopFromStorage()
+        const pinnedTop0 = readSuggestedPanelPinnedTopPxFromStorage()
         if (h0 != null) {
           setSuggestedPanelHeight(h0)
+          if (pinTop0 && pinnedTop0 != null) {
+            setSuggestedPanelHeightPinsTop(true)
+            setSuggestedPopupTop(pinnedTop0)
+          } else {
+            setSuggestedPanelHeightPinsTop(false)
+          }
+        } else {
+          setSuggestedPanelHeightPinsTop(false)
         }
         if (d0 != null) {
           setSuggestedPanelRightDelta(d0)
@@ -2767,6 +3030,13 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
+  }, [menuOpen])
+
+  useEffect(() => {
+    if (menuOpenPrevRef.current && !menuOpen) {
+      setMenuCardId(committedCardIdRef.current)
+    }
+    menuOpenPrevRef.current = menuOpen
   }, [menuOpen])
 
   const {
@@ -2794,20 +3064,45 @@ export default function App() {
   } = round
   const charlestonDone = charlestonPhase === 'done'
 
+  const requestPlayableCard = useCallback((next: PlayableCardId) => {
+    if (next === menuCardId) return
+    setMenuCardId(next)
+  }, [menuCardId])
+
   useEffect(() => {
     const disc = discardTrackerPanelRef.current
     if (!disc) return
+    /** Ignore subpixel / hover flicker from ResizeObserver (stabilizes height when bottom corners are near the tracker). */
+    const last = { top: null as number | null, bottom: null as number | null, right: null as number | null }
+    const LAYOUT_ANCHOR_EPS_PX = 2
     const update = () => {
       const dRect = disc.getBoundingClientRect()
       const topFromAction = charlestonDone
         ? suggestedPopupTopAnchorMainRef.current?.getBoundingClientRect().bottom
         : suggestedPopupTopAnchorCharlestonRef.current?.getBoundingClientRect().bottom
       const toolbarBorderLeft = botExposuresToolbarWellRef.current?.getBoundingClientRect().left
-      setSuggestedPopupTop(topFromAction ?? dRect.top)
-      setSuggestedPopupBottom(window.innerHeight - dRect.bottom)
-      setSuggestedPopupRight(
-        toolbarBorderLeft == null ? null : window.innerWidth - toolbarBorderLeft,
-      )
+      if (!suggestedPanelHeightPinsTopRef.current) {
+        const nextTop = topFromAction ?? dRect.top
+        if (last.top == null || Math.abs(last.top - nextTop) >= LAYOUT_ANCHOR_EPS_PX) {
+          last.top = nextTop
+          setSuggestedPopupTop(nextTop)
+        }
+      }
+      const nextBottom = window.innerHeight - dRect.bottom
+      if (last.bottom == null || Math.abs(last.bottom - nextBottom) >= LAYOUT_ANCHOR_EPS_PX) {
+        last.bottom = nextBottom
+        setSuggestedPopupBottom(nextBottom)
+      }
+      const nextRight = toolbarBorderLeft == null ? null : window.innerWidth - toolbarBorderLeft
+      if (nextRight == null) {
+        if (last.right !== null) {
+          last.right = null
+          setSuggestedPopupRight(null)
+        }
+      } else if (last.right == null || Math.abs(last.right - nextRight) >= LAYOUT_ANCHOR_EPS_PX) {
+        last.right = nextRight
+        setSuggestedPopupRight(nextRight)
+      }
     }
     update()
     const ro = new ResizeObserver(update)
@@ -3292,9 +3587,41 @@ export default function App() {
       exposures: botExposures,
       playerClaimMelds: eastExposures,
       eastTableClaimMelds: eastExposures,
+      patterns: cardPatterns,
     }),
-    [hand, wall.length, discardTiles, botExposures, eastExposures],
+    [hand, wall.length, discardTiles, botExposures, eastExposures, cardPatterns],
   )
+
+  /** Matches `declareMahjong` success preconditions for the main rack MAHJ control (self-draw vs live discard). */
+  const mahjongWinLegallyAvailable = useMemo(() => {
+    if (!charlestonDone || !mahjongHintEnabled) return false
+    if (mainPhase === 'east-discard') {
+      return summarizeRackTowardWin(suggestedRankInput).bestTilesAway === 0
+    }
+    if (mainPhase === 'bot-turn' && activeBotDiscard) {
+      return hasLegalMahjongOnBotDiscard({
+        mainPhase: 'bot-turn',
+        activeBotDiscard,
+        hand,
+        eastExposures,
+        botExposures,
+        wall,
+        discardPile,
+      })
+    }
+    return false
+  }, [
+    charlestonDone,
+    mahjongHintEnabled,
+    mainPhase,
+    suggestedRankInput,
+    activeBotDiscard,
+    hand,
+    eastExposures,
+    botExposures,
+    wall,
+    discardPile,
+  ])
 
   const eastSuggestedHands = useMemo(() => {
     if (mainPhase === 'mahjong-declared' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand' || mainPhase === 'wall-game') return []
@@ -3359,9 +3686,9 @@ export default function App() {
       .reduce((m, i) => (m < 0 ? i : Math.min(m, i)), -1)
     const patternId =
       variantSep >= 0 ? suggestedFocusHandKey.slice(0, variantSep) : suggestedFocusHandKey
-    const p = PRACTICE_PATTERNS.find((x) => x.id === patternId)
+    const p = cardPatterns.find((x) => x.id === patternId)
     return !!p?.closed
-  }, [suggestedFocusHandKey, mainPhase])
+  }, [suggestedFocusHandKey, mainPhase, cardPatterns])
 
   const suggestedTileGuide = useMemo(() => {
     // Rack + exposure highlights follow the focused line whenever one is selected — independent of
@@ -3381,7 +3708,7 @@ export default function App() {
       .filter((i) => i >= 0)
       .reduce((m, i) => (m < 0 ? i : Math.min(m, i)), -1)
     const patternId = variantSep >= 0 ? suggestedFocusHandKey.slice(0, variantSep) : suggestedFocusHandKey
-    const p = PRACTICE_PATTERNS.find((x) => x.id === patternId)
+    const p = cardPatterns.find((x) => x.id === patternId)
     if (!p) return null
 
     // Variant key: pin the pattern per combo so highlights match the selected variant row.
@@ -3423,7 +3750,7 @@ export default function App() {
       suggestedHandsExposureTileIds,
     )
     return { bestIds }
-  }, [suggestedFocusHandKey, mainPhase, rackForSuggestedPatternMatch, suggestedHandsExposureTileIds])
+  }, [suggestedFocusHandKey, mainPhase, rackForSuggestedPatternMatch, suggestedHandsExposureTileIds, cardPatterns])
 
   /**
    * Bot-exposure highlights for the focused suggested line: dim tiles that don't fit the line,
@@ -3443,7 +3770,7 @@ export default function App() {
       .filter((i) => i >= 0)
       .reduce((m, i) => (m < 0 ? i : Math.min(m, i)), -1)
     const patternId = variantSep >= 0 ? suggestedFocusHandKey.slice(0, variantSep) : suggestedFocusHandKey
-    const p = PRACTICE_PATTERNS.find((x) => x.id === patternId)
+    const p = cardPatterns.find((x) => x.id === patternId)
     if (!p) return null
     const bestIds = new Set<string>()
     for (const exp of botExposures) {
@@ -3453,7 +3780,7 @@ export default function App() {
       }
     }
     return { bestIds }
-  }, [suggestedFocusHandKey, mainPhase, botExposures])
+  }, [suggestedFocusHandKey, mainPhase, botExposures, cardPatterns])
 
   /** Discards that match naturals the focused line is still short (Strip slots without highlight). */
   const suggestedDiscardNeedIds = useMemo(() => {
@@ -3465,6 +3792,7 @@ export default function App() {
       rackForSuggestedPatternMatch,
       discardTiles,
       suggestedHandsExposureTileIds,
+      cardPatterns,
     )
   }, [
     suggestedFocusHandKey,
@@ -3472,6 +3800,7 @@ export default function App() {
     rackForSuggestedPatternMatch,
     discardTiles,
     suggestedHandsExposureTileIds,
+    cardPatterns,
   ])
 
   /** Suggest-dim the committed discard strip only when a “need” natural is actually visible there.
@@ -3513,6 +3842,7 @@ export default function App() {
           exposures: r.botExposures,
           playerClaimMelds: r.eastExposures,
           eastTableClaimMelds: r.eastExposures,
+          patterns: getActiveCardPatterns(),
         },
         focusKey,
       ),
@@ -3528,6 +3858,7 @@ export default function App() {
       exposures: botExposures,
       playerClaimMelds: eastExposures,
       eastTableClaimMelds: eastExposures,
+      patterns: cardPatterns,
     }
     const { bestTilesAway: eastAway, linesAtMin: eastLines } = suggestedHandsTiedAtBest(eastRankInput)
     const eastRow = {
@@ -3546,12 +3877,13 @@ export default function App() {
         exposures: botExposures,
         playerClaimMelds: playerClaims,
         eastTableClaimMelds: eastExposures,
+        patterns: cardPatterns,
       }
       const { bestTilesAway, linesAtMin } = suggestedHandsTiedAtBest(rankInput)
       return { label, bestTilesAway, linesAtMin, rankInput }
     })
     return [eastRow, ...botRows]
-  }, [mainPhase, bots, hand, wall.length, discardTiles, botExposures, eastExposures])
+  }, [mainPhase, bots, hand, wall.length, discardTiles, botExposures, eastExposures, cardPatterns])
 
   /**
    * On win: full 14 (concealed + exposures) left-to-right in the order of the winning
@@ -3566,12 +3898,13 @@ export default function App() {
       exposures: botExposures,
       playerClaimMelds: eastExposures,
       eastTableClaimMelds: eastExposures,
+      patterns: cardPatterns,
     }
     const { closestLine } = summarizeRackTowardWin(rankInput)
     const allTiles = [...hand, ...eastExposures.flatMap((e) => e.tiles)]
     if (!closestLine) return allTiles
     return sortFullRackTilesForPattern(closestLine.id, rankInput, focusKeyForSuggestedHandLine(closestLine))
-  }, [mainPhase, hand, eastExposures, wall.length, discardTiles, botExposures])
+  }, [mainPhase, hand, eastExposures, wall.length, discardTiles, botExposures, cardPatterns])
 
   /**
    * Bot-mahjong end screen: same per-seat layout as Wall Game (East + three bots).
@@ -3596,6 +3929,7 @@ export default function App() {
       exposures: botExposures,
       playerClaimMelds: eastExposures,
       eastTableClaimMelds: eastExposures,
+      patterns: cardPatterns,
     }
     const { bestTilesAway: eastAway, linesAtMin: eastLines } = suggestedHandsTiedAtBest(eastRankInput)
     const eastRow: SeatRow = {
@@ -3615,6 +3949,7 @@ export default function App() {
         exposures: botExposures,
         playerClaimMelds: claims,
         eastTableClaimMelds: eastExposures,
+        patterns: cardPatterns,
       }
       const { bestTilesAway, linesAtMin } = suggestedHandsTiedAtBest(rankInput)
       return { label: `Bot ${idx + 1} (${label})`, bestTilesAway, linesAtMin, rankInput }
@@ -3627,7 +3962,7 @@ export default function App() {
     ]
 
     return { how, winnerLabel, winnerRow, loserRows }
-  }, [mainPhase, botWin, bots, hand, wall.length, discardTiles, botExposures, eastExposures])
+  }, [mainPhase, botWin, bots, hand, wall.length, discardTiles, botExposures, eastExposures, cardPatterns])
 
   /**
    * Wall game: same per-seat practice-card readout as the Mah Jongg overlays (tiles away,
@@ -3651,6 +3986,7 @@ export default function App() {
       exposures: botExposures,
       playerClaimMelds: eastExposures,
       eastTableClaimMelds: eastExposures,
+      patterns: cardPatterns,
     }
     const { bestTilesAway: eastAway, linesAtMin: eastLines } = suggestedHandsTiedAtBest(eastRankInput)
     const eastRow: WRow = { label: 'You (East)', bestTilesAway: eastAway, linesAtMin: eastLines, rankInput: eastRankInput }
@@ -3665,6 +4001,7 @@ export default function App() {
         exposures: botExposures,
         playerClaimMelds: claims,
         eastTableClaimMelds: eastExposures,
+        patterns: cardPatterns,
       }
       const { bestTilesAway, linesAtMin } = suggestedHandsTiedAtBest(rankInput)
       return {
@@ -3676,7 +4013,7 @@ export default function App() {
     })
 
     return { rows: [eastRow, ...botRows] }
-  }, [mainPhase, bots, hand, wall.length, discardTiles, botExposures, eastExposures])
+  }, [mainPhase, bots, hand, wall.length, discardTiles, botExposures, eastExposures, cardPatterns])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -3976,7 +4313,10 @@ export default function App() {
         ? passSlotCount <= 3
         : passSlotCount === 3
 
-  const newHand = useCallback(() => {
+  const performNewHandDeal = useCallback(() => {
+    const m = menuCardIdRef.current
+    const c = committedCardIdRef.current
+
     setPendingJokerSwapTileId(null)
     setCharlestonPassError(null)
     setCallRuleError(null)
@@ -4006,8 +4346,29 @@ export default function App() {
     const w = readBotWinsEnabledFromStorage()
     setBotWinsEnabled((prev) => (prev === w ? prev : w))
     botWinsEnabledRef.current = w
+    if (m !== c) {
+      try {
+        writePlayableCardToStorage(m)
+      } catch {
+        /* ignore */
+      }
+      setCommittedCardId(m)
+      setActiveCardPatterns(patternsForCard(m))
+    }
     setRound(createNewRound())
   }, [])
+
+  /** @returns true if a new round was dealt; false if deferred (card-change confirm — keep menu open so pending card is not cleared). */
+  const newHand = useCallback((): boolean => {
+    const m = menuCardIdRef.current
+    const c = committedCardIdRef.current
+    if (m !== c) {
+      setBlockingDialog({ variant: 'new-game-pending-card', nextCardId: m })
+      return false
+    }
+    performNewHandDeal()
+    return true
+  }, [performNewHandDeal])
 
   const sendCharlestonPass = useCallback(() => {
     const charlestonBotPassOpts = {
@@ -4187,14 +4548,17 @@ export default function App() {
           exposures: cur.botExposures,
           playerClaimMelds: cur.eastExposures,
           eastTableClaimMelds: cur.eastExposures,
+          patterns: getActiveCardPatterns(),
         }
         const { bestTilesAway, closestLine } = summarizeRackTowardWin(rankInput)
         // No line on the card can complete from this rack — discarding will lock in a dead hand.
         if (!closestLine || bestTilesAway >= 14) {
-          queueMicrotask(() =>
-            setBlockingDialog({ variant: 'discard-dead-warning', rankInput }),
-          )
-          return
+          if (deadHandWarningsEnabledRef.current) {
+            queueMicrotask(() =>
+              setBlockingDialog({ variant: 'discard-dead-warning', rankInput }),
+            )
+            return
+          }
         }
       }
     }
@@ -4234,10 +4598,11 @@ export default function App() {
           exposures: cur.botExposures,
           playerClaimMelds: cur.eastExposures,
           eastTableClaimMelds: cur.eastExposures,
+          patterns: getActiveCardPatterns(),
         }
         const { bestTilesAway } = summarizeRackTowardWin(rankInput)
         if (bestTilesAway !== 0) {
-          if (gameModeRef.current === 'training') {
+          if (gameModeRef.current === 'training' && deadHandWarningsEnabledRef.current) {
             queueMicrotask(() => setBlockingDialog({ variant: 'mahjong-dead-warning', rankInput }))
             return cur
           }
@@ -4259,8 +4624,9 @@ export default function App() {
             exposures: cur.botExposures,
             playerClaimMelds: cur.eastExposures,
             eastTableClaimMelds: cur.eastExposures,
+            patterns: getActiveCardPatterns(),
           }
-          if (gameModeRef.current === 'training') {
+          if (gameModeRef.current === 'training' && deadHandWarningsEnabledRef.current) {
             queueMicrotask(() => setBlockingDialog({ variant: 'mahjong-dead-warning', rankInput }))
             return cur
           }
@@ -4284,8 +4650,9 @@ export default function App() {
             exposures: cur.botExposures,
             playerClaimMelds: cur.eastExposures,
             eastTableClaimMelds: cur.eastExposures,
+            patterns: getActiveCardPatterns(),
           }
-          if (gameModeRef.current === 'training') {
+          if (gameModeRef.current === 'training' && deadHandWarningsEnabledRef.current) {
             queueMicrotask(() => setBlockingDialog({ variant: 'mahjong-dead-warning', rankInput }))
             return cur
           }
@@ -4312,8 +4679,9 @@ export default function App() {
           exposures: cur.botExposures,
           playerClaimMelds: cur.eastExposures,
           eastTableClaimMelds: cur.eastExposures,
+          patterns: getActiveCardPatterns(),
         }
-        if (gameModeRef.current === 'training') {
+        if (gameModeRef.current === 'training' && deadHandWarningsEnabledRef.current) {
           // Training mode: warn before committing to dead hand
           queueMicrotask(() => setBlockingDialog({ variant: 'mahjong-dead-warning', rankInput }))
           return cur
@@ -4382,8 +4750,13 @@ export default function App() {
         message: err,
       })
     } else if (err === MSG_CALL_INSUFFICIENT_TILES) {
-      setCallRuleError(null)
-      setBlockingDialog({ variant: 'dead-hand-warning' })
+      if (deadHandWarningsEnabledRef.current) {
+        setCallRuleError(null)
+        setBlockingDialog({ variant: 'dead-hand-warning' })
+      } else {
+        setBlockingDialog(null)
+        setCallRuleError(MSG_CALL_INSUFFICIENT_TILES)
+      }
     } else if (err) {
       setBlockingDialog(null)
       setCallRuleError(err)
@@ -4430,11 +4803,13 @@ export default function App() {
           }
         }
         if (!anyCallableLineFits && rankInputWorstCase) {
-          setBlockingDialog({
-            variant: 'call-exposure-dead-warning',
-            rankInput: rankInputWorstCase,
-          })
-          return
+          if (deadHandWarningsEnabledRef.current) {
+            setBlockingDialog({
+              variant: 'call-exposure-dead-warning',
+              rankInput: rankInputWorstCase,
+            })
+            return
+          }
         }
       }
       setEastCallStagedWaveFlyIn(
@@ -4963,12 +5338,40 @@ export default function App() {
               </button>
             </header>
             <div className="app-menu-modal__body">
+              <div className="app-menu-modal__diff-block">
+                <div className="app-menu-modal__subhead" id="app-menu-playable-card-label">
+                  Select card
+                </div>
+                <div
+                  className="app-menu-tray__diff-row app-menu-modal__diff-row"
+                  role="radiogroup"
+                  aria-labelledby="app-menu-playable-card-label"
+                >
+                  {PLAYABLE_CARD_IDS.map((id) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className={[
+                        'btn',
+                        'app-menu-tray__diff-btn',
+                        menuCardId === id ? 'app-menu-tray__diff-btn--on' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      role="radio"
+                      aria-checked={menuCardId === id}
+                      onClick={() => requestPlayableCard(id)}
+                    >
+                      {PLAYABLE_CARD_LABEL[id]}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <button
                 type="button"
                 className="btn app-menu-tray__item app-menu-modal__new-game"
                 onClick={() => {
-                  newHand()
-                  setMenuOpen(false)
+                  if (newHand()) setMenuOpen(false)
                 }}
               >
                 New Game
@@ -5073,6 +5476,87 @@ export default function App() {
                   ))}
                 </div>
               </div>
+              <div className="app-menu-modal__suggested-hand-filters">
+                <div className="app-menu-modal__subhead" id="app-menu-sh-filters-heading">
+                  Filters for suggested hands
+                </div>
+                <div
+                  className="app-menu-modal__suggested-hand-filters-cols"
+                  role="group"
+                  aria-labelledby="app-menu-sh-filters-heading"
+                >
+                  {suggestedHandsFilterColumns.map((col, ci) => (
+                    <div key={ci} className="app-menu-modal__suggested-hand-filters-col">
+                      {col.map((section) => {
+                        const labelId = `app-menu-sh-sec-${section.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '')}`
+                        const shown = !suggestedHandsUncheckedSections.has(section)
+                        return (
+                          <div key={section} className="app-menu-modal__row app-menu-modal__row--toggle">
+                            <AppMenuSettingSwitch
+                              labelId={labelId}
+                              pressed={shown}
+                              onToggle={() =>
+                                setSuggestedHandsUncheckedSections((prev) => {
+                                  const next = new Set(prev)
+                                  if (next.has(section)) next.delete(section)
+                                  else next.add(section)
+                                  return next
+                                })
+                              }
+                            />
+                            <span className="app-menu-modal__label" id={labelId}>
+                              {suggestedHandSectionMenuLabel(section)}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ))}
+                </div>
+                <div className="app-menu-modal__subhead" id="app-menu-sh-font-heading">
+                  Suggested hands text size
+                </div>
+                <div
+                  className="app-menu-modal__tile-graphics-modes app-menu-tray__diff-row app-menu-modal__diff-row"
+                  role="radiogroup"
+                  aria-labelledby="app-menu-sh-font-heading"
+                >
+                  {SUGGESTED_HANDS_FONT_SIZE_OPTIONS.map((tier) => (
+                    <button
+                      key={tier}
+                      type="button"
+                      className={[
+                        'btn app-menu-tray__diff-btn app-menu-modal__font-size-tier-btn',
+                        suggestedHandsFontSize === tier ? 'app-menu-tray__diff-btn--on' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      role="radio"
+                      aria-checked={suggestedHandsFontSize === tier}
+                      onClick={() => setSuggestedHandsFontSizeTier(tier)}
+                    >
+                      {tier === 'small' ? 'Small' : tier === 'medium' ? 'Medium' : 'Large'}
+                    </button>
+                  ))}
+                </div>
+                <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                  <AppMenuSettingSwitch
+                    labelId="app-menu-label-sh-show-concealed"
+                    pressed={!suggestedHandsHideConcealed}
+                    onToggle={() => setSuggestedHandsHideConcealed((v) => !v)}
+                  />
+                  <span className="app-menu-modal__label" id="app-menu-label-sh-show-concealed">
+                    Concealed (C)
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="btn app-menu-modal__suggested-filters-reset"
+                  onClick={() => setSuggestedHandsUncheckedSections(new Set())}
+                >
+                  Reset Category Filters
+                </button>
+              </div>
               <div className="app-menu-tray__divider app-menu-modal__section-rule" role="separator" />
               <div className="app-menu-modal__body-footer app-menu-modal__body-footer--settings-toggles">
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
@@ -5123,6 +5607,29 @@ export default function App() {
                 </div>
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
                   <AppMenuSettingSwitch
+                    labelId="app-menu-label-dead-hand-warnings"
+                    pressed={deadHandWarningsEnabled}
+                    onToggle={toggleDeadHandWarnings}
+                  />
+                  <span
+                    className="app-menu-modal__label"
+                    id="app-menu-label-dead-hand-warnings"
+                  >
+                    {DEAD_HAND_WARNINGS_LABEL}
+                  </span>
+                </div>
+                <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                  <AppMenuSettingSwitch
+                    labelId="app-menu-label-mahjong-hint"
+                    pressed={mahjongHintEnabled}
+                    onToggle={toggleMahjongHint}
+                  />
+                  <span className="app-menu-modal__label" id="app-menu-label-mahjong-hint">
+                    {MAHJONG_HINT_LABEL}
+                  </span>
+                </div>
+                <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                  <AppMenuSettingSwitch
                     labelId="app-menu-label-joker-swap-hint"
                     pressed={jokerSwapHintEnabled}
                     onToggle={toggleJokerSwapHint}
@@ -5145,6 +5652,7 @@ export default function App() {
           role="presentation"
           onClick={() => {
             // Warnings that require an explicit choice — backdrop click does nothing
+            if (blockingDialog?.variant === 'new-game-pending-card') return
             if (blockingDialog?.variant === 'dead-hand-warning') return
             if (blockingDialog?.variant === 'mahjong-dead-warning') return
             if (blockingDialog?.variant === 'call-exposure-dead-warning') return
@@ -5158,6 +5666,7 @@ export default function App() {
             className={[
               'charleston-error-dialog',
               blockingDialog?.variant === 'table' ? 'charleston-error-dialog--table' : '',
+              blockingDialog?.variant === 'new-game-pending-card' ||
               blockingDialog?.variant === 'dead-hand-warning'
                 ? 'charleston-error-dialog--blocking-neutral charleston-error-dialog--dead-hand-warning'
                 : '',
@@ -5179,6 +5688,7 @@ export default function App() {
             aria-modal="true"
             aria-labelledby={
               blockingDialog?.variant === 'table' ||
+              blockingDialog?.variant === 'new-game-pending-card' ||
               blockingDialog?.variant === 'dead-hand-warning' ||
               blockingDialog?.variant === 'mahjong-dead-warning' ||
               blockingDialog?.variant === 'call-exposure-dead-warning' ||
@@ -5199,15 +5709,46 @@ export default function App() {
             }
             onClick={(e) => e.stopPropagation()}
           >
-            {blockingDialog?.variant === 'dead-hand-warning' ? (
+            {blockingDialog?.variant === 'new-game-pending-card' ? (
               <>
                 <h2 id="game-blocking-error-title" className="charleston-error-dialog__title">
-                  ⚠️ Proceeding will kill your hand
+                  End Current Game and Start New Game with {PLAYABLE_CARD_LABEL[blockingDialog.nextCardId]}{' '}
+                  Card?
+                </h2>
+                <div className="charleston-error-dialog__actions charleston-error-dialog__actions--spread">
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setBlockingDialog(null)
+                      setMenuOpen(false)
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn--primary"
+                    onClick={() => {
+                      setBlockingDialog(null)
+                      performNewHandDeal()
+                      setMenuOpen(false)
+                    }}
+                  >
+                    Continue
+                  </button>
+                </div>
+              </>
+            ) : blockingDialog?.variant === 'dead-hand-warning' ? (
+              <>
+                <h2 id="game-blocking-error-title" className="charleston-error-dialog__title">
+                  ⚠️ Calling this discard is not legal
                 </h2>
                 <p id="game-blocking-error-body" className="charleston-error-dialog__body">
-                  You do not have enough tiles to form a valid Pung, Kong, Quint, or Sextent with
-                  this discard. If you call it, your hand will be officially dead and the game will
-                  end immediately.
+                  With this discard, you cannot form a valid Pung, Kong, Quint, or Sextent from your
+                  hand — you do not have the required matching tiles and jokers. If you proceed
+                  anyway, your hand will be officially dead — the game is over.
                 </p>
                 <div className="charleston-error-dialog__actions charleston-error-dialog__actions--spread">
                   <button
@@ -5271,9 +5812,9 @@ export default function App() {
                   ⚠️ Not a legal Mah Jongg hand
                 </h2>
                 <p id="game-blocking-error-body" className="charleston-error-dialog__body">
-                  Your current tiles do not complete any hand on the card. If you proceed with
-                  this declaration, your hand will be officially dead and the game will end
-                  immediately.
+                  Your current tiles do not complete any legal hand on the{' '}
+                  <strong>2026 NMJL card</strong>. If you proceed with this Mah Jongg declaration,
+                  your hand will be officially dead and the game will end immediately.
                 </p>
                 <div className="charleston-error-dialog__actions charleston-error-dialog__actions--spread">
                   <button
@@ -5303,8 +5844,8 @@ export default function App() {
                 </h2>
                 <p id="game-blocking-error-body" className="charleston-error-dialog__body">
                   {blockingDialog.variant === 'call-exposure-dead-warning'
-                    ? 'Calling this tile would expose a meld that does not fit any remaining playable hand on the card. If you proceed, your hand will be officially dead and the game will end immediately.'
-                    : 'Your current exposures do not fit any remaining playable hand on the card. Proceeding will end the game with a dead hand.'}
+                    ? 'Calling this tile would expose a meld that does not fit any remaining playable hand on the 2026 NMJL card. If you proceed, your hand will be officially dead and the game will end immediately.'
+                    : 'Your current exposures do not fit any remaining playable hand on the 2026 NMJL card. Proceeding will end the game with a dead hand.'}
                 </p>
                 <div className="charleston-error-dialog__actions charleston-error-dialog__actions--spread">
                   <button
@@ -5363,8 +5904,9 @@ export default function App() {
           <div className="dead-hand-dialog" onClick={(e) => e.stopPropagation()}>
             <h2 id="dead-hand-title" className="dead-hand-dialog__title">💀 Dead Hand</h2>
             <p className="dead-hand-dialog__body">
-              You called a tile but cannot form a valid Pung, Kong, Quint, or Sextent with
-              your remaining tiles. Your hand is officially dead — the game is over.
+              Your tiles and exposures do not form a legal hand on the{' '}
+              <strong>{playableCardShortLabel(committedCardId)}</strong>. Your hand is officially dead —
+              the game is over.
             </p>
             <div className="dead-hand-dialog__actions">
               <button
@@ -5980,8 +6522,18 @@ export default function App() {
                                 </div>
                                 <button
                                   type="button"
-                                  className="btn btn--mahjong rack-bottom-tile-cell rack-bottom-tile-cell--c6-7"
+                                  className={[
+                                    'btn btn--mahjong rack-bottom-tile-cell rack-bottom-tile-cell--c6-7',
+                                    mahjongButtonEnabled && mahjongWinLegallyAvailable ? 'btn--mahjong-hint' : '',
+                                  ]
+                                    .filter(Boolean)
+                                    .join(' ')}
                                   disabled={!mahjongButtonEnabled}
+                                  aria-label={
+                                    mahjongButtonEnabled && mahjongWinLegallyAvailable
+                                      ? 'Mah Jongg — legal win available'
+                                      : 'Mah Jongg'
+                                  }
                                   onClick={declareMahjong}
                                 >
                                   MAHJ
@@ -6236,15 +6788,23 @@ export default function App() {
                     <div
                       id="suggested-hands-popup"
                       className={['suggested-hands-popup', suggestedPanelHandsOn ? 'suggested-hands-popup--open' : ''].filter(Boolean).join(' ')}
+                      data-suggested-hands-font={suggestedHandsFontSize}
                       style={{
                         left: `calc(var(--app-h-pad) + ${suggestedPanelLeftDelta}px)`,
                         ...(suggestedPanelHeight != null
-                          ? {
-                              top: 'auto',
-                              right: suggestedPopupRightForStyle,
-                              bottom: suggestedPopupBottom ?? undefined,
-                              height: suggestedPanelHeight,
-                            }
+                          ? suggestedPanelHeightPinsTop
+                            ? {
+                                top: suggestedPopupTop ?? undefined,
+                                right: suggestedPopupRightForStyle,
+                                bottom: undefined,
+                                height: suggestedPanelHeight,
+                              }
+                            : {
+                                top: 'auto',
+                                right: suggestedPopupRightForStyle,
+                                bottom: suggestedPopupBottom ?? undefined,
+                                height: suggestedPanelHeight,
+                              }
                           : {
                               top: suggestedPopupTop ?? undefined,
                               right: suggestedPopupRightForStyle,
@@ -6311,12 +6871,6 @@ export default function App() {
                           >
                             Tiles
                           </button>
-                          {/* Filter trigger portalled here by SuggestedHandsPanel */}
-                          <div
-                            ref={setFilterButtonPortalRef}
-                            className="suggested-hands-popup__filter-portal"
-                            onPointerDown={(e) => e.stopPropagation()}
-                          />
                         </div>
                         <button
                           type="button"
@@ -6340,9 +6894,11 @@ export default function App() {
                         rackTilesForSuggestedStrip={rackForSuggestedHandsUi}
                         rackTilesForPatternMatch={rackForSuggestedPatternMatch}
                         exposureTileIdsForSuggestedStrip={suggestedHandsExposureTileIds}
-                        filterButtonPortal={filterBtnPortalEl}
-                        isOpen={suggestedPanelHandsOn}
-                        categoryResetEpoch={suggestedCategoryResetEpoch}
+                        uncheckedSections={suggestedHandsUncheckedSections}
+                        onUncheckedSectionsChange={setSuggestedHandsUncheckedSections}
+                        hideConcealedHands={suggestedHandsHideConcealed}
+                        cardPatterns={cardPatterns}
+                        cardSectionOrder={cardSectionOrder}
                       />
                       <div
                         className="suggested-hands-popup__right-edge"

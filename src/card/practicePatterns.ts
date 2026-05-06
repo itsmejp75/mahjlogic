@@ -87,6 +87,10 @@ export type PracticePattern = {
   title: string
   /** Color-coded card text segments (NMJL ink conventions). */
   titleSegments?: CardTextSeg[]
+  /** League card hand index when present (e.g. 1a, 2b). Mock card omits. */
+  cardHandCode?: string
+  /** Parenthetical constraints from the league card line. Mock card omits. */
+  cardParenthesis?: string
   /** Total tiles the complete hand requires (always 14). */
   roughTarget: number
   section: string
@@ -104,35 +108,36 @@ export type PracticePattern = {
 }
 
 // ── tile-type helpers ─────────────────────────────────────────────────────────
-function suit(...ranks: number[]) {
+/** @public Shared by league-card pattern modules (not a playable card book). */
+export function suit(...ranks: number[]) {
   const s = new Set(ranks)
   return (def: TileDef) => def.cat === 'suit' && s.has(def.rank)
 }
-const flower   = (def: TileDef) => def.cat === 'flower'
-const dragon   = (def: TileDef) => def.cat === 'dragon'
-const wind     = (def: TileDef) => def.cat === 'wind'
-const anySuit  = (def: TileDef) => def.cat === 'suit'
+export const flower = (def: TileDef) => def.cat === 'flower'
+export const dragon = (def: TileDef) => def.cat === 'dragon'
+export const wind = (def: TileDef) => def.cat === 'wind'
+export const anySuit = (def: TileDef) => def.cat === 'suit'
 /** Bam + crak only — like-number kongs opposing the soap (dot) column on `FFF 1111 DDD 1111`. */
-const bamCrakSuit = (def: TileDef) => def.cat === 'suit' && (def.suit === 'bam' || def.suit === 'crak')
-const redDrg   = (def: TileDef) => def.cat === 'dragon' && def.dragon === 'red'
-const grnDrg   = (def: TileDef) => def.cat === 'dragon' && def.dragon === 'green'
-const soapDrg  = (def: TileDef) => def.cat === 'dragon' && def.dragon === 'soap'
-const northW   = (def: TileDef) => def.cat === 'wind' && def.wind === 'N'
-const eastW    = (def: TileDef) => def.cat === 'wind' && def.wind === 'E'
-const westW    = (def: TileDef) => def.cat === 'wind' && def.wind === 'W'
-const southW   = (def: TileDef) => def.cat === 'wind' && def.wind === 'S'
+export const bamCrakSuit = (def: TileDef) => def.cat === 'suit' && (def.suit === 'bam' || def.suit === 'crak')
+export const redDrg = (def: TileDef) => def.cat === 'dragon' && def.dragon === 'red'
+export const grnDrg = (def: TileDef) => def.cat === 'dragon' && def.dragon === 'green'
+export const soapDrg = (def: TileDef) => def.cat === 'dragon' && def.dragon === 'soap'
+export const northW = (def: TileDef) => def.cat === 'wind' && def.wind === 'N'
+export const eastW = (def: TileDef) => def.cat === 'wind' && def.wind === 'E'
+export const westW = (def: TileDef) => def.cat === 'wind' && def.wind === 'W'
+export const southW = (def: TileDef) => def.cat === 'wind' && def.wind === 'S'
 
-function or(...fns: Array<(d: TileDef) => boolean>) {
+export function or(...fns: Array<(d: TileDef) => boolean>) {
   return (def: TileDef) => fns.some((f) => f(def))
 }
 
 // ── color-segment helpers (NMJL ink conventions) ──────────────────────────────
-const n  = (t: string): CardTextSeg => ({ t, ink: 'navy'    })
-const g  = (t: string): CardTextSeg => ({ t, ink: 'green'   })
-const r  = (t: string): CardTextSeg => ({ t, ink: 'red'     })
-const fl = (t: string): CardTextSeg => ({ t, ink: 'flower'  })
-const sp = (t: string): CardTextSeg => ({ t, ink: 'navy'    })
-const so = (t: string): CardTextSeg => ({ t, ink: 'soap'    })
+export const n = (t: string): CardTextSeg => ({ t, ink: 'navy' })
+export const g = (t: string): CardTextSeg => ({ t, ink: 'green' })
+export const r = (t: string): CardTextSeg => ({ t, ink: 'red' })
+export const fl = (t: string): CardTextSeg => ({ t, ink: 'flower' })
+export const sp = (t: string): CardTextSeg => ({ t, ink: 'navy' })
+export const so = (t: string): CardTextSeg => ({ t, ink: 'soap' })
 
 // ── hands ─────────────────────────────────────────────────────────────────────
 export const PRACTICE_PATTERNS: PracticePattern[] = [

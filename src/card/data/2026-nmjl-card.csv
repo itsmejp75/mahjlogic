@@ -1,0 +1,92 @@
+2026 NMJL CARD
+Category,Hand #,Hand,Colors,Parenthesis,Values
+,,,,,
+,,,,,
+2026,1,222 000 2222 6666,"green:222, blue:000, red:2222 6666",(Any 2 Suits),X25
+2026,2,2026 DDD 2222 DDD,"Green:2026 DDD, red:2222 DDD","(Any 2 Suits w Matching Dragons, Kong 2 or 6)",X25
+2026,3,FFF 2026 222 6666,"Blue:FFF, green: 2026, red:222, blue:6666",(Any 3 Suits),X25
+2026,4,22 00 222 666 NEWS,"Green:22, blue:00, red:222 666, blue:NEWS",(Any 2 Suits),X30
+,,,,,
+,,,,,
+2468,1a,222 444 6666 8888,Blue:222 444 6666 8888,(Any 1 Suit),X25
+2468,1b,222 444 6666 8888,"Green:222 444, red:6666 8888",(Any 2 Suits),X25
+2468,2,FF 2222 44 66 8888,"Blue:FF, green:2222, red:44 66, green:8888",(Any 2 Suits),X30
+2468,3,EE 22444 666 88 WW,Blue:EE 22 444 666 88 WW,"(Any 1 Suit, East and West Only)",X30
+2468,4,2222 DDD 8888 DDD,"Green:2222 DDD, red:8888 DDD","(Any 2 Suits w Matching Dragons, These Nos. Only)",X25
+2468,5,FFF 22 44 666 8888,Blue:FFF 22 44 666 8888,(Any 1 Suit),X25
+2468,6,2468 2222 D 2222D,"Green:2468, red:2222 D, blue:2222 D","(Any 3 Suits, Kong 2,4,6, or 8 w Matching Dragon)",X25
+2468,7,FFF 2468 FFF 2222,"Blue:FFF, green:2468, blue:FFF, red:2222","(Any 3 Suits, Kong 2,4,6, or 8)",X30
+2468,8,FF 246 888 246 888,"Blue:FF, green:246 888, red:246 888",(Any 2 Suits),C30
+,,,,,
+,,,,,
+ANY LIKE NUMBERS,1,1111 FFFFFF 1111,"Green:1111, blue:FFFFF, red:1111",(Any 2 Suits),X30
+ANY LIKE NUMBERS,2,1111 D 111 D 1111 D,"Green:1111 D, red:111 D, blue:1111 D",(Any 3 Suits w Matching Dragon),X25
+ANY LIKE NUMBERS,3,FF 1111 11 1111 DD,"Blue:FF, green:1111, red:11, blue:1111, green:DD",(Any 3 Suits w Any Dragon),X25
+,,,,,
+,,,,,
+QUINTS,1,11111 1111 11111,"Green:11111, red:1111, blue:11111","(Any 3 Suits, Any Like Nos.)",X40
+QUINTS,2,FF 11111 22 33333,Blue:FF 11111 22 33333,"(Any 1 Suit, Any 3 Consec. Nos.)",X45
+QUINTS,3,11111 44444 DDDD,"Green:11111 44444, red:DDDD","(Any 2 Nos. In Any 1 Suit w Opp, Dragon)",X40
+,,,,,
+,,,,,
+CONSECUTIVE RUN,1a,11 222 33 444 5555,Blue:11 222 33 444 5555,"(Any 1 Suit, These Nos. Only)",X25
+CONSECUTIVE RUN,1b,55 666 77 888 9999,Blue:55 666 77 888 9999,"(Any 1 Suit, These Nos. Only)",X25
+CONSECUTIVE RUN,2a,FFF 1111 234 5555,Blue:FFF 1111 234 5555,"(Any 1 Suit, Any 5 Consec. Nos.)",X25
+CONSECUTIVE RUN,2b,FFF 1111 234 5555,"Blue:FFF, green:1111, red:234, green:5555","(Any 2 Suits, Any 5 Consec. Nos.)",X25
+CONSECUTIVE RUN,3,11 22 111 222 3333 ,"Green:11 22, red:111 222, blue:3333","(Any 3 Suits, Any 3 Consec. Nos.)",X25
+CONSECUTIVE RUN,4a,111 222 3333 4444,Blue:111 222 3333 4444,"(Any 1 Suit, Any 4 Consec. Nos.)",X25
+CONSECUTIVE RUN,4b,111 222 3333 4444,Green:111 222 3333 4444,"(Any 2 Suits, Any 4 Consec. Nos.)",X25
+CONSECUTIVE RUN,5a,FFF 11 22 333 DDDD,Blue:FFF 11 22 333 DDDD,"(Any 1 Suit, Any 3 Consec. Nos. W Matching Dragons)",X25
+CONSECUTIVE RUN,5b,FFF 11 22 333 DDDD,"Blue:FFF, green:11, red:22, green:333, red:DDDD","(Any  Suits, Any 3 Consec. Nos., Dragons Match Middle No.)",X25
+CONSECUTIVE RUN,6,1111 FFFFFF 2222,Blue:1111 FFFFF 2222,"(Any 1 Suit, Any 2 Consec. Nos.)",X30
+CONSECUTIVE RUN,7a,FF 1111 2222 3333,Blue:FF 1111 2222 3333,"(Any 1 Suit, Any 3 Consec. Nos.)",X25
+CONSECUTIVE RUN,7b,FF 1111 2222 3333,"Blue:FF, green:1111, red:2222, blue:3333","(Any 3 Suits, Any 3 Consec. Nos.)",X25
+CONSECUTIVE RUN,8,122 333 1 22 333 44,"Green:1 22 333, red:1 22 333, blue:44","(Any 3 Suits, Any 4 Consec. Nos.)",C35
+,,,,,
+,,,,,
+13579,1a,11 333 55 777 9999,Blue:11 333 55 777 9999,(Any 1 Suit),X25
+13579,1b,11 333 55 777 9999,"Green:11 333, red:55 777, blue:9999",(Any 3 Suits),X25
+13579,2a,111 333 3333 5555,"Green:111 333, red:3333 5555",(Any 2 Suits),X25
+13579,2b,555 777 7777 9999,"Green:555 777, red:7777 9999",(Any 2 Suits),X25
+13579,3a,NN 1111 33 5555 SS,Blue:NN 1111 33 5555 SS,"(Any 1 Suit, North & South Only)",X30
+13579,3b,NN 5555 77 9999 SS,Blue:NN 5555 77 9999 SS,"(Any 1 Suit, North & South Only)",X30
+13579,4,113579 1111 1111,"Green:113579, red:1111, blue:1111","(Any 3 Suits, Pair Any Odd No., Kongs Match Pair)",X25
+13579,5a,FFF 11 33 555 DDDD,Blue:FFF 11 33 555 DDDD,(Any 1 Suit w Matching Dragons),X25
+13579,5b,FFF 55 77 999 DDDD,Blue:FFF 55 77 999 DDDD,(Any 1 Suit w Matching Dragons),X25
+13579,6a,11 33 111 333 5555,"Green:11 33, red:111 333, blue:5555",(Any 3 Suits),X25
+13579,6b,55 77 555 777 9999,"Green:55 77, red:555 777, blue:9999",(Any 3 Suits),X25
+13579,7a,1111 33 55 77 9999,Blue:1111 33 55 77 9999,(Any 1 Suit),X30
+13579,7b,1111 33 55 77 9999,"Green:1111, red:33 55 77, green:9999",(Any 2 Suits),X30
+13579,8a,FF 11 33 55 111 111,"Blue:FF, green:11 33 55, red:111, blue:111","(Any 3 Suits, These Nos. Only)",C35
+13579,8b,FF 55 77 99 555 555,"Blue:FF, green:55 77 99, red:555, blue:555","(Any 3 Suits, These Nos. Only)",C35
+13579,9,FF 135 777 999 DDD,"Blue:FF, green:135 777 999, red:DDD",(Any 1 Suit w Opposing Dragon),C30
+,,,,,
+,,,,,
+WINDS - DRAGONS,1a,NNNN EEE WWW SSSS,Blue:NNNN EEE WWW SSSS,,X25
+WINDS - DRAGONS,1b,NNN EEEE WWWWSSS,Blue:NNN EEEE WWWW SSS,,X25
+WINDS - DRAGONS,2,1234 DDD DDD DDDD,"Blue:1234, green:DDD, red:DDD, blue:DDDD","(Any 4 Consec. Nos. In Any 1 Suit, Any 3 Dragons)",X25
+WINDS - DRAGONS,3,NNN 1111 1111 SSS,"Blue:NNN, green:1111, red:1111, blue:SSS",(Any Like Odd Nos. In Any 2 Suits),X25
+WINDS - DRAGONS,4,NNN 2222 2222 SSS,"Blue:EEE, green:2222, red:2222, blue:WWW",(Any Like Even Nos. In Any 2 Suits),X25
+WINDS - DRAGONS,5,FFF NNNN FFF DDDD,Blue:FFF NNNN FFF DDDD,"(Any Wind, Any Dragon)",X25
+WINDS - DRAGONS,6,1 N 2 EE 3 WWW 4 SSSS,Blue:1 N 2 EE 3 WWW 4 SSSS,"(Any 1 Suit, These Nos. Only)",X25
+WINDS - DRAGONS,7a,FF NNNN SSSS DD DD,"Blue:FF NNNN SSSS, green:DD, red:DD",(Any 2 Dragons),X25
+WINDS - DRAGONS,7b,FFEEEEWWWWDDDD,"Blue:FF EEEE WWWW, green:DD, red:DD",(Any 2 Dragons),X25
+WINDS - DRAGONS,8,NN EEE 2026 WWWSS,Blue:NN EEE 2026 WWW SS,(2026 Any 1 Suit),C30
+,,,,,
+,,,,,
+369,1a,333 666 6666 9999,"Green:333 666, red:6666 9999",(Any 2 Suits),X25
+369,1b,333 666 6666 9999,"Green:333 666, red:6666, blue:9999",(Any 3 Suits),X25
+369,2,33 66 333 666 9999,"Green:33 66, red:333 666, blue:9999",(Any 3 Suits),X25
+369,3a,FFF 33 666 99 DDDD,Blue:FFF 33 666 99 DDDD,(1 Suit w Matching Dragon),X25
+369,3b,FFF 33 666 99 DDDD,"Blue:FFF, green:33 666 99, red:DDDD",(1 Suit w Opposing Dragon),X25
+369,4,33 66 666 999 NEWS,"Green:33 66, red:666 999, blue:NEWS",(Any 2 Suits),X30
+369,5,FF 3369 3333 3333,"Blue:FF, green:3369, red:3333, blue:3333","(Any 3 Suits, Pair 3,6, or 9, Kongs Match Pair)",X25
+369,6,FF 333 666 999 369,"Blue:FF, green:333 666 999, red:369",(Any 2 Suits),C30
+,,,,,
+,,,,,
+SINGLES AND PAIRS,1,NNEEWWSS 1D 1D 1D,"Blue:NN EE WW SS, green:1D, red:1D, blue:1D","(Any 3 Suits, Any Like No. W Matching Dragon)",C50
+SINGLES AND PAIRS,2,4 66 88 2 4 66 88 88,"Green:2 4 66 88, red:2 4 66 88, blue:88","(Any 3 Suits, These Nos. Only)",C50
+SINGLES AND PAIRS,3,FF 3369 3669 3699,"Blue:FF, green:3369, red:3669, blue:3699",(Any 3 Suits),C50
+SINGLES AND PAIRS,4,11 22 33 44 55 66 77,Blue:11 22 33 44 55 66 77,"(Any 1 Suit, Any 7 Consec. Nos.)",C50
+SINGLES AND PAIRS,5,11 357 99 11 357 99,"Green:11 357 99, red:11 357 99",(Any 2 Suits),C50
+SINGLES AND PAIRS,6,FF 2026 2026 2026,"Blue:FF, green:2026, red:2026, blue:2026",(Any 3 Suits),C75

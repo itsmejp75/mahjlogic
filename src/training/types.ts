@@ -47,8 +47,12 @@ export type SuggestedHandLine = {
   section: string
   points: number
   closed: boolean
-  /** Fixed line number within this section on the NMJL card (never changes with sort order). */
+  /** Fixed line number within this section on the practice card (sequential; never changes with sort order). */
   cardLineNumber: number
+  /** Official hand # from the league card when available (e.g. 1a, 2). */
+  cardHandCode?: string
+  /** Parenthetical note from the league card line. */
+  cardParenthesis?: string
   /**
    * For `consecRanks` suit-permute patterns: identifies this as a secondary-tier entry showing
    * alternate (perm, base) combos at a worse "tiles away" than the primary entry.

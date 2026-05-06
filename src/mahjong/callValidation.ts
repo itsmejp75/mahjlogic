@@ -1,4 +1,5 @@
 import { summarizeRackTowardWin } from '../analysis/suggestedHands'
+import { getActiveCardPatterns } from '../card/activeCardPatternsScope'
 import type { BotExposure } from '../analysis/types'
 import type { ClaimType, DiscardEntry, EastExposure, TileInstance } from './types'
 import { findExactMatches } from './tileUtils'
@@ -179,6 +180,7 @@ function winOnBotDiscardInput(
       exposures: r.botExposures,
       playerClaimMelds: eastMelds,
       eastTableClaimMelds: eastMelds,
+      patterns: getActiveCardPatterns(),
     }).bestTilesAway === 0
   )
 }

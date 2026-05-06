@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react'
-import { postGameRackAndHighlights, type RankSuggestedHandsInput } from '../analysis/suggestedHands'
+import { postGameRackAndHighlights, suggestedHandCardRefDisplay, type RankSuggestedHandsInput } from '../analysis/suggestedHands'
 import type { SuggestedHandLine } from '../training/types'
 import { TileFace } from './TileFace'
 import { CardColoredText } from './CardColoredText'
 
 function lineLabelPlain(line: SuggestedHandLine): string {
-  const n = line.cardLineNumber != null ? `#${line.cardLineNumber}` : ''
-  return n ? `${line.section} ${n} — ${line.title}` : `${line.section} — ${line.title}`
+  const ref = suggestedHandCardRefDisplay(line)
+  return `${line.section} #${ref} — ${line.title}`
 }
 
 export type PostGameLoserRackRowProps = {
@@ -61,11 +61,11 @@ export function PostGameLoserRackRow({
       <span className="mahjong-win__bots-review-away">
         {bestTilesAway === 0 ? '0 away' : `${bestTilesAway} away`}
       </span>
-      {line.section && line.cardLineNumber != null && (
+      {line.section ? (
         <span className="mahjong-win__bots-review-ref">
-          {line.section} #{line.cardLineNumber}
+          {line.section} #{suggestedHandCardRefDisplay(line)}
         </span>
-      )}
+      ) : null}
       <div className="post-game-tied__pattern-line mahjong-win__bots-review-pattern">
         {line.titleSegments ? <CardColoredText segments={line.titleSegments} /> : line.title}
         {showTiedLinePicker && safe.length > 1 ? (
@@ -77,7 +77,7 @@ export function PostGameLoserRackRow({
           >
             {safe.map((h, i) => (
               <option
-                key={`${rowId}-opt-${i}-${h.id}-${h.matchedInHand}-${h.cardLineNumber}`}
+                key={`${rowId}-opt-${i}-${h.id}-${h.matchedInHand}-${suggestedHandCardRefDisplay(h)}`}
                 value={i}
               >
                 {lineLabelPlain(h)}

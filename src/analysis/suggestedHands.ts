@@ -15,7 +15,7 @@ import {
   reorder13579_1bGroupTileDefsToDisplay,
   srsDragonCoupledColumn,
 } from '../card/patternLinePreview'
-import { PRACTICE_PATTERNS } from '../card/practicePatterns'
+import { getActiveCardPatterns } from '../card/activeCardPatternsScope'
 import { suitPermutations } from '../card/nmjlSuitSlots'
 import type { PatternGroup, PracticePattern } from '../card/practicePatterns'
 import type { SuggestedHandLine } from '../training/types'
@@ -2928,6 +2928,7 @@ export function computeSuggestedDiscardNeedHighlightIds(
   rack: TileInstance[],
   discards: readonly TileInstance[],
   exposureTileIds?: ReadonlySet<string>,
+  patternBook: PracticePattern[] = getActiveCardPatterns(),
 ): Set<string> {
   if (!focusKey) return new Set()
   const variantSep = ['::tier::', '::oc::', '::ocall::']
@@ -2935,7 +2936,7 @@ export function computeSuggestedDiscardNeedHighlightIds(
     .filter((i) => i >= 0)
     .reduce((m, i) => (m < 0 ? i : Math.min(m, i)), -1)
   const patternId = variantSep >= 0 ? focusKey.slice(0, variantSep) : focusKey
-  const p = PRACTICE_PATTERNS.find((x) => x.id === patternId)
+  const p = patternBook.find((x) => x.id === patternId)
   if (!p) return new Set()
   const greedyUiOpts: GreedyPatternMatchOpts | undefined =
     exposureTileIds && exposureTileIds.size > 0
@@ -2990,6 +2991,7 @@ export function contestedFlexibleHandTileIds(
   rack: TileInstance[],
   focus: PracticePattern,
   lines: SuggestedHandLine[],
+  patternBook: PracticePattern[] = getActiveCardPatterns(),
 ): Set<string> {
   const fl = lines.find((l) => l.id === focus.id)
   if (!fl) return new Set()
@@ -2999,7 +3001,7 @@ export function contestedFlexibleHandTileIds(
     if (line.id === focus.id) continue
     if (line.tilesNeededRough !== fl.tilesNeededRough || line.matchedInHand !== fl.matchedInHand)
       continue
-    const q = PRACTICE_PATTERNS.find((x) => x.id === line.id)
+    const q = patternBook.find((x) => x.id === line.id)
     if (!q) continue
     const usedQ = new Set(greedyUsedTileOrderForPattern(rack, q))
     for (const id of usedF) {
@@ -3234,7 +3236,7 @@ export function sortHandForSuggestedPattern(
    *  in combo-order then strip-order. */
   focusKey?: string,
 ): TileInstance[] {
-  const basePattern = PRACTICE_PATTERNS.find((x) => x.id === patternId)
+  const basePattern = cardBookForRankInput(input).find((x) => x.id === patternId)
   if (!basePattern) return [...hand]
   const playerClaimMelds = input.playerClaimMelds ?? []
   const rackForPattern = rackForPatternWithClaimMelds(hand, playerClaimMelds)
@@ -3302,7 +3304,7 @@ export function sortFullRackTilesForPattern(
   input: RankSuggestedHandsInput,
   focusKey?: string,
 ): TileInstance[] {
-  const basePattern = PRACTICE_PATTERNS.find((x) => x.id === patternId)
+  const basePattern = cardBookForRankInput(input).find((x) => x.id === patternId)
   const playerClaimMelds = input.playerClaimMelds ?? []
   const rackRaw = [...input.hand, ...playerClaimMelds.flatMap((e) => e.tiles)]
   const rackForPattern = rackForPatternWithClaimMelds(input.hand, playerClaimMelds)
@@ -3371,7 +3373,7 @@ export function postGameRackAndHighlights(
 ): { fullRack: TileInstance[]; bestIds: Set<string> } {
   const fk = focusKeyForSuggestedHandLine(line)
   const fullRack = sortFullRackTilesForPattern(line.id, rankInput, fk)
-  const base = PRACTICE_PATTERNS.find((x) => x.id === line.id)
+  const base = cardBookForRankInput(rankInput).find((x) => x.id === line.id)
   if (!base) return { fullRack, bestIds: new Set() }
   const playerClaimMelds = rankInput.playerClaimMelds ?? []
   const rack = rackForPatternWithClaimMelds(rankInput.hand, playerClaimMelds)
@@ -3395,6 +3397,29 @@ export function postGameRackAndHighlights(
   return { fullRack, bestIds }
 }
 
+/** Official hand # for UI: league `cardHandCode` when set, else practice-card sequential index. */
+export function suggestedHandCardRefDisplay(line: SuggestedHandLine): string {
+  const c = line.cardHandCode?.trim()
+  if (c) return c
+  return String(line.cardLineNumber)
+}
+
+/**
+ * Sort key within a section (e.g. 1a before 1b before 2). Practice card uses sequential line index.
+ */
+export function suggestedHandCardRefOrder(line: SuggestedHandLine): number {
+  const code = line.cardHandCode?.trim()
+  if (code) {
+    const m = code.match(/^(\d+)([a-z])?$/i)
+    if (m) {
+      const n = parseInt(m[1]!, 10)
+      const suf = m[2] ? m[2]!.toLowerCase().charCodeAt(0) - 96 : 0
+      return n * 32 + suf
+    }
+  }
+  return 10_000 + line.cardLineNumber
+}
+
 /**
  * All practice lines that share the best (minimum) `tilesNeededRough` for this rack, ordered with
  * the same tiebreak as {@link summarizeRackTowardWin} — `[0]` is that function’s `closestLine`.
@@ -3415,7 +3440,9 @@ export function suggestedHandsTiedAtBest(input: RankSuggestedHandsInput): {
     if (b.matchedInHand !== a.matchedInHand) return b.matchedInHand - a.matchedInHand
     if (a.visibleDeadMatches !== b.visibleDeadMatches) return a.visibleDeadMatches - b.visibleDeadMatches
     if (a.section !== b.section) return a.section.localeCompare(b.section)
-    if (a.cardLineNumber !== b.cardLineNumber) return (a.cardLineNumber ?? 0) - (b.cardLineNumber ?? 0)
+    if (suggestedHandCardRefOrder(a) !== suggestedHandCardRefOrder(b)) {
+      return suggestedHandCardRefOrder(a) - suggestedHandCardRefOrder(b)
+    }
     return a.title.localeCompare(b.title)
   })
   return { bestTilesAway: minAway, linesAtMin: tied }
@@ -3424,7 +3451,7 @@ export function suggestedHandsTiedAtBest(input: RankSuggestedHandsInput): {
 /**
  * Ranks placeholder “hands” using your **hand + East exposures** (14-tile total toward Mah Jongg),
  * wall height, discards, and bot racks.
- * When the real card arrives, swap `PRACTICE_PATTERNS` for NMJL definitions + legality.
+ * Card data comes from {@link RankSuggestedHandsInput.patterns} or the session book ({@link getActiveCardPatterns}).
  */
 export type RankSuggestedHandsInput = {
   hand: TileInstance[]
@@ -3441,6 +3468,14 @@ export type RankSuggestedHandsInput = {
    * Omit to default to `playerClaimMelds` (correct when the scoring seat is East).
    */
   eastTableClaimMelds?: ReadonlyArray<{ tiles: TileInstance[] }>
+  /**
+   * Card book to rank against. Defaults to the session book ({@link getActiveCardPatterns}).
+   */
+  patterns?: PracticePattern[]
+}
+
+function cardBookForRankInput(input: RankSuggestedHandsInput): PracticePattern[] {
+  return input.patterns ?? getActiveCardPatterns()
 }
 
 export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHandLine[] {
@@ -3458,15 +3493,17 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
     exposureTileIds && exposureTileIds.size > 0 ? { exposureTileIds } : undefined
   const visible = tableVisibleTiles(discards, exposures, eastTableClaimMelds)
 
+  const book = cardBookForRankInput(input)
+
   // Pre-compute fixed card line numbers (never changes regardless of sort order)
   const cardLineNumbers = new Map<string, number>()
   const sectionLineCount: Record<string, number> = {}
-  for (const p of PRACTICE_PATTERNS) {
+  for (const p of book) {
     sectionLineCount[p.section] = (sectionLineCount[p.section] ?? 0) + 1
     cardLineNumbers.set(p.id, sectionLineCount[p.section])
   }
 
-  const patternsToRank = PRACTICE_PATTERNS.filter((p) => {
+  const patternsToRank = book.filter((p) => {
     if (hasPlayerClaimMelds && p.closed) return false
     if (hasPlayerClaimMelds && !claimMeldsFitPracticePattern(p, playerClaimMelds)) return false
     return true
@@ -3504,6 +3541,8 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
       points: p.points,
       closed: p.closed,
       cardLineNumber: cardLineNumbers.get(p.id) ?? 1,
+      cardHandCode: p.cardHandCode,
+      cardParenthesis: p.cardParenthesis,
     }
 
     // For consecRanks patterns generate additional tier entries (each at a different tiles-away
@@ -3605,6 +3644,8 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
         points: p.points,
         closed: p.closed,
         cardLineNumber: cardLineNumbers.get(p.id) ?? 1,
+        cardHandCode: p.cardHandCode,
+        cardParenthesis: p.cardParenthesis,
         consecRanksTier: { combos: sorted.map((c) => ({ perm: c.perm, base: c.base })) },
       })
     }

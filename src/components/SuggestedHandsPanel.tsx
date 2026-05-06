@@ -3,19 +3,21 @@ import {
   useEffect,
   useMemo,
   useRef,
-  useState,
   type CSSProperties,
+  type Dispatch,
+  type SetStateAction,
 } from 'react'
-import { createPortal } from 'react-dom'
 import {
   buildConsecRanksTierStripRow,
   buildSuggestedStripSlotRowsWithVariants,
   greedyPatternMatchDetail,
   type GreedyPatternMatchOpts,
   type SuggestedStripSlot,
+  suggestedHandCardRefDisplay,
+  suggestedHandCardRefOrder,
 } from '../analysis/suggestedHands'
 import type { CardInk } from '../card/cardText'
-import { PRACTICE_CARD_SECTION_ORDER, PRACTICE_PATTERNS } from '../card/practicePatterns'
+import type { PracticePattern } from '../card/practicePatterns'
 import type { TileDef, TileInstance } from '../mahjong/types'
 import type { SuggestedHandLine } from '../training/types'
 import { CardColoredText } from './CardColoredText'
@@ -37,18 +39,6 @@ function stripTileFaceCardInk(def: TileDef, ink: CardInk | undefined): CardInk |
     if (def.dragon === 'soap') return 'navy'
   }
   return ink
-}
-
-const HIDE_CONCEALED_HANDS_STORAGE_KEY = 'mahjlogic:suggested-hands-hide-concealed'
-
-function readStoredHideConcealedHands(): boolean {
-  try {
-    const raw = localStorage.getItem(HIDE_CONCEALED_HANDS_STORAGE_KEY)
-    if (raw == null) return false
-    return raw === '1'
-  } catch {
-    return false
-  }
 }
 
 /**
@@ -79,12 +69,15 @@ type Props = {
   rackTilesForPatternMatch?: TileInstance[]
   /** This seat’s exposure tile ids — fixes like-numbers rank for strip layout when set. */
   exposureTileIdsForSuggestedStrip?: ReadonlySet<string>
-  /** When provided, the Filter trigger button is portalled into this element. */
-  filterButtonPortal?: HTMLDivElement | null
-  /** Tracks whether the containing popup is open — filter tray resets when popup closes. */
-  isOpen?: boolean
-  /** Incremented by the parent when a new game starts; resets category filters to All. */
-  categoryResetEpoch?: number
+  /** Section names turned off in the app menu (not listed here ⇒ all sections from the card may show). */
+  uncheckedSections: Set<string>
+  onUncheckedSectionsChange: Dispatch<SetStateAction<Set<string>>>
+  /** When true, omit hands marked concealed (C) from the suggested list. */
+  hideConcealedHands: boolean
+  /** Active card book — pattern lookup and section order for this deal. */
+  cardPatterns: PracticePattern[]
+  /** Section order on the active card (same semantics as built-in practice card order). */
+  cardSectionOrder: readonly string[]
 }
 
 export function SuggestedHandsPanel({
@@ -97,13 +90,15 @@ export function SuggestedHandsPanel({
   rackTilesForSuggestedStrip,
   rackTilesForPatternMatch,
   exposureTileIdsForSuggestedStrip,
-  filterButtonPortal,
-  isOpen,
-  categoryResetEpoch = 0,
+  uncheckedSections,
+  onUncheckedSectionsChange,
+  hideConcealedHands,
+  cardPatterns,
+  cardSectionOrder,
 }: Props) {
   const sections = useMemo(() => {
     const uniq = Array.from(new Set(hands.map((h) => h.section)))
-    const rank = new Map(PRACTICE_CARD_SECTION_ORDER.map((s, i) => [s, i]))
+    const rank = new Map(cardSectionOrder.map((s, i) => [s, i]))
     return uniq.sort((a, b) => {
       const ra = rank.get(a)
       const rb = rank.get(b)
@@ -112,39 +107,21 @@ export function SuggestedHandsPanel({
       if (rb !== undefined) return 1
       return a.localeCompare(b)
     })
-  }, [hands])
+  }, [hands, cardSectionOrder])
 
-  const [uncheckedSections, setUncheckedSections] = useState<Set<string>>(() => new Set())
   const checkedSections = useMemo(
     () => new Set(sections.filter((s) => !uncheckedSections.has(s))),
     [sections, uncheckedSections],
   )
-  const [hideConcealedHands, setHideConcealedHands] = useState(readStoredHideConcealedHands)
-  const [filterTrayOpen, setFilterTrayOpen] = useState(false)
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  /** If every section that appears in the current ranking is turned off, revert to all on. */
   useEffect(() => {
     if (sections.length === 0) return
-    if (checkedSections.size > 0) return
-    setUncheckedSections(new Set())
-  }, [sections, checkedSections])
-
-  useEffect(() => {
-    setUncheckedSections(new Set())
-  }, [categoryResetEpoch])
-
-  // Reset filter tray whenever the popup is closed
-  useEffect(() => {
-    if (!isOpen) setFilterTrayOpen(false)
-  }, [isOpen])
-
-  const allSelected = sections.length > 0 && checkedSections.size === sections.length
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(HIDE_CONCEALED_HANDS_STORAGE_KEY, hideConcealedHands ? '1' : '0')
-    } catch { /* ignore */ }
-  }, [hideConcealedHands])
+    const anyVisible = sections.some((s) => !uncheckedSections.has(s))
+    if (anyVisible) return
+    onUncheckedSectionsChange(new Set())
+  }, [sections, uncheckedSections, onUncheckedSectionsChange])
 
   useEffect(
     () => () => {
@@ -178,16 +155,18 @@ export function SuggestedHandsPanel({
 
   const displayHands = useMemo(() => {
     const base = hideConcealedHands ? filtered.filter((h) => !h.closed) : filtered
-    const rank = new Map(PRACTICE_CARD_SECTION_ORDER.map((s, i) => [s, i]))
+    const rank = new Map(cardSectionOrder.map((s, i) => [s, i]))
     return [...base].sort((a, b) => {
       if (a.tilesNeededRough !== b.tilesNeededRough) return a.tilesNeededRough - b.tilesNeededRough
       const ra = rank.get(a.section) ?? 999
       const rb = rank.get(b.section) ?? 999
       if (ra !== rb) return ra - rb
-      if (a.cardLineNumber !== b.cardLineNumber) return a.cardLineNumber - b.cardLineNumber
+      const oa = suggestedHandCardRefOrder(a)
+      const ob = suggestedHandCardRefOrder(b)
+      if (oa !== ob) return oa - ob
       return a.id.localeCompare(b.id)
     })
-  }, [filtered, hideConcealedHands])
+  }, [filtered, hideConcealedHands, cardSectionOrder])
 
   const listRowsForHandsPanel = displayHands
 
@@ -237,10 +216,10 @@ export function SuggestedHandsPanel({
         : undefined
     const rackIdSet = new Set(rackMatch.map((t) => t.id))
     const m = new Map<string, StripRowsEntry>()
-    const patternCache = new Map<string, ReturnType<typeof PRACTICE_PATTERNS.find>>()
+    const patternCache = new Map<string, PracticePattern | undefined>()
     for (const h of filtered) {
       const key = handEntryKey(h)
-      const p = patternCache.get(h.id) ?? PRACTICE_PATTERNS.find((x) => x.id === h.id)
+      const p = patternCache.get(h.id) ?? cardPatterns.find((x) => x.id === h.id)
       patternCache.set(h.id, p)
       if (!p) {
         m.set(key, { rows: [], ocVariantSuffixes: [], ocAllSuffix: '' })
@@ -284,6 +263,7 @@ export function SuggestedHandsPanel({
     rackTilesForPatternMatch,
     exposureTileIdsForSuggestedStrip,
     handEntryKey,
+    cardPatterns,
   ])
 
   const showHandCategoryLabels = handsListOn
@@ -300,116 +280,6 @@ export function SuggestedHandsPanel({
     }
     return { gridTemplateAreas: handsRowGridTemplateAreas(showHandCategoryLabels, tilesGuideOn) }
   }, [handsListSpreadsheet3, showHandCategoryLabels, tilesGuideOn])
-
-  // Filter trigger button — portalled into the popup drag handle header
-  const filterTriggerNode = (
-    <button
-      type="button"
-      className={[
-        'hands-panel__display-toggle',
-        filterTrayOpen ? 'hands-panel__display-toggle--on' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-      aria-pressed={filterTrayOpen}
-      aria-label="Toggle filter tray"
-      onClick={() => setFilterTrayOpen((o) => !o)}
-      onPointerDown={(e) => e.stopPropagation()}
-    >
-      Filter
-    </button>
-  )
-
-  // Filter tray — right-side slide-in panel inside the section
-  const filterTray = (
-    <div
-      className={[
-        'suggested-hands-filter-tray',
-        filterTrayOpen ? 'suggested-hands-filter-tray--open' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-      aria-hidden={!filterTrayOpen}
-    >
-      <div className="suggested-hands-filter-tray__inner">
-        {/* All sections */}
-        <button
-          type="button"
-          className={[
-            'btn',
-            'suggested-hands-filter-tray__item',
-            allSelected ? 'suggested-hands-filter-tray__item--on' : '',
-          ]
-            .filter(Boolean)
-            .join(' ')}
-          aria-pressed={allSelected}
-          disabled={sections.length === 0}
-          onClick={() => {
-            if (allSelected) {
-              setUncheckedSections(new Set(sections))
-            } else {
-              setUncheckedSections(new Set())
-            }
-          }}
-        >
-          All
-        </button>
-
-        {/* Concealed — sits directly below All */}
-        <button
-          type="button"
-          className={[
-            'btn',
-            'suggested-hands-filter-tray__item',
-            !hideConcealedHands ? 'suggested-hands-filter-tray__item--on' : '',
-          ]
-            .filter(Boolean)
-            .join(' ')}
-          aria-pressed={!hideConcealedHands}
-          onClick={() => setHideConcealedHands((v) => !v)}
-        >
-          Concealed
-        </button>
-
-        {sections.map((sec) => {
-          const isOn = checkedSections.has(sec)
-          const isLast = checkedSections.size === 1 && isOn
-          return (
-            <button
-              key={sec}
-              type="button"
-              className={[
-                'btn',
-                'suggested-hands-filter-tray__item',
-                isOn ? 'suggested-hands-filter-tray__item--on' : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-              aria-pressed={isOn}
-              disabled={isLast}
-              onClick={() => {
-                setUncheckedSections((prev) => {
-                  if (isOn) {
-                    if (isLast) return prev
-                    const next = new Set(prev)
-                    next.add(sec)
-                    return next
-                  } else {
-                    if (!prev.has(sec)) return prev
-                    const next = new Set(prev)
-                    next.delete(sec)
-                    return next
-                  }
-                })
-              }}
-            >
-              {sec}
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
 
   return (
     <section className="panel panel--hands" aria-label="Suggested hands">
@@ -462,13 +332,18 @@ export function SuggestedHandsPanel({
                         activePatternId === allKey ||
                         (variantKeys.length > 0 &&
                           variantKeys.some((k) => k === activePatternId))
-                      const ariaLabel = `${h.section} #${h.cardLineNumber}, ${h.title}, ${h.tilesNeededRough} tiles away`
+                      const cardRef = suggestedHandCardRefDisplay(h)
+                      const ariaLabel = `${h.section} #${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away`
                       const handTitleNode = (
                         <span className="hands-sheet__hand-title" aria-label={h.title}>
                           {h.titleSegments?.length ? (
                             <>
                               <CardColoredText segments={h.titleSegments} />
                               {(() => {
+                                const paren = h.cardParenthesis?.trim()
+                                if (paren) {
+                                  return <span className="hands-sheet__paren">{paren}</span>
+                                }
                                 const m = h.title.match(/(\([^)]+\))/)
                                 return m ? (
                                   <span className="hands-sheet__paren">{m[1]}</span>
@@ -524,9 +399,7 @@ export function SuggestedHandsPanel({
                         <div className="hands-sheet__combined-header-line">
                           <span className="hands-sheet__category">
                             {h.section}
-                            <span className="hands-sheet__section-num">
-                              #{h.cardLineNumber}
-                            </span>
+                            <span className="hands-sheet__section-num">#{cardRef}</span>
                           </span>
                           <span className="hands-sheet__combined-divider" aria-hidden="true">
                             ·
@@ -564,7 +437,7 @@ export function SuggestedHandsPanel({
                                     cancelScheduledClick()
                                     onPatternDoubleClick(h.id, allKey)
                                   }}
-                                  aria-label={`${h.section} #${h.cardLineNumber}, ${h.title} — highlight all variants`}
+                                  aria-label={`${h.section} #${cardRef}, ${h.title} — highlight all variants`}
                                   aria-pressed={activePatternId === allKey}
                                 >
                                   {headerLine}
@@ -708,7 +581,8 @@ export function SuggestedHandsPanel({
                         activePatternId === allKey ||
                         (variantKeys.length > 0 &&
                           variantKeys.some((k) => k === activePatternId))
-                      const ariaLabel = `${h.section} #${h.cardLineNumber}, ${h.title}, ${h.tilesNeededRough} tiles away`
+                      const cardRef = suggestedHandCardRefDisplay(h)
+                      const ariaLabel = `${h.section} #${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away`
                       const renderTileRow = (
                         slots: SuggestedStripSlot[],
                         isActiveRow: boolean,
@@ -879,7 +753,8 @@ export function SuggestedHandsPanel({
                     {listRowsForHandsPanel.map((h) => {
                       const rowKey = handEntryKey(h)
                       const isFocused = activePatternId === rowKey
-                      const ariaLabel = `${h.section} #${h.cardLineNumber}, ${h.title}, ${h.tilesNeededRough} tiles away`
+                      const cardRef = suggestedHandCardRefDisplay(h)
+                      const ariaLabel = `${h.section} #${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away`
                       return (
                         <li
                           key={rowKey}
@@ -906,9 +781,7 @@ export function SuggestedHandsPanel({
                             <div className="hands-sheet__cell hands-sheet__cell--cat" role="cell">
                               <span className="hands-sheet__category">
                                 {h.section}
-                                <span className="hands-sheet__section-num">
-                                  #{h.cardLineNumber}
-                                </span>
+                                <span className="hands-sheet__section-num">#{cardRef}</span>
                               </span>
                             </div>
                             <div className="hands-sheet__cell hands-sheet__cell--hand" role="cell">
@@ -917,6 +790,10 @@ export function SuggestedHandsPanel({
                                   <>
                                     <CardColoredText segments={h.titleSegments} />
                                     {(() => {
+                                      const paren = h.cardParenthesis?.trim()
+                                      if (paren) {
+                                        return <span className="hands-sheet__paren">{paren}</span>
+                                      }
                                       const m = h.title.match(/(\([^)]+\))/)
                                       return m ? (
                                         <span className="hands-sheet__paren">{m[1]}</span>
@@ -1042,9 +919,10 @@ export function SuggestedHandsPanel({
                 const rowIsFocused = activePatternId === handEntryKey(h) ||
                   activePatternId === categoryClickKey ||
                   (variantKeys.length > 0 && variantKeys.some((k) => k === activePatternId))
+                const cardRef = suggestedHandCardRefDisplay(h)
                 const rowAriaLabel =
                   !handsListOn || !showHandCategoryLabels
-                    ? `${h.section} #${h.cardLineNumber}, ${h.title}, ${h.tilesNeededRough} tiles away`
+                    ? `${h.section} #${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away`
                     : undefined
                 const outerClass = [
                   'hands-list__row-hit',
@@ -1079,7 +957,7 @@ export function SuggestedHandsPanel({
                   ? {
                       role: 'button' as const,
                       tabIndex: 0,
-                      'aria-label': `${h.section} #${h.cardLineNumber}, ${h.title} — highlight all variants`,
+                      'aria-label': `${h.section} #${cardRef}, ${h.title} — highlight all variants`,
                       'aria-pressed': activePatternId === categoryClickKey,
                       onClick: (e: React.MouseEvent) => {
                         e.stopPropagation()
@@ -1113,7 +991,7 @@ export function SuggestedHandsPanel({
                           >
                             <span className="hands-list__with-tiles-category">
                               {h.section}
-                              <span className="hands-list__section-num">#{h.cardLineNumber}</span>
+                              <span className="hands-list__section-num">#{cardRef}</span>
                             </span>
                             {handsListOn ? (
                               <span
@@ -1124,6 +1002,10 @@ export function SuggestedHandsPanel({
                                   <>
                                     <CardColoredText segments={h.titleSegments} />
                                     {(() => {
+                                      const paren = h.cardParenthesis?.trim()
+                                      if (paren) {
+                                        return <span className="hands-list__paren">{paren}</span>
+                                      }
                                       const m = h.title.match(/(\([^)]+\))/)
                                       return m ? (
                                         <span className="hands-list__paren">{m[1]}</span>
@@ -1293,13 +1175,6 @@ export function SuggestedHandsPanel({
           Hands list is hidden — turn on Hands or Tiles to see suggested lines.
         </p>
       )}
-
-      {/* Right-side filter tray */}
-      {filterTray}
-
-      {/* Filter trigger portalled into the popup header */}
-      {typeof document !== 'undefined' && filterButtonPortal &&
-        createPortal(filterTriggerNode, filterButtonPortal)}
     </section>
   )
 }

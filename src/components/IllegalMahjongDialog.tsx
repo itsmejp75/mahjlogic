@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
-import { PRACTICE_PATTERNS, type PracticePattern } from '../card/practicePatterns'
+import { getActiveCardPatterns } from '../card/activeCardPatternsScope'
+import type { PracticePattern } from '../card/practicePatterns'
 import {
   getRackTilesNotHelpingPattern,
   rankSuggestedHands,
+  suggestedHandCardRefDisplay,
   type RankSuggestedHandsInput,
 } from '../analysis/suggestedHands'
 import type { SuggestedHandLine } from '../training/types'
@@ -79,8 +81,9 @@ export function IllegalMahjongDialog({ rankInput, onDismiss }: Props) {
     ? lines.filter((l) => l.section === selected.section)
     : lines
 
+  const patternBook = rankInput.patterns ?? getActiveCardPatterns()
   const pattern: PracticePattern | undefined = selected
-    ? PRACTICE_PATTERNS.find((p) => p.id === selected.id)
+    ? patternBook.find((p) => p.id === selected.id)
     : undefined
 
   const unusedTiles = useMemo(() => {
@@ -145,7 +148,7 @@ export function IllegalMahjongDialog({ rankInput, onDismiss }: Props) {
                 >
                   {handsInActiveSection.map((l) => (
                     <option key={l.id} value={l.id}>
-                      #{l.cardLineNumber} — {l.title}
+                      #{suggestedHandCardRefDisplay(l)} — {l.title}
                       {l.closed ? ' (C)' : ''}
                     </option>
                   ))}
@@ -156,7 +159,7 @@ export function IllegalMahjongDialog({ rankInput, onDismiss }: Props) {
             {selected ? (
               <div className="mahjong-blocked-modal__white-panel">
                 <p className="mahjong-blocked-modal__line-summary">
-                  {selected.section} #{selected.cardLineNumber} — {selected.tilesNeededRough} tiles away (
+                  {selected.section} #{suggestedHandCardRefDisplay(selected)} — {selected.tilesNeededRough} tiles away (
                   {selected.closed ? 'Concealed' : 'Exposed'}, {selected.points}
                   pt)
                 </p>

@@ -31,7 +31,7 @@ import {
   rankSuggestedHands,
   type RankSuggestedHandsInput,
 } from './suggestedHands'
-import { PRACTICE_PATTERNS } from '../card/practicePatterns'
+import { getActiveCardPatterns } from '../card/activeCardPatternsScope'
 import { pickRandomPass } from '../mahjong/charleston'
 import { shuffle } from '../mahjong/deck'
 import type { DiscardEntry, TileInstance } from '../mahjong/types'
@@ -73,6 +73,7 @@ function buildInput(ctx: BotRankContext): RankSuggestedHandsInput {
     exposures: ctx.botExposures,
     playerClaimMelds: ctx.botExposures.filter((e) => e.seat === ctx.botSeat),
     eastTableClaimMelds: ctx.eastExposures,
+    patterns: getActiveCardPatterns(),
   }
 }
 
@@ -128,7 +129,7 @@ export function chooseBotCharlestonPass(
   const ranked = rankSuggestedHands(buildInput(ctx))
   if (ranked.length === 0) return pickRandomPass(hand, n)
   const bestLine = ranked[0]!
-  const p = PRACTICE_PATTERNS.find((x) => x.id === bestLine.id)
+  const p = getActiveCardPatterns().find((x) => x.id === bestLine.id)
   if (!p) return pickRandomPass(hand, n)
 
   const rack = [...hand]
@@ -187,7 +188,7 @@ export function chooseBotDiscard(
   }
 
   const bestLine = ranked[0]!
-  const p = PRACTICE_PATTERNS.find((x) => x.id === bestLine.id)
+  const p = getActiveCardPatterns().find((x) => x.id === bestLine.id)
   if (!p) return nonJokers[Math.floor(Math.random() * nonJokers.length)]!
 
   // Rack = concealed hand + own exposed tiles (both count toward the 14).

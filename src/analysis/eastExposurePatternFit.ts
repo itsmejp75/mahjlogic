@@ -1,6 +1,7 @@
 import type { TileDef, TileInstance } from '../mahjong/types'
 import { suitPermutations } from '../card/nmjlSuitSlots'
-import { PRACTICE_PATTERNS, type PatternGroup, type PracticePattern } from '../card/practicePatterns'
+import { getActiveCardPatterns } from '../card/activeCardPatternsScope'
+import type { PatternGroup, PracticePattern } from '../card/practicePatterns'
 
 type Suit = 'bam' | 'dot' | 'crak'
 const SUITS: Suit[] = ['bam', 'dot', 'crak']
@@ -584,9 +585,10 @@ export function claimMeldsFitPracticePattern(
  */
 export function openClaimMeldsFitSomePracticeLine(
   melds: ReadonlyArray<{ tiles: TileInstance[] }>,
+  book: PracticePattern[] = getActiveCardPatterns(),
 ): boolean {
   if (melds.length === 0) return true
-  return PRACTICE_PATTERNS.some((p) => {
+  return book.some((p) => {
     if (p.closed) return false
     return claimMeldsFitPracticePattern(p, melds)
   })

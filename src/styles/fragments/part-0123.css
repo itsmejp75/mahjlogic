@@ -56,7 +56,7 @@
 
   @supports (width: 100dvi) {
     :root {
-      --app-play-fit-inline-from-block: 100dvi;
+      --app-play-fit-inline-from-block: 92dvi;
     }
   }
 
@@ -198,71 +198,5 @@
   html[data-native-app] .app-play-split > .app-play-split__right .panel--bot-exposures {
     flex: 0 0 calc(100% + var(--native-lower-edge-pull-down));
     height: calc(100% + var(--native-lower-edge-pull-down));
-  }
-}
-
-/*
- * Mobile web / installed PWA landscape: match the native full-bleed shell.
- *
- * Portrait already fills because there is no side safe-area inset. In iPhone
- * landscape, `env(safe-area-inset-left/right)` can become a large value and
- * the base `--app-h-pad` adds it to both sides, leaving the centered board
- * gutters visible. The native shell already removes that contribution; do the
- * same for browser/PWA landscape and let the content reach the viewport edge.
- */
-@media (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) {
-  html:not([data-native-app]) {
-    --app-play-fit-inline-from-block: 100dvi;
-    --app-safe-inline: 0px;
-    --app-h-pad: var(--app-h-pad-base);
-    --mobile-web-lower-edge-pull-down: clamp(1.2rem, 6dvb, 2rem);
-  }
-
-  html:not([data-native-app]) .app,
-  html:not([data-native-app]) .app-main {
-    height: 100dvb;
-    min-height: 0;
-  }
-
-  html:not([data-native-app]) .app-main {
-    box-sizing: border-box;
-    padding-top: var(--app-v-pad);
-    padding-bottom: 0;
-  }
-
-  html:not([data-native-app]) .app-dnd-frame {
-    flex: 1 1 0;
-    height: 100%;
-    min-height: 0;
-    justify-content: flex-start;
-  }
-
-  html:not([data-native-app]) .app-rack-stage,
-  html:not([data-native-app]) .app-play-split {
-    padding-inline-start: var(--app-h-pad-base);
-    padding-inline-end: var(--app-h-pad-base);
-  }
-
-  html:not([data-native-app]) .app-play-split {
-    flex: 1 1 0;
-    max-height: none;
-    min-height: 0;
-    align-self: stretch;
-    height: auto;
-  }
-
-  html:not([data-native-app]) .app-play-split__left,
-  html:not([data-native-app]) .app-play-split__right,
-  html:not([data-native-app]) .app-play-split__right-stack,
-  html:not([data-native-app]) .app-play-split > .app-play-split__left > .panel--discard-tracker,
-  html:not([data-native-app]) .app-play-split > .app-play-split__right .panel--bot-exposures {
-    height: 100%;
-    min-height: 0;
-  }
-
-  html:not([data-native-app]) .app-play-split > .app-play-split__left > .panel--discard-tracker,
-  html:not([data-native-app]) .app-play-split > .app-play-split__right .panel--bot-exposures {
-    flex: 0 0 calc(100% + var(--mobile-web-lower-edge-pull-down));
-    height: calc(100% + var(--mobile-web-lower-edge-pull-down));
   }
 }
