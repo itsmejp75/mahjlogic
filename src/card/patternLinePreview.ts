@@ -157,10 +157,6 @@ function pushJokerFlagRun(flags: boolean[], n: number, jokerOk: boolean) {
 }
 
 /**
- * NMJL: jokers only in 3+ identical (pung / kong / quint / sextet). Not singles, pairs, flowers,
- * or sequence-style groups (consec runs, multi-rank “123” layouts, etc.).
- */
-/**
  * From `titleSegments`, digit runs printed in red/green/navy columns → stand-in suit per rank
  * (NMJL card slots — not fixed bam/dot/crak legality).
  */
@@ -386,7 +382,7 @@ function pushBoolRun(flags: boolean[], n: number, v: boolean) {
 
 /**
  * NMJL joker flags in **title order** (matches `buildPreviewSlotsFromTitleSegments` / card ink).
- * Runs of 3+ like tiles (suits, dragons, or FFFF) allow jokers; singles, pairs, and winds in 1s do not.
+ * Any run of **3+ identical** tiles (suits, dragons, flowers, winds) allows jokers; singles and pairs do not.
  */
 function appendTitleSegmentJokerEligible(flags: boolean[], seg: CardTextSeg): void {
   const t = seg.t
@@ -407,9 +403,8 @@ function appendTitleSegmentJokerEligible(flags: boolean[], seg: CardTextSeg): vo
   }
 
   if (seg.ink === 'honor') {
-    const honorWinds = extractWindsFromText(t)
-    for (let wi = 0; wi < honorWinds.length; wi++) {
-      pushBoolRun(flags, 1, false)
+    for (const { count } of windRunsFromText(t)) {
+      pushBoolRun(flags, count, count >= 3)
     }
     const d = extractDTokenCount(t)
     if (d > 0) pushBoolRun(flags, d, d >= 3)
@@ -424,9 +419,8 @@ function appendTitleSegmentJokerEligible(flags: boolean[], seg: CardTextSeg): vo
     const dCount = extractDTokenCount(t)
     if (dCount > 0) pushBoolRun(flags, dCount, dCount >= 3)
     if (extractSameDigitRuns(t).length === 0 && dCount === 0) {
-      const suitWinds = extractWindsFromText(t)
-      for (let wi = 0; wi < suitWinds.length; wi++) {
-        pushBoolRun(flags, 1, false)
+      for (const { count } of windRunsFromText(t)) {
+        pushBoolRun(flags, count, count >= 3)
       }
     }
   }
@@ -652,6 +646,19 @@ function extractWindsFromText(t: string): Wind[] {
   const out: Wind[] = []
   for (const ch of t) {
     if (ch === 'N' || ch === 'E' || ch === 'W' || ch === 'S') out.push(ch)
+  }
+  return out
+}
+
+/** Contiguous runs of the same wind letter (e.g. `NNN` → one run of 3) for joker-eligibility. */
+function windRunsFromText(t: string): Array<{ wind: Wind; count: number }> {
+  const out: Array<{ wind: Wind; count: number }> = []
+  for (const ch of t) {
+    if (ch !== 'N' && ch !== 'E' && ch !== 'W' && ch !== 'S') continue
+    const w = ch as Wind
+    const last = out[out.length - 1]
+    if (last && last.wind === w) last.count++
+    else out.push({ wind: w, count: 1 })
   }
   return out
 }

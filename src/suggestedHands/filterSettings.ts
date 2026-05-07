@@ -93,16 +93,16 @@ export function suggestedHandSectionMenuLabel(section: string): string {
 }
 
 /**
- * Column-major layout (read down column 1, then column 2, …) to match common NMJL filter sheets.
+ * Two-column column-major layout (read down column 1, then column 2) — 10 NMJL sections → 5×2.
  */
 export function suggestedHandsFilterMenuColumns(
   order: readonly string[] = PRACTICE_CARD_SECTION_ORDER,
 ): string[][] {
   const n = order.length
-  if (n === 0) return [[], [], []]
-  const colCount = 3
+  if (n === 0) return [[], []]
+  const colCount = 2
   const rows = Math.ceil(n / colCount)
-  const cols: string[][] = [[], [], []]
+  const cols: string[][] = [[], []]
   for (let c = 0; c < colCount; c++) {
     for (let r = 0; r < rows; r++) {
       const i = c * rows + r

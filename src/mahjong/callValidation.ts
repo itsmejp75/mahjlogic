@@ -37,14 +37,14 @@ export const BLOCKING_TITLE_SWAP_ERROR = 'Error with swap'
 
 /** Swap error: no joker is exposed in any meld on the table. */
 export const MSG_SWAP_NO_EXPOSED_JOKERS =
-  'There are no exposed jokers in any meld on the table right now, so nothing can be swapped. A joker swap only applies when you or another player has a joker showing in an exposure you are allowed to redeem on your turn.'
+  'There are no exposed jokers you can redeem on your turn right now. A joker swap only applies when it is your turn and you or another player has a joker showing in an exposure you are allowed to replace with a matching natural from your hand.'
 
 /**
  * Swap error: user pressed Swap without staging a natural in the swap / placemat slot.
  * “Placemat” matches on-table language (exposure row + discard-adjacent staging).
  */
 export const MSG_SWAP_PICK_TILE_FIRST =
-  'To swap a joker, first move the natural tile you want to give up from your hand to the placemat — the staging slot next to the discard tracker or the reserved slot on your exposure row — then press Swap. You must have exactly one tile in the placemat. You can also drag that tile directly onto your own melds or another player’s exposed meld that contains a joker you may redeem.'
+  'On your turn: move the natural tile you want to give up from your hand to the placemat — the staging slot next to the discard tracker or the reserved slot on your exposure row — then press Swap. You must have exactly one tile in the placemat. You can also drag that tile directly onto your own melds or another player’s exposed meld that contains a joker you may redeem.'
 
 /** Swap error: staged tile cannot legally replace any exposed joker. */
 export const MSG_SWAP_NO_LEGAL_FOR_TILE =

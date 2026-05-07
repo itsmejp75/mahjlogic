@@ -7,17 +7,29 @@ import { tileDefsEqual } from './tileUtils'
 const JOKER_SWAP_SEAT_ORDER: BotSeat[] = ['South', 'West', 'North']
 
 /**
- * Jokers in a meld can be exchanged for a natural that appears in the same meld (any order).
- * Returns every joker in the meld when at least one non-joker matches `naturalDef`.
+ * Tile type that every joker in this exposure represents: all non-jokers in the meld must match.
+ * Returns null if there are no naturals or they disagree (invalid meld for swap).
+ */
+export function representativeDefInExposedMeld(tiles: TileInstance[]): TileDef | null {
+  const naturals = tiles.filter((t) => t.def.cat !== 'joker')
+  if (naturals.length === 0) return null
+  const first = naturals[0]!.def
+  for (let i = 1; i < naturals.length; i++) {
+    if (!tileDefsEqual(naturals[i]!.def, first)) return null
+  }
+  return first
+}
+
+/**
+ * On your turn, any exposed joker in the meld may be redeemed with a natural matching what that
+ * joker represents (the meld’s like naturals).
  */
 function jokersSwappableWithNaturalInMeld(
   tiles: TileInstance[],
   naturalDef: TileDef,
 ): TileInstance[] {
-  const hasMatchingNatural = tiles.some(
-    (t) => t.def.cat !== 'joker' && tileDefsEqual(t.def, naturalDef),
-  )
-  if (!hasMatchingNatural) return []
+  const rep = representativeDefInExposedMeld(tiles)
+  if (!rep || !tileDefsEqual(naturalDef, rep)) return []
   return tiles.filter((t) => t.def.cat === 'joker')
 }
 
@@ -169,9 +181,9 @@ function uniqueNaturalDefs(tiles: TileInstance[]): TileDef[] {
 }
 
 /**
- * Inverse of `collectSwappableJokerTileIds`: every East hand tile id whose def matches a
- * natural already present in some meld that also contains a joker (bot rows and your own
- * East exposures). These are the rack tiles you could trade for an exposed joker.
+ * Inverse of `collectSwappableJokerTileIds`: each hand tile id whose def matches the tile type of
+ * some exposed meld that contains a joker (bot rows and East’s own exposures) — naturals you can
+ * trade for an exposed joker on your turn.
  *
  * `pendingDiscard` — tile staged in the discard tray (out of `hand`) is included so the joker
  * train stays on it until the discard is committed.
@@ -202,9 +214,9 @@ export function collectHandTileIdsSwappableForJokers(
 }
 
 /**
- * Every exposed joker tile id the player can currently redeem: for each unique natural
- * in hand (and staged East discard, if not a joker), any meld that contains both that
- * natural and a joker (in any order) — bot rows and your own East exposures.
+ * Every exposed joker the player may redeem **on their turn** with a natural currently in hand
+ * (or staged for discard): each joker sits in a meld whose naturals all match that tile type —
+ * bot rows and your own East exposures.
  */
 export function collectSwappableJokerTileIds(
   hand: TileInstance[],

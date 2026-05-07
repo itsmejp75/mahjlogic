@@ -97,6 +97,12 @@ function hasText(row: Nmjl2026CsvHandRow, needle: string): boolean {
   return `${row.parenthesis} ${row.hand}`.toLowerCase().includes(needle.toLowerCase())
 }
 
+/** Card line text like “w Opp, Dragon” (abbrev., 2026 export). */
+function isOpposingDragonParenthetical(row: Nmjl2026CsvHandRow): boolean {
+  const p = `${row.parenthesis} ${row.hand}`.toLowerCase()
+  return p.includes('opposing dragon') || /\bw\s+opp\b/.test(p) || p.includes('opp, dragon')
+}
+
 function isFlexibleConsecutive(row: Nmjl2026CsvHandRow): boolean {
   return hasText(row, 'Consec') && !hasText(row, 'These Nos. Only')
 }
@@ -124,6 +130,17 @@ function slotColorGroup(slot: RankSlot, flexibleConsec: boolean, minRank: number
     }))
 }
 
+/**
+ * Dragons that live on “ink” rows with **no suit ranks** (e.g. `green:DDD` next to `blue:1234`)
+ * must become their own meld groups. Previously `buildRankGroups` only looked at slots with
+ * `ranks.size > 0`, so Wind–Dragons 2 lost two pungs and Quints 3 lost the opposing DDDD.
+ */
+function dragonOrphanRankGroups(rankSlots: RankSlot[]): PatternGroup[] {
+  return rankSlots
+    .filter((s) => s.ranks.size === 0 && s.dragonCount > 0)
+    .map((s) => ({ kind: 'rank' as const, need: s.dragonCount, test: dragon }))
+}
+
 function buildRankGroups(row: Nmjl2026CsvHandRow, rankSlots: RankSlot[]): PatternGroup[] {
   const slotsWithRanks = rankSlots.filter((slot) => slot.ranks.size > 0)
   if (!slotsWithRanks.length) return []
@@ -136,8 +153,9 @@ function buildRankGroups(row: Nmjl2026CsvHandRow, rankSlots: RankSlot[]): Patter
       needs.length >= 2
         ? [{ kind: 'shared-rank-suits', needs, test: anySuit }]
         : [{ kind: 'suit-locked-rank', need: needs[0] ?? 0, test: anySuit }]
-    const dragonNeed = rankSlots.reduce((sum, slot) => sum + slot.dragonCount, 0)
-    if (dragonNeed > 0) groups.push({ kind: 'fixed', need: dragonNeed, test: dragon })
+    const dragonOnRankSlots = slotsWithRanks.reduce((sum, slot) => sum + slot.dragonCount, 0)
+    if (dragonOnRankSlots > 0) groups.push({ kind: 'fixed', need: dragonOnRankSlots, test: dragon })
+    groups.push(...dragonOrphanRankGroups(rankSlots))
     return groups
   }
 
@@ -156,12 +174,12 @@ function buildRankGroups(row: Nmjl2026CsvHandRow, rankSlots: RankSlot[]): Patter
         {
           kind: 'suit-permute',
           colorGroups: [slotColorGroup(slot, true, minRank)],
-          colorGroupDragonCounts: anyDragon ? undefined : [slot.dragonCount],
+          // Matching dragons on the same ink as the run (e.g. DDDD with 1234) belong to the suit
+          // slot — even when other inks are “any dragon” pungs (Wind–Dragons 2).
+          colorGroupDragonCounts: slot.dragonCount > 0 ? [slot.dragonCount] : undefined,
           consecRanks: true,
         },
-        ...(anyDragon && slot.dragonCount > 0
-          ? ([{ kind: 'fixed', need: slot.dragonCount, test: dragon }] as PatternGroup[])
-          : []),
+        ...dragonOrphanRankGroups(rankSlots),
       ]
     }
     return [
@@ -170,17 +188,17 @@ function buildRankGroups(row: Nmjl2026CsvHandRow, rankSlots: RankSlot[]): Patter
         rankNeeds,
         dragonCount: anyDragon ? 0 : slot.dragonCount,
         opposingDragons:
-          hasText(row, 'Opposing Dragon') && slot.dragonCount > 0 ? { need: slot.dragonCount } : undefined,
+          isOpposingDragonParenthetical(row) && slot.dragonCount > 0 ? { need: slot.dragonCount } : undefined,
       },
-      ...(anyDragon && !hasText(row, 'Opposing Dragon') && slot.dragonCount > 0
+      ...(anyDragon && !isOpposingDragonParenthetical(row) && slot.dragonCount > 0
         ? ([{ kind: 'fixed', need: slot.dragonCount, test: dragon }] as PatternGroup[])
         : []),
+      ...dragonOrphanRankGroups(rankSlots),
     ]
   }
 
   const colorGroups = slotsWithRanks.map((slot) => slotColorGroup(slot, flexibleConsec, minRank))
-  const colorGroupDragonCounts = slotsWithRanks.map((slot) => (anyDragon ? 0 : slot.dragonCount))
-  const fixedDragonNeed = anyDragon ? rankSlots.reduce((sum, slot) => sum + slot.dragonCount, 0) : 0
+  const colorGroupDragonCounts = slotsWithRanks.map((slot) => slot.dragonCount)
   return [
     {
       kind: 'suit-permute',
@@ -188,9 +206,7 @@ function buildRankGroups(row: Nmjl2026CsvHandRow, rankSlots: RankSlot[]): Patter
       colorGroupDragonCounts,
       consecRanks: flexibleConsec ? true : undefined,
     },
-    ...(fixedDragonNeed > 0
-      ? ([{ kind: 'fixed', need: fixedDragonNeed, test: dragon }] as PatternGroup[])
-      : []),
+    ...dragonOrphanRankGroups(rankSlots),
   ]
 }
 

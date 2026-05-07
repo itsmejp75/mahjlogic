@@ -73,6 +73,7 @@ import {
   suggestedHandsTiedAtBest,
   summarizeRackTowardWin,
   computeSuggestedDiscardNeedHighlightIds,
+  computeBotExposureSuggestedBestIds,
   type RankSuggestedHandsInput,
 } from './analysis/suggestedHands'
 import { tileInstancesWithClaimMeldJokersResolved } from './analysis/eastExposurePatternFit'
@@ -137,6 +138,7 @@ import {
   findNextJokerSwapTarget,
   collectHandTileIdsSwappableForJokers,
   collectSwappableJokerTileIds,
+  representativeDefInExposedMeld,
   parseBotSeatSwapDropId,
   parseBotExposureSwapDropId,
   parseEastExposureSwapDropId,
@@ -1195,12 +1197,10 @@ function getRepDefForExposedJoker(
 ): TileDef | null {
   if (parsed.rack === 'bot') {
     const exp = r.botExposures[parsed.exposureIdx]
-    const rep = exp?.tiles.find((t) => t.def.cat !== 'joker')
-    return rep?.def ?? null
+    return exp ? representativeDefInExposedMeld(exp.tiles) : null
   }
   const exp = r.eastExposures[parsed.exposureIdx]
-  const rep = exp?.tiles.find((t) => t.def.cat !== 'joker')
-  return rep?.def ?? null
+  return exp ? representativeDefInExposedMeld(exp.tiles) : null
 }
 
 /**
@@ -1211,12 +1211,7 @@ function applyEastNaturalForExposedJoker(
   r: RoundState,
   p: { rack: 'bot' | 'east'; exposureIdx: number; jokerTileId: string; eastTileId: string },
 ): RoundState {
-  if (
-    r.mainPhase !== 'east-discard' &&
-    r.mainPhase !== 'bot-turn' &&
-    r.mainPhase !== 'call-staging'
-  )
-    return r
+  if (r.mainPhase !== 'east-discard' && r.mainPhase !== 'call-staging') return r
   // Don't pull a tile out of the call you're currently staging — it would leave a dangling id
   // in stagedCallTileIds and break the call meld.
   if (r.mainPhase === 'call-staging' && r.stagedCallTileIds.includes(p.eastTileId)) return r
@@ -3226,7 +3221,7 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (mainPhase !== 'east-discard' && mainPhase !== 'bot-turn') setPendingJokerSwapTileId(null)
+    if (mainPhase !== 'east-discard' && mainPhase !== 'call-staging') setPendingJokerSwapTileId(null)
   }, [mainPhase])
 
   useEffect(() => {
@@ -3335,9 +3330,7 @@ export default function App() {
 
   const jokerSwapUiActive =
     charlestonDone &&
-    (mainPhase === 'east-discard' ||
-      mainPhase === 'bot-turn' ||
-      mainPhase === 'call-staging') &&
+    (mainPhase === 'east-discard' || mainPhase === 'call-staging') &&
     anyExposedJoker
 
   const jokerSwapPick = useMemo(() => {
@@ -3753,34 +3746,33 @@ export default function App() {
   }, [suggestedFocusHandKey, mainPhase, rackForSuggestedPatternMatch, suggestedHandsExposureTileIds, cardPatterns])
 
   /**
-   * Bot-exposure highlights for the focused suggested line: dim tiles that don't fit the line,
-   * leave matching tiles lit + bordered (same visual treatment as the player's own rack).
-   *
-   * Bot tile ids are unrelated to East's rack ids, so we can't reuse `suggestedTileGuide.bestIds`
-   * directly. Instead we light any bot tile whose `def` matches the focused pattern's `matches()`
-   * predicate — same predicate that drives the base hand-line definition, so the visual answers
-   * "is this exposed bot tile part of the line you're studying?". Jokers are intentionally NOT
-   * added here; `ExposureRack` itself never dims jokers (always-lit per design), so they appear
-   * fully visible without the white ring (which is reserved for natural tile matches).
+   * Bot exposure rings for the focused line: naturals that match strip “need” slots (dead tiles you
+   * want), plus jokers you can redeem only while the strip still needs a joker and your hand can swap.
    */
   const botExposureSuggestedTileGuide = useMemo(() => {
     if (!suggestedFocusHandKey || mainPhase === 'mahjong-declared' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand' || mainPhase === 'wall-game') return null
-    const variantSep = ['::tier::', '::oc::', '::ocall::']
-      .map((s) => suggestedFocusHandKey.indexOf(s))
-      .filter((i) => i >= 0)
-      .reduce((m, i) => (m < 0 ? i : Math.min(m, i)), -1)
-    const patternId = variantSep >= 0 ? suggestedFocusHandKey.slice(0, variantSep) : suggestedFocusHandKey
-    const p = cardPatterns.find((x) => x.id === patternId)
-    if (!p) return null
-    const bestIds = new Set<string>()
-    for (const exp of botExposures) {
-      for (const t of exp.tiles) {
-        if (t.def.cat === 'joker') continue
-        if (p.matches(t.def)) bestIds.add(t.id)
-      }
-    }
+    const bestIds = computeBotExposureSuggestedBestIds(
+      suggestedFocusHandKey,
+      rackForSuggestedPatternMatch,
+      botExposures,
+      hand,
+      pendingEastDiscardTile,
+      eastExposures,
+      suggestedHandsExposureTileIds,
+      cardPatterns,
+    )
     return { bestIds }
-  }, [suggestedFocusHandKey, mainPhase, botExposures, cardPatterns])
+  }, [
+    suggestedFocusHandKey,
+    mainPhase,
+    rackForSuggestedPatternMatch,
+    botExposures,
+    hand,
+    pendingEastDiscardTile,
+    eastExposures,
+    suggestedHandsExposureTileIds,
+    cardPatterns,
+  ])
 
   /** Discards that match naturals the focused line is still short (Strip slots without highlight). */
   const suggestedDiscardNeedIds = useMemo(() => {
@@ -5480,38 +5472,57 @@ export default function App() {
                 <div className="app-menu-modal__subhead" id="app-menu-sh-filters-heading">
                   Filters for suggested hands
                 </div>
+                <button
+                  type="button"
+                  className="btn app-menu-modal__suggested-filters-reset"
+                  onClick={() => setSuggestedHandsUncheckedSections(new Set())}
+                >
+                  Reset Category Filters
+                </button>
                 <div
-                  className="app-menu-modal__suggested-hand-filters-cols"
+                  className="app-menu-modal__suggested-hand-filters-inner"
                   role="group"
                   aria-labelledby="app-menu-sh-filters-heading"
                 >
-                  {suggestedHandsFilterColumns.map((col, ci) => (
-                    <div key={ci} className="app-menu-modal__suggested-hand-filters-col">
-                      {col.map((section) => {
-                        const labelId = `app-menu-sh-sec-${section.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '')}`
-                        const shown = !suggestedHandsUncheckedSections.has(section)
-                        return (
-                          <div key={section} className="app-menu-modal__row app-menu-modal__row--toggle">
-                            <AppMenuSettingSwitch
-                              labelId={labelId}
-                              pressed={shown}
-                              onToggle={() =>
-                                setSuggestedHandsUncheckedSections((prev) => {
-                                  const next = new Set(prev)
-                                  if (next.has(section)) next.delete(section)
-                                  else next.add(section)
-                                  return next
-                                })
-                              }
-                            />
-                            <span className="app-menu-modal__label" id={labelId}>
-                              {suggestedHandSectionMenuLabel(section)}
-                            </span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  ))}
+                  <div className="app-menu-modal__suggested-hand-filters-cols">
+                    {suggestedHandsFilterColumns.map((col, ci) => (
+                      <div key={ci} className="app-menu-modal__suggested-hand-filters-col">
+                        {col.map((section) => {
+                          const labelId = `app-menu-sh-sec-${section.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '')}`
+                          const shown = !suggestedHandsUncheckedSections.has(section)
+                          return (
+                            <div key={section} className="app-menu-modal__row app-menu-modal__row--toggle">
+                              <AppMenuSettingSwitch
+                                labelId={labelId}
+                                pressed={shown}
+                                onToggle={() =>
+                                  setSuggestedHandsUncheckedSections((prev) => {
+                                    const next = new Set(prev)
+                                    if (next.has(section)) next.delete(section)
+                                    else next.add(section)
+                                    return next
+                                  })
+                                }
+                              />
+                              <span className="app-menu-modal__label" id={labelId}>
+                                {suggestedHandSectionMenuLabel(section)}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                    <AppMenuSettingSwitch
+                      labelId="app-menu-label-sh-show-concealed"
+                      pressed={!suggestedHandsHideConcealed}
+                      onToggle={() => setSuggestedHandsHideConcealed((v) => !v)}
+                    />
+                    <span className="app-menu-modal__label" id="app-menu-label-sh-show-concealed">
+                      Concealed (C)
+                    </span>
+                  </div>
                 </div>
                 <div className="app-menu-modal__subhead" id="app-menu-sh-font-heading">
                   Suggested hands text size
@@ -5539,23 +5550,6 @@ export default function App() {
                     </button>
                   ))}
                 </div>
-                <div className="app-menu-modal__row app-menu-modal__row--toggle">
-                  <AppMenuSettingSwitch
-                    labelId="app-menu-label-sh-show-concealed"
-                    pressed={!suggestedHandsHideConcealed}
-                    onToggle={() => setSuggestedHandsHideConcealed((v) => !v)}
-                  />
-                  <span className="app-menu-modal__label" id="app-menu-label-sh-show-concealed">
-                    Concealed (C)
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  className="btn app-menu-modal__suggested-filters-reset"
-                  onClick={() => setSuggestedHandsUncheckedSections(new Set())}
-                >
-                  Reset Category Filters
-                </button>
               </div>
               <div className="app-menu-tray__divider app-menu-modal__section-rule" role="separator" />
               <div className="app-menu-modal__body-footer app-menu-modal__body-footer--settings-toggles">

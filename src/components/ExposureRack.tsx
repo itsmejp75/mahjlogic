@@ -292,8 +292,7 @@ function SortableStagedSlot({
     suggestedTileGuide,
     botJokerBorderMenuOn,
   )
-  // Jokers stay lit when a suggested line is focused — they substitute for any tile so dimming
-  // them would falsely imply they don't help. Same rule applies in every meld branch below.
+  // Jokers stay fully lit when not rung (we do not dim them). Irrelevant jokers simply omit the ring.
   const suggestDim = !suppressDim && !!suggestBestIds && !isBest && !isJoker
   let waveDelayMs: number | null = null
   if (callStagingWave) {
@@ -446,26 +445,19 @@ export type ExposureSuggestedTileGuide = {
 
 /**
  * White focus ring (suggest-best) per slot:
- * - Non-jokers: ring when the tile id is in `bestIds` (suggested hand focus for this rack).
- * - Jokers on the player's (East) rack: only when the id is in `bestIds` (same as before).
- * - Jokers on bot exposure racks: when `botJokerBorderMenuOn` is set — if true, always; if false, only
- *   while a suggested hand is focused for this panel (`suggestedTileGuide` non-null).
- *   Omitted for East: bot-specific behavior stays default.
+ * - Tile id in `bestIds` (focused suggested line for this rack).
+ * - Bots: optional `botJokerBorderMenuOn === true` rings every joker regardless of `bestIds`.
  */
 function slotIsSuggestBest(
   isJoker: boolean,
   tileId: string,
   bestIds: ReadonlySet<string> | null | undefined,
-  suggestedTileGuide: ExposureSuggestedTileGuide | null,
+  _suggestedTileGuide: ExposureSuggestedTileGuide | null,
   botJokerBorderMenuOn: boolean | undefined,
 ): boolean {
-  if (!isJoker) {
-    return !!bestIds?.has(tileId)
-  }
-  if (botJokerBorderMenuOn === undefined) {
-    return !!bestIds?.has(tileId)
-  }
-  return botJokerBorderMenuOn || suggestedTileGuide != null
+  if (bestIds?.has(tileId)) return true
+  if (!isJoker) return false
+  return botJokerBorderMenuOn === true
 }
 
 type Props = {

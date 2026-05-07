@@ -1,5 +1,6 @@
-import type { Dragon, Suit, TileDef, TileInstance } from '../mahjong/types'
+import type { Dragon, EastExposure, Suit, TileDef, TileInstance } from '../mahjong/types'
 import { tileDefsEqual } from '../mahjong/tileUtils'
+import { collectSwappableJokerTileIds } from '../mahjong/jokerSwapTarget'
 import type { CardInk } from '../card/cardText'
 import {
   firstOpposingConsecutiveStandInPairFromTitle,
@@ -159,10 +160,9 @@ function forcedSharedRankSuitsRankFromExposures(
  * Computes how many tiles in `hand` productively fill the pattern's explicit groups.
  * Each tile can only be used once (greedy left-to-right allocation).
  *
- * **Jokers** (aligned with [I Love Mahj — Using jokers](https://ilovemahj.com/american-mahjong-getting-started)):
- * substitute only in **3+ identical** combinations (pung / kong / quint / sextet), including a
- * flower pung/kong when the card shows FFF/FFFF; never singles, pairs, or “fake runs” like NEWS /
- * year digits (those are singles in code via `fixed` / small `need`). Pairs of flowers (FF) get no jokers.
+ * **Jokers:** NMJL allows them in any **identical meld of 3+** (pung / kong / quint / sextet):
+ * suits, dragons, flowers, winds — never in singles, pairs, or runs built from single tiles (e.g. NEWS
+ * or year digits as separate `fixed` groups with `need` 1 each).
  */
 function countGroupPreviewSlots(g: PatternGroup): number {
   switch (g.kind) {
@@ -369,6 +369,8 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
           const m = take(d => g.test(d) && tileKey(d) === k, g.need)
           total += m
           noteJokerSlots(g.need, m)
+        } else {
+          noteJokerSlots(g.need, 0)
         }
         break
       }
@@ -412,6 +414,9 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
             total += dm
             noteJokerSlots(dcSlr, dm)
           }
+        } else {
+          noteJokerSlots(g.need, 0)
+          if (dcSlr > 0) noteJokerSlots(dcSlr, 0)
         }
         break
       }
@@ -461,6 +466,9 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
           const m2 = take(d => d.cat === 'suit' && d.suit === s2 && d.rank === bestR + 1 && g.test(d), g.need2, 1)
           total += m2
           noteJokerSlots(g.need2, m2)
+        } else {
+          noteJokerSlots(g.need1, 0)
+          noteJokerSlots(g.need2, 0)
         }
         break
       }
@@ -486,6 +494,8 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
             noteJokerSlots(need, m)
             rem -= n
           }
+        } else {
+          for (const need of g.needs) noteJokerSlots(need, 0)
         }
         break
       }
@@ -531,6 +541,8 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
             total += m
             noteJokerSlots(need, m)
           }
+        } else {
+          for (const need of g.needs) noteJokerSlots(need, 0)
         }
         break
       }
@@ -584,6 +596,9 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
             total += md
             noteJokerSlots(g.dragonCount, md)
           }
+        } else {
+          for (let i = 0; i < g.numGroups; i++) noteJokerSlots(g.rankCount, 0)
+          if (g.dragonCount > 0) noteJokerSlots(g.dragonCount, 0)
         }
         break
       }
@@ -606,6 +621,8 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
             total += m
             noteJokerSlots(need, m)
           }
+        } else {
+          for (let i = 0; i < n; i++) noteJokerSlots(g.needs[i]!, 0)
         }
         break
       }
@@ -651,6 +668,8 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
             total += m
             noteJokerSlots(need, m)
           }
+        } else {
+          for (let i = 0; i < n; i++) noteJokerSlots(g.needs[i]!, 0)
         }
         break
       }
@@ -723,6 +742,13 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
             total += m
             noteJokerSlots(need, m)
           }
+        } else {
+          if (g.dragonCount > 0) noteJokerSlots(g.dragonCount, 0)
+          if (g.opposingDragons) {
+            noteJokerSlots(g.opposingDragons.need, 0)
+            noteJokerSlots(g.opposingDragons.need, 0)
+          }
+          for (const { need } of g.rankNeeds) noteJokerSlots(need, 0)
         }
         break
       }
@@ -883,14 +909,16 @@ export function getRackTilesNotHelpingPattern(
   p: PracticePattern,
 ): TileInstance[] {
   const noJokers = p.section === 'SINGLES AND PAIRS'
-  const full = p.groups
-    ? computeGroupMatch([...rack], p.groups, { noJokers })
-    : rack.filter((t) => p.matches(t.def)).length
+  const full =
+    p.groups?.length
+      ? computeGroupMatch([...rack], p.groups, { noJokers })
+      : rack.filter((t) => p.matches(t.def)).length
   return rack.filter((t) => {
     const rest = rack.filter((x) => x.id !== t.id)
-    const partial = p.groups
-      ? computeGroupMatch([...rest], p.groups, { noJokers })
-      : rest.filter((x) => p.matches(x.def)).length
+    const partial =
+      p.groups?.length
+        ? computeGroupMatch([...rest], p.groups, { noJokers })
+        : rest.filter((x) => p.matches(x.def)).length
     return partial >= full
   })
 }
@@ -905,7 +933,7 @@ export function greedyPatternMatchDetail(
   p: PracticePattern,
   opts?: GreedyPatternMatchOpts,
 ): { usedOrder: string[]; usedMeta: GroupUsedMeta[] } {
-  if (!p.groups) {
+  if (!p.groups?.length) {
     return {
       usedOrder: rack.filter((t) => p.matches(t.def)).map((t) => t.id),
       usedMeta: [],
@@ -2918,6 +2946,110 @@ function discardIdsMatchingNeededDefs(
   return ids
 }
 
+function botExposureTileIdsMatchingNeededDefs(
+  botExposures: readonly BotExposure[],
+  needDefs: readonly TileDef[],
+): Set<string> {
+  const ids = new Set<string>()
+  for (const exp of botExposures) {
+    for (const t of exp.tiles) {
+      if (t.def.cat === 'joker') continue
+      if (needDefs.some((d) => tileDefsEqual(d, t.def))) ids.add(t.id)
+    }
+  }
+  return ids
+}
+
+/** True when the focused strip still has at least one unfilled joker-eligible cell. */
+function stripRowsStillWantJoker(rows: SuggestedStripSlot[][]): boolean {
+  for (const row of rows) {
+    for (const s of row) {
+      if (!s.highlight && s.jokerSuggested) return true
+    }
+  }
+  return false
+}
+
+/**
+ * Bot exposure tile ids for the focused suggested line: naturals that match strip “need” defs
+ * (same basis as discard dead-tile highlights), plus exposed jokers you may redeem with your hand
+ * only while the strip still shows a joker hole.
+ */
+export function computeBotExposureSuggestedBestIds(
+  focusKey: string | null,
+  rack: TileInstance[],
+  botExposures: BotExposure[],
+  hand: TileInstance[],
+  pendingEastDiscard: TileInstance | null,
+  eastExposures: EastExposure[],
+  exposureTileIds?: ReadonlySet<string>,
+  patternBook: PracticePattern[] = getActiveCardPatterns(),
+): Set<string> {
+  if (!focusKey) return new Set()
+  const variantSep = ['::tier::', '::oc::', '::ocall::']
+    .map((s) => focusKey.indexOf(s))
+    .filter((i) => i >= 0)
+    .reduce((m, i) => (m < 0 ? i : Math.min(m, i)), -1)
+  const patternId = variantSep >= 0 ? focusKey.slice(0, variantSep) : focusKey
+  const p = patternBook.find((x) => x.id === patternId)
+  if (!p) return new Set()
+  const greedyUiOpts: GreedyPatternMatchOpts | undefined =
+    exposureTileIds && exposureTileIds.size > 0 ? { exposureTileIds } : undefined
+
+  const addFromStripWork = (pinnedP: PracticePattern, isMulti: boolean, fk: string) => {
+    const detail = greedyPatternMatchDetail(rack, pinnedP, greedyUiOpts)
+    const rackIdSet = new Set(rack.map((t) => t.id))
+    const bestIds = isMulti
+      ? new Set(detail.usedOrder.filter((id) => rackIdSet.has(id)))
+      : computeRackPatternHighlightIds(
+          rack,
+          pinnedP,
+          detail,
+          exposureTileIds,
+        )
+    const result = buildSuggestedStripSlotRowsWithVariants(
+      pinnedP,
+      rack,
+      detail.usedOrder,
+      bestIds,
+      detail.usedMeta,
+      exposureTileIds,
+    )
+    const rows = pickStripRowsForFocusKey(p.id, fk, isMulti, result)
+    const needDefs = collectNeededNaturalDefsFromStripRows(rows)
+    const out = botExposureTileIdsMatchingNeededDefs(botExposures, needDefs)
+    if (stripRowsStillWantJoker(rows)) {
+      const swappable = collectSwappableJokerTileIds(
+        hand,
+        pendingEastDiscard,
+        botExposures,
+        eastExposures,
+      )
+      for (const exp of botExposures) {
+        for (const t of exp.tiles) {
+          if (t.def.cat === 'joker' && swappable.has(t.id)) out.add(t.id)
+        }
+      }
+    }
+    return out
+  }
+
+  if (variantSep >= 0) {
+    const pinnedPatterns = buildPinnedPatternsFromFocusKey(p, focusKey)
+    if (pinnedPatterns.length > 0) {
+      const isMulti = isMultiComboFocusKey(focusKey)
+      const out = new Set<string>()
+      for (const pinnedP of pinnedPatterns) {
+        for (const id of addFromStripWork(pinnedP, isMulti, focusKey)) {
+          out.add(id)
+        }
+      }
+      return out
+    }
+  }
+  return addFromStripWork(p, false, focusKey)
+}
+
 /**
  * For the same suggested-hand focus as the rack guide, which discard-pile tile ids are naturals
  * the pattern is still short (non-highlight strip slots) — "dead" copies of tiles you need.
@@ -3512,7 +3644,7 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
   const drgForSuit = { bam: 'green' as const, dot: 'soap' as const, crak: 'red' as const }
 
   const rows: SuggestedHandLine[] = patternsToRank.flatMap((p) => {
-    const matchedInHand = p.groups
+    const matchedInHand = p.groups?.length
       ? computeGroupMatch(rackForPattern, p.groups, {
           noJokers: p.section === 'SINGLES AND PAIRS',
           ...groupMatchExposureOpts,
