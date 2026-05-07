@@ -283,7 +283,7 @@
 
   @supports (width: 100dvi) {
     :root {
-      --app-play-fit-inline-from-block: 92dvi;
+      --app-play-fit-inline-from-block: 100dvi;
     }
   }
 
@@ -328,7 +328,7 @@
  * Capacitor / native shell only (`data-native-app` from `main.tsx`).
  *
  * Width token (`--app-play-fit-inline-from-block`):
- *   - Browser narrow viewport uses `92dvi` (8% margin, never edge-to-edge).
+ *   - Browser narrow viewport uses `100dvi` so mobile web/PWA stays edge-to-edge.
  *   - Native default of `100dvi` makes tiles 8% wider AND 8% taller (1.333× ratio), which inflates
  *     the rack zone enough that buttons / charleston / discard / bot trays look oversized vs. their
  *     dark inner containers. `96dvi` keeps the look "edge-to-edge" (≈10–12px margin per side on
