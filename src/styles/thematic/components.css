@@ -410,7 +410,8 @@
   z-index: 1;
   background: var(--window-inner-surface);
   border-radius: calc(var(--rack-tile-btn-border-radius) + var(--bot-exposure-inner-pad));
-  overflow: hidden;
+  overflow-x: visible;
+  overflow-y: visible;
 }
 
 /* ---- part-0010.css (from base.css, layout.css, components.css, animations.css) ---- */

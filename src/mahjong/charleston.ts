@@ -80,19 +80,19 @@ export function charlestonPastFirstRound(phase: CharlestonPhase): boolean {
   )
 }
 
-/** Rack bar title left of Pass (sentence case). `null` when not shown (e.g. `done`). */
+/** Pass-strip round label above instructions (no trailing colon). `null` when not shown (e.g. `done`). */
 export function charlestonRackRoundTitle(phase: CharlestonPhase): string | null {
   switch (phase) {
     case 'right1':
     case 'across1':
     case 'left1':
-      return '1st CHARLESTON:'
+      return '1st CHARLESTON'
     case 'left2':
     case 'across2':
     case 'right2':
-      return '2nd CHARLESTON:'
+      return '2nd CHARLESTON'
     case 'courtesy':
-      return 'COURTESY PASS:'
+      return 'COURTESY PASS'
     default:
       return null
   }
@@ -133,19 +133,31 @@ export function charlestonPassDirections(phase: CharlestonPhase): string {
   return line[phase as Exclude<CharlestonPhase, 'done'>]
 }
 
-/** Visible Pass button text (compact direction + count). Other phases fall back to `PASS` until labeled. */
-export function charlestonPassButtonLabel(phase: CharlestonPhase): string {
-  if (phase === 'done') return 'PASS'
-  const labels: Record<Exclude<CharlestonPhase, 'done'>, string> = {
+/** Pass-strip line under the round title (compact pass wording; matches rack strip UI). */
+export function charlestonPassStripInstruction(phase: CharlestonPhase): string {
+  if (phase === 'done') return ''
+  const line: Record<Exclude<CharlestonPhase, 'done'>, string> = {
     right1: 'PASS 3 RIGHT',
     across1: 'PASS 3 ACROSS',
-    left1: 'BLIND PASS 0-3 LEFT',
-    left2: 'PASS 3 LEFT / 0 TO STOP',
-    across2: 'PASS',
-    right2: 'PASS',
+    left1: '(BLIND) PASS 0-3 LEFT',
+    left2: 'PASS 3 LEFT',
+    across2: 'PASS 3 ACROSS',
+    right2: '(BLIND) PASS 0-3 RIGHT',
     courtesy: 'PASS 0-3 ACROSS',
   }
-  return labels[phase]
+  return line[phase]
+}
+
+/** Spoken summary for pass-strip copy (covers stacked second-left layout). */
+export function charlestonPassStripInstructionAria(phase: CharlestonPhase): string {
+  if (phase === 'done') return ''
+  if (phase === 'left2') return 'PASS 3 LEFT, or 0 TO STOP'
+  return charlestonPassStripInstruction(phase)
+}
+
+/** Visible Pass button text on the rack Charleston bar (direction lives in the pass-strip copy). */
+export function charlestonPassButtonLabel(_phase: CharlestonPhase): string {
+  return 'PASS'
 }
 
 /** First left and second right allow blind passes (tiles from incoming batch, not from rack). */

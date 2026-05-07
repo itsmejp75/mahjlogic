@@ -38,6 +38,8 @@ import {
   charlestonMahjongButtonPhase,
   charlestonPassDirections,
   charlestonPassButtonLabel,
+  charlestonPassStripInstruction,
+  charlestonPassStripInstructionAria,
   charlestonRackRoundTitle,
   nextCharlestonPhase,
   type CharlestonPhase,
@@ -6194,6 +6196,32 @@ export default function App() {
                                   suggestedBestIds={suggestedTileGuide?.bestIds}
                                   flyOutFrom={passStripFlyOut}
                                   hiddenSortableTileId={null}
+                                  inlineHeaderTitle={charlestonRackRoundTitleText}
+                                  inlineHeaderInstruction={
+                                    charlestonPhase === 'left2' ? (
+                                      <div className="pass-strip-tail__instruction pass-strip-tail__instruction--stacked">
+                                        <span className="pass-strip-tail__instruction-line">PASS 3 LEFT</span>
+                                        <span className="pass-strip-tail__instruction-or" aria-hidden>
+                                          -OR-
+                                        </span>
+                                        <span className="pass-strip-tail__instruction-line pass-strip-tail__instruction-line--0-to-stop">
+                                          <span className="pass-strip-tail__instruction-line__0">0</span>{' '}
+                                          <span
+                                            className="pass-strip-tail__instruction-or pass-strip-tail__instruction-or--inline"
+                                            aria-hidden
+                                          >
+                                            TO
+                                          </span>{' '}
+                                          <span className="pass-strip-tail__instruction-line__stop">STOP</span>
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      charlestonPassStripInstruction(charlestonPhase)
+                                    )
+                                  }
+                                  inlineHeaderInstructionAria={charlestonPassStripInstructionAria(
+                                    charlestonPhase,
+                                  )}
                                 />
                               }
                             />
@@ -6281,14 +6309,6 @@ export default function App() {
                                 >
                                   MAHJ
                                 </button>
-                              ) : null}
-                              {charlestonRackRoundTitleText != null ? (
-                                <div
-                                  className="rack-charleston-round-label rack-bottom-tile-cell rack-bottom-tile-cell--c9-11"
-                                  aria-hidden
-                                >
-                                  {charlestonRackRoundTitleText}
-                                </div>
                               ) : null}
                               <button
                                 type="button"

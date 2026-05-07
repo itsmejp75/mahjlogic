@@ -49,19 +49,156 @@
 }
 
 .pass-strip-tail__inner {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: var(--rack-tile-gap);
+  display: block;
+  padding: 0.1rem;
+  box-sizing: border-box;
   cursor: default;
-  /* Pin to exactly 3 tile widths + 2 gaps so children cannot get squeezed
-     by sub-pixel rounding or parent flex constraints. */
+  /* Pin to exactly 3 tile widths + 2 gaps. */
   width: calc(3 * var(--rack-tile-w) + 2 * var(--rack-tile-gap));
   flex-shrink: 0;
-  box-sizing: border-box;
   /* Unified 3-tile box — same fill/border as `.pass-box` (visible on dark panel chrome). */
   background: color-mix(in srgb, var(--coach-teal) 11%, var(--bg-elevated) 89%);
   border: 1px solid var(--coach-teal-border);
   border-radius: 0.38rem;
   transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+/* Tile row + label stack: copy sits behind tiles; gaps / empty chrome show it; tiles paint on top. */
+.pass-strip-tail__stack {
+  position: relative;
+  width: 100%;
+}
+
+.pass-strip-tail__header--overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+  gap: clamp(0.32rem, calc(var(--rack-tile-w, 1rem) * 0.09), 0.52rem);
+  padding: 0.12rem 0.18rem;
+  box-sizing: border-box;
+  opacity: 1;
+  transition: opacity 0.28s ease;
+  /* One size for round label + instruction lines */
+  --pass-strip-header-fs: clamp(0.82rem, calc(var(--rack-tile-w, 1rem) * 0.39), 1.18rem);
+}
+
+.pass-strip-tail--pass-slots-filled .pass-strip-tail__header--overlay {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pass-strip-tail__header--overlay {
+    transition-duration: 0.05s;
+  }
+}
+
+.pass-strip-tail__title {
+  font-family: 'Figtree', var(--sans);
+  font-weight: 700;
+  font-size: var(--pass-strip-header-fs);
+  line-height: 1.1;
+  letter-spacing: 0.03em;
+  color: #bdbdbd;
+  margin: 0;
+  padding: 0;
+  max-width: 100%;
+  text-shadow:
+    0 0 0.25rem color-mix(in srgb, var(--bg-elevated) 92%, transparent),
+    0 0 0.5rem color-mix(in srgb, var(--bg-elevated) 78%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-black) 28%, transparent);
+}
+
+/* Separator between round label and instruction copy — line matches label width only */
+.pass-strip-tail__header--overlay:has(.pass-strip-tail__instruction) .pass-strip-tail__title {
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding-bottom: clamp(0.14rem, calc(var(--rack-tile-w, 1rem) * 0.042), 0.24rem);
+  border-bottom: 1px solid color-mix(in srgb, #f2f2e9 28%, var(--coach-teal-border) 72%);
+}
+
+.pass-strip-tail__header--overlay:has(.pass-strip-tail__instruction) {
+  gap: clamp(0.18rem, calc(var(--rack-tile-w, 1rem) * 0.055), 0.34rem);
+}
+
+.pass-strip-tail__instruction {
+  font-family: 'Figtree', var(--sans);
+  font-weight: 500;
+  font-size: var(--pass-strip-header-fs);
+  line-height: 1.18;
+  letter-spacing: 0.01em;
+  color: #f2f2e9;
+  margin: 0;
+  padding: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  text-shadow:
+    0 0 0.22rem color-mix(in srgb, var(--bg-elevated) 90%, transparent),
+    0 0 0.45rem color-mix(in srgb, var(--bg-elevated) 72%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-black) 24%, transparent);
+}
+
+.pass-strip-tail__instruction--stacked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.04rem;
+  line-height: 1.12;
+}
+
+.pass-strip-tail__instruction--stacked .pass-strip-tail__instruction-line {
+  display: block;
+  max-width: 100%;
+}
+
+.pass-strip-tail__instruction-or {
+  display: block;
+  font-family: 'Figtree', var(--sans);
+  font-weight: 600;
+  font-size: calc(var(--pass-strip-header-fs) * 0.74);
+  letter-spacing: 0.14em;
+  line-height: 1.15;
+  color: #bdbdbd;
+  text-shadow:
+    0 0 0.18rem color-mix(in srgb, var(--bg-elevated) 88%, transparent),
+    0 0 0.38rem color-mix(in srgb, var(--bg-elevated) 65%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-black) 22%, transparent);
+}
+
+/* Extra air above/below stacked `-OR-` only (not inline `TO`). */
+.pass-strip-tail__instruction-or:not(.pass-strip-tail__instruction-or--inline) {
+  margin-block: clamp(0.12rem, calc(var(--rack-tile-w, 1rem) * 0.034), 0.26rem);
+}
+
+/* Same typographic size as standalone `-OR-`, inlined in `0 TO STOP` (cream like other instruction copy). */
+.pass-strip-tail__instruction-or--inline {
+  display: inline;
+  letter-spacing: 0.1em;
+  vertical-align: 0.02em;
+  color: #f2f2e9;
+}
+
+.pass-strip-tail__instruction-line--0-to-stop {
+  white-space: nowrap;
+}
+
+.pass-strip-tail__tiles {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--rack-tile-gap);
+  width: 100%;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
 }

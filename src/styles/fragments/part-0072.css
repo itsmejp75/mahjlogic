@@ -10,6 +10,9 @@
 
 /* Same span as hand slots 12–14: `--player-rack-face-gap` matches `.panel-hand-rack__hand-tray .hand-row`. */
 .panel--hand .pass-strip-tail__inner {
-  gap: var(--player-rack-face-gap);
   width: calc(3 * var(--rack-tile-w) + 2 * var(--player-rack-face-gap));
+}
+
+.panel--hand .pass-strip-tail__tiles {
+  gap: var(--player-rack-face-gap);
 }

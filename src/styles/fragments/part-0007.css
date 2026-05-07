@@ -43,5 +43,7 @@
   z-index: 1;
   background: var(--window-inner-surface);
   border-radius: calc(var(--rack-tile-btn-border-radius) + var(--bot-exposure-inner-pad));
-  overflow: hidden;
+  /* Don’t clip Pass / round-label when they wrap or sit near the tray rim. */
+  overflow-x: visible;
+  overflow-y: visible;
 }

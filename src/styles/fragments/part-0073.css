@@ -27,6 +27,11 @@
   pointer-events: none;
 }
 
+.pass-strip-tail.pass-strip-tail--fly-out .pass-strip-tail__header--overlay {
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
 /* ---- part-0077.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 

@@ -67,6 +67,31 @@
 
 /* Charleston pass: last three slots inline on the exposure rack row */
 
+/* Pass + round title: type tracks 3-slot bar width (and tile height cap) so labels shrink on phones. */
+.rack-bottom-bar--charleston {
+  --charleston-pass-label-fs: clamp(
+    0.3rem,
+    min(
+      calc(var(--rack-tile-btn-inner-3) * 0.048),
+      calc(var(--rack-tile-h, var(--hand-rack-tile-h)) * 0.09)
+    ),
+    0.68rem
+  );
+}
+
+/*
+ * Default `.rack-bottom-tile-cell` uses `overflow: hidden` (pill mask) — clips single-line Pass / title.
+ * Keep wall gem clipped; allow Pass + round label to paint past the pill when needed (still nowrap).
+ */
+.rack-bottom-bar--charleston .btn.charleston-pass-btn.rack-bottom-tile-cell:not(.suggested-hands-tab) {
+  overflow: visible;
+}
+
+/* Wall remaining count: same scale ratio as default bar (`--rack-bottom-action-fs` × 2.048). */
+.rack-bottom-bar--charleston .rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell {
+  font-size: min(1.792rem, calc(var(--charleston-pass-label-fs) * 2.048));
+}
+
 .charleston-pass-btn {
   font-weight: 500;
   flex-shrink: 0;
@@ -74,37 +99,18 @@
 
 /* Instructional label on the rack Pass control (HANDS tab keeps a single line). */
 .charleston-pass-btn:not(.suggested-hands-tab) {
-  white-space: normal;
+  white-space: nowrap;
   text-align: center;
   line-height: 1.12;
-  font-size: calc(var(--rack-tile-h, 2.78rem) * 0.105);
-  padding-inline: 0.06rem;
-  hyphens: manual;
+  font-size: var(--charleston-pass-label-fs);
+  padding-block: max(0.06rem, min(0.22rem, calc(var(--hand-rack-tile-w) * 0.05)));
+  padding-inline: 0.04rem;
+  letter-spacing: 0.02em;
+  min-width: 0;
 }
 
 .charleston-pass-btn.suggested-hands-tab {
   white-space: nowrap;
-}
-
-/* Charleston round title left of Pass: plain text on dark `--window-inner-surface` tray. */
-.rack-charleston-round-label {
-  font-family: 'Figtree', var(--sans);
-  font-weight: 400;
-  font-size: calc(var(--rack-tile-h, 2.78rem) * 0.105);
-  line-height: var(--btn-line-height);
-  letter-spacing: var(--btn-letter-spacing);
-  text-transform: none;
-  color: #bdbdbd;
-  background: none;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  text-align: right;
-  padding-inline: 0.28rem 0.46rem;
-  transform: translateX(-0.4rem);
-  white-space: nowrap;
-  min-width: 0;
-  box-sizing: border-box;
 }
 
 /* Charleston Pass on rack: solid teal (#006767). HANDS: purple (`.suggested-hands-tab` below). */

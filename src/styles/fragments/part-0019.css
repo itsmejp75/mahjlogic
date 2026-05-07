@@ -8,9 +8,9 @@
 
 
 
-/* Charleston inline pass info — sits in the grid bar between wall count and pass cluster. */
+/* Charleston: round title + pass hints live in the teal pass-strip box on the rack row. */
 
-/* Charleston: Stop cols 9–11, Pass cols 12–14 — direct grid children, no wrapper needed */
+/* Charleston bar: Pass cols 12–14 (cols 9–11 unused — grid spacing only) */
 
 .rack-bottom-tile-cell {
   width: 100%;

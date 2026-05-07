@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import type { CSSProperties, MouseEvent, ReactNode } from 'react'
 import { useDndContext, useDroppable } from '@dnd-kit/core'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -90,6 +90,12 @@ type Props = {
   flyOutFrom?: PassStripFlyOutFrom | null
   /** While this pass tile is registered in the hand sortable list (drag preview), hide its pass-strip sortable. */
   hiddenSortableTileId?: string | null
+  /** `inlineTail` only: round label inside the teal pass box (e.g. `1st CHARLESTON`). */
+  inlineHeaderTitle?: string | null
+  /** `inlineTail` only: instruction under the title, same box (string or custom layout). */
+  inlineHeaderInstruction?: ReactNode
+  /** Plain phrase for `aria-label` when instruction is not a simple string. */
+  inlineHeaderInstructionAria?: string
 }
 
 export function PassStrip({
@@ -100,6 +106,9 @@ export function PassStrip({
   suggestedBestIds,
   flyOutFrom = null,
   hiddenSortableTileId = null,
+  inlineHeaderTitle = null,
+  inlineHeaderInstruction,
+  inlineHeaderInstructionAria,
 }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: PASS_BOX_ID })
   const inlineTail = variant === 'inlineTail'
@@ -114,15 +123,17 @@ export function PassStrip({
             ? 'pass-strip-tail--fly-out pass-strip-tail--fly-out-courtesy-top'
             : 'pass-strip-tail--fly-out pass-strip-tail--fly-out-across'
 
-  const inner = (
+  const tileRowClick = (e: MouseEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest('.pass-strip__tile-btn, .pass-strip__tile-wrap')) {
+      return
+    }
+    onPassBoxClick()
+  }
+
+  const tileRow = (
     <div
-      className={inlineTail ? 'pass-strip-tail__inner' : 'pass-box__inner'}
-      onClick={(e) => {
-        if ((e.target as HTMLElement).closest('.pass-strip__tile-btn, .pass-strip__tile-wrap')) {
-          return
-        }
-        onPassBoxClick()
-      }}
+      className={inlineTail ? 'pass-strip-tail__tiles' : 'pass-box__inner'}
+      onClick={tileRowClick}
     >
       {slots.map((tile, index) =>
         tile ? (
@@ -161,16 +172,58 @@ export function PassStrip({
   )
 
   if (inlineTail) {
+    const hasInstruction =
+      inlineHeaderInstruction != null &&
+      (typeof inlineHeaderInstruction === 'string'
+        ? inlineHeaderInstruction.length > 0
+        : true)
+    const showHeader = Boolean(inlineHeaderTitle) || hasInstruction
+    const passStripHasTiles = slots.some((t) => t != null)
+    const instructionAria =
+      typeof inlineHeaderInstruction === 'string'
+        ? inlineHeaderInstruction
+        : (inlineHeaderInstructionAria ?? '')
+    const ariaParts = [
+      inlineHeaderTitle,
+      instructionAria,
+      'Charleston pass, three tile slots',
+    ].filter(Boolean) as string[]
     return (
       <div
         ref={setNodeRef}
-        className={['pass-strip-tail', isOver ? 'pass-strip-tail--over' : '', flyOutClass]
+        className={[
+          'pass-strip-tail',
+          passStripHasTiles ? 'pass-strip-tail--pass-slots-filled' : '',
+          isOver ? 'pass-strip-tail--over' : '',
+          flyOutClass,
+        ]
           .filter(Boolean)
           .join(' ')}
         role="group"
-        aria-label="Charleston pass — last three exposure slots"
+        aria-label={ariaParts.join('. ')}
       >
-        {inner}
+        <div className="pass-strip-tail__inner">
+          <div className="pass-strip-tail__stack">
+            {tileRow}
+            {showHeader ? (
+              <div
+                className="pass-strip-tail__header pass-strip-tail__header--overlay"
+                aria-hidden
+              >
+                {inlineHeaderTitle ? (
+                  <div className="pass-strip-tail__title">{inlineHeaderTitle}</div>
+                ) : null}
+                {hasInstruction ? (
+                  typeof inlineHeaderInstruction === 'string' ? (
+                    <p className="pass-strip-tail__instruction">{inlineHeaderInstruction}</p>
+                  ) : (
+                    inlineHeaderInstruction
+                  )
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        </div>
       </div>
     )
   }
@@ -193,7 +246,7 @@ export function PassStrip({
       role="group"
       aria-label="Tiles to pass"
     >
-      {inner}
+      {tileRow}
     </div>
   )
 }
