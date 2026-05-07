@@ -80,6 +80,24 @@ export function charlestonPastFirstRound(phase: CharlestonPhase): boolean {
   )
 }
 
+/** Rack bar title left of Pass (sentence case). `null` when not shown (e.g. `done`). */
+export function charlestonRackRoundTitle(phase: CharlestonPhase): string | null {
+  switch (phase) {
+    case 'right1':
+    case 'across1':
+    case 'left1':
+      return '1st CHARLESTON:'
+    case 'left2':
+    case 'across2':
+    case 'right2':
+      return '2nd CHARLESTON:'
+    case 'courtesy':
+      return 'COURTESY PASS:'
+    default:
+      return null
+  }
+}
+
 /**
  * When to show the Mah Jongg preview control during Charleston: second **left** only, then again
  * from **courtesy** onward (hidden during second across and second right passes).
@@ -106,12 +124,28 @@ export function charlestonPassDirections(phase: CharlestonPhase): string {
     right1: 'Charleston: 1st pass right - select 3',
     across1: 'Charleston: 1st pass across - select 3',
     left1: 'Charleston: 1st pass left - select up to 3',
-    left2: 'Charleston: 2nd pass left - select 3',
+    left2:
+      'Charleston: 2nd pass left — select 3 tiles, or leave the pass strip empty and pass to skip to courtesy',
     across2: 'Charleston: 2nd pass across - select 3',
     right2: 'Charleston: 2nd pass right - select up to 3',
     courtesy: 'Charleston: courtesy - select 0-3',
   }
   return line[phase as Exclude<CharlestonPhase, 'done'>]
+}
+
+/** Visible Pass button text (compact direction + count). Other phases fall back to `PASS` until labeled. */
+export function charlestonPassButtonLabel(phase: CharlestonPhase): string {
+  if (phase === 'done') return 'PASS'
+  const labels: Record<Exclude<CharlestonPhase, 'done'>, string> = {
+    right1: 'PASS 3 RIGHT',
+    across1: 'PASS 3 ACROSS',
+    left1: 'BLIND PASS 0-3 LEFT',
+    left2: 'PASS 3 LEFT / 0 TO STOP',
+    across2: 'PASS',
+    right2: 'PASS',
+    courtesy: 'PASS 0-3 ACROSS',
+  }
+  return labels[phase]
 }
 
 /** First left and second right allow blind passes (tiles from incoming batch, not from rack). */

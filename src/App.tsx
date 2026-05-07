@@ -37,6 +37,8 @@ import {
   charlestonAllowsBlind,
   charlestonMahjongButtonPhase,
   charlestonPassDirections,
+  charlestonPassButtonLabel,
+  charlestonRackRoundTitle,
   nextCharlestonPhase,
   type CharlestonPhase,
   type FourHands,
@@ -3041,7 +3043,6 @@ export default function App() {
     passSlots,
     selectedHandTileId,
     charlestonPhase,
-    awaitingSecondCharlestonChoice,
     mainPhase,
     discardPile,
     drawnTileId,
@@ -4298,12 +4299,17 @@ export default function App() {
   const passSlotCount = passSlots.filter(Boolean).length
   const blindPhase = !charlestonDone && charlestonAllowsBlind(charlestonPhase)
   const courtesyPhase = charlestonPhase === 'courtesy'
+  const secondCharlestonLeftChoice = charlestonPhase === 'left2'
   const passReady =
-    courtesyPhase
-      ? passSlotCount <= 3
-      : blindPhase
+    secondCharlestonLeftChoice
+      ? passSlotCount === 0 || passSlotCount === 3
+      : courtesyPhase
         ? passSlotCount <= 3
-        : passSlotCount === 3
+        : blindPhase
+          ? passSlotCount <= 3
+          : passSlotCount === 3
+
+  const charlestonRackRoundTitleText = charlestonRackRoundTitle(charlestonPhase)
 
   const performNewHandDeal = useCallback(() => {
     const m = menuCardIdRef.current
@@ -4458,17 +4464,49 @@ export default function App() {
     }
   }, [])
 
+  const skipToCourtesyPass = useCallback(() => {
+    if (passStripFlyoutTimerRef.current) {
+      clearTimeout(passStripFlyoutTimerRef.current)
+      passStripFlyoutTimerRef.current = null
+    }
+    setPassStripFlyOut(null)
+    pushRound((r) => {
+      if (r.charlestonPhase !== 'left2' || !r.awaitingSecondCharlestonChoice) return r
+      // Return any tiles currently parked in the pass slots back to the hand so
+      // stopping the Charleston never silently drops the player's tiles.
+      const returning = r.passSlots.filter(Boolean) as TileInstance[]
+      const handNext = returning.length > 0 ? [...r.hand, ...returning] : r.hand
+      return {
+        ...r,
+        hand: handNext,
+        charlestonPhase: 'courtesy',
+        charlestonSkippedSecondRound: true,
+        awaitingSecondCharlestonChoice: false,
+        passSlots: [null, null, null],
+        passSlotOrigins: [null, null, null],
+        selectedHandTileId: null,
+      }
+    })
+  }, [])
+
   const onCharlestonPassButtonClick = useCallback(() => {
     const passSlotCount = passSlots.filter(Boolean).length
     const blindPhaseLocal = !charlestonDone && charlestonAllowsBlind(charlestonPhase)
     const courtesyPhaseLocal = charlestonPhase === 'courtesy'
+    const secondCharlestonLeftChoiceLocal = charlestonPhase === 'left2'
     const ready =
-      courtesyPhaseLocal
-        ? passSlotCount <= 3
-        : blindPhaseLocal
+      secondCharlestonLeftChoiceLocal
+        ? passSlotCount === 0 || passSlotCount === 3
+        : courtesyPhaseLocal
           ? passSlotCount <= 3
-          : passSlotCount === 3
+          : blindPhaseLocal
+            ? passSlotCount <= 3
+            : passSlotCount === 3
     if (!ready) return
+    if (secondCharlestonLeftChoiceLocal && passSlotCount === 0) {
+      skipToCourtesyPass()
+      return
+    }
     const eastRack = passSlots.filter(Boolean) as TileInstance[]
     if (eastRack.some((t) => t.def.cat === 'joker')) {
       sendCharlestonPass()
@@ -4495,32 +4533,7 @@ export default function App() {
       setPassStripFlyOut(null)
       sendCharlestonPass()
     }, 350)
-  }, [passSlots, charlestonPhase, charlestonDone, sendCharlestonPass])
-
-  const skipToCourtesyPass = useCallback(() => {
-    if (passStripFlyoutTimerRef.current) {
-      clearTimeout(passStripFlyoutTimerRef.current)
-      passStripFlyoutTimerRef.current = null
-    }
-    setPassStripFlyOut(null)
-    pushRound((r) => {
-      if (r.charlestonPhase !== 'left2' || !r.awaitingSecondCharlestonChoice) return r
-      // Return any tiles currently parked in the pass slots back to the hand so
-      // stopping the Charleston never silently drops the player's tiles.
-      const returning = r.passSlots.filter(Boolean) as TileInstance[]
-      const handNext = returning.length > 0 ? [...r.hand, ...returning] : r.hand
-      return {
-        ...r,
-        hand: handNext,
-        charlestonPhase: 'courtesy',
-        charlestonSkippedSecondRound: true,
-        awaitingSecondCharlestonChoice: false,
-        passSlots: [null, null, null],
-        passSlotOrigins: [null, null, null],
-        selectedHandTileId: null,
-      }
-    })
-  }, [])
+  }, [passSlots, charlestonPhase, charlestonDone, sendCharlestonPass, skipToCourtesyPass])
 
   const skipBotDiscard = useCallback(
     () =>
@@ -6269,15 +6282,13 @@ export default function App() {
                                   MAHJ
                                 </button>
                               ) : null}
-                              {awaitingSecondCharlestonChoice ? (
-                                <button
-                                  type="button"
-                                  className="btn charleston-stop-btn rack-bottom-tile-cell rack-bottom-tile-cell--c9-11"
-                                  aria-label="Stop Charleston: skip to courtesy pass"
-                                  onClick={skipToCourtesyPass}
+                              {charlestonRackRoundTitleText != null ? (
+                                <div
+                                  className="rack-charleston-round-label rack-bottom-tile-cell rack-bottom-tile-cell--c9-11"
+                                  aria-hidden
                                 >
-                                  STOP
-                                </button>
+                                  {charlestonRackRoundTitleText}
+                                </div>
                               ) : null}
                               <button
                                 type="button"
@@ -6287,7 +6298,7 @@ export default function App() {
                                 aria-disabled={!passReady || passStripFlyOut != null}
                                 onClick={onCharlestonPassButtonClick}
                               >
-                                PASS
+                                {charlestonPassButtonLabel(charlestonPhase)}
                               </button>
                             </div>
                             </div>

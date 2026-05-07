@@ -14,7 +14,7 @@
 
 /* Last two hand slots (tiles 13–14); negative lines stay correct if slot count changes. */
 
-/* Charleston: Stop = cols 9–11, Pass = cols 12–14 */
+/* Charleston: Pass = cols 12–14 */
 .rack-bottom-tile-cell--c9-11 {
   grid-column: 9 / 12;
 }

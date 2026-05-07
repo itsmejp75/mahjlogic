@@ -37,7 +37,7 @@ export function analyzeTrainingState(snapshot: TrainingSnapshot): CoachReport {
         {
           label: 'Second round',
           detail:
-            'Tap Yes to run the second left, across, and right passes, or Skip to courtesy pass to go straight to the courtesy pass (NMJL).',
+            'Choose three tiles to pass for the second left, or leave the pass strip empty and tap Pass to skip the rest of the second Charleston and go to the courtesy pass (NMJL).',
           band: 'unknown',
         },
       ],
