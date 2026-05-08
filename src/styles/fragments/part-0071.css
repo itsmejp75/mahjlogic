@@ -55,11 +55,11 @@
 .pass-strip-tail__inner {
   display: flex;
   flex-direction: column;
-  container-type: inline-size;
   box-sizing: border-box;
   padding: 0;
   cursor: default;
   /* Pin outer width — same gap tokens as Charleston exposure row overrides in panel-hand CSS. */
+  --pass-strip-box-w: calc(3 * var(--rack-tile-w) + 2 * var(--player-rack-face-gap, var(--rack-tile-gap)));
   width: calc(3 * var(--rack-tile-w) + 2 * var(--rack-tile-gap));
   flex-shrink: 0;
   flex: 0 1 auto;
@@ -92,13 +92,13 @@
   justify-content: center;
   text-align: center;
   pointer-events: none;
-  gap: clamp(0.12rem, calc(100cqi * 0.025), 0.52rem);
-  padding: clamp(0.06rem, calc(100cqi * 0.012), 0.12rem) clamp(0.08rem, calc(100cqi * 0.018), 0.18rem);
+  gap: clamp(0.12rem, calc(var(--pass-strip-box-w) * 0.025), 0.52rem);
+  padding: clamp(0.06rem, calc(var(--pass-strip-box-w) * 0.012), 0.12rem) clamp(0.08rem, calc(var(--pass-strip-box-w) * 0.018), 0.18rem);
   box-sizing: border-box;
   opacity: 1;
   transition: opacity 0.28s ease;
   /* Scale with the actual 3-tile box width so copy shrinks before it can wrap/spill. */
-  --pass-strip-header-fs: clamp(0.48rem, calc(100cqi * 0.082), 1.18rem);
+  --pass-strip-header-fs: clamp(0.48rem, calc(var(--pass-strip-box-w) * 0.082), 1.18rem);
 }
 
 .pass-strip-tail--pass-slots-filled .pass-strip-tail__header--overlay {
@@ -116,7 +116,7 @@
   font-weight: 700;
   font-size: var(--pass-strip-header-fs);
   line-height: 1.1;
-  letter-spacing: clamp(0.008em, calc(100cqi * 0.00022), 0.03em);
+  letter-spacing: clamp(0.008em, calc(var(--pass-strip-box-w) * 0.00022), 0.03em);
   color: #bdbdbd;
   margin: 0;
   padding: 0;
@@ -133,12 +133,12 @@
   width: fit-content;
   max-width: 100%;
   box-sizing: border-box;
-  padding-bottom: clamp(0.08rem, calc(100cqi * 0.018), 0.24rem);
+  padding-bottom: clamp(0.08rem, calc(var(--pass-strip-box-w) * 0.018), 0.24rem);
   border-bottom: 1px solid color-mix(in srgb, #f2f2e9 28%, var(--coach-teal-border) 72%);
 }
 
 .pass-strip-tail__header--overlay:has(.pass-strip-tail__instruction) {
-  gap: clamp(0.08rem, calc(100cqi * 0.018), 0.34rem);
+  gap: clamp(0.08rem, calc(var(--pass-strip-box-w) * 0.018), 0.34rem);
 }
 
 .pass-strip-tail__instruction {
@@ -146,7 +146,7 @@
   font-weight: 500;
   font-size: var(--pass-strip-header-fs);
   line-height: 1.18;
-  letter-spacing: clamp(0em, calc(100cqi * 0.00008), 0.01em);
+  letter-spacing: clamp(0em, calc(var(--pass-strip-box-w) * 0.00008), 0.01em);
   color: #f2f2e9;
   margin: 0;
   padding: 0;
@@ -166,7 +166,7 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: clamp(0.01rem, calc(100cqi * 0.003), 0.04rem);
+  gap: clamp(0.01rem, calc(var(--pass-strip-box-w) * 0.003), 0.04rem);
   line-height: 1.12;
 }
 
@@ -180,7 +180,7 @@
   font-family: 'Figtree', var(--sans);
   font-weight: 600;
   font-size: calc(var(--pass-strip-header-fs) * 0.74);
-  letter-spacing: clamp(0.04em, calc(100cqi * 0.0009), 0.14em);
+  letter-spacing: clamp(0.04em, calc(var(--pass-strip-box-w) * 0.0009), 0.14em);
   line-height: 1.15;
   color: #bdbdbd;
   text-shadow:
@@ -191,13 +191,13 @@
 
 /* Extra air above/below stacked `-OR-` only (not inline `TO`). */
 .pass-strip-tail__instruction-or:not(.pass-strip-tail__instruction-or--inline) {
-  margin-block: clamp(0.04rem, calc(100cqi * 0.01), 0.26rem);
+  margin-block: clamp(0.04rem, calc(var(--pass-strip-box-w) * 0.01), 0.26rem);
 }
 
 /* Same typographic size as standalone `-OR-`, inlined in `0 TO STOP` (cream like other instruction copy). */
 .pass-strip-tail__instruction-or--inline {
   display: inline;
-  letter-spacing: clamp(0.03em, calc(100cqi * 0.00065), 0.1em);
+  letter-spacing: clamp(0.03em, calc(var(--pass-strip-box-w) * 0.00065), 0.1em);
   vertical-align: 0.02em;
   color: #f2f2e9;
 }
