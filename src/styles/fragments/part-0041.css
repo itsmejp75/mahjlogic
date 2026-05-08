@@ -35,14 +35,15 @@
   gap: var(--play-split-lower-toolbar-button-gap);
   width: 100%;
   box-sizing: border-box;
-  padding: var(--bot-exposure-inner-pad);
+  padding-block: var(--bot-toolbar-pad-block, var(--bot-exposure-inner-pad));
+  padding-inline: var(--bot-exposure-inner-pad);
   position: relative;
   z-index: 2;
   background: var(--window-inner-surface);
-  border-radius: calc(var(--rack-tile-btn-border-radius) + var(--bot-exposure-inner-pad));
+  border-radius: calc(var(--rack-tile-btn-border-radius) + var(--bot-toolbar-pad-block, var(--bot-exposure-inner-pad)));
   /* Must not clip: the Menu control sits in this shell. */
   overflow: visible;
-  min-height: calc(2 * var(--bot-exposure-inner-pad) + var(--rack-action-touch-min-h));
+  min-height: calc(2 * var(--bot-toolbar-pad-block, var(--bot-exposure-inner-pad)) + var(--bot-toolbar-button-h, var(--rack-action-touch-min-h)));
 }
 
 /*

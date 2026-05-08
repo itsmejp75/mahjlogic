@@ -18,8 +18,8 @@
   flex: 0 0 auto;
   align-self: center;
   width: var(--menu-btn-w);
-  height: var(--rack-action-touch-min-h);
-  min-height: var(--rack-action-touch-min-h);
+  height: var(--bot-toolbar-button-h, var(--rack-action-touch-min-h));
+  min-height: var(--bot-toolbar-button-h, var(--rack-action-touch-min-h));
   z-index: 2;
   margin-left: 0;
 }
@@ -47,8 +47,8 @@
   align-self: center;
   width: var(--rack-tile-btn-inner-1);
   max-width: 100%;
-  min-height: var(--rack-action-touch-min-h);
-  height: var(--rack-action-touch-min-h);
+  min-height: var(--bot-toolbar-button-h, var(--rack-action-touch-min-h));
+  height: var(--bot-toolbar-button-h, var(--rack-action-touch-min-h));
   border-radius: var(--rack-tile-btn-border-radius);
   border: none;
   z-index: 2;
@@ -65,7 +65,7 @@
 
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__clear.btn--label-wrap {
   height: auto;
-  min-height: var(--rack-action-touch-min-h);
+  min-height: var(--bot-toolbar-button-h, var(--rack-action-touch-min-h));
   line-height: 1.1;
   padding: var(--rack-control-pad-block) var(--rack-control-pad-inline);
   white-space: normal;
@@ -84,8 +84,8 @@
   align-self: center;
   width: var(--rack-tile-btn-inner-1);
   max-width: 100%;
-  min-height: var(--rack-action-touch-min-h);
-  height: var(--rack-action-touch-min-h);
+  min-height: var(--bot-toolbar-button-h, var(--rack-action-touch-min-h));
+  height: var(--bot-toolbar-button-h, var(--rack-action-touch-min-h));
   border-radius: var(--rack-tile-btn-border-radius);
   border: none;
   z-index: 2;
@@ -115,8 +115,8 @@
 .panel--bot-exposures__toolbar-well .app-bottom-center-controls .suggested-hands-tab {
   flex: 0 0 auto;
   align-self: center;
-  min-height: var(--rack-action-touch-min-h);
-  height: var(--rack-action-touch-min-h);
+  min-height: var(--bot-toolbar-button-h, var(--rack-action-touch-min-h));
+  height: var(--bot-toolbar-button-h, var(--rack-action-touch-min-h));
   /* Match global `.btn` drop shadow; lock so :hover / open don’t reflow the label */
   box-shadow:
     0 2px 4px color-mix(in srgb, var(--color-black) 16%, transparent),
@@ -138,5 +138,5 @@
   top: 0;
   left: 0;
   width: var(--menu-btn-w);
-  height: var(--rack-action-touch-min-h);
+  height: var(--bot-toolbar-button-h, var(--rack-action-touch-min-h));
 }

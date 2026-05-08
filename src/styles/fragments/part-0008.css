@@ -11,22 +11,31 @@
 
 /* Hand tray: side inset lives on .hand-row so left/right tile-edge gaps stay symmetric. */
 .panel--hand .panel-hand-rack__hand-tray .hand-bank {
-  padding-block: var(--hand-rack-tray-inset-block);
+  padding-block: var(--hand-rack-container-pad-block, 2px);
   padding-inline: 0;
   box-sizing: border-box;
-  min-height: calc(var(--rack-tile-h) + 2 * var(--hand-rack-tray-inset-block));
-  /* Bank is the dark tray — tiles sit at natural width so padding shows on all sides */
+  height: var(
+    --hand-rack-outer-h,
+    calc(var(--hand-rack-fill-tile-h, var(--hand-rack-tile-h)) + var(--hand-rack-rim-block, 2px))
+  );
+  min-height: var(
+    --hand-rack-outer-h,
+    calc(var(--hand-rack-fill-tile-h, var(--hand-rack-tile-h)) + var(--hand-rack-rim-block, 2px))
+  );
+  border-radius: var(--tile-face-border-radius);
+  /* Bank is the dark tray; tiles fill it with only the rim/highlight in the border box. */
 }
 
 .panel--hand .panel-hand-rack__hand-tray .hand-row {
-  --rack-tile-w: calc(var(--hand-rack-tile-w) * var(--hand-rack-tile-scale));
-  --rack-tile-h: calc(var(--hand-rack-tile-h) * var(--hand-rack-tile-scale));
-  /* Fill the hand bank; tiles pack from the left inside the fixed 14-slot strip. */
-  padding-inline: var(--hand-rack-tray-inset-inline);
+  /* `--rack-tile-w` / `--rack-tile-h`: see `part-0118.css` (same CQ + scale as exposure row). */
+  /* Fill the hand bank edge-to-edge with 14 faces + 13 gaps. */
+  padding-inline: 0;
   box-sizing: border-box;
   margin-left: 0;
   width: 100%;
   max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
   justify-content: flex-start;
   flex-shrink: 0;
 }

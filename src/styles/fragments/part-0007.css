@@ -17,13 +17,13 @@
   justify-content: center;
   width: 100%;
   box-sizing: border-box;
-  padding-block: var(--bot-exposure-inner-pad);
+  padding-block: var(--hand-button-row-pad-block, var(--bot-exposure-inner-pad));
   padding-inline: 0;
-  min-height: calc(2 * var(--bot-exposure-inner-pad) + var(--suggested-tab-h));
+  min-height: calc(2 * var(--hand-button-row-pad-block, var(--bot-exposure-inner-pad)) + var(--hand-button-row-h, var(--suggested-tab-h)));
   position: relative;
   z-index: 1;
   background: var(--window-inner-surface);
-  border-radius: calc(var(--rack-tile-btn-border-radius) + var(--bot-exposure-inner-pad));
+  border-radius: calc(var(--rack-tile-btn-border-radius) + var(--hand-button-row-pad-block, var(--bot-exposure-inner-pad)));
   overflow: hidden;
 }
 
@@ -35,14 +35,14 @@
   justify-content: center;
   width: 100%;
   box-sizing: border-box;
-  padding-top: var(--bot-exposure-inner-pad);
+  padding-top: var(--hand-button-row-pad-block, var(--bot-exposure-inner-pad));
   padding-inline: 0;
-  padding-bottom: var(--bot-exposure-inner-pad);
-  min-height: calc(2 * var(--bot-exposure-inner-pad) + var(--rack-action-touch-min-h));
+  padding-bottom: var(--hand-button-row-pad-block, var(--bot-exposure-inner-pad));
+  min-height: calc(2 * var(--hand-button-row-pad-block, var(--bot-exposure-inner-pad)) + var(--hand-button-row-h, var(--rack-action-touch-min-h)));
   position: relative;
   z-index: 1;
   background: var(--window-inner-surface);
-  border-radius: calc(var(--rack-tile-btn-border-radius) + var(--bot-exposure-inner-pad));
+  border-radius: calc(var(--rack-tile-btn-border-radius) + var(--hand-button-row-pad-block, var(--bot-exposure-inner-pad)));
   /* Don’t clip Pass / round-label when they wrap or sit near the tray rim. */
   overflow-x: visible;
   overflow-y: visible;

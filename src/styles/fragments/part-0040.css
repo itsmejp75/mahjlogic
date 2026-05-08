@@ -14,7 +14,10 @@
   flex-direction: column;
   gap: var(--play-tray-h-divider);
   --bot-exposure-row-count: 3;
-  --bot-toolbar-track-h: calc(2 * var(--bot-exposure-inner-pad) + var(--rack-action-touch-min-h));
+  --bot-toolbar-height-delta: calc(var(--hand-rack-tray-inset-inline) / 14 * 1.3333);
+  --bot-toolbar-pad-block: max(0px, calc(var(--bot-exposure-inner-pad) - var(--bot-toolbar-height-delta) / 2));
+  --bot-toolbar-button-h: max(36px, calc(var(--rack-action-touch-min-h) - var(--bot-toolbar-height-delta)));
+  --bot-toolbar-track-h: calc(2 * var(--bot-toolbar-pad-block) + var(--bot-toolbar-button-h));
   --bot-body-top-pad: 0px;
   --bot-body-bottom-pad: 0px;
   /* Row↔row gaps match East rack tray dividers (`--play-tray-h-divider`). */

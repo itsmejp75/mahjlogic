@@ -11,7 +11,7 @@
 /* Same 14-column grid + insets as the main tile action bar; inner-7 wide controls. */
 .panel--hand .rack-bottom-bar--wall-game {
   display: grid;
-  grid-template-columns: repeat(14, var(--hand-rack-tile-w));
+  grid-template-columns: repeat(14, var(--hand-rack-fill-tile-w, var(--hand-rack-tile-w)));
   column-gap: var(--player-rack-face-gap);
   row-gap: 0;
   width: 100%;

@@ -15,8 +15,6 @@
 }
 
 .panel--hand .rack-stage__rack-top .exposure-rack {
-  --rack-tile-w: calc(var(--hand-rack-tile-w) * var(--hand-rack-tile-scale));
-  --rack-tile-h: calc(var(--hand-rack-tile-h) * var(--hand-rack-tile-scale));
   position: relative;
   z-index: 1;
 }

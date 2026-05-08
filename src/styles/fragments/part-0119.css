@@ -18,8 +18,12 @@
  * rack rim on iPhone landscape: `left=692 + width=171 = 863` vs rack ≈ 850.
  */
 .panel--hand .rack-stage__rack-top .exposure-rack.exposure-rack--charleston-pass {
-  --rack-tile-w: calc((100cqi - 13 * var(--player-rack-face-gap)) / 14);
+  --rack-tile-w: var(--hand-top-rack-tile-w);
   --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
+  --exposure-slot-h: var(--rack-tile-h);
+  padding: 0;
+  height: var(--hand-rack-outer-h, calc(var(--rack-tile-h) + 2px));
+  min-height: var(--hand-rack-outer-h, calc(var(--rack-tile-h) + 2px));
 }
 
 /*

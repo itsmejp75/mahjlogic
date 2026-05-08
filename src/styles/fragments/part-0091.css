@@ -25,11 +25,20 @@
 .east-discard-staging--inline {
   margin-bottom: 0;
   min-height: var(--rack-tile-h);
+  height: var(--rack-tile-h);
   max-height: var(--rack-tile-h);
   min-width: var(--rack-tile-w);
+  width: var(--rack-tile-w);
   max-width: var(--rack-tile-w);
   padding: 0;
   box-sizing: border-box;
+  overflow: hidden;
+}
+
+.east-discard-staging--inline .east-discard-staging__tile,
+.east-discard-staging--inline .tile-face {
+  width: 100%;
+  height: 100%;
 }
 
 .east-discard-staging--inline .east-discard-staging__placeholder {

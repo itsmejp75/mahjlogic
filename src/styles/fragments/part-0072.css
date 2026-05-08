@@ -8,9 +8,22 @@
 
 
 
-/* Same span as hand slots 12–14: `--player-rack-face-gap` matches `.panel-hand-rack__hand-tray .hand-row`. */
-.panel--hand .pass-strip-tail__inner {
+/* Same span + gaps as slots 11–13: exact 3 × tile face + 2 gaps; stretches to Charleston rack row height. */
+.panel--hand .pass-strip-tail {
+  align-self: center;
   width: calc(3 * var(--rack-tile-w) + 2 * var(--player-rack-face-gap));
+  flex: 0 0 calc(3 * var(--rack-tile-w) + 2 * var(--player-rack-face-gap));
+  display: flex;
+  height: var(--rack-tile-h);
+  min-height: var(--rack-tile-h);
+  max-height: var(--rack-tile-h);
+}
+
+.panel--hand .pass-strip-tail__inner {
+  width: 100%;
+  height: 100%;
+  flex: 0 0 auto;
+  min-height: 0;
 }
 
 .panel--hand .pass-strip-tail__tiles {

@@ -4,8 +4,17 @@
 
 
 
-.panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass),
+.panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass) {
+  /* Top rack tiles fill the fixed tray edge-to-edge: 14 faces + 13 visible gaps. */
+  --rack-tile-w: var(--hand-top-rack-tile-w);
+  --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
+  --exposure-slot-h: var(--rack-tile-h);
+  height: calc(var(--rack-tile-h) + var(--hand-rack-rim-block, 2px));
+  min-height: calc(var(--rack-tile-h) + var(--hand-rack-rim-block, 2px));
+}
+
 .panel--hand .panel-hand-rack__hand-tray .hand-row {
-  --rack-tile-w: calc((100cqi - 13 * var(--player-rack-face-gap)) / 14);
+  /* Fill the fixed rack width with larger faces; the rack-column width still comes from `--hand-rack-tile-w`. */
+  --rack-tile-w: var(--hand-top-rack-tile-w);
   --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
 }

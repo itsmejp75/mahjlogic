@@ -19,36 +19,37 @@
 
 /* Inline discard slot: same border + fill as call-initiate / pass-box */
 .exposure-rack__slot--east-discard-slot .east-discard-staging.east-discard-staging--inline {
-  border: 1px solid var(--coach-teal-border);
-  border-radius: 0.38rem;
+  border: 0;
+  border-radius: var(--tile-face-border-radius);
   background: color-mix(in srgb, var(--coach-teal) 11%, var(--bg-elevated) 89%);
-  transition: background 0.15s ease, border-color 0.15s ease;
+  box-shadow: inset 0 0 0 1px var(--coach-teal-border);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
 }
 
 .exposure-rack__slot--east-discard-slot .east-discard-staging.east-discard-staging--inline:has(.east-discard-staging__tile) {
   outline: none;
   background: color-mix(in srgb, var(--coach-teal) 14%, var(--bg-elevated) 86%);
+  box-shadow: none;
 }
 
 .exposure-rack__slot--east-discard-slot
   .east-discard-staging.east-discard-staging--inline.east-discard-staging--over:not(:has(.east-discard-staging__tile)) {
   outline: none;
   background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
-  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
 }
 
 .exposure-rack__slot--east-discard-slot
   .east-discard-staging.east-discard-staging--inline.east-discard-staging--over:has(.east-discard-staging__tile) {
-  box-shadow: none;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
   background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
-  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
 }
 
 /* Hovering the staged tile should be visibly brighter than the base green slot. */
 .exposure-rack__slot--east-discard-slot
   .east-discard-staging.east-discard-staging--inline:has(.east-discard-staging__tile:hover) {
   background: color-mix(in srgb, var(--coach-teal-bg) 92%, var(--bg-elevated) 8%);
-  border-color: color-mix(in srgb, var(--coach-teal) 40%, var(--border) 34%, var(--bg-elevated) 26%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--coach-teal) 40%, var(--border) 34%, var(--bg-elevated) 26%);
 }
 
 /* Pass tail cells use the same geometry as the rest of the Charleston exposure row */

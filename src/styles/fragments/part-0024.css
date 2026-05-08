@@ -8,13 +8,28 @@
 
 
 
-.panel--hand .exposure-rack {
-  justify-content: center;
-  padding-block: var(--hand-rack-tray-inset-block);
-  padding-inline: var(--hand-rack-tray-inset-inline);
+.panel--hand .rack-stage__rack-top .exposure-rack {
+  /* Snug to the shared 14 × face + 13 gap column; clip sub-pixel / transform spill on narrow viewports. */
   width: 100%;
-  min-height: calc(var(--rack-tile-h) + 2 * var(--hand-rack-tray-inset-block));
+  max-width: 100%;
+  min-width: 0;
   box-sizing: border-box;
+  overflow-x: clip;
+}
+
+.panel--hand .exposure-rack {
+  justify-content: flex-start;
+  padding-block: var(--hand-rack-container-pad-block, 2px);
+  padding-inline: 0;
+  width: 100%;
+  height: var(--hand-rack-outer-h, calc(var(--rack-tile-h) + var(--hand-rack-rim-block, 2px)));
+  min-height: var(--hand-rack-outer-h, calc(var(--rack-tile-h) + var(--hand-rack-rim-block, 2px)));
+  box-sizing: border-box;
+}
+
+.panel--hand .exposure-rack:not(.exposure-rack--charleston-pass) {
+  height: var(--hand-rack-outer-h, calc(var(--rack-tile-h) + var(--hand-rack-rim-block, 2px)));
+  min-height: var(--hand-rack-outer-h, calc(var(--rack-tile-h) + var(--hand-rack-rim-block, 2px)));
 }
 
 .panel--hand .hand-bank {

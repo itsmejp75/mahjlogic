@@ -14,6 +14,7 @@
 
 .panel--hand .rack-bottom-tile-cell {
   font-size: var(--rack-bottom-action-fs);
+  min-height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
 }
 
 .panel--hand .rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell {
@@ -25,6 +26,10 @@
 
 .panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell {
   padding: 0.14rem 0.05rem;
+}
+
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack {
+  min-height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
 }
 
 .rack-stack .exposure-rack,

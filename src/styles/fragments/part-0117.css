@@ -42,6 +42,48 @@
     (100cqi - 2 * var(--hand-rack-tray-inset-inline) - 13 * var(--player-rack-face-gap)) / 14
   );
   --hand-rack-tile-h: calc(var(--hand-rack-tile-w) * 1.3333);
+  /*
+   * Keep the rack column width on `--hand-rack-tile-w`, but draw player tiles
+   * slightly wider so the 14-face strip consumes the right-side tray slack.
+   */
+  /* The tray border is the protected area; tiles fill the content box right up to that rim. */
+  --hand-rack-rim-inline: 2px;
+  --hand-rack-rim-block: 2px;
+  --hand-rack-container-pad-block: 2px;
+  --hand-top-rack-tile-w: calc(
+    (14 * var(--hand-rack-tile-w) + 2 * var(--hand-rack-tray-inset-inline) - var(--hand-rack-rim-inline)) /
+      14
+  );
+  --hand-top-rack-tile-h: calc(var(--hand-top-rack-tile-w) * 1.3333);
+  --hand-rack-outer-h: calc(
+    var(--hand-top-rack-tile-h) + var(--hand-rack-rim-block) + 2 * var(--hand-rack-container-pad-block)
+  );
+  --hand-top-rack-outer-h: var(--hand-rack-outer-h);
+  --hand-rack-fill-tile-w: var(--hand-top-rack-tile-w);
+  --hand-rack-fill-tile-h: var(--hand-top-rack-tile-h);
+  --hand-top-rack-height-delta: calc(
+    (var(--hand-top-rack-tile-w) - var(--hand-rack-tile-w)) * 1.3333
+  );
+  --hand-button-row-h: max(36px, calc(var(--rack-action-touch-min-h) - var(--hand-top-rack-height-delta)));
+  --hand-button-row-pad-block: max(
+    0px,
+    calc(var(--bot-exposure-inner-pad) - var(--hand-top-rack-height-delta) / 2)
+  );
+  --rack-tile-w: var(--hand-rack-fill-tile-w);
+  --rack-tile-h: var(--hand-rack-fill-tile-h);
+  --rack-tile-btn-inner-1: calc(var(--hand-rack-fill-tile-w) - 2 * var(--rack-tile-face-bw));
+  --rack-tile-btn-inner-2: calc(
+    2 * var(--hand-rack-fill-tile-w) + var(--player-rack-face-gap) - 2 * var(--rack-tile-face-bw)
+  );
+  --rack-tile-btn-inner-3: calc(
+    3 * var(--hand-rack-fill-tile-w) + 2 * var(--player-rack-face-gap) - 2 * var(--rack-tile-face-bw)
+  );
+  --rack-tile-btn-inner-7: calc(
+    7 * var(--hand-rack-fill-tile-w) + 6 * var(--player-rack-face-gap) - 2 * var(--rack-tile-face-bw)
+  );
+  --hand-rack-tile-scale: 1;
+  /* Pass-strip `.pass-strip-tail__inner` chrome: horizontal border only (`padding` 0); keep post-Charleston tray min-height aligned. */
+  --charleston-pass-strip-inner-y-chrome: 2px;
 }
 
 /*
