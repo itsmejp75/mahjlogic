@@ -39,11 +39,33 @@
   font-size: var(--rack-control-label-fs);
   letter-spacing: max(0.01em, calc(0.02em + 0.02rem));
   line-height: 1.08;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   padding: var(--rack-control-pad-block) var(--rack-control-pad-inline);
+  text-overflow: clip;
 }
 
 .panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell {
   font-size: var(--rack-hand-action-label-fs);
+}
+
+/*
+ * One-tile text controls (Sort / HINT / narrow toolbar actions) need a tighter cap than wider
+ * actions so labels scale down with the button instead of clipping/spilling in small windows.
+ */
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1,
+.panel--bot-exposures__toolbar-well .panel--bot-exposures__clear,
+.panel--bot-exposures__toolbar-well .panel--bot-exposures__hint {
+  font-size: min(var(--rack-hand-action-label-fs), calc(var(--hand-rack-tile-w) * 0.34));
+  letter-spacing: max(0.005em, calc(0.01em + 0.006rem));
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.panel--bot-exposures__toolbar-well .panel--bot-exposures__clear.btn--label-wrap {
+  white-space: normal;
 }
 
 /* ---- part-0003.css (from base.css, layout.css, components.css, animations.css) ---- */
