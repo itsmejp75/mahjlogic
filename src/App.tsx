@@ -6335,10 +6335,34 @@ export default function App() {
                                   </span>
                                 </button>
                               </div>
+                              {showSuggestedHandsPanel ? (
+                                <button
+                                  type="button"
+                                  className={[
+                                    'btn',
+                                    'btn--primary',
+                                    'charleston-pass-btn',
+                                    'suggested-hands-tab',
+                                    'rack-bottom-tile-cell',
+                                    'rack-bottom-tile-cell--c3-4',
+                                    suggestedPanelHandsOn ? 'suggested-hands-tab--open' : '',
+                                  ]
+                                    .filter(Boolean)
+                                    .join(' ')}
+                                  aria-label="Suggested hands"
+                                  onClick={() => setSuggestedPanelHandsOn((v) => !v)}
+                                  aria-expanded={suggestedPanelHandsOn}
+                                  aria-controls="suggested-hands-popup"
+                                >
+                                  HANDS
+                                </button>
+                              ) : null}
                               <div
-                                className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell rack-bottom-tile-cell--c3${
-                                  wall.length >= OPENING_WALL_TILES ? ' rack-bottom-wall--full' : ''
-                                }${wall.length === 0 ? ' rack-bottom-wall--empty' : ''}`}
+                                className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell ${
+                                  showSuggestedHandsPanel ? 'rack-bottom-tile-cell--c5' : 'rack-bottom-tile-cell--c3'
+                                }${wall.length >= OPENING_WALL_TILES ? ' rack-bottom-wall--full' : ''}${
+                                  wall.length === 0 ? ' rack-bottom-wall--empty' : ''
+                                }`}
                                 style={wallRemainHeatStyle(wall.length)}
                                 aria-label={`${wall.length} tiles remaining in wall`}
                               >
@@ -6582,10 +6606,34 @@ export default function App() {
                                     </span>
                                   </button>
                                 </div>
+                                {showSuggestedHandsPanel ? (
+                                  <button
+                                    type="button"
+                                    className={[
+                                      'btn',
+                                      'btn--primary',
+                                      'charleston-pass-btn',
+                                      'suggested-hands-tab',
+                                      'rack-bottom-tile-cell',
+                                      'rack-bottom-tile-cell--c3-4',
+                                      suggestedPanelHandsOn ? 'suggested-hands-tab--open' : '',
+                                    ]
+                                      .filter(Boolean)
+                                      .join(' ')}
+                                    aria-label="Suggested hands"
+                                    onClick={() => setSuggestedPanelHandsOn((v) => !v)}
+                                    aria-expanded={suggestedPanelHandsOn}
+                                    aria-controls="suggested-hands-popup"
+                                  >
+                                    HANDS
+                                  </button>
+                                ) : null}
                                 <div
-                                  className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell rack-bottom-tile-cell--c3${
-                                    wall.length >= OPENING_WALL_TILES ? ' rack-bottom-wall--full' : ''
-                                  }${wall.length === 0 ? ' rack-bottom-wall--empty' : ''}`}
+                                  className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell ${
+                                    showSuggestedHandsPanel ? 'rack-bottom-tile-cell--c5' : 'rack-bottom-tile-cell--c3'
+                                  }${wall.length >= OPENING_WALL_TILES ? ' rack-bottom-wall--full' : ''}${
+                                    wall.length === 0 ? ' rack-bottom-wall--empty' : ''
+                                  }`}
                                   style={wallRemainHeatStyle(wall.length)}
                                   aria-label={`${wall.length} tiles remaining in wall`}
                                 >
@@ -6768,20 +6816,6 @@ export default function App() {
                                 aria-controls={menuOpen ? 'app-menu-modal' : undefined}
                                 onClick={() => setMenuOpen((v) => !v)}
                               />
-                            </div>
-                          ) : null}
-                          {showSuggestedHandsPanel ? (
-                            <div className="app-bottom-center-controls" role="group" aria-label="Suggested hands controls">
-                              <button
-                                type="button"
-                                className={['btn', 'btn--primary', 'charleston-pass-btn', 'suggested-hands-tab', suggestedPanelHandsOn ? 'suggested-hands-tab--open' : ''].filter(Boolean).join(' ')}
-                                aria-label="Suggested hands"
-                                onClick={() => setSuggestedPanelHandsOn((v) => !v)}
-                                aria-expanded={suggestedPanelHandsOn}
-                                aria-controls="suggested-hands-popup"
-                              >
-                                HANDS
-                              </button>
                             </div>
                           ) : null}
                           <button

@@ -31,7 +31,6 @@
 .rack-bottom-tile-cell:not(.rack-bottom-wall),
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__clear,
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__hint,
-.panel--bot-exposures__toolbar-well .app-bottom-center-controls .suggested-hands-tab,
 .panel--bot-exposures__toolbar-well .app-menu-anchor .app-bottom-center-controls__menu-btn,
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell {
   font-size: var(--rack-control-label-fs);
@@ -47,8 +46,7 @@
 /* East hand action strip + bot toolbar HANDS / CLR HL / HINT: shared label scale (Menu icons stay smaller). */
 .panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell,
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__clear,
-.panel--bot-exposures__toolbar-well .panel--bot-exposures__hint,
-.panel--bot-exposures__toolbar-well .app-bottom-center-controls .suggested-hands-tab {
+.panel--bot-exposures__toolbar-well .panel--bot-exposures__hint {
   font-size: var(--rack-hand-action-label-fs);
 }
 

@@ -33,7 +33,6 @@
 .rack-bottom-tile-cell,
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__clear,
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__hint,
-.panel--bot-exposures__toolbar-well .app-bottom-center-controls .suggested-hands-tab,
 .panel--bot-exposures__toolbar-well .app-menu-anchor .app-bottom-center-controls__menu-btn,
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell {
   font-size: var(--rack-control-label-fs);
@@ -124,7 +123,6 @@
 .hands-list__card-c,
 .hands-sheet__card-c,
 .mahjong-blocked-modal__c-mark,
-.panel--bot-exposures__toolbar-well .app-bottom-center-controls .suggested-hands-tab,
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__clear,
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__hint,
 .rack-bottom-tile-cell,
@@ -677,6 +675,16 @@
   grid-column: 3 / 4;
 }
 
+/* Two tile faces + one grid gap (HANDS), aligned under rack columns 3–4. */
+.rack-bottom-tile-cell--c3-4 {
+  grid-column: 3 / 5;
+}
+
+/* Single column under rack column 5 (e.g. wall count when HANDS uses 3–4). */
+.rack-bottom-tile-cell--c5 {
+  grid-column: 5 / 6;
+}
+
 .rack-bottom-tile-cell--c4-5 {
   grid-column: 4 / 6;
 }
@@ -720,6 +728,7 @@
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c1,
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c2,
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c3,
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c5,
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c12 {
   width: var(--rack-tile-btn-inner-1);
   max-width: var(--rack-tile-btn-inner-1);
@@ -727,6 +736,7 @@
   justify-self: start;
 }
 
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c3-4,
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c4-5,
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c6-7,
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c8-9,
@@ -1439,27 +1449,6 @@
     0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);
 }
 
-.panel--bot-exposures__toolbar-well .app-bottom-center-controls .suggested-hands-tab {
-  flex: 0 0 auto;
-  align-self: center;
-  min-height: var(--rack-action-touch-min-h);
-  height: var(--rack-action-touch-min-h);
-  /* Match global `.btn` drop shadow; lock so :hover / open don’t reflow the label */
-  box-shadow:
-    0 2px 4px color-mix(in srgb, var(--color-black) 16%, transparent),
-    0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);
-  transform: none;
-}
-
-.panel--bot-exposures__toolbar-well
-  .app-bottom-center-controls
-  .suggested-hands-tab:hover:not(:disabled):not(.suggested-hands-tab--open) {
-  box-shadow:
-    0 2px 4px color-mix(in srgb, var(--color-black) 16%, transparent),
-    0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);
-  transform: none;
-}
-
 .panel--bot-exposures__toolbar-well .app-menu-anchor .app-bottom-center-controls__menu-btn {
   position: absolute;
   top: 0;
@@ -1958,6 +1947,7 @@
   justify-self: start;
 }
 
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c3-4,
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c4-5,
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7,
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c8-9,
@@ -6321,8 +6311,7 @@
   letter-spacing: var(--btn-letter-spacing);
   white-space: nowrap;
   min-height: var(--suggested-tab-h);
-  /* 3 tile columns — inner face (Charleston Pass / action row) */
-  width: var(--rack-tile-btn-inner-3);
+  /* Width comes from `.panel--hand .rack-bottom-bar--tile-grid` (grid span = two 1fr tracks + column-gap). */
 }
 
 /* ---- part-0094.css (from base.css, layout.css, components.css, animations.css) ---- */

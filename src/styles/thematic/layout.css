@@ -1092,11 +1092,6 @@
   flex: 0 0 auto;
 }
 
-.app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well .suggested-hands-tab {
-  min-width: 0;
-  max-width: 100%;
-}
-
 /* ---- part-0045.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 

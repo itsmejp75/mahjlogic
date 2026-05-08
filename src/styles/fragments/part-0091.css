@@ -836,6 +836,5 @@
   letter-spacing: var(--btn-letter-spacing);
   white-space: nowrap;
   min-height: var(--suggested-tab-h);
-  /* 3 tile columns — inner face (Charleston Pass / action row) */
-  width: var(--rack-tile-btn-inner-3);
+  /* Width comes from `.panel--hand .rack-bottom-bar--tile-grid` (grid span = two 1fr tracks + column-gap). */
 }

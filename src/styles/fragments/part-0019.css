@@ -38,6 +38,16 @@
   grid-column: 3 / 4;
 }
 
+/* Two tile faces + one grid gap (HANDS), aligned under rack columns 3–4. */
+.rack-bottom-tile-cell--c3-4 {
+  grid-column: 3 / 5;
+}
+
+/* Single column under rack column 5 (e.g. wall count when HANDS uses 3–4). */
+.rack-bottom-tile-cell--c5 {
+  grid-column: 5 / 6;
+}
+
 .rack-bottom-tile-cell--c4-5 {
   grid-column: 4 / 6;
 }

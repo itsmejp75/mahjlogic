@@ -11,8 +11,3 @@
 .app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well > * {
   flex: 0 0 auto;
 }
-
-.app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well .suggested-hands-tab {
-  min-width: 0;
-  max-width: 100%;
-}
