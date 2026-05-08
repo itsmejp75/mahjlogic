@@ -233,16 +233,25 @@
    * cap label size to a fraction of the face width so type tracks button size the same way when
    * the window shrinks. Padding scales too so text stays off the control rim.
    */
+  /* Default rack / bot menu icon; East hand + bot HANDS/CLR/HINT use `--rack-hand-action-label-fs` (part-0001). */
   --rack-control-label-fs: min(
     var(--rack-bottom-action-fs),
-    calc(var(--hand-rack-tile-w) * 0.35)
+    calc(var(--hand-rack-tile-w) * 0.48)
   );
-  --rack-control-label-fs-tight: min(
+  /* East hand menu icon `em` basis — keep separate from text button size. */
+  --rack-menu-hamburger-fs: min(
     var(--rack-bottom-action-fs),
-    calc(var(--hand-rack-tile-w) * 0.25)
+    calc(var(--hand-rack-tile-w) * 0.48)
   );
-  --rack-control-pad-inline: max(0.1rem, min(0.24rem, calc(var(--hand-rack-tile-w) * 0.08)));
-  --rack-control-pad-block: max(0.1rem, min(0.2rem, calc(var(--hand-rack-tile-w) * 0.05)));
+  /* East hand Sort / MAHJ / Swap / Call / Pass / Charleston (+ wall count, part-0021). Slightly
+   * above bot `--rack-control-label-fs`; may exceed `--rack-bottom-action-fs` when that caps icons.
+   * Hamburger stays `--rack-menu-hamburger-fs` (part-0020). */
+  --rack-hand-action-label-fs: min(
+    calc(var(--rack-bottom-action-fs) * 1.18),
+    calc(var(--hand-rack-tile-w) * 0.58)
+  );
+  --rack-control-pad-inline: max(0.08rem, min(0.2rem, calc(var(--hand-rack-tile-w) * 0.07)));
+  --rack-control-pad-block: max(0.08rem, min(0.16rem, calc(var(--hand-rack-tile-w) * 0.042)));
 
   /* Rack action row + bot toolbar (Menu / Clear / Suggested): larger tap targets on phones. */
   --rack-action-touch-min-h: max(48px, calc(var(--hand-rack-tile-h) * 0.52));

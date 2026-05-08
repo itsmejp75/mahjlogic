@@ -28,14 +28,9 @@
   white-space: nowrap;
 }
 
-/* Stop Charleston only (c9-11); Undo (c2 + rack-neutral) stays dark gray. */
+/* Stop Charleston only (c9-11). */
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c9-11.charleston-stop-btn:not(:disabled) {
   background: #9b1b30;
-  color: var(--color-white);
-}
-
-.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c2.btn.btn--rack-neutral.charleston-stop-btn:not(:disabled) {
-  background: var(--color-slate-mid);
   color: var(--color-white);
 }
 

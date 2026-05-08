@@ -86,13 +86,21 @@
   min-width: 0;
   max-width: var(--rack-tile-btn-inner-1);
   margin-inline-start: var(--rack-tile-face-bw);
-  padding: 0.16rem 0.04rem;
-  /* Count: same numeral font as tile faces (Noto Sans Arabic); + white inlay on gem fill */
-  font-family: 'Noto Sans Arabic', var(--sans);
-  font-size: min(1.792rem, calc(var(--rack-bottom-action-fs) * 2.048));
+  /* Center the count in the heat box; symmetric inset so V/H optical center holds. */
+  padding: 0;
+  /* Match hand action strip label size; same row height as adjacent cells (part-0026 / menu anchor). */
+  min-height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
+  box-sizing: border-box;
+  /* Same face as rack `.btn` (Figtree) so the count aligns visually with Sort / Menu / MAHJ. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  text-align: center;
+  font-family: 'Figtree', var(--sans);
+  font-size: var(--rack-hand-action-label-fs);
   font-weight: 600;
-  letter-spacing: 0.02em;
-  line-height: 1.1;
+  letter-spacing: 0;
   font-variant-numeric: tabular-nums;
   color: var(--color-off-black);
   border-radius: var(--rack-tile-btn-border-radius);
@@ -127,6 +135,12 @@
   background-position: 0 calc(var(--wall-t, 1) * 100%);
   box-shadow: none;
   transition: background-position 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.rack-bottom-wall__num {
+  line-height: 0;
+  display: block;
+  text-align: center;
 }
 
 /* Opening wall (99 tiles): uniform green — gradient heat begins after the first tile is drawn/discarded. */

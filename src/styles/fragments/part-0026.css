@@ -12,24 +12,22 @@
   gap: var(--rack-tile-gap);
 }
 
-.panel--hand .rack-bottom-tile-cell {
+/* Wall count typography + padding: only part-0021 / charleston rules — do not bind to action row scale. */
+.panel--hand .rack-bottom-tile-cell:not(.rack-bottom-wall) {
   font-size: var(--rack-bottom-action-fs);
   min-height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
 }
 
-.panel--hand .rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell {
-  font-size: min(1.792rem, calc(var(--rack-bottom-action-fs) * 2.048));
-  font-family: 'Noto Sans Arabic', var(--sans);
-  font-weight: 600;
-  color: var(--color-off-black);
+/* Wall count: font + metrics from part-0021 (`--rack-hand-action-label-fs`). */
+
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell,
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack {
+  min-height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
 }
 
 .panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell {
   padding: 0.14rem 0.05rem;
-}
-
-.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack {
-  min-height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
+  box-sizing: border-box;
 }
 
 .rack-stack .exposure-rack,

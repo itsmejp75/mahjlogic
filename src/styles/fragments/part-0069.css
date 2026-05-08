@@ -79,9 +79,9 @@
   );
 }
 
-/* Wall remaining count: same scale ratio as default bar (`--rack-bottom-action-fs` × 2.048). */
+/* Wall remaining count: same size as main hand action labels. */
 .rack-bottom-bar--charleston .rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell {
-  font-size: min(1.792rem, calc(var(--charleston-pass-label-fs) * 2.048));
+  font-size: var(--rack-hand-action-label-fs);
 }
 
 .charleston-pass-btn {

@@ -1,11 +1,21 @@
 import type { CSSProperties } from 'react'
-import { Fragment, useRef, useLayoutEffect, useEffect, useState } from 'react'
+import { useRef, useLayoutEffect, useEffect, useState } from 'react'
 import { useDndContext } from '@dnd-kit/core'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { TileInstance } from '../mahjong/types'
 import type { HandTileFlyIn } from '../mahjong/handTileFlyIn'
 import { TileFace } from './TileFace'
+
+/**
+ * Tile-width "track" for inline shift transforms — must match the grid track width
+ * `.panel--hand .panel-hand-rack__hand-tray .hand-row` uses (`repeat(14, 1fr)` + `gap`).
+ * Using `--rack-tile-w` + face-gap keeps the math identical to one column step.
+ */
+const REMOVAL_SHIFT_TRANSFORM =
+  'translateX(calc(var(--rack-tile-w) + var(--player-rack-face-gap, var(--rack-tile-gap))))'
+const RACK_REORDER_EASING = 'cubic-bezier(0.2, 0, 0.2, 1)'
+const RACK_REORDER_DURATION = '0.16s'
 
 function SortableTile({
   tile,
@@ -26,6 +36,7 @@ function SortableTile({
   jokerSwapHintBounceEpoch = 0,
   externalShift = false,
   externalPreviewActive = false,
+  shiftPhase = null,
 }: {
   tile: TileInstance
   selected: boolean
@@ -56,9 +67,17 @@ function SortableTile({
   externalShift?: boolean
   /** Ignore dnd-kit transforms while a non-hand tile previews insertion into the rack. */
   externalPreviewActive?: boolean
+  /**
+   * Post-removal slide animation:
+   *   `'pre'`  — tile is parked one column to the right (its old position) with no transition.
+   *   `'post'` — transition is enabled and the transform clears, sliding the tile back into its
+   *              new (smaller-rack) column. Same feel as in-rack rearrange.
+   *   `null`   — no shift in progress.
+   */
+  shiftPhase?: 'pre' | 'post' | null
 }) {
   const { active } = useDndContext()
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
+  const { attributes, listeners, setNodeRef, transform } =
     useSortable({
       id: tile.id,
       // Never use sortable’s **post-drop** “layout” animation. It can stack with `transition`
@@ -67,29 +86,44 @@ function SortableTile({
     })
 
   const sortableTransform = CSS.Transform.toString(transform)
-  const externalShiftTransform =
-    'translateX(calc(var(--rack-tile-w) + var(--player-rack-face-gap, var(--rack-tile-gap))))'
+  const externalShiftTransform = REMOVAL_SHIFT_TRANSFORM
+  const draggingThisTile = active != null && String(active.id) === tile.id
+
+  let resolvedTransform: string | undefined
+  let resolvedTransition: string
+
+  if (externalPreviewActive) {
+    // Cross-zone drags (Charleston pass or discard staging hovering the rack): use only the
+    // single rightward gap transform; ignore dnd-kit context transforms that would fight it.
+    resolvedTransform = externalShift ? externalShiftTransform : undefined
+    resolvedTransition = active ? `transform ${RACK_REORDER_DURATION} ${RACK_REORDER_EASING}` : 'none'
+  } else if (draggingThisTile) {
+    // The dragged tile tracks the pointer with no easing; the DragOverlay clone is what the user sees.
+    resolvedTransform = sortableTransform ?? undefined
+    resolvedTransition = 'none'
+  } else if (shiftPhase === 'pre') {
+    // Park one column to the right (the tile's old position) without easing so the next render
+    // can transition cleanly back to the new column.
+    resolvedTransform = REMOVAL_SHIFT_TRANSFORM
+    resolvedTransition = 'none'
+  } else if (shiftPhase === 'post') {
+    // Slide back to the new column. Same easing/duration as in-rack rearrange.
+    resolvedTransform = sortableTransform ?? undefined
+    resolvedTransition = `transform ${RACK_REORDER_DURATION} ${RACK_REORDER_EASING}`
+  } else if (active) {
+    // Some other tile is being dragged — let dnd-kit's transform smoothly position this neighbour.
+    resolvedTransform = sortableTransform ?? undefined
+    resolvedTransition = `transform ${RACK_REORDER_DURATION} ${RACK_REORDER_EASING}`
+  } else {
+    resolvedTransform = sortableTransform ?? undefined
+    resolvedTransition = 'none'
+  }
+
   const style: CSSProperties = {
-    // Cross-zone drags (Charleston/pass or discard staging -> hand) are not part of the hand's
-    // normal order. If dnd-kit still reports context transforms, they can fight the preview
-    // gap and pull the first hand tile toward the source slot. During that preview, use only
-    // our single rightward gap transform.
-    transform: externalPreviewActive
-      ? externalShift
-        ? externalShiftTransform
-        : undefined
-      : sortableTransform,
-    // The dragged tile itself must track the pointer with no easing. Neighbours should always
-    // quick-slide while a drag is active (including Charleston); after release, cleanup
-    // transforms snap so the old post-drop left-jut/flip cannot play.
-    transition:
-      isDragging
-        ? 'none'
-        : active
-          ? 'transform 0.14s cubic-bezier(0.2, 0, 0.2, 1)'
-          : 'none',
-    opacity: isDragging ? 0 : undefined,
-    zIndex: isDragging ? 2 : undefined,
+    transform: resolvedTransform,
+    transition: resolvedTransition,
+    opacity: draggingThisTile ? 0 : undefined,
+    zIndex: draggingThisTile ? 2 : undefined,
   }
 
   // When the tile becomes "just drawn", measure the delta from the active discard slot
@@ -198,7 +232,7 @@ function SortableTile({
           .join(' ')}
         style={flyStyle}
       >
-        <TileFace def={tile.def} elevated={isDragging} rackSuitStacked rackNewMark={rackNewMarkProp} />
+        <TileFace def={tile.def} elevated={draggingThisTile} rackSuitStacked rackNewMark={rackNewMarkProp} />
       </div>
     </div>
   )
@@ -309,33 +343,74 @@ export function SortableHand({
   const renderIds = sortableOrder ?? tiles.map((t) => t.id)
   const g = suggestedTileGuide
   const externalPreviewActive = externalInsertPreviewIndex != null
-  const prevRenderIdsForCollapseRef = useRef<string[]>(renderIds)
-  const collapseGapRef = useRef<{ key: string; index: number } | null>(null)
-  const collapseSeqRef = useRef(0)
-  const [, forceCollapseRender] = useState(0)
 
-  if (animationsEnabled && !externalPreviewActive) {
-    const prev = prevRenderIdsForCollapseRef.current
+  /**
+   * Post-removal slide animation. The hand row is a CSS Grid (`repeat(14, 1fr)`),
+   * so animating the *width* of a placeholder slot does nothing — neighbour tiles
+   * just snap into the smaller layout. Instead, when a tile is removed (tap-to-pass,
+   * tap-to-discard, drag-drop into pass/discard), we briefly translate every tile to
+   * the right of the removed index by one column to its old position and let it
+   * transition back to `translateX(0)`. Same easing/duration as in-rack rearrange.
+   */
+  const prevRenderIdsRef = useRef<string[]>(renderIds)
+  const removalVersionRef = useRef(0)
+  const [removalShift, setRemovalShift] = useState<{
+    fromIndex: number
+    applied: boolean
+    version: number
+  } | null>(null)
+
+  useLayoutEffect(() => {
+    const prev = prevRenderIdsRef.current
+    prevRenderIdsRef.current = renderIds
+    if (!animationsEnabled) return
+    if (externalPreviewActive) return
     if (prev.length === renderIds.length + 1) {
       const removedIndex = prev.findIndex((id) => !renderIds.includes(id))
-      if (removedIndex >= 0) {
-        collapseSeqRef.current += 1
-        collapseGapRef.current = {
-          key: `collapse-${prev[removedIndex]}-${collapseSeqRef.current}`,
-          index: removedIndex,
-        }
+      if (removedIndex >= 0 && removedIndex < renderIds.length) {
+        removalVersionRef.current += 1
+        setRemovalShift({
+          fromIndex: removedIndex,
+          applied: false,
+          version: removalVersionRef.current,
+        })
       }
     } else if (prev.length !== renderIds.length) {
-      collapseGapRef.current = null
+      // Length changed in some other way (e.g. multiple tiles added/removed) — drop the shift.
+      setRemovalShift(null)
     }
-    prevRenderIdsForCollapseRef.current = renderIds
-  } else {
-    collapseGapRef.current = null
-    prevRenderIdsForCollapseRef.current = renderIds
-  }
+  }, [renderIds, animationsEnabled, externalPreviewActive])
 
-  const collapseGap = collapseGapRef.current
-  const emptyCount = Math.max(0, slotCount - renderIds.length - (collapseGap ? 1 : 0))
+  // After the "pre" state is committed and painted, schedule the flip to "post" so the
+  // browser can transition `transform: translateX(+col)` -> `translateX(0)`.
+  useEffect(() => {
+    if (!removalShift || removalShift.applied) return
+    const v = removalShift.version
+    let raf2 = 0
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        setRemovalShift((s) =>
+          s && s.version === v && !s.applied ? { ...s, applied: true } : s,
+        )
+      })
+    })
+    return () => {
+      cancelAnimationFrame(raf1)
+      if (raf2) cancelAnimationFrame(raf2)
+    }
+  }, [removalShift])
+
+  // Clear the shift state once the slide animation has finished.
+  useEffect(() => {
+    if (!removalShift || !removalShift.applied) return
+    const v = removalShift.version
+    const t = window.setTimeout(() => {
+      setRemovalShift((s) => (s && s.version === v ? null : s))
+    }, 220)
+    return () => window.clearTimeout(t)
+  }, [removalShift])
+
+  const emptyCount = Math.max(0, slotCount - renderIds.length)
 
   // Track the most-recently drawn tile so we can play a drop-in animation exactly once.
   const [justDrawnId, setJustDrawnId] = useState<string | null>(null)
@@ -351,22 +426,6 @@ export function SortableHand({
       return () => clearTimeout(timer)
     }
   }, [highlightedTileId, animationsEnabled])
-
-  const renderCollapsingGap = (index: number) => {
-    if (!collapseGap || collapseGap.index !== index) return null
-    return (
-      <div
-        key={collapseGap.key}
-        className="hand-slot--collapse"
-        aria-hidden
-        onAnimationEnd={() => {
-          if (collapseGapRef.current?.key !== collapseGap.key) return
-          collapseGapRef.current = null
-          forceCollapseRender((n) => n + 1)
-        }}
-      />
-    )
-  }
 
   return (
     <div className="hand-row" role="list" aria-label="Your hand">
@@ -384,43 +443,47 @@ export function SortableHand({
             waveMs != null && isHandFlyIn && handTileFlyIn
               ? Math.max(0, handTileFlyIn.ids.indexOf(tile.id)) * waveMs
               : undefined
+          const shiftPhase: 'pre' | 'post' | null =
+            removalShift && index >= removalShift.fromIndex
+              ? removalShift.applied
+                ? 'post'
+                : 'pre'
+              : null
           return (
-            <Fragment key={tile.id}>
-              {renderCollapsingGap(index)}
-              <SortableTile
-                tile={tile}
-                selected={selectedTileId === tile.id}
-                charlestonGlow={charlestonGlowTileIds?.has(tile.id) ?? false}
-                discardMode={discardMode}
-                suggestDim={!!g && !isBest && !isNewlyReceived && !isJoker}
-                suggestBest={isBest}
-                stagedForMeld={stagedForMeldIds?.has(tile.id) ?? false}
-                isJustDrawn={animationsEnabled && justDrawnId === tile.id}
-                isHandFlyIn={isHandFlyIn}
-                handTileFlyIn={handTileFlyIn}
-                handFlyInWaveDelayMs={handFlyInWaveDelayMs}
-                drawInFromRackBottom={handJokerSwapFlyInFromBelowId === tile.id}
-                rackNewMark={!!rackNewMarkTileIds?.has(tile.id)}
-                jokerSwapHintBounce={jokerSwapHintBounceTileIds?.has(tile.id) ?? false}
-                jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
-                externalShift={externalPreviewActive && index >= externalInsertPreviewIndex}
-                externalPreviewActive={externalPreviewActive}
-                onSelect={onTileActivate}
-              />
-            </Fragment>
+            <SortableTile
+              key={tile.id}
+              tile={tile}
+              selected={selectedTileId === tile.id}
+              charlestonGlow={charlestonGlowTileIds?.has(tile.id) ?? false}
+              discardMode={discardMode}
+              suggestDim={!!g && !isBest && !isNewlyReceived && !isJoker}
+              suggestBest={isBest}
+              stagedForMeld={stagedForMeldIds?.has(tile.id) ?? false}
+              isJustDrawn={animationsEnabled && justDrawnId === tile.id}
+              isHandFlyIn={isHandFlyIn}
+              handTileFlyIn={handTileFlyIn}
+              handFlyInWaveDelayMs={handFlyInWaveDelayMs}
+              drawInFromRackBottom={handJokerSwapFlyInFromBelowId === tile.id}
+              rackNewMark={!!rackNewMarkTileIds?.has(tile.id)}
+              jokerSwapHintBounce={jokerSwapHintBounceTileIds?.has(tile.id) ?? false}
+              jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
+              externalShift={externalPreviewActive && index >= externalInsertPreviewIndex}
+              externalPreviewActive={externalPreviewActive}
+              shiftPhase={shiftPhase}
+              onSelect={onTileActivate}
+            />
           )
         }
         if (charlestonPassPhantomTile && id === charlestonPassPhantomTile.id) {
           return (
-            <Fragment key={id}>
-              {renderCollapsingGap(index)}
-              <CharlestonPassHandPhantomSortable tile={charlestonPassPhantomTile} />
-            </Fragment>
+            <CharlestonPassHandPhantomSortable
+              key={id}
+              tile={charlestonPassPhantomTile}
+            />
           )
         }
-        return renderCollapsingGap(index)
+        return null
       })}
-      {renderCollapsingGap(renderIds.length)}
       {Array.from({ length: emptyCount }, (_, i) => (
         <div key={`empty-${i}`} className="hand-slot--empty" aria-hidden />
       ))}

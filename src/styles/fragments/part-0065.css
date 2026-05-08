@@ -64,12 +64,6 @@
   box-shadow: none;
 }
 
-/* Sort + Undo: 1-tile slot, slightly tighter than Pass / other actions. */
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1,
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c2 {
-  font-size: var(--rack-control-label-fs-tight);
-}
-
 /* Same inner-face metrics as the general `.rack-bottom-tile-cell` block above (see :root). */
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1,
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c2,

@@ -31,7 +31,6 @@
 /* Shared: rack-aligned control typography (deduped from 8 rules) */
 .rack-bottom-bar--wall-game .btn.rack-bottom-tile-cell,
 .rack-bottom-tile-cell,
-.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn,
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__clear,
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__hint,
 .panel--bot-exposures__toolbar-well .app-bottom-center-controls .suggested-hands-tab,
@@ -41,6 +40,10 @@
   letter-spacing: max(0.01em, calc(0.02em + 0.02rem));
   line-height: 1.08;
   padding: var(--rack-control-pad-block) var(--rack-control-pad-inline);
+}
+
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell {
+  font-size: var(--rack-hand-action-label-fs);
 }
 
 /* ---- part-0003.css (from base.css, layout.css, components.css, animations.css) ---- */
@@ -277,14 +280,18 @@
    */
   --rack-control-label-fs: min(
     var(--rack-bottom-action-fs),
-    calc(var(--hand-rack-tile-w) * 0.35)
+    calc(var(--hand-rack-tile-w) * 0.48)
   );
-  --rack-control-label-fs-tight: min(
+  --rack-menu-hamburger-fs: min(
     var(--rack-bottom-action-fs),
-    calc(var(--hand-rack-tile-w) * 0.25)
+    calc(var(--hand-rack-tile-w) * 0.48)
   );
-  --rack-control-pad-inline: max(0.1rem, min(0.24rem, calc(var(--hand-rack-tile-w) * 0.08)));
-  --rack-control-pad-block: max(0.1rem, min(0.2rem, calc(var(--hand-rack-tile-w) * 0.05)));
+  --rack-hand-action-label-fs: min(
+    var(--rack-bottom-action-fs),
+    calc(var(--rack-menu-hamburger-fs) * 1.34)
+  );
+  --rack-control-pad-inline: max(0.08rem, min(0.2rem, calc(var(--hand-rack-tile-w) * 0.07)));
+  --rack-control-pad-block: max(0.08rem, min(0.16rem, calc(var(--hand-rack-tile-w) * 0.042)));
 
   /* Rack action row + bot toolbar (Menu / Clear / Suggested): larger tap targets on phones. */
   --rack-action-touch-min-h: max(48px, calc(var(--hand-rack-tile-h) * 0.52));
@@ -1917,12 +1924,6 @@
   white-space: nowrap;
   /* Base `.btn` uses a soft drop-shadow that reads as a border next to the tile row */
   box-shadow: none;
-}
-
-/* Sort + Undo: 1-tile slot, slightly tighter than Pass / other actions. */
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1,
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c2 {
-  font-size: var(--rack-control-label-fs-tight);
 }
 
 /* Same inner-face metrics as the general `.rack-bottom-tile-cell` block above (see :root). */

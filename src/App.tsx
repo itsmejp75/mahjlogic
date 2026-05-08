@@ -3189,7 +3189,7 @@ export default function App() {
   const [blockingDialog, setBlockingDialog] = useState<GameBlockingDialog | null>(null)
   const sortModeRef = useRef<SortMode | null>(null)
 
-  // ── Undo history ────────────────────────────────────────────────────────────
+  // ── Undo history (rack Undo removed; menu exposes Undo) ─────────────────────
   const roundRef = useRef(round)
   roundRef.current = round
   type HistoryEntry = { round: RoundState; sortMode: SortMode | null }
@@ -4958,7 +4958,21 @@ export default function App() {
       const { active, over } = e
       const aid = String(active.id)
       try {
-        if (!over) return
+        if (!over) {
+          /* Charleston: release outside any droppable → park tile on the right end of the rack. */
+          if (!charlestonDone && hand.some((t) => t.id === aid)) {
+            pushRound((r) => {
+              if (r.charlestonPhase === 'done') return r
+              const idx = r.hand.findIndex((t) => t.id === aid)
+              if (idx < 0) return r
+              const hn = [...r.hand]
+              const [tile] = hn.splice(idx, 1)
+              hn.push(tile)
+              return { ...r, hand: hn, selectedHandTileId: null }
+            })
+          }
+          return
+        }
         const oid = String(over.id)
 
         const exposureFromIdx = parseEastExposureMeldSortId(aid)
@@ -5114,6 +5128,20 @@ export default function App() {
         return { ...r, hand: arrayMove(handNext, handIdx, overHandIdx), selectedHandTileId: null }
       }
 
+      /* Charleston: dropped on hand bank or full pass box → cancel pass, tile to rack end. */
+      if (!blockPass && handIdx >= 0 && oid === HAND_BANK_ID) {
+        const moved = handNext[handIdx]!
+        handNext.splice(handIdx, 1)
+        handNext.push(moved)
+        return { ...r, hand: handNext, selectedHandTileId: null }
+      }
+      if (!blockPass && handIdx >= 0 && oid === PASS_BOX_ID && passToIdx === null) {
+        const moved = handNext[handIdx]!
+        handNext.splice(handIdx, 1)
+        handNext.push(moved)
+        return { ...r, hand: handNext, selectedHandTileId: null }
+      }
+
       if (!blockPass && passFromIdx >= 0 && passToIdx !== null && handIdx < 0) {
         if (passFromIdx === passToIdx) return { ...r, selectedHandTileId: null }
         const moved = passSlotsNext[passFromIdx]!
@@ -5178,6 +5206,7 @@ export default function App() {
     },
     [
       hand,
+      charlestonDone,
       jokerSwapUiActive,
       mainPhase,
       stagedCallTileIds,
@@ -5382,6 +5411,17 @@ export default function App() {
                 }}
               >
                 New Game
+              </button>
+              <button
+                type="button"
+                className="btn app-menu-tray__item"
+                disabled={!canUndo}
+                onClick={() => {
+                  undoAction()
+                  setMenuOpen(false)
+                }}
+              >
+                Undo
               </button>
               <div className="app-menu-modal__diff-block">
                 <div className="app-menu-modal__subhead" id="bot-difficulty-menu-label">
@@ -6270,14 +6310,31 @@ export default function App() {
                               >
                                 Sort
                               </button>
-                              <button
-                                type="button"
-                                className="btn btn--rack-neutral charleston-stop-btn rack-bottom-tile-cell rack-bottom-tile-cell--c2"
-                                disabled={!canUndo}
-                                onClick={undoAction}
+                              <div
+                                ref={menuContainerRef}
+                                className="app-menu-anchor app-menu-anchor--hand-rack rack-bottom-tile-cell rack-bottom-tile-cell--c2"
                               >
-                                Undo
-                              </button>
+                                <button
+                                  type="button"
+                                  className={[
+                                    'btn app-bottom-center-controls__menu-btn',
+                                    menuOpen ? 'app-bottom-center-controls__menu-btn--open' : '',
+                                  ]
+                                    .filter(Boolean)
+                                    .join(' ')}
+                                  aria-label="Menu"
+                                  aria-haspopup="dialog"
+                                  aria-expanded={menuOpen}
+                                  aria-controls={menuOpen ? 'app-menu-modal' : undefined}
+                                  onClick={() => setMenuOpen((v) => !v)}
+                                >
+                                  <span className="hand-rack-menu-hamburger" aria-hidden>
+                                    <span className="hand-rack-menu-hamburger__bar" />
+                                    <span className="hand-rack-menu-hamburger__bar" />
+                                    <span className="hand-rack-menu-hamburger__bar" />
+                                  </span>
+                                </button>
+                              </div>
                               <div
                                 className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell rack-bottom-tile-cell--c3${
                                   wall.length >= OPENING_WALL_TILES ? ' rack-bottom-wall--full' : ''
@@ -6285,21 +6342,7 @@ export default function App() {
                                 style={wallRemainHeatStyle(wall.length)}
                                 aria-label={`${wall.length} tiles remaining in wall`}
                               >
-                                {wall.length}
-                              </div>
-                              <div
-                                ref={menuContainerRef}
-                                className="app-menu-anchor app-menu-anchor--hand-rack rack-bottom-tile-cell rack-bottom-tile-cell--c4-5"
-                              >
-                                <button
-                                  type="button"
-                                  className={['btn app-bottom-center-controls__menu-btn', menuOpen ? 'app-bottom-center-controls__menu-btn--open' : ''].filter(Boolean).join(' ')}
-                                  aria-label="Menu"
-                                  aria-haspopup="dialog"
-                                  aria-expanded={menuOpen}
-                                  aria-controls={menuOpen ? 'app-menu-modal' : undefined}
-                                  onClick={() => setMenuOpen((v) => !v)}
-                                />
+                                <span className="rack-bottom-wall__num">{wall.length}</span>
                               </div>
                               {mahjongButtonEnabled ? (
                                 <button
@@ -6514,14 +6557,31 @@ export default function App() {
                                 >
                                   Sort
                                 </button>
-                                <button
-                                  type="button"
-                                  className="btn btn--rack-neutral charleston-stop-btn rack-bottom-tile-cell rack-bottom-tile-cell--c2"
-                                  disabled={!canUndo}
-                                  onClick={undoAction}
+                                <div
+                                  ref={menuContainerRef}
+                                  className="app-menu-anchor app-menu-anchor--hand-rack rack-bottom-tile-cell rack-bottom-tile-cell--c2"
                                 >
-                                  Undo
-                                </button>
+                                  <button
+                                    type="button"
+                                    className={[
+                                      'btn app-bottom-center-controls__menu-btn',
+                                      menuOpen ? 'app-bottom-center-controls__menu-btn--open' : '',
+                                    ]
+                                      .filter(Boolean)
+                                      .join(' ')}
+                                    aria-label="Menu"
+                                    aria-haspopup="dialog"
+                                    aria-expanded={menuOpen}
+                                    aria-controls={menuOpen ? 'app-menu-modal' : undefined}
+                                    onClick={() => setMenuOpen((v) => !v)}
+                                  >
+                                    <span className="hand-rack-menu-hamburger" aria-hidden>
+                                      <span className="hand-rack-menu-hamburger__bar" />
+                                      <span className="hand-rack-menu-hamburger__bar" />
+                                      <span className="hand-rack-menu-hamburger__bar" />
+                                    </span>
+                                  </button>
+                                </div>
                                 <div
                                   className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell rack-bottom-tile-cell--c3${
                                     wall.length >= OPENING_WALL_TILES ? ' rack-bottom-wall--full' : ''
@@ -6529,21 +6589,7 @@ export default function App() {
                                   style={wallRemainHeatStyle(wall.length)}
                                   aria-label={`${wall.length} tiles remaining in wall`}
                                 >
-                                  {wall.length}
-                                </div>
-                                <div
-                                  ref={menuContainerRef}
-                                  className="app-menu-anchor app-menu-anchor--hand-rack rack-bottom-tile-cell rack-bottom-tile-cell--c4-5"
-                                >
-                                  <button
-                                    type="button"
-                                    className={['btn app-bottom-center-controls__menu-btn', menuOpen ? 'app-bottom-center-controls__menu-btn--open' : ''].filter(Boolean).join(' ')}
-                                    aria-label="Menu"
-                                    aria-haspopup="dialog"
-                                    aria-expanded={menuOpen}
-                                    aria-controls={menuOpen ? 'app-menu-modal' : undefined}
-                                    onClick={() => setMenuOpen((v) => !v)}
-                                  />
+                                  <span className="rack-bottom-wall__num">{wall.length}</span>
                                 </div>
                                 <button
                                   type="button"
