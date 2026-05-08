@@ -11,10 +11,12 @@
 /* Slot 14: East discard staging (same column as incoming bot discard when not staging). */
 .exposure-rack__slot--east-discard-slot {
   justify-content: center;
+  align-items: center;
 }
 
 .exposure-rack__slot--east-discard-slot .east-discard-staging--inline {
   margin-inline: auto;
+  margin-block: auto;
 }
 
 /* Inline discard slot: same border + fill as call-initiate / pass-box */

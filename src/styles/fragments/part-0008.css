@@ -12,7 +12,8 @@
 /* Hand tray: side inset lives on .hand-row so left/right tile-edge gaps stay symmetric. */
 .panel--hand .panel-hand-rack__hand-tray .hand-bank {
   padding-block: var(--hand-rack-container-pad-block, 2px);
-  padding-inline: 0;
+  padding-inline-start: var(--hand-rack-content-offset-x, 1px);
+  padding-inline-end: 0;
   box-sizing: border-box;
   height: var(
     --hand-rack-outer-h,

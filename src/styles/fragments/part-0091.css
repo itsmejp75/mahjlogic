@@ -36,6 +36,7 @@
 }
 
 .east-discard-staging--inline .east-discard-staging__tile,
+.east-discard-staging--inline .east-discard-staging__tile > div,
 .east-discard-staging--inline .tile-face {
   width: 100%;
   height: 100%;

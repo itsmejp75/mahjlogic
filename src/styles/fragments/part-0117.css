@@ -49,6 +49,7 @@
   /* The tray border is the protected area; tiles fill the content box right up to that rim. */
   --hand-rack-rim-inline: 2px;
   --hand-rack-rim-block: 2px;
+  --hand-rack-content-offset-x: calc(var(--hand-rack-rim-inline) / 2);
   --hand-rack-container-pad-block: 2px;
   --hand-top-rack-tile-w: calc(
     (14 * var(--hand-rack-tile-w) + 2 * var(--hand-rack-tray-inset-inline) - var(--hand-rack-rim-inline)) /
