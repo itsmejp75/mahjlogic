@@ -9,41 +9,56 @@
 
 
 /*
- * Same shell + outer height as `.panel--bot-exposures__toolbar-well`: full inner pad on the
- * tray + min inner row = `--suggested-tab-h` (Menu / Clear row). Horizontal padding stays 0 so
- * the 14-column bar still lines up with tiles; `--bot-exposure-inner-pad` comes from `.app-dnd-frame`.
+ * Hand action trays: part-0115 applies `--dark-tray-rim-*` — 1px border plus stacked inset shadows.
+ * Match the tile-rack rim geometry so button content is snug to the visible inner edge without
+ * painting over the border/highlight. Applies both during Charleston and after it.
  */
-.panel--hand .panel-hand-rack__action-well {
+.panel--hand .panel-hand-rack__action-well,
+.panel--hand .panel-hand-rack__charleston-actions-well {
   justify-content: center;
   width: 100%;
+  min-width: 0;
   box-sizing: border-box;
-  padding-block: var(--hand-button-row-pad-block, var(--bot-exposure-inner-pad));
+  padding-block: var(--hand-rack-rim-block, 2px);
+  /* Zero inline padding so the Sort button's left edge sits flush against the inside of
+   * the left border — same x as tile 1 above. Pass/Discard's right edge does the same on
+   * the right. The 14-column action grid width (`--hand-action-strip-w`
+   * = 14 * face-w + 13 * gap = 100cqi - 2px) fits this content box edge-to-edge. */
   padding-inline: 0;
-  min-height: calc(2 * var(--hand-button-row-pad-block, var(--bot-exposure-inner-pad)) + var(--hand-button-row-h, var(--suggested-tab-h)));
+  min-height: calc(
+    2 * var(--hand-rack-rim-block, 2px)
+    + var(--hand-button-row-h, var(--rack-action-touch-min-h))
+    + 2 * 1px
+  );
   position: relative;
   z-index: 1;
   background: var(--window-inner-surface);
-  border-radius: calc(var(--rack-tile-btn-border-radius) + var(--hand-button-row-pad-block, var(--bot-exposure-inner-pad)));
+  border-radius: calc(var(--rack-tile-btn-border-radius) + var(--hand-rack-rim-block, 2px));
   overflow: hidden;
 }
 
 /*
- * Charleston Sort→Pass row: same min-height rhythm as `.panel--bot-exposures__toolbar-well`.
- * Keep top/bottom inset symmetric so the gap below Pass matches the space above it.
+ * TEMP-DEBUG: strip the action wells' rim chrome (1px border + inset shadows) while we
+ * verify button-row alignment, but keep the dark background so the row is still visible
+ * against the panel surface. Corner radius matches the BUTTONS inside (not the tile-face
+ * radius the bank above uses) so the well looks like a button-shaped tray that holds
+ * button-shaped controls.
+ *
+ *   --rack-tile-btn-border-radius : ~0.68rem  ← button corner radius (used here on well)
+ *   --tile-face-border-radius     : ~0.35rem  ← tile corner radius (used by `.hand-bank`)
+ *
+ * The previous formula `calc(--rack-tile-btn-border-radius + --hand-rack-rim-block)`
+ * added 2px to compensate for the rim border so the well's INNER curve matched the
+ * button's OUTER curve concentrically. With the rim border removed, that compensation
+ * is no longer needed — well outer = well content edge.
+ *
+ * To restore the rim border + inset shadows, delete this rule (the part-0115 rim + the
+ * original `border-radius` declaration above re-take effect immediately).
  */
+.panel--hand .panel-hand-rack__action-well,
 .panel--hand .panel-hand-rack__charleston-actions-well {
-  justify-content: center;
-  width: 100%;
-  box-sizing: border-box;
-  padding-top: var(--hand-button-row-pad-block, var(--bot-exposure-inner-pad));
-  padding-inline: 0;
-  padding-bottom: var(--hand-button-row-pad-block, var(--bot-exposure-inner-pad));
-  min-height: calc(2 * var(--hand-button-row-pad-block, var(--bot-exposure-inner-pad)) + var(--hand-button-row-h, var(--rack-action-touch-min-h)));
-  position: relative;
-  z-index: 1;
+  border: none;
   background: var(--window-inner-surface);
-  border-radius: calc(var(--rack-tile-btn-border-radius) + var(--hand-button-row-pad-block, var(--bot-exposure-inner-pad)));
-  /* Don’t clip Pass / round-label when they wrap or sit near the tray rim. */
-  overflow-x: visible;
-  overflow-y: visible;
+  border-radius: var(--rack-tile-btn-border-radius);
+  box-shadow: none;
 }

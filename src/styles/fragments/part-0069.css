@@ -79,14 +79,6 @@
   );
 }
 
-/*
- * Default `.rack-bottom-tile-cell` uses `overflow: hidden` (pill mask) — clips single-line Pass / title.
- * Keep wall gem clipped; allow Pass + round label to paint past the pill when needed (still nowrap).
- */
-.rack-bottom-bar--charleston .btn.charleston-pass-btn.rack-bottom-tile-cell:not(.suggested-hands-tab) {
-  overflow: visible;
-}
-
 /* Wall remaining count: same scale ratio as default bar (`--rack-bottom-action-fs` × 2.048). */
 .rack-bottom-bar--charleston .rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell {
   font-size: min(1.792rem, calc(var(--charleston-pass-label-fs) * 2.048));

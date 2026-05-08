@@ -46,14 +46,23 @@
    * Keep the rack column width on `--hand-rack-tile-w`, but draw player tiles
    * slightly wider so the 14-face strip consumes the right-side tray slack.
    */
-  /* The tray border is the protected area; tiles fill the content box right up to that rim. */
+  /*
+   * Tray inline chrome: 1px border on each side only (`--hand-rack-rim-inline` = 2px total).
+   * No inner padding — tile 1's left edge sits flush against the inside of the left border
+   * and tile 14's right edge sits flush against the inside of the right border, the same
+   * way the original right edge looked. The action-well shares the same chrome so the
+   * Sort button's left edge matches tile 1, and Pass/Discard's right edge matches tile 14.
+   *
+   * Tile strip = 100cqi − 2px (just the border) = bank/well content box exactly. No
+   * overflow, no gap. The tile-face/button height stays locked to the 4:3 (1.3333) aspect
+   * via `--hand-top-rack-tile-h` below — width is the only thing that changes here.
+   */
   --hand-rack-rim-inline: 2px;
   --hand-rack-rim-block: 2px;
-  --hand-rack-content-offset-x: calc(var(--hand-rack-rim-inline) / 2);
+  --hand-rack-content-offset-x: 0px;
   --hand-rack-container-pad-block: 2px;
   --hand-top-rack-tile-w: calc(
-    (14 * var(--hand-rack-tile-w) + 2 * var(--hand-rack-tray-inset-inline) - var(--hand-rack-rim-inline)) /
-      14
+    (100cqi - var(--hand-rack-rim-inline) - 13 * var(--player-rack-face-gap)) / 14
   );
   --hand-top-rack-tile-h: calc(var(--hand-top-rack-tile-w) * 1.3333);
   --hand-rack-outer-h: calc(
@@ -72,6 +81,13 @@
   );
   --rack-tile-w: var(--hand-rack-fill-tile-w);
   --rack-tile-h: var(--hand-rack-fill-tile-h);
+  --hand-action-face-gap: var(--player-rack-face-gap);
+  --hand-action-face-w: var(--hand-top-rack-tile-w);
+  --hand-action-strip-w: calc(14 * var(--hand-action-face-w) + 13 * var(--hand-action-face-gap));
+  --hand-action-span-1: var(--hand-action-face-w);
+  --hand-action-span-2: calc(2 * var(--hand-action-face-w) + var(--hand-action-face-gap));
+  --hand-action-span-3: calc(3 * var(--hand-action-face-w) + 2 * var(--hand-action-face-gap));
+  --hand-action-span-7: calc(7 * var(--hand-action-face-w) + 6 * var(--hand-action-face-gap));
   --rack-tile-btn-inner-1: calc(var(--hand-rack-fill-tile-w) - 2 * var(--rack-tile-face-bw));
   --rack-tile-btn-inner-2: calc(
     2 * var(--hand-rack-fill-tile-w) + var(--player-rack-face-gap) - 2 * var(--rack-tile-face-bw)

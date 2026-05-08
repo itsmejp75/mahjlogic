@@ -266,3 +266,94 @@
     height: calc(100% + var(--mobile-web-lower-edge-pull-down));
   }
 }
+
+/*
+ * TEMP-DEBUG: strip the rim chrome from ALL THREE hand-panel rows (exposure / hand-bank /
+ * action-well) so we can verify alignment from a clean slate. Each row has up to three
+ * border layers; all need disabling:
+ *
+ *   1. Direct background + radius from earlier fragments
+ *      - hand-bank          → part-0075.css   (background + 0.55rem radius — kept)
+ *      - exposure-rack      → part-0088.css   (background + tile-face radius — kept;
+ *                                              its 1px border is killed by this rule)
+ *      - action-well        → part-0007.css   (background + button radius — set by the
+ *                                              TEMP-DEBUG override block in that file)
+ *   2. Shared rim border + inset shadows from part-0115.css (the 4-color border-top/
+ *      inline/bottom set). Box-shadow already disabled in part-0115; this rule kills
+ *      the border. Selector list there mixes 1-class (`.hand-bank`), 2-class (action
+ *      wells), and 4-class (exposure rack) selectors — all are beaten here by either
+ *      higher specificity OR cascade order (this fragment loads last in animations.css).
+ *   3. ::after rim overlay (exposure rack only — part-0122.css). Box-shadow already
+ *      disabled there; this rule hides the pseudo entirely so its 1px border can't
+ *      paint either.
+ *
+ * Backgrounds and corner radii are intentionally left intact so each row still reads as
+ * a tray whose corners match its CHILDREN: tile-face radius for the two tile rows and
+ * button radius for the action row.
+ *
+ * To restore the framed look:
+ *   - Delete this rule.
+ *   - Delete the action-well TEMP-DEBUG override block in part-0007.css.
+ *   - Replace `box-shadow: none;` in part-0115.css with the four `var(--dark-tray-rim-shadow-*)`
+ *     tokens stacked.
+ *   - Replace `box-shadow: none;` in part-0122.css with the same four tokens.
+ */
+.panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass),
+.panel--hand .rack-stage__rack-top .exposure-rack.exposure-rack--charleston-pass,
+.panel--hand .panel-hand-rack__hand-tray .hand-bank,
+.panel--hand .panel-hand-rack__action-well,
+.panel--hand .panel-hand-rack__charleston-actions-well {
+  border: none;
+  box-shadow: none;
+}
+
+.panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass)::after,
+.panel--hand .rack-stage__rack-top .exposure-rack.exposure-rack--charleston-pass::after {
+  display: none;
+}
+
+/*
+ * TEMP-DEBUG (paired with the rim-removal block above): with the 1px tray border + inner
+ * pad gone in both axes, every chrome-related length token in the part-0117.css panel
+ * declaration needs to follow, otherwise the formulas keep reserving space for chrome
+ * that no longer paints. Two distinct symptoms motivated this:
+ *
+ *   HORIZONTAL — gap on the right of the exposure row / pass-box / east-discard slot
+ *     The tile-width formula `(100cqi - --hand-rack-rim-inline - 13·gap) / 14` still
+ *     subtracted 2px for the (now-absent) border, so 14·tile-w + 13·gap came out 2px
+ *     short of 100cqi. The hand-row and action-row already use `repeat(14, 1fr)` grids
+ *     so they auto-fit and didn't show the gap; the exposure rack uses flex with
+ *     explicit widths off `--rack-tile-w` so it inherited the stale formula.
+ *
+ *   VERTICAL — 6px of dead space inside every row
+ *     `--hand-rack-outer-h = tile-h + --hand-rack-rim-block + 2·--hand-rack-container-pad-block`
+ *     reserved 2px for the vertical border + 4px for inner padding. With the border
+ *     gone, that's 6px of unused space inside hand-bank and exposure rack. The action
+ *     well's `min-height` formula has the same problem PLUS a hardcoded `+ 2·1px` for
+ *     the (also now-absent) inset shadow, so it was 8px taller than its buttons.
+ *
+ * Zeroing all three tokens at the source recomputes every dependent calc():
+ *
+ *   tile-w  = (100cqi - 0 - 13·gap) / 14         → 14·tile-w + 13·gap = 100cqi exactly
+ *   outer-h = tile-h + 0 + 2·0 = tile-h          → hand-bank + exposure-rack hug tiles
+ *
+ * Action well needs a small extra push because its min-height has the `+ 2·1px` literal
+ * that's independent of any token; pin it to `--hand-button-row-h` directly.
+ *
+ * Variables are declared on `.panel--hand` (specificity 0,1,0) — overriding at source
+ * is enough since every dependent rule reads through the cascade.
+ *
+ * To restore: delete this rule (the part-0117 declarations re-take effect, matching the
+ * restored 1px·2 border + 2px inner pad chrome).
+ */
+.panel--hand {
+  --hand-rack-rim-inline: 0px;
+  --hand-rack-rim-block: 0px;
+  --hand-rack-container-pad-block: 0px;
+}
+
+.panel--hand .panel-hand-rack__action-well,
+.panel--hand .panel-hand-rack__charleston-actions-well {
+  padding-block: 0;
+  min-height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
+}

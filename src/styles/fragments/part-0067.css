@@ -12,6 +12,52 @@
   box-shadow: none;
 }
 
+.panel--hand .rack-bottom-bar--tile-grid .rack-bottom-tile-cell,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell,
+.panel--hand .rack-bottom-bar--tile-grid .rack-bottom-tile-cell:disabled,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:disabled,
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn,
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:disabled,
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:hover,
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn--open,
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn--open:hover {
+  box-shadow: none;
+}
+
+/*
+ * Hand action row cells: size from the grid track, NOT from a `--hand-action-face-w` token
+ * computed independently. The well's `.rack-bottom-bar--tile-grid` (part-0017) uses
+ * `grid-template-columns: repeat(14, 1fr)`, and each button class (`--c1`, `--c4-5`, etc.)
+ * sets its `grid-column` span (part-0019, part-0021). With `width: 100%` the button stretches
+ * to fill its spanned columns exactly — same column tracks the tile faces above use, so
+ * Sort lines up with tile 1, Pass/Discard's right edge lines up with tile 14, and every
+ * 2-/3-/7-tile-wide button matches the painted span of the tile faces above.
+ *
+ * Border-box keeps the global `.btn` padding (from part-0063 `.btn`) inside the
+ * column instead of spilling past the column track on the right. `justify-self: stretch`
+ * is the grid default; left here as `start` for parity with prior behavior, but it has
+ * no visible effect when the cell is already 100% wide.
+ */
+.panel--hand .rack-bottom-bar--tile-grid > .rack-bottom-tile-cell,
+.panel--hand .rack-bottom-bar--tile-grid > .btn.rack-bottom-tile-cell {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: none;
+  margin-inline-start: 0;
+  justify-self: stretch;
+  width: 100%;
+}
+
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn {
+  box-sizing: border-box;
+}
+
+.panel--hand .rack-bottom-bar--tile-grid .rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell {
+  padding: 0;
+  border: none;
+  box-shadow: none;
+}
+
 /* No pressed/inset or hover tint — true fills stay visible while you tune palette. */
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:active:not(:disabled) {
   transform: none;

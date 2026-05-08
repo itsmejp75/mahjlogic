@@ -20,8 +20,8 @@
 .panel--hand .exposure-rack {
   justify-content: flex-start;
   padding-block: var(--hand-rack-container-pad-block, 2px);
-  padding-inline-start: var(--hand-rack-content-offset-x, 1px);
-  padding-inline-end: 0;
+  /* Zero inline padding — see part-0008 .hand-bank and part-0117 tile-w formula. */
+  padding-inline: 0;
   width: 100%;
   height: var(--hand-rack-outer-h, calc(var(--rack-tile-h) + var(--hand-rack-rim-block, 2px)));
   min-height: var(--hand-rack-outer-h, calc(var(--rack-tile-h) + var(--hand-rack-rim-block, 2px)));

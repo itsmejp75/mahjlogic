@@ -70,7 +70,11 @@
     margin-left: 0;
   }
 
-  .panel--hand .rack-bottom-bar--tile-grid,
+  .panel--hand .rack-bottom-bar--tile-grid {
+    padding-inline: 0;
+    margin-left: 0;
+  }
+
   .panel--hand .rack-bottom-bar--wall-game {
     width: 100%;
     padding-inline: var(--rack-tray-inset-inline);

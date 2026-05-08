@@ -112,12 +112,11 @@
 }
 
 /*
- * Hand row: hand tiles are borderless and fill each slot (--rack-tile-w). The rules above size
- * buttons to the *inner* face of a bordered .tile-face; in the hand panel, stretch to the full
- * grid area so left/right edges line up with the tile faces in the hand row.
+ * Hand action rows use the same face-edge contract as the rack above: a c1 item fills
+ * one column, c4-5 fills two columns plus one grid gap, c12-14 fills three plus two gaps.
  */
-.panel--hand .rack-bottom-bar--tile-grid > .rack-bottom-tile-cell,
-.panel--hand .rack-bottom-bar--tile-grid > .btn.rack-bottom-tile-cell {
+.panel--hand .rack-bottom-bar--tile-grid > .rack-bottom-tile-cell {
+  box-sizing: border-box;
   width: 100%;
   max-width: none;
   margin-inline-start: 0;

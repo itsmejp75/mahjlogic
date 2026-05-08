@@ -228,11 +228,10 @@
   border-top-color: var(--dark-tray-rim-border-top);
   border-inline-color: var(--dark-tray-rim-border-inline);
   border-bottom-color: var(--dark-tray-rim-border-bottom);
-  box-shadow:
-    var(--dark-tray-rim-shadow-up-1),
-    var(--dark-tray-rim-shadow-up-2),
-    var(--dark-tray-rim-shadow-down-1),
-    var(--dark-tray-rim-shadow-down-2);
+  /* TEMP-DEBUG: inset rim highlight/shadow disabled while diagnosing tile/button row alignment.
+   * To restore the recessed bevel, replace `none` with the four `var(--dark-tray-rim-shadow-*)`
+   * tokens stacked (was: shadow-up-1, shadow-up-2, shadow-down-1, shadow-down-2). */
+  box-shadow: none;
 }
 
 /*

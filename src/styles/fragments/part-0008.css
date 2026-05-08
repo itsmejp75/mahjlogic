@@ -12,8 +12,10 @@
 /* Hand tray: side inset lives on .hand-row so left/right tile-edge gaps stay symmetric. */
 .panel--hand .panel-hand-rack__hand-tray .hand-bank {
   padding-block: var(--hand-rack-container-pad-block, 2px);
-  padding-inline-start: var(--hand-rack-content-offset-x, 1px);
-  padding-inline-end: 0;
+  /* Zero inline padding so tile 1 is flush against the inside of the left border (mirrors
+   * tile 14 against the right border). Tile width in part-0117.css = (100cqi − border) / 14,
+   * which is the bank content box width — fits with no overflow on either end. */
+  padding-inline: 0;
   box-sizing: border-box;
   height: var(
     --hand-rack-outer-h,
@@ -28,8 +30,22 @@
 }
 
 .panel--hand .panel-hand-rack__hand-tray .hand-row {
-  /* `--rack-tile-w` / `--rack-tile-h`: see `part-0118.css` (same CQ + scale as exposure row). */
-  /* Fill the hand bank edge-to-edge with 14 faces + 13 gaps. */
+  /* `--rack-tile-w` / `--rack-tile-h`: see `part-0118.css` (same CQ + scale as exposure row).
+   *
+   * GRID (not flex) so the row's full inline content area is split into 14 mathematically
+   * equal `1fr` columns by the browser. With explicit per-slot widths (the previous `flex`
+   * + `width: var(--rack-tile-w)` setup), each of the 14 fractional-pixel widths rounded
+   * independently and the lost sub-pixels piled up as visible slack on the right edge of
+   * tile 14 (and pushed tile 1 against the left border). Grid `1fr` distributes pixels
+   * across all columns once, with no rounding accumulation — both ends of the row sit
+   * the same distance off the bank's inner border edge.
+   *
+   * Slot widths are normalized to `100%` of their grid track in the rule below. The base
+   * `display: flex` + `gap: var(--rack-tile-gap)` from part-0075 are overridden here. */
+  display: grid;
+  grid-template-columns: repeat(14, 1fr);
+  gap: var(--player-rack-face-gap);
+  align-items: center;
   padding-inline: 0;
   box-sizing: border-box;
   margin-left: 0;
@@ -37,6 +53,14 @@
   max-width: 100%;
   min-width: 0;
   overflow-x: clip;
-  justify-content: flex-start;
-  flex-shrink: 0;
+}
+
+/* Slot/wrap widths must come from the grid track, not the original explicit
+ * `width: var(--rack-tile-w)` in part-0075 (which would re-introduce sub-pixel drift). */
+.panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap,
+.panel--hand .panel-hand-rack__hand-tray .hand-row > .hand-slot--empty,
+.panel--hand .panel-hand-rack__hand-tray .hand-row > .hand-slot--collapse {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
 }

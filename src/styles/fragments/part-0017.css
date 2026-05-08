@@ -31,17 +31,28 @@
   grid-row: 1;
 }
 
-/* Same horizontal origin as the 14 hand slots: `.hand-row` uses this inset + 2px nudge (see
-   above). A plain `14 * tile + 13 * gap` bar centered in the tray is shifted by ~0.44rem, so
-   every column and every multi-tile control looked one tile off or “too small”. */
+/* Hand action grids: 14 columns + the same 13 gaps as the rack above.
+ *
+ * `repeat(14, 1fr)` (not explicit `--hand-action-face-w` per column) so the well's full
+ * content area is split into 14 mathematically equal columns by the browser — same fix
+ * applied to `.hand-row` in part-0008. With per-column explicit widths, each of the 14
+ * fractional-pixel column widths rounded independently and the lost sub-pixels piled up
+ * as visible slack on the right edge of the rightmost button (Pass/Discard). 1fr columns
+ * distribute pixels across all tracks once, with no rounding accumulation.
+ *
+ * Buttons span their grid columns via `.rack-bottom-tile-cell--cN` rules in part-0019 +
+ * part-0021 (e.g. `--c4-5 { grid-column: 4 / 6 }`); each button's width is `100%` of its
+ * spanned cells (set in part-0067), so buttons line up with the tile-face columns above. */
 .panel--hand .rack-bottom-bar--tile-grid {
+  grid-template-columns: repeat(14, 1fr);
+  column-gap: var(--hand-action-face-gap);
   width: 100%;
-  max-width: none;
+  max-width: 100%;
   box-sizing: border-box;
-  padding-inline: var(--hand-rack-tray-inset-inline);
+  padding-inline: 0;
   /* Clear base `margin-inline: auto` so the grid tracks line up with the tile-face edges above. */
   margin: 0;
-  transform: translateX(var(--hand-rack-action-row-nudge-x));
+  transform: none;
 }
 
 /*
