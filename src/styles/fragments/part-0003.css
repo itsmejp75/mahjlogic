@@ -202,17 +202,14 @@
     + var(--rack-tile-face-bw)
   );
   /*
-   * Main action bar (`.panel--hand .rack-bottom-bar--tile-grid`): horizontal center of Swap
-   * (`grid-column: 6 / 8`, two face-width slots) from the same origin as play-split inner-left
-   * (after `--app-h-pad`): hand + discard panel inline pad, bar pad + -2px/+1px nudge, then 6
-   * tile tracks + 5.5 gaps to the span midpoint.
+   * Main action bar: horizontal center of the Call / joker-Swap shared span (`grid-column: 9 / 11`).
    */
   --rack-swap-center-x-from-stage-content: calc(
     var(--hand-window-pad-inline)
     + var(--rack-tray-inset-inline)
     - 1px
-    + 6 * var(--hand-rack-tile-w)
-    + 5.5 * var(--player-rack-face-gap)
+    + 9 * var(--hand-rack-tile-w)
+    + 8.5 * var(--player-rack-face-gap)
   );
   /* Menu: 2 columns — inner face (matches bottom action bar) */
   --menu-btn-w: var(--rack-tile-btn-inner-2);

@@ -101,13 +101,15 @@
   filter: none;
 }
 
-/* Main rack: Swap (joker swap) — #6A0DAD */
-.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7:not(:disabled) {
+/* Main rack: Joker swap shares the Call column — #6A0DAD (see `.btn--joker-swap-action`). */
+.rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled) {
   background: #6a0dad;
   color: var(--color-white);
 }
 
-.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7:disabled {
+.rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled {
   background: #6a0dad;
   color: var(--color-white);
   opacity: 0.5;

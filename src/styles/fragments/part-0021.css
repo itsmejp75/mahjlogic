@@ -12,6 +12,11 @@
   grid-column: 10 / 12;
 }
 
+/* Wall count: column 11, immediately left of Discard (12–14). */
+.rack-bottom-tile-cell--c11 {
+  grid-column: 11 / 12;
+}
+
 /* Last two hand slots (tiles 13–14); negative lines stay correct if slot count changes. */
 
 /* Charleston: Pass = cols 12–14 */
@@ -32,6 +37,7 @@
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c2,
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c3,
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c5,
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c11,
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c12 {
   width: var(--rack-tile-btn-inner-1);
   max-width: var(--rack-tile-btn-inner-1);
@@ -41,6 +47,7 @@
 
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c3-4,
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c4-5,
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c5-6,
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c6-7,
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c8-9,
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c10-11,

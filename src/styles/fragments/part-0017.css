@@ -13,8 +13,8 @@
   box-sizing: border-box;
 }
 
-/* 14 hand slots: Sort=1, Undo=2, empty 3, MJ 4–5, Swap 6–7, Call 8–9, wall=10, empty 11, primary 12–14
-   (primary matches Charleston pass width: three slots). Fixed column widths (same as tiles). */
+/* 14 hand slots: Sort=1, Menu=2, HANDS=3–4 (optional), MAHJ=5–6, LOGIC=7–8, Call *or* Swap=9–10, wall=11, Discard=12–14
+   (Call and joker Swap share 9–10; Discard matches Charleston pass width: three slots). */
 .rack-bottom-bar--tile-grid {
   --rack-hand-slot-count: 14;
   display: grid;

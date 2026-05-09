@@ -202,10 +202,6 @@ const LS_KEY_BOT_DIFFICULTY = 'mahjlogic.botDifficulty'
 const LS_KEY_TILE_GRAPHICS = 'mahjlogic.tileGraphics'
 /** One-time migration: users who had Classic as the old default are moved to Prism. */
 const LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED = 'mahjlogic.tileGraphicsDefaultMigrated'
-const LS_KEY_JOKER_SWAP_HINT = 'mahjlogic.jokerSwapHintEnabled'
-/** Former “Joker Flash” preference; read once to seed `LS_KEY_JOKER_SWAP_HINT` if missing. */
-const LS_KEY_JOKER_FLASH_LEGACY = 'mahjlogic.jokerFlashEnabled'
-const JOKER_SWAP_HINT_LABEL = 'Joker swap hint'
 /** Training / practice: confirm before dead hand from bad call, bad Mah Jongg, or hopeless discard. */
 const LS_KEY_DEAD_HAND_WARNINGS = 'mahjlogic.deadHandWarningsEnabled'
 const DEAD_HAND_WARNINGS_LABEL = 'Dead hand warnings'
@@ -393,22 +389,6 @@ function readBotDifficultyFromStorage(): BotDifficulty {
     /* ignore */
   }
   return DEFAULT_BOT_DIFFICULTY
-}
-
-function readJokerSwapHintFromStorage(): boolean {
-  try {
-    const v = localStorage.getItem(LS_KEY_JOKER_SWAP_HINT)
-    if (v != null) return v === 'true' || v === '1'
-    const legacy = localStorage.getItem(LS_KEY_JOKER_FLASH_LEGACY)
-    if (legacy != null) {
-      const on = legacy === 'true' || legacy === '1'
-      localStorage.setItem(LS_KEY_JOKER_SWAP_HINT, on ? 'true' : 'false')
-      return on
-    }
-  } catch {
-    /* ignore */
-  }
-  return true
 }
 
 function readDeadHandWarningsFromStorage(): boolean {
@@ -2250,7 +2230,6 @@ export default function App() {
   }, [cardPatterns])
 
   const [tileGraphics, setTileGraphics] = useState<TileGraphics>(() => readTileGraphicsFromStorage())
-  const [jokerSwapHintEnabled, setJokerSwapHintEnabled] = useState<boolean>(() => readJokerSwapHintFromStorage())
   const [deadHandWarningsEnabled, setDeadHandWarningsEnabled] = useState<boolean>(() =>
     readDeadHandWarningsFromStorage(),
   )
@@ -2336,18 +2315,6 @@ export default function App() {
     })
   }, [])
 
-  const toggleJokerSwapHint = useCallback(() => {
-    setJokerSwapHintEnabled((v) => {
-      const next = !v
-      try {
-        localStorage.setItem(LS_KEY_JOKER_SWAP_HINT, next ? 'true' : 'false')
-      } catch {
-        /* ignore */
-      }
-      return next
-    })
-  }, [])
-
   const toggleDeadHandWarnings = useCallback(() => {
     setDeadHandWarningsEnabled((v) => {
       const next = !v
@@ -2413,10 +2380,6 @@ export default function App() {
       const t = readTileGraphicsFromStorage()
       return prev === t ? prev : t
     })
-    setJokerSwapHintEnabled((prev) => {
-      const h = readJokerSwapHintFromStorage()
-      return prev === h ? prev : h
-    })
     setDeadHandWarningsEnabled((prev) => {
       const d = readDeadHandWarningsFromStorage()
       return prev === d ? prev : d
@@ -2475,9 +2438,6 @@ export default function App() {
       } else if (e.key === LS_KEY_TILE_GRAPHICS) {
         if (e.newValue == null) return
         if (isTileGraphics(e.newValue)) setTileGraphics(e.newValue)
-      } else if (e.key === LS_KEY_JOKER_SWAP_HINT) {
-        if (e.newValue == null) return
-        setJokerSwapHintEnabled(e.newValue === 'true' || e.newValue === '1')
       } else if (e.key === LS_KEY_DEAD_HAND_WARNINGS) {
         if (e.newValue == null) return
         const on = e.newValue === 'true' || e.newValue === '1'
@@ -3347,12 +3307,7 @@ export default function App() {
 
   /** Joker swap hint (dock-bounce): only starts during East's discard turn. */
   const activeJokerSwapHintBounceIds = useMemo(() => {
-    if (
-      mainPhase !== 'east-discard' ||
-      !jokerSwapHintEnabled ||
-      !jokerSwapUiActive ||
-      !animationsEnabled
-    ) {
+    if (mainPhase !== 'east-discard' || !jokerSwapUiActive || !animationsEnabled) {
       return null
     }
     const hand_ = collectHandTileIdsSwappableForJokers(
@@ -3369,16 +3324,7 @@ export default function App() {
     )
     if (hand_.size === 0 && jokers.size === 0) return null
     return { hand: hand_, jokers }
-  }, [
-    mainPhase,
-    jokerSwapHintEnabled,
-    jokerSwapUiActive,
-    animationsEnabled,
-    hand,
-    pendingEastDiscardTile,
-    botExposures,
-    eastExposures,
-  ])
+  }, [mainPhase, jokerSwapUiActive, animationsEnabled, hand, pendingEastDiscardTile, botExposures, eastExposures])
 
   const [settlingJokerSwapHintBounceIds, setSettlingJokerSwapHintBounceIds] = useState<{
     hand: ReadonlySet<string>
@@ -5297,6 +5243,9 @@ export default function App() {
     : eastMainSortableIds ?? handIds
 
   const mainGameCallDisabled = mainPhase !== 'bot-turn' || !activeBotDiscard
+  /** Shared Call / Swap cell: Swap on your turn (draw & discard flow); Call on opponents’ discards. */
+  const mainBarSharedSlotIsJokerSwap =
+    mainPhase === 'east-discard' || mainPhase === 'call-staging'
   const mahjongButtonEnabled =
     charlestonDone &&
     (mainPhase === 'east-discard' ||
@@ -5675,19 +5624,6 @@ export default function App() {
                   />
                   <span className="app-menu-modal__label" id="app-menu-label-mahjong-hint">
                     {MAHJONG_HINT_LABEL}
-                  </span>
-                </div>
-                <div className="app-menu-modal__row app-menu-modal__row--toggle">
-                  <AppMenuSettingSwitch
-                    labelId="app-menu-label-joker-swap-hint"
-                    pressed={jokerSwapHintEnabled}
-                    onToggle={toggleJokerSwapHint}
-                  />
-                  <span
-                    className="app-menu-modal__label"
-                    id="app-menu-label-joker-swap-hint"
-                  >
-                    {JOKER_SWAP_HINT_LABEL}
                   </span>
                 </div>
               </div>
@@ -6188,7 +6124,7 @@ export default function App() {
       <div
         className="app-layout"
         data-animations={animationsEnabled ? 'on' : 'off'}
-        data-joker-swap-hint={jokerSwapHintEnabled ? 'on' : 'off'}
+        data-joker-swap-hint="on"
       >
         <div className="app-main">
           <div
@@ -6357,17 +6293,6 @@ export default function App() {
                                   HANDS
                                 </button>
                               ) : null}
-                              <div
-                                className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell ${
-                                  showSuggestedHandsPanel ? 'rack-bottom-tile-cell--c5' : 'rack-bottom-tile-cell--c3'
-                                }${wall.length >= OPENING_WALL_TILES ? ' rack-bottom-wall--full' : ''}${
-                                  wall.length === 0 ? ' rack-bottom-wall--empty' : ''
-                                }`}
-                                style={wallRemainHeatStyle(wall.length)}
-                                aria-label={`${wall.length} tiles remaining in wall`}
-                              >
-                                <span className="rack-bottom-wall__num">{wall.length}</span>
-                              </div>
                               {mahjongButtonEnabled ? (
                                 <button
                                   type="button"
@@ -6628,21 +6553,10 @@ export default function App() {
                                     HANDS
                                   </button>
                                 ) : null}
-                                <div
-                                  className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell ${
-                                    showSuggestedHandsPanel ? 'rack-bottom-tile-cell--c5' : 'rack-bottom-tile-cell--c3'
-                                  }${wall.length >= OPENING_WALL_TILES ? ' rack-bottom-wall--full' : ''}${
-                                    wall.length === 0 ? ' rack-bottom-wall--empty' : ''
-                                  }`}
-                                  style={wallRemainHeatStyle(wall.length)}
-                                  aria-label={`${wall.length} tiles remaining in wall`}
-                                >
-                                  <span className="rack-bottom-wall__num">{wall.length}</span>
-                                </div>
                                 <button
                                   type="button"
                                   className={[
-                                    'btn btn--mahjong rack-bottom-tile-cell rack-bottom-tile-cell--c6-7',
+                                    'btn btn--mahjong rack-bottom-tile-cell rack-bottom-tile-cell--c5-6',
                                     mahjongButtonEnabled && mahjongWinLegallyAvailable ? 'btn--mahjong-hint' : '',
                                   ]
                                     .filter(Boolean)
@@ -6659,32 +6573,55 @@ export default function App() {
                                 </button>
                                 <button
                                   type="button"
-                                  className="btn btn--rack-neutral rack-bottom-tile-cell rack-bottom-tile-cell--c8-9"
-                                  onClick={executeJokerSwapFromSlot}
+                                  className="btn btn--rack-neutral rack-bottom-tile-cell rack-bottom-tile-cell--c7-8"
+                                  disabled
+                                  aria-label="Logic hints (coming soon)"
+                                  title="Coming soon"
                                 >
-                                  Swap
+                                  LOGIC
                                 </button>
-                                <button
-                                  type="button"
-                                  className={[
-                                    'btn rack-bottom-tile-cell rack-bottom-tile-cell--c10-11',
-                                    focusedHandIsConcealed ? 'btn--call-concealed' : '',
-                                  ]
-                                    .filter(Boolean)
-                                    .join(' ')}
-                                  disabled={mainGameCallDisabled}
-                                  onClick={initiateCall}
+                                {mainBarSharedSlotIsJokerSwap ? (
+                                  <button
+                                    type="button"
+                                    className="btn btn--joker-swap-action rack-bottom-tile-cell rack-bottom-tile-cell--c9-10"
+                                    onClick={executeJokerSwapFromSlot}
+                                    aria-label="Joker swap"
+                                  >
+                                    Swap
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className={[
+                                      'btn rack-bottom-tile-cell rack-bottom-tile-cell--c9-10',
+                                      focusedHandIsConcealed ? 'btn--call-concealed' : '',
+                                    ]
+                                      .filter(Boolean)
+                                      .join(' ')}
+                                    disabled={mainGameCallDisabled}
+                                    onClick={initiateCall}
+                                    aria-label="Call discard"
+                                  >
+                                    Call
+                                    {focusedHandIsConcealed ? (
+                                      <span
+                                        className="btn--call-concealed__note"
+                                        aria-label="Focused line is a concealed hand"
+                                      >
+                                        CONCEALED
+                                      </span>
+                                    ) : null}
+                                  </button>
+                                )}
+                                <div
+                                  className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell rack-bottom-tile-cell--c11${
+                                    wall.length >= OPENING_WALL_TILES ? ' rack-bottom-wall--full' : ''
+                                  }${wall.length === 0 ? ' rack-bottom-wall--empty' : ''}`}
+                                  style={wallRemainHeatStyle(wall.length)}
+                                  aria-label={`${wall.length} tiles remaining in wall`}
                                 >
-                                  Call
-                                  {focusedHandIsConcealed ? (
-                                    <span
-                                      className="btn--call-concealed__note"
-                                      aria-label="Focused line is a concealed hand"
-                                    >
-                                      CONCEALED
-                                    </span>
-                                  ) : null}
-                                </button>
+                                  <span className="rack-bottom-wall__num">{wall.length}</span>
+                                </div>
                                 <button
                                   type="button"
                                   className={[
@@ -6818,28 +6755,6 @@ export default function App() {
                               />
                             </div>
                           ) : null}
-                          <button
-                            type="button"
-                            className="btn btn--rack-neutral panel--bot-exposures__clear"
-                            aria-label="Clear suggested hand focus and rack highlights"
-                            disabled={suggestedFocusHandKey === null}
-                            onClick={() => setSuggestedFocusHandKey(null)}
-                          >
-                            CLR
-                          </button>
-                          <button
-                            type="button"
-                            className={[
-                              'btn panel--bot-exposures__hint',
-                              jokerSwapHintEnabled ? 'panel--bot-exposures__hint--on' : '',
-                            ]
-                              .filter(Boolean)
-                              .join(' ')}
-                            aria-pressed={jokerSwapHintEnabled}
-                            onClick={toggleJokerSwapHint}
-                          >
-                            HINT
-                          </button>
                         </div>
                       </div>
                       <div className="panel--bot-exposures__body">
