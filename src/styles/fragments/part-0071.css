@@ -92,8 +92,71 @@
   box-sizing: border-box;
   opacity: 1;
   transition: opacity 0.28s ease;
-  /* Scale with the actual 3-tile box width so copy shrinks before it can wrap/spill. */
-  --pass-strip-header-fs: clamp(0.48rem, calc(var(--pass-strip-box-w) * 0.082), 1.18rem);
+  /*
+   * Preferred size matches the historical curve (0.082 × box, cap 1.18rem). The old `clamp(..., 0.48rem)`
+   * floor kept type from shrinking when the window narrowed, so nowrap lines clipped.
+   * Floor scales with the box; `min(..., box / 12.4)` tightens only when a long line would overflow.
+   */
+  --_pass-strip-fs-pref: clamp(
+    calc(var(--pass-strip-box-w) * 0.032),
+    calc(var(--pass-strip-box-w) * 0.082),
+    1.18rem
+  );
+  --pass-strip-header-fs: min(
+    var(--_pass-strip-fs-pref),
+    calc(var(--pass-strip-box-w) / 12.4)
+  );
+}
+
+/* Title + pass line stay centered as a block; direction glyph sits on its own row toward the bottom. */
+.pass-strip-tail__header--overlay.pass-strip-tail__header--with-footer {
+  justify-content: flex-start;
+  gap: 0;
+}
+
+.pass-strip-tail__header--with-footer .pass-strip-tail__header-spacer {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  pointer-events: none;
+}
+
+/* Unwrap so title + instruction behave like direct flex children of the overlay (legacy layout). */
+.pass-strip-tail__header-centered--legacy {
+  display: contents;
+}
+
+.pass-strip-tail__header--with-footer .pass-strip-tail__header-centered {
+  flex: 0 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: clamp(0.12rem, calc(var(--pass-strip-box-w) * 0.025), 0.52rem);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.pass-strip-tail__header--with-footer .pass-strip-tail__header-centered:has(.pass-strip-tail__instruction) {
+  gap: clamp(0.08rem, calc(var(--pass-strip-box-w) * 0.018), 0.34rem);
+}
+
+.pass-strip-tail__header-footer {
+  flex: 1 0 0;
+  /* Keep a real row for the direction glyph so it never stacks over the instruction line. */
+  min-height: calc(var(--pass-strip-header-fs) * 1.35);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding-bottom: clamp(0.02rem, calc(var(--pass-strip-box-w) * 0.012), 0.1rem);
+  box-sizing: border-box;
+  pointer-events: none;
 }
 
 .pass-strip-tail--pass-slots-filled .pass-strip-tail__header--overlay {
@@ -116,6 +179,7 @@
   margin: 0;
   padding: 0;
   max-width: 100%;
+  min-width: 0;
   white-space: nowrap;
   text-shadow:
     0 0 0.25rem color-mix(in srgb, var(--bg-elevated) 92%, transparent),
@@ -123,9 +187,9 @@
     0 1px 2px color-mix(in srgb, var(--color-black) 28%, transparent);
 }
 
-/* Separator between round label and instruction copy — line matches label width only */
+/* Separator under title: full pass-box width so shrinking type stays visually contained (not fit-content). */
 .pass-strip-tail__header--overlay:has(.pass-strip-tail__instruction) .pass-strip-tail__title {
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
   box-sizing: border-box;
   padding-bottom: clamp(0.08rem, calc(var(--pass-strip-box-w) * 0.018), 0.24rem);
@@ -134,6 +198,10 @@
 
 .pass-strip-tail__header--overlay:has(.pass-strip-tail__instruction) {
   gap: clamp(0.08rem, calc(var(--pass-strip-box-w) * 0.018), 0.34rem);
+}
+
+.pass-strip-tail__header--overlay.pass-strip-tail__header--with-footer:has(.pass-strip-tail__instruction) {
+  gap: 0;
 }
 
 .pass-strip-tail__instruction {
@@ -146,6 +214,7 @@
   margin: 0;
   padding: 0;
   max-width: 100%;
+  min-width: 0;
   white-space: nowrap;
   overflow-wrap: break-word;
   word-break: break-word;
@@ -153,6 +222,15 @@
     0 0 0.22rem color-mix(in srgb, var(--bg-elevated) 90%, transparent),
     0 0 0.45rem color-mix(in srgb, var(--bg-elevated) 72%, transparent),
     0 1px 2px color-mix(in srgb, var(--color-black) 24%, transparent);
+}
+
+/* Direction glyph on its own row at bottom of pass box (Charleston). */
+.charleston-pass-direction-arrow--footer {
+  display: block;
+  font-weight: 700;
+  font-size: calc(var(--pass-strip-header-fs) * 1.12);
+  line-height: 1;
+  opacity: 0.95;
 }
 
 .pass-strip-tail__instruction--stacked {
@@ -163,6 +241,9 @@
   text-align: center;
   gap: clamp(0.01rem, calc(var(--pass-strip-box-w) * 0.003), 0.04rem);
   line-height: 1.12;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .pass-strip-tail__instruction--stacked .pass-strip-tail__instruction-line {

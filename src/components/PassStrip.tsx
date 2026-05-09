@@ -96,6 +96,13 @@ type Props = {
   inlineHeaderInstruction?: ReactNode
   /** Plain phrase for `aria-label` when instruction is not a simple string. */
   inlineHeaderInstructionAria?: string
+  /**
+   * `inlineTail` only: when true, reserve a bottom row for `inlineHeaderFooter` so title + instruction
+   * stay vertically centered as a block (footer does not affect that centering).
+   */
+  inlineHeaderFooterRow?: boolean
+  /** `inlineTail` + `inlineHeaderFooterRow`: content for the bottom row (e.g. direction arrow). */
+  inlineHeaderFooter?: ReactNode
 }
 
 export function PassStrip({
@@ -109,6 +116,8 @@ export function PassStrip({
   inlineHeaderTitle = null,
   inlineHeaderInstruction,
   inlineHeaderInstructionAria,
+  inlineHeaderFooterRow = false,
+  inlineHeaderFooter = null,
 }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: PASS_BOX_ID })
   const inlineTail = variant === 'inlineTail'
@@ -178,6 +187,10 @@ export function PassStrip({
         ? inlineHeaderInstruction.length > 0
         : true)
     const showHeader = Boolean(inlineHeaderTitle) || hasInstruction
+    const showFooterRow =
+      inlineHeaderFooterRow &&
+      inlineHeaderFooter != null &&
+      (typeof inlineHeaderFooter === 'string' ? inlineHeaderFooter.length > 0 : true)
     const passStripHasTiles = slots.some((t) => t != null)
     const instructionAria =
       typeof inlineHeaderInstruction === 'string'
@@ -207,18 +220,34 @@ export function PassStrip({
             {tileRow}
             {showHeader ? (
               <div
-                className="pass-strip-tail__header pass-strip-tail__header--overlay"
+                className={[
+                  'pass-strip-tail__header',
+                  'pass-strip-tail__header--overlay',
+                  showFooterRow ? 'pass-strip-tail__header--with-footer' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
                 aria-hidden
               >
-                {inlineHeaderTitle ? (
-                  <div className="pass-strip-tail__title">{inlineHeaderTitle}</div>
-                ) : null}
-                {hasInstruction ? (
-                  typeof inlineHeaderInstruction === 'string' ? (
-                    <p className="pass-strip-tail__instruction">{inlineHeaderInstruction}</p>
-                  ) : (
-                    inlineHeaderInstruction
-                  )
+                {showFooterRow ? <div className="pass-strip-tail__header-spacer" /> : null}
+                <div
+                  className={
+                    showFooterRow ? 'pass-strip-tail__header-centered' : 'pass-strip-tail__header-centered--legacy'
+                  }
+                >
+                  {inlineHeaderTitle ? (
+                    <div className="pass-strip-tail__title">{inlineHeaderTitle}</div>
+                  ) : null}
+                  {hasInstruction ? (
+                    typeof inlineHeaderInstruction === 'string' ? (
+                      <p className="pass-strip-tail__instruction">{inlineHeaderInstruction}</p>
+                    ) : (
+                      inlineHeaderInstruction
+                    )
+                  ) : null}
+                </div>
+                {showFooterRow ? (
+                  <div className="pass-strip-tail__header-footer">{inlineHeaderFooter}</div>
                 ) : null}
               </div>
             ) : null}

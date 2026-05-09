@@ -1,8 +1,32 @@
 import { useMemo, useState } from 'react'
 import { postGameRackAndHighlights, suggestedHandCardRefDisplay, type RankSuggestedHandsInput } from '../analysis/suggestedHands'
+import type { TileInstance } from '../mahjong/types'
 import type { SuggestedHandLine } from '../training/types'
 import { TileFace } from './TileFace'
 import { CardColoredText } from './CardColoredText'
+
+/** Split card-ordered rack into runs; consecutive exposure tiles share one meld frame. */
+function segmentRackIntoExposureRuns(
+  fullRack: readonly TileInstance[],
+  claimMelds: ReadonlyArray<{ tiles: TileInstance[] }> | undefined,
+): { meldIdx: number | null; tiles: TileInstance[] }[] {
+  const idToMeld = new Map<string, number>()
+  claimMelds?.forEach((meld, mi) => {
+    for (const t of meld.tiles) idToMeld.set(t.id, mi)
+  })
+  const runs: { meldIdx: number | null; tiles: TileInstance[] }[] = []
+  for (const tile of fullRack) {
+    const mi = idToMeld.get(tile.id)
+    const meldIdx = mi === undefined ? null : mi
+    const last = runs[runs.length - 1]
+    if (!last || last.meldIdx !== meldIdx) {
+      runs.push({ meldIdx, tiles: [tile] })
+    } else {
+      last.tiles.push(tile)
+    }
+  }
+  return runs
+}
 
 function lineLabelPlain(line: SuggestedHandLine): string {
   const ref = suggestedHandCardRefDisplay(line)
@@ -23,6 +47,8 @@ export type PostGameLoserRackRowProps = {
    * `bot-mj` row: “−TBD pts” after the pattern. Omit on wall / player win lists.
    */
   trailingLabel?: 'bot-mj-loss-pts' | 'none'
+  /** Featured top row for this overlay: larger rack (You on wall / your win; winning seat when a bot won). */
+  playerSeatFocus?: boolean
 }
 
 /**
@@ -38,6 +64,7 @@ export function PostGameLoserRackRow({
   showTiedLinePicker,
   cardVariant,
   trailingLabel = 'none',
+  playerSeatFocus = false,
 }: PostGameLoserRackRowProps) {
   const [tiedIndex, setTiedIndex] = useState(0)
   const safe = linesAtMin
@@ -49,6 +76,11 @@ export function PostGameLoserRackRow({
         ? postGameRackAndHighlights(line, rankInput)
         : { fullRack: [] as const, bestIds: new Set<string>() },
     [line, rankInput],
+  )
+
+  const tileRuns = useMemo(
+    () => segmentRackIntoExposureRuns(fullRack, rankInput.playerClaimMelds),
+    [fullRack, rankInput.playerClaimMelds],
   )
 
   if (!line) {
@@ -94,17 +126,29 @@ export function PostGameLoserRackRow({
 
   const tiles = (
     <div className="mahjong-win__bots-review-tiles">
-      {fullRack.map((tile) => (
+      {tileRuns.map((run, runIdx) => (
         <div
-          key={tile.id}
+          key={`run-${runIdx}-${run.tiles[0]?.id ?? runIdx}`}
           className={[
-            'mahjong-win__bots-review-tile',
-            bestIds.has(tile.id) ? '' : 'mahjong-win__bots-review-tile--dim',
+            'mahjong-win__bots-review-tile-run',
+            run.meldIdx !== null ? 'mahjong-win__bots-review-tile-run--exposure' : '',
           ]
             .filter(Boolean)
             .join(' ')}
         >
-          <TileFace def={tile.def} />
+          {run.tiles.map((tile) => (
+            <div
+              key={tile.id}
+              className={[
+                'mahjong-win__bots-review-tile',
+                bestIds.has(tile.id) ? '' : 'mahjong-win__bots-review-tile--dim',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              <TileFace def={tile.def} />
+            </div>
+          ))}
         </div>
       ))}
     </div>
@@ -112,7 +156,14 @@ export function PostGameLoserRackRow({
 
   if (cardVariant === 'wrapped') {
     return (
-      <div className="mahjong-win__bots-review-inner">
+      <div
+        className={[
+          'mahjong-win__bots-review-inner',
+          playerSeatFocus ? 'mahjong-win__bots-review-inner--player-focus' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
         {header}
         {tiles}
       </div>

@@ -952,10 +952,12 @@ export function greedyPatternMatchDetail(
 }
 
 /**
- * Tile ids to ring on the rack for the focused line. With explicit `p.groups`, uses the same
- * strip placement as the suggested-hand preview (`computePreviewStripAssignment`) so tiles the
- * matcher consumed but did **not** place on the card strip (e.g. an odd duplicate suit) stay
- * un-highlighted. Jokers appear only when assigned to joker-eligible strip slots.
+ * Tile ids to ring on the rack for the focused line. With explicit `p.groups`, starts from strip
+ * placement (`computePreviewStripAssignment`) for joker/coach alignment, then **always** includes
+ * every tile id the greedy matcher consumed toward this pattern (`usedOrder`) that is still on the
+ * rack. That keeps claim-meld / exposure tiles (e.g. 7D, 9D in open pungs) lit even when preview
+ * placement skips their ids. Tiles that match the pattern but were **not** consumed stay unlit.
+ * Live discards not yet on the rack are handled separately in the app (`suggestedTileGuideForRack`).
  */
 export function computeRackPatternHighlightIds(
   rack: TileInstance[],
@@ -986,6 +988,9 @@ export function computeRackPatternHighlightIds(
       )
       for (const id of assign.slotTileIdByStripIndex) {
         if (id != null) out.add(id)
+      }
+      for (const id of detail.usedOrder) {
+        if (rackIdSet.has(id)) out.add(id)
       }
       return out
     }
@@ -3478,7 +3483,13 @@ export function sortFullRackTilesForPattern(
     appendStripOrder(basePattern)
   }
 
+  const pForMatch: PracticePattern = pinnedPatterns.length > 0 ? pinnedPatterns[0]! : basePattern
+  const greedyOpts: GreedyPatternMatchOpts | undefined =
+    exposureTileIds?.size ? { exposureTileIds } : undefined
+  const tailDetail = greedyPatternMatchDetail(rackForPattern, pForMatch, greedyOpts)
+  const usedRank = new Map(tailDetail.usedOrder.map((id, i) => [id, i] as const))
   const rest = rackRaw.filter((t) => !seen.has(t.id))
+  rest.sort((a, b) => (usedRank.get(a.id) ?? 99_999) - (usedRank.get(b.id) ?? 99_999))
   return [...ordered, ...rest]
 }
 
@@ -3722,6 +3733,16 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
             )
             naturalFill += count
             if (sg.canUseJoker && sg.need >= 3) jokerEligibleUnfilled += sg.need - count
+          }
+          const slotDc = consecPermuteGroup.colorGroupDragonCounts?.[ci] ?? 0
+          if (slotDc > 0) {
+            const drg = drgForSuit[s]
+            const dNat = Math.min(
+              remForPermute.filter((t) => t.def.cat === 'dragon' && t.def.dragon === drg).length,
+              slotDc,
+            )
+            naturalFill += dNat
+            jokerEligibleUnfilled += slotDc - dNat
           }
         }
         if (tdc > 0) {

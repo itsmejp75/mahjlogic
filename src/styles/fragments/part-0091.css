@@ -599,9 +599,9 @@
 
 /* Wall draw only: one column of seats, scroll inside the review (title + actions stay put). */
 .wall-game-dialog--wall-seats {
-  /* Same face size as right-column bot exposure racks (`.app-play-split` + `.panel--bot-exposures`). */
-  --bot-exposure-slot-scale: 1.05;
-  --bot-exposure-tile-scale: 0.94;
+  /* Derived from right-column bot exposure tile math; scaled up for readable end-game racks. */
+  --bot-exposure-slot-scale: 1.12;
+  --bot-exposure-tile-scale: 1;
   --bot-tile-w-ref: max(1rem, calc(
     ((var(--app-viewport-inline, 100vw) - 2 * var(--app-h-pad)) / 2
     - 2 * var(--hand-window-pad-inline)
@@ -610,10 +610,13 @@
   --bot-tile-h-ref: max(1.34rem, calc(var(--bot-tile-w-ref) * 1.3333));
   --bot-tile-h-width-fit: calc(var(--bot-tile-h-ref) * var(--bot-exposure-tile-scale));
   --bot-tile-h-height-fit: var(--bot-tile-h-width-fit);
-  --wall-game-bots-tile-h: min(var(--bot-tile-h-width-fit), var(--bot-tile-h-height-fit));
+  --_wall-game-seat-base-h: min(var(--bot-tile-h-width-fit), var(--bot-tile-h-height-fit));
+  --wall-game-bots-tile-h: min(calc(var(--_wall-game-seat-base-h) * 1.14), 2.35rem);
   --wall-game-bots-tile-w: calc(var(--wall-game-bots-tile-h) / 1.3333);
+  --wall-game-player-tile-h: min(calc(var(--wall-game-bots-tile-h) * 1.32), 2.95rem);
+  --wall-game-player-tile-w: calc(var(--wall-game-player-tile-h) / 1.3333);
   width: 100%;
-  max-width: min(42rem, calc(100vw - 1rem));
+  max-width: min(44rem, calc(100vw - 1rem));
   height: min(90dvh, 56rem);
   max-height: min(90dvh, 56rem);
   padding: 0.9rem 0.85rem 0.8rem;
@@ -630,17 +633,22 @@
   scrollbar-gutter: stable;
 }
 
-/* Center each seat’s header+rack as one block; text and tiles share the same left edge inside the block. */
+/* Headers align to the card’s left edge; tile rows span full width and center racks. */
 .wall-game-dialog--wall-seats .wall-game-dialog__review .mahjong-win__bots-review-card {
-  align-items: center;
+  align-items: stretch;
 }
 
 .wall-game-dialog--wall-seats .wall-game-dialog__review .mahjong-win__bots-review-inner {
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
-  margin-inline: auto;
+  margin-inline: 0;
   box-sizing: border-box;
   align-items: flex-start;
+}
+
+.wall-game-dialog--wall-seats .wall-game-dialog__review .mahjong-win__bots-review-inner--player-focus .mahjong-win__bots-review-tile {
+  --rack-tile-w: var(--wall-game-player-tile-w);
+  --rack-tile-h: var(--wall-game-player-tile-h);
 }
 
 .wall-game-dialog--wall-seats .wall-game-dialog__review .mahjong-win__bots-review-title {

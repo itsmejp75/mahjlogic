@@ -104,7 +104,10 @@ function isOpposingDragonParenthetical(row: Nmjl2026CsvHandRow): boolean {
 }
 
 function isFlexibleConsecutive(row: Nmjl2026CsvHandRow): boolean {
-  return hasText(row, 'Consec') && !hasText(row, 'These Nos. Only')
+  // Most flexible runs say “Any N Consec. Nos.”; 2026 CONSECUTIVE RUN 5a/5b use “Any Run” instead.
+  if (hasText(row, 'These Nos. Only')) return false
+  if (hasText(row, 'Consec')) return true
+  return row.category === 'CONSECUTIVE RUN' && hasText(row, 'Any Run')
 }
 
 function isFlexibleLikeNumber(row: Nmjl2026CsvHandRow): boolean {

@@ -38,7 +38,6 @@ import {
   charlestonMahjongButtonPhase,
   charlestonPassDirections,
   charlestonPassButtonLabel,
-  charlestonPassStripInstruction,
   charlestonPassStripInstructionAria,
   charlestonRackRoundTitle,
   nextCharlestonPhase,
@@ -81,6 +80,10 @@ import {
   type RankSuggestedHandsInput,
 } from './analysis/suggestedHands'
 import { tileInstancesWithClaimMeldJokersResolved } from './analysis/eastExposurePatternFit'
+import {
+  CharlestonPassStripDirectionGlyph,
+  CharlestonPassStripInstructionMain,
+} from './components/CharlestonPassStripInstructionLabel'
 import { PostGameLoserRackRow } from './components/PostGameLoserRackRow'
 import { IllegalMahjongDialog } from './components/IllegalMahjongDialog'
 import { SuggestedHandsPanel } from './components/SuggestedHandsPanel'
@@ -3757,6 +3760,25 @@ export default function App() {
     return false
   }, [suggestedDiscardNeedIds, displayedDiscardPile])
 
+  /**
+   * The live bot discard is omitted from the scroll strip while it is claimable but is still in
+   * `discardPile` for “needed tile” logic — merge it into rack/exposure highlight ids so the
+   * incoming-discard slot and hand coach stay consistent with the hands tray.
+   */
+  const suggestedTileGuideForRack = useMemo(() => {
+    if (!suggestedTileGuide) return null
+    if (
+      (mainPhase === 'bot-turn' || mainPhase === 'call-staging') &&
+      activeBotDiscard &&
+      suggestedDiscardNeedIds?.has(activeBotDiscard.id)
+    ) {
+      const merged = new Set(suggestedTileGuide.bestIds)
+      merged.add(activeBotDiscard.id)
+      return { bestIds: merged }
+    }
+    return suggestedTileGuide
+  }, [suggestedTileGuide, mainPhase, activeBotDiscard, suggestedDiscardNeedIds])
+
   useEffect(() => {
     if (mainPhase === 'mahjong-declared' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand' || mainPhase === 'wall-game') setSuggestedFocusHandKey(null)
   }, [mainPhase])
@@ -4309,12 +4331,21 @@ export default function App() {
     const m = menuCardIdRef.current
     const c = committedCardIdRef.current
     if (m !== c) {
-      setBlockingDialog({ variant: 'new-game-pending-card', nextCardId: m })
-      return false
+      const roundAlreadyOver =
+        mainPhase === 'wall-game' ||
+        mainPhase === 'mahjong-declared' ||
+        mainPhase === 'bot-mahjong' ||
+        mainPhase === 'dead-hand'
+      if (!roundAlreadyOver) {
+        setBlockingDialog({ variant: 'new-game-pending-card', nextCardId: m })
+        return false
+      }
+      performNewHandDeal()
+      return true
     }
     performNewHandDeal()
     return true
-  }, [performNewHandDeal])
+  }, [performNewHandDeal, mainPhase])
 
   const sendCharlestonPass = useCallback(() => {
     const charlestonBotPassOpts = {
@@ -5932,6 +5963,7 @@ export default function App() {
                         showTiedLinePicker={postGameWallGameReview.rows[0].linesAtMin.length > 1}
                         cardVariant="wrapped"
                         trailingLabel="none"
+                        playerSeatFocus
                       />
                     </li>
                   ) : null}
@@ -6010,6 +6042,7 @@ export default function App() {
                         showTiedLinePicker={postGameBotReview[0].linesAtMin.length > 1}
                         cardVariant="wrapped"
                         trailingLabel="none"
+                        playerSeatFocus
                       />
                     </li>
                   ) : null}
@@ -6078,6 +6111,7 @@ export default function App() {
                     showTiedLinePicker={postGameBotMahjongReview.winnerRow.linesAtMin.length > 1}
                     cardVariant="wrapped"
                     trailingLabel="none"
+                    playerSeatFocus
                   />
                 </li>
                 {postGameBotMahjongReview.loserRows.length > 0 ? (
@@ -6159,7 +6193,7 @@ export default function App() {
                                 calledTileId: exp.calledTileId,
                               }))}
                               watermark={<RackLogoWatermark />}
-                              suggestedTileGuide={suggestedTileGuide}
+                              suggestedTileGuide={suggestedTileGuideForRack}
                               slotCount={14}
                               reserveTrailingSlots={3}
                               ariaLabel="Your exposures and Charleston pass"
@@ -6169,31 +6203,16 @@ export default function App() {
                                   slots={passSlots}
                                   onPassBoxClick={onPassBoxClick}
                                   onPassTileClickReturn={onPassTileClickReturn}
-                                  suggestedBestIds={suggestedTileGuide?.bestIds}
+                                  suggestedBestIds={suggestedTileGuideForRack?.bestIds}
                                   flyOutFrom={passStripFlyOut}
                                   hiddenSortableTileId={null}
                                   inlineHeaderTitle={charlestonRackRoundTitleText}
                                   inlineHeaderInstruction={
-                                    charlestonPhase === 'left2' ? (
-                                      <div className="pass-strip-tail__instruction pass-strip-tail__instruction--stacked">
-                                        <span className="pass-strip-tail__instruction-line">PASS 3 LEFT</span>
-                                        <span className="pass-strip-tail__instruction-or" aria-hidden>
-                                          -OR-
-                                        </span>
-                                        <span className="pass-strip-tail__instruction-line pass-strip-tail__instruction-line--0-to-stop">
-                                          <span className="pass-strip-tail__instruction-line__0">0</span>{' '}
-                                          <span
-                                            className="pass-strip-tail__instruction-or pass-strip-tail__instruction-or--inline"
-                                            aria-hidden
-                                          >
-                                            TO
-                                          </span>{' '}
-                                          <span className="pass-strip-tail__instruction-line__stop">STOP</span>
-                                        </span>
-                                      </div>
-                                    ) : (
-                                      charlestonPassStripInstruction(charlestonPhase)
-                                    )
+                                    <CharlestonPassStripInstructionMain phase={charlestonPhase} />
+                                  }
+                                  inlineHeaderFooterRow
+                                  inlineHeaderFooter={
+                                    <CharlestonPassStripDirectionGlyph phase={charlestonPhase} />
                                   }
                                   inlineHeaderInstructionAria={charlestonPassStripInstructionAria(
                                     charlestonPhase,
@@ -6220,7 +6239,7 @@ export default function App() {
                                     handJokerSwapFlyInFromBelowId={
                                       animationsEnabled ? handJokerSwapFlyInFromBelowId : null
                                     }
-                                    suggestedTileGuide={suggestedTileGuide}
+                                    suggestedTileGuide={suggestedTileGuideForRack}
                                     discardMode={false}
                                     animationsEnabled={animationsEnabled}
                                     rackNewMarkTileIds={rackNewMarkTileIds}
@@ -6373,7 +6392,7 @@ export default function App() {
                                   : []),
                                   ]
                               }
-                              suggestedTileGuide={suggestedTileGuide}
+                              suggestedTileGuide={suggestedTileGuideForRack}
                               highlightCalledTile={mainPhase === 'call-staging'}
                               watermark={<RackLogoWatermark />}
                               ariaLabel="Your exposures"
@@ -6398,7 +6417,7 @@ export default function App() {
                                     onTileClickReturn={returnStagedEastDiscard}
                                     suggestBest={
                                       !!pendingEastDiscardTile &&
-                                      !!suggestedTileGuide?.bestIds.has(pendingEastDiscardTile.id)
+                                      !!suggestedTileGuideForRack?.bestIds.has(pendingEastDiscardTile.id)
                                     }
                                     jokerSwapHintBounce={
                                       !!pendingEastDiscardTile &&
@@ -6457,7 +6476,7 @@ export default function App() {
                                     handJokerSwapFlyInFromBelowId={
                                       animationsEnabled ? handJokerSwapFlyInFromBelowId : null
                                     }
-                                    suggestedTileGuide={suggestedTileGuide}
+                                    suggestedTileGuide={suggestedTileGuideForRack}
                                     discardMode={false}
                                     animationsEnabled={animationsEnabled}
                                     rackNewMarkTileIds={rackNewMarkTileIds}
@@ -7011,7 +7030,7 @@ export default function App() {
                         key={tile.id}
                         className={[
                           'drag-overlay-tile',
-                          suggestedTileGuide?.bestIds.has(tile.id)
+                          suggestedTileGuideForRack?.bestIds.has(tile.id)
                             ? 'sortable-tile-wrap--suggest-best'
                             : '',
                         ]
@@ -7030,7 +7049,7 @@ export default function App() {
                   <div
                     className={[
                       'drag-overlay-tile',
-                      suggestedTileGuide?.bestIds.has(dragOverlayTile.id)
+                      suggestedTileGuideForRack?.bestIds.has(dragOverlayTile.id)
                         ? 'sortable-tile-wrap--suggest-best'
                         : '',
                     ]
