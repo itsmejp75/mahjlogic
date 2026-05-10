@@ -150,9 +150,11 @@
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
+  justify-content: center;
   gap: 0.25rem 0.65rem;
   font-size: 1.06rem;
   line-height: 1.4;
+  text-align: center;
 }
 
 .mahjong-win__bots-review-seat {
@@ -188,6 +190,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 0.4rem 0.65rem;
   min-width: 0;
 }

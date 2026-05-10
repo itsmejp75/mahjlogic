@@ -44,7 +44,7 @@
   text-align: left;
   justify-content: flex-start;
   font-size: var(--app-ui-control-fs);
-  font-weight: 600;
+  font-weight: 500;
   padding: 0.38rem 0.65rem;
   border-radius: 0.7rem;
   /* Off: 32% opacity text — matches app-wide inactive button standard */

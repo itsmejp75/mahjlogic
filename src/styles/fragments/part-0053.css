@@ -91,7 +91,7 @@
   z-index: 2;
   background: var(--color-slate-mid);
   color: var(--color-white);
-  font-weight: 500;
+  font-weight: 400;
   font-family: 'Figtree', var(--sans);
   text-transform: uppercase;
   box-shadow:

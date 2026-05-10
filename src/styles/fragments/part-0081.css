@@ -27,7 +27,7 @@
 .hands-panel__display-toggles .hands-panel__categories-trigger--header {
   padding: var(--hands-header-chip-py) var(--hands-header-chip-px);
   font-size: var(--hands-header-chip-fs);
-  font-weight: 600;
+  font-weight: 500;
   line-height: var(--hands-header-chip-lh);
   min-height: calc(
     2 * var(--hands-header-chip-py) + var(--hands-header-chip-lh) * var(--hands-header-chip-fs) + 2px
@@ -2105,7 +2105,7 @@
   font-family: 'Figtree', var(--sans);
   font-size: var(--app-ui-control-fs-sm);
   line-height: 1.05;
-  font-weight: 500;
+  font-weight: 400;
   text-transform: uppercase;
   letter-spacing: var(--btn-letter-spacing);
   cursor: pointer;

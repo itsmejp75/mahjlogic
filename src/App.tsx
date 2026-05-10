@@ -80,10 +80,7 @@ import {
   type RankSuggestedHandsInput,
 } from './analysis/suggestedHands'
 import { tileInstancesWithClaimMeldJokersResolved } from './analysis/eastExposurePatternFit'
-import {
-  CharlestonPassStripDirectionGlyph,
-  CharlestonPassStripInstructionMain,
-} from './components/CharlestonPassStripInstructionLabel'
+import { CharlestonPassStripInstructionMain } from './components/CharlestonPassStripInstructionLabel'
 import { PostGameLoserRackRow } from './components/PostGameLoserRackRow'
 import { IllegalMahjongDialog } from './components/IllegalMahjongDialog'
 import { SuggestedHandsPanel } from './components/SuggestedHandsPanel'
@@ -436,6 +433,7 @@ type GameBlockingDialog =
   | { variant: 'call-exposure-dead-warning'; rankInput: RankSuggestedHandsInput }
   | { variant: 'discard-dead-warning'; rankInput: RankSuggestedHandsInput }
   | { variant: 'new-game-pending-card'; nextCardId: PlayableCardId }
+  | { variant: 'new-game-confirm' }
 
 const CALL_STAGING_DROP_ID = 'call-staging-meld-drop'
 const EAST_EXPOSURE_MELD_SORT_ID_PREFIX = 'east-exposure-meld:'
@@ -4326,22 +4324,30 @@ export default function App() {
     setRound(createNewRound())
   }, [])
 
-  /** @returns true if a new round was dealt; false if deferred (card-change confirm — keep menu open so pending card is not cleared). */
+  /** @returns true if a new round was dealt; false if deferred for confirmation. */
   const newHand = useCallback((): boolean => {
     const m = menuCardIdRef.current
     const c = committedCardIdRef.current
+    const roundAlreadyOver =
+      mainPhase === 'wall-game' ||
+      mainPhase === 'mahjong-declared' ||
+      mainPhase === 'bot-mahjong' ||
+      mainPhase === 'dead-hand'
+    const roundStarted =
+      historyRef.current.length > 0 ||
+      mainPhase !== 'east-discard' ||
+      roundRef.current.charlestonPhase !== 'right1'
     if (m !== c) {
-      const roundAlreadyOver =
-        mainPhase === 'wall-game' ||
-        mainPhase === 'mahjong-declared' ||
-        mainPhase === 'bot-mahjong' ||
-        mainPhase === 'dead-hand'
       if (!roundAlreadyOver) {
         setBlockingDialog({ variant: 'new-game-pending-card', nextCardId: m })
         return false
       }
       performNewHandDeal()
       return true
+    }
+    if (roundStarted && !roundAlreadyOver) {
+      setBlockingDialog({ variant: 'new-game-confirm' })
+      return false
     }
     performNewHandDeal()
     return true
@@ -5669,6 +5675,7 @@ export default function App() {
           onClick={() => {
             // Warnings that require an explicit choice — backdrop click does nothing
             if (blockingDialog?.variant === 'new-game-pending-card') return
+            if (blockingDialog?.variant === 'new-game-confirm') return
             if (blockingDialog?.variant === 'dead-hand-warning') return
             if (blockingDialog?.variant === 'mahjong-dead-warning') return
             if (blockingDialog?.variant === 'call-exposure-dead-warning') return
@@ -5683,6 +5690,7 @@ export default function App() {
               'charleston-error-dialog',
               blockingDialog?.variant === 'table' ? 'charleston-error-dialog--table' : '',
               blockingDialog?.variant === 'new-game-pending-card' ||
+              blockingDialog?.variant === 'new-game-confirm' ||
               blockingDialog?.variant === 'dead-hand-warning'
                 ? 'charleston-error-dialog--blocking-neutral charleston-error-dialog--dead-hand-warning'
                 : '',
@@ -5705,6 +5713,7 @@ export default function App() {
             aria-labelledby={
               blockingDialog?.variant === 'table' ||
               blockingDialog?.variant === 'new-game-pending-card' ||
+              blockingDialog?.variant === 'new-game-confirm' ||
               blockingDialog?.variant === 'dead-hand-warning' ||
               blockingDialog?.variant === 'mahjong-dead-warning' ||
               blockingDialog?.variant === 'call-exposure-dead-warning' ||
@@ -5730,6 +5739,36 @@ export default function App() {
                 <h2 id="game-blocking-error-title" className="charleston-error-dialog__title">
                   End Current Game and Start New Game with {PLAYABLE_CARD_LABEL[blockingDialog.nextCardId]}{' '}
                   Card?
+                </h2>
+                <div className="charleston-error-dialog__actions charleston-error-dialog__actions--spread">
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setBlockingDialog(null)
+                      setMenuOpen(false)
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn--primary"
+                    onClick={() => {
+                      setBlockingDialog(null)
+                      performNewHandDeal()
+                      setMenuOpen(false)
+                    }}
+                  >
+                    Continue
+                  </button>
+                </div>
+              </>
+            ) : blockingDialog?.variant === 'new-game-confirm' ? (
+              <>
+                <h2 id="game-blocking-error-title" className="charleston-error-dialog__title">
+                  End Current Game and Start New Game?
                 </h2>
                 <div className="charleston-error-dialog__actions charleston-error-dialog__actions--spread">
                   <button
@@ -6210,10 +6249,6 @@ export default function App() {
                                   inlineHeaderInstruction={
                                     <CharlestonPassStripInstructionMain phase={charlestonPhase} />
                                   }
-                                  inlineHeaderFooterRow
-                                  inlineHeaderFooter={
-                                    <CharlestonPassStripDirectionGlyph phase={charlestonPhase} />
-                                  }
                                   inlineHeaderInstructionAria={charlestonPassStripInstructionAria(
                                     charlestonPhase,
                                   )}
@@ -6309,7 +6344,7 @@ export default function App() {
                                   aria-expanded={suggestedPanelHandsOn}
                                   aria-controls="suggested-hands-popup"
                                 >
-                                  HANDS
+                                  Hands
                                 </button>
                               ) : null}
                               {mahjongButtonEnabled ? (
@@ -6318,7 +6353,7 @@ export default function App() {
                                   className="btn btn--mahjong rack-bottom-tile-cell rack-bottom-tile-cell--c6-7"
                                   onClick={declareMahjong}
                                 >
-                                  MAHJ
+                                  Mahj
                                 </button>
                               ) : null}
                               <button
@@ -6569,7 +6604,7 @@ export default function App() {
                                     aria-expanded={suggestedPanelHandsOn}
                                     aria-controls="suggested-hands-popup"
                                   >
-                                    HANDS
+                                    Hands
                                   </button>
                                 ) : null}
                                 <button
@@ -6588,7 +6623,7 @@ export default function App() {
                                   }
                                   onClick={declareMahjong}
                                 >
-                                  MAHJ
+                                  Mahj
                                 </button>
                                 <button
                                   type="button"
@@ -6597,7 +6632,7 @@ export default function App() {
                                   aria-label="Logic hints (coming soon)"
                                   title="Coming soon"
                                 >
-                                  LOGIC
+                                  Logic
                                 </button>
                                 {mainBarSharedSlotIsJokerSwap ? (
                                   <button

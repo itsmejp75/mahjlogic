@@ -79,11 +79,6 @@
   );
 }
 
-/* Wall remaining count: same size as main hand action labels. */
-.rack-bottom-bar--charleston .rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell {
-  font-size: var(--rack-hand-action-label-fs);
-}
-
 .charleston-pass-btn {
   font-weight: 500;
   flex-shrink: 0;

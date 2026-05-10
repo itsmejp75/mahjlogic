@@ -309,7 +309,7 @@
   font: inherit;
   font-size: 1.7rem;
   line-height: 1;
-  font-weight: 700;
+  font-weight: 600;
   color: color-mix(in srgb, #f5e6a3 90%, #d4a012 10%);
   cursor: pointer;
   transition:
@@ -335,7 +335,7 @@
   min-width: 7.5rem;
   padding: 0.42rem 1.35rem;
   border-radius: 999px;
-  font-weight: 600;
+  font-weight: 500;
   border: 1px solid color-mix(in srgb, #d4a012 38%, var(--color-off-black) 62%);
   background: color-mix(in srgb, #ebe4d8 88%, #c4bfb6 12%);
   color: #1e1c18;
@@ -839,7 +839,7 @@
   position: relative;
   z-index: 1;
   font-family: 'Figtree', var(--sans);
-  font-weight: 500;
+  font-weight: 400;
   text-transform: uppercase;
   letter-spacing: var(--btn-letter-spacing);
   white-space: nowrap;

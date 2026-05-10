@@ -165,7 +165,7 @@
 .suggested-hands-popup__header-controls .hands-panel__display-toggle {
   padding: var(--hands-header-chip-py) var(--hands-header-chip-px);
   font-size: var(--hands-header-chip-fs);
-  font-weight: 600;
+  font-weight: 500;
   line-height: var(--hands-header-chip-lh);
   min-height: calc(
     2 * var(--hands-header-chip-py) + var(--hands-header-chip-lh) * var(--hands-header-chip-fs) + 2px
@@ -189,7 +189,7 @@
   cursor: pointer;
   font-size: 1.6rem;
   line-height: 1;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-muted);
   z-index: 1;
   box-shadow: 0 1px 0 color-mix(in srgb, var(--fg) 8%, transparent);

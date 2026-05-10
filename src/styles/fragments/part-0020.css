@@ -31,13 +31,20 @@
 .panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn {
   position: absolute;
   inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   height: 100%;
   border-radius: inherit;
   padding: 0;
-  font-size: var(--rack-menu-hamburger-fs);
+  font-size: min(
+    var(--rack-menu-hamburger-fs),
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.58)
+  );
   letter-spacing: 0;
   text-transform: none;
+  overflow: hidden;
 }
 
 .panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn,
@@ -46,19 +53,29 @@
   box-shadow: none;
 }
 
-/* Three-line icon: `em` = parent `--rack-control-label-fs` (same as button labels). */
+/* Three-line icon: clamp to the actual one-slot button box, not just inherited font size. */
 .hand-rack-menu-hamburger {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   align-items: stretch;
-  width: 1.2em;
-  height: 0.95em;
+  width: min(
+    1.2em,
+    calc(var(--rack-tile-btn-inner-1) * 0.5),
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.42)
+  );
+  height: min(
+    0.95em,
+    calc(var(--rack-tile-btn-inner-1) * 0.38),
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.34)
+  );
   flex-shrink: 0;
+  max-width: calc(100% - 2px);
+  max-height: calc(100% - 2px);
 }
 
 .hand-rack-menu-hamburger__bar {
-  height: 0.11em;
+  height: min(0.11em, calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.045));
   min-height: 1px;
   border-radius: 0.06em;
   background: currentColor;

@@ -2555,6 +2555,141 @@ function buildConsecOpposingSuitStripVariantRows(
   }
 }
 
+function sameDigitRuns(text: string): Array<{ rank: number; count: number }> {
+  const out: Array<{ rank: number; count: number }> = []
+  const re = /(\d)\1*/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text)) != null) {
+    const run = m[0]!
+    out.push({ rank: Number(run[0]), count: run.length })
+  }
+  return out
+}
+
+function allTitleDigitRanks(p: PracticePattern): number[] {
+  const out: number[] = []
+  for (const seg of p.titleSegments ?? []) {
+    for (const { rank } of sameDigitRuns(seg.t)) {
+      if (rank >= 1 && rank <= 9) out.push(rank)
+    }
+  }
+  return out
+}
+
+function suitPermuteColorGroupIndexForTitleRun(
+  g: Extract<PatternGroup, { kind: 'suit-permute' }>,
+  normalizedRank: number,
+  count: number,
+): number | null {
+  for (let ci = 0; ci < g.colorGroups.length; ci++) {
+    const group = g.colorGroups[ci]!
+    if (group.some((sg) => sg.rank === normalizedRank && sg.need >= count)) return ci
+  }
+  return null
+}
+
+function cardTitleOrderDefsForSuitPermute(
+  p: PracticePattern,
+  g: Extract<PatternGroup, { kind: 'suit-permute' }>,
+  perm: readonly Suit[],
+  base: number,
+): TileDef[] | null {
+  if (!p.titleSegments?.length) return null
+  const digitRanks = allTitleDigitRanks(p).filter((rank) => rank > 0)
+  const minRank = digitRanks.length ? Math.min(...digitRanks) : 1
+  const out: TileDef[] = []
+  let currentColorGroup: number | null = null
+  const dragonForSuit = { bam: 'green' as const, dot: 'soap' as const, crak: 'red' as const }
+
+  for (const seg of p.titleSegments) {
+    const parts = seg.t.match(/F+|N+|E+|W+|S+|D+|(\d)\1*/g) ?? []
+    currentColorGroup = null
+    for (const part of parts) {
+      if (/^F+$/.test(part)) {
+        for (let i = 0; i < part.length; i++) out.push({ cat: 'flower', flower: 1 })
+        continue
+      }
+      if (/^[NEWS]+$/.test(part)) {
+        for (const ch of part) out.push({ cat: 'wind', wind: ch as 'N' | 'E' | 'W' | 'S' })
+        continue
+      }
+      if (/^D+$/.test(part)) {
+        if (currentColorGroup == null) return null
+        const suit = perm[currentColorGroup]
+        if (!suit) return null
+        for (let i = 0; i < part.length; i++) {
+          out.push({ cat: 'dragon', dragon: dragonForSuit[suit] })
+        }
+        continue
+      }
+      const runRank = Number(part[0])
+      if (runRank === 0) {
+        for (let i = 0; i < part.length; i++) out.push({ cat: 'dragon', dragon: 'soap' })
+        continue
+      }
+      const normalizedRank = g.consecRanks ? runRank - minRank + 1 : runRank
+      const ci = suitPermuteColorGroupIndexForTitleRun(g, normalizedRank, part.length)
+      if (ci == null) return null
+      const suit = perm[ci]
+      if (!suit) return null
+      currentColorGroup = ci
+      const actualRank = g.consecRanks ? normalizedRank - 1 + base : normalizedRank
+      for (let i = 0; i < part.length; i++) out.push({ cat: 'suit', suit, rank: actualRank })
+    }
+  }
+
+  return out.length === p.roughTarget ? out : null
+}
+
+function reorderStripSlotsToCardTitleOrder(
+  slots: SuggestedStripSlot[],
+  stripDefs: readonly TileDef[],
+  desiredDefs: readonly TileDef[] | null,
+): SuggestedStripSlot[] {
+  if (!desiredDefs || desiredDefs.length !== slots.length || stripDefs.length !== slots.length) {
+    return slots
+  }
+  const used = new Set<number>()
+  const order: number[] = []
+  for (const d of desiredDefs) {
+    const idx = stripDefs.findIndex((candidate, i) => !used.has(i) && tileDefsEqual(candidate, d))
+    if (idx < 0) return slots
+    used.add(idx)
+    order.push(idx)
+  }
+  return order.length === slots.length ? order.map((idx) => slots[idx]!) : slots
+}
+
+function suitPermuteTitleOrderDefsFromResolvedStrip(
+  p: PracticePattern,
+  stripDefs: readonly TileDef[],
+): TileDef[] | null {
+  const groups = p.groups
+  if (!groups?.length) return null
+  const gi = groups.findIndex((g) => g.kind === 'suit-permute')
+  if (gi < 0) return null
+  const g = groups[gi]!
+  if (g.kind !== 'suit-permute') return null
+  const span = groupPreviewIndexSpans(p)?.[gi]
+  if (!span) return null
+  const [a] = span
+  const perm: Suit[] = []
+  let base: number | null = null
+  let idx = a
+  for (let ci = 0; ci < g.colorGroups.length; ci++) {
+    const firstRankGroup = g.colorGroups[ci]?.find((sg) => sg.need > 0)
+    if (!firstRankGroup) return null
+    const def = stripDefs[idx]
+    if (def?.cat !== 'suit') return null
+    perm.push(def.suit)
+    if (base == null) base = g.consecRanks ? def.rank - firstRankGroup.rank + 1 : 1
+    idx += g.colorGroups[ci]!.reduce((sum, sg) => sum + sg.need, 0)
+    idx += g.colorGroupDragonCounts?.[ci] ?? 0
+  }
+  if (base == null) return null
+  return cardTitleOrderDefsForSuitPermute(p, g, perm, base)
+}
+
 /**
  * `suit-permute` groups: one strip row per ordered suit assignment across color slots, greedy first.
  * e.g. FF 2222 44 66 8888 → 6 rows (all 3! orderings of bam/dot/crak to red/navy/green slots).
@@ -2689,7 +2824,12 @@ function buildSuitPermuteStripVariantRows(
         for (let k = 0; k < tdc && idx < b; k++) strip[idx++] = { cat: 'dragon', dragon: drg }
       }
     }
-    return buildSuggestedStripSlotsFromStripDefs(p, rack, usedOrder, bestIdsForAssignment, um, strip, true)
+    const slots = buildSuggestedStripSlotsFromStripDefs(p, rack, usedOrder, bestIdsForAssignment, um, strip, true)
+    return reorderStripSlotsToCardTitleOrder(
+      slots,
+      strip,
+      cardTitleOrderDefsForSuitPermute(p, g, perm, base),
+    )
   })
   return rows.length > 0 ? { rows, maxFill } : null
 }
@@ -2776,7 +2916,7 @@ export function buildConsecRanksTierStripRow(
   // pinnedP's groups (which split the suit-permute group into multiple fixed groups).
   // Using p would map e.g. a "2222 in bam" used tile (groupIdx=2 in pinnedP) to the
   // "DDD" dragon group in p, where it can't be placed and would silently fail to highlight.
-  return buildSuggestedStripSlotsFromStripDefs(
+  const slots = buildSuggestedStripSlotsFromStripDefs(
     pinnedP,
     rackForDisplay,
     tierDetail.usedOrder,
@@ -2784,6 +2924,11 @@ export function buildConsecRanksTierStripRow(
     tierDetail.usedMeta ?? [],
     strip,
     true,
+  )
+  return reorderStripSlotsToCardTitleOrder(
+    slots,
+    strip,
+    cardTitleOrderDefsForSuitPermute(p, spg, tierPerm, tierBase),
   )
 }
 
@@ -3267,6 +3412,7 @@ function stripOrderedHandIdsForPattern(
   rackForPattern: TileInstance[],
   handIds: Set<string>,
   exposureTileIds?: ReadonlySet<string>,
+  displayPattern: PracticePattern = pinnedP,
 ): { orderedIds: string[]; usedIds: Set<string> } {
   const greedyOpts = exposureTileIds?.size ? { exposureTileIds } : undefined
   const detail = greedyPatternMatchDetail(rackForPattern, pinnedP, greedyOpts)
@@ -3300,13 +3446,35 @@ function stripOrderedHandIdsForPattern(
     displayDefs.length > 0 && displayDefs.length === slotTileIdByStripIndex.length
       ? displayDefs
       : stripDefs
+  const titleOrderDefs = suitPermuteTitleOrderDefsFromResolvedStrip(displayPattern, stripDefs)
   const jokerEli = patternPreviewJokerEligibleBySlot(pinnedP)
 
   const slots: (string | null)[] =
     slotTileIdByStripIndex.length > 0
       ? [...slotTileIdByStripIndex]
       : defsByDisplay.map(() => null)
-  const n = Math.min(slots.length, defsByDisplay.length)
+  let orderedSlotDefs = defsByDisplay
+  if (titleOrderDefs && titleOrderDefs.length === slots.length && stripDefs.length === slots.length) {
+    const used = new Set<number>()
+    const reorderedSlots: (string | null)[] = []
+    const reorderedDefs: TileDef[] = []
+    for (const d of titleOrderDefs) {
+      const idx = stripDefs.findIndex((candidate, i) => !used.has(i) && tileDefsEqual(candidate, d))
+      if (idx < 0) {
+        reorderedSlots.length = 0
+        reorderedDefs.length = 0
+        break
+      }
+      used.add(idx)
+      reorderedSlots.push(slots[idx] ?? null)
+      reorderedDefs.push(stripDefs[idx]!)
+    }
+    if (reorderedSlots.length === slots.length) {
+      slots.splice(0, slots.length, ...reorderedSlots)
+      orderedSlotDefs = reorderedDefs
+    }
+  }
+  const n = Math.min(slots.length, orderedSlotDefs.length)
   const byId = new Map(rackForPattern.map((t) => [t.id, t] as const))
   const inSlots = new Set<string>(slots.filter((x): x is string => x != null))
 
@@ -3315,7 +3483,7 @@ function stripOrderedHandIdsForPattern(
   // (the old `usedOrder` tail put greedy match order first and scrambled FF before consec, etc.).
   for (let i = 0; i < n; i++) {
     if (slots[i] != null) continue
-    const d = defsByDisplay[i]!
+    const d = orderedSlotDefs[i]!
     for (const id of detail.usedOrder) {
       if (inSlots.has(id) || !handIds.has(id) || !bestIds.has(id)) continue
       const t = byId.get(id)
@@ -3329,7 +3497,7 @@ function stripOrderedHandIdsForPattern(
   }
   for (let i = 0; i < n; i++) {
     if (slots[i] != null) continue
-    const d = defsByDisplay[i]!
+    const d = orderedSlotDefs[i]!
     if (!previewSlotAllowsJoker(d, pinnedP, i, jokerEli)) continue
     for (const id of detail.usedOrder) {
       if (inSlots.has(id) || !handIds.has(id) || !bestIds.has(id)) continue
@@ -3397,7 +3565,13 @@ export function sortHandForSuggestedPattern(
     // Walk each combo in order; accumulate strip-ordered IDs with global dedup so the
     // first combo's tiles come first, then any additional tiles only the later combos use.
     for (const pp of pinnedPatterns) {
-      const { orderedIds } = stripOrderedHandIdsForPattern(pp, rackForPattern, handIds, exposureTileIds)
+      const { orderedIds } = stripOrderedHandIdsForPattern(
+        pp,
+        rackForPattern,
+        handIds,
+        exposureTileIds,
+        basePattern,
+      )
       for (const id of orderedIds) {
         if (seen.has(id)) continue
         const t = hand.find((x) => x.id === id)
@@ -3414,6 +3588,7 @@ export function sortHandForSuggestedPattern(
       rackForPattern,
       handIds,
       exposureTileIds,
+      basePattern,
     )
     for (const id of orderedIds) {
       if (seen.has(id)) continue
@@ -3466,6 +3641,7 @@ export function sortFullRackTilesForPattern(
       rackForPattern,
       rackIds,
       exposureTileIds,
+      basePattern,
     )
     for (const id of orderedIds) {
       if (seen.has(id)) continue

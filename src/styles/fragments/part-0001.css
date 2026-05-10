@@ -36,6 +36,7 @@
   font-size: var(--rack-control-label-fs);
   letter-spacing: max(0.01em, calc(0.02em + 0.02rem));
   line-height: 1.08;
+  text-transform: none;
   min-width: 0;
   max-width: 100%;
   overflow: hidden;
@@ -47,7 +48,10 @@
 .panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell,
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__clear,
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__hint {
-  font-size: var(--rack-hand-action-label-fs);
+  font-size: min(
+    var(--rack-hand-action-label-fs),
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.52)
+  );
 }
 
 /*
@@ -61,6 +65,36 @@
   letter-spacing: max(0.005em, calc(0.01em + 0.006rem));
   overflow: hidden;
   text-overflow: clip;
+  white-space: nowrap;
+}
+
+/* Two- and three-slot hand controls shrink by both row height and label width before they can spill. */
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c3-4,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c4-5,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c5-6,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c7-8,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c8-9,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c9-10,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c10-11,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c11-12,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c13-14 {
+  font-size: min(
+    var(--rack-hand-action-label-fs),
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.52),
+    calc(var(--rack-tile-btn-inner-2) / 5.9)
+  );
+  white-space: nowrap;
+}
+
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c3-5,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c9-11,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14 {
+  font-size: min(
+    var(--rack-hand-action-label-fs),
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.52),
+    calc(var(--rack-tile-btn-inner-3) / 7.6)
+  );
   white-space: nowrap;
 }
 
