@@ -3773,8 +3773,20 @@ export function suggestedHandsTiedAtBest(input: RankSuggestedHandsInput): {
  * Card data comes from {@link RankSuggestedHandsInput.patterns} or the session book ({@link getActiveCardPatterns}).
  */
 export type RankSuggestedHandsInput = {
+  /**
+   * Concealed rack tiles for this seat. **Tiles-away** ({@link SuggestedHandLine.tilesNeededRough}) uses
+   * only these plus resolved {@link playerClaimMelds} (`rankSuggestedHands` → `rackForPatternWithClaimMelds`)
+   * — nothing from {@link discards} ever increases {@link SuggestedHandLine.matchedInHand}.
+   * When you stage a discard for East, that tile leaves `hand` until you undo or commit, so tiles away goes
+   * up despite the discarded copy still glowing on the discard tracker coach.
+   */
   hand: TileInstance[]
   wallRemaining: number
+  /**
+   * Discards folded into {@link tableVisibleTiles} **only** for `visibleDeadMatches`.
+   * The app omits any live unreclaimed opponent discard here so unreclaimed tiles are not counted as
+   * settled table-dead in messaging (coach still rings that tile separately from the discard strip).
+   */
   discards: TileInstance[]
   exposures: BotExposure[]
   /**

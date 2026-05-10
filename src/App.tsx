@@ -770,6 +770,26 @@ type RoundState = {
   playerWinMethod: { type: 'self-draw' } | { type: 'called-discard'; botLabel: string } | null
 }
 
+/**
+ * Tiles in the discard pile that count as “dead” for practice-card table visibility / coach hints.
+ * Matches the discard strip: while a bot’s discard is still claimable (`bot-turn` / `call-staging`),
+ * that tile is omitted until the claim resolves — it must not read as already in your rack or as a
+ * settled dead copy for `rankSuggestedHands` / strip need highlights.
+ */
+function deadDiscardTilesForRanking(
+  r: Pick<RoundState, 'discardPile' | 'mainPhase' | 'activeBotDiscard'>,
+): TileInstance[] {
+  if (
+    (r.mainPhase === 'bot-turn' || r.mainPhase === 'call-staging') &&
+    r.activeBotDiscard
+  ) {
+    return r.discardPile
+      .filter((e) => e.tile.id !== r.activeBotDiscard!.id)
+      .map((e) => e.tile)
+  }
+  return r.discardPile.map((e) => e.tile)
+}
+
 function createNewRound(): RoundState {
   const deck = shuffle(buildAmericanDeck())
   const { east, south, west, north, wall } = dealOpeningFour(deck)
@@ -3394,7 +3414,10 @@ export default function App() {
     prevMainPhaseForJokerHintRef.current = mainPhase
   }, [mainPhase])
 
-  const discardTiles = useMemo(() => discardPile.map((e) => e.tile), [discardPile])
+  const discardTiles = useMemo(
+    () => deadDiscardTilesForRanking({ discardPile, mainPhase, activeBotDiscard }),
+    [discardPile, mainPhase, activeBotDiscard],
+  )
 
   /** Shown in the discard strip only after all passes / claims resolve — not while East (or bots) may still claim it. */
   const displayedDiscardPile = useMemo(() => {
@@ -3724,7 +3747,7 @@ export default function App() {
     cardPatterns,
   ])
 
-  /** Discards that match naturals the focused line is still short (Strip slots without highlight). */
+  /** Discards that match naturals the focused line is still short (incoming slot + discard tracker). */
   const suggestedDiscardNeedIds = useMemo(() => {
     if (!suggestedFocusHandKey) return null
     if (mainPhase === 'mahjong-declared' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand' || mainPhase === 'wall-game')
@@ -3732,7 +3755,7 @@ export default function App() {
     return computeSuggestedDiscardNeedHighlightIds(
       suggestedFocusHandKey,
       rackForSuggestedPatternMatch,
-      discardTiles,
+      discardPile.map((e) => e.tile),
       suggestedHandsExposureTileIds,
       cardPatterns,
     )
@@ -3740,7 +3763,7 @@ export default function App() {
     suggestedFocusHandKey,
     mainPhase,
     rackForSuggestedPatternMatch,
-    discardTiles,
+    discardPile,
     suggestedHandsExposureTileIds,
     cardPatterns,
   ])
@@ -3759,9 +3782,10 @@ export default function App() {
   }, [suggestedDiscardNeedIds, displayedDiscardPile])
 
   /**
-   * The live bot discard is omitted from the scroll strip while it is claimable but is still in
-   * `discardPile` for “needed tile” logic — merge it into rack/exposure highlight ids so the
-   * incoming-discard slot and hand coach stay consistent with the hands tray.
+   * Incoming bot discard: ring when strip needs match ({@link suggestedDiscardNeedIds}) — coach-only like
+   * discard-tracker glow. **Tiles-away** uses only {@link suggestedRankInput.hand} + exposures; unreclaimed
+   * disc never increases `matchedInHand`. Leaving staging / committing discard removes naturals from
+   * `hand`, so tiles away bumps while that copy can still glow in the tracker strip.
    */
   const suggestedTileGuideForRack = useMemo(() => {
     if (!suggestedTileGuide) return null
@@ -3799,7 +3823,7 @@ export default function App() {
         {
           hand: r.hand,
           wallRemaining: r.wall.length,
-          discards: r.discardPile.map((e) => e.tile),
+          discards: deadDiscardTilesForRanking(r),
           exposures: r.botExposures,
           playerClaimMelds: r.eastExposures,
           eastTableClaimMelds: r.eastExposures,
