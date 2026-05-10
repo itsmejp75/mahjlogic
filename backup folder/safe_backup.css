@@ -36,17 +36,78 @@
 
 /* Shared: rack-aligned control typography (deduped from 8 rules) */
 .rack-bottom-bar--wall-game .btn.rack-bottom-tile-cell,
-.rack-bottom-tile-cell,
-.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn,
+.rack-bottom-tile-cell:not(.rack-bottom-wall),
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__clear,
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__hint,
-.panel--bot-exposures__toolbar-well .app-bottom-center-controls .suggested-hands-tab,
 .panel--bot-exposures__toolbar-well .app-menu-anchor .app-bottom-center-controls__menu-btn,
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell {
   font-size: var(--rack-control-label-fs);
   letter-spacing: max(0.01em, calc(0.02em + 0.02rem));
   line-height: 1.08;
+  text-transform: none;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   padding: var(--rack-control-pad-block) var(--rack-control-pad-inline);
+  text-overflow: clip;
+}
+
+/* East hand action strip + bot toolbar HANDS / CLR HL / HINT: shared label scale (Menu icons stay smaller). */
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell,
+.panel--bot-exposures__toolbar-well .panel--bot-exposures__clear,
+.panel--bot-exposures__toolbar-well .panel--bot-exposures__hint {
+  font-size: min(
+    var(--rack-hand-action-label-fs),
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.52)
+  );
+}
+
+/*
+ * One-tile text controls (Sort / HINT / narrow toolbar actions) need a tighter cap than wider
+ * actions so labels scale down with the button instead of clipping/spilling in small windows.
+ */
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1,
+.panel--bot-exposures__toolbar-well .panel--bot-exposures__clear,
+.panel--bot-exposures__toolbar-well .panel--bot-exposures__hint {
+  font-size: min(var(--rack-hand-action-label-fs), calc(var(--hand-rack-tile-w) * 0.34));
+  letter-spacing: max(0.005em, calc(0.01em + 0.006rem));
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+/* Two- and three-slot hand controls shrink by both row height and label width before they can spill. */
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c3-4,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c4-5,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c5-6,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c7-8,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c8-9,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c9-10,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c10-11,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c11-12,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c13-14 {
+  font-size: min(
+    var(--rack-hand-action-label-fs),
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.52),
+    calc(var(--rack-tile-btn-inner-2) / 5.9)
+  );
+  white-space: nowrap;
+}
+
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c3-5,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c9-11,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14 {
+  font-size: min(
+    var(--rack-hand-action-label-fs),
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.52),
+    calc(var(--rack-tile-btn-inner-3) / 7.6)
+  );
+  white-space: nowrap;
+}
+
+.panel--bot-exposures__toolbar-well .panel--bot-exposures__clear.btn--label-wrap {
+  white-space: normal;
 }
 
 /* ---- part-0002.css (from base.css, layout.css, components.css, animations.css) ---- */
@@ -135,7 +196,6 @@
 .hands-list__card-c,
 .hands-sheet__card-c,
 .mahjong-blocked-modal__c-mark,
-.panel--bot-exposures__toolbar-well .app-bottom-center-controls .suggested-hands-tab,
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__clear,
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__hint,
 .rack-bottom-tile-cell,
@@ -281,17 +341,14 @@
     + var(--rack-tile-face-bw)
   );
   /*
-   * Main action bar (`.panel--hand .rack-bottom-bar--tile-grid`): horizontal center of Swap
-   * (`grid-column: 6 / 8`, two face-width slots) from the same origin as play-split inner-left
-   * (after `--app-h-pad`): hand + discard panel inline pad, bar pad + -2px/+1px nudge, then 6
-   * tile tracks + 5.5 gaps to the span midpoint.
+   * Main action bar: horizontal center of the Call / joker-Swap shared span (`grid-column: 9 / 11`).
    */
   --rack-swap-center-x-from-stage-content: calc(
     var(--hand-window-pad-inline)
     + var(--rack-tray-inset-inline)
     - 1px
-    + 6 * var(--hand-rack-tile-w)
-    + 5.5 * var(--player-rack-face-gap)
+    + 9 * var(--hand-rack-tile-w)
+    + 8.5 * var(--player-rack-face-gap)
   );
   /* Menu: 2 columns — inner face (matches bottom action bar) */
   --menu-btn-w: var(--rack-tile-btn-inner-2);
@@ -311,16 +368,25 @@
    * cap label size to a fraction of the face width so type tracks button size the same way when
    * the window shrinks. Padding scales too so text stays off the control rim.
    */
+  /* Default rack / bot menu icon; East hand + bot HANDS/CLR/HINT use `--rack-hand-action-label-fs` (part-0001). */
   --rack-control-label-fs: min(
     var(--rack-bottom-action-fs),
-    calc(var(--hand-rack-tile-w) * 0.35)
+    calc(var(--hand-rack-tile-w) * 0.48)
   );
-  --rack-control-label-fs-tight: min(
+  /* East hand menu icon `em` basis — keep separate from text button size. */
+  --rack-menu-hamburger-fs: min(
     var(--rack-bottom-action-fs),
-    calc(var(--hand-rack-tile-w) * 0.25)
+    calc(var(--hand-rack-tile-w) * 0.48)
   );
-  --rack-control-pad-inline: max(0.1rem, min(0.24rem, calc(var(--hand-rack-tile-w) * 0.08)));
-  --rack-control-pad-block: max(0.1rem, min(0.2rem, calc(var(--hand-rack-tile-w) * 0.05)));
+  /* East hand Sort / MAHJ / Swap / Call / Pass / Charleston (+ wall count, part-0021). Slightly
+   * above bot `--rack-control-label-fs`; may exceed `--rack-bottom-action-fs` when that caps icons.
+   * Hamburger stays `--rack-menu-hamburger-fs` (part-0020). */
+  --rack-hand-action-label-fs: min(
+    calc(var(--rack-bottom-action-fs) * 1.18),
+    calc(var(--hand-rack-tile-w) * 0.58)
+  );
+  --rack-control-pad-inline: max(0.08rem, min(0.2rem, calc(var(--hand-rack-tile-w) * 0.07)));
+  --rack-control-pad-block: max(0.08rem, min(0.16rem, calc(var(--hand-rack-tile-w) * 0.042)));
 
   /* Rack action row + bot toolbar (Menu / Clear / Suggested): larger tap targets on phones. */
   --rack-action-touch-min-h: max(48px, calc(var(--hand-rack-tile-h) * 0.52));
@@ -479,41 +545,58 @@
 
 
 /*
- * Same shell + outer height as `.panel--bot-exposures__toolbar-well`: full inner pad on the
- * tray + min inner row = `--suggested-tab-h` (Menu / Clear row). Horizontal padding stays 0 so
- * the 14-column bar still lines up with tiles; `--bot-exposure-inner-pad` comes from `.app-dnd-frame`.
+ * Hand action trays: part-0115 applies `--dark-tray-rim-*` — 1px border plus stacked inset shadows.
+ * Match the tile-rack rim geometry so button content is snug to the visible inner edge without
+ * painting over the border/highlight. Applies both during Charleston and after it.
  */
-.panel--hand .panel-hand-rack__action-well {
+.panel--hand .panel-hand-rack__action-well,
+.panel--hand .panel-hand-rack__charleston-actions-well {
   justify-content: center;
   width: 100%;
+  min-width: 0;
   box-sizing: border-box;
-  padding-block: var(--bot-exposure-inner-pad);
+  padding-block: var(--hand-rack-rim-block, 2px);
+  /* Zero inline padding so the Sort button's left edge sits flush against the inside of
+   * the left border — same x as tile 1 above. Pass/Discard's right edge does the same on
+   * the right. The 14-column action grid width (`--hand-action-strip-w`
+   * = 14 * face-w + 13 * gap = 100cqi - 2px) fits this content box edge-to-edge. */
   padding-inline: 0;
-  min-height: calc(2 * var(--bot-exposure-inner-pad) + var(--suggested-tab-h));
+  min-height: calc(
+    2 * var(--hand-rack-rim-block, 2px)
+    + var(--hand-button-row-h, var(--rack-action-touch-min-h))
+    + 2 * 1px
+  );
   position: relative;
   z-index: 1;
   background: var(--window-inner-surface);
-  border-radius: calc(var(--rack-tile-btn-border-radius) + var(--bot-exposure-inner-pad));
+  border-radius: calc(var(--rack-tile-btn-border-radius) + var(--hand-rack-rim-block, 2px));
   overflow: hidden;
 }
 
 /*
- * Charleston Sort→Pass row: same min-height rhythm as `.panel--bot-exposures__toolbar-well`.
- * Keep top/bottom inset symmetric so the gap below Pass matches the space above it.
+ * TEMP-DEBUG: strip the action wells' rim chrome (1px border + inset shadows) while we
+ * verify button-row alignment, but keep the dark background so the row is still visible
+ * against the panel surface. Corner radius matches the BUTTONS inside (not the tile-face
+ * radius the bank above uses) so the well looks like a button-shaped tray that holds
+ * button-shaped controls.
+ *
+ *   --rack-tile-btn-border-radius : ~0.68rem  ← button corner radius (used here on well)
+ *   --tile-face-border-radius     : ~0.35rem  ← tile corner radius (used by `.hand-bank`)
+ *
+ * The previous formula `calc(--rack-tile-btn-border-radius + --hand-rack-rim-block)`
+ * added 2px to compensate for the rim border so the well's INNER curve matched the
+ * button's OUTER curve concentrically. With the rim border removed, that compensation
+ * is no longer needed — well outer = well content edge.
+ *
+ * To restore the rim border + inset shadows, delete this rule (the part-0115 rim + the
+ * original `border-radius` declaration above re-take effect immediately).
  */
+.panel--hand .panel-hand-rack__action-well,
 .panel--hand .panel-hand-rack__charleston-actions-well {
-  justify-content: center;
-  width: 100%;
-  box-sizing: border-box;
-  padding-top: var(--bot-exposure-inner-pad);
-  padding-inline: 0;
-  padding-bottom: var(--bot-exposure-inner-pad);
-  min-height: calc(2 * var(--bot-exposure-inner-pad) + var(--rack-action-touch-min-h));
-  position: relative;
-  z-index: 1;
+  border: none;
   background: var(--window-inner-surface);
-  border-radius: calc(var(--rack-tile-btn-border-radius) + var(--bot-exposure-inner-pad));
-  overflow: hidden;
+  border-radius: var(--rack-tile-btn-border-radius);
+  box-shadow: none;
 }
 
 /* ---- part-0008.css (from base.css, layout.css, components.css, animations.css) ---- */
@@ -531,24 +614,58 @@
 
 /* Hand tray: side inset lives on .hand-row so left/right tile-edge gaps stay symmetric. */
 .panel--hand .panel-hand-rack__hand-tray .hand-bank {
-  padding-block: var(--hand-rack-tray-inset-block);
+  padding-block: var(--hand-rack-container-pad-block, 2px);
+  /* Zero inline padding so tile 1 is flush against the inside of the left border (mirrors
+   * tile 14 against the right border). Tile width in part-0117.css = (100cqi − border) / 14,
+   * which is the bank content box width — fits with no overflow on either end. */
   padding-inline: 0;
   box-sizing: border-box;
-  min-height: calc(var(--rack-tile-h) + 2 * var(--hand-rack-tray-inset-block));
-  /* Bank is the dark tray — tiles sit at natural width so padding shows on all sides */
+  height: var(
+    --hand-rack-outer-h,
+    calc(var(--hand-rack-fill-tile-h, var(--hand-rack-tile-h)) + var(--hand-rack-rim-block, 2px))
+  );
+  min-height: var(
+    --hand-rack-outer-h,
+    calc(var(--hand-rack-fill-tile-h, var(--hand-rack-tile-h)) + var(--hand-rack-rim-block, 2px))
+  );
+  border-radius: var(--tile-face-border-radius);
+  /* Bank is the dark tray; tiles fill it with only the rim/highlight in the border box. */
 }
 
 .panel--hand .panel-hand-rack__hand-tray .hand-row {
-  --rack-tile-w: calc(var(--hand-rack-tile-w) * var(--hand-rack-tile-scale));
-  --rack-tile-h: calc(var(--hand-rack-tile-h) * var(--hand-rack-tile-scale));
-  /* Fill the hand bank; tiles pack from the left inside the fixed 14-slot strip. */
-  padding-inline: var(--hand-rack-tray-inset-inline);
+  /* `--rack-tile-w` / `--rack-tile-h`: see `part-0118.css` (same CQ + scale as exposure row).
+   *
+   * GRID (not flex) so the row's full inline content area is split into 14 mathematically
+   * equal `1fr` columns by the browser. With explicit per-slot widths (the previous `flex`
+   * + `width: var(--rack-tile-w)` setup), each of the 14 fractional-pixel widths rounded
+   * independently and the lost sub-pixels piled up as visible slack on the right edge of
+   * tile 14 (and pushed tile 1 against the left border). Grid `1fr` distributes pixels
+   * across all columns once, with no rounding accumulation — both ends of the row sit
+   * the same distance off the bank's inner border edge.
+   *
+   * Slot widths are normalized to `100%` of their grid track in the rule below. The base
+   * `display: flex` + `gap: var(--rack-tile-gap)` from part-0075 are overridden here. */
+  display: grid;
+  grid-template-columns: repeat(14, 1fr);
+  gap: var(--player-rack-face-gap);
+  align-items: center;
+  padding-inline: 0;
   box-sizing: border-box;
   margin-left: 0;
   width: 100%;
   max-width: 100%;
-  justify-content: flex-start;
-  flex-shrink: 0;
+  min-width: 0;
+  overflow-x: clip;
+}
+
+/* Slot/wrap widths must come from the grid track, not the original explicit
+ * `width: var(--rack-tile-w)` in part-0075 (which would re-introduce sub-pixel drift). */
+.panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap,
+.panel--hand .panel-hand-rack__hand-tray .hand-row > .hand-slot--empty,
+.panel--hand .panel-hand-rack__hand-tray .hand-row > .hand-slot--collapse {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
 }
 
 /* ---- part-0009.css (from base.css, layout.css, components.css, animations.css) ---- */
@@ -585,11 +702,10 @@
 
 .panel--hand .rack-stage__rack-col {
   gap: var(--play-tray-h-divider);
-  /* Pin the column to exactly 14 tile-widths so exposure rack, hand, and
-     button bar all share the same coordinate origin and never center separately.
-     `.rack-stage` is now flex+align-items:center (see below), so align-self
-     handles horizontal centering. margin-inline auto is redundant but harmless. */
-  width: calc(14 * var(--rack-tile-w) + 13 * var(--player-rack-face-gap) + 2 * var(--hand-rack-tray-inset-inline));
+  /* Pin the column to exactly 14 face-widths + 13 gaps + tray insets (`--hand-rack-tile-w` from `.panel--hand` container query). */
+  width: calc(
+    14 * var(--hand-rack-tile-w) + 13 * var(--player-rack-face-gap) + 2 * var(--hand-rack-tray-inset-inline)
+  );
   max-width: 100%;
   margin-inline: auto;
   align-self: center;
@@ -632,8 +748,6 @@
 }
 
 .panel--hand .rack-stage__rack-top .exposure-rack {
-  --rack-tile-w: calc(var(--hand-rack-tile-w) * var(--hand-rack-tile-scale));
-  --rack-tile-h: calc(var(--hand-rack-tile-h) * var(--hand-rack-tile-scale));
   position: relative;
   z-index: 1;
 }
@@ -813,8 +927,8 @@
   box-sizing: border-box;
 }
 
-/* 14 hand slots: Sort=1, Undo=2, empty 3, MJ 4–5, Swap 6–7, Call 8–9, wall=10, empty 11, primary 12–14
-   (primary matches Charleston pass width: three slots). Fixed column widths (same as tiles). */
+/* 14 hand slots: Sort=1, Menu=2, HANDS=3–4 (optional), MAHJ=5–6, LOGIC=7–8, Call *or* Swap=9–10, wall=11, Discard=12–14
+   (Call and joker Swap share 9–10; Discard matches Charleston pass width: three slots). */
 .rack-bottom-bar--tile-grid {
   --rack-hand-slot-count: 14;
   display: grid;
@@ -831,17 +945,28 @@
   grid-row: 1;
 }
 
-/* Same horizontal origin as the 14 hand slots: `.hand-row` uses this inset + 2px nudge (see
-   above). A plain `14 * tile + 13 * gap` bar centered in the tray is shifted by ~0.44rem, so
-   every column and every multi-tile control looked one tile off or “too small”. */
+/* Hand action grids: 14 columns + the same 13 gaps as the rack above.
+ *
+ * `repeat(14, 1fr)` (not explicit `--hand-action-face-w` per column) so the well's full
+ * content area is split into 14 mathematically equal columns by the browser — same fix
+ * applied to `.hand-row` in part-0008. With per-column explicit widths, each of the 14
+ * fractional-pixel column widths rounded independently and the lost sub-pixels piled up
+ * as visible slack on the right edge of the rightmost button (Pass/Discard). 1fr columns
+ * distribute pixels across all tracks once, with no rounding accumulation.
+ *
+ * Buttons span their grid columns via `.rack-bottom-tile-cell--cN` rules in part-0019 +
+ * part-0021 (e.g. `--c4-5 { grid-column: 4 / 6 }`); each button's width is `100%` of its
+ * spanned cells (set in part-0067), so buttons line up with the tile-face columns above. */
 .panel--hand .rack-bottom-bar--tile-grid {
+  grid-template-columns: repeat(14, 1fr);
+  column-gap: var(--hand-action-face-gap);
   width: 100%;
-  max-width: none;
+  max-width: 100%;
   box-sizing: border-box;
-  padding-inline: var(--hand-rack-tray-inset-inline);
+  padding-inline: 0;
   /* Clear base `margin-inline: auto` so the grid tracks line up with the tile-face edges above. */
   margin: 0;
-  transform: translateX(var(--hand-rack-action-row-nudge-x));
+  transform: none;
 }
 
 /*
@@ -899,7 +1024,7 @@
 /* Same 14-column grid + insets as the main tile action bar; inner-7 wide controls. */
 .panel--hand .rack-bottom-bar--wall-game {
   display: grid;
-  grid-template-columns: repeat(14, var(--hand-rack-tile-w));
+  grid-template-columns: repeat(14, var(--hand-rack-fill-tile-w, var(--hand-rack-tile-w)));
   column-gap: var(--player-rack-face-gap);
   row-gap: 0;
   width: 100%;
@@ -938,16 +1063,16 @@
 
 
 
-/* Charleston inline pass info — sits in the grid bar between wall count and pass cluster. */
+/* Charleston: round title + pass hints live in the teal pass-strip box on the rack row. */
 
-/* Charleston: Stop cols 9–11, Pass cols 12–14 — direct grid children, no wrapper needed */
+/* Charleston bar: Pass cols 12–14 (cols 9–11 unused — grid spacing only) */
 
 .rack-bottom-tile-cell {
   width: 100%;
   max-width: 100%;
   min-width: 0;
   min-height: var(--rack-action-touch-min-h);
-  font-weight: 500;
+  font-weight: 400;
   text-align: center;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -966,6 +1091,29 @@
 
 .rack-bottom-tile-cell--c3 {
   grid-column: 3 / 4;
+}
+
+/* Two tile faces + one grid gap (HANDS), aligned under rack columns 3–4. */
+.rack-bottom-tile-cell--c3-4 {
+  grid-column: 3 / 5;
+}
+
+/* Single column under rack column 5 (e.g. wall count when HANDS uses 3–4). */
+.rack-bottom-tile-cell--c5 {
+  grid-column: 5 / 6;
+}
+
+/* Main rack: MAHJ / Swap / Call shifted one column left of former 6–7 / 8–9 / 10–11. */
+.rack-bottom-tile-cell--c5-6 {
+  grid-column: 5 / 7;
+}
+
+.rack-bottom-tile-cell--c7-8 {
+  grid-column: 7 / 9;
+}
+
+.rack-bottom-tile-cell--c9-10 {
+  grid-column: 9 / 11;
 }
 
 .rack-bottom-tile-cell--c4-5 {
@@ -992,7 +1140,7 @@
 
 
 
-/* Menu on the East hand / Charleston action bar (replaces former Mah Jongg slot c4–5). */
+/* Menu on the East hand / Charleston action bar: single column c2, hamburger icon (cols 4–5 unused). */
 .panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack {
   position: relative;
   bottom: auto;
@@ -1002,10 +1150,10 @@
   z-index: auto;
   box-sizing: border-box;
   display: block;
-  width: var(--rack-tile-btn-inner-2);
-  max-width: var(--rack-tile-btn-inner-2);
-  margin-inline-start: var(--rack-tile-face-bw);
-  justify-self: start;
+  width: 100%;
+  max-width: none;
+  margin-inline-start: 0;
+  justify-self: stretch;
   min-height: var(--rack-action-touch-min-h);
   padding: 0;
   border-radius: var(--rack-tile-btn-border-radius);
@@ -1015,9 +1163,55 @@
 .panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn {
   position: absolute;
   inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   height: 100%;
   border-radius: inherit;
+  padding: 0;
+  font-size: min(
+    var(--rack-menu-hamburger-fs),
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.58)
+  );
+  letter-spacing: 0;
+  text-transform: none;
+  overflow: hidden;
+}
+
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn,
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:hover,
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn--open {
+  box-shadow: none;
+}
+
+/* Three-line icon: clamp to the actual one-slot button box, not just inherited font size. */
+.hand-rack-menu-hamburger {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+  width: min(
+    1.2em,
+    calc(var(--rack-tile-btn-inner-1) * 0.5),
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.42)
+  );
+  height: min(
+    0.95em,
+    calc(var(--rack-tile-btn-inner-1) * 0.38),
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.34)
+  );
+  flex-shrink: 0;
+  max-width: calc(100% - 2px);
+  max-height: calc(100% - 2px);
+}
+
+.hand-rack-menu-hamburger__bar {
+  height: min(0.11em, calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.045));
+  min-height: 1px;
+  border-radius: 0.06em;
+  background: currentColor;
+  flex-shrink: 0;
 }
 
 /* ---- part-0021.css (from base.css, layout.css, components.css, animations.css) ---- */
@@ -1036,9 +1230,14 @@
   grid-column: 10 / 12;
 }
 
+/* Wall count: column 11, immediately left of Discard (12–14). */
+.rack-bottom-tile-cell--c11 {
+  grid-column: 11 / 12;
+}
+
 /* Last two hand slots (tiles 13–14); negative lines stay correct if slot count changes. */
 
-/* Charleston: Stop = cols 9–11, Pass = cols 12–14 */
+/* Charleston: Pass = cols 12–14 */
 .rack-bottom-tile-cell--c9-11 {
   grid-column: 9 / 12;
 }
@@ -1055,6 +1254,8 @@
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c1,
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c2,
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c3,
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c5,
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c11,
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c12 {
   width: var(--rack-tile-btn-inner-1);
   max-width: var(--rack-tile-btn-inner-1);
@@ -1062,7 +1263,9 @@
   justify-self: start;
 }
 
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c3-4,
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c4-5,
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c5-6,
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c6-7,
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c8-9,
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c10-11,
@@ -1110,13 +1313,25 @@
   min-width: 0;
   max-width: var(--rack-tile-btn-inner-1);
   margin-inline-start: var(--rack-tile-face-bw);
-  padding: 0.16rem 0.04rem;
-  /* Count: same numeral font as tile faces (Noto Sans Arabic); + white inlay on gem fill */
-  font-family: 'Noto Sans Arabic', var(--sans);
-  font-size: min(1.792rem, calc(var(--rack-bottom-action-fs) * 2.048));
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  line-height: 1.1;
+  /* Center the count in the heat box; symmetric inset so V/H optical center holds. */
+  padding: 0;
+  /* Match hand action strip label size; same row height as adjacent cells (part-0026 / menu anchor). */
+  min-height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
+  box-sizing: border-box;
+  /* Same face as rack `.btn` (Figtree) so the count aligns visually with Sort / Menu / MAHJ. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  text-align: center;
+  font-family: 'Figtree', var(--sans);
+  font-size: min(
+    var(--rack-hand-action-label-fs),
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.52),
+    calc(var(--rack-tile-btn-inner-1) * 0.72)
+  );
+  font-weight: 500;
+  letter-spacing: 0;
   font-variant-numeric: tabular-nums;
   color: var(--color-off-black);
   border-radius: var(--rack-tile-btn-border-radius);
@@ -1151,6 +1366,12 @@
   background-position: 0 calc(var(--wall-t, 1) * 100%);
   box-shadow: none;
   transition: background-position 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.rack-bottom-wall__num {
+  line-height: 0;
+  display: block;
+  text-align: center;
 }
 
 /* Opening wall (99 tiles): uniform green — gradient heat begins after the first tile is drawn/discarded. */
@@ -1203,7 +1424,7 @@
   background: color-mix(in srgb, var(--bg-elevated) 94%, var(--color-white) 6%);
   color: var(--text-h);
   font-family: 'Figtree', var(--sans);
-  font-weight: 500;
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
   box-sizing: border-box;
@@ -1222,13 +1443,29 @@
 
 
 
-.panel--hand .exposure-rack {
-  justify-content: center;
-  padding-block: var(--hand-rack-tray-inset-block);
-  padding-inline: var(--hand-rack-tray-inset-inline);
+.panel--hand .rack-stage__rack-top .exposure-rack {
+  /* Snug to the shared 14 × face + 13 gap column; clip sub-pixel / transform spill on narrow viewports. */
   width: 100%;
-  min-height: calc(var(--rack-tile-h) + 2 * var(--hand-rack-tray-inset-block));
+  max-width: 100%;
+  min-width: 0;
   box-sizing: border-box;
+  overflow-x: clip;
+}
+
+.panel--hand .exposure-rack {
+  justify-content: flex-start;
+  padding-block: var(--hand-rack-container-pad-block, 2px);
+  /* Zero inline padding — see part-0008 .hand-bank and part-0117 tile-w formula. */
+  padding-inline: 0;
+  width: 100%;
+  height: var(--hand-rack-outer-h, calc(var(--rack-tile-h) + var(--hand-rack-rim-block, 2px)));
+  min-height: var(--hand-rack-outer-h, calc(var(--rack-tile-h) + var(--hand-rack-rim-block, 2px)));
+  box-sizing: border-box;
+}
+
+.panel--hand .exposure-rack:not(.exposure-rack--charleston-pass) {
+  height: var(--hand-rack-outer-h, calc(var(--rack-tile-h) + var(--hand-rack-rim-block, 2px)));
+  min-height: var(--hand-rack-outer-h, calc(var(--rack-tile-h) + var(--hand-rack-rim-block, 2px)));
 }
 
 .panel--hand .hand-bank {
@@ -1276,19 +1513,22 @@
   gap: var(--rack-tile-gap);
 }
 
-.panel--hand .rack-bottom-tile-cell {
+/* Wall count typography + padding: only part-0021 / charleston rules — do not bind to action row scale. */
+.panel--hand .rack-bottom-tile-cell:not(.rack-bottom-wall) {
   font-size: var(--rack-bottom-action-fs);
+  min-height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
 }
 
-.panel--hand .rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell {
-  font-size: min(1.792rem, calc(var(--rack-bottom-action-fs) * 2.048));
-  font-family: 'Noto Sans Arabic', var(--sans);
-  font-weight: 600;
-  color: var(--color-off-black);
+/* Wall count: font + metrics from part-0021 (`--rack-hand-action-label-fs`). */
+
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell,
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack {
+  min-height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
 }
 
 .panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell {
   padding: 0.14rem 0.05rem;
+  box-sizing: border-box;
 }
 
 .rack-stack .exposure-rack,
@@ -1792,11 +2032,15 @@
    * resolves exactly to viewport width and the right edge no longer clips.
    */
   .panel--hand .panel-hand-rack__hand-tray .hand-row {
-    padding-inline: var(--rack-tray-inset-inline);
+    padding-inline: 0;
     margin-left: 0;
   }
 
-  .panel--hand .rack-bottom-bar--tile-grid,
+  .panel--hand .rack-bottom-bar--tile-grid {
+    padding-inline: 0;
+    margin-left: 0;
+  }
+
   .panel--hand .rack-bottom-bar--wall-game {
     width: 100%;
     padding-inline: var(--rack-tray-inset-inline);
@@ -2300,7 +2544,10 @@
   flex-direction: column;
   gap: var(--play-tray-h-divider);
   --bot-exposure-row-count: 3;
-  --bot-toolbar-track-h: calc(2 * var(--bot-exposure-inner-pad) + var(--rack-action-touch-min-h));
+  --bot-toolbar-height-delta: calc(var(--hand-rack-tray-inset-inline) / 14 * 1.3333);
+  --bot-toolbar-pad-block: max(0px, calc(var(--bot-exposure-inner-pad) - var(--bot-toolbar-height-delta) / 2));
+  --bot-toolbar-button-h: max(36px, calc(var(--rack-action-touch-min-h) - var(--bot-toolbar-height-delta)));
+  --bot-toolbar-track-h: calc(2 * var(--bot-toolbar-pad-block) + var(--bot-toolbar-button-h));
   --bot-body-top-pad: 0px;
   --bot-body-bottom-pad: 0px;
   /* Row↔row gaps match East rack tray dividers (`--play-tray-h-divider`). */
@@ -2355,14 +2602,15 @@
   gap: var(--play-split-lower-toolbar-button-gap);
   width: 100%;
   box-sizing: border-box;
-  padding: var(--bot-exposure-inner-pad);
+  padding-block: var(--bot-toolbar-pad-block, var(--bot-exposure-inner-pad));
+  padding-inline: var(--bot-exposure-inner-pad);
   position: relative;
   z-index: 2;
   background: var(--window-inner-surface);
-  border-radius: calc(var(--rack-tile-btn-border-radius) + var(--bot-exposure-inner-pad));
+  border-radius: calc(var(--rack-tile-btn-border-radius) + var(--bot-toolbar-pad-block, var(--bot-exposure-inner-pad)));
   /* Must not clip: the Menu control sits in this shell. */
   overflow: visible;
-  min-height: calc(2 * var(--bot-exposure-inner-pad) + var(--rack-action-touch-min-h));
+  min-height: calc(2 * var(--bot-toolbar-pad-block, var(--bot-exposure-inner-pad)) + var(--bot-toolbar-button-h, var(--rack-action-touch-min-h)));
 }
 
 /*
@@ -2401,11 +2649,6 @@
 
 .app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well > * {
   flex: 0 0 auto;
-}
-
-.app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well .suggested-hands-tab {
-  min-width: 0;
-  max-width: 100%;
 }
 
 /* ---- part-0043.css (from base.css, layout.css, components.css, animations.css) ---- */
@@ -2792,8 +3035,8 @@
   flex: 0 0 auto;
   align-self: center;
   width: var(--menu-btn-w);
-  height: var(--rack-action-touch-min-h);
-  min-height: var(--rack-action-touch-min-h);
+  height: var(--bot-toolbar-button-h, var(--rack-action-touch-min-h));
+  min-height: var(--bot-toolbar-button-h, var(--rack-action-touch-min-h));
   z-index: 2;
   margin-left: 0;
 }
@@ -2821,8 +3064,8 @@
   align-self: center;
   width: var(--rack-tile-btn-inner-1);
   max-width: 100%;
-  min-height: var(--rack-action-touch-min-h);
-  height: var(--rack-action-touch-min-h);
+  min-height: var(--bot-toolbar-button-h, var(--rack-action-touch-min-h));
+  height: var(--bot-toolbar-button-h, var(--rack-action-touch-min-h));
   border-radius: var(--rack-tile-btn-border-radius);
   border: none;
   z-index: 2;
@@ -2839,7 +3082,7 @@
 
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__clear.btn--label-wrap {
   height: auto;
-  min-height: var(--rack-action-touch-min-h);
+  min-height: var(--bot-toolbar-button-h, var(--rack-action-touch-min-h));
   line-height: 1.1;
   padding: var(--rack-control-pad-block) var(--rack-control-pad-inline);
   white-space: normal;
@@ -2858,14 +3101,14 @@
   align-self: center;
   width: var(--rack-tile-btn-inner-1);
   max-width: 100%;
-  min-height: var(--rack-action-touch-min-h);
-  height: var(--rack-action-touch-min-h);
+  min-height: var(--bot-toolbar-button-h, var(--rack-action-touch-min-h));
+  height: var(--bot-toolbar-button-h, var(--rack-action-touch-min-h));
   border-radius: var(--rack-tile-btn-border-radius);
   border: none;
   z-index: 2;
   background: var(--color-slate-mid);
   color: var(--color-white);
-  font-weight: 500;
+  font-weight: 400;
   font-family: 'Figtree', var(--sans);
   text-transform: uppercase;
   box-shadow:
@@ -2886,33 +3129,12 @@
     0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);
 }
 
-.panel--bot-exposures__toolbar-well .app-bottom-center-controls .suggested-hands-tab {
-  flex: 0 0 auto;
-  align-self: center;
-  min-height: var(--rack-action-touch-min-h);
-  height: var(--rack-action-touch-min-h);
-  /* Match global `.btn` drop shadow; lock so :hover / open don’t reflow the label */
-  box-shadow:
-    0 2px 4px color-mix(in srgb, var(--color-black) 16%, transparent),
-    0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);
-  transform: none;
-}
-
-.panel--bot-exposures__toolbar-well
-  .app-bottom-center-controls
-  .suggested-hands-tab:hover:not(:disabled):not(.suggested-hands-tab--open) {
-  box-shadow:
-    0 2px 4px color-mix(in srgb, var(--color-black) 16%, transparent),
-    0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);
-  transform: none;
-}
-
 .panel--bot-exposures__toolbar-well .app-menu-anchor .app-bottom-center-controls__menu-btn {
   position: absolute;
   top: 0;
   left: 0;
   width: var(--menu-btn-w);
-  height: var(--rack-action-touch-min-h);
+  height: var(--bot-toolbar-button-h, var(--rack-action-touch-min-h));
 }
 
 /* ---- part-0054.css (from base.css, layout.css, components.css, animations.css) ---- */
@@ -3420,7 +3642,7 @@
 .btn {
   font-family: 'Figtree', var(--sans);
   font-size: var(--btn-font-size);
-  font-weight: 500;
+  font-weight: 400;
   line-height: var(--btn-line-height);
   text-transform: uppercase;
   letter-spacing: var(--btn-letter-spacing);
@@ -3545,8 +3767,15 @@
   color: var(--color-white);
 }
 
-.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7:not(:disabled),
-.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7:disabled {
+/* LOGIC (c7–8) + joker swap when gray mode */
+.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c7-8:not(:disabled),
+.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c7-8:disabled,
+.app[data-color-buttons='off']
+  .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
+.app[data-color-buttons='off']
+  .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled {
   background: var(--color-slate-mid);
   color: var(--color-white);
 }
@@ -3732,12 +3961,6 @@
   box-shadow: none;
 }
 
-/* Sort + Undo: 1-tile slot, slightly tighter than Pass / other actions. */
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1,
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c2 {
-  font-size: var(--rack-control-label-fs-tight);
-}
-
 /* Same inner-face metrics as the general `.rack-bottom-tile-cell` block above (see :root). */
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1,
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c2,
@@ -3748,7 +3971,9 @@
   justify-self: start;
 }
 
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c3-4,
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c4-5,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c5-6,
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7,
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c8-9,
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c10-11,
@@ -3780,12 +4005,11 @@
 }
 
 /*
- * Hand row: hand tiles are borderless and fill each slot (--rack-tile-w). The rules above size
- * buttons to the *inner* face of a bordered .tile-face; in the hand panel, stretch to the full
- * grid area so left/right edges line up with the tile faces in the hand row.
+ * Hand action rows use the same face-edge contract as the rack above: a c1 item fills
+ * one column, c4-5 fills two columns plus one grid gap, c12-14 fills three plus two gaps.
  */
-.panel--hand .rack-bottom-bar--tile-grid > .rack-bottom-tile-cell,
-.panel--hand .rack-bottom-bar--tile-grid > .btn.rack-bottom-tile-cell {
+.panel--hand .rack-bottom-bar--tile-grid > .rack-bottom-tile-cell {
+  box-sizing: border-box;
   width: 100%;
   max-width: none;
   margin-inline-start: 0;
@@ -3828,6 +4052,56 @@
   box-shadow: none;
 }
 
+.panel--hand .rack-bottom-bar--tile-grid .rack-bottom-tile-cell,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell,
+.panel--hand .rack-bottom-bar--tile-grid .rack-bottom-tile-cell:disabled,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:disabled,
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn,
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:disabled,
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:hover,
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn--open,
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn--open:hover {
+  box-shadow: none;
+}
+
+/*
+ * Hand action row cells: size from the grid track, NOT from a `--hand-action-face-w` token
+ * computed independently. The well's `.rack-bottom-bar--tile-grid` (part-0017) uses
+ * `grid-template-columns: repeat(14, 1fr)`, and each button class (`--c1`, `--c4-5`, etc.)
+ * sets its `grid-column` span (part-0019, part-0021). With `width: 100%` the button stretches
+ * to fill its spanned columns exactly — same column tracks the tile faces above use, so
+ * Sort lines up with tile 1, Pass/Discard's right edge lines up with tile 14, and every
+ * 2-/3-/7-tile-wide button matches the painted span of the tile faces above.
+ *
+ * Border-box keeps the global `.btn` padding (from part-0063 `.btn`) inside the
+ * column instead of spilling past the column track on the right. `justify-self: stretch`
+ * is the grid default; left here as `start` for parity with prior behavior, but it has
+ * no visible effect when the cell is already 100% wide.
+ */
+.panel--hand .rack-bottom-bar--tile-grid > .rack-bottom-tile-cell,
+.panel--hand .rack-bottom-bar--tile-grid > .btn.rack-bottom-tile-cell {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: none;
+  margin-inline-start: 0;
+  justify-self: stretch;
+  width: 100%;
+}
+
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn {
+  box-sizing: border-box;
+}
+
+/* Panel-hand tile grid: reinforce wall flex centering over any later generic rack-cell rules. */
+.panel--hand .rack-bottom-bar--tile-grid .rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell {
+  border: none;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
 /* No pressed/inset or hover tint — true fills stay visible while you tune palette. */
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:active:not(:disabled) {
   transform: none;
@@ -3867,13 +4141,15 @@
   filter: none;
 }
 
-/* Main rack: Swap (joker swap) — #6A0DAD */
-.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7:not(:disabled) {
+/* Main rack: Joker swap shares the Call column — #6A0DAD (see `.btn--joker-swap-action`). */
+.rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled) {
   background: #6a0dad;
   color: var(--color-white);
 }
 
-.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6-7:disabled {
+.rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled {
   background: #6a0dad;
   color: var(--color-white);
   opacity: 0.5;
@@ -4026,9 +4302,36 @@
 
 /* Charleston pass: last three slots inline on the exposure rack row */
 
+/* Pass + round title: type tracks 3-slot bar width (and tile height cap) so labels shrink on phones. */
+.rack-bottom-bar--charleston {
+  --charleston-pass-label-fs: clamp(
+    0.3rem,
+    min(
+      calc(var(--rack-tile-btn-inner-3) * 0.048),
+      calc(var(--rack-tile-h, var(--hand-rack-tile-h)) * 0.09)
+    ),
+    0.68rem
+  );
+}
+
 .charleston-pass-btn {
   font-weight: 500;
   flex-shrink: 0;
+}
+
+/* Instructional label on the rack Pass control (HANDS tab keeps a single line). */
+.charleston-pass-btn:not(.suggested-hands-tab) {
+  white-space: nowrap;
+  text-align: center;
+  line-height: 1.12;
+  font-size: var(--charleston-pass-label-fs);
+  padding-block: max(0.06rem, min(0.22rem, calc(var(--hand-rack-tile-w) * 0.05)));
+  padding-inline: 0.04rem;
+  letter-spacing: 0.02em;
+  min-width: 0;
+}
+
+.charleston-pass-btn.suggested-hands-tab {
   white-space: nowrap;
 }
 
@@ -4060,9 +4363,18 @@
 
 
 
-/* Lock the Charleston Pass button itself in place; align wrappers/trays around it, not this control. */
-.panel--hand .rack-bottom-bar--charleston .charleston-pass-btn.rack-bottom-tile-cell--c12-14 {
+/* Charleston rack: keep PASS clipped to cols 12–14 (dropshadow/border bleed) — do not resize the control box. */
+.panel--hand .rack-bottom-bar--charleston .btn.charleston-pass-btn.rack-bottom-tile-cell--c12-14:not(.suggested-hands-tab) {
   transform: none;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Main rack: keep Ignore/Discard clipped to cols 12-14 the same way PASS is clipped. */
+.panel--hand .rack-bottom-bar--main .btn.rack-bottom-tile-cell--c12-14 {
+  transform: none;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 /* ---- part-0071.css (from base.css, layout.css, components.css, animations.css) ---- */
@@ -4092,19 +4404,14 @@
 }
 
 .charleston-stop-btn {
-  font-weight: 500;
+  font-weight: 400;
   flex-shrink: 0;
   white-space: nowrap;
 }
 
-/* Stop Charleston only (c9-11); Undo (c2 + rack-neutral) stays dark gray. */
+/* Stop Charleston only (c9-11). */
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c9-11.charleston-stop-btn:not(:disabled) {
   background: #9b1b30;
-  color: var(--color-white);
-}
-
-.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c2.btn.btn--rack-neutral.charleston-stop-btn:not(:disabled) {
-  background: var(--color-slate-mid);
   color: var(--color-white);
 }
 
@@ -4114,25 +4421,252 @@
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  justify-content: flex-start;
+  justify-content: stretch;
 }
 
+/* Outer box footprint = exactly 3 × tile face + 2 inter-tile gaps (border-box).
+
+   Panel-hand Charleston also stretches this to the rack row height (`.panel--hand` rules in `part-0072.css`).
+   Outer vertical size sync: `--charleston-pass-strip-inner-y-chrome` in `part-0117.css` (horizontal border only once padding removed). */
 .pass-strip-tail__inner {
   display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: var(--rack-tile-gap);
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: 0;
   cursor: default;
-  /* Pin to exactly 3 tile widths + 2 gaps so children cannot get squeezed
-     by sub-pixel rounding or parent flex constraints. */
+  /* Pin outer width — same gap tokens as Charleston exposure row overrides in panel-hand CSS. */
+  --pass-strip-box-w: calc(3 * var(--rack-tile-w) + 2 * var(--player-rack-face-gap, var(--rack-tile-gap)));
   width: calc(3 * var(--rack-tile-w) + 2 * var(--rack-tile-gap));
   flex-shrink: 0;
-  box-sizing: border-box;
+  flex: 0 1 auto;
+  min-height: 0;
   /* Unified 3-tile box — same fill/border as `.pass-box` (visible on dark panel chrome). */
   background: color-mix(in srgb, var(--coach-teal) 11%, var(--bg-elevated) 89%);
-  border: 1px solid var(--coach-teal-border);
-  border-radius: 0.38rem;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  border: 0;
+  border-radius: var(--tile-face-border-radius);
+  box-shadow: inset 0 0 0 1px var(--coach-teal-border);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Tile row + label stack: copy sits behind tiles; gaps / empty chrome show it; tiles paint on top. */
+.pass-strip-tail__stack {
+  position: relative;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pass-strip-tail__header--overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+  gap: clamp(0.12rem, calc(var(--pass-strip-box-w) * 0.025), 0.52rem);
+  padding: clamp(0.06rem, calc(var(--pass-strip-box-w) * 0.012), 0.12rem) clamp(0.08rem, calc(var(--pass-strip-box-w) * 0.018), 0.18rem);
+  box-sizing: border-box;
+  opacity: 1;
+  transition: opacity 0.28s ease;
+  /*
+   * Preferred size favors readability while still scaling down with the pass box. The old `clamp(..., 0.48rem)`
+   * floor kept type from shrinking when the window narrowed, so nowrap lines clipped.
+   * Floor scales with the box; `min(..., box / 10.2)` tightens only when a long line would overflow.
+   */
+  --_pass-strip-fs-pref: clamp(
+    calc(var(--pass-strip-box-w) * 0.04),
+    calc(var(--pass-strip-box-w) * 0.105),
+    1.42rem
+  );
+  --pass-strip-header-fs: min(
+    var(--_pass-strip-fs-pref),
+    calc(var(--pass-strip-box-w) / 10.2),
+    calc(var(--rack-tile-h) / 5.2)
+  );
+}
+
+/* Title + pass line stay centered as a block; direction glyph sits on its own row toward the bottom. */
+.pass-strip-tail__header--overlay.pass-strip-tail__header--with-footer {
+  justify-content: flex-start;
+  gap: 0;
+}
+
+.pass-strip-tail__header--with-footer .pass-strip-tail__header-spacer {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  pointer-events: none;
+}
+
+/* Unwrap so title + instruction behave like direct flex children of the overlay (legacy layout). */
+.pass-strip-tail__header-centered--legacy {
+  display: contents;
+}
+
+.pass-strip-tail__header--with-footer .pass-strip-tail__header-centered {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: clamp(0.12rem, calc(var(--pass-strip-box-w) * 0.025), 0.52rem);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.pass-strip-tail__header--with-footer .pass-strip-tail__header-centered:has(.pass-strip-tail__instruction) {
+  gap: clamp(0.08rem, calc(var(--pass-strip-box-w) * 0.018), 0.34rem);
+}
+
+.pass-strip-tail__header-footer {
+  flex: 1 0 0;
+  /* Keep a real row for the direction glyph so it never stacks over the instruction line. */
+  min-height: calc(var(--pass-strip-header-fs) * 1.35);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding-bottom: clamp(0.02rem, calc(var(--pass-strip-box-w) * 0.012), 0.1rem);
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.pass-strip-tail--pass-slots-filled .pass-strip-tail__header--overlay {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pass-strip-tail__header--overlay {
+    transition-duration: 0.05s;
+  }
+}
+
+.pass-strip-tail__title {
+  font-family: 'Figtree', var(--sans);
+  font-weight: 700;
+  font-size: var(--pass-strip-header-fs);
+  line-height: 1.1;
+  letter-spacing: clamp(0.008em, calc(var(--pass-strip-box-w) * 0.00022), 0.03em);
+  color: #bdbdbd;
+  margin: 0;
+  padding: 0;
+  max-width: 100%;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-shadow:
+    0 0 0.25rem color-mix(in srgb, var(--bg-elevated) 92%, transparent),
+    0 0 0.5rem color-mix(in srgb, var(--bg-elevated) 78%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-black) 28%, transparent);
+}
+
+/* Separator under title: match the visible title text width. */
+.pass-strip-tail__header--overlay:has(.pass-strip-tail__instruction) .pass-strip-tail__title {
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding-bottom: clamp(0.08rem, calc(var(--pass-strip-box-w) * 0.018), 0.24rem);
+  border-bottom: 1px solid color-mix(in srgb, #f2f2e9 28%, var(--coach-teal-border) 72%);
+}
+
+.pass-strip-tail__header--overlay:has(.pass-strip-tail__instruction) {
+  gap: clamp(0.08rem, calc(var(--pass-strip-box-w) * 0.018), 0.34rem);
+}
+
+.pass-strip-tail__header--overlay.pass-strip-tail__header--with-footer:has(.pass-strip-tail__instruction) {
+  gap: 0;
+}
+
+.pass-strip-tail__instruction {
+  font-family: 'Figtree', var(--sans);
+  font-weight: 500;
+  font-size: var(--pass-strip-header-fs);
+  line-height: 1.18;
+  letter-spacing: clamp(0em, calc(var(--pass-strip-box-w) * 0.00008), 0.01em);
+  color: #f2f2e9;
+  margin: 0;
+  padding: 0;
+  max-width: 100%;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-shadow:
+    0 0 0.22rem color-mix(in srgb, var(--bg-elevated) 90%, transparent),
+    0 0 0.45rem color-mix(in srgb, var(--bg-elevated) 72%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-black) 24%, transparent);
+}
+
+.pass-strip-tail__instruction--stacked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: clamp(0.01rem, calc(var(--pass-strip-box-w) * 0.003), 0.04rem);
+  line-height: 1.12;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.pass-strip-tail__instruction--stacked .pass-strip-tail__instruction-line {
+  display: block;
+  max-width: 100%;
+}
+
+.pass-strip-tail__instruction-or {
+  display: block;
+  font-family: 'Figtree', var(--sans);
+  font-weight: 600;
+  font-size: calc(var(--pass-strip-header-fs) * 0.74);
+  letter-spacing: clamp(0.04em, calc(var(--pass-strip-box-w) * 0.0009), 0.14em);
+  line-height: 1.15;
+  color: #bdbdbd;
+  text-shadow:
+    0 0 0.18rem color-mix(in srgb, var(--bg-elevated) 88%, transparent),
+    0 0 0.38rem color-mix(in srgb, var(--bg-elevated) 65%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-black) 22%, transparent);
+}
+
+/* Extra air above/below stacked `-OR-` only (not inline `TO`). */
+.pass-strip-tail__instruction-or:not(.pass-strip-tail__instruction-or--inline) {
+  margin-block: clamp(0.04rem, calc(var(--pass-strip-box-w) * 0.01), 0.26rem);
+}
+
+/* Same typographic size as standalone `-OR-`, inlined in `0 TO STOP` (cream like other instruction copy). */
+.pass-strip-tail__instruction-or--inline {
+  display: inline;
+  letter-spacing: clamp(0.03em, calc(var(--pass-strip-box-w) * 0.00065), 0.1em);
+  vertical-align: 0.02em;
+  color: #f2f2e9;
+}
+
+.pass-strip-tail__instruction-line--0-to-stop {
+  white-space: nowrap;
+}
+
+.pass-strip-tail__tiles {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rack-tile-gap);
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  z-index: 2;
 }
 
 /* ---- part-0072.css (from base.css, layout.css, components.css, animations.css) ---- */
@@ -4147,10 +4681,26 @@
 
 
 
-/* Same span as hand slots 12–14: `--player-rack-face-gap` matches `.panel-hand-rack__hand-tray .hand-row`. */
-.panel--hand .pass-strip-tail__inner {
-  gap: var(--player-rack-face-gap);
+/* Same span + gaps as slots 11–13: exact 3 × tile face + 2 gaps; stretches to Charleston rack row height. */
+.panel--hand .pass-strip-tail {
+  align-self: center;
   width: calc(3 * var(--rack-tile-w) + 2 * var(--player-rack-face-gap));
+  flex: 0 0 calc(3 * var(--rack-tile-w) + 2 * var(--player-rack-face-gap));
+  display: flex;
+  height: var(--rack-tile-h);
+  min-height: var(--rack-tile-h);
+  max-height: var(--rack-tile-h);
+}
+
+.panel--hand .pass-strip-tail__inner {
+  width: 100%;
+  height: 100%;
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.panel--hand .pass-strip-tail__tiles {
+  gap: var(--player-rack-face-gap);
 }
 
 /* ---- part-0073.css (from base.css, layout.css, components.css, animations.css) ---- */
@@ -4170,18 +4720,23 @@
 /* Drop target: same stronger fill + border as call box --over */
 .pass-strip-tail--over .pass-strip-tail__inner {
   background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
-  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
 }
 
 /* Dragging FROM the box: keep it bright */
 .pass-strip-tail__inner:has(.pass-strip__tile-wrap--dragging) {
   background: color-mix(in srgb, var(--coach-teal) 18%, var(--bg-elevated) 82%);
-  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
 }
 
 /* Charleston: tiles exit the pass box toward the pass direction before the exchange commits. */
 .pass-strip-tail.pass-strip-tail--fly-out {
   pointer-events: none;
+}
+
+.pass-strip-tail.pass-strip-tail--fly-out .pass-strip-tail__header--overlay {
+  opacity: 0;
+  transition: opacity 0.18s ease;
 }
 
 /* ---- part-0077.css (from base.css, layout.css, components.css, animations.css) ---- */
@@ -5037,15 +5592,15 @@
 
 .staging-meld-drop-zone {
   border-radius: 0.5rem;
-  border: 1px solid transparent;
-  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  border: 0;
+  box-sizing: border-box;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
 }
 
 /* Call-staging: same chrome as `.pass-box--over` when a tile is dragged over the exposure rack. */
 .staging-meld-drop-zone--over {
   background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
-  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
-  box-shadow: none;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
 }
 
 /* ── Call prompt ── */
@@ -5145,12 +5700,14 @@
   background: transparent;
 }
 
-/* Centers the header+tiles block as a unit; header stays left-aligned with tile row */
+/* Full-width block: header left-aligned; tile row centers in the dialog */
 .mahjong-win__bots-review-inner {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  width: fit-content;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Single line: seat · away · section #N · pattern text */
@@ -5158,9 +5715,11 @@
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
+  justify-content: center;
   gap: 0.25rem 0.65rem;
   font-size: 1.06rem;
   line-height: 1.4;
+  text-align: center;
 }
 
 .mahjong-win__bots-review-seat {
@@ -5196,6 +5755,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 0.4rem 0.65rem;
   min-width: 0;
 }
@@ -5231,7 +5791,23 @@
   gap: 5px;
 }
 
-/* Boxed border around an exposed meld group */
+/* Contiguous strip segments: concealed runs are plain; each exposure meld gets a thin frame. */
+.mahjong-win__bots-review-tile-run {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.mahjong-win__bots-review-tile-run--exposure {
+  padding: 0.1rem 0.22rem;
+  border-radius: 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--window-fg, #e8eaf0) 24%, var(--border, #445) 76%);
+  box-sizing: border-box;
+  background: color-mix(in srgb, var(--color-black) 10%, transparent);
+}
 
 .mahjong-win__bots-review-tile {
   --rack-tile-w: var(--hand-rack-tile-w);
@@ -5255,14 +5831,23 @@
 
 .wall-game-dialog__review .mahjong-win__bots-review-tiles {
   flex-wrap: nowrap;
-  justify-content: flex-start;
+  justify-content: center;
+  width: 100%;
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   padding-bottom: 0.15rem;
   box-sizing: border-box;
+  gap: 4px;
+}
+
+.wall-game-dialog__review .mahjong-win__bots-review-tile-run {
   gap: 3px;
+}
+
+.wall-game-dialog__review .mahjong-win__bots-review-tile-run--exposure {
+  padding: 0.06rem 0.14rem;
 }
 
 .wall-game-dialog__review .mahjong-win__bots-review-tile {
@@ -5348,7 +5933,7 @@
 .hands-panel__display-toggles .hands-panel__categories-trigger--header {
   padding: var(--hands-header-chip-py) var(--hands-header-chip-px);
   font-size: var(--hands-header-chip-fs);
-  font-weight: 600;
+  font-weight: 500;
   line-height: var(--hands-header-chip-lh);
   min-height: calc(
     2 * var(--hands-header-chip-py) + var(--hands-header-chip-lh) * var(--hands-header-chip-fs) + 2px
@@ -7426,7 +8011,7 @@
   font-family: 'Figtree', var(--sans);
   font-size: var(--app-ui-control-fs-sm);
   line-height: 1.05;
-  font-weight: 500;
+  font-weight: 400;
   text-transform: uppercase;
   letter-spacing: var(--btn-letter-spacing);
   cursor: pointer;
@@ -7690,44 +8275,47 @@
 /* Slot 14: East discard staging (same column as incoming bot discard when not staging). */
 .exposure-rack__slot--east-discard-slot {
   justify-content: center;
+  align-items: center;
 }
 
 .exposure-rack__slot--east-discard-slot .east-discard-staging--inline {
   margin-inline: auto;
+  margin-block: auto;
 }
 
 /* Inline discard slot: same border + fill as call-initiate / pass-box */
 .exposure-rack__slot--east-discard-slot .east-discard-staging.east-discard-staging--inline {
-  border: 1px solid var(--coach-teal-border);
-  border-radius: 0.38rem;
+  border: 0;
+  border-radius: var(--tile-face-border-radius);
   background: color-mix(in srgb, var(--coach-teal) 11%, var(--bg-elevated) 89%);
-  transition: background 0.15s ease, border-color 0.15s ease;
+  box-shadow: inset 0 0 0 1px var(--coach-teal-border);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
 }
 
 .exposure-rack__slot--east-discard-slot .east-discard-staging.east-discard-staging--inline:has(.east-discard-staging__tile) {
   outline: none;
   background: color-mix(in srgb, var(--coach-teal) 14%, var(--bg-elevated) 86%);
+  box-shadow: none;
 }
 
 .exposure-rack__slot--east-discard-slot
   .east-discard-staging.east-discard-staging--inline.east-discard-staging--over:not(:has(.east-discard-staging__tile)) {
   outline: none;
   background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
-  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
 }
 
 .exposure-rack__slot--east-discard-slot
   .east-discard-staging.east-discard-staging--inline.east-discard-staging--over:has(.east-discard-staging__tile) {
-  box-shadow: none;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
   background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
-  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
 }
 
 /* Hovering the staged tile should be visibly brighter than the base green slot. */
 .exposure-rack__slot--east-discard-slot
   .east-discard-staging.east-discard-staging--inline:has(.east-discard-staging__tile:hover) {
   background: color-mix(in srgb, var(--coach-teal-bg) 92%, var(--bg-elevated) 8%);
-  border-color: color-mix(in srgb, var(--coach-teal) 40%, var(--border) 34%, var(--bg-elevated) 26%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--coach-teal) 40%, var(--border) 34%, var(--bg-elevated) 26%);
 }
 
 /* Pass tail cells use the same geometry as the rest of the Charleston exposure row */
@@ -7773,17 +8361,18 @@
 .panel--hand .exposure-rack:not(.exposure-rack--charleston-pass) {
   background: var(--window-inner-surface);
   border: 1px solid var(--window-border);
-  border-radius: 0.38rem;
+  border-radius: var(--tile-face-border-radius);
 }
 
 /* Keep Charleston exposure row in the same visible tray container. */
 .panel--hand .exposure-rack.exposure-rack--charleston-pass {
   background: var(--window-inner-surface);
   border: 1px solid var(--window-border);
-  border-radius: 0.38rem;
+  border-radius: var(--tile-face-border-radius);
   /* Same inner vertical pad as post-Charleston `.panel--hand .exposure-rack` (`--hand-rack-tray-inset-block`). */
   padding-block: var(--hand-rack-tray-inset-block);
   justify-content: flex-start;
+  align-items: stretch;
   /* Same inter-face gap as `.hand-row` (cols 1–14 share one grid). */
   gap: var(--player-rack-face-gap);
   /* Match `.panel-hand-rack__hand-tray .hand-row` horizontal inset so slot 12 / pass-tail lines up with the 12th tile face; do not use `--rack-tray-inset-inline` here (it shifts the pass box vs the hand). */
@@ -7891,11 +8480,21 @@
 .east-discard-staging--inline {
   margin-bottom: 0;
   min-height: var(--rack-tile-h);
+  height: var(--rack-tile-h);
   max-height: var(--rack-tile-h);
   min-width: var(--rack-tile-w);
+  width: var(--rack-tile-w);
   max-width: var(--rack-tile-w);
   padding: 0;
   box-sizing: border-box;
+  overflow: hidden;
+}
+
+.east-discard-staging--inline .east-discard-staging__tile,
+.east-discard-staging--inline .east-discard-staging__tile > div,
+.east-discard-staging--inline .tile-face {
+  width: 100%;
+  height: 100%;
 }
 
 .east-discard-staging--inline .east-discard-staging__placeholder {
@@ -8165,7 +8764,7 @@
   font: inherit;
   font-size: 1.7rem;
   line-height: 1;
-  font-weight: 700;
+  font-weight: 600;
   color: color-mix(in srgb, #f5e6a3 90%, #d4a012 10%);
   cursor: pointer;
   transition:
@@ -8191,7 +8790,7 @@
   min-width: 7.5rem;
   padding: 0.42rem 1.35rem;
   border-radius: 999px;
-  font-weight: 600;
+  font-weight: 500;
   border: 1px solid color-mix(in srgb, #d4a012 38%, var(--color-off-black) 62%);
   background: color-mix(in srgb, #ebe4d8 88%, #c4bfb6 12%);
   color: #1e1c18;
@@ -8455,9 +9054,9 @@
 
 /* Wall draw only: one column of seats, scroll inside the review (title + actions stay put). */
 .wall-game-dialog--wall-seats {
-  /* Same face size as right-column bot exposure racks (`.app-play-split` + `.panel--bot-exposures`). */
-  --bot-exposure-slot-scale: 1.05;
-  --bot-exposure-tile-scale: 0.94;
+  /* Derived from right-column bot exposure tile math; scaled up for readable end-game racks. */
+  --bot-exposure-slot-scale: 1.12;
+  --bot-exposure-tile-scale: 1;
   --bot-tile-w-ref: max(1rem, calc(
     ((var(--app-viewport-inline, 100vw) - 2 * var(--app-h-pad)) / 2
     - 2 * var(--hand-window-pad-inline)
@@ -8466,10 +9065,13 @@
   --bot-tile-h-ref: max(1.34rem, calc(var(--bot-tile-w-ref) * 1.3333));
   --bot-tile-h-width-fit: calc(var(--bot-tile-h-ref) * var(--bot-exposure-tile-scale));
   --bot-tile-h-height-fit: var(--bot-tile-h-width-fit);
-  --wall-game-bots-tile-h: min(var(--bot-tile-h-width-fit), var(--bot-tile-h-height-fit));
+  --_wall-game-seat-base-h: min(var(--bot-tile-h-width-fit), var(--bot-tile-h-height-fit));
+  --wall-game-bots-tile-h: min(calc(var(--_wall-game-seat-base-h) * 1.14), 2.35rem);
   --wall-game-bots-tile-w: calc(var(--wall-game-bots-tile-h) / 1.3333);
+  --wall-game-player-tile-h: min(calc(var(--wall-game-bots-tile-h) * 1.32), 2.95rem);
+  --wall-game-player-tile-w: calc(var(--wall-game-player-tile-h) / 1.3333);
   width: 100%;
-  max-width: min(42rem, calc(100vw - 1rem));
+  max-width: min(44rem, calc(100vw - 1rem));
   height: min(90dvh, 56rem);
   max-height: min(90dvh, 56rem);
   padding: 0.9rem 0.85rem 0.8rem;
@@ -8486,17 +9088,22 @@
   scrollbar-gutter: stable;
 }
 
-/* Center each seat’s header+rack as one block; text and tiles share the same left edge inside the block. */
+/* Headers align to the card’s left edge; tile rows span full width and center racks. */
 .wall-game-dialog--wall-seats .wall-game-dialog__review .mahjong-win__bots-review-card {
-  align-items: center;
+  align-items: stretch;
 }
 
 .wall-game-dialog--wall-seats .wall-game-dialog__review .mahjong-win__bots-review-inner {
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
-  margin-inline: auto;
+  margin-inline: 0;
   box-sizing: border-box;
   align-items: flex-start;
+}
+
+.wall-game-dialog--wall-seats .wall-game-dialog__review .mahjong-win__bots-review-inner--player-focus .mahjong-win__bots-review-tile {
+  --rack-tile-w: var(--wall-game-player-tile-w);
+  --rack-tile-h: var(--wall-game-player-tile-h);
 }
 
 .wall-game-dialog--wall-seats .wall-game-dialog__review .mahjong-win__bots-review-title {
@@ -8687,13 +9294,12 @@
   position: relative;
   z-index: 1;
   font-family: 'Figtree', var(--sans);
-  font-weight: 500;
+  font-weight: 400;
   text-transform: uppercase;
   letter-spacing: var(--btn-letter-spacing);
   white-space: nowrap;
   min-height: var(--suggested-tab-h);
-  /* 3 tile columns — inner face (Charleston Pass / action row) */
-  width: var(--rack-tile-btn-inner-3);
+  /* Width comes from `.panel--hand .rack-bottom-bar--tile-grid` (grid span = two 1fr tracks + column-gap). */
 }
 
 /* ---- part-0092.css (from base.css, layout.css, components.css, animations.css) ---- */
@@ -8840,7 +9446,7 @@
   font: inherit;
   font-size: 1.6rem;
   line-height: 1;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-white);
   cursor: pointer;
   box-shadow: 0 1px 2px color-mix(in srgb, var(--color-black) 28%, transparent);
@@ -9406,7 +10012,7 @@
   min-height: var(--rack-action-touch-min-h);
   padding: 0.2rem 0.3rem;
   font-size: var(--rack-bottom-action-fs);
-  font-weight: 500;
+  font-weight: 400;
   border-radius: var(--rack-tile-btn-border-radius);
   white-space: nowrap;
   line-height: var(--btn-line-height);
@@ -9447,7 +10053,7 @@
   flex: 1 1 20%;
   min-width: 0;
   font-size: var(--app-ui-control-fs-xs);
-  font-weight: 600;
+  font-weight: 500;
   padding: 0.35rem 0.2rem;
   line-height: 1.2;
   text-transform: none;
@@ -9467,7 +10073,7 @@
   min-height: 2.5rem;
   padding: 0.42rem 0.3rem;
   font-size: max(0.8125rem, var(--app-ui-control-fs-xs));
-  font-weight: 700;
+  font-weight: 600;
   border-radius: 0.42rem;
   transition: border-color 0.14s ease, background-color 0.14s ease;
 }
@@ -9525,7 +10131,7 @@
   color: var(--color-white);
   font-family: 'Figtree', var(--sans);
   font-size: var(--app-ui-control-fs);
-  font-weight: 500;
+  font-weight: 400;
   text-transform: uppercase;
   letter-spacing: var(--btn-letter-spacing);
   cursor: pointer;
@@ -9740,7 +10346,7 @@
   text-align: left;
   justify-content: flex-start;
   font-size: var(--app-ui-control-fs);
-  font-weight: 600;
+  font-weight: 500;
   padding: 0.38rem 0.65rem;
   border-radius: 0.7rem;
   /* Off: 32% opacity text — matches app-wide inactive button standard */
@@ -10241,7 +10847,7 @@
 .suggested-hands-popup__header-controls .hands-panel__display-toggle {
   padding: var(--hands-header-chip-py) var(--hands-header-chip-px);
   font-size: var(--hands-header-chip-fs);
-  font-weight: 600;
+  font-weight: 500;
   line-height: var(--hands-header-chip-lh);
   min-height: calc(
     2 * var(--hands-header-chip-py) + var(--hands-header-chip-lh) * var(--hands-header-chip-fs) + 2px
@@ -10265,7 +10871,7 @@
   cursor: pointer;
   font-size: 1.6rem;
   line-height: 1;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-muted);
   z-index: 1;
   box-shadow: 0 1px 0 color-mix(in srgb, var(--fg) 8%, transparent);
@@ -10304,11 +10910,10 @@
   border-top-color: var(--dark-tray-rim-border-top);
   border-inline-color: var(--dark-tray-rim-border-inline);
   border-bottom-color: var(--dark-tray-rim-border-bottom);
-  box-shadow:
-    var(--dark-tray-rim-shadow-up-1),
-    var(--dark-tray-rim-shadow-up-2),
-    var(--dark-tray-rim-shadow-down-1),
-    var(--dark-tray-rim-shadow-down-2);
+  /* TEMP-DEBUG: inset rim highlight/shadow disabled while diagnosing tile/button row alignment.
+   * To restore the recessed bevel, replace `none` with the four `var(--dark-tray-rim-shadow-*)`
+   * tokens stacked (was: shadow-up-1, shadow-up-2, shadow-down-1, shadow-down-2). */
+  box-shadow: none;
 }
 
 /*
@@ -10540,6 +11145,65 @@ html[data-native-app] .app-play-split {
     (100cqi - 2 * var(--hand-rack-tray-inset-inline) - 13 * var(--player-rack-face-gap)) / 14
   );
   --hand-rack-tile-h: calc(var(--hand-rack-tile-w) * 1.3333);
+  /*
+   * Keep the rack column width on `--hand-rack-tile-w`, but draw player tiles
+   * slightly wider so the 14-face strip consumes the right-side tray slack.
+   */
+  /*
+   * Tray inline chrome: 1px border on each side only (`--hand-rack-rim-inline` = 2px total).
+   * No inner padding — tile 1's left edge sits flush against the inside of the left border
+   * and tile 14's right edge sits flush against the inside of the right border, the same
+   * way the original right edge looked. The action-well shares the same chrome so the
+   * Sort button's left edge matches tile 1, and Pass/Discard's right edge matches tile 14.
+   *
+   * Tile strip = 100cqi − 2px (just the border) = bank/well content box exactly. No
+   * overflow, no gap. The tile-face/button height stays locked to the 4:3 (1.3333) aspect
+   * via `--hand-top-rack-tile-h` below — width is the only thing that changes here.
+   */
+  --hand-rack-rim-inline: 2px;
+  --hand-rack-rim-block: 2px;
+  --hand-rack-content-offset-x: 0px;
+  --hand-rack-container-pad-block: 2px;
+  --hand-top-rack-tile-w: calc(
+    (100cqi - var(--hand-rack-rim-inline) - 13 * var(--player-rack-face-gap)) / 14
+  );
+  --hand-top-rack-tile-h: calc(var(--hand-top-rack-tile-w) * 1.3333);
+  --hand-rack-outer-h: calc(
+    var(--hand-top-rack-tile-h) + var(--hand-rack-rim-block) + 2 * var(--hand-rack-container-pad-block)
+  );
+  --hand-top-rack-outer-h: var(--hand-rack-outer-h);
+  --hand-rack-fill-tile-w: var(--hand-top-rack-tile-w);
+  --hand-rack-fill-tile-h: var(--hand-top-rack-tile-h);
+  --hand-top-rack-height-delta: calc(
+    (var(--hand-top-rack-tile-w) - var(--hand-rack-tile-w)) * 1.3333
+  );
+  --hand-button-row-h: max(36px, calc(var(--rack-action-touch-min-h) - var(--hand-top-rack-height-delta)));
+  --hand-button-row-pad-block: max(
+    0px,
+    calc(var(--bot-exposure-inner-pad) - var(--hand-top-rack-height-delta) / 2)
+  );
+  --rack-tile-w: var(--hand-rack-fill-tile-w);
+  --rack-tile-h: var(--hand-rack-fill-tile-h);
+  --hand-action-face-gap: var(--player-rack-face-gap);
+  --hand-action-face-w: var(--hand-top-rack-tile-w);
+  --hand-action-strip-w: calc(14 * var(--hand-action-face-w) + 13 * var(--hand-action-face-gap));
+  --hand-action-span-1: var(--hand-action-face-w);
+  --hand-action-span-2: calc(2 * var(--hand-action-face-w) + var(--hand-action-face-gap));
+  --hand-action-span-3: calc(3 * var(--hand-action-face-w) + 2 * var(--hand-action-face-gap));
+  --hand-action-span-7: calc(7 * var(--hand-action-face-w) + 6 * var(--hand-action-face-gap));
+  --rack-tile-btn-inner-1: calc(var(--hand-rack-fill-tile-w) - 2 * var(--rack-tile-face-bw));
+  --rack-tile-btn-inner-2: calc(
+    2 * var(--hand-rack-fill-tile-w) + var(--player-rack-face-gap) - 2 * var(--rack-tile-face-bw)
+  );
+  --rack-tile-btn-inner-3: calc(
+    3 * var(--hand-rack-fill-tile-w) + 2 * var(--player-rack-face-gap) - 2 * var(--rack-tile-face-bw)
+  );
+  --rack-tile-btn-inner-7: calc(
+    7 * var(--hand-rack-fill-tile-w) + 6 * var(--player-rack-face-gap) - 2 * var(--rack-tile-face-bw)
+  );
+  --hand-rack-tile-scale: 1;
+  /* Pass-strip `.pass-strip-tail__inner` chrome: horizontal border only (`padding` 0); keep post-Charleston tray min-height aligned. */
+  --charleston-pass-strip-inner-y-chrome: 2px;
 }
 
 /*
@@ -10566,9 +11230,20 @@ html[data-native-app] .app-play-split {
 
 
 
-.panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass),
+.panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass) {
+  /* Top rack tiles fill the fixed tray edge-to-edge: 14 faces + 13 visible gaps. */
+  --rack-tile-w: var(--hand-top-rack-tile-w);
+  --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
+  --exposure-slot-h: var(--rack-tile-h);
+  padding-block: 0;
+  height: var(--hand-rack-outer-h, calc(var(--rack-tile-h) + var(--hand-rack-rim-block, 2px)));
+  min-height: var(--hand-rack-outer-h, calc(var(--rack-tile-h) + var(--hand-rack-rim-block, 2px)));
+  align-items: center;
+}
+
 .panel--hand .panel-hand-rack__hand-tray .hand-row {
-  --rack-tile-w: calc((100cqi - 13 * var(--player-rack-face-gap)) / 14);
+  /* Fill the fixed rack width with larger faces; the rack-column width still comes from `--hand-rack-tile-w`. */
+  --rack-tile-w: var(--hand-top-rack-tile-w);
   --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
 }
 
@@ -10594,8 +11269,12 @@ html[data-native-app] .app-play-split {
  * rack rim on iPhone landscape: `left=692 + width=171 = 863` vs rack ≈ 850.
  */
 .panel--hand .rack-stage__rack-top .exposure-rack.exposure-rack--charleston-pass {
-  --rack-tile-w: calc((100cqi - 13 * var(--player-rack-face-gap)) / 14);
+  --rack-tile-w: var(--hand-top-rack-tile-w);
   --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
+  --exposure-slot-h: var(--rack-tile-h);
+  padding: 0;
+  height: var(--hand-rack-outer-h, calc(var(--rack-tile-h) + 2px));
+  min-height: var(--hand-rack-outer-h, calc(var(--rack-tile-h) + 2px));
 }
 
 /*
@@ -10746,11 +11425,11 @@ html[data-native-app] .app-play-split {
   border-top-color: var(--dark-tray-rim-border-top);
   border-inline-color: var(--dark-tray-rim-border-inline);
   border-bottom-color: var(--dark-tray-rim-border-bottom);
-  box-shadow:
-    var(--dark-tray-rim-shadow-up-1),
-    var(--dark-tray-rim-shadow-up-2),
-    var(--dark-tray-rim-shadow-down-1),
-    var(--dark-tray-rim-shadow-down-2);
+  /* TEMP-DEBUG: inset rim highlight/shadow disabled while diagnosing tile-row alignment.
+   * To restore the recessed bevel, replace `none` with the four stacked `--dark-tray-rim-shadow-*`
+   * tokens (was: shadow-up-1, shadow-up-2, shadow-down-1, shadow-down-2). Same change applied in
+   * `part-0115.css`. */
+  box-shadow: none;
 }
 
 /* ---- part-0123.css (from base.css, layout.css, components.css, animations.css) ---- */
@@ -11022,4 +11701,133 @@ html[data-native-app] .app-play-split {
     flex: 0 0 calc(100% + var(--mobile-web-lower-edge-pull-down));
     height: calc(100% + var(--mobile-web-lower-edge-pull-down));
   }
+}
+
+/*
+ * Installed iOS PWA only (standalone): keep notch clearance on the camera side,
+ * trim the opposite side to roughly the same spacing as the top inset, and add
+ * a small bottom inset so the play area sits a touch higher.
+ */
+@media (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) and (display-mode: standalone) {
+  html:not([data-native-app]) {
+    --app-play-fit-inline-from-block: 100dvi;
+    --pwa-landscape-inline-start: calc(var(--app-v-pad) + env(safe-area-inset-left, 0px));
+    --pwa-landscape-inline-end: var(--app-v-pad);
+    --app-h-pad: calc((var(--pwa-landscape-inline-start) + var(--pwa-landscape-inline-end)) * 0.5);
+  }
+
+  html:not([data-native-app]) .app-main {
+    padding-bottom: var(--app-v-pad);
+  }
+
+  html:not([data-native-app]) .app-rack-stage,
+  html:not([data-native-app]) .app-play-split {
+    padding-inline-start: var(--pwa-landscape-inline-start);
+    padding-inline-end: var(--pwa-landscape-inline-end);
+  }
+
+  html:not([data-native-app]) .app-menu-anchor {
+    right: var(--pwa-landscape-inline-end);
+    bottom: var(--pwa-landscape-inline-end);
+  }
+
+  html:not([data-native-app]) .app-bottom-center-controls {
+    right: calc(var(--pwa-landscape-inline-end) + var(--menu-btn-w) + 0.5rem);
+    bottom: var(--pwa-landscape-inline-end);
+  }
+
+  html:not([data-native-app]) .suggested-hands-popup {
+    right: calc(var(--pwa-landscape-inline-end) + var(--bot-panel-outer-w));
+  }
+}
+
+/*
+ * TEMP-DEBUG: strip the rim chrome from ALL THREE hand-panel rows (exposure / hand-bank /
+ * action-well) so we can verify alignment from a clean slate. Each row has up to three
+ * border layers; all need disabling:
+ *
+ *   1. Direct background + radius from earlier fragments
+ *      - hand-bank          → part-0075.css   (background + 0.55rem radius — kept)
+ *      - exposure-rack      → part-0088.css   (background + tile-face radius — kept;
+ *                                              its 1px border is killed by this rule)
+ *      - action-well        → part-0007.css   (background + button radius — set by the
+ *                                              TEMP-DEBUG override block in that file)
+ *   2. Shared rim border + inset shadows from part-0115.css (the 4-color border-top/
+ *      inline/bottom set). Box-shadow already disabled in part-0115; this rule kills
+ *      the border. Selector list there mixes 1-class (`.hand-bank`), 2-class (action
+ *      wells), and 4-class (exposure rack) selectors — all are beaten here by either
+ *      higher specificity OR cascade order (this fragment loads last in animations.css).
+ *   3. ::after rim overlay (exposure rack only — part-0122.css). Box-shadow already
+ *      disabled there; this rule hides the pseudo entirely so its 1px border can't
+ *      paint either.
+ *
+ * Backgrounds and corner radii are intentionally left intact so each row still reads as
+ * a tray whose corners match its CHILDREN: tile-face radius for the two tile rows and
+ * button radius for the action row.
+ *
+ * To restore the framed look:
+ *   - Delete this rule.
+ *   - Delete the action-well TEMP-DEBUG override block in part-0007.css.
+ *   - Replace `box-shadow: none;` in part-0115.css with the four `var(--dark-tray-rim-shadow-*)`
+ *     tokens stacked.
+ *   - Replace `box-shadow: none;` in part-0122.css with the same four tokens.
+ */
+.panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass),
+.panel--hand .rack-stage__rack-top .exposure-rack.exposure-rack--charleston-pass,
+.panel--hand .panel-hand-rack__hand-tray .hand-bank,
+.panel--hand .panel-hand-rack__action-well,
+.panel--hand .panel-hand-rack__charleston-actions-well {
+  border: none;
+  box-shadow: none;
+}
+
+.panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass)::after,
+.panel--hand .rack-stage__rack-top .exposure-rack.exposure-rack--charleston-pass::after {
+  display: none;
+}
+
+/*
+ * TEMP-DEBUG (paired with the rim-removal block above): with the 1px tray border + inner
+ * pad gone in both axes, every chrome-related length token in the part-0117.css panel
+ * declaration needs to follow, otherwise the formulas keep reserving space for chrome
+ * that no longer paints. Two distinct symptoms motivated this:
+ *
+ *   HORIZONTAL — gap on the right of the exposure row / pass-box / east-discard slot
+ *     The tile-width formula `(100cqi - --hand-rack-rim-inline - 13·gap) / 14` still
+ *     subtracted 2px for the (now-absent) border, so 14·tile-w + 13·gap came out 2px
+ *     short of 100cqi. The hand-row and action-row already use `repeat(14, 1fr)` grids
+ *     so they auto-fit and didn't show the gap; the exposure rack uses flex with
+ *     explicit widths off `--rack-tile-w` so it inherited the stale formula.
+ *
+ *   VERTICAL — 6px of dead space inside every row
+ *     `--hand-rack-outer-h = tile-h + --hand-rack-rim-block + 2·--hand-rack-container-pad-block`
+ *     reserved 2px for the vertical border + 4px for inner padding. With the border
+ *     gone, that's 6px of unused space inside hand-bank and exposure rack. The action
+ *     well's `min-height` formula has the same problem PLUS a hardcoded `+ 2·1px` for
+ *     the (also now-absent) inset shadow, so it was 8px taller than its buttons.
+ *
+ * Zeroing all three tokens at the source recomputes every dependent calc():
+ *
+ *   tile-w  = (100cqi - 0 - 13·gap) / 14         → 14·tile-w + 13·gap = 100cqi exactly
+ *   outer-h = tile-h + 0 + 2·0 = tile-h          → hand-bank + exposure-rack hug tiles
+ *
+ * Action well needs a small extra push because its min-height has the `+ 2·1px` literal
+ * that's independent of any token; pin it to `--hand-button-row-h` directly.
+ *
+ * Variables are declared on `.panel--hand` (specificity 0,1,0) — overriding at source
+ * is enough since every dependent rule reads through the cascade.
+ *
+ * To restore: delete this rule (the part-0117 declarations re-take effect, matching the
+ * restored 1px·2 border + 2px inner pad chrome).
+ */
+.panel--hand {
+  --hand-rack-rim-inline: 0px;
+  --hand-rack-rim-block: 0px;
+  --hand-rack-container-pad-block: 0px;
+}
+
+.panel--hand .panel-hand-rack__action-well,
+.panel--hand .panel-hand-rack__charleston-actions-well {
+  padding-block: 0;
+  min-height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
 }
