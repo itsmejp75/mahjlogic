@@ -268,6 +268,44 @@
 }
 
 /*
+ * Installed iOS PWA only (standalone): keep notch clearance on the camera side,
+ * trim the opposite side to roughly the same spacing as the top inset, and add
+ * a small bottom inset so the play area sits a touch higher.
+ */
+@media (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) and (display-mode: standalone) {
+  html:not([data-native-app]) {
+    --app-play-fit-inline-from-block: 100dvi;
+    --pwa-landscape-inline-start: calc(var(--app-v-pad) + env(safe-area-inset-left, 0px));
+    --pwa-landscape-inline-end: var(--app-v-pad);
+    --app-h-pad: calc((var(--pwa-landscape-inline-start) + var(--pwa-landscape-inline-end)) * 0.5);
+  }
+
+  html:not([data-native-app]) .app-main {
+    padding-bottom: var(--app-v-pad);
+  }
+
+  html:not([data-native-app]) .app-rack-stage,
+  html:not([data-native-app]) .app-play-split {
+    padding-inline-start: var(--pwa-landscape-inline-start);
+    padding-inline-end: var(--pwa-landscape-inline-end);
+  }
+
+  html:not([data-native-app]) .app-menu-anchor {
+    right: var(--pwa-landscape-inline-end);
+    bottom: var(--pwa-landscape-inline-end);
+  }
+
+  html:not([data-native-app]) .app-bottom-center-controls {
+    right: calc(var(--pwa-landscape-inline-end) + var(--menu-btn-w) + 0.5rem);
+    bottom: var(--pwa-landscape-inline-end);
+  }
+
+  html:not([data-native-app]) .suggested-hands-popup {
+    right: calc(var(--pwa-landscape-inline-end) + var(--bot-panel-outer-w));
+  }
+}
+
+/*
  * TEMP-DEBUG: strip the rim chrome from ALL THREE hand-panel rows (exposure / hand-bank /
  * action-well) so we can verify alignment from a clean slate. Each row has up to three
  * border layers; all need disabling:

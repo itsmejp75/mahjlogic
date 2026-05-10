@@ -11,7 +11,11 @@ _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if _SCRIPT_DIR not in sys.path:
     sys.path.insert(0, _SCRIPT_DIR)
 
-from splash_raster_prep import flatten_rgba, prepare_splash_source_rgb  # noqa: E402
+from splash_raster_prep import (  # noqa: E402
+    SPLASH_BG_RGB,
+    flatten_rgba,
+    prepare_splash_source_rgb,
+)
 
 
 def main() -> int:
@@ -25,7 +29,7 @@ def main() -> int:
         print(f"stage-prepared-splash: missing {src}", file=sys.stderr)
         return 1
 
-    rgb = flatten_rgba(Image.open(src))
+    rgb = flatten_rgba(Image.open(src), bg_rgb=SPLASH_BG_RGB)
     rgb = prepare_splash_source_rgb(rgb)
     os.makedirs(os.path.dirname(dest), exist_ok=True)
     rgb.save(dest, optimize=True)

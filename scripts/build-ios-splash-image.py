@@ -12,7 +12,11 @@ _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if _SCRIPT_DIR not in sys.path:
     sys.path.insert(0, _SCRIPT_DIR)
 
-from splash_raster_prep import flatten_rgba, prepare_splash_source_rgb  # noqa: E402
+from splash_raster_prep import (  # noqa: E402
+    SPLASH_BG_RGB,
+    flatten_rgba,
+    prepare_splash_source_rgb,
+)
 
 # Large enough for a sharp centered logo JPEG at ~2732 px without mushy quantization.
 TARGET_BYTES = 3 * 1024 * 1024
@@ -40,7 +44,7 @@ def main() -> int:
     if len(sys.argv) > 1:
         img = Image.open(src).convert("RGB")
     else:
-        rgb = flatten_rgba(Image.open(src))
+        rgb = flatten_rgba(Image.open(src), bg_rgb=SPLASH_BG_RGB)
         img = prepare_splash_source_rgb(rgb)
 
     best_data: bytes | None = None

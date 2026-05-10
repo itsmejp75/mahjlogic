@@ -11,7 +11,11 @@ _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if _SCRIPT_DIR not in sys.path:
     sys.path.insert(0, _SCRIPT_DIR)
 
-from splash_raster_prep import flatten_rgba, prepare_splash_source_rgb  # noqa: E402
+from splash_raster_prep import (  # noqa: E402
+    SPLASH_BG_RGB,
+    flatten_rgba,
+    prepare_splash_source_rgb,
+)
 
 SIZES = {
     (2556, 1179),
@@ -47,12 +51,12 @@ def main() -> int:
         if not os.path.isfile(src):
             print("regenerate-pwa-startup-images: missing", src, file=sys.stderr)
             return 1
-        img = flatten_rgba(Image.open(src))
+        img = flatten_rgba(Image.open(src), bg_rgb=SPLASH_BG_RGB)
         img = prepare_splash_source_rgb(img)
 
     out_dir = os.path.join(root, "public", "startup")
     os.makedirs(out_dir, exist_ok=True)
-    bg = (0, 0, 0, 255)
+    bg = (*SPLASH_BG_RGB, 255)
     iw, ih = img.size
 
     for w, h in sorted(SIZES):
