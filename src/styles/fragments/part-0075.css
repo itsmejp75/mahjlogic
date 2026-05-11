@@ -299,6 +299,118 @@
   --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
 }
 
+@keyframes suggest-dying-flash {
+  0% {
+    --tile-face-highlight-inset: 0 0 0 0 transparent;
+    --tile-face-highlight-shadow: 0 0 0 0 transparent;
+  }
+  10% {
+    --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
+    --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
+  }
+  20% {
+    --tile-face-highlight-inset: 0 0 0 0 transparent;
+    --tile-face-highlight-shadow: 0 0 0 0 transparent;
+  }
+  30% {
+    --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
+    --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
+  }
+  40% {
+    --tile-face-highlight-inset: 0 0 0 0 transparent;
+    --tile-face-highlight-shadow: 0 0 0 0 transparent;
+  }
+  50% {
+    --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
+    --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
+  }
+  60% {
+    --tile-face-highlight-inset: 0 0 0 0 transparent;
+    --tile-face-highlight-shadow: 0 0 0 0 transparent;
+  }
+  70% {
+    --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
+    --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
+  }
+  80% {
+    --tile-face-highlight-inset: 0 0 0 0 transparent;
+    --tile-face-highlight-shadow: 0 0 0 0 transparent;
+  }
+  90% {
+    --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
+    --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
+  }
+  100% {
+    --tile-face-highlight-inset: 0 0 0 0 transparent;
+    --tile-face-highlight-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@keyframes suggest-dying-flash-overlay {
+  0%   { opacity: 1; }
+  10%  { opacity: 0; }
+  20%  { opacity: 1; }
+  30%  { opacity: 0; }
+  40%  { opacity: 1; }
+  50%  { opacity: 0; }
+  60%  { opacity: 1; }
+  70%  { opacity: 0; }
+  80%  { opacity: 1; }
+  90%  { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes suggest-dying-flash-joker {
+  0%   { filter: brightness(0.64); }
+  10%  { filter: brightness(1); }
+  20%  { filter: brightness(0.64); }
+  30%  { filter: brightness(1); }
+  40%  { filter: brightness(0.64); }
+  50%  { filter: brightness(1); }
+  60%  { filter: brightness(0.64); }
+  70%  { filter: brightness(1); }
+  80%  { filter: brightness(0.64); }
+  90%  { filter: brightness(1); }
+  100% { filter: brightness(0.64); }
+}
+
+.sortable-tile-wrap--suggest-dying .tile-face,
+.exposure-rack__slot--suggest-dying .tile-face,
+.discard-entry--suggest-dying .tile-face {
+  animation: suggest-dying-flash 2.5s ease-in-out 1 forwards;
+}
+
+.sortable-tile-wrap--suggest-dying .tile-face:not(.tile--joker)::after,
+.exposure-rack__slot--suggest-dying .tile-face:not(.tile--joker)::after,
+.discard-entry--suggest-dying .tile-face:not(.tile--joker)::after {
+  opacity: 1;
+  animation: suggest-dying-flash-overlay 2.5s ease-in-out 1 forwards;
+}
+
+.sortable-tile-wrap--suggest-dying .tile-face.tile--joker,
+.exposure-rack__slot--suggest-dying .tile-face.tile--joker,
+.discard-entry--suggest-dying .tile-face.tile--joker {
+  --tile-face-suggest-dim-inset: var(--suggest-dim-inset-shadow);
+  filter: brightness(0.64);
+  animation: suggest-dying-flash 2.5s ease-in-out 1 forwards,
+             suggest-dying-flash-joker 2.5s ease-in-out 1 forwards;
+}
+
+.sortable-tile-wrap__fly {
+  position: relative;
+}
+
+.sortable-tile-wrap__dead-warn {
+  position: absolute;
+  top: 0.05rem;
+  right: 0.05rem;
+  z-index: 3;
+  width: clamp(1.4rem, 4.2cqh, 2rem);
+  height: clamp(1.4rem, 4.2cqh, 2rem);
+  pointer-events: none;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6));
+}
+
 /* Pass slot and discard staging tiles that belong to the focused suggested hand */
 .pass-strip__tile-wrap--suggest-best .tile-face,
 .east-discard-staging__tile--suggest-best .tile-face {

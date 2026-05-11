@@ -1142,17 +1142,25 @@ export const PRACTICE_PATTERNS: PracticePattern[] = [
 
   {
     id: 'sp-1', section: 'SINGLES AND PAIRS', points: 50, closed: true, roughTarget: 14,
-    title: 'NN EE WW SS 11 11 11 (like #s)',
-    titleSegments: [n('NN EE WW SS '), r('11 '), g('11 '), n('11')],
-    // 2 each of all 4 winds + 3 pairs of suit tiles all sharing one rank
+    title: 'NN EE WW SS 1D 1D 1D (like #s)',
+    titleSegments: [n('NN EE WW SS '), r('1D '), g('1D '), n('1D')],
     groups: [
       { kind: 'fixed',       need: 2,        test: northW },
       { kind: 'fixed',       need: 2,        test: eastW },
       { kind: 'fixed',       need: 2,        test: westW },
       { kind: 'fixed',       need: 2,        test: southW },
-      { kind: 'shared-rank-suits', needs: [2,2,2], test: anySuit },
+      {
+        kind: 'suit-permute',
+        colorGroups: [
+          [{ rank: 1, need: 1 }],
+          [{ rank: 1, need: 1 }],
+          [{ rank: 1, need: 1 }],
+        ],
+        colorGroupDragonCounts: [1, 1, 1],
+        consecRanks: true,
+      },
     ],
-    matches: or(wind, anySuit),
+    matches: or(wind, anySuit, dragon),
   },
   {
     id: 'sp-2', section: 'SINGLES AND PAIRS', points: 50, closed: true, roughTarget: 14,

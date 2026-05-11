@@ -17,6 +17,19 @@ const REMOVAL_SHIFT_TRANSFORM =
 const RACK_REORDER_EASING = 'cubic-bezier(0.2, 0, 0.2, 1)'
 const RACK_REORDER_DURATION = '0.16s'
 
+function DeadCauseWarning() {
+  return (
+    <svg
+      className="sortable-tile-wrap__dead-warn"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path d="M12 2L1 21h22L12 2z" fill="#facc15" stroke="#92400e" strokeWidth="1.5" strokeLinejoin="round" />
+      <text x="12" y="18.5" textAnchor="middle" fontSize="13" fontWeight="800" fill="#92400e" fontFamily="system-ui, sans-serif">!</text>
+    </svg>
+  )
+}
+
 function SortableTile({
   tile,
   selected,
@@ -24,6 +37,8 @@ function SortableTile({
   discardMode,
   suggestDim,
   suggestBest,
+  suggestDying,
+  suggestDeadCause,
   stagedForMeld,
   isJustDrawn,
   isHandFlyIn,
@@ -44,6 +59,8 @@ function SortableTile({
   discardMode: boolean
   suggestDim: boolean
   suggestBest: boolean
+  suggestDying: boolean
+  suggestDeadCause: boolean
   stagedForMeld: boolean
   isJustDrawn: boolean
   /** Charleston / wall-draw fly-in (viewport corner origin). */
@@ -208,6 +225,8 @@ function SortableTile({
         discardMode ? 'sortable-tile-wrap--discard-mode' : '',
         suggestDim ? 'sortable-tile-wrap--suggest-dim' : '',
         suggestBest ? 'sortable-tile-wrap--suggest-best' : '',
+        suggestDying ? 'sortable-tile-wrap--suggest-dying' : '',
+        suggestDeadCause ? 'sortable-tile-wrap--suggest-dead-cause' : '',
         stagedForMeld ? 'sortable-tile-wrap--staged-meld' : '',
       ]
         .filter(Boolean)
@@ -233,6 +252,7 @@ function SortableTile({
         style={flyStyle}
       >
         <TileFace def={tile.def} elevated={draggingThisTile} rackSuitStacked rackNewMark={rackNewMarkProp} />
+        {suggestDeadCause ? <DeadCauseWarning /> : null}
       </div>
     </div>
   )
@@ -288,6 +308,11 @@ type Props = {
   suggestedTileGuide?: {
     bestIds: ReadonlySet<string>
   } | null
+  /** Tiles that were previously highlighted but became dead for the focused suggestion. */
+  suggestedDeadTileGuide?: {
+    deadIds: ReadonlySet<string>
+    skullIds: ReadonlySet<string>
+  } | null
   /** When true, tiles show a discard-hover indicator on hover. */
   discardMode?: boolean
   /** Total visible slots in the rack; empty slots fill the remainder. */
@@ -329,6 +354,7 @@ export function SortableHand({
   handTileFlyIn = null,
   handJokerSwapFlyInFromBelowId = null,
   suggestedTileGuide,
+  suggestedDeadTileGuide = null,
   discardMode = false,
   slotCount = 14,
   stagedForMeldIds,
@@ -342,6 +368,7 @@ export function SortableHand({
 }: Props) {
   const renderIds = sortableOrder ?? tiles.map((t) => t.id)
   const g = suggestedTileGuide
+  const deadGuide = suggestedDeadTileGuide
   const externalPreviewActive = externalInsertPreviewIndex != null
 
   /**
@@ -436,7 +463,8 @@ export function SortableHand({
           const isNewlyReceived =
             tile.id === highlightedTileId ||
             (charlestonGlowTileIds?.has(tile.id) ?? false)
-          const isJoker = tile.def.cat === 'joker'
+          const isDeadSuggested = !!deadGuide?.deadIds.has(tile.id)
+          const isDeadCause = !!deadGuide?.skullIds.has(tile.id)
           const isHandFlyIn = !!handTileFlyIn?.ids.includes(tile.id)
           const waveMs = handTileFlyIn?.staggerWaveDelayMs
           const handFlyInWaveDelayMs =
@@ -456,8 +484,10 @@ export function SortableHand({
               selected={selectedTileId === tile.id}
               charlestonGlow={charlestonGlowTileIds?.has(tile.id) ?? false}
               discardMode={discardMode}
-              suggestDim={!!g && !isBest && !isNewlyReceived && !isJoker}
+              suggestDim={isDeadSuggested || (!!g && !isBest && !isNewlyReceived)}
               suggestBest={isBest}
+              suggestDying={isDeadSuggested}
+              suggestDeadCause={isDeadCause}
               stagedForMeld={stagedForMeldIds?.has(tile.id) ?? false}
               isJustDrawn={animationsEnabled && justDrawnId === tile.id}
               isHandFlyIn={isHandFlyIn}

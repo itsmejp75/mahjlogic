@@ -1006,6 +1006,120 @@ export function computeRackPatternHighlightIds(
   return out
 }
 
+function fullDefKey(def: TileDef): string {
+  switch (def.cat) {
+    case 'suit':   return `s:${def.suit}:${def.rank}`
+    case 'wind':   return `w:${def.wind}`
+    case 'dragon': return `d:${def.dragon}`
+    case 'flower': return 'f'
+    case 'joker':  return 'j'
+  }
+}
+
+function totalCopiesForDef(def: TileDef): number {
+  if (def.cat === 'flower') return 8
+  if (def.cat === 'joker') return 8
+  return 4
+}
+
+export function buildUnavailableTileDefCounts(tiles: TileInstance[]): Map<string, number> {
+  const m = new Map<string, number>()
+  for (const t of tiles) {
+    const k = fullDefKey(t.def)
+    m.set(k, (m.get(k) ?? 0) + 1)
+  }
+  return m
+}
+
+/**
+ * Find tiles in `bestIds` whose natural tile is publicly exhausted (discarded or
+ * exposed by bots). Dead-tile hints should not assume an unseen copy is gone just
+ * because it might be in the wall or an opponent rack.
+ */
+export function findInfeasibleBestIds(
+  rackTiles: TileInstance[],
+  groups: PatternGroup[],
+  usedMeta: GroupUsedMeta[],
+  bestIds: ReadonlySet<string>,
+  unavailableCounts: ReadonlyMap<string, number>,
+): Set<string> {
+  const infeasible = new Set<string>()
+  const rackById = new Map(rackTiles.map((t) => [t.id, t] as const))
+
+  for (const meta of usedMeta) {
+    if (meta.isJoker) continue
+    if (!bestIds.has(meta.id)) continue
+    const tile = rackById.get(meta.id)
+    if (!tile) continue
+
+    const group = groups[meta.groupIdx]
+    if (!group) continue
+    const defKey = fullDefKey(tile.def)
+    const total = totalCopiesForDef(tile.def)
+    const unavail = unavailableCounts.get(defKey) ?? 0
+
+    const need = groupNeedForDef(group, tile.def, meta)
+    if (need != null && total - unavail < need) {
+      infeasible.add(meta.id)
+    }
+  }
+
+  return infeasible
+}
+
+function groupNeedForDef(
+  group: PatternGroup,
+  _def: TileDef,
+  meta: GroupUsedMeta,
+): number | null {
+  switch (group.kind) {
+    case 'fixed':
+    case 'rank':
+    case 'suit-locked-rank':
+      return group.need
+
+    case 'consec':
+      return meta.consecPart === 0 ? group.need1 : group.need2
+
+    case 'consec-multi':
+    case 'suit-locked-consec-multi':
+      return Math.min(...group.needs)
+
+    case 'shared-rank':
+    case 'shared-rank-suits':
+      return Math.max(...group.needs)
+
+    case 'suit-locked':
+      if (_def.cat === 'dragon') return group.dragonCount
+      if (_def.cat === 'suit') {
+        const entry = group.rankNeeds.find((rn) => rn.rank === _def.rank)
+        return entry?.need ?? null
+      }
+      return null
+
+    case 'suit-locked-consec':
+      return group.rankCount
+
+    case 'suit-permute': {
+      if (_def.cat !== 'suit') {
+        const dragonCounts = group.colorGroupDragonCounts
+        if (dragonCounts) return Math.max(...dragonCounts)
+        return group.trailingDragonCount ?? null
+      }
+      let maxNeed = 0
+      for (const cg of group.colorGroups) {
+        for (const slot of cg) {
+          if (slot.rank === _def.rank && slot.need > maxNeed) maxNeed = slot.need
+        }
+      }
+      return maxNeed > 0 ? maxNeed : null
+    }
+
+    default:
+      return null
+  }
+}
+
 /** Greedy assignment order of tile ids toward `p` (same logic as `computeGroupMatch`). */
 export function greedyUsedTileOrderForPattern(
   rack: TileInstance[],

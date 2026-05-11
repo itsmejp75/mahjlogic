@@ -244,6 +244,7 @@ function SortableStagedSlot({
   onTileClick,
   stackSuitTiles,
   suggestBestIds,
+  suggestedDeadTileIds,
   suggestedTileGuide,
   botJokerBorderMenuOn,
   suppressDim,
@@ -256,6 +257,7 @@ function SortableStagedSlot({
   onTileClick: (id: string) => void
   stackSuitTiles: boolean
   suggestBestIds: ReadonlySet<string> | null
+  suggestedDeadTileIds: ReadonlySet<string> | null
   suggestedTileGuide: ExposureSuggestedTileGuide | null
   botJokerBorderMenuOn: boolean | undefined
   suppressDim: boolean
@@ -292,8 +294,8 @@ function SortableStagedSlot({
     suggestedTileGuide,
     botJokerBorderMenuOn,
   )
-  // Jokers stay fully lit when not rung (we do not dim them). Irrelevant jokers simply omit the ring.
-  const suggestDim = !suppressDim && !!suggestBestIds && !isBest && !isJoker
+  const isDeadSuggested = !!suggestedDeadTileIds?.has(tile.id)
+  const suggestDim = isDeadSuggested || (!suppressDim && !!suggestBestIds && !isBest)
   let waveDelayMs: number | null = null
   if (callStagingWave) {
     waveDelayMs =
@@ -323,6 +325,7 @@ function SortableStagedSlot({
         isDragging ? 'exposure-rack__slot--dragging' : '',
         isJoker ? 'exposure-rack__slot--joker' : '',
         isBest ? 'exposure-rack__slot--suggest-best' : '',
+        isDeadSuggested ? 'exposure-rack__slot--suggest-dying' : '',
         suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
         jokerSwapHintBounceClass(jokerSwapHintBounceTileIds, tile.id),
       ]
@@ -341,6 +344,7 @@ function DroppableMeldSlots({
   meld,
   gi,
   suggestBestIds,
+  suggestedDeadTileIds,
   suggestedTileGuide,
   botJokerBorderMenuOn,
   suppressDim,
@@ -354,6 +358,7 @@ function DroppableMeldSlots({
   meld: MeldGroup
   gi: number
   suggestBestIds: ReadonlySet<string> | null
+  suggestedDeadTileIds: ReadonlySet<string> | null
   suggestedTileGuide: ExposureSuggestedTileGuide | null
   botJokerBorderMenuOn: boolean | undefined
   suppressDim: boolean
@@ -393,7 +398,8 @@ function DroppableMeldSlots({
           suggestedTileGuide,
           botJokerBorderMenuOn,
         )
-        const suggestDim = !suppressDim && !!suggestBestIds && !isBest && !isJoker
+        const isDeadSuggested = !!suggestedDeadTileIds?.has(tile.id)
+        const suggestDim = isDeadSuggested || (!suppressDim && !!suggestBestIds && !isBest)
         const flyIn = !!flyInTileIds?.has(tile.id)
         const flyFromRight = !!flyInFromRightTileIds?.has(tile.id)
         return (
@@ -405,6 +411,7 @@ function DroppableMeldSlots({
               isCalled ? 'exposure-rack__slot--called' : '',
               isJoker ? 'exposure-rack__slot--joker' : '',
               isBest ? 'exposure-rack__slot--suggest-best' : '',
+              isDeadSuggested ? 'exposure-rack__slot--suggest-dying' : '',
               suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
               onAmend ? 'exposure-rack__slot--call-amendable' : '',
               jokerSwapHintBounceClass(jokerSwapHintBounceTileIds, tile.id),
@@ -526,6 +533,8 @@ type Props = {
   flyInFromRightTileIds?: ReadonlySet<string> | null
   /** Same semantics as `SortableHand` — highlights tiles that count toward the focused suggested line. */
   suggestedTileGuide?: ExposureSuggestedTileGuide | null
+  /** Exposure tile ids that just died for the focused suggested line (flash then stay dim). */
+  suggestedDeadTileIds?: ReadonlySet<string> | null
   /**
    * When true, tiles not in `bestIds` are never dimmed (they just show as normal).
    * Use for committed exposure racks where tiles are locked in and should always appear lit.
@@ -582,6 +591,7 @@ export function ExposureRack({
   trailingSuffix,
   className,
   suggestedTileGuide = null,
+  suggestedDeadTileIds = null,
   suppressDim = false,
   highlightCalledTile = false,
   firstEmptyOverride = null,
@@ -643,6 +653,7 @@ export function ExposureRack({
               meld={meld}
               gi={gi}
               suggestBestIds={suggestedTileGuide?.bestIds ?? null}
+              suggestedDeadTileIds={suggestedDeadTileIds}
               suggestedTileGuide={suggestedTileGuide}
               botJokerBorderMenuOn={botJokerBorderMenuOn}
               suppressDim={suppressDim}
@@ -666,7 +677,8 @@ export function ExposureRack({
               const g = suggestedTileGuide
               const isJoker = tile.def.cat === 'joker'
               const isBest = slotIsSuggestBest(isJoker, tile.id, g?.bestIds, g, botJokerBorderMenuOn)
-              const suggestDim = !suppressDim && !!g && !isBest && !isJoker
+              const isDeadSuggested = !!suggestedDeadTileIds?.has(tile.id)
+              const suggestDim = isDeadSuggested || (!suppressDim && !!g && !isBest)
               const waveTimingCalled =
                 callStagingWaveFlyIn != null
                   ? {
@@ -705,6 +717,7 @@ export function ExposureRack({
                     'exposure-rack__slot--called',
                     isJoker ? 'exposure-rack__slot--joker' : '',
                     isBest ? 'exposure-rack__slot--suggest-best' : '',
+                    isDeadSuggested ? 'exposure-rack__slot--suggest-dying' : '',
                     suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
                     jokerSwapHintBounceClass(jokerSwapHintBounceTileIds, tile.id),
                   ]
@@ -733,6 +746,7 @@ export function ExposureRack({
                 onTileClick={handler}
                 stackSuitTiles={stackSuitTiles}
                 suggestBestIds={suggestedTileGuide?.bestIds ?? null}
+                suggestedDeadTileIds={suggestedDeadTileIds}
                 suggestedTileGuide={suggestedTileGuide}
                 botJokerBorderMenuOn={botJokerBorderMenuOn}
                 suppressDim={suppressDim}
@@ -749,7 +763,8 @@ export function ExposureRack({
             const isJoker = tile.def.cat === 'joker'
             const g = suggestedTileGuide
             const isBest = slotIsSuggestBest(isJoker, tile.id, g?.bestIds, g, botJokerBorderMenuOn)
-            const suggestDim = !suppressDim && !!g && !isBest && !isJoker
+            const isDeadSuggested = !!suggestedDeadTileIds?.has(tile.id)
+            const suggestDim = isDeadSuggested || (!suppressDim && !!g && !isBest)
             const flyIn = !!flyInTileIds?.has(tile.id)
             const flyFromRight = !!flyInFromRightTileIds?.has(tile.id)
             return (
@@ -763,6 +778,7 @@ export function ExposureRack({
                   isCalled ? 'exposure-rack__slot--called' : '',
                   isJoker ? 'exposure-rack__slot--joker' : '',
                   isBest ? 'exposure-rack__slot--suggest-best' : '',
+                  isDeadSuggested ? 'exposure-rack__slot--suggest-dying' : '',
                   suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
                   jokerSwapHintBounceClass(jokerSwapHintBounceTileIds, tile.id),
                 ]
@@ -794,7 +810,8 @@ export function ExposureRack({
           const isJoker = tile.def.cat === 'joker'
           const g = suggestedTileGuide
           const isBest = slotIsSuggestBest(isJoker, tile.id, g?.bestIds, g, botJokerBorderMenuOn)
-          const suggestDim = !suppressDim && !!g && !isBest && !isJoker
+          const isDeadSuggested = !!suggestedDeadTileIds?.has(tile.id)
+          const suggestDim = isDeadSuggested || (!suppressDim && !!g && !isBest)
           const flyIn = !!flyInTileIds?.has(tile.id)
           const flyFromRight = !!flyInFromRightTileIds?.has(tile.id)
           return (
@@ -807,6 +824,7 @@ export function ExposureRack({
                 isCalled ? 'exposure-rack__slot--called' : '',
                 isJoker ? 'exposure-rack__slot--joker' : '',
                 isBest ? 'exposure-rack__slot--suggest-best' : '',
+                isDeadSuggested ? 'exposure-rack__slot--suggest-dying' : '',
                 suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
                 jokerSwapHintBounceClass(jokerSwapHintBounceTileIds, tile.id),
               ]

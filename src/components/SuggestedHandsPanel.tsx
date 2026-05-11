@@ -76,6 +76,8 @@ function handsRowGridTemplateAreas(cat: boolean, tiles: boolean): string {
 type Props = {
   hands: SuggestedHandLine[]
   activePatternId: string | null
+  /** When set, this hand stays at the top of the list regardless of tiles-away order. */
+  pinnedPatternId?: string | null
   onPatternClick: (handKey: string) => void
   onPatternDoubleClick: (patternId: string, focusKey?: string) => void
   handsListOn: boolean
@@ -104,6 +106,7 @@ type Props = {
 export function SuggestedHandsPanel({
   hands,
   activePatternId,
+  pinnedPatternId,
   onPatternClick,
   onPatternDoubleClick,
   handsListOn,
@@ -177,7 +180,18 @@ export function SuggestedHandsPanel({
   const displayHands = useMemo(() => {
     const base = hideConcealedHands ? filtered.filter((h) => !h.closed) : filtered
     const rank = new Map(cardSectionOrder.map((s, i) => [s, i]))
+    const isPinned = (h: SuggestedHandLine) => {
+      if (!pinnedPatternId) return false
+      if (h.id === pinnedPatternId) return true
+      if (pinnedPatternId.startsWith(`${h.id}::tier::`) ||
+          pinnedPatternId.startsWith(`${h.id}::oc::`) ||
+          pinnedPatternId.startsWith(`${h.id}::ocall::`)) return true
+      return false
+    }
     return [...base].sort((a, b) => {
+      const ap = isPinned(a) ? 0 : 1
+      const bp = isPinned(b) ? 0 : 1
+      if (ap !== bp) return ap - bp
       if (a.tilesNeededRough !== b.tilesNeededRough) return a.tilesNeededRough - b.tilesNeededRough
       const ra = rank.get(a.section) ?? 999
       const rb = rank.get(b.section) ?? 999
@@ -187,7 +201,7 @@ export function SuggestedHandsPanel({
       if (oa !== ob) return oa - ob
       return a.id.localeCompare(b.id)
     })
-  }, [filtered, hideConcealedHands, cardSectionOrder])
+  }, [filtered, hideConcealedHands, cardSectionOrder, pinnedPatternId])
 
   const listRowsForHandsPanel = displayHands
 

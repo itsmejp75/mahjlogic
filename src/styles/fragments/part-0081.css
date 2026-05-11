@@ -777,29 +777,15 @@
   align-self: center;
 }
 
-/*
- * Concealed annotation under "Call" in the rack action well.
- * `position: relative` + extra bottom padding reserve space so a larger CONCEALED line stays
- * under the centered "Call" label (absolute note is out of flex flow).
- */
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell.btn--call-concealed {
-  position: relative;
-  padding-bottom: 0.52rem;
-}
-
-.btn--call-concealed__note {
-  position: absolute;
-  left: 50%;
-  bottom: 0.1rem;
-  transform: translateX(-50%);
-  font-family: var(--font-concealed-c);
+/* Concealed annotation on "Call" in the rack action well. */
+.btn--call-concealed__c {
+  display: inline-block;
+  box-sizing: border-box;
+  padding: 0 0.08em 0.02em;
+  border: 1px solid #dc2626;
+  border-radius: 0.18em;
   color: #dc2626;
-  font-weight: 700;
-  font-size: 0.88em;
-  letter-spacing: 0.04em;
   line-height: 1;
-  pointer-events: none;
-  white-space: nowrap;
 }
 
 /* NMJL card “C” (concealed) — compact red outline; `em` tracks the category hand line size. */

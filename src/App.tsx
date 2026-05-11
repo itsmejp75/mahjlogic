@@ -29,7 +29,7 @@ import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from '@d
 import { CSS } from '@dnd-kit/utilities'
 import { buildAmericanDeck, dealOpeningFour, shuffle } from './mahjong/deck'
 import { tileShortLabel } from './mahjong/labels'
-import type { ClaimType, DiscardEntry, EastExposure, Seat, TileDef, TileInstance } from './mahjong/types'
+import type { ClaimType, DiscardEntry, EastExposure, Seat, Suit, TileDef, TileInstance } from './mahjong/types'
 import { findExactMatches, sortTiles, tileDefsEqual, type SortMode } from './mahjong/tileUtils'
 import { PASS_BOX_ID, passDropIndex, type PassSlots } from './mahjong/passTargets'
 import {
@@ -63,12 +63,12 @@ import {
   readPlayableCardFromStorage,
   writePlayableCardToStorage,
 } from './card/cardCatalog'
+import type { PatternGroup, PracticePattern } from './card/practicePatterns'
 import { getActiveCardPatterns, setActiveCardPatterns } from './card/activeCardPatternsScope'
 import {
   buildPinnedPatternsFromFocusKey,
   computeRackPatternHighlightIds,
   greedyPatternMatchDetail,
-  isMultiComboFocusKey,
   rankSuggestedHands,
   focusKeyForSuggestedHandLine,
   sortHandForSuggestedPattern,
@@ -77,6 +77,8 @@ import {
   summarizeRackTowardWin,
   computeSuggestedDiscardNeedHighlightIds,
   computeBotExposureSuggestedBestIds,
+  findInfeasibleBestIds,
+  buildUnavailableTileDefCounts,
   type RankSuggestedHandsInput,
 } from './analysis/suggestedHands'
 import { tileInstancesWithClaimMeldJokersResolved } from './analysis/eastExposurePatternFit'
@@ -203,11 +205,17 @@ const LS_KEY_TILE_GRAPHICS = 'mahjlogic.tileGraphics'
 /** One-time migration: users who had Classic as the old default are moved to Prism. */
 const LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED = 'mahjlogic.tileGraphicsDefaultMigrated'
 /** Training / practice: confirm before dead hand from bad call, bad Mah Jongg, or hopeless discard. */
+const LS_KEY_UNDO = 'mahjlogic.undoEnabled'
+const UNDO_LABEL = 'Undo'
 const LS_KEY_DEAD_HAND_WARNINGS = 'mahjlogic.deadHandWarningsEnabled'
 const DEAD_HAND_WARNINGS_LABEL = 'Dead hand warnings'
 /** Highlight the Mah Jongg rack button when a declaration would succeed (self-draw or on a live discard). */
 const LS_KEY_MAHJONG_HINT = 'mahjlogic.mahjongHintEnabled'
 const MAHJONG_HINT_LABEL = 'Mah Jongg hint'
+const LS_KEY_DEAD_TILE_HINT = 'mahjlogic.deadTileHintEnabled'
+const DEAD_TILE_HINT_LABEL = 'Dead tile(s) hint'
+const LS_KEY_CONCEALED_HAND_REMINDER = 'mahjlogic.concealedHandReminderEnabled'
+const CONCEALED_HAND_REMINDER_LABEL = 'Concealed hand reminder'
 const JOKER_SWAP_HINT_BOUNCE_DELAY_MS = 500
 const JOKER_SWAP_HINT_BOUNCE_DURATION_MS = 1700
 /** The keyframe has returned to translateY(0) at 52%; the rest of the iteration is idle. */
@@ -411,6 +419,36 @@ function readMahjongHintFromStorage(): boolean {
   }
 }
 
+function readDeadTileHintFromStorage(): boolean {
+  try {
+    const v = localStorage.getItem(LS_KEY_DEAD_TILE_HINT)
+    if (v === null) return true
+    return v === 'true' || v === '1'
+  } catch {
+    return true
+  }
+}
+
+function readUndoFromStorage(): boolean {
+  try {
+    const v = localStorage.getItem(LS_KEY_UNDO)
+    if (v === null) return true
+    return v === 'true' || v === '1'
+  } catch {
+    return true
+  }
+}
+
+function readConcealedHandReminderFromStorage(): boolean {
+  try {
+    const v = localStorage.getItem(LS_KEY_CONCEALED_HAND_REMINDER)
+    if (v === null) return true
+    return v === 'true' || v === '1'
+  } catch {
+    return true
+  }
+}
+
 /**
  * east-discard      East has 14 tiles and must discard one.
  * bot-turn          A bot just drew and discarded; player can Call (claim discard), declare Mah Jongg, or skip.
@@ -434,6 +472,7 @@ type GameBlockingDialog =
   | { variant: 'discard-dead-warning'; rankInput: RankSuggestedHandsInput }
   | { variant: 'new-game-pending-card'; nextCardId: PlayableCardId }
   | { variant: 'new-game-confirm' }
+  | { variant: 'concealed-call-warning' }
 
 const CALL_STAGING_DROP_ID = 'call-staging-meld-drop'
 const EAST_EXPOSURE_MELD_SORT_ID_PREFIX = 'east-exposure-meld:'
@@ -788,6 +827,276 @@ function deadDiscardTilesForRanking(
       .map((e) => e.tile)
   }
   return r.discardPile.map((e) => e.tile)
+}
+
+function totalCopiesForDeadHintDef(def: TileDef): number {
+  return def.cat === 'flower' || def.cat === 'joker' ? 8 : 4
+}
+
+const DEAD_HINT_SUITS: readonly Suit[] = ['bam', 'dot', 'crak']
+const DEAD_HINT_DRAGON_FOR_SUIT: Record<Suit, Extract<TileDef, { cat: 'dragon' }>['dragon']> = {
+  bam: 'green',
+  dot: 'soap',
+  crak: 'red',
+}
+
+function deadHintDefKey(def: TileDef): string {
+  switch (def.cat) {
+    case 'suit': return `s:${def.suit}:${def.rank}`
+    case 'wind': return `w:${def.wind}`
+    case 'dragon': return `d:${def.dragon}`
+    case 'flower': return 'f'
+    case 'joker': return 'j'
+  }
+}
+
+function addDeadHintNeed(
+  needs: Map<string, { def: TileDef; need: number }>,
+  def: TileDef,
+  count: number,
+) {
+  if (count <= 0) return
+  const key = deadHintDefKey(def)
+  const cur = needs.get(key)
+  needs.set(key, { def, need: (cur?.need ?? 0) + count })
+}
+
+function copyDeadHintNeeds(
+  needs: ReadonlyMap<string, { def: TileDef; need: number }>,
+): Map<string, { def: TileDef; need: number }> {
+  return new Map(Array.from(needs, ([key, value]) => [key, { ...value }]))
+}
+
+function deadHintSuitPermutations(slotCount: number): Suit[][] {
+  if (slotCount <= 0) return [[]]
+  const out: Suit[][] = []
+  const walk = (chosen: Suit[]) => {
+    if (chosen.length === slotCount) {
+      out.push([...chosen])
+      return
+    }
+    for (const suit of DEAD_HINT_SUITS) {
+      if (chosen.includes(suit)) continue
+      chosen.push(suit)
+      walk(chosen)
+      chosen.pop()
+    }
+  }
+  walk([])
+  return out
+}
+
+function deadHintGroupNeedVariants(
+  group: PatternGroup,
+  triggerDef: TileDef,
+): Array<Map<string, { def: TileDef; need: number }>> {
+  switch (group.kind) {
+    case 'fixed':
+    case 'rank':
+    case 'suit-locked-rank': {
+      const needs = new Map<string, { def: TileDef; need: number }>()
+      if (group.test(triggerDef)) addDeadHintNeed(needs, triggerDef, group.need)
+      return [needs]
+    }
+    case 'suit-locked': {
+      return DEAD_HINT_SUITS.map((suit) => {
+        const needs = new Map<string, { def: TileDef; need: number }>()
+        for (const rankNeed of group.rankNeeds) {
+          addDeadHintNeed(needs, { cat: 'suit', suit, rank: rankNeed.rank }, rankNeed.need)
+        }
+        if (group.dragonCount > 0) {
+          addDeadHintNeed(needs, { cat: 'dragon', dragon: DEAD_HINT_DRAGON_FOR_SUIT[suit] }, group.dragonCount)
+        }
+        return needs
+      })
+    }
+    case 'suit-locked-consec': {
+      const variants: Array<Map<string, { def: TileDef; need: number }>> = []
+      const maxStart = 10 - group.numGroups
+      for (const suit of DEAD_HINT_SUITS) {
+        for (let start = 1; start <= maxStart; start++) {
+          const needs = new Map<string, { def: TileDef; need: number }>()
+          for (let i = 0; i < group.numGroups; i++) {
+            addDeadHintNeed(needs, { cat: 'suit', suit, rank: start + i }, group.rankCount)
+          }
+          if (group.dragonCount > 0) {
+            addDeadHintNeed(needs, { cat: 'dragon', dragon: DEAD_HINT_DRAGON_FOR_SUIT[suit] }, group.dragonCount)
+          }
+          variants.push(needs)
+        }
+      }
+      return variants
+    }
+    case 'suit-locked-consec-multi': {
+      const variants: Array<Map<string, { def: TileDef; need: number }>> = []
+      const maxStart = 10 - group.needs.length
+      for (const suit of DEAD_HINT_SUITS) {
+        for (let start = 1; start <= maxStart; start++) {
+          const needs = new Map<string, { def: TileDef; need: number }>()
+          group.needs.forEach((need, i) => {
+            addDeadHintNeed(needs, { cat: 'suit', suit, rank: start + i }, need)
+          })
+          variants.push(needs)
+        }
+      }
+      return variants
+    }
+    case 'suit-permute': {
+      const variants: Array<Map<string, { def: TileDef; need: number }>> = []
+      const maxOffset = Math.max(0, ...group.colorGroups.flatMap((cg) => cg.map((slot) => slot.rank)))
+      const maxStart = group.consecRanks ? 10 - maxOffset : 1
+      for (const assignment of deadHintSuitPermutations(group.colorGroups.length)) {
+        for (let start = 1; start <= maxStart; start++) {
+          const needs = new Map<string, { def: TileDef; need: number }>()
+          group.colorGroups.forEach((colorGroup, colorIdx) => {
+            const suit = assignment[colorIdx]
+            if (!suit) return
+            for (const slot of colorGroup) {
+              addDeadHintNeed(needs, {
+                cat: 'suit',
+                suit,
+                rank: group.consecRanks ? start + slot.rank - 1 : slot.rank,
+              }, slot.need)
+            }
+            const dragonCount = group.colorGroupDragonCounts?.[colorIdx] ?? 0
+            if (dragonCount > 0) {
+              addDeadHintNeed(needs, { cat: 'dragon', dragon: DEAD_HINT_DRAGON_FOR_SUIT[suit] }, dragonCount)
+            }
+          })
+          if (group.trailingDragonCount && assignment.length < DEAD_HINT_SUITS.length) {
+            const remainingSuit = DEAD_HINT_SUITS.find((suit) => !assignment.includes(suit))
+            if (remainingSuit) {
+              addDeadHintNeed(needs, { cat: 'dragon', dragon: DEAD_HINT_DRAGON_FOR_SUIT[remainingSuit] }, group.trailingDragonCount)
+            }
+          }
+          variants.push(needs)
+        }
+      }
+      return variants
+    }
+    default:
+      return [new Map()]
+  }
+}
+
+function focusedPatternHasAvailableDeadHintVariant(
+  focusKey: string | null,
+  triggerDef: TileDef,
+  unavailableTiles: readonly TileInstance[],
+  patterns: PracticePattern[],
+): boolean {
+  if (!focusKey) return false
+  const variantSep = ['::tier::', '::oc::', '::ocall::']
+    .map((s) => focusKey.indexOf(s))
+    .filter((i) => i >= 0)
+    .reduce((m, i) => (m < 0 ? i : Math.min(m, i)), -1)
+  const patternId = variantSep >= 0 ? focusKey.slice(0, variantSep) : focusKey
+  const pattern = patterns.find((p) => p.id === patternId)
+  if (!pattern?.groups?.length) return false
+  const pinnedPatterns = buildPinnedPatternsFromFocusKey(pattern, focusKey)
+  const candidates = pinnedPatterns.length > 0 ? pinnedPatterns : [pattern]
+
+  const unavailableByKey = new Map<string, number>()
+  for (const tile of unavailableTiles) {
+    const key = deadHintDefKey(tile.def)
+    unavailableByKey.set(key, (unavailableByKey.get(key) ?? 0) + 1)
+  }
+
+  for (const candidate of candidates) {
+    let variants: Array<Map<string, { def: TileDef; need: number }>> = [new Map()]
+    for (const group of candidate.groups ?? []) {
+      const groupVariants = deadHintGroupNeedVariants(group, triggerDef)
+      const next: Array<Map<string, { def: TileDef; need: number }>> = []
+      for (const base of variants) {
+        for (const groupVariant of groupVariants) {
+          const merged = copyDeadHintNeeds(base)
+          for (const { def, need } of groupVariant.values()) addDeadHintNeed(merged, def, need)
+          next.push(merged)
+        }
+      }
+      variants = next
+    }
+
+    for (const needs of variants) {
+      let ok = true
+      for (const { def, need } of needs.values()) {
+        const available = totalCopiesForDeadHintDef(def) - (unavailableByKey.get(deadHintDefKey(def)) ?? 0)
+        if (available < need) {
+          ok = false
+          break
+        }
+      }
+      if (ok) return true
+    }
+  }
+
+  return false
+}
+
+function groupNeedForDeadHintDef(group: PatternGroup, def: TileDef): number | null {
+  switch (group.kind) {
+    case 'fixed':
+    case 'rank':
+    case 'suit-locked-rank':
+      return group.test(def) ? group.need : null
+    case 'consec':
+      return group.test(def) ? Math.max(group.need1, group.need2) : null
+    case 'shared-rank':
+    case 'shared-rank-suits':
+    case 'consec-multi':
+    case 'suit-locked-consec-multi':
+      return group.test(def) ? Math.max(...group.needs) : null
+    case 'suit-locked':
+      if (def.cat === 'suit') {
+        return group.rankNeeds.find((n) => n.rank === def.rank)?.need ?? null
+      }
+      if (def.cat === 'dragon') {
+        return Math.max(group.dragonCount, group.opposingDragons?.need ?? 0) || null
+      }
+      return null
+    case 'suit-locked-consec':
+      if (def.cat === 'suit') return group.rankCount
+      if (def.cat === 'dragon') return group.dragonCount || null
+      return null
+    case 'suit-permute':
+      if (def.cat === 'suit') {
+        let need = 0
+        for (const colorGroup of group.colorGroups) {
+          for (const part of colorGroup) {
+            if (part.rank === def.rank) need = Math.max(need, part.need)
+          }
+        }
+        return need || null
+      }
+      if (def.cat === 'dragon') {
+        return Math.max(...(group.colorGroupDragonCounts ?? []), group.trailingDragonCount ?? 0) || null
+      }
+      return null
+  }
+}
+
+function focusedPatternNeedForDeadHintDef(
+  focusKey: string | null,
+  def: TileDef,
+  patterns: PracticePattern[],
+): number | null {
+  if (!focusKey) return null
+  const variantSep = ['::tier::', '::oc::', '::ocall::']
+    .map((s) => focusKey.indexOf(s))
+    .filter((i) => i >= 0)
+    .reduce((m, i) => (m < 0 ? i : Math.min(m, i)), -1)
+  const patternId = variantSep >= 0 ? focusKey.slice(0, variantSep) : focusKey
+  const pattern = patterns.find((p) => p.id === patternId)
+  if (!pattern) return null
+  const pinnedPatterns = buildPinnedPatternsFromFocusKey(pattern, focusKey)
+  const candidates = pinnedPatterns.length > 0 ? pinnedPatterns : [pattern]
+  let need = 0
+  for (const candidate of candidates) {
+    for (const group of candidate.groups ?? []) {
+      need = Math.max(need, groupNeedForDeadHintDef(group, def) ?? 0)
+    }
+  }
+  return need || null
 }
 
 function createNewRound(): RoundState {
@@ -2195,7 +2504,23 @@ function AppMenuSettingSwitch({
 export default function App() {
   const [round, setRound] = useState<RoundState>(() => createNewRound())
   const [suggestedFocusHandKey, setSuggestedFocusHandKey] = useState<string | null>(null)
+  const suggestedFocusHandKeyRef = useRef<string | null>(null)
+  suggestedFocusHandKeyRef.current = suggestedFocusHandKey
+  const [suggestedDeadTileGuide, setSuggestedDeadTileGuide] = useState<{
+    focusKey: string
+    phase: MainPhase
+    suppressAfterPhase: boolean
+    deadIds: ReadonlySet<string>
+    skullIds: ReadonlySet<string>
+  } | null>(null)
+  const [suggestedDeadTableGuide, setSuggestedDeadTableGuide] = useState<{
+    focusKey: string
+    botExposureDeadIds: ReadonlySet<string>
+    discardDeadIds: ReadonlySet<string>
+  } | null>(null)
   const [suggestedPanelHandsOn, setSuggestedPanelHandsOn] = useState(false)
+  const [suggestedPinnedHandKey, setSuggestedPinnedHandKey] = useState<string | null>(null)
+  const [suggestedSuppressedHandKey, setSuggestedSuppressedHandKey] = useState<string | null>(null)
   const [suggestedCategoryResetEpoch, setSuggestedCategoryResetEpoch] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuOpenPrevRef = useRef(false)
@@ -2255,6 +2580,13 @@ export default function App() {
     readDeadHandWarningsFromStorage(),
   )
   const [mahjongHintEnabled, setMahjongHintEnabled] = useState<boolean>(() => readMahjongHintFromStorage())
+  const [deadTileHintEnabled, setDeadTileHintEnabled] = useState<boolean>(() =>
+    readDeadTileHintFromStorage(),
+  )
+  const [concealedHandReminderEnabled, setConcealedHandReminderEnabled] = useState<boolean>(() =>
+    readConcealedHandReminderFromStorage(),
+  )
+  const [undoEnabled, setUndoEnabled] = useState<boolean>(() => readUndoFromStorage())
   const setTileGraphicsMode = useCallback((g: TileGraphics) => {
     setTileGraphics(g)
     try {
@@ -2360,6 +2692,42 @@ export default function App() {
     })
   }, [])
 
+  const toggleDeadTileHint = useCallback(() => {
+    setDeadTileHintEnabled((v) => {
+      const next = !v
+      try {
+        localStorage.setItem(LS_KEY_DEAD_TILE_HINT, next ? 'true' : 'false')
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }, [])
+
+  const toggleConcealedHandReminder = useCallback(() => {
+    setConcealedHandReminderEnabled((v) => {
+      const next = !v
+      try {
+        localStorage.setItem(LS_KEY_CONCEALED_HAND_REMINDER, next ? 'true' : 'false')
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }, [])
+
+  const toggleUndo = useCallback(() => {
+    setUndoEnabled((v) => {
+      const next = !v
+      try {
+        localStorage.setItem(LS_KEY_UNDO, next ? 'true' : 'false')
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }, [])
+
   // Keep a ref so pure-function callbacks always see the current setting value.
   const botWinsEnabledRef = useRef(botWinsEnabled)
   useEffect(() => {
@@ -2375,6 +2743,13 @@ export default function App() {
   useEffect(() => {
     deadHandWarningsEnabledRef.current = deadHandWarningsEnabled
   }, [deadHandWarningsEnabled])
+
+  const concealedHandReminderEnabledRef = useRef(concealedHandReminderEnabled)
+  useEffect(() => {
+    concealedHandReminderEnabledRef.current = concealedHandReminderEnabled
+  }, [concealedHandReminderEnabled])
+
+  const focusedHandIsConcealedRef = useRef(false)
 
   /** Re-read on mount: guarantees UI matches `localStorage` after refresh. */
   useEffect(() => {
@@ -2408,6 +2783,18 @@ export default function App() {
     setMahjongHintEnabled((prev) => {
       const m = readMahjongHintFromStorage()
       return prev === m ? prev : m
+    })
+    setDeadTileHintEnabled((prev) => {
+      const d = readDeadTileHintFromStorage()
+      return prev === d ? prev : d
+    })
+    setConcealedHandReminderEnabled((prev) => {
+      const c = readConcealedHandReminderFromStorage()
+      return prev === c ? prev : c
+    })
+    setUndoEnabled((prev) => {
+      const u = readUndoFromStorage()
+      return prev === u ? prev : u
     })
     setSuggestedHandsUncheckedSections(() => readUncheckedSectionsFromStorage())
     setSuggestedHandsHideConcealed((prev) => {
@@ -2467,6 +2854,15 @@ export default function App() {
       } else if (e.key === LS_KEY_MAHJONG_HINT) {
         if (e.newValue == null) return
         setMahjongHintEnabled(e.newValue === 'true' || e.newValue === '1')
+      } else if (e.key === LS_KEY_DEAD_TILE_HINT) {
+        if (e.newValue == null) return
+        setDeadTileHintEnabled(e.newValue === 'true' || e.newValue === '1')
+      } else if (e.key === LS_KEY_CONCEALED_HAND_REMINDER) {
+        if (e.newValue == null) return
+        setConcealedHandReminderEnabled(e.newValue === 'true' || e.newValue === '1')
+      } else if (e.key === LS_KEY_UNDO) {
+        if (e.newValue == null) return
+        setUndoEnabled(e.newValue === 'true' || e.newValue === '1')
       } else if (e.key === SUGGESTED_HANDS_UNCHECKED_SECTIONS_KEY) {
         if (e.newValue == null) return
         setSuggestedHandsUncheckedSections(readUncheckedSectionsFromStorage())
@@ -2900,6 +3296,7 @@ export default function App() {
   useEffect(() => {
     const wasOpen = lastSuggestedPanelOpenRef.current
     if (wasOpen && !suggestedPanelHandsOn) {
+      if (suggestedFocusHandKeyRef.current) setSuggestedPinnedHandKey(suggestedFocusHandKeyRef.current)
       const { h, d, l, px, py, pinTop, pinTopY } = panelSizeOnLatestRenderRef.current
       if (suggestedHandsRememberSizeRef.current) {
         try {
@@ -3401,7 +3798,7 @@ export default function App() {
     return () => window.clearTimeout(t)
   }, [activeJokerSwapHintBounceIds])
 
-  const jokerSwapHintBounceIds = activeJokerSwapHintBounceIds ?? settlingJokerSwapHintBounceIds
+  const rawJokerSwapHintBounceIds = activeJokerSwapHintBounceIds ?? settlingJokerSwapHintBounceIds
 
   /** Increment when your turn starts again so the dock-bounce animation can replay if swap is still available. */
   const [jokerSwapHintBounceEpoch, setJokerSwapHintBounceEpoch] = useState(0)
@@ -3410,9 +3807,27 @@ export default function App() {
     const prev = prevMainPhaseForJokerHintRef.current
     if (mainPhase === 'east-discard' && prev != null && prev !== 'east-discard') {
       setJokerSwapHintBounceEpoch((e) => e + 1)
+    } else if (prev === 'east-discard' && mainPhase !== 'east-discard') {
+      setJokerSwapBounceAnimDone(true)
     }
     prevMainPhaseForJokerHintRef.current = mainPhase
   }, [mainPhase])
+
+  const [jokerSwapBounceAnimDone, setJokerSwapBounceAnimDone] = useState(false)
+  const jokerSwapBounceIsActive = !!rawJokerSwapHintBounceIds && !jokerSwapBounceAnimDone
+
+  useEffect(() => {
+    if (!jokerSwapBounceIsActive) return
+    const totalMs = JOKER_SWAP_HINT_BOUNCE_DELAY_MS + JOKER_SWAP_HINT_BOUNCE_DURATION_MS * 4
+    const t = window.setTimeout(() => setJokerSwapBounceAnimDone(true), totalMs)
+    return () => window.clearTimeout(t)
+  }, [jokerSwapBounceIsActive])
+
+  useEffect(() => {
+    setJokerSwapBounceAnimDone(false)
+  }, [jokerSwapHintBounceEpoch])
+
+  const jokerSwapHintBounceIds = jokerSwapBounceAnimDone ? null : rawJokerSwapHintBounceIds
 
   const discardTiles = useMemo(
     () => deadDiscardTilesForRanking({ discardPile, mainPhase, activeBotDiscard }),
@@ -3655,11 +4070,13 @@ export default function App() {
     const p = cardPatterns.find((x) => x.id === patternId)
     return !!p?.closed
   }, [suggestedFocusHandKey, mainPhase, cardPatterns])
+  focusedHandIsConcealedRef.current = focusedHandIsConcealed
 
   const suggestedTileGuide = useMemo(() => {
     // Rack + exposure highlights follow the focused line whenever one is selected — independent of
     // the "Tiles" toggle (that toggle only adds pattern previews inside the suggested-hands list).
     if (!suggestedFocusHandKey || mainPhase === 'mahjong-declared' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand' || mainPhase === 'wall-game') return null
+    if (suggestedSuppressedHandKey === suggestedFocusHandKey) return null
     const greedyUiOpts =
       suggestedHandsExposureTileIds && suggestedHandsExposureTileIds.size > 0
         ? { exposureTileIds: suggestedHandsExposureTileIds }
@@ -3682,41 +4099,57 @@ export default function App() {
     //   tiles match exactly what the panel row shows.
     // - Multi combo (title row click — "all"): UNION of contributing rack tiles across every
     //   combo so the rack lights up every tile that helps any variant in the stack.
+    const unavailableCounts = deadTileHintEnabled
+      ? buildUnavailableTileDefCounts([
+          ...discardPile.map((e) => e.tile),
+          ...botExposures.flatMap((e) => e.tiles),
+        ])
+      : null
+
+    const computeAvailableRackHighlightIds = (pinnedP: PracticePattern) => {
+      let rack = rackForSuggestedPatternMatch
+      let detail = greedyPatternMatchDetail(rack, pinnedP, greedyUiOpts)
+      let bestIds = computeRackPatternHighlightIds(
+        rack,
+        pinnedP,
+        detail,
+        suggestedHandsExposureTileIds,
+      )
+
+      if (unavailableCounts && pinnedP.groups) {
+        for (let pass = 0; pass < 4; pass++) {
+          const infeasible = findInfeasibleBestIds(
+            rack, pinnedP.groups, detail.usedMeta, bestIds, unavailableCounts,
+          )
+          if (infeasible.size === 0) break
+          rack = rack.filter((t) => !infeasible.has(t.id))
+          detail = greedyPatternMatchDetail(rack, pinnedP, greedyUiOpts)
+          bestIds = computeRackPatternHighlightIds(
+            rack,
+            pinnedP,
+            detail,
+            suggestedHandsExposureTileIds,
+          )
+        }
+      }
+
+      return bestIds
+    }
+
     if (variantSep >= 0) {
       const pinnedPatterns = buildPinnedPatternsFromFocusKey(p, suggestedFocusHandKey)
       if (pinnedPatterns.length > 0) {
-        const isMulti = isMultiComboFocusKey(suggestedFocusHandKey)
-        const rackIdSet = new Set(rackForSuggestedPatternMatch.map((t) => t.id))
         const unionIds = new Set<string>()
         for (const pinnedP of pinnedPatterns) {
-          const detail = greedyPatternMatchDetail(rackForSuggestedPatternMatch, pinnedP, greedyUiOpts)
-          if (!isMulti) {
-            const ids = computeRackPatternHighlightIds(
-              rackForSuggestedPatternMatch,
-              pinnedP,
-              detail,
-              suggestedHandsExposureTileIds,
-            )
-            for (const id of ids) unionIds.add(id)
-          } else {
-            for (const id of detail.usedOrder) {
-              if (rackIdSet.has(id)) unionIds.add(id)
-            }
-          }
+          const ids = computeAvailableRackHighlightIds(pinnedP)
+          for (const id of ids) unionIds.add(id)
         }
         return { bestIds: unionIds }
       }
     }
 
-    const detail = greedyPatternMatchDetail(rackForSuggestedPatternMatch, p, greedyUiOpts)
-    const bestIds = computeRackPatternHighlightIds(
-      rackForSuggestedPatternMatch,
-      p,
-      detail,
-      suggestedHandsExposureTileIds,
-    )
-    return { bestIds }
-  }, [suggestedFocusHandKey, mainPhase, rackForSuggestedPatternMatch, suggestedHandsExposureTileIds, cardPatterns])
+    return { bestIds: computeAvailableRackHighlightIds(p) }
+  }, [suggestedFocusHandKey, suggestedSuppressedHandKey, mainPhase, rackForSuggestedPatternMatch, suggestedHandsExposureTileIds, cardPatterns, deadTileHintEnabled, discardPile, botExposures])
 
   /**
    * Bot exposure rings for the focused line: naturals that match strip “need” slots (dead tiles you
@@ -3724,6 +4157,7 @@ export default function App() {
    */
   const botExposureSuggestedTileGuide = useMemo(() => {
     if (!suggestedFocusHandKey || mainPhase === 'mahjong-declared' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand' || mainPhase === 'wall-game') return null
+    if (suggestedSuppressedHandKey === suggestedFocusHandKey) return null
     const bestIds = computeBotExposureSuggestedBestIds(
       suggestedFocusHandKey,
       rackForSuggestedPatternMatch,
@@ -3737,6 +4171,7 @@ export default function App() {
     return { bestIds }
   }, [
     suggestedFocusHandKey,
+    suggestedSuppressedHandKey,
     mainPhase,
     rackForSuggestedPatternMatch,
     botExposures,
@@ -3750,6 +4185,7 @@ export default function App() {
   /** Discards that match naturals the focused line is still short (incoming slot + discard tracker). */
   const suggestedDiscardNeedIds = useMemo(() => {
     if (!suggestedFocusHandKey) return null
+    if (suggestedSuppressedHandKey === suggestedFocusHandKey) return null
     if (mainPhase === 'mahjong-declared' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand' || mainPhase === 'wall-game')
       return null
     return computeSuggestedDiscardNeedHighlightIds(
@@ -3761,6 +4197,7 @@ export default function App() {
     )
   }, [
     suggestedFocusHandKey,
+    suggestedSuppressedHandKey,
     mainPhase,
     rackForSuggestedPatternMatch,
     discardPile,
@@ -3789,9 +4226,18 @@ export default function App() {
    */
   const suggestedTileGuideForRack = useMemo(() => {
     if (!suggestedTileGuide) return null
+    const activeDiscardIsDead =
+      !!activeBotDiscard &&
+      suggestedDeadTableGuide?.focusKey === suggestedFocusHandKey &&
+      suggestedDeadTableGuide.discardDeadIds.has(activeBotDiscard.id)
+    const selectedHandIsDying =
+      suggestedDeadTileGuide?.focusKey === suggestedFocusHandKey &&
+      suggestedDeadTileGuide.suppressAfterPhase
     if (
       (mainPhase === 'bot-turn' || mainPhase === 'call-staging') &&
       activeBotDiscard &&
+      !activeDiscardIsDead &&
+      !selectedHandIsDying &&
       suggestedDiscardNeedIds?.has(activeBotDiscard.id)
     ) {
       const merged = new Set(suggestedTileGuide.bestIds)
@@ -3799,22 +4245,257 @@ export default function App() {
       return { bestIds: merged }
     }
     return suggestedTileGuide
-  }, [suggestedTileGuide, mainPhase, activeBotDiscard, suggestedDiscardNeedIds])
+  }, [
+    suggestedTileGuide,
+    mainPhase,
+    activeBotDiscard,
+    suggestedDiscardNeedIds,
+    suggestedDeadTableGuide,
+    suggestedDeadTileGuide,
+    suggestedFocusHandKey,
+  ])
+
+  const prevSuggestedFocusForDeadGuideRef = useRef<string | null>(null)
+  const prevSuggestedBestIdsForDeadGuideRef = useRef<ReadonlySet<string>>(new Set())
+  const prevBotExposureBestIdsForDeadGuideRef = useRef<ReadonlySet<string>>(new Set())
+  const prevDiscardNeedIdsForDeadGuideRef = useRef<ReadonlySet<string>>(new Set())
+  const prevDiscardSnapshotForDeadGuideRef = useRef('0:')
 
   useEffect(() => {
-    if (mainPhase === 'mahjong-declared' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand' || mainPhase === 'wall-game') setSuggestedFocusHandKey(null)
+    const prevFocus = prevSuggestedFocusForDeadGuideRef.current
+    const prevBestIds = prevSuggestedBestIdsForDeadGuideRef.current
+    const prevBotBestIds = prevBotExposureBestIdsForDeadGuideRef.current
+    const prevDiscardNeedIds = prevDiscardNeedIdsForDeadGuideRef.current
+    const prevDiscardSnapshot = prevDiscardSnapshotForDeadGuideRef.current
+    const currentBestIds = suggestedTileGuideForRack?.bestIds ?? null
+    const currentBotBestIds = botExposureSuggestedTileGuide?.bestIds ?? null
+    const currentDiscardNeedIds = suggestedDiscardNeedIds ?? null
+    const lastDiscard = discardPile.length > 0 ? discardPile[discardPile.length - 1]!.tile : null
+    const discardSnapshot = lastDiscard ? `${discardPile.length}:${lastDiscard.id}` : '0:'
+    const discardAdvanced = discardSnapshot !== prevDiscardSnapshot
+    const focusChanged = prevFocus !== suggestedFocusHandKey
+    const shouldReset = !deadTileHintEnabled || !suggestedFocusHandKey || !currentBestIds || focusChanged
+    const lastDiscardNeed =
+      lastDiscard
+        ? focusedPatternNeedForDeadHintDef(suggestedFocusHandKey, lastDiscard.def, cardPatterns)
+        : null
+    const unavailableDeadHintTiles = [
+      ...discardPile.map((e) => e.tile),
+      ...botExposures.flatMap((e) => e.tiles),
+    ]
+    const unavailableLastDiscardCopies =
+      lastDiscard
+        ? unavailableDeadHintTiles.filter((tile) => tileDefsEqual(tile.def, lastDiscard.def)).length
+        : 0
+    const ownedLastDiscardCopies =
+      lastDiscard
+        ? rackForSuggestedHandsUi.filter((tile) => tileDefsEqual(tile.def, lastDiscard.def)).length
+        : 0
+    const discardExhaustedNeededDef =
+      !!lastDiscard &&
+      discardAdvanced &&
+      !!currentDiscardNeedIds?.has(lastDiscard.id) &&
+      lastDiscardNeed != null &&
+      ownedLastDiscardCopies < lastDiscardNeed &&
+      totalCopiesForDeadHintDef(lastDiscard.def) - unavailableLastDiscardCopies < lastDiscardNeed
+
+    if (shouldReset) {
+      setSuggestedDeadTileGuide(null)
+      setSuggestedDeadTableGuide(null)
+    } else if (discardAdvanced && prevBestIds.size > 0) {
+      const rackById = new Map(rackForSuggestedHandsUi.map((t) => [t.id, t] as const))
+      const deadIds = new Set<string>()
+      const stillHasUsablePivot =
+        discardExhaustedNeededDef && lastDiscard
+          ? focusedPatternHasAvailableDeadHintVariant(
+              suggestedFocusHandKey,
+              lastDiscard.def,
+              unavailableDeadHintTiles,
+              cardPatterns,
+            )
+          : currentBestIds.size > 0
+      if (discardExhaustedNeededDef) {
+        const exhaustedPrevIds = new Set<string>()
+        for (const id of prevBestIds) {
+          const tile = rackById.get(id)
+          if (tile && lastDiscard && tileDefsEqual(tile.def, lastDiscard.def)) {
+            exhaustedPrevIds.add(id)
+          }
+        }
+        for (const id of stillHasUsablePivot && exhaustedPrevIds.size > 0 ? exhaustedPrevIds : prevBestIds) {
+          deadIds.add(id)
+        }
+      } else {
+        for (const id of prevBestIds) {
+          if (rackById.has(id) && !currentBestIds.has(id)) deadIds.add(id)
+        }
+      }
+      if (deadIds.size > 0) {
+        const suppressAfterPhase = deadIds.size >= prevBestIds.size
+        const skullIds = new Set<string>()
+        if (discardAdvanced && lastDiscard) {
+          for (const id of deadIds) {
+            const tile = rackById.get(id)
+            if (tile && tileDefsEqual(tile.def, lastDiscard.def)) skullIds.add(id)
+          }
+        }
+        setSuggestedDeadTileGuide((cur) => {
+          if (cur?.focusKey === suggestedFocusHandKey) {
+            const nextDeadIds = new Set(cur.deadIds)
+            for (const id of deadIds) nextDeadIds.add(id)
+            const nextSkullIds = new Set(cur.skullIds)
+            for (const id of skullIds) nextSkullIds.add(id)
+            return {
+              focusKey: suggestedFocusHandKey,
+              phase: cur.phase,
+              suppressAfterPhase: cur.suppressAfterPhase || suppressAfterPhase,
+              deadIds: nextDeadIds,
+              skullIds: nextSkullIds,
+            }
+          }
+          return {
+            focusKey: suggestedFocusHandKey,
+            phase: mainPhase,
+            suppressAfterPhase,
+            deadIds,
+            skullIds,
+          }
+        })
+      }
+
+      const botExposureDeadIds = new Set<string>()
+      if (discardExhaustedNeededDef) {
+        if (stillHasUsablePivot && lastDiscard) {
+          for (const exp of botExposures) {
+            for (const tile of exp.tiles) {
+              if (prevBotBestIds.has(tile.id) && tileDefsEqual(tile.def, lastDiscard.def)) {
+                botExposureDeadIds.add(tile.id)
+              }
+            }
+          }
+        } else {
+          for (const id of prevBotBestIds) botExposureDeadIds.add(id)
+        }
+      } else if (currentBotBestIds) {
+        for (const id of prevBotBestIds) {
+          if (!currentBotBestIds.has(id)) botExposureDeadIds.add(id)
+        }
+      }
+      const discardDeadIds = new Set<string>()
+      if (discardExhaustedNeededDef) {
+        if (stillHasUsablePivot && lastDiscard) {
+          for (const entry of discardPile) {
+            if (
+              (prevDiscardNeedIds.has(entry.tile.id) || currentDiscardNeedIds?.has(entry.tile.id)) &&
+              tileDefsEqual(entry.tile.def, lastDiscard.def)
+            ) {
+              discardDeadIds.add(entry.tile.id)
+            }
+          }
+        } else {
+          for (const id of prevDiscardNeedIds) discardDeadIds.add(id)
+          for (const id of currentDiscardNeedIds ?? []) discardDeadIds.add(id)
+        }
+      } else if (currentDiscardNeedIds) {
+        for (const id of prevDiscardNeedIds) {
+          if (!currentDiscardNeedIds.has(id)) discardDeadIds.add(id)
+        }
+      }
+      if (botExposureDeadIds.size > 0 || discardDeadIds.size > 0) {
+        setSuggestedDeadTableGuide((cur) => {
+          if (cur?.focusKey === suggestedFocusHandKey) {
+            const nextBotExposureDeadIds = new Set(cur.botExposureDeadIds)
+            for (const id of botExposureDeadIds) nextBotExposureDeadIds.add(id)
+            const nextDiscardDeadIds = new Set(cur.discardDeadIds)
+            for (const id of discardDeadIds) nextDiscardDeadIds.add(id)
+            return {
+              focusKey: suggestedFocusHandKey,
+              botExposureDeadIds: nextBotExposureDeadIds,
+              discardDeadIds: nextDiscardDeadIds,
+            }
+          }
+          return {
+            focusKey: suggestedFocusHandKey,
+            botExposureDeadIds,
+            discardDeadIds,
+          }
+        })
+      }
+    }
+
+    prevSuggestedFocusForDeadGuideRef.current = suggestedFocusHandKey
+    prevSuggestedBestIdsForDeadGuideRef.current = currentBestIds ? new Set(currentBestIds) : new Set()
+    prevBotExposureBestIdsForDeadGuideRef.current = currentBotBestIds
+      ? new Set(currentBotBestIds)
+      : new Set()
+    prevDiscardNeedIdsForDeadGuideRef.current = currentDiscardNeedIds
+      ? new Set(currentDiscardNeedIds)
+      : new Set()
+    prevDiscardSnapshotForDeadGuideRef.current = discardSnapshot
+  }, [
+    deadTileHintEnabled,
+    suggestedFocusHandKey,
+    suggestedTileGuideForRack,
+    botExposureSuggestedTileGuide,
+    suggestedDiscardNeedIds,
+    discardPile,
+    botExposures,
+    rackForSuggestedHandsUi,
+    cardPatterns,
+  ])
+
+  useEffect(() => {
+    if (!suggestedDeadTileGuide) return
+    if (suggestedDeadTileGuide.focusKey !== suggestedFocusHandKey) return
+    if (suggestedDeadTileGuide.phase === mainPhase) return
+
+    setSuggestedDeadTileGuide(null)
+    setSuggestedDeadTableGuide(null)
+    if (suggestedDeadTileGuide.suppressAfterPhase) {
+      setSuggestedSuppressedHandKey(suggestedDeadTileGuide.focusKey)
+    }
+  }, [mainPhase, suggestedDeadTileGuide, suggestedFocusHandKey])
+
+  const suggestedDeadTileGuideForRack = useMemo(() => {
+    if (!deadTileHintEnabled) return null
+    if (!suggestedFocusHandKey || !suggestedDeadTileGuide) return null
+    if (suggestedDeadTileGuide.focusKey !== suggestedFocusHandKey) return null
+    return {
+      deadIds: suggestedDeadTileGuide.deadIds,
+      skullIds: suggestedDeadTileGuide.skullIds,
+    }
+  }, [deadTileHintEnabled, suggestedFocusHandKey, suggestedDeadTileGuide])
+
+  const suggestedDeadTableGuideForView = useMemo(() => {
+    if (!deadTileHintEnabled) return null
+    if (!suggestedFocusHandKey || !suggestedDeadTableGuide) return null
+    if (suggestedDeadTableGuide.focusKey !== suggestedFocusHandKey) return null
+    return {
+      botExposureDeadIds: suggestedDeadTableGuide.botExposureDeadIds,
+      discardDeadIds: suggestedDeadTableGuide.discardDeadIds,
+    }
+  }, [deadTileHintEnabled, suggestedFocusHandKey, suggestedDeadTableGuide])
+
+  useEffect(() => {
+    if (mainPhase === 'mahjong-declared' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand' || mainPhase === 'wall-game') {
+      setSuggestedFocusHandKey(null)
+      setSuggestedPinnedHandKey(null)
+      setSuggestedSuppressedHandKey(null)
+      setSuggestedDeadTileGuide(null)
+      setSuggestedDeadTableGuide(null)
+    }
   }, [mainPhase])
 
   const onSuggestedPatternClick = useCallback((handKey: string) => {
     setSuggestedFocusHandKey((cur) => (cur === handKey ? null : handKey))
+    setSuggestedPinnedHandKey(null)
+    setSuggestedSuppressedHandKey(null)
   }, [])
 
   const onSuggestedPatternDoubleClick = useCallback((patternId: string, focusKey?: string) => {
-    // Double-click sorts the rack toward the pattern. Focus defaults to the bare pattern id
-    // but a caller (e.g. tier variant row) can pin focus to a specific variant key so the
-    // selected variant stays highlighted after the sort. The focusKey is also forwarded to
-    // the sorter so it sorts toward that specific tier combo's pinned pattern.
     setSuggestedFocusHandKey(focusKey ?? patternId)
+    setSuggestedPinnedHandKey(null)
+    setSuggestedSuppressedHandKey(null)
     pushRound((r) => ({
       ...r,
       hand: sortHandForSuggestedPattern(
@@ -4318,6 +4999,8 @@ export default function App() {
     setEastDiscardIntoHandPreview(null)
     setPassStripFlyOut(null)
     setSuggestedFocusHandKey(null)
+    setSuggestedPinnedHandKey(null)
+    setSuggestedSuppressedHandKey(null)
     setSuggestedCategoryResetEpoch((epoch) => epoch + 1)
     if (passStripFlyoutTimerRef.current) {
       clearTimeout(passStripFlyoutTimerRef.current)
@@ -4744,7 +5427,20 @@ export default function App() {
     pushRound((r) => ({ ...r, hand: sortTiles(r.hand, nextMode) }))
   }, [pushRound])
 
+  const proceedWithCallRef = useRef<(() => void) | null>(null)
+
   const initiateCall = useCallback(() => {
+    if (
+      concealedHandReminderEnabledRef.current &&
+      focusedHandIsConcealedRef.current
+    ) {
+      setBlockingDialog({ variant: 'concealed-call-warning' })
+      return
+    }
+    proceedWithCallRef.current?.()
+  }, [])
+
+  const proceedWithCall = useCallback(() => {
     // Compute the error synchronously from the current render's state values — reading it
     // after setRound(updater) is unreliable in React 18 because updaters may be deferred.
     const err = getCallInitiateBlockMessage({
@@ -4847,6 +5543,7 @@ export default function App() {
     animationsEnabled,
     pushRound,
   ])
+  proceedWithCallRef.current = proceedWithCall
 
   useLayoutEffect(() => {
     if (mainPhase !== 'call-staging' || !callEntryMagnet) return
@@ -5422,17 +6119,19 @@ export default function App() {
               >
                 New Game
               </button>
-              <button
-                type="button"
-                className="btn app-menu-tray__item"
-                disabled={!canUndo}
-                onClick={() => {
-                  undoAction()
-                  setMenuOpen(false)
-                }}
-              >
-                Undo
-              </button>
+              {undoEnabled ? (
+                <button
+                  type="button"
+                  className="btn app-menu-tray__item"
+                  disabled={!canUndo}
+                  onClick={() => {
+                    undoAction()
+                    setMenuOpen(false)
+                  }}
+                >
+                  Undo
+                </button>
+              ) : null}
               <div className="app-menu-modal__diff-block">
                 <div className="app-menu-modal__subhead" id="bot-difficulty-menu-label">
                   Bot difficulty
@@ -5620,6 +6319,16 @@ export default function App() {
               <div className="app-menu-modal__body-footer app-menu-modal__body-footer--settings-toggles">
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
                   <AppMenuSettingSwitch
+                    labelId="app-menu-label-undo"
+                    pressed={undoEnabled}
+                    onToggle={toggleUndo}
+                  />
+                  <span className="app-menu-modal__label" id="app-menu-label-undo">
+                    {UNDO_LABEL}
+                  </span>
+                </div>
+                <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                  <AppMenuSettingSwitch
                     labelId="app-menu-label-remember-hands-size"
                     pressed={suggestedHandsRememberSize}
                     onToggle={toggleSuggestedHandsRememberSize}
@@ -5687,6 +6396,26 @@ export default function App() {
                     {MAHJONG_HINT_LABEL}
                   </span>
                 </div>
+                <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                  <AppMenuSettingSwitch
+                    labelId="app-menu-label-dead-tile-hint"
+                    pressed={deadTileHintEnabled}
+                    onToggle={toggleDeadTileHint}
+                  />
+                  <span className="app-menu-modal__label" id="app-menu-label-dead-tile-hint">
+                    {DEAD_TILE_HINT_LABEL}
+                  </span>
+                </div>
+                <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                  <AppMenuSettingSwitch
+                    labelId="app-menu-label-concealed-hand-reminder"
+                    pressed={concealedHandReminderEnabled}
+                    onToggle={toggleConcealedHandReminder}
+                  />
+                  <span className="app-menu-modal__label" id="app-menu-label-concealed-hand-reminder">
+                    {CONCEALED_HAND_REMINDER_LABEL}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -5704,6 +6433,7 @@ export default function App() {
             if (blockingDialog?.variant === 'mahjong-dead-warning') return
             if (blockingDialog?.variant === 'call-exposure-dead-warning') return
             if (blockingDialog?.variant === 'discard-dead-warning') return
+            if (blockingDialog?.variant === 'concealed-call-warning') return
             setCharlestonPassError(null)
             setCallRuleError(null)
             setBlockingDialog(null)
@@ -5715,7 +6445,8 @@ export default function App() {
               blockingDialog?.variant === 'table' ? 'charleston-error-dialog--table' : '',
               blockingDialog?.variant === 'new-game-pending-card' ||
               blockingDialog?.variant === 'new-game-confirm' ||
-              blockingDialog?.variant === 'dead-hand-warning'
+              blockingDialog?.variant === 'dead-hand-warning' ||
+              blockingDialog?.variant === 'concealed-call-warning'
                 ? 'charleston-error-dialog--blocking-neutral charleston-error-dialog--dead-hand-warning'
                 : '',
               blockingDialog?.variant === 'mahjong-dead-warning'
@@ -5741,7 +6472,8 @@ export default function App() {
               blockingDialog?.variant === 'dead-hand-warning' ||
               blockingDialog?.variant === 'mahjong-dead-warning' ||
               blockingDialog?.variant === 'call-exposure-dead-warning' ||
-              blockingDialog?.variant === 'discard-dead-warning'
+              blockingDialog?.variant === 'discard-dead-warning' ||
+              blockingDialog?.variant === 'concealed-call-warning'
                 ? 'game-blocking-error-title'
                 : blockingDialog?.variant === 'mahjong-blocked'
                   ? 'mj-blocked-title'
@@ -5813,6 +6545,37 @@ export default function App() {
                       setBlockingDialog(null)
                       performNewHandDeal()
                       setMenuOpen(false)
+                    }}
+                  >
+                    Continue
+                  </button>
+                </div>
+              </>
+            ) : blockingDialog?.variant === 'concealed-call-warning' ? (
+              <>
+                <h2 id="game-blocking-error-title" className="charleston-error-dialog__title">
+                  Concealed Hand
+                </h2>
+                <p id="game-blocking-error-body" className="charleston-error-dialog__body">
+                  You have a concealed hand highlighted from your suggested hands. Are you sure you want to call?
+                </p>
+                <div className="charleston-error-dialog__actions charleston-error-dialog__actions--spread">
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setBlockingDialog(null)
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn--primary"
+                    onClick={() => {
+                      setBlockingDialog(null)
+                      proceedWithCallRef.current?.()
                     }}
                   >
                     Continue
@@ -6299,6 +7062,7 @@ export default function App() {
                                       animationsEnabled ? handJokerSwapFlyInFromBelowId : null
                                     }
                                     suggestedTileGuide={suggestedTileGuideForRack}
+                                    suggestedDeadTileGuide={suggestedDeadTileGuideForRack}
                                     discardMode={false}
                                     animationsEnabled={animationsEnabled}
                                     rackNewMarkTileIds={rackNewMarkTileIds}
@@ -6379,6 +7143,21 @@ export default function App() {
                                 >
                                   Mahj
                                 </button>
+                              ) : null}
+                              {undoEnabled && canUndo ? (
+                                <span
+                                  className="btn__undo-sibling charleston-pass-btn rack-bottom-tile-cell rack-bottom-tile-cell--c12-14"
+                                  role="button"
+                                  tabIndex={0}
+                                  aria-label="Undo"
+                                  onClick={() => undoAction()}
+                                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); undoAction() } }}
+                                >
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                    <polyline points="1 4 1 10 7 10" />
+                                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                                  </svg>
+                                </span>
                               ) : null}
                               <button
                                 type="button"
@@ -6536,6 +7315,7 @@ export default function App() {
                                       animationsEnabled ? handJokerSwapFlyInFromBelowId : null
                                     }
                                     suggestedTileGuide={suggestedTileGuideForRack}
+                                    suggestedDeadTileGuide={suggestedDeadTileGuideForRack}
                                     discardMode={false}
                                     animationsEnabled={animationsEnabled}
                                     rackNewMarkTileIds={rackNewMarkTileIds}
@@ -6672,7 +7452,7 @@ export default function App() {
                                     type="button"
                                     className={[
                                       'btn rack-bottom-tile-cell rack-bottom-tile-cell--c9-10',
-                                      focusedHandIsConcealed ? 'btn--call-concealed' : '',
+                                      concealedHandReminderEnabled && focusedHandIsConcealed ? 'btn--call-concealed' : '',
                                     ]
                                       .filter(Boolean)
                                       .join(' ')}
@@ -6680,15 +7460,14 @@ export default function App() {
                                     onClick={initiateCall}
                                     aria-label="Call discard"
                                   >
-                                    Call
-                                    {focusedHandIsConcealed ? (
-                                      <span
-                                        className="btn--call-concealed__note"
-                                        aria-label="Focused line is a concealed hand"
-                                      >
-                                        CONCEALED
-                                      </span>
-                                    ) : null}
+                                    {concealedHandReminderEnabled && focusedHandIsConcealed ? (
+                                      <>
+                                        <span
+                                          className="btn--call-concealed__c"
+                                          aria-label="Concealed hand"
+                                        >C</span>all
+                                      </>
+                                    ) : 'Call'}
                                   </button>
                                 )}
                                 <div
@@ -6700,6 +7479,21 @@ export default function App() {
                                 >
                                   <span className="rack-bottom-wall__num">{wall.length}</span>
                                 </div>
+                                {undoEnabled && canUndo ? (
+                                  <span
+                                    className="btn__undo-sibling rack-bottom-tile-cell rack-bottom-tile-cell--c12-14"
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-label="Undo"
+                                    onClick={() => undoAction()}
+                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); undoAction() } }}
+                                  >
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                      <polyline points="1 4 1 10 7 10" />
+                                      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                                    </svg>
+                                  </span>
+                                ) : null}
                                 <button
                                   type="button"
                                   className={[
@@ -6765,7 +7559,9 @@ export default function App() {
                           {discardTrackerEntries.map(({ tile, seat, flyAnimate }) => {
                             const needRing =
                               suggestedDiscardNeedIds != null && suggestedDiscardNeedIds.has(tile.id)
-                            const isDim = suggestedDiscardPileCanDim && !needRing
+                            const isDead =
+                              !!suggestedDeadTableGuideForView?.discardDeadIds.has(tile.id)
+                            const isDim = isDead || (suggestedDiscardPileCanDim && !needRing)
                             return (
                               <div
                                 key={tile.id}
@@ -6773,6 +7569,7 @@ export default function App() {
                                   'discard-entry',
                                   `discard-entry--${seat}`,
                                   needRing ? 'discard-entry--suggest-need' : '',
+                                  isDead ? 'discard-entry--suggest-dying' : '',
                                   isDim ? 'discard-entry--suggest-dim' : '',
                                 ]
                                   .filter(Boolean)
@@ -6870,6 +7667,9 @@ export default function App() {
                                   ariaLabel={`${label} exposures`}
                                   flyInTileIds={animationsEnabled ? botExposureFlyInTileIds : null}
                                   suggestedTileGuide={botExposureSuggestedTileGuide}
+                                  suggestedDeadTileIds={
+                                    suggestedDeadTableGuideForView?.botExposureDeadIds ?? null
+                                  }
                                   botJokerBorderMenuOn={false}
                                   jokerSwapHintBounceTileIds={jokerSwapHintBounceIds?.jokers ?? null}
                                   jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
@@ -6983,6 +7783,7 @@ export default function App() {
                       <SuggestedHandsPanel
                         hands={eastSuggestedHands}
                         activePatternId={suggestedFocusHandKey}
+                        pinnedPatternId={suggestedPinnedHandKey}
                         onPatternClick={onSuggestedPatternClick}
                         onPatternDoubleClick={onSuggestedPatternDoubleClick}
                         handsListOn={suggestedHandsListOn}
