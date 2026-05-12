@@ -139,6 +139,11 @@
   margin-left: 0.2rem;
 }
 
+.rack-bottom-wall--disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
 .btn--logic__img {
   height: 0.85em;
   width: auto;

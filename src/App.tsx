@@ -7162,6 +7162,15 @@ export default function App() {
                               >
                                 Swap
                               </button>
+                              <div
+                                className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-wall--disabled rack-bottom-tile-cell rack-bottom-tile-cell--c11${
+                                  wall.length >= OPENING_WALL_TILES ? ' rack-bottom-wall--full' : ''
+                                }`}
+                                style={wallRemainHeatStyle(wall.length)}
+                                aria-label={`${wall.length} tiles remaining in wall`}
+                              >
+                                <span className="rack-bottom-wall__num">{wall.length}</span>
+                              </div>
                               <button
                                 type="button"
                                 className="btn btn--primary charleston-pass-btn rack-bottom-tile-cell rack-bottom-tile-cell--c12-14"
