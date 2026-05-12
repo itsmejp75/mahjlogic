@@ -625,6 +625,8 @@ export function ExposureRack({
     .map((meld) => meld.sortableMeldId)
     .filter((id): id is string => id != null)
 
+  const filledMeldCount = melds.filter((m) => m.tiles.length > 0 && !m.dropZoneId).length
+
   return (
     <div
       className={['exposure-rack', className].filter(Boolean).join(' ')}
@@ -632,7 +634,15 @@ export function ExposureRack({
       aria-label={ariaLabel}
     >
       {watermark ? (
-        <div className="exposure-rack__watermark" aria-hidden="true">
+        <div
+          className={[
+            'exposure-rack__watermark',
+            filledMeldCount >= 2 ? 'exposure-rack__watermark--hidden' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          aria-hidden="true"
+        >
           {watermark}
         </div>
       ) : null}

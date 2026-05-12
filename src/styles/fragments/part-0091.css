@@ -643,7 +643,7 @@
   max-width: 100%;
   margin-inline: 0;
   box-sizing: border-box;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .wall-game-dialog--wall-seats .wall-game-dialog__review .mahjong-win__bots-review-inner--player-focus .mahjong-win__bots-review-tile {
@@ -811,7 +811,7 @@
   padding-bottom: 0.05rem;
 }
 
-/* New Game full width; Review and Replay side by side (same order as in markup). */
+/* Two rows of two: [Menu · New Game] then [Review · Replay]. */
 .wall-game-dialog__actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -821,16 +821,13 @@
   flex-shrink: 0;
 }
 
-.wall-game-dialog__actions > .btn:first-child {
-  grid-column: 1 / -1;
-}
-
 .wall-game-dialog__actions .btn {
   width: 100%;
   justify-content: center;
   padding-block: 0.45rem;
   font-size: calc(var(--btn-font-size) * 0.98);
   line-height: var(--btn-line-height);
+  text-transform: none;
 }
 
 /* ── Suggested Hands tab + slide-up popup ── */

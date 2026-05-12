@@ -22,7 +22,8 @@
 /* Match bot exposure inter-tile spacing in the exact main-rack / discard / player-exposure rows. */
 .panel--hand .panel-hand-rack__hand-tray .hand-row,
 .panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass),
-.panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass) .exposure-rack__meld-drop {
+.panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass) .exposure-rack__meld-drop,
+.panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass) .exposure-rack__meld-sortable {
   gap: var(--player-rack-face-gap);
 }
 

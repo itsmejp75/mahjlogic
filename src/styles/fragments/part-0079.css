@@ -261,7 +261,13 @@
 .wall-game-dialog__review .mahjong-win__bots-review-inner {
   width: 100%;
   max-width: 100%;
-  align-items: flex-start;
+  align-items: center;
+}
+
+/* Card hand pattern on its own centered row below seat / away / category. */
+.wall-game-dialog__review .mahjong-win__bots-review-header .post-game-tied__pattern-line {
+  flex-basis: 100%;
+  justify-content: center;
 }
 
 .wall-game-dialog__review .mahjong-win__bots-review-tiles {
@@ -291,6 +297,6 @@
 }
 
 .wall-game-dialog--wall-seats .wall-game-dialog__review .mahjong-win__bots-review-tile {
-  --rack-tile-w: var(--wall-game-bots-tile-w);
-  --rack-tile-h: var(--wall-game-bots-tile-h);
+  --rack-tile-w: var(--wall-game-player-tile-w);
+  --rack-tile-h: var(--wall-game-player-tile-h);
 }

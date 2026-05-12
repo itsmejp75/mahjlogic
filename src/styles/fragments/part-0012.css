@@ -26,6 +26,12 @@
   pointer-events: none;
   user-select: none;
   z-index: 0;
+  opacity: 1;
+  transition: opacity 2s ease;
+}
+
+.panel--hand .rack-stage__rack-top .exposure-rack__watermark--hidden {
+  opacity: 0;
 }
 
 /* Melds/slots above tray rim ::after (z-index 1); see part-0120. */

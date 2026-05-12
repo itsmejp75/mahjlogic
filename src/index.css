@@ -24,6 +24,23 @@
   src: url('../assets/fonts/Figtree/Figtree-Italic-VariableFont_wght.ttf') format('truetype-variations');
 }
 
+/* Local Roboto (assets/fonts/Roboto): variable font covering weights 100–900.
+   Charleston pass-box instruction text uses this family. */
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../assets/fonts/Roboto/Roboto-VariableFont_wdth,wght.ttf') format('truetype-variations');
+}
+@font-face {
+  font-family: 'Roboto';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../assets/fonts/Roboto/Roboto-Italic-VariableFont_wdth,wght.ttf') format('truetype-variations');
+}
+
 /* Local Noto Sans Arabic (assets/fonts/Noto_Sans_Arabic): variable font covering weights 100–900.
    Used for numeric glyphs on tile faces (suit ranks + digit-bearing labels). */
 @font-face {

@@ -4509,6 +4509,36 @@ export default function App() {
     }
   }, [mainPhase])
 
+  const handsButtonLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handsButtonLongPressFired = useRef(false)
+
+  const onHandsButtonPointerDown = useCallback(() => {
+    handsButtonLongPressFired.current = false
+    handsButtonLongPressTimer.current = setTimeout(() => {
+      handsButtonLongPressFired.current = true
+      setSuggestedFocusHandKey(null)
+      setSuggestedPinnedHandKey(null)
+      setSuggestedSuppressedHandKey(null)
+      setSuggestedDeadTileGuide(null)
+      setSuggestedDeadTableGuide(null)
+    }, 500)
+  }, [])
+
+  const onHandsButtonPointerUpOrLeave = useCallback(() => {
+    if (handsButtonLongPressTimer.current != null) {
+      clearTimeout(handsButtonLongPressTimer.current)
+      handsButtonLongPressTimer.current = null
+    }
+  }, [])
+
+  const onHandsButtonClick = useCallback(() => {
+    if (handsButtonLongPressFired.current) {
+      handsButtonLongPressFired.current = false
+      return
+    }
+    setSuggestedPanelHandsOn((v) => !v)
+  }, [])
+
   const onSuggestedPatternClick = useCallback((handKey: string) => {
     setSuggestedFocusHandKey((cur) => (cur === handKey ? null : handKey))
     setSuggestedPinnedHandKey(null)
@@ -6142,19 +6172,6 @@ export default function App() {
               >
                 New Game
               </button>
-              {undoEnabled ? (
-                <button
-                  type="button"
-                  className="btn app-menu-tray__item"
-                  disabled={!canUndo}
-                  onClick={() => {
-                    undoAction()
-                    setMenuOpen(false)
-                  }}
-                >
-                  Undo
-                </button>
-              ) : null}
               <div className="app-menu-modal__diff-block">
                 <div className="app-menu-modal__subhead" id="bot-difficulty-menu-label">
                   Bot difficulty
@@ -6837,25 +6854,16 @@ export default function App() {
               </div>
             ) : null}
             <div className="wall-game-dialog__actions">
-              <button
-                type="button"
-                className="btn btn--primary"
-                onClick={newHand}
-              >
+              <button type="button" className="btn" onClick={() => { setWallGameReviewing(true); setMenuOpen(true) }}>
+                Menu
+              </button>
+              <button type="button" className="btn btn--primary" onClick={newHand}>
                 New Game
               </button>
-              <button
-                type="button"
-                className="btn"
-                onClick={() => setWallGameReviewing(true)}
-              >
+              <button type="button" className="btn" onClick={() => setWallGameReviewing(true)}>
                 Review
               </button>
-              <button
-                type="button"
-                className="btn"
-                onClick={newHand}
-              >
+              <button type="button" className="btn" onClick={newHand}>
                 Replay
               </button>
             </div>
@@ -6916,6 +6924,9 @@ export default function App() {
               </div>
             ) : null}
             <div className="wall-game-dialog__actions">
+              <button type="button" className="btn" onClick={() => { setMahjongWinReviewing(true); setMenuOpen(true) }}>
+                Menu
+              </button>
               <button type="button" className="btn btn--primary" onClick={newHand}>
                 New Game
               </button>
@@ -6983,6 +6994,9 @@ export default function App() {
               </ul>
             </div>
             <div className="wall-game-dialog__actions">
+              <button type="button" className="btn" onClick={() => { setBotMahjongWinReviewing(true); setMenuOpen(true) }}>
+                Menu
+              </button>
               <button type="button" className="btn btn--primary" onClick={newHand}>
                 New Game
               </button>
@@ -7151,7 +7165,11 @@ export default function App() {
                                     .filter(Boolean)
                                     .join(' ')}
                                   aria-label="Suggested hands"
-                                  onClick={() => setSuggestedPanelHandsOn((v) => !v)}
+                                  onClick={onHandsButtonClick}
+                                  onPointerDown={onHandsButtonPointerDown}
+                                  onPointerUp={onHandsButtonPointerUpOrLeave}
+                                  onPointerLeave={onHandsButtonPointerUpOrLeave}
+                                  onPointerCancel={onHandsButtonPointerUpOrLeave}
                                   aria-expanded={suggestedPanelHandsOn}
                                   aria-controls="suggested-hands-popup"
                                 >
@@ -7452,7 +7470,11 @@ export default function App() {
                                       .filter(Boolean)
                                       .join(' ')}
                                     aria-label="Suggested hands"
-                                    onClick={() => setSuggestedPanelHandsOn((v) => !v)}
+                                    onClick={onHandsButtonClick}
+                                    onPointerDown={onHandsButtonPointerDown}
+                                    onPointerUp={onHandsButtonPointerUpOrLeave}
+                                    onPointerLeave={onHandsButtonPointerUpOrLeave}
+                                    onPointerCancel={onHandsButtonPointerUpOrLeave}
                                     aria-expanded={suggestedPanelHandsOn}
                                     aria-controls="suggested-hands-popup"
                                   >

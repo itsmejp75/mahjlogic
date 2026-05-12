@@ -84,10 +84,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   text-align: center;
   pointer-events: none;
-  gap: clamp(0.12rem, calc(var(--pass-strip-box-w) * 0.025), 0.52rem);
+  gap: 0;
   padding: clamp(0.06rem, calc(var(--pass-strip-box-w) * 0.012), 0.12rem) clamp(0.08rem, calc(var(--pass-strip-box-w) * 0.018), 0.18rem);
   box-sizing: border-box;
   opacity: 1;
@@ -116,7 +116,7 @@
 }
 
 .pass-strip-tail__header--with-footer .pass-strip-tail__header-spacer {
-  flex: 1 1 0;
+  flex: 0 0 0;
   min-height: 0;
   width: 100%;
   pointer-events: none;
@@ -128,15 +128,15 @@
 }
 
 .pass-strip-tail__header--with-footer .pass-strip-tail__header-centered {
-  flex: 0 1 auto;
+  flex: 1 1 0;
   min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   text-align: center;
-  gap: clamp(0.12rem, calc(var(--pass-strip-box-w) * 0.025), 0.52rem);
+  gap: 0;
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -144,12 +144,11 @@
 }
 
 .pass-strip-tail__header--with-footer .pass-strip-tail__header-centered:has(.pass-strip-tail__instruction) {
-  gap: clamp(0.08rem, calc(var(--pass-strip-box-w) * 0.018), 0.34rem);
+  gap: 0;
 }
 
 .pass-strip-tail__header-footer {
-  flex: 1 0 0;
-  /* Keep a real row for the direction glyph so it never stacks over the instruction line. */
+  flex: 0 0 auto;
   min-height: calc(var(--pass-strip-header-fs) * 1.35);
   width: 100%;
   display: flex;
@@ -172,12 +171,12 @@
 }
 
 .pass-strip-tail__title {
-  font-family: 'Figtree', var(--sans);
-  font-weight: 700;
-  font-size: var(--pass-strip-header-fs);
-  line-height: 1.1;
-  letter-spacing: clamp(0.008em, calc(var(--pass-strip-box-w) * 0.00022), 0.03em);
-  color: #bdbdbd;
+  font-family: 'Roboto', var(--sans);
+  font-weight: 400;
+  font-size: calc(var(--pass-strip-header-fs) * 0.82);
+  line-height: 1.15;
+  letter-spacing: clamp(0.01em, calc(var(--pass-strip-box-w) * 0.0003), 0.04em);
+  color: #b0b0b0;
   margin: 0;
   padding: 0;
   max-width: 100%;
@@ -195,12 +194,13 @@
   width: fit-content;
   max-width: 100%;
   box-sizing: border-box;
+  padding-top: clamp(0.08rem, calc(var(--pass-strip-box-w) * 0.018), 0.24rem);
   padding-bottom: clamp(0.08rem, calc(var(--pass-strip-box-w) * 0.018), 0.24rem);
   border-bottom: 1px solid color-mix(in srgb, #f2f2e9 28%, var(--coach-teal-border) 72%);
 }
 
 .pass-strip-tail__header--overlay:has(.pass-strip-tail__instruction) {
-  gap: clamp(0.08rem, calc(var(--pass-strip-box-w) * 0.018), 0.34rem);
+  gap: 0;
 }
 
 .pass-strip-tail__header--overlay.pass-strip-tail__header--with-footer:has(.pass-strip-tail__instruction) {
@@ -208,10 +208,10 @@
 }
 
 .pass-strip-tail__instruction {
-  font-family: 'Figtree', var(--sans);
-  font-weight: 500;
+  font-family: 'Roboto', var(--sans);
+  font-weight: 700;
   font-size: var(--pass-strip-header-fs);
-  line-height: 1.18;
+  line-height: 1.2;
   letter-spacing: clamp(0em, calc(var(--pass-strip-box-w) * 0.00008), 0.01em);
   color: #f2f2e9;
   margin: 0;
@@ -224,6 +224,11 @@
     0 0 0.22rem color-mix(in srgb, var(--bg-elevated) 90%, transparent),
     0 0 0.45rem color-mix(in srgb, var(--bg-elevated) 72%, transparent),
     0 1px 2px color-mix(in srgb, var(--color-black) 24%, transparent);
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .pass-strip-tail__instruction--stacked {
@@ -237,6 +242,7 @@
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
+  flex: 1 1 0;
 }
 
 .pass-strip-tail__instruction--stacked .pass-strip-tail__instruction-line {
@@ -246,12 +252,13 @@
 
 .pass-strip-tail__instruction-or {
   display: block;
-  font-family: 'Figtree', var(--sans);
-  font-weight: 600;
-  font-size: calc(var(--pass-strip-header-fs) * 0.74);
-  letter-spacing: clamp(0.04em, calc(var(--pass-strip-box-w) * 0.0009), 0.14em);
+  font-family: 'Roboto', var(--sans);
+  font-weight: 400;
+  font-style: italic;
+  font-size: calc(var(--pass-strip-header-fs) * 0.62);
+  letter-spacing: clamp(0.03em, calc(var(--pass-strip-box-w) * 0.0007), 0.1em);
   line-height: 1.15;
-  color: #bdbdbd;
+  color: #c5a882;
   text-shadow:
     0 0 0.18rem color-mix(in srgb, var(--bg-elevated) 88%, transparent),
     0 0 0.38rem color-mix(in srgb, var(--bg-elevated) 65%, transparent),
@@ -266,13 +273,16 @@
 /* Same typographic size as standalone `-OR-`, inlined in `0 TO STOP` (cream like other instruction copy). */
 .pass-strip-tail__instruction-or--inline {
   display: inline;
+  font-style: italic;
   letter-spacing: clamp(0.03em, calc(var(--pass-strip-box-w) * 0.00065), 0.1em);
   vertical-align: 0.02em;
-  color: #f2f2e9;
+  color: #c5a882;
 }
 
 .pass-strip-tail__instruction-line--0-to-stop {
   white-space: nowrap;
+  font-weight: 700;
+  color: #e0a86e;
 }
 
 .pass-strip-tail__tiles {
