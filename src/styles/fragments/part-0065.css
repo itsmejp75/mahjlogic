@@ -60,8 +60,6 @@
   border-radius: var(--rack-tile-btn-border-radius);
   border: none;
   white-space: nowrap;
-  /* Base `.btn` uses a soft drop-shadow that reads as a border next to the tile row */
-  box-shadow: none;
 }
 
 /* Same inner-face metrics as the general `.rack-bottom-tile-cell` block above (see :root). */

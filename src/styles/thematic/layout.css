@@ -1643,7 +1643,7 @@
 
 
 /* Lock the Charleston Pass button itself in place; align wrappers/trays around it, not this control. */
-.panel--hand .rack-bottom-bar--charleston .charleston-pass-btn.rack-bottom-tile-cell--c12-14 {
+.panel--hand .rack-bottom-bar--charleston .charleston-pass-btn.rack-bottom-tile-cell--c12-14:not(:active) {
   transform: none;
 }
 

@@ -1950,8 +1950,6 @@
   border-radius: var(--rack-tile-btn-border-radius);
   border: none;
   white-space: nowrap;
-  /* Base `.btn` uses a soft drop-shadow that reads as a border next to the tile row */
-  box-shadow: none;
 }
 
 /* Same inner-face metrics as the general `.rack-bottom-tile-cell` block above (see :root). */
@@ -2231,6 +2229,22 @@
   filter: none;
   box-shadow: none;
   cursor: not-allowed;
+}
+
+.rack-bottom-bar .btn.rack-bottom-tile-cell:not(:disabled) {
+  box-shadow:
+    inset 3px 3px 7px rgba(0, 0, 0, 0.35),
+    inset -2px -2px 5px rgba(255, 255, 255, 0.12);
+  transition: box-shadow 0.14s ease, transform 0.12s ease;
+}
+
+.btn.charleston-pass-btn:active:not(:disabled),
+.rack-bottom-bar .btn.rack-bottom-tile-cell:active:not(:disabled) {
+  transition: none;
+  transform: scale(0.94);
+  box-shadow:
+    inset 4px 4px 10px rgba(0, 0, 0, 0.5),
+    inset -2px -2px 6px rgba(255, 255, 255, 0.1);
 }
 
 /* ---- part-0072.css (from base.css, layout.css, components.css, animations.css) ---- */

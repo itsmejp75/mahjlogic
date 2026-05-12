@@ -265,3 +265,12 @@
     0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);
   transform: none;
 }
+
+.app-bottom-center-controls__menu-btn:active:not(:disabled) {
+  transition: none;
+  transform: none;
+  box-shadow:
+    inset 3px 3px 7px rgba(0, 0, 0, 0.35),
+    inset -2px -2px 5px rgba(255, 255, 255, 0.12),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.12);
+}

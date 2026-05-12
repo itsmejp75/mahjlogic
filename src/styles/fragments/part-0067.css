@@ -9,7 +9,10 @@
 
 
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:hover:not(:disabled) {
-  box-shadow: none;
+  box-shadow:
+    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
+    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
+  transform: none;
 }
 
 .panel--hand .rack-bottom-bar--tile-grid .rack-bottom-tile-cell,
@@ -18,10 +21,28 @@
 .panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:disabled,
 .panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn,
 .panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:disabled,
-.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:hover,
 .panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn--open,
 .panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn--open:hover {
   box-shadow: none;
+}
+
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:not(:disabled),
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:hover:not(:disabled),
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn--open:not(:disabled),
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn--open:hover:not(:disabled) {
+  box-shadow:
+    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
+    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
+  transform: none;
+}
+
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:active:not(:disabled) {
+  transition: none;
+  transform: none;
+  box-shadow:
+    inset 3px 3px 7px rgba(0, 0, 0, 0.35),
+    inset -2px -2px 5px rgba(255, 255, 255, 0.12),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.12);
 }
 
 /*
@@ -119,10 +140,22 @@
   border-radius: var(--rack-tile-btn-border-radius, 0.7rem) 0 0 var(--rack-tile-btn-border-radius, 0.7rem);
   cursor: pointer;
   opacity: 0.72;
-  transition: opacity 0.12s ease, background 0.12s ease;
+  background: transparent;
+  box-shadow: none;
+  transition: opacity 0.12s ease, background 0.12s ease, box-shadow 0.14s ease, transform 0.12s ease;
 }
 
-.btn__undo-inset:hover,
+.btn__undo-inset:hover {
+  opacity: 0.72;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.btn__undo-inset:focus:not(:focus-visible) {
+  outline: none;
+}
+
 .btn__undo-inset:focus-visible {
   opacity: 1;
   background: rgba(255, 255, 255, 0.18);
@@ -130,7 +163,22 @@
 
 .btn__undo-inset:active {
   opacity: 1;
-  background: rgba(255, 255, 255, 0.3);
+  background: transparent;
+  outline: none;
+  transition: none;
+  transform: none;
+  box-shadow:
+    inset 3px 3px 7px rgba(0, 0, 0, 0.35),
+    inset -2px -2px 5px rgba(255, 255, 255, 0.12),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.12);
+}
+
+.btn.rack-bottom-tile-cell--c12-14:active:not(:disabled) + .btn__undo-inset:not(:active) {
+  opacity: 0.72;
+  background: transparent;
+  box-shadow: none;
+  outline: none;
+  transform: none;
 }
 
 .btn__undo-inset > svg {

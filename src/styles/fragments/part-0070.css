@@ -9,14 +9,14 @@
 
 
 /* Charleston rack: keep PASS clipped to cols 12–14 (dropshadow/border bleed) — do not resize the control box. */
-.panel--hand .rack-bottom-bar--charleston .btn.charleston-pass-btn.rack-bottom-tile-cell--c12-14:not(.suggested-hands-tab) {
+.panel--hand .rack-bottom-bar--charleston .btn.charleston-pass-btn.rack-bottom-tile-cell--c12-14:not(.suggested-hands-tab):not(:active) {
   transform: none;
   box-sizing: border-box;
   overflow: hidden;
 }
 
 /* Main rack: keep Ignore/Discard clipped to cols 12-14 the same way PASS is clipped. */
-.panel--hand .rack-bottom-bar--main .btn.rack-bottom-tile-cell--c12-14 {
+.panel--hand .rack-bottom-bar--main .btn.rack-bottom-tile-cell--c12-14:not(:active) {
   transform: none;
   box-sizing: border-box;
   overflow: hidden;
