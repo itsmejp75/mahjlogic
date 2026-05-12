@@ -4115,7 +4115,7 @@ export default function App() {
     //   combo so the rack lights up every tile that helps any variant in the stack.
     const unavailableCounts = deadTileHintEnabled
       ? buildUnavailableTileDefCounts([
-          ...discardPile.map((e) => e.tile),
+          ...discardTiles,
           ...botExposures.flatMap((e) => e.tiles),
         ])
       : null
@@ -4163,7 +4163,7 @@ export default function App() {
     }
 
     return { bestIds: computeAvailableRackHighlightIds(p) }
-  }, [suggestedFocusHandKey, suggestedSuppressedHandKey, mainPhase, rackForSuggestedPatternMatch, suggestedHandsExposureTileIds, cardPatterns, deadTileHintEnabled, discardPile, botExposures])
+  }, [suggestedFocusHandKey, suggestedSuppressedHandKey, mainPhase, rackForSuggestedPatternMatch, suggestedHandsExposureTileIds, cardPatterns, deadTileHintEnabled, discardTiles, botExposures])
 
   /**
    * Bot exposure rings for the focused line: naturals that match strip “need” slots (dead tiles you
@@ -4312,6 +4312,8 @@ export default function App() {
       lastDiscardNeed != null &&
       ownedLastDiscardCopies < lastDiscardNeed &&
       totalCopiesForDeadHintDef(lastDiscard.def) - unavailableLastDiscardCopies < lastDiscardNeed
+    const deadHintAppliesToDef = (def: TileDef) =>
+      focusedPatternNeedForDeadHintDef(suggestedFocusHandKey, def, cardPatterns) != null
 
     if (shouldReset) {
       setSuggestedDeadTileGuide(null)
@@ -4341,7 +4343,8 @@ export default function App() {
         }
       } else {
         for (const id of prevBestIds) {
-          if (rackById.has(id) && !currentBestIds.has(id)) deadIds.add(id)
+          const tile = rackById.get(id)
+          if (tile && !currentBestIds.has(id) && deadHintAppliesToDef(tile.def)) deadIds.add(id)
         }
       }
       if (deadIds.size > 0) {
@@ -4392,7 +4395,10 @@ export default function App() {
         }
       } else if (currentBotBestIds) {
         for (const id of prevBotBestIds) {
-          if (!currentBotBestIds.has(id)) botExposureDeadIds.add(id)
+          const tile = botExposures.flatMap((e) => e.tiles).find((t) => t.id === id)
+          if (tile && !currentBotBestIds.has(id) && deadHintAppliesToDef(tile.def)) {
+            botExposureDeadIds.add(id)
+          }
         }
       }
       const discardDeadIds = new Set<string>()
@@ -4412,7 +4418,10 @@ export default function App() {
         }
       } else if (currentDiscardNeedIds) {
         for (const id of prevDiscardNeedIds) {
-          if (!currentDiscardNeedIds.has(id)) discardDeadIds.add(id)
+          const tile = discardPile.find((entry) => entry.tile.id === id)?.tile
+          if (tile && !currentDiscardNeedIds.has(id) && deadHintAppliesToDef(tile.def)) {
+            discardDeadIds.add(id)
+          }
         }
       }
       if (botExposureDeadIds.size > 0 || discardDeadIds.size > 0) {

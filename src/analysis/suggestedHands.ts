@@ -1060,7 +1060,8 @@ export function findInfeasibleBestIds(
     const unavail = unavailableCounts.get(defKey) ?? 0
 
     const need = groupNeedForDef(group, tile.def, meta)
-    if (need != null && total - unavail < need) {
+    if (need == null || need > 2) continue
+    if (total - unavail < need) {
       infeasible.add(meta.id)
     }
   }
@@ -2759,6 +2760,7 @@ function cardTitleOrderDefsForSuitPermute(
   const minRank = digitRanks.length ? Math.min(...digitRanks) : 1
   const out: TileDef[] = []
   const usedColorGroups = new Set<number>()
+  const colorGroupByInk = new Map<CardInk, number>()
   let currentColorGroup: number | null = null
   const dragonForSuit = { bam: 'green' as const, dot: 'soap' as const, crak: 'red' as const }
 
@@ -2775,7 +2777,20 @@ function cardTitleOrderDefsForSuitPermute(
         continue
       }
       if (/^D+$/.test(part)) {
-        if (currentColorGroup == null) return null
+        if (currentColorGroup == null) {
+          const mapped = colorGroupByInk.get(seg.ink)
+          const candidates = Array.from({ length: g.colorGroups.length }, (_, i) => i)
+          const ci =
+            mapped != null && (g.colorGroupDragonCounts?.[mapped] ?? 0) >= part.length
+              ? mapped
+              : candidates.find((i) => !usedColorGroups.has(i) && (g.colorGroupDragonCounts?.[i] ?? 0) >= part.length) ??
+                candidates.find((i) => (g.colorGroupDragonCounts?.[i] ?? 0) >= part.length) ??
+                null
+          if (ci == null) return null
+          currentColorGroup = ci
+          usedColorGroups.add(ci)
+          colorGroupByInk.set(seg.ink, ci)
+        }
         const suit = perm[currentColorGroup]
         if (!suit) return null
         for (let i = 0; i < part.length; i++) {
@@ -2809,6 +2824,7 @@ function cardTitleOrderDefsForSuitPermute(
       if (!suit) return null
       currentColorGroup = ci
       usedColorGroups.add(ci)
+      colorGroupByInk.set(seg.ink, ci)
       const actualRank = g.consecRanks ? normalizedRank - 1 + base : normalizedRank
       for (let i = 0; i < part.length; i++) out.push({ cat: 'suit', suit, rank: actualRank })
     }
