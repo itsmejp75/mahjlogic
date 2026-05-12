@@ -106,53 +106,20 @@
   position: relative;
 }
 
-.btn__undo-sibling {
-  z-index: 2;
-  pointer-events: none;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  padding-left: 0.2rem;
-}
-
-.btn__undo-sibling > svg {
-  pointer-events: auto;
-  width: clamp(1.1rem, 3.2cqh, 1.6rem);
-  height: clamp(1.1rem, 3.2cqh, 1.6rem);
-  padding: 0.15rem;
-  border-radius: 4px;
-  cursor: pointer;
-  opacity: 0.72;
-  transition: opacity 0.12s ease, background 0.12s ease;
-}
-
-.btn__undo-sibling > svg:hover,
-.btn__undo-sibling > svg:focus-visible {
-  opacity: 1;
-  background: rgba(255, 255, 255, 0.18);
-}
-
-.btn__undo-sibling > svg:active {
-  opacity: 1;
-  background: rgba(255, 255, 255, 0.3);
-}
-
 .btn__undo-inset {
-  position: absolute;
-  left: 0.2rem;
-  top: 50%;
-  transform: translateY(-50%);
+  z-index: 2;
+  pointer-events: auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: clamp(1.1rem, 3.2cqh, 1.6rem);
-  height: clamp(1.1rem, 3.2cqh, 1.6rem);
-  padding: 0.15rem;
-  border-radius: 4px;
+  width: calc(var(--rack-tile-w, 2.4rem) / 2) !important;
+  max-width: calc(var(--rack-tile-w, 2.4rem) / 2) !important;
+  justify-self: start !important;
+  padding: 0;
+  border-radius: var(--rack-tile-btn-border-radius, 0.7rem) 0 0 var(--rack-tile-btn-border-radius, 0.7rem);
   cursor: pointer;
   opacity: 0.72;
   transition: opacity 0.12s ease, background 0.12s ease;
-  z-index: 1;
 }
 
 .btn__undo-inset:hover,
@@ -166,9 +133,10 @@
   background: rgba(255, 255, 255, 0.3);
 }
 
-.btn__undo-inset svg {
-  width: 100%;
-  height: 100%;
+.btn__undo-inset > svg {
+  width: clamp(1.4rem, 4cqh, 2rem);
+  height: clamp(1.4rem, 4cqh, 2rem);
+  margin-left: 0.2rem;
 }
 
 /* Main rack: Joker swap shares the Call column — #6A0DAD (see `.btn--joker-swap-action`). */

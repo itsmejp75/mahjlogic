@@ -7144,21 +7144,6 @@ export default function App() {
                                   Mahj
                                 </button>
                               ) : null}
-                              {undoEnabled && canUndo ? (
-                                <span
-                                  className="btn__undo-sibling charleston-pass-btn rack-bottom-tile-cell rack-bottom-tile-cell--c12-14"
-                                  role="button"
-                                  tabIndex={0}
-                                  aria-label="Undo"
-                                  onClick={() => undoAction()}
-                                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); undoAction() } }}
-                                >
-                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                    <polyline points="1 4 1 10 7 10" />
-                                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
-                                  </svg>
-                                </span>
-                              ) : null}
                               <button
                                 type="button"
                                 className="btn btn--primary charleston-pass-btn rack-bottom-tile-cell rack-bottom-tile-cell--c12-14"
@@ -7169,6 +7154,21 @@ export default function App() {
                               >
                                 {charlestonPassButtonLabel(charlestonPhase)}
                               </button>
+                              {undoEnabled && canUndo ? (
+                                <span
+                                  className="btn__undo-inset rack-bottom-tile-cell rack-bottom-tile-cell--c12-14"
+                                  role="button"
+                                  tabIndex={0}
+                                  aria-label="Undo"
+                                  onClick={() => undoAction()}
+                                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); undoAction() } }}
+                                >
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                    <polyline points="1 4 1 10 7 10" />
+                                    <path d="M6 18a9 9 0 1 0-.36-12.36L1 10" />
+                                  </svg>
+                                </span>
+                              ) : null}
                             </div>
                             </div>
                           </div>
@@ -7479,21 +7479,6 @@ export default function App() {
                                 >
                                   <span className="rack-bottom-wall__num">{wall.length}</span>
                                 </div>
-                                {undoEnabled && canUndo ? (
-                                  <span
-                                    className="btn__undo-sibling rack-bottom-tile-cell rack-bottom-tile-cell--c12-14"
-                                    role="button"
-                                    tabIndex={0}
-                                    aria-label="Undo"
-                                    onClick={() => undoAction()}
-                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); undoAction() } }}
-                                  >
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                      <polyline points="1 4 1 10 7 10" />
-                                      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
-                                    </svg>
-                                  </span>
-                                ) : null}
                                 <button
                                   type="button"
                                   className={[
@@ -7511,6 +7496,21 @@ export default function App() {
                                 >
                                   {mainGamePrimaryLabel}
                                 </button>
+                                {undoEnabled && canUndo ? (
+                                  <span
+                                    className="btn__undo-inset rack-bottom-tile-cell rack-bottom-tile-cell--c12-14"
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-label="Undo"
+                                    onClick={() => undoAction()}
+                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); undoAction() } }}
+                                  >
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                      <polyline points="1 4 1 10 7 10" />
+                                      <path d="M6 18a9 9 0 1 0-.36-12.36L1 10" />
+                                    </svg>
+                                  </span>
+                                ) : null}
                               </div>
                             )}
                               </div>
