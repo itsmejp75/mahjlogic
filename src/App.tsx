@@ -154,6 +154,8 @@ import {
   openClaimMeldsFitSomePracticeLine,
   reorderEastExposuresToPatternGroupOrder,
 } from './analysis/eastExposurePatternFit'
+import logicLogoSrc from './assets/logic-logo.svg?url'
+import mahjLogoSrc from './assets/mahj-logo.svg?url'
 import './styles/style.css'
 
 /** Tiles in wall after opening deal (`dealOpeningFour`); meter stays flat green until below this. */
@@ -7135,15 +7137,31 @@ export default function App() {
                                   Hands
                                 </button>
                               ) : null}
-                              {mahjongButtonEnabled ? (
-                                <button
-                                  type="button"
-                                  className="btn btn--mahjong rack-bottom-tile-cell rack-bottom-tile-cell--c6-7"
-                                  onClick={declareMahjong}
-                                >
-                                  Mahj
-                                </button>
-                              ) : null}
+                              <button
+                                type="button"
+                                className="btn btn--mahjong rack-bottom-tile-cell rack-bottom-tile-cell--c5-6"
+                                disabled={!mahjongButtonEnabled}
+                                onClick={declareMahjong}
+                                aria-label="Mah Jongg"
+                              >
+                                <img className="btn--mahj__img" src={mahjLogoSrc} alt="Mahj" draggable={false} />
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn--rack-neutral btn--logic rack-bottom-tile-cell rack-bottom-tile-cell--c7-8"
+                                disabled
+                                aria-label="Logic hints"
+                              >
+                                <img className="btn--logic__img" src={logicLogoSrc} alt="Logic" draggable={false} />
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn--joker-swap-action rack-bottom-tile-cell rack-bottom-tile-cell--c9-10"
+                                disabled
+                                aria-label="Joker swap"
+                              >
+                                Swap
+                              </button>
                               <button
                                 type="button"
                                 className="btn btn--primary charleston-pass-btn rack-bottom-tile-cell rack-bottom-tile-cell--c12-14"
@@ -7427,16 +7445,14 @@ export default function App() {
                                   }
                                   onClick={declareMahjong}
                                 >
-                                  Mahj
+                                  <img className="btn--mahj__img" src={mahjLogoSrc} alt="Mahj" draggable={false} />
                                 </button>
                                 <button
                                   type="button"
-                                  className="btn btn--rack-neutral rack-bottom-tile-cell rack-bottom-tile-cell--c7-8"
-                                  disabled
-                                  aria-label="Logic hints (coming soon)"
-                                  title="Coming soon"
+                                  className="btn btn--rack-neutral btn--logic rack-bottom-tile-cell rack-bottom-tile-cell--c7-8"
+                                  aria-label="Logic hints"
                                 >
-                                  Logic
+                                  <img className="btn--logic__img" src={logicLogoSrc} alt="Logic" draggable={false} />
                                 </button>
                                 {mainBarSharedSlotIsJokerSwap ? (
                                   <button

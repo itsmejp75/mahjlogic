@@ -2099,6 +2099,24 @@
   margin-left: 0.2rem;
 }
 
+.btn--logic__img {
+  height: 0.85em;
+  width: auto;
+  object-fit: contain;
+  pointer-events: none;
+  vertical-align: baseline;
+}
+
+.btn--mahj__img {
+  height: 1.6em;
+  width: auto;
+  object-fit: contain;
+  pointer-events: none;
+  vertical-align: baseline;
+  position: relative;
+  top: 0.15em;
+}
+
 /* Main rack: Joker swap shares the Call column — #6A0DAD (see `.btn--joker-swap-action`). */
 .rack-bottom-bar--main.rack-bottom-bar--tile-grid
   .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled) {
