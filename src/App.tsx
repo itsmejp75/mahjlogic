@@ -1035,6 +1035,15 @@ function focusedPatternHasAvailableDeadHintVariant(
   return false
 }
 
+function minPositiveNeed(...counts: Array<number | null | undefined>): number | null {
+  let min: number | null = null
+  for (const count of counts) {
+    if (count == null || count <= 0) continue
+    min = min == null ? count : Math.min(min, count)
+  }
+  return min
+}
+
 function groupNeedForDeadHintDef(group: PatternGroup, def: TileDef): number | null {
   switch (group.kind) {
     case 'fixed':
@@ -1042,18 +1051,18 @@ function groupNeedForDeadHintDef(group: PatternGroup, def: TileDef): number | nu
     case 'suit-locked-rank':
       return group.test(def) ? group.need : null
     case 'consec':
-      return group.test(def) ? Math.max(group.need1, group.need2) : null
+      return group.test(def) ? Math.min(group.need1, group.need2) : null
     case 'shared-rank':
     case 'shared-rank-suits':
     case 'consec-multi':
     case 'suit-locked-consec-multi':
-      return group.test(def) ? Math.max(...group.needs) : null
+      return group.test(def) ? minPositiveNeed(...group.needs) : null
     case 'suit-locked':
       if (def.cat === 'suit') {
         return group.rankNeeds.find((n) => n.rank === def.rank)?.need ?? null
       }
       if (def.cat === 'dragon') {
-        return Math.max(group.dragonCount, group.opposingDragons?.need ?? 0) || null
+        return minPositiveNeed(group.dragonCount, group.opposingDragons?.need ?? null)
       }
       return null
     case 'suit-locked-consec':
@@ -1062,16 +1071,17 @@ function groupNeedForDeadHintDef(group: PatternGroup, def: TileDef): number | nu
       return null
     case 'suit-permute':
       if (def.cat === 'suit') {
-        let need = 0
+        let need: number | null = null
         for (const colorGroup of group.colorGroups) {
           for (const part of colorGroup) {
-            if (part.rank === def.rank) need = Math.max(need, part.need)
+            if (part.rank !== def.rank || part.need <= 0) continue
+            need = need == null ? part.need : Math.min(need, part.need)
           }
         }
-        return need || null
+        return need
       }
       if (def.cat === 'dragon') {
-        return Math.max(...(group.colorGroupDragonCounts ?? []), group.trailingDragonCount ?? 0) || null
+        return minPositiveNeed(...(group.colorGroupDragonCounts ?? []), group.trailingDragonCount ?? null)
       }
       return null
   }
@@ -1092,13 +1102,15 @@ function focusedPatternNeedForDeadHintDef(
   if (!pattern) return null
   const pinnedPatterns = buildPinnedPatternsFromFocusKey(pattern, focusKey)
   const candidates = pinnedPatterns.length > 0 ? pinnedPatterns : [pattern]
-  let need = 0
+  let need: number | null = null
   for (const candidate of candidates) {
     for (const group of candidate.groups ?? []) {
-      need = Math.max(need, groupNeedForDeadHintDef(group, def) ?? 0)
+      const groupNeed = groupNeedForDeadHintDef(group, def)
+      if (groupNeed == null || groupNeed > 2) continue
+      need = need == null ? groupNeed : Math.min(need, groupNeed)
     }
   }
-  return need || null
+  return need
 }
 
 function createNewRound(): RoundState {
@@ -7149,8 +7161,8 @@ export default function App() {
                               <button
                                 type="button"
                                 className="btn btn--rack-neutral btn--logic rack-bottom-tile-cell rack-bottom-tile-cell--c7-8"
-                                disabled
                                 aria-label="Logic hints"
+                                onClick={() => setSuggestedPanelHandsOn(true)}
                               >
                                 <img className="btn--logic__img" src={logicLogoSrc} alt="Logic" draggable={false} />
                               </button>
@@ -7460,6 +7472,7 @@ export default function App() {
                                   type="button"
                                   className="btn btn--rack-neutral btn--logic rack-bottom-tile-cell rack-bottom-tile-cell--c7-8"
                                   aria-label="Logic hints"
+                                  onClick={() => setSuggestedPanelHandsOn(true)}
                                 >
                                   <img className="btn--logic__img" src={logicLogoSrc} alt="Logic" draggable={false} />
                                 </button>
