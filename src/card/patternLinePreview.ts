@@ -413,14 +413,22 @@ function appendTitleSegmentJokerEligible(flags: boolean[], seg: CardTextSeg): vo
 
   const suit = previewStandInSuitForDigitInk(seg.ink)
   if (suit != null) {
-    for (const { count } of extractSameDigitRuns(t)) {
-      pushBoolRun(flags, count, count >= 3)
-    }
-    const dCount = extractDTokenCount(t)
-    if (dCount > 0) pushBoolRun(flags, dCount, dCount >= 3)
-    if (extractSameDigitRuns(t).length === 0 && dCount === 0) {
-      for (const { count } of windRunsFromText(t)) {
-        pushBoolRun(flags, count, count >= 3)
+    for (const part of tokenParts(t)) {
+      if (/^F+$/i.test(part)) {
+        pushBoolRun(flags, part.length, part.length >= 3)
+      } else {
+        const digitRuns = extractSameDigitRuns(part)
+        if (digitRuns.length > 0) {
+          for (const { count } of digitRuns) {
+            pushBoolRun(flags, count, count >= 3)
+          }
+        } else if (/^D+$/i.test(part)) {
+          pushBoolRun(flags, part.length, part.length >= 3)
+        } else {
+          for (const { count } of windRunsFromText(part)) {
+            pushBoolRun(flags, count, count >= 3)
+          }
+        }
       }
     }
   }
@@ -642,6 +650,14 @@ function extractDTokenCount(t: string): number {
   return n
 }
 
+function tokenParts(t: string): string[] {
+  const out: string[] = []
+  for (const tok of t.trim().split(/\s+/).filter(Boolean)) {
+    out.push(...(tok.match(/F+|N+|E+|W+|S+|D+|[0-9]+/g) ?? []))
+  }
+  return out
+}
+
 function extractWindsFromText(t: string): Wind[] {
   const out: Wind[] = []
   for (const ch of t) {
@@ -701,14 +717,22 @@ function parseTitleSegmentToPreviewSlots(seg: CardTextSeg, ctx: PreviewLineConte
 
   const suit = previewStandInSuitForDigitInk(seg.ink)
   if (suit != null) {
-    for (const { rank, count } of extractSameDigitRuns(t)) {
-      if (rank === 0) pushDragonSlots(out, seg, 'soap', count, ctx)
-      else pushSuitSlots(out, seg, suit, rank, count, ctx)
-    }
-    const dCount = extractDTokenCount(t)
-    if (dCount > 0) pushDragonSlots(out, seg, dragonFromTitleSegmentInk(seg.ink), dCount, ctx)
-    if (extractSameDigitRuns(t).length === 0 && dCount === 0) {
-      for (const w of extractWindsFromText(t)) pushWindSlots(out, seg, w, 1, ctx)
+    for (const part of tokenParts(t)) {
+      if (/^F+$/i.test(part)) {
+        pushFlowerSlots(out, seg, part.length, ctx)
+      } else {
+        const digitRuns = extractSameDigitRuns(part)
+        if (digitRuns.length > 0) {
+          for (const { rank, count } of digitRuns) {
+            if (rank === 0) pushDragonSlots(out, seg, 'soap', count, ctx)
+            else pushSuitSlots(out, seg, suit, rank, count, ctx)
+          }
+        } else if (/^D+$/i.test(part)) {
+          pushDragonSlots(out, seg, dragonFromTitleSegmentInk(seg.ink), part.length, ctx)
+        } else {
+          for (const w of extractWindsFromText(part)) pushWindSlots(out, seg, w, 1, ctx)
+        }
+      }
     }
     return out
   }
@@ -963,16 +987,15 @@ function applyLikeTwoCardStripOrderIfNeeded(p: PracticePattern, slots: readonly 
 export function patternLinePreviewSlots(p: PracticePattern): PatternPreviewSlot[] {
   const fromSeg = buildPreviewSlotsFromTitleSegments(p)
 
+  if (fromSeg != null && fromSeg.length >= p.roughTarget) {
+    return fromSeg.slice(0, p.roughTarget)
+  }
+
   const fromGrp = p.groups?.length ? patternLinePreviewGroupOrderSlots(p) : []
   const grpSlice = fromGrp.slice(0, p.roughTarget)
 
-  /** Full winning-hand length from explicit groups — preferred so the strip is always 14 concrete tiles. */
   if (grpSlice.length === p.roughTarget) {
     return applyLikeTwoCardStripOrderIfNeeded(p, grpSlice)
-  }
-
-  if (fromSeg != null && fromSeg.length >= p.roughTarget) {
-    return fromSeg.slice(0, p.roughTarget)
   }
 
   return grpSlice.length > 0 ? grpSlice : (fromSeg?.slice(0, p.roughTarget) ?? [])

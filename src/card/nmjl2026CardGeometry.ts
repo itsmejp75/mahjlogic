@@ -20,7 +20,7 @@ type Geometry = Pick<PracticePattern, 'groups' | 'matches' | 'titleSegments'>
 type Test = (def: TileDef) => boolean
 
 type ColorRun = { ink: CardInk; text: string }
-type RankSlot = { ink: CardInk; ranks: Map<number, number>; dragonCount: number }
+type RankSlot = { ink: CardInk; ranks: Map<number, number>; dragonCount: number; firstRankOrder?: number }
 
 function inkForCsvColor(color: string): CardInk {
   const c = color.trim().toLowerCase()
@@ -73,11 +73,16 @@ function addRank(slot: RankSlot, rank: number, need: number): void {
   slot.ranks.set(rank, (slot.ranks.get(rank) ?? 0) + need)
 }
 
-function addDigitRun(slot: RankSlot, part: string, soapCount: { value: number }): void {
+function addDigitRun(slot: RankSlot, part: string, soapCount: { value: number }): boolean {
+  let addedNaturalRank = false
   for (const ch of part) {
     if (ch === '0') soapCount.value += 1
-    else addRank(slot, Number(ch), 1)
+    else {
+      addRank(slot, Number(ch), 1)
+      addedNaturalRank = true
+    }
   }
+  return addedNaturalRank
 }
 
 function tokenParts(token: string): string[] {
@@ -145,10 +150,25 @@ function dragonOrphanRankGroups(rankSlots: RankSlot[]): PatternGroup[] {
 }
 
 function buildRankGroups(row: Nmjl2026CsvHandRow, rankSlots: RankSlot[]): PatternGroup[] {
-  const slotsWithRanks = rankSlots.filter((slot) => slot.ranks.size > 0)
+  const slotsWithRanks = rankSlots
+    .filter((slot) => slot.ranks.size > 0)
+    .sort((a, b) => (a.firstRankOrder ?? 0) - (b.firstRankOrder ?? 0))
   if (!slotsWithRanks.length) return []
 
   if (isFlexibleLikeNumber(row)) {
+    const hasMatchingDragonText = hasText(row, 'Matching Dragon')
+    const hasRankSlotDragons = slotsWithRanks.some((slot) => slot.dragonCount > 0)
+    if (slotsWithRanks.length >= 2 && hasMatchingDragonText && hasRankSlotDragons) {
+      return [
+        {
+          kind: 'suit-permute',
+          colorGroups: slotsWithRanks.map((slot) => slotColorGroup(slot, false, 1)),
+          colorGroupDragonCounts: slotsWithRanks.map((slot) => slot.dragonCount),
+        },
+        ...dragonOrphanRankGroups(rankSlots),
+      ]
+    }
+
     const needs = slotsWithRanks.map((slot) =>
       [...slot.ranks.values()].reduce((sum, n) => sum + n, 0),
     )
@@ -218,6 +238,8 @@ function buildGroupsAndMatches(row: Nmjl2026CsvHandRow): { groups: PatternGroup[
   const matchTests: Test[] = []
   const rankSlots: RankSlot[] = []
   const soapCount = { value: 0 }
+  let rankGroupInsertPos = -1
+  let nextRankOrder = 0
 
   for (const run of splitColorRuns(row.colors)) {
     const slot = getSlot(rankSlots, run.ink)
@@ -240,7 +262,10 @@ function buildGroupsAndMatches(row: Nmjl2026CsvHandRow): { groups: PatternGroup[
           slot.dragonCount += part.length
           matchTests.push(dragon)
         } else if (/^[0-9]+$/.test(part)) {
-          addDigitRun(slot, part, soapCount)
+          if (rankGroupInsertPos < 0) rankGroupInsertPos = groups.length
+          if (addDigitRun(slot, part, soapCount) && slot.firstRankOrder == null) {
+            slot.firstRankOrder = nextRankOrder++
+          }
           matchTests.push(anySuit)
           if (part.includes('0')) matchTests.push(soapDrg)
         }
@@ -253,7 +278,12 @@ function buildGroupsAndMatches(row: Nmjl2026CsvHandRow): { groups: PatternGroup[
     matchTests.push(soapDrg)
   }
 
-  groups.push(...buildRankGroups(row, rankSlots))
+  const rankGroups = buildRankGroups(row, rankSlots)
+  if (rankGroupInsertPos >= 0 && rankGroupInsertPos < groups.length) {
+    groups.splice(rankGroupInsertPos, 0, ...rankGroups)
+  } else {
+    groups.push(...rankGroups)
+  }
   if (!rankSlots.some((slot) => slot.ranks.size > 0)) {
     const dragonNeed = rankSlots.reduce((sum, slot) => sum + slot.dragonCount, 0)
     pushFixedGroup(groups, dragonNeed, dragon)

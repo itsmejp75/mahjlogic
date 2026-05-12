@@ -7,6 +7,7 @@ import {
   patternLinePreviewCardInks,
   patternLinePreviewDefs,
   patternLinePreviewGroupOrderDefs,
+  patternLinePreviewSlots,
   patternPreviewJokerEligibleBySlot,
   reorderConsec6GroupTileDefsToDisplay,
   reorderLikeThreeGroupTileDefsToDisplay,
@@ -2405,6 +2406,43 @@ export type SuggestedStripSlot = {
   jokerSuggested: boolean
 }
 
+function stripDefsMatchRelaxed(a: TileDef, b: TileDef): boolean {
+  if (a.cat !== b.cat) return false
+  if (a.cat === 'suit' && b.cat === 'suit') return a.rank === b.rank
+  if (a.cat === 'wind' && b.cat === 'wind') return a.wind === b.wind
+  if (a.cat === 'dragon' && b.cat === 'dragon') {
+    return a.dragon === b.dragon || a.dragon === 'any' || b.dragon === 'any'
+  }
+  return true
+}
+
+function reorderStripToTitleOrder(
+  provisional: SuggestedStripSlot[],
+  groupDefs: readonly TileDef[],
+  p: PracticePattern,
+): { defs: TileDef[]; slots: SuggestedStripSlot[] } | null {
+  const titlePreview = patternLinePreviewSlots(p)
+  if (titlePreview.length !== provisional.length) return null
+  const used = new Set<number>()
+  const reorderedDefs: TileDef[] = []
+  const reorderedSlots: SuggestedStripSlot[] = []
+  for (const tp of titlePreview) {
+    let found = -1
+    for (let gi = 0; gi < groupDefs.length; gi++) {
+      if (used.has(gi)) continue
+      if (stripDefsMatchRelaxed(groupDefs[gi]!, tp.def)) {
+        found = gi
+        break
+      }
+    }
+    if (found < 0) return null
+    used.add(found)
+    reorderedDefs.push(groupDefs[found]!)
+    reorderedSlots.push({ ...provisional[found]!, cardInk: tp.cardInk })
+  }
+  return { defs: reorderedDefs, slots: reorderedSlots }
+}
+
 function leftAnchorNaturalsByMeldRun(
   defs: readonly TileDef[],
   slots: readonly SuggestedStripSlot[],
@@ -2461,6 +2499,8 @@ function buildSuggestedStripSlotsFromStripDefs(
   /** When true (variant rows), a rack tile only shows in a slot when it exactly matches the slot's
    * resolved suit+rank. Prevents mixed-suit display in consec / suit-permute variant rows. */
   strictSuitMatching = false,
+  /** Skip internal title-order reorder (caller will do its own reordering). */
+  skipTitleReorder = false,
 ): SuggestedStripSlot[] {
   const rawDefs =
     p.id === 'like-2' && stripDefsGroup.length === 14
@@ -2521,6 +2561,10 @@ function buildSuggestedStripSlotsFromStripDefs(
 
     return { displayDef, cardInk, highlight, jokerSuggested }
   })
+  if (!skipTitleReorder) {
+    const reordered = reorderStripToTitleOrder(provisional, defs, p)
+    if (reordered) return leftAnchorNaturalsByMeldRun(reordered.defs, reordered.slots)
+  }
   return leftAnchorNaturalsByMeldRun(defs, provisional)
 }
 
@@ -2694,8 +2738,10 @@ function suitPermuteColorGroupIndexForTitleRun(
   g: Extract<PatternGroup, { kind: 'suit-permute' }>,
   normalizedRank: number,
   count: number,
+  candidates?: readonly number[],
 ): number | null {
-  for (let ci = 0; ci < g.colorGroups.length; ci++) {
+  const scan = candidates ?? Array.from({ length: g.colorGroups.length }, (_, i) => i)
+  for (const ci of scan) {
     const group = g.colorGroups[ci]!
     if (group.some((sg) => sg.rank === normalizedRank && sg.need >= count)) return ci
   }
@@ -2712,6 +2758,7 @@ function cardTitleOrderDefsForSuitPermute(
   const digitRanks = allTitleDigitRanks(p).filter((rank) => rank > 0)
   const minRank = digitRanks.length ? Math.min(...digitRanks) : 1
   const out: TileDef[] = []
+  const usedColorGroups = new Set<number>()
   let currentColorGroup: number | null = null
   const dragonForSuit = { bam: 'green' as const, dot: 'soap' as const, crak: 'red' as const }
 
@@ -2742,11 +2789,26 @@ function cardTitleOrderDefsForSuitPermute(
         continue
       }
       const normalizedRank = g.consecRanks ? runRank - minRank + 1 : runRank
-      const ci = suitPermuteColorGroupIndexForTitleRun(g, normalizedRank, part.length)
+      let ci: number | null = null
+      if (currentColorGroup != null) {
+        const group = g.colorGroups[currentColorGroup]
+        if (group?.some((sg) => sg.rank === normalizedRank && sg.need >= part.length)) {
+          ci = currentColorGroup
+        }
+      } else {
+        const available = Array.from({ length: g.colorGroups.length }, (_, i) => i).filter(
+          (i) => !usedColorGroups.has(i),
+        )
+        ci = suitPermuteColorGroupIndexForTitleRun(g, normalizedRank, part.length, available)
+        if (ci == null) {
+          ci = suitPermuteColorGroupIndexForTitleRun(g, normalizedRank, part.length)
+        }
+      }
       if (ci == null) return null
       const suit = perm[ci]
       if (!suit) return null
       currentColorGroup = ci
+      usedColorGroups.add(ci)
       const actualRank = g.consecRanks ? normalizedRank - 1 + base : normalizedRank
       for (let i = 0; i < part.length; i++) out.push({ cat: 'suit', suit, rank: actualRank })
     }
@@ -2938,7 +3000,7 @@ function buildSuitPermuteStripVariantRows(
         for (let k = 0; k < tdc && idx < b; k++) strip[idx++] = { cat: 'dragon', dragon: drg }
       }
     }
-    const slots = buildSuggestedStripSlotsFromStripDefs(p, rack, usedOrder, bestIdsForAssignment, um, strip, true)
+    const slots = buildSuggestedStripSlotsFromStripDefs(p, rack, usedOrder, bestIdsForAssignment, um, strip, true, true)
     return reorderStripSlotsToCardTitleOrder(
       slots,
       strip,
@@ -3037,6 +3099,7 @@ export function buildConsecRanksTierStripRow(
     tierBestIds,
     tierDetail.usedMeta ?? [],
     strip,
+    true,
     true,
   )
   return reorderStripSlotsToCardTitleOrder(
