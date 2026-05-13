@@ -374,6 +374,50 @@
   100% { filter: brightness(0.64); }
 }
 
+/*
+ * Mah Jongg rack logo: same flash steps as `suggest-dying-flash-overlay` (2.5s), then 2s rest at full
+ * logo. The animated element is masked to the logo shape, so only the blue glyph changes color.
+ * Timeline: 2.5s flash + 2s pause = 4.5s; flash occupies the first 2.5/4.5 of the keyframe range.
+ */
+@keyframes mahjong-logo-hint-cycle {
+  0% {
+    background-color: var(--mahj-logo-blue);
+  }
+  5.556% {
+    background-color: transparent;
+  }
+  11.111% {
+    background-color: var(--mahj-logo-blue);
+  }
+  16.667% {
+    background-color: transparent;
+  }
+  22.222% {
+    background-color: var(--mahj-logo-blue);
+  }
+  27.778% {
+    background-color: transparent;
+  }
+  33.333% {
+    background-color: var(--mahj-logo-blue);
+  }
+  38.889% {
+    background-color: transparent;
+  }
+  44.444% {
+    background-color: var(--mahj-logo-blue);
+  }
+  50% {
+    background-color: transparent;
+  }
+  55.556% {
+    background-color: var(--mahj-logo-blue);
+  }
+  100% {
+    background-color: var(--mahj-logo-blue);
+  }
+}
+
 .sortable-tile-wrap--suggest-dying .tile-face,
 .exposure-rack__slot--suggest-dying .tile-face,
 .discard-entry--suggest-dying .tile-face {

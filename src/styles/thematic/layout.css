@@ -1422,11 +1422,16 @@
 }
 
 /* Main hand rack: Ignore–Discard, Swap, Mah Jongg (above also covers MJ). */
-.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:not(:disabled),
+.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:not(:disabled) {
+  background: var(--color-slate-mid);
+  color: var(--color-white);
+}
+
 .app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:disabled:not(.btn--discard),
 .app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14.btn--discard:disabled {
   background: var(--color-slate-mid);
   color: var(--color-white);
+  opacity: 0.5;
 }
 
 .app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c7-8:not(:disabled),
@@ -1442,13 +1447,19 @@
 }
 
 /* Charleston: Pass (teal / HANDS purple) + Stop. */
-.app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):not(:disabled),
+.app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):not(:disabled) {
+  background: var(--color-slate-mid);
+  color: var(--color-white);
+  filter: none;
+}
+
 .app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):disabled {
   background: var(--color-slate-mid);
   color: var(--color-white);
   filter: none;
-  opacity: 1;
-  cursor: inherit;
+  opacity: 0.5;
+  box-shadow: none;
+  cursor: not-allowed;
 }
 
 .app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn.suggested-hands-tab:not(:disabled) {
@@ -1498,11 +1509,6 @@
   background: var(--color-slate-mid);
   color: var(--color-white);
   filter: none;
-}
-
-.app[data-color-buttons='off'] .wall-game-dialog__actions .btn--primary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-slate-mid) 86%, var(--color-white) 14%);
-  color: var(--color-white);
 }
 
 .app[data-color-buttons='off'] .charleston-error-dialog .btn--primary:hover:not(:disabled) {

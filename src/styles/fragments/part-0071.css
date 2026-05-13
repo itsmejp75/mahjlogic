@@ -8,13 +8,15 @@
 
 
 
-/* HANDS — solid purple (#9A5FAB). */
-.btn.btn--primary.charleston-pass-btn.suggested-hands-tab:not(:disabled) {
+/* HANDS + rack Mah Jongg (color on): same solid purple (#9a5fab) — single source so they never drift. */
+.btn.btn--primary.charleston-pass-btn.suggested-hands-tab:not(:disabled),
+.app[data-color-buttons='on'] .panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong.rack-bottom-tile-cell--c5-6:not(:disabled) {
   background: #9a5fab;
   color: var(--color-white);
 }
 
-.btn.btn--primary.charleston-pass-btn.suggested-hands-tab:disabled {
+.btn.btn--primary.charleston-pass-btn.suggested-hands-tab:disabled,
+.app[data-color-buttons='on'] .panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong.rack-bottom-tile-cell--c5-6:disabled {
   background: #9a5fab;
   color: var(--color-white);
   opacity: 0.5;

@@ -203,11 +203,11 @@ export function hasLegalMahjongOnBotDiscard(r: CallValidationRoundSlice): boolea
   // (a) All concealed: 13th tile in hand + called as 14th, no new exposure.
   if (winOnBotDiscardInput(r, called, [...r.hand, called], r.eastExposures)) return true
 
-  // (b) Same as Call → one tile staged → commit: 2-tile exposure [called, t], claimType pung.
-  const oneFromHand: TileInstance[] = [
-    ...findExactMatches(r.hand, called.def),
-    ...r.hand.filter((t) => t.def.cat === 'joker'),
-  ]
+  // (b) Same as Call -> one tile staged -> commit: 2-tile exposure [called, t].
+  // This models winning on a discard that completes a pair/single-style group.
+  // Do not include jokers here: NMJL jokers can fill pungs/kongs/quints/sextets, not pairs or
+  // year-number singles. The 3+ claim simulation below covers legal joker use in true melds.
+  const oneFromHand = findExactMatches(r.hand, called.def)
   for (const t of oneFromHand) {
     const handNext = r.hand.filter((x) => x.id !== t.id)
     const exposure: EastExposure = {

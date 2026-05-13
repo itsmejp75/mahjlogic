@@ -217,6 +217,7 @@ function SortableTile({
     <div
       ref={setWrapRef}
       style={style}
+      data-hand-tile-id={tile.id}
       className={[
         'sortable-tile-wrap',
         isJustDrawn && drawInFromRackBottom ? 'sortable-tile-wrap--joker-swap-fly-clip' : '',

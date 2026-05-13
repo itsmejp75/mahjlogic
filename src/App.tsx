@@ -175,7 +175,6 @@ const BOT_DIFFICULTY_LABEL: Record<BotDifficulty, string> = {
   unfair: 'Unfair',
 }
 
-const SUGGESTED_HANDS_REMEMBER_SIZE_LABEL = 'Remember hands window size'
 
 const LS_KEY_BOT_WINS = 'mahjlogic.botWinsEnabled'
 
@@ -185,7 +184,6 @@ const LS_KEY_ANIMATIONS = 'mahjlogic.animationsEnabled'
 const LS_KEY_COLOR_BUTTONS = 'mahjlogic.colorButtonsEnabled'
 const COLOR_BUTTONS_LABEL = 'Color buttons'
 /** When true, height/width of Suggested hands panel are saved when closed and restored on next open. */
-const LS_KEY_SUGGESTED_HANDS_REMEMBER_SIZE = 'mahjlogic.suggestedHandsRememberSize'
 const LS_KEY_SUGGESTED_HANDS_PANEL_HEIGHT = 'mahjlogic.suggestedHandsPanelHeight'
 /** When "1", explicit height was set by bottom-edge / bottom-corner drag — layout uses fixed `top` + `height` (grow downward). */
 const LS_KEY_SUGGESTED_HANDS_HEIGHT_PIN_TOP = 'mahjlogic.suggestedHandsHeightPinTop'
@@ -195,8 +193,6 @@ const LS_KEY_SUGGESTED_HANDS_RIGHT_DELTA = 'mahjlogic.suggestedHandsRightDelta'
 const LS_KEY_SUGGESTED_HANDS_LEFT_DELTA = 'mahjlogic.suggestedHandsLeftDelta'
 const LS_KEY_SUGGESTED_HANDS_OFFSET_X = 'mahjlogic.suggestedHandsOffsetX'
 const LS_KEY_SUGGESTED_HANDS_OFFSET_Y = 'mahjlogic.suggestedHandsOffsetY'
-/** @deprecated Migrated to LS_KEY_SUGGESTED_HANDS_REMEMBER_SIZE; removed on read */
-const LS_KEY_SUGGESTED_HANDS_RESIZE_LOCK_LEGACY = 'mahjlogic.suggestedHandsResizeLock'
 const LS_KEY_BOT_DIFFICULTY = 'mahjlogic.botDifficulty'
 /**
  * Tile face style (`TILE_GRAPHICS` / `data-tile-graphics`). Product default is Prism (`solid-color`).
@@ -224,13 +220,12 @@ const JOKER_SWAP_HINT_BOUNCE_DURATION_MS = 1700
 const JOKER_SWAP_HINT_BOUNCE_VISIBLE_MS = JOKER_SWAP_HINT_BOUNCE_DURATION_MS * 0.52
 
 /** Menu order: Prism first; Ivory (classic) last in the minimalist row. */
-const TILE_GRAPHICS = ['solid-color', 'dark', 'light', 'designer', 'bakelite', 'classic'] as const
+const TILE_GRAPHICS = ['solid-color', 'light', 'designer', 'bakelite', 'classic'] as const
 type TileGraphics = (typeof TILE_GRAPHICS)[number]
 
 const TILE_GRAPHICS_LABEL: Record<TileGraphics, string> = {
   classic: 'Ivory',
   'solid-color': 'Prism',
-  dark: 'Obsidian',
   light: 'Sorbet',
   designer: 'Jewel',
   bakelite: 'Autumn',
@@ -271,6 +266,12 @@ function readTileGraphicsFromStorage(): TileGraphics {
       localStorage.setItem(LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED, 'true')
       return 'solid-color'
     }
+    /** Obsidian (`dark`) removed from the menu; migrate persisted choice to Prism. */
+    if (v === 'dark') {
+      localStorage.setItem(LS_KEY_TILE_GRAPHICS, 'solid-color')
+      localStorage.setItem(LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED, 'true')
+      return 'solid-color'
+    }
     if (v != null && isTileGraphics(v)) return v
   } catch {
     /* ignore */
@@ -305,23 +306,6 @@ function readColorButtonsFromStorage(): boolean {
   } catch {
     return true
   }
-}
-
-function readSuggestedHandsRememberSizeFromStorage(): boolean {
-  try {
-    const v = localStorage.getItem(LS_KEY_SUGGESTED_HANDS_REMEMBER_SIZE)
-    if (v !== null) {
-      return v === 'true' || v === '1'
-    }
-    try {
-      localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_RESIZE_LOCK_LEGACY)
-    } catch {
-      /* ignore */
-    }
-  } catch {
-    /* ignore */
-  }
-  return false
 }
 
 function readSuggestedPanelHeightFromStorage(): number | null {
@@ -376,7 +360,7 @@ function readSuggestedPanelLeftDeltaFromStorage(): number | null {
   }
 }
 
-/** Drag nudge (px) — stored when “Remember hands window size” is on. */
+/** Drag nudge (px) — persisted with suggested-hands panel layout. */
 function readSuggestedPanelPositionOffsetFromStorage(): { x: number; y: number } | null {
   try {
     const xs = localStorage.getItem(LS_KEY_SUGGESTED_HANDS_OFFSET_X)
@@ -1734,6 +1718,29 @@ function commitEastDiscardWithHand(
     })
   }
 
+  // If East drew the last wall tile, East's discard is the final live discard.
+  // Opponents may still win on it (handled above), but they should not call it
+  // only to make an exposure and throw another discard when no wall tiles remain.
+  if (r.wall.length === 0) {
+    return applyBotsJokerSwapsFromEast({
+      ...r,
+      ...clearCallAmend,
+      hand: handNext,
+      wall: r.wall,
+      discardPile: [...r.discardPile, { tile: discardedTile, seat: 'east' }],
+      eastExposures: r.eastExposures,
+      botExposures: r.botExposures,
+      mainPhase: 'wall-game',
+      activeBotIndex: null,
+      activeBotDiscard: null,
+      botTurnBanner: null,
+      pendingEastDiscardTile: null,
+      drawnTileId: null,
+      handTileFlyIn: null,
+      selectedHandTileId: null,
+    })
+  }
+
   // ── Check if a bot wants to call East's discard ──────────────────────────
   const botCall = findBotCallOnDiscard(r.bots, discardedTile, r, botDifficulty)
   if (botCall) {
@@ -1978,6 +1985,24 @@ function applySkipBotDiscard(
       handTileFlyIn: null,
       selectedHandTileId: null,
       botWin: { botIndex: mjCaller, how: 'east-discard' },
+    })
+  }
+
+  // Empty wall: once the live discard has made it past East and no remaining bot
+  // can declare Mah Jongg on it, no one should call it merely to expose and discard.
+  if (r.wall.length === 0) {
+    return applyBotsJokerSwapsFromEast({
+      ...r,
+      bots: botsNext,
+      wall: r.wall,
+      mainPhase: 'wall-game',
+      activeBotIndex: null,
+      activeBotDiscard: null,
+      botTurnBanner: null,
+      pendingEastDiscardTile: null,
+      drawnTileId: null,
+      handTileFlyIn: null,
+      selectedHandTileId: null,
     })
   }
 
@@ -2559,11 +2584,6 @@ export default function App() {
   const [botWinsEnabled, setBotWinsEnabled] = useState<boolean>(() => readBotWinsEnabledFromStorage())
   const [animationsEnabled, setAnimationsEnabled] = useState<boolean>(() => readAnimationsEnabledFromStorage())
   const [colorButtonsEnabled, setColorButtonsEnabled] = useState<boolean>(() => readColorButtonsFromStorage())
-  const [suggestedHandsRememberSize, setSuggestedHandsRememberSize] = useState<boolean>(() =>
-    readSuggestedHandsRememberSizeFromStorage(),
-  )
-  const suggestedHandsRememberSizeRef = useRef(suggestedHandsRememberSize)
-  suggestedHandsRememberSizeRef.current = suggestedHandsRememberSize
   const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>(() => readBotDifficultyFromStorage())
   const botDifficultyRef = useRef(botDifficulty)
   botDifficultyRef.current = botDifficulty
@@ -2654,27 +2674,6 @@ export default function App() {
       const next = !v
       try {
         localStorage.setItem(LS_KEY_COLOR_BUTTONS, next ? 'true' : 'false')
-      } catch {
-        /* ignore */
-      }
-      return next
-    })
-  }, [])
-
-  const toggleSuggestedHandsRememberSize = useCallback(() => {
-    setSuggestedHandsRememberSize((v) => {
-      const next = !v
-      try {
-        localStorage.setItem(LS_KEY_SUGGESTED_HANDS_REMEMBER_SIZE, next ? 'true' : 'false')
-        if (!next) {
-          localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_PANEL_HEIGHT)
-          localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_HEIGHT_PIN_TOP)
-          localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_PANEL_PINNED_TOP)
-          localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_RIGHT_DELTA)
-          localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_LEFT_DELTA)
-          localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_OFFSET_X)
-          localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_OFFSET_Y)
-        }
       } catch {
         /* ignore */
       }
@@ -2778,10 +2777,6 @@ export default function App() {
       const c = readColorButtonsFromStorage()
       return prev === c ? prev : c
     })
-    setSuggestedHandsRememberSize((prev) => {
-      const s = readSuggestedHandsRememberSizeFromStorage()
-      return prev === s ? prev : s
-    })
     setBotDifficulty((prev) => {
       const b = readBotDifficultyFromStorage()
       return prev === b ? prev : b
@@ -2851,15 +2846,12 @@ export default function App() {
       } else if (e.key === LS_KEY_COLOR_BUTTONS) {
         if (e.newValue == null) return
         setColorButtonsEnabled(e.newValue === 'true' || e.newValue === '1')
-      } else if (e.key === LS_KEY_SUGGESTED_HANDS_REMEMBER_SIZE) {
-        if (e.newValue == null) return
-        setSuggestedHandsRememberSize(e.newValue === 'true' || e.newValue === '1')
       } else if (e.key === LS_KEY_BOT_DIFFICULTY) {
         if (e.newValue == null) return
         if (isBotDifficulty(e.newValue)) setBotDifficulty(e.newValue)
       } else if (e.key === LS_KEY_TILE_GRAPHICS) {
         if (e.newValue == null) return
-        if (isTileGraphics(e.newValue)) setTileGraphics(e.newValue)
+        setTileGraphics(readTileGraphicsFromStorage())
       } else if (e.key === LS_KEY_DEAD_HAND_WARNINGS) {
         if (e.newValue == null) return
         const on = e.newValue === 'true' || e.newValue === '1'
@@ -3312,54 +3304,40 @@ export default function App() {
     if (wasOpen && !suggestedPanelHandsOn) {
       if (suggestedFocusHandKeyRef.current) setSuggestedPinnedHandKey(suggestedFocusHandKeyRef.current)
       const { h, d, l, px, py, pinTop, pinTopY } = panelSizeOnLatestRenderRef.current
-      if (suggestedHandsRememberSizeRef.current) {
-        try {
-          if (h != null) {
-            localStorage.setItem(LS_KEY_SUGGESTED_HANDS_PANEL_HEIGHT, String(h))
-            if (pinTop && pinTopY != null) {
-              localStorage.setItem(LS_KEY_SUGGESTED_HANDS_HEIGHT_PIN_TOP, '1')
-              localStorage.setItem(LS_KEY_SUGGESTED_HANDS_PANEL_PINNED_TOP, String(pinTopY))
-            } else {
-              localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_HEIGHT_PIN_TOP)
-              localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_PANEL_PINNED_TOP)
-            }
+      try {
+        if (h != null) {
+          localStorage.setItem(LS_KEY_SUGGESTED_HANDS_PANEL_HEIGHT, String(h))
+          if (pinTop && pinTopY != null) {
+            localStorage.setItem(LS_KEY_SUGGESTED_HANDS_HEIGHT_PIN_TOP, '1')
+            localStorage.setItem(LS_KEY_SUGGESTED_HANDS_PANEL_PINNED_TOP, String(pinTopY))
           } else {
-            localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_PANEL_HEIGHT)
             localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_HEIGHT_PIN_TOP)
             localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_PANEL_PINNED_TOP)
           }
-          if (d != null) {
-            localStorage.setItem(LS_KEY_SUGGESTED_HANDS_RIGHT_DELTA, String(d))
-          } else {
-            localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_RIGHT_DELTA)
-          }
-          if (l !== 0) {
-            localStorage.setItem(LS_KEY_SUGGESTED_HANDS_LEFT_DELTA, String(l))
-          } else {
-            localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_LEFT_DELTA)
-          }
-          if (px === 0 && py === 0) {
-            localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_OFFSET_X)
-            localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_OFFSET_Y)
-          } else {
-            localStorage.setItem(LS_KEY_SUGGESTED_HANDS_OFFSET_X, String(px))
-            localStorage.setItem(LS_KEY_SUGGESTED_HANDS_OFFSET_Y, String(py))
-          }
-        } catch {
-          /* ignore */
-        }
-      } else {
-        try {
+        } else {
           localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_PANEL_HEIGHT)
           localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_HEIGHT_PIN_TOP)
           localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_PANEL_PINNED_TOP)
+        }
+        if (d != null) {
+          localStorage.setItem(LS_KEY_SUGGESTED_HANDS_RIGHT_DELTA, String(d))
+        } else {
           localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_RIGHT_DELTA)
+        }
+        if (l !== 0) {
+          localStorage.setItem(LS_KEY_SUGGESTED_HANDS_LEFT_DELTA, String(l))
+        } else {
           localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_LEFT_DELTA)
+        }
+        if (px === 0 && py === 0) {
           localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_OFFSET_X)
           localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_OFFSET_Y)
-        } catch {
-          /* ignore */
+        } else {
+          localStorage.setItem(LS_KEY_SUGGESTED_HANDS_OFFSET_X, String(px))
+          localStorage.setItem(LS_KEY_SUGGESTED_HANDS_OFFSET_Y, String(py))
         }
+      } catch {
+        /* ignore */
       }
       if (suggestedPanelCloseLayoutResetTimerRef.current != null) {
         clearTimeout(suggestedPanelCloseLayoutResetTimerRef.current)
@@ -3380,39 +3358,37 @@ export default function App() {
         resetLayout()
       }
     } else if (!wasOpen && suggestedPanelHandsOn) {
-      if (suggestedHandsRememberSize) {
-        const h0 = readSuggestedPanelHeightFromStorage()
-        const d0 = readSuggestedPanelRightDeltaFromStorage()
-        const l0 = readSuggestedPanelLeftDeltaFromStorage()
-        const pos0 = readSuggestedPanelPositionOffsetFromStorage()
-        const pinTop0 = readSuggestedPanelHeightPinTopFromStorage()
-        const pinnedTop0 = readSuggestedPanelPinnedTopPxFromStorage()
-        if (h0 != null) {
-          setSuggestedPanelHeight(h0)
-          if (pinTop0 && pinnedTop0 != null) {
-            setSuggestedPanelHeightPinsTop(true)
-            setSuggestedPopupTop(pinnedTop0)
-          } else {
-            setSuggestedPanelHeightPinsTop(false)
-          }
+      const h0 = readSuggestedPanelHeightFromStorage()
+      const d0 = readSuggestedPanelRightDeltaFromStorage()
+      const l0 = readSuggestedPanelLeftDeltaFromStorage()
+      const pos0 = readSuggestedPanelPositionOffsetFromStorage()
+      const pinTop0 = readSuggestedPanelHeightPinTopFromStorage()
+      const pinnedTop0 = readSuggestedPanelPinnedTopPxFromStorage()
+      if (h0 != null) {
+        setSuggestedPanelHeight(h0)
+        if (pinTop0 && pinnedTop0 != null) {
+          setSuggestedPanelHeightPinsTop(true)
+          setSuggestedPopupTop(pinnedTop0)
         } else {
           setSuggestedPanelHeightPinsTop(false)
         }
-        if (d0 != null) {
-          setSuggestedPanelRightDelta(d0)
-        }
-        if (l0 != null) {
-          setSuggestedPanelLeftDelta(l0)
-        }
-        if (pos0 != null) {
-          setSuggestedPanelPositionOffset(pos0)
-        } else {
-          setSuggestedPanelPositionOffset({ x: 0, y: 0 })
-        }
+      } else {
+        setSuggestedPanelHeightPinsTop(false)
+      }
+      if (d0 != null) {
+        setSuggestedPanelRightDelta(d0)
+      }
+      if (l0 != null) {
+        setSuggestedPanelLeftDelta(l0)
+      }
+      if (pos0 != null) {
+        setSuggestedPanelPositionOffset(pos0)
+      } else {
+        setSuggestedPanelPositionOffset({ x: 0, y: 0 })
       }
     }
     lastSuggestedPanelOpenRef.current = suggestedPanelHandsOn
-  }, [suggestedPanelHandsOn, suggestedHandsRememberSize])
+  }, [suggestedPanelHandsOn])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -4785,10 +4761,40 @@ export default function App() {
           if (pb) return [pb]
         }
         if (fromPassSlot || fromStagedDiscard) {
-          const overHandTile = hits.find((h) => hand.some((t) => t.id === h.id))
-          if (overHandTile) return [overHandTile]
-          const hb = pick(HAND_BANK_ID)
-          if (hb) return [hb]
+          const handTileIds = new Set(hand.map((t) => t.id))
+          const overHandTile = hits.find((h) => handTileIds.has(String(h.id)))
+          const handBankHit = pick(HAND_BANK_ID)
+          if (overHandTile || handBankHit) {
+            const pointerX = args.pointerCoordinates?.x ?? lastDragPointerRef.current.x
+            const handTileContainers = args.droppableContainers.filter((c) => handTileIds.has(String(c.id)))
+            if (Number.isFinite(pointerX) && handTileContainers.length > 0) {
+              const byCenterX = handTileContainers
+                .map((container) => {
+                  const rect = args.droppableRects.get(container.id)
+                  if (!rect) return null
+                  return {
+                    container,
+                    centerX: rect.left + rect.width / 2,
+                  }
+                })
+                .filter((x): x is { container: (typeof handTileContainers)[number]; centerX: number } => x != null)
+                .sort((a, b) => a.centerX - b.centerX)
+              const target = byCenterX.find((x) => pointerX < x.centerX) ?? byCenterX[byCenterX.length - 1]
+              if (target) {
+                return [
+                  {
+                    id: target.container.id,
+                    data: {
+                      droppableContainer: target.container,
+                      value: Math.abs(pointerX - target.centerX),
+                    },
+                  },
+                ]
+              }
+            }
+            if (overHandTile) return [overHandTile]
+            if (handBankHit) return [handBankHit]
+          }
         }
         if (charlestonDone && mainPhase === 'east-discard' && pick(EAST_DISCARD_STAGING_ID)) {
           return [pick(EAST_DISCARD_STAGING_ID)!]
@@ -4816,6 +4822,47 @@ export default function App() {
         }
         if (charlestonDone && jokerSwapUiActive && pick(JOKER_SWAP_STAGING_ID)) {
           return [pick(JOKER_SWAP_STAGING_ID)!]
+        }
+        if (hand.some((t) => t.id === aid)) {
+          const handTileIds = new Set(hand.map((t) => t.id))
+          const overHandRack =
+            hits.some((h) => handTileIds.has(String(h.id))) ||
+            hits.some((h) => String(h.id) === HAND_BANK_ID)
+          if (overHandRack) {
+            const handTileContainers = args.droppableContainers.filter((c) => {
+              const id = String(c.id)
+              return id !== aid && handTileIds.has(id)
+            })
+            if (handTileContainers.length > 0) {
+              const pointerX = args.pointerCoordinates?.x
+              if (pointerX != null) {
+                const byCenterX = handTileContainers
+                  .map((container) => {
+                    const rect = args.droppableRects.get(container.id)
+                    if (!rect) return null
+                    return {
+                      container,
+                      centerX: rect.left + rect.width / 2,
+                    }
+                  })
+                  .filter((x): x is { container: (typeof handTileContainers)[number]; centerX: number } => x != null)
+                  .sort((a, b) => a.centerX - b.centerX)
+                const target = byCenterX.find((x) => pointerX < x.centerX) ?? byCenterX[byCenterX.length - 1]
+                if (target) {
+                  return [
+                    {
+                      id: target.container.id,
+                      data: {
+                        droppableContainer: target.container,
+                        value: Math.abs(pointerX - target.centerX),
+                      },
+                    },
+                  ]
+                }
+              }
+              return closestCenter({ ...args, droppableContainers: handTileContainers })
+            }
+          }
         }
         // Drag-to-bot-exposure joker swap: prefer a meld dropzone under the pointer,
         // otherwise the seat-wide dropzone. (Without this, closestCenter falls back to
@@ -4946,6 +4993,41 @@ export default function App() {
     ],
   )
 
+  const handVisualInsertIndexFromPointer = useCallback(() => {
+    const pointerX = lastDragPointerRef.current.x
+    if (!Number.isFinite(pointerX)) return null
+    const elementsById = new Map<string, HTMLElement>()
+    document.querySelectorAll<HTMLElement>('.hand-row [data-hand-tile-id]').forEach((el) => {
+      const id = el.dataset.handTileId
+      if (id) elementsById.set(id, el)
+    })
+    const centers = hand
+      .map((tile, index) => {
+        const el = elementsById.get(tile.id)
+        if (!el) return null
+        const rect = el.getBoundingClientRect()
+        if (rect.width < 1) return null
+        return { index, centerX: rect.left + rect.width / 2 }
+      })
+      .filter((x): x is { index: number; centerX: number } => x != null)
+      .sort((a, b) => a.centerX - b.centerX)
+    if (centers.length === 0) return null
+    return centers.find((x) => pointerX < x.centerX)?.index ?? hand.length
+  }, [hand])
+
+  const handInsertIndexFromOver = useCallback(
+    (over: { rect: { left: number; width: number } }, overHandIdx: number) => {
+      const visualIndex = handVisualInsertIndexFromPointer()
+      if (visualIndex != null) return visualIndex
+
+      const rect = over.rect
+      const centerX = rect.left + rect.width / 2
+      const pointerX = lastDragPointerRef.current.x
+      return pointerX > centerX ? Math.min(overHandIdx + 1, hand.length) : overHandIdx
+    },
+    [hand.length, handVisualInsertIndexFromPointer],
+  )
+
   const onDragOver = useCallback(
     (e: DragOverEvent) => {
       const aid = String(e.active.id)
@@ -4958,19 +5040,21 @@ export default function App() {
           }
           const oid = String(over.id)
           if (oid === HAND_BANK_ID) {
+            const handPreviewIndex = handVisualInsertIndexFromPointer() ?? hand.length
             setEastDiscardIntoHandPreview((prev) =>
-              prev?.tileId === aid && prev.handPreviewIndex === hand.length
+              prev?.tileId === aid && prev.handPreviewIndex === handPreviewIndex
                 ? prev
-                : { tileId: aid, handPreviewIndex: hand.length },
+                : { tileId: aid, handPreviewIndex },
             )
             return
           }
           const overHandIdx = hand.findIndex((t) => t.id === oid)
           if (overHandIdx >= 0) {
+            const handPreviewIndex = handInsertIndexFromOver(over, overHandIdx)
             setEastDiscardIntoHandPreview((prev) =>
-              prev?.tileId === aid && prev.handPreviewIndex === overHandIdx
+              prev?.tileId === aid && prev.handPreviewIndex === handPreviewIndex
                 ? prev
-                : { tileId: aid, handPreviewIndex: overHandIdx },
+                : { tileId: aid, handPreviewIndex },
             )
             return
           }
@@ -4992,25 +5076,35 @@ export default function App() {
       }
       const oid = String(over.id)
       if (oid === HAND_BANK_ID) {
+        const handPreviewIndex = handVisualInsertIndexFromPointer() ?? hand.length
         setCharlestonPassIntoHandPreview((prev) =>
-          prev?.tileId === aid && prev.handPreviewIndex === hand.length
+          prev?.tileId === aid && prev.handPreviewIndex === handPreviewIndex
             ? prev
-            : { tileId: aid, handPreviewIndex: hand.length },
+            : { tileId: aid, handPreviewIndex },
         )
         return
       }
       const overHandIdx = hand.findIndex((t) => t.id === oid)
       if (overHandIdx >= 0) {
+        const handPreviewIndex = handInsertIndexFromOver(over, overHandIdx)
         setCharlestonPassIntoHandPreview((prev) =>
-          prev?.tileId === aid && prev.handPreviewIndex === overHandIdx
+          prev?.tileId === aid && prev.handPreviewIndex === handPreviewIndex
             ? prev
-            : { tileId: aid, handPreviewIndex: overHandIdx },
+            : { tileId: aid, handPreviewIndex },
         )
         return
       }
       setCharlestonPassIntoHandPreview(null)
     },
-    [charlestonDone, mainPhase, pendingEastDiscardTile, passSlots, hand],
+    [
+      charlestonDone,
+      mainPhase,
+      pendingEastDiscardTile,
+      passSlots,
+      hand,
+      handInsertIndexFromOver,
+      handVisualInsertIndexFromPointer,
+    ],
   )
 
   const onDragCancel = useCallback(() => {
@@ -5848,7 +5942,10 @@ export default function App() {
       if (r.mainPhase === 'east-discard' && r.pendingEastDiscardTile?.id === aid && oid === HAND_BANK_ID) {
         const t = r.pendingEastDiscardTile
         const handNext2 = [...r.hand]
-        const insertIdx = Math.min(r.pendingEastDiscardIdx ?? handNext2.length, handNext2.length)
+        const insertIdx = Math.min(
+          handVisualInsertIndexFromPointer() ?? r.pendingEastDiscardIdx ?? handNext2.length,
+          handNext2.length,
+        )
         handNext2.splice(insertIdx, 0, t)
         return { ...r, hand: handNext2, pendingEastDiscardTile: null, pendingEastDiscardIdx: null, selectedHandTileId: null }
       }
@@ -5859,7 +5956,8 @@ export default function App() {
       ) {
         const t = r.pendingEastDiscardTile
         const hn = [...r.hand]
-        hn.splice(overHandIdx, 0, t)
+        const insertIdx = handInsertIndexFromOver(over, overHandIdx)
+        hn.splice(insertIdx, 0, t)
         return { ...r, hand: hn, pendingEastDiscardTile: null, pendingEastDiscardIdx: null, selectedHandTileId: null }
       }
       if (r.mainPhase === 'east-discard' && oid === EAST_DISCARD_STAGING_ID && handIdx >= 0) {
@@ -5935,14 +6033,18 @@ export default function App() {
         passSlotsNext[passFromIdx] = null
         const passOriginsNext: [number | null, number | null, number | null] = [...r.passSlotOrigins]
         passOriginsNext[passFromIdx] = null
-        if (t) handNext.push(t)
+        if (t) {
+          const insertIdx = Math.min(handVisualInsertIndexFromPointer() ?? handNext.length, handNext.length)
+          handNext.splice(insertIdx, 0, t)
+        }
         return { ...r, hand: handNext, passSlots: passSlotsNext, passSlotOrigins: passOriginsNext }
       }
 
       if (passFromIdx >= 0 && overHandIdx >= 0) {
         const t = passSlotsNext[passFromIdx]
         passSlotsNext[passFromIdx] = null
-        if (t) handNext.splice(overHandIdx, 0, t)
+        const insertIdx = handInsertIndexFromOver(over, overHandIdx)
+        if (t) handNext.splice(insertIdx, 0, t)
         return { ...r, hand: handNext, passSlots: passSlotsNext }
       }
 
@@ -5975,6 +6077,8 @@ export default function App() {
       botExposures,
       wall,
       discardPile,
+      handInsertIndexFromOver,
+      handVisualInsertIndexFromPointer,
     ],
   )
 
@@ -6369,16 +6473,6 @@ export default function App() {
                 </div>
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
                   <AppMenuSettingSwitch
-                    labelId="app-menu-label-remember-hands-size"
-                    pressed={suggestedHandsRememberSize}
-                    onToggle={toggleSuggestedHandsRememberSize}
-                  />
-                  <span className="app-menu-modal__label" id="app-menu-label-remember-hands-size">
-                    {SUGGESTED_HANDS_REMEMBER_SIZE_LABEL}
-                  </span>
-                </div>
-                <div className="app-menu-modal__row app-menu-modal__row--toggle">
-                  <AppMenuSettingSwitch
                     labelId="app-menu-label-bot-wins"
                     pressed={botWinsEnabled}
                     onToggle={toggleBotWins}
@@ -6499,6 +6593,10 @@ export default function App() {
               blockingDialog?.variant === 'mahjong-blocked'
                 ? 'charleston-error-dialog--table charleston-error-dialog--mahjong-blocked'
                 : '',
+              blockingDialog?.variant === 'new-game-pending-card' ||
+              blockingDialog?.variant === 'new-game-confirm'
+                ? 'charleston-error-dialog--new-game-warning'
+                : '',
               callRuleError ? 'charleston-error-dialog--call-warning' : '',
             ]
               .filter(Boolean)
@@ -6533,8 +6631,7 @@ export default function App() {
             {blockingDialog?.variant === 'new-game-pending-card' ? (
               <>
                 <h2 id="game-blocking-error-title" className="charleston-error-dialog__title">
-                  End Current Game and Start New Game with {PLAYABLE_CARD_LABEL[blockingDialog.nextCardId]}{' '}
-                  Card?
+                  {`End Current Game and Start New Game with ${PLAYABLE_CARD_LABEL[blockingDialog.nextCardId]} Card?`}
                 </h2>
                 <div className="charleston-error-dialog__actions charleston-error-dialog__actions--spread">
                   <button
@@ -6854,16 +6951,24 @@ export default function App() {
               </div>
             ) : null}
             <div className="wall-game-dialog__actions">
-              <button type="button" className="btn" onClick={() => { setWallGameReviewing(true); setMenuOpen(true) }}>
+              <button
+                type="button"
+                className="btn btn--primary wall-game-dialog__action-btn"
+                onClick={() => { setWallGameReviewing(true); setMenuOpen(true) }}
+              >
                 Menu
               </button>
-              <button type="button" className="btn btn--primary" onClick={newHand}>
+              <button type="button" className="btn btn--primary wall-game-dialog__action-btn" onClick={newHand}>
                 New Game
               </button>
-              <button type="button" className="btn" onClick={() => setWallGameReviewing(true)}>
+              <button
+                type="button"
+                className="btn btn--primary wall-game-dialog__action-btn"
+                onClick={() => setWallGameReviewing(true)}
+              >
                 Review
               </button>
-              <button type="button" className="btn" onClick={newHand}>
+              <button type="button" className="btn btn--primary wall-game-dialog__action-btn" onClick={newHand}>
                 Replay
               </button>
             </div>
@@ -6924,16 +7029,24 @@ export default function App() {
               </div>
             ) : null}
             <div className="wall-game-dialog__actions">
-              <button type="button" className="btn" onClick={() => { setMahjongWinReviewing(true); setMenuOpen(true) }}>
+              <button
+                type="button"
+                className="btn btn--primary wall-game-dialog__action-btn"
+                onClick={() => { setMahjongWinReviewing(true); setMenuOpen(true) }}
+              >
                 Menu
               </button>
-              <button type="button" className="btn btn--primary" onClick={newHand}>
+              <button type="button" className="btn btn--primary wall-game-dialog__action-btn" onClick={newHand}>
                 New Game
               </button>
-              <button type="button" className="btn" onClick={() => setMahjongWinReviewing(true)}>
+              <button
+                type="button"
+                className="btn btn--primary wall-game-dialog__action-btn"
+                onClick={() => setMahjongWinReviewing(true)}
+              >
                 Review
               </button>
-              <button type="button" className="btn" onClick={newHand}>
+              <button type="button" className="btn btn--primary wall-game-dialog__action-btn" onClick={newHand}>
                 Replay
               </button>
             </div>
@@ -6994,16 +7107,24 @@ export default function App() {
               </ul>
             </div>
             <div className="wall-game-dialog__actions">
-              <button type="button" className="btn" onClick={() => { setBotMahjongWinReviewing(true); setMenuOpen(true) }}>
+              <button
+                type="button"
+                className="btn btn--primary wall-game-dialog__action-btn"
+                onClick={() => { setBotMahjongWinReviewing(true); setMenuOpen(true) }}
+              >
                 Menu
               </button>
-              <button type="button" className="btn btn--primary" onClick={newHand}>
+              <button type="button" className="btn btn--primary wall-game-dialog__action-btn" onClick={newHand}>
                 New Game
               </button>
-              <button type="button" className="btn" onClick={() => setBotMahjongWinReviewing(true)}>
+              <button
+                type="button"
+                className="btn btn--primary wall-game-dialog__action-btn"
+                onClick={() => setBotMahjongWinReviewing(true)}
+              >
                 Review
               </button>
-              <button type="button" className="btn" onClick={newHand}>
+              <button type="button" className="btn btn--primary wall-game-dialog__action-btn" onClick={newHand}>
                 Replay
               </button>
             </div>
@@ -7183,7 +7304,10 @@ export default function App() {
                                 onClick={declareMahjong}
                                 aria-label="Mah Jongg"
                               >
-                                <img className="btn--mahj__img" src={mahjLogoSrc} alt="Mahj" draggable={false} />
+                                <span className="btn--mahj__logo-stack">
+                                  <span className="btn--mahj__logo-stack__well" aria-hidden />
+                                  <img className="btn--mahj__img" src={mahjLogoSrc} alt="" draggable={false} />
+                                </span>
                               </button>
                               <button
                                 type="button"
@@ -7202,9 +7326,9 @@ export default function App() {
                                 Swap
                               </button>
                               <div
-                                className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-wall--disabled rack-bottom-tile-cell rack-bottom-tile-cell--c11${
+                                className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell rack-bottom-tile-cell--c11${
                                   wall.length >= OPENING_WALL_TILES ? ' rack-bottom-wall--full' : ''
-                                }`}
+                                }${wall.length === 0 ? ' rack-bottom-wall--empty' : ''}`}
                                 style={wallRemainHeatStyle(wall.length)}
                                 aria-label={`${wall.length} tiles remaining in wall`}
                               >
@@ -7497,7 +7621,10 @@ export default function App() {
                                   }
                                   onClick={declareMahjong}
                                 >
-                                  <img className="btn--mahj__img" src={mahjLogoSrc} alt="Mahj" draggable={false} />
+                                  <span className="btn--mahj__logo-stack">
+                                    <span className="btn--mahj__logo-stack__well" aria-hidden />
+                                    <img className="btn--mahj__img" src={mahjLogoSrc} alt="" draggable={false} />
+                                  </span>
                                 </button>
                                 <button
                                   type="button"
@@ -7520,7 +7647,7 @@ export default function App() {
                                   <button
                                     type="button"
                                     className={[
-                                      'btn rack-bottom-tile-cell rack-bottom-tile-cell--c9-10',
+                                      'btn btn--joker-swap-action rack-bottom-tile-cell rack-bottom-tile-cell--c9-10',
                                       concealedHandReminderEnabled && focusedHandIsConcealed ? 'btn--call-concealed' : '',
                                     ]
                                       .filter(Boolean)

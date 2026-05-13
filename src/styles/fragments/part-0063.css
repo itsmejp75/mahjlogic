@@ -173,7 +173,7 @@
   color: var(--text-h);
 }
 
-.btn--primary:hover:not(.rack-bottom-tile-cell):not(.suggested-hands-tab) {
+.btn--primary:hover:not(.rack-bottom-tile-cell):not(.suggested-hands-tab):not(.wall-game-dialog__action-btn) {
   background: color-mix(in srgb, var(--bg-elevated) 86%, var(--color-white) 14%);
   box-shadow:
     0 2px 5px color-mix(in srgb, var(--color-black) 18%, transparent),
@@ -193,9 +193,8 @@
     0 1px 3px color-mix(in srgb, var(--color-black) 12%, transparent);
 }
 
-/* Same solid purple as HANDS (`.suggested-hands-tab` / `.charleston-pass-btn.suggested-hands-tab`). */
+/* Rack Mah Jongg fill lives with HANDS in part-0071 (same #9a5fab). Gray mode: part-0064 + part-0063. */
 .btn--mahjong {
-  background: #9a5fab;
   color: var(--color-white);
 }
 

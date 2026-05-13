@@ -270,7 +270,7 @@
   transition: none;
   transform: none;
   box-shadow:
-    inset 3px 3px 7px rgba(0, 0, 0, 0.35),
-    inset -2px -2px 5px rgba(255, 255, 255, 0.12),
-    inset 0 0 0 2px rgba(255, 255, 255, 0.12);
+    inset 4px 4px 11px rgba(0, 0, 0, 0.48),
+    inset -3px -3px 8px rgba(255, 255, 255, 0.1),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.24);
 }

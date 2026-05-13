@@ -3646,13 +3646,24 @@ function stripOrderedHandIdsForPattern(
     slotTileIdByStripIndex.length > 0
       ? [...slotTileIdByStripIndex]
       : defsByDisplay.map(() => null)
-  let orderedSlotDefs = defsByDisplay
-  if (titleOrderDefs && titleOrderDefs.length === slots.length && stripDefs.length === slots.length) {
+  const slotDefsInAssignmentOrder = (() => {
+    if (stripDefs.length !== slots.length) return defsByDisplay
+    if (pinnedP.id === 'like-2' && stripDefs.length === 14) return reorderLikeTwoGroupTileDefsToDisplay(stripDefs)
+    if (pinnedP.id === 'like-3' && stripDefs.length === 14) return reorderLikeThreeGroupTileDefsToDisplay(stripDefs)
+    if (pinnedP.id === 'consec-6' && stripDefs.length === 14) return reorderConsec6GroupTileDefsToDisplay(stripDefs)
+    if (pinnedP.id === 'math-2' && stripDefs.length === 14) return reorderMath2GroupTileDefsToDisplay(stripDefs)
+    if (pinnedP.id === '2468-2' && stripDefs.length === 14) return reorder2468_2GroupTileDefsToDisplay(stripDefs)
+    if (pinnedP.id === '13579-1b' && stripDefs.length === 14) return reorder13579_1bGroupTileDefsToDisplay(stripDefs)
+    return stripDefs
+  })()
+
+  let orderedSlotDefs = slotDefsInAssignmentOrder
+  if (titleOrderDefs && titleOrderDefs.length === slots.length && slotDefsInAssignmentOrder.length === slots.length) {
     const used = new Set<number>()
     const reorderedSlots: (string | null)[] = []
     const reorderedDefs: TileDef[] = []
     for (const d of titleOrderDefs) {
-      const idx = stripDefs.findIndex((candidate, i) => !used.has(i) && tileDefsEqual(candidate, d))
+      const idx = slotDefsInAssignmentOrder.findIndex((candidate, i) => !used.has(i) && tileDefsEqual(candidate, d))
       if (idx < 0) {
         reorderedSlots.length = 0
         reorderedDefs.length = 0
@@ -3660,7 +3671,7 @@ function stripOrderedHandIdsForPattern(
       }
       used.add(idx)
       reorderedSlots.push(slots[idx] ?? null)
-      reorderedDefs.push(stripDefs[idx]!)
+      reorderedDefs.push(slotDefsInAssignmentOrder[idx]!)
     }
     if (reorderedSlots.length === slots.length) {
       slots.splice(0, slots.length, ...reorderedSlots)
