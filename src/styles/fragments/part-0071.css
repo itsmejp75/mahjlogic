@@ -97,17 +97,17 @@
   /*
    * Preferred size favors readability while still scaling down with the pass box. The old `clamp(..., 0.48rem)`
    * floor kept type from shrinking when the window narrowed, so nowrap lines clipped.
-   * Floor scales with the box; `min(..., box / 10.2)` tightens only when a long line would overflow.
+   * Floor scales with the box; `min(..., box / 9.95)` tightens only when a long line would overflow.
    */
   --_pass-strip-fs-pref: clamp(
     calc(var(--pass-strip-box-w) * 0.04),
-    calc(var(--pass-strip-box-w) * 0.105),
+    calc(var(--pass-strip-box-w) * 0.109),
     1.42rem
   );
   --pass-strip-header-fs: min(
     var(--_pass-strip-fs-pref),
-    calc(var(--pass-strip-box-w) / 10.2),
-    calc(var(--rack-tile-h) / 5.2)
+    calc(var(--pass-strip-box-w) / 9.95),
+    calc(var(--rack-tile-h) / 5.02)
   );
 }
 
@@ -147,6 +147,8 @@
 
 .pass-strip-tail__header--with-footer .pass-strip-tail__header-centered:has(.pass-strip-tail__instruction) {
   gap: 0;
+  /* Let pass copy paint fully (stacked 2nd-left needs three tight lines + larger type). */
+  overflow: visible;
 }
 
 .pass-strip-tail__header-footer {
@@ -177,7 +179,7 @@
   font-weight: 400;
   font-size: calc(var(--pass-strip-header-fs) * 0.82);
   line-height: 1.15;
-  letter-spacing: clamp(0.01em, calc(var(--pass-strip-box-w) * 0.0003), 0.04em);
+  letter-spacing: clamp(0.035em, calc(var(--pass-strip-box-w) * 0.00058), 0.095em);
   color: #b0b0b0;
   margin: 0;
   padding: 0;
@@ -201,6 +203,12 @@
   border-bottom: 1px solid color-mix(in srgb, #f2f2e9 28%, var(--coach-teal-border) 72%);
 }
 
+/* Stacked “Pass 3 Left / -OR- / 0 to STOP”: reclaim a little vertical space for larger type. */
+.pass-strip-tail__header--overlay:has(.pass-strip-tail__instruction--stacked) .pass-strip-tail__title {
+  padding-top: clamp(0.05rem, calc(var(--pass-strip-box-w) * 0.012), 0.16rem);
+  padding-bottom: clamp(0.05rem, calc(var(--pass-strip-box-w) * 0.012), 0.16rem);
+}
+
 .pass-strip-tail__header--overlay:has(.pass-strip-tail__instruction) {
   gap: 0;
 }
@@ -213,21 +221,21 @@
   font-family: 'Roboto', var(--sans);
   font-weight: 700;
   font-size: var(--pass-strip-header-fs);
-  line-height: 1.2;
-  letter-spacing: clamp(0em, calc(var(--pass-strip-box-w) * 0.00008), 0.01em);
-  color: #f2f2e9;
+  line-height: 1.14;
+  letter-spacing: clamp(0.032em, calc(var(--pass-strip-box-w) * 0.00026), 0.072em);
+  color: #DCDCE0;
   margin: 0;
   padding: 0;
   max-width: 100%;
   min-width: 0;
   white-space: nowrap;
-  overflow: hidden;
+  overflow: visible;
   text-shadow:
     0 0 0.22rem color-mix(in srgb, var(--bg-elevated) 90%, transparent),
     0 0 0.45rem color-mix(in srgb, var(--bg-elevated) 72%, transparent),
     0 1px 2px color-mix(in srgb, var(--color-black) 24%, transparent);
-  flex: 1 1 0;
-  min-height: 0;
+  flex: 1 1 auto;
+  min-height: min-content;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -239,17 +247,20 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: clamp(0.01rem, calc(var(--pass-strip-box-w) * 0.003), 0.04rem);
-  line-height: 1.12;
+  gap: 0;
+  line-height: 1.05;
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
-  flex: 1 1 0;
+  flex: 1 1 auto;
+  min-height: min-content;
+  overflow: visible;
 }
 
 .pass-strip-tail__instruction--stacked .pass-strip-tail__instruction-line {
   display: block;
   max-width: 100%;
+  line-height: 1.05;
 }
 
 .pass-strip-tail__instruction-or {
@@ -258,9 +269,9 @@
   font-weight: 400;
   font-style: italic;
   font-size: calc(var(--pass-strip-header-fs) * 0.62);
-  letter-spacing: clamp(0.03em, calc(var(--pass-strip-box-w) * 0.0007), 0.1em);
-  line-height: 1.15;
-  color: #c5a882;
+  letter-spacing: clamp(0.048em, calc(var(--pass-strip-box-w) * 0.00092), 0.14em);
+  line-height: 1.08;
+  color: #DCDCE0;
   text-shadow:
     0 0 0.18rem color-mix(in srgb, var(--bg-elevated) 88%, transparent),
     0 0 0.38rem color-mix(in srgb, var(--bg-elevated) 65%, transparent),
@@ -269,14 +280,14 @@
 
 /* Extra air above/below stacked `-OR-` only (not inline `TO`). */
 .pass-strip-tail__instruction-or:not(.pass-strip-tail__instruction-or--inline) {
-  margin-block: clamp(0.04rem, calc(var(--pass-strip-box-w) * 0.01), 0.26rem);
+  margin-block: clamp(0.015rem, calc(var(--pass-strip-box-w) * 0.005), 0.12rem);
 }
 
-/* Same typographic size as standalone `-OR-`, inlined in `0 TO STOP` (cream like other instruction copy). */
+/* Inlined in `0 TO STOP`: warm accent like stacked `-OR-` (parent line is `#e0a86e`). */
 .pass-strip-tail__instruction-or--inline {
   display: inline;
   font-style: italic;
-  letter-spacing: clamp(0.03em, calc(var(--pass-strip-box-w) * 0.00065), 0.1em);
+  letter-spacing: clamp(0.048em, calc(var(--pass-strip-box-w) * 0.00088), 0.14em);
   vertical-align: 0.02em;
   color: #c5a882;
 }
@@ -285,6 +296,12 @@
   white-space: nowrap;
   font-weight: 700;
   color: #e0a86e;
+}
+
+/* Widen “0” / “Stop” only — not the inline “to” (user request). */
+.pass-strip-tail__instruction-line--0-to-stop .pass-strip-tail__instruction-line__0,
+.pass-strip-tail__instruction-line--0-to-stop .pass-strip-tail__instruction-line__stop {
+  letter-spacing: 0.08em;
 }
 
 .pass-strip-tail__tiles {

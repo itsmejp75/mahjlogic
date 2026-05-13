@@ -375,46 +375,46 @@
 }
 
 /*
- * Mah Jongg rack logo: same flash steps as `suggest-dying-flash-overlay` (2.5s), then 2s rest at full
- * logo. The animated element is masked to the logo shape, so only the blue glyph changes color.
- * Timeline: 2.5s flash + 2s pause = 4.5s; flash occupies the first 2.5/4.5 of the keyframe range.
+ * Mah Jongg rack logo hint: same timing as the former masked flash (2.5s bursts + 2s hold).
+ * Animate the real <img> with brightness — CSS mask + `mahj-logo.svg` was inconsistent in
+ * WKWebView (often only the lower “Logic” strokes pulsed, not the Mahj mark).
  */
-@keyframes mahjong-logo-hint-cycle {
+@keyframes mahjong-logo-hint-img-cycle {
   0% {
-    background-color: var(--mahj-logo-blue);
+    filter: brightness(1.38);
   }
   5.556% {
-    background-color: transparent;
+    filter: brightness(1);
   }
   11.111% {
-    background-color: var(--mahj-logo-blue);
+    filter: brightness(1.38);
   }
   16.667% {
-    background-color: transparent;
+    filter: brightness(1);
   }
   22.222% {
-    background-color: var(--mahj-logo-blue);
+    filter: brightness(1.38);
   }
   27.778% {
-    background-color: transparent;
+    filter: brightness(1);
   }
   33.333% {
-    background-color: var(--mahj-logo-blue);
+    filter: brightness(1.38);
   }
   38.889% {
-    background-color: transparent;
+    filter: brightness(1);
   }
   44.444% {
-    background-color: var(--mahj-logo-blue);
+    filter: brightness(1.38);
   }
   50% {
-    background-color: transparent;
+    filter: brightness(1);
   }
   55.556% {
-    background-color: var(--mahj-logo-blue);
+    filter: brightness(1.38);
   }
   100% {
-    background-color: var(--mahj-logo-blue);
+    filter: brightness(1.38);
   }
 }
 

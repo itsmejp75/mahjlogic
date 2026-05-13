@@ -173,7 +173,7 @@
   color: var(--text-h);
 }
 
-.btn--primary:hover:not(.rack-bottom-tile-cell):not(.suggested-hands-tab):not(.wall-game-dialog__action-btn) {
+.btn--primary:hover:not(.rack-bottom-tile-cell):not(.suggested-hands-tab):not(.wall-game-dialog__action-btn):not(.charleston-error-dialog__rack-action) {
   background: color-mix(in srgb, var(--bg-elevated) 86%, var(--color-white) 14%);
   box-shadow:
     0 2px 5px color-mix(in srgb, var(--color-black) 18%, transparent),

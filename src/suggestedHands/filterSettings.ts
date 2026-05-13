@@ -1,34 +1,5 @@
 import { PRACTICE_CARD_SECTION_ORDER } from '../card/practicePatterns'
 
-/** Text size tier for the suggested-hands popup (`small` | `medium` | `large`). */
-export const SUGGESTED_HANDS_FONT_SIZE_OPTIONS = ['small', 'medium', 'large'] as const
-export type SuggestedHandsFontSize = (typeof SUGGESTED_HANDS_FONT_SIZE_OPTIONS)[number]
-
-export const SUGGESTED_HANDS_FONT_SIZE_STORAGE_KEY = 'mahjlogic:suggested-hands-font-size'
-export const SUGGESTED_HANDS_FONT_SIZE_DEFAULT: SuggestedHandsFontSize = 'medium'
-
-export function isSuggestedHandsFontSize(value: string): value is SuggestedHandsFontSize {
-  return (SUGGESTED_HANDS_FONT_SIZE_OPTIONS as readonly string[]).includes(value)
-}
-
-export function readSuggestedHandsFontSizeFromStorage(): SuggestedHandsFontSize {
-  try {
-    const raw = localStorage.getItem(SUGGESTED_HANDS_FONT_SIZE_STORAGE_KEY)
-    if (raw != null && isSuggestedHandsFontSize(raw)) return raw
-  } catch {
-    /* ignore */
-  }
-  return SUGGESTED_HANDS_FONT_SIZE_DEFAULT
-}
-
-export function writeSuggestedHandsFontSizeToStorage(value: SuggestedHandsFontSize): void {
-  try {
-    localStorage.setItem(SUGGESTED_HANDS_FONT_SIZE_STORAGE_KEY, value)
-  } catch {
-    /* ignore */
-  }
-}
-
 /** When `'1'`, hands marked concealed (C) are omitted from the suggested list. */
 export const HIDE_CONCEALED_HANDS_STORAGE_KEY = 'mahjlogic:suggested-hands-hide-concealed'
 

@@ -220,10 +220,16 @@
 }
 
 .charleston-error-dialog--new-game-warning .charleston-error-dialog__title {
-  margin-bottom: 0.65rem;
-  font-size: clamp(0.82rem, 1.85vw, 0.98rem);
-  line-height: 1.3;
+  margin: 0 0 1.2rem;
+  font-family: 'Figtree', var(--sans);
+  font-size: var(--rack-bottom-action-fs);
+  font-weight: 400;
+  line-height: var(--btn-line-height);
+  letter-spacing: var(--btn-letter-spacing);
+  text-transform: none;
   text-wrap: balance;
+  text-align: center;
+  color: #dcdce0;
 }
 
 .charleston-error-dialog--blocking-neutral .charleston-error-dialog__body {
@@ -252,6 +258,70 @@
     0 2px 6px color-mix(in srgb, var(--color-black) 20%, transparent);
 }
 
+/* New-game confirm / card swap: same max width as `.app-menu-modal`; rack pills like menu rows (no hover wash). */
+.charleston-error-dialog.charleston-error-dialog--new-game-warning {
+  width: 100%;
+  max-width: min(38rem, 100%);
+  margin-inline: auto;
+  box-sizing: border-box;
+  padding-block: 1.35rem 1.45rem;
+  padding-inline: 1.25rem;
+}
+
+.charleston-error-dialog.charleston-error-dialog--new-game-warning
+  .charleston-error-dialog__actions--spread
+  .charleston-error-dialog__rack-action,
+.charleston-error-dialog.charleston-error-dialog--new-game-warning
+  .charleston-error-dialog__actions--spread
+  .charleston-error-dialog__rack-action.btn--primary {
+  min-width: 7rem;
+  border: none;
+  border-radius: var(--rack-tile-btn-border-radius);
+  background: var(--color-slate-mid);
+  color: #dcdce0;
+  text-shadow: none;
+  filter: none;
+  box-shadow:
+    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
+    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
+  transition: box-shadow 0.14s ease, transform 0.12s ease;
+}
+
+/* Different-card prompt: sentence-case Cancel (global `.btn` is uppercase). */
+.charleston-error-dialog.charleston-error-dialog--new-game-warning
+  .charleston-error-dialog__actions--spread
+  .charleston-error-dialog__rack-action:not(.btn--primary) {
+  text-transform: none;
+}
+
+.charleston-error-dialog.charleston-error-dialog--new-game-warning
+  .charleston-error-dialog__actions--spread
+  .charleston-error-dialog__rack-action:hover:not(:disabled),
+.charleston-error-dialog.charleston-error-dialog--new-game-warning
+  .charleston-error-dialog__actions--spread
+  .charleston-error-dialog__rack-action.btn--primary:hover:not(:disabled) {
+  background: var(--color-slate-mid);
+  color: #dcdce0;
+  box-shadow:
+    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
+    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
+  transform: none;
+}
+
+.charleston-error-dialog.charleston-error-dialog--new-game-warning
+  .charleston-error-dialog__actions--spread
+  .charleston-error-dialog__rack-action:active:not(:disabled),
+.charleston-error-dialog.charleston-error-dialog--new-game-warning
+  .charleston-error-dialog__actions--spread
+  .charleston-error-dialog__rack-action.btn--primary:active:not(:disabled) {
+  transition: none;
+  transform: none;
+  box-shadow:
+    inset 4px 4px 11px rgba(0, 0, 0, 0.48),
+    inset -3px -3px 8px rgba(255, 255, 255, 0.1),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.24);
+}
+
 .charleston-error-dialog__actions {
   display: flex;
   justify-content: flex-end;
@@ -266,6 +336,11 @@
   justify-content: space-between;
   margin-top: 0.5rem;
   gap: 0.75rem;
+}
+
+.charleston-error-dialog.charleston-error-dialog--new-game-warning
+  .charleston-error-dialog__actions--spread {
+  margin-top: 0.95rem;
 }
 
 /* Swap (and similar): felt + gold border — matches coach teal + pass-box gold accents */

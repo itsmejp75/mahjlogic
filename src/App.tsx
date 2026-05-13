@@ -93,13 +93,8 @@ import {
   readUncheckedSectionsFromStorage,
   writeUncheckedSectionsToStorage,
   suggestedHandsFilterMenuColumns,
-  SUGGESTED_HANDS_FONT_SIZE_OPTIONS,
-  SUGGESTED_HANDS_FONT_SIZE_STORAGE_KEY,
-  readSuggestedHandsFontSizeFromStorage,
-  writeSuggestedHandsFontSizeToStorage,
   SUGGESTED_HANDS_UNCHECKED_SECTIONS_KEY,
   suggestedHandSectionMenuLabel,
-  type SuggestedHandsFontSize,
 } from './suggestedHands/filterSettings'
 import type { BotExposure, BotSeat } from './analysis/types'
 import {
@@ -180,9 +175,6 @@ const LS_KEY_BOT_WINS = 'mahjlogic.botWinsEnabled'
 
 const BOT_WINS_LABEL = 'Bot wins'
 const LS_KEY_ANIMATIONS = 'mahjlogic.animationsEnabled'
-/** When false, rack / table action buttons use neutral gray (like Sort) instead of teal, purple, etc. */
-const LS_KEY_COLOR_BUTTONS = 'mahjlogic.colorButtonsEnabled'
-const COLOR_BUTTONS_LABEL = 'Color buttons'
 /** When true, height/width of Suggested hands panel are saved when closed and restored on next open. */
 const LS_KEY_SUGGESTED_HANDS_PANEL_HEIGHT = 'mahjlogic.suggestedHandsPanelHeight'
 /** When "1", explicit height was set by bottom-edge / bottom-corner drag — layout uses fixed `top` + `height` (grow downward). */
@@ -291,16 +283,6 @@ function readBotWinsEnabledFromStorage(): boolean {
 function readAnimationsEnabledFromStorage(): boolean {
   try {
     const v = localStorage.getItem(LS_KEY_ANIMATIONS)
-    if (v === null) return true
-    return v === 'true' || v === '1'
-  } catch {
-    return true
-  }
-}
-
-function readColorButtonsFromStorage(): boolean {
-  try {
-    const v = localStorage.getItem(LS_KEY_COLOR_BUTTONS)
     if (v === null) return true
     return v === 'true' || v === '1'
   } catch {
@@ -456,8 +438,7 @@ type GameBlockingDialog =
   | { variant: 'mahjong-dead-warning'; rankInput: RankSuggestedHandsInput }
   | { variant: 'call-exposure-dead-warning'; rankInput: RankSuggestedHandsInput }
   | { variant: 'discard-dead-warning'; rankInput: RankSuggestedHandsInput }
-  | { variant: 'new-game-pending-card'; nextCardId: PlayableCardId }
-  | { variant: 'new-game-confirm' }
+  | { variant: 'different-card-requires-new-game'; pendingCardId: PlayableCardId }
   | { variant: 'concealed-call-warning' }
 
 const CALL_STAGING_DROP_ID = 'call-staging-meld-drop'
@@ -2576,14 +2557,10 @@ export default function App() {
   const [suggestedHandsHideConcealed, setSuggestedHandsHideConcealed] = useState<boolean>(() =>
     readHideConcealedHandsFromStorage(),
   )
-  const [suggestedHandsFontSize, setSuggestedHandsFontSize] = useState<SuggestedHandsFontSize>(() =>
-    readSuggestedHandsFontSizeFromStorage(),
-  )
 
   // ── Game options (persisted) ──────────────────────────────────────────────
   const [botWinsEnabled, setBotWinsEnabled] = useState<boolean>(() => readBotWinsEnabledFromStorage())
   const [animationsEnabled, setAnimationsEnabled] = useState<boolean>(() => readAnimationsEnabledFromStorage())
-  const [colorButtonsEnabled, setColorButtonsEnabled] = useState<boolean>(() => readColorButtonsFromStorage())
   const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>(() => readBotDifficultyFromStorage())
   const botDifficultyRef = useRef(botDifficulty)
   botDifficultyRef.current = botDifficulty
@@ -2631,11 +2608,6 @@ export default function App() {
     }
   }, [])
 
-  const setSuggestedHandsFontSizeTier = useCallback((tier: SuggestedHandsFontSize) => {
-    setSuggestedHandsFontSize(tier)
-    writeSuggestedHandsFontSizeToStorage(tier)
-  }, [])
-
   const setBotDifficultyLevel = useCallback((d: BotDifficulty) => {
     setBotDifficulty(d)
     try {
@@ -2662,18 +2634,6 @@ export default function App() {
       const next = !v
       try {
         localStorage.setItem(LS_KEY_ANIMATIONS, next ? 'true' : 'false')
-      } catch {
-        /* ignore */
-      }
-      return next
-    })
-  }, [])
-
-  const toggleColorButtons = useCallback(() => {
-    setColorButtonsEnabled((v) => {
-      const next = !v
-      try {
-        localStorage.setItem(LS_KEY_COLOR_BUTTONS, next ? 'true' : 'false')
       } catch {
         /* ignore */
       }
@@ -2773,10 +2733,6 @@ export default function App() {
       const a = readAnimationsEnabledFromStorage()
       return prev === a ? prev : a
     })
-    setColorButtonsEnabled((prev) => {
-      const c = readColorButtonsFromStorage()
-      return prev === c ? prev : c
-    })
     setBotDifficulty((prev) => {
       const b = readBotDifficultyFromStorage()
       return prev === b ? prev : b
@@ -2810,10 +2766,6 @@ export default function App() {
       const h = readHideConcealedHandsFromStorage()
       return prev === h ? prev : h
     })
-    setSuggestedHandsFontSize((prev) => {
-      const f = readSuggestedHandsFontSizeFromStorage()
-      return prev === f ? prev : f
-    })
   }, [])
 
   useEffect(() => {
@@ -2843,9 +2795,6 @@ export default function App() {
         const on = e.newValue === 'true' || e.newValue === '1'
         setAnimationsEnabled(on)
         animationsEnabledRef.current = on
-      } else if (e.key === LS_KEY_COLOR_BUTTONS) {
-        if (e.newValue == null) return
-        setColorButtonsEnabled(e.newValue === 'true' || e.newValue === '1')
       } else if (e.key === LS_KEY_BOT_DIFFICULTY) {
         if (e.newValue == null) return
         if (isBotDifficulty(e.newValue)) setBotDifficulty(e.newValue)
@@ -2875,9 +2824,6 @@ export default function App() {
       } else if (e.key === HIDE_CONCEALED_HANDS_STORAGE_KEY) {
         if (e.newValue == null) return
         setSuggestedHandsHideConcealed(readHideConcealedHandsFromStorage())
-      } else if (e.key === SUGGESTED_HANDS_FONT_SIZE_STORAGE_KEY) {
-        if (e.newValue == null) return
-        setSuggestedHandsFontSize(readSuggestedHandsFontSizeFromStorage())
       }
     }
     window.addEventListener('storage', onStorage)
@@ -3432,8 +3378,20 @@ export default function App() {
 
   const requestPlayableCard = useCallback((next: PlayableCardId) => {
     if (next === menuCardId) return
+    const committed = committedCardIdRef.current
+    if (next !== committed) {
+      const roundAlreadyOver =
+        mainPhase === 'wall-game' ||
+        mainPhase === 'mahjong-declared' ||
+        mainPhase === 'bot-mahjong' ||
+        mainPhase === 'dead-hand'
+      if (!roundAlreadyOver) {
+        setBlockingDialog({ variant: 'different-card-requires-new-game', pendingCardId: next })
+        return
+      }
+    }
     setMenuCardId(next)
-  }, [menuCardId])
+  }, [menuCardId, mainPhase])
 
   useEffect(() => {
     const disc = discardTrackerPanelRef.current
@@ -3698,6 +3656,13 @@ export default function App() {
     }
     return false
   }, [botExposures, eastExposures])
+
+  /** Any exposure meld on your rack or a bot’s (used to hide Charleston “Swap” until something is on table). */
+  const anyTableExposure = useMemo(() => {
+    if (eastExposures.some((e) => e.tiles.length > 0)) return true
+    if (botExposures.some((e) => e.tiles.length > 0)) return true
+    return false
+  }, [eastExposures, botExposures])
 
   const jokerSwapUiActive =
     charlestonDone &&
@@ -4829,13 +4794,34 @@ export default function App() {
             hits.some((h) => handTileIds.has(String(h.id))) ||
             hits.some((h) => String(h.id) === HAND_BANK_ID)
           if (overHandRack) {
+            const pointerX = args.pointerCoordinates?.x ?? lastDragPointerRef.current.x
+            const activeHandContainer = args.droppableContainers.find((c) => String(c.id) === aid)
+            const activeHandRect = activeHandContainer ? args.droppableRects.get(activeHandContainer.id) : null
+            if (
+              activeHandContainer &&
+              activeHandRect &&
+              Number.isFinite(pointerX) &&
+              pointerX >= activeHandRect.left &&
+              pointerX <= activeHandRect.left + activeHandRect.width
+            ) {
+              // Keep the lifted tile's original slot reachable. Otherwise the two neighbours
+              // that closed around it can never reopen while the pointer is between them.
+              return [
+                {
+                  id: activeHandContainer.id,
+                  data: {
+                    droppableContainer: activeHandContainer,
+                    value: 0,
+                  },
+                },
+              ]
+            }
             const handTileContainers = args.droppableContainers.filter((c) => {
               const id = String(c.id)
               return id !== aid && handTileIds.has(id)
             })
             if (handTileContainers.length > 0) {
-              const pointerX = args.pointerCoordinates?.x
-              if (pointerX != null) {
+              if (Number.isFinite(pointerX)) {
                 const byCenterX = handTileContainers
                   .map((container) => {
                     const rect = args.droppableRects.get(container.id)
@@ -5178,34 +5164,11 @@ export default function App() {
     setRound(createNewRound())
   }, [])
 
-  /** @returns true if a new round was dealt; false if deferred for confirmation. */
+  /** @returns true (menu may close); card-change warning is shown from `requestPlayableCard` when needed. */
   const newHand = useCallback((): boolean => {
-    const m = menuCardIdRef.current
-    const c = committedCardIdRef.current
-    const roundAlreadyOver =
-      mainPhase === 'wall-game' ||
-      mainPhase === 'mahjong-declared' ||
-      mainPhase === 'bot-mahjong' ||
-      mainPhase === 'dead-hand'
-    const roundStarted =
-      historyRef.current.length > 0 ||
-      mainPhase !== 'east-discard' ||
-      roundRef.current.charlestonPhase !== 'right1'
-    if (m !== c) {
-      if (!roundAlreadyOver) {
-        setBlockingDialog({ variant: 'new-game-pending-card', nextCardId: m })
-        return false
-      }
-      performNewHandDeal()
-      return true
-    }
-    if (roundStarted && !roundAlreadyOver) {
-      setBlockingDialog({ variant: 'new-game-confirm' })
-      return false
-    }
     performNewHandDeal()
     return true
-  }, [performNewHandDeal, mainPhase])
+  }, [performNewHandDeal])
 
   const sendCharlestonPass = useCallback(() => {
     const charlestonBotPassOpts = {
@@ -6158,9 +6121,11 @@ export default function App() {
     : eastMainSortableIds ?? handIds
 
   const mainGameCallDisabled = mainPhase !== 'bot-turn' || !activeBotDiscard
-  /** Shared Call / Swap cell: Swap on your turn (draw & discard flow); Call on opponents’ discards. */
-  const mainBarSharedSlotIsJokerSwap =
-    mainPhase === 'east-discard' || mainPhase === 'call-staging'
+  /**
+   * Shared c9–10 cell: Swap only when joker-swap UI applies (east discard or call-staging and at least
+   * one exposed joker). Otherwise show Call (bot-turn) or the same Call control disabled on your turn.
+   */
+  const mainBarSharedSlotIsJokerSwap = jokerSwapUiActive
   const mahjongButtonEnabled =
     charlestonDone &&
     (mainPhase === 'east-discard' ||
@@ -6205,7 +6170,7 @@ export default function App() {
     <div
       className="app"
       data-tile-graphics={tileGraphics}
-      data-color-buttons={colorButtonsEnabled ? 'on' : 'off'}
+      data-color-buttons="off"
       data-animations={animationsEnabled ? 'on' : 'off'}
     >
       {menuOpen ? (
@@ -6432,32 +6397,6 @@ export default function App() {
                     </span>
                   </div>
                 </div>
-                <div className="app-menu-modal__subhead" id="app-menu-sh-font-heading">
-                  Suggested hands text size
-                </div>
-                <div
-                  className="app-menu-modal__tile-graphics-modes app-menu-tray__diff-row app-menu-modal__diff-row"
-                  role="radiogroup"
-                  aria-labelledby="app-menu-sh-font-heading"
-                >
-                  {SUGGESTED_HANDS_FONT_SIZE_OPTIONS.map((tier) => (
-                    <button
-                      key={tier}
-                      type="button"
-                      className={[
-                        'btn app-menu-tray__diff-btn app-menu-modal__font-size-tier-btn',
-                        suggestedHandsFontSize === tier ? 'app-menu-tray__diff-btn--on' : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                      role="radio"
-                      aria-checked={suggestedHandsFontSize === tier}
-                      onClick={() => setSuggestedHandsFontSizeTier(tier)}
-                    >
-                      {tier === 'small' ? 'Small' : tier === 'medium' ? 'Medium' : 'Large'}
-                    </button>
-                  ))}
-                </div>
               </div>
               <div className="app-menu-tray__divider app-menu-modal__section-rule" role="separator" />
               <div className="app-menu-modal__body-footer app-menu-modal__body-footer--settings-toggles">
@@ -6492,19 +6431,6 @@ export default function App() {
                   />
                   <span className="app-menu-modal__label" id="app-menu-label-anim">
                     Animations
-                  </span>
-                </div>
-                <div className="app-menu-modal__row app-menu-modal__row--toggle">
-                  <AppMenuSettingSwitch
-                    labelId="app-menu-label-color-buttons"
-                    pressed={colorButtonsEnabled}
-                    onToggle={toggleColorButtons}
-                  />
-                  <span
-                    className="app-menu-modal__label"
-                    id="app-menu-label-color-buttons"
-                  >
-                    {COLOR_BUTTONS_LABEL}
                   </span>
                 </div>
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
@@ -6561,8 +6487,7 @@ export default function App() {
           role="presentation"
           onClick={() => {
             // Warnings that require an explicit choice — backdrop click does nothing
-            if (blockingDialog?.variant === 'new-game-pending-card') return
-            if (blockingDialog?.variant === 'new-game-confirm') return
+            if (blockingDialog?.variant === 'different-card-requires-new-game') return
             if (blockingDialog?.variant === 'dead-hand-warning') return
             if (blockingDialog?.variant === 'mahjong-dead-warning') return
             if (blockingDialog?.variant === 'call-exposure-dead-warning') return
@@ -6577,11 +6502,12 @@ export default function App() {
             className={[
               'charleston-error-dialog',
               blockingDialog?.variant === 'table' ? 'charleston-error-dialog--table' : '',
-              blockingDialog?.variant === 'new-game-pending-card' ||
-              blockingDialog?.variant === 'new-game-confirm' ||
               blockingDialog?.variant === 'dead-hand-warning' ||
               blockingDialog?.variant === 'concealed-call-warning'
                 ? 'charleston-error-dialog--blocking-neutral charleston-error-dialog--dead-hand-warning'
+                : '',
+              blockingDialog?.variant === 'different-card-requires-new-game'
+                ? 'charleston-error-dialog--blocking-neutral'
                 : '',
               blockingDialog?.variant === 'mahjong-dead-warning'
                 ? 'charleston-error-dialog--blocking-neutral charleston-error-dialog--mahjong-dead-warning'
@@ -6593,8 +6519,7 @@ export default function App() {
               blockingDialog?.variant === 'mahjong-blocked'
                 ? 'charleston-error-dialog--table charleston-error-dialog--mahjong-blocked'
                 : '',
-              blockingDialog?.variant === 'new-game-pending-card' ||
-              blockingDialog?.variant === 'new-game-confirm'
+              blockingDialog?.variant === 'different-card-requires-new-game'
                 ? 'charleston-error-dialog--new-game-warning'
                 : '',
               callRuleError ? 'charleston-error-dialog--call-warning' : '',
@@ -6605,8 +6530,7 @@ export default function App() {
             aria-modal="true"
             aria-labelledby={
               blockingDialog?.variant === 'table' ||
-              blockingDialog?.variant === 'new-game-pending-card' ||
-              blockingDialog?.variant === 'new-game-confirm' ||
+              blockingDialog?.variant === 'different-card-requires-new-game' ||
               blockingDialog?.variant === 'dead-hand-warning' ||
               blockingDialog?.variant === 'mahjong-dead-warning' ||
               blockingDialog?.variant === 'call-exposure-dead-warning' ||
@@ -6628,63 +6552,33 @@ export default function App() {
             }
             onClick={(e) => e.stopPropagation()}
           >
-            {blockingDialog?.variant === 'new-game-pending-card' ? (
+            {blockingDialog?.variant === 'different-card-requires-new-game' ? (
               <>
                 <h2 id="game-blocking-error-title" className="charleston-error-dialog__title">
-                  {`End Current Game and Start New Game with ${PLAYABLE_CARD_LABEL[blockingDialog.nextCardId]} Card?`}
+                  Selecting a different card will require a New Game.
                 </h2>
                 <div className="charleston-error-dialog__actions charleston-error-dialog__actions--spread">
                   <button
                     type="button"
-                    className="btn"
+                    className="btn charleston-error-dialog__rack-action"
                     onClick={(e) => {
                       e.stopPropagation()
                       setBlockingDialog(null)
-                      setMenuOpen(false)
+                      setMenuCardId(committedCardIdRef.current)
                     }}
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
-                    className="btn btn--primary"
+                    className="btn btn--primary charleston-error-dialog__rack-action"
                     onClick={() => {
+                      const id = blockingDialog.pendingCardId
                       setBlockingDialog(null)
-                      performNewHandDeal()
-                      setMenuOpen(false)
+                      setMenuCardId(id)
                     }}
                   >
-                    Continue
-                  </button>
-                </div>
-              </>
-            ) : blockingDialog?.variant === 'new-game-confirm' ? (
-              <>
-                <h2 id="game-blocking-error-title" className="charleston-error-dialog__title">
-                  End Current Game and Start New Game?
-                </h2>
-                <div className="charleston-error-dialog__actions charleston-error-dialog__actions--spread">
-                  <button
-                    type="button"
-                    className="btn"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setBlockingDialog(null)
-                      setMenuOpen(false)
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn--primary"
-                    onClick={() => {
-                      setBlockingDialog(null)
-                      performNewHandDeal()
-                      setMenuOpen(false)
-                    }}
-                  >
-                    Continue
+                    OK
                   </button>
                 </div>
               </>
@@ -7317,14 +7211,38 @@ export default function App() {
                               >
                                 <img className="btn--logic__img" src={logicLogoSrc} alt="Logic" draggable={false} />
                               </button>
-                              <button
-                                type="button"
-                                className="btn btn--joker-swap-action rack-bottom-tile-cell rack-bottom-tile-cell--c9-10"
-                                disabled
-                                aria-label="Joker swap"
-                              >
-                                Swap
-                              </button>
+                              {anyTableExposure ? (
+                                <button
+                                  type="button"
+                                  className="btn btn--joker-swap-action rack-bottom-tile-cell rack-bottom-tile-cell--c9-10"
+                                  disabled
+                                  aria-label="Joker swap"
+                                >
+                                  Swap
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className={[
+                                    'btn btn--joker-swap-action rack-bottom-tile-cell rack-bottom-tile-cell--c9-10',
+                                    concealedHandReminderEnabled && focusedHandIsConcealed ? 'btn--call-concealed' : '',
+                                  ]
+                                    .filter(Boolean)
+                                    .join(' ')}
+                                  disabled={mainGameCallDisabled}
+                                  onClick={initiateCall}
+                                  aria-label="Call discard"
+                                >
+                                  {concealedHandReminderEnabled && focusedHandIsConcealed ? (
+                                    <>
+                                      <span
+                                        className="btn--call-concealed__c"
+                                        aria-label="Concealed hand"
+                                      >C</span>all
+                                    </>
+                                  ) : 'Call'}
+                                </button>
+                              )}
                               <div
                                 className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell rack-bottom-tile-cell--c11${
                                   wall.length >= OPENING_WALL_TILES ? ' rack-bottom-wall--full' : ''
@@ -7882,7 +7800,6 @@ export default function App() {
                     <div
                       id="suggested-hands-popup"
                       className={['suggested-hands-popup', suggestedPanelHandsOn ? 'suggested-hands-popup--open' : ''].filter(Boolean).join(' ')}
-                      data-suggested-hands-font={suggestedHandsFontSize}
                       style={{
                         left: `calc(var(--app-h-pad) + ${suggestedPanelLeftDelta}px)`,
                         ...(suggestedPanelHeight != null

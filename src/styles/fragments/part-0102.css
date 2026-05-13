@@ -66,7 +66,7 @@
   font-size: var(--app-ui-control-fs-xs);
   font-weight: 600;
   letter-spacing: 0.04em;
-  text-transform: uppercase;
+  text-transform: capitalize;
   color: var(--text-muted, var(--window-fg-muted));
   line-height: 1.3;
 }
@@ -95,14 +95,34 @@
   font-weight: 600;
   text-transform: none;
   letter-spacing: 0.02em;
-  border-radius: 0.42rem;
-  border: 1.5px solid color-mix(in srgb, var(--border) 60%, var(--fg) 18%);
-  background: color-mix(in srgb, var(--coach-teal, var(--fg)) 10%, var(--bg-elevated, var(--bg)));
-  color: var(--text-h, var(--fg));
+  border: none;
+  border-radius: var(--rack-tile-btn-border-radius);
+  background: var(--color-slate-mid);
+  color: #dcdce0;
+  text-shadow: none;
+  box-shadow:
+    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
+    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
+  transition: box-shadow 0.14s ease, transform 0.12s ease;
 }
 
 .app-menu-modal__suggested-filters-reset:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--coach-teal, var(--fg)) 14%, var(--bg-elevated, var(--bg)));
+  background: var(--color-slate-mid);
+  color: #dcdce0;
+  box-shadow:
+    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
+    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
+  transform: none;
+}
+
+.app-menu-modal__suggested-filters-reset:active:not(:disabled) {
+  /* Pressed face — part-0069 rack `.btn.rack-bottom-tile-cell:active`. */
+  transition: none;
+  transform: none;
+  box-shadow:
+    inset 4px 4px 11px rgba(0, 0, 0, 0.48),
+    inset -3px -3px 8px rgba(255, 255, 255, 0.1),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.24);
 }
 
 .app-menu-modal__diff-row {
@@ -152,6 +172,29 @@
   padding: 0.1rem 0.1rem 0.25rem;
 }
 
+/* Minimalist tile-graphics row: five mode buttons span the same width as the 10-up preview below
+   (same horizontal inset + gap as `.app-menu-modal__tile-graphics-preview`, part-0097). */
+.app-menu-modal .app-menu-modal__tile-graphics-modes.app-menu-tray__diff-row {
+  --menu-tile-g: var(--player-rack-face-gap);
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0 var(--menu-tile-g);
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0.04rem var(--menu-tile-g) 0.15rem;
+  margin-inline: 0;
+  flex-wrap: unset;
+  justify-content: unset;
+  overflow-x: visible;
+}
+
+.app-menu-modal .app-menu-modal__tile-graphics-modes .app-menu-tray__diff-btn {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
 .app-menu-tray__diff-btn {
   box-sizing: border-box;
   flex: 1 1 20%;
@@ -162,63 +205,68 @@
   line-height: 1.2;
   text-transform: none;
   letter-spacing: 0.02em;
-  background: color-mix(in srgb, var(--fg) 8%, transparent);
-  color: var(--fg);
-  border: 1.5px solid color-mix(in srgb, var(--border) 60%, var(--fg) 18%);
-  transition: border-color 0.14s ease, background 0.14s ease, box-shadow 0.14s ease, transform 0.12s ease;
+  border: none;
+  transition: box-shadow 0.14s ease, transform 0.12s ease;
 }
 
-.app-menu-tray__diff-btn:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--fg) 12%, transparent);
-}
-
-/* In settings modal: all four options share size; unselected vs selected paint split below (specificity) */
+/* In settings modal: rack-neutral pill (same face as main rack action row; no hover wash). */
 .app-menu-modal .app-menu-tray__diff-btn {
   min-height: 2.5rem;
   padding: 0.42rem 0.3rem;
   font-size: max(0.8125rem, var(--app-ui-control-fs-xs));
   font-weight: 600;
-  border-radius: 0.42rem;
-  transition: border-color 0.14s ease, background-color 0.14s ease;
+  border-radius: var(--rack-tile-btn-border-radius);
 }
 
-.app-menu-modal .app-menu-tray__diff-btn:not(.app-menu-tray__diff-btn--on) {
-  background: var(--app-menu-sort-surface, var(--color-slate-mid));
-  color: var(--color-white);
-  border: 1.5px solid var(--app-menu-rim-hairline, color-mix(in srgb, var(--color-white) 18%, #1f2429));
+.app-menu-modal .app-menu-tray__diff-btn:not(:disabled),
+.app-menu-modal .app-menu-tray__diff-btn.app-menu-tray__diff-btn--on:not(:disabled) {
+  background: var(--color-slate-mid);
+  color: #dcdce0;
   text-shadow: none;
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--color-black) 22%, transparent);
+  box-shadow:
+    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
+    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
 }
 
-/* Unselected: same family as Sort, lighter on hover */
-.app-menu-modal .app-menu-tray__diff-btn:hover:not(:disabled):not(.app-menu-tray__diff-btn--on) {
-  border-color: color-mix(in srgb, var(--color-white) 32%, #2d3339);
-  background: var(--app-menu-sort-surface-hover, color-mix(in srgb, var(--color-white) 7%, var(--color-slate-mid)));
+.app-menu-modal .app-menu-tray__diff-btn.app-menu-tray__diff-btn--on:not(:disabled) {
+  /* Stay visually pressed-in for the active radio (same inset as rack `:active`, part-0069). */
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--color-white) 10%, transparent),
-    0 2px 5px color-mix(in srgb, var(--color-black) 16%, transparent);
-  transform: none;
+    inset 4px 4px 11px rgba(0, 0, 0, 0.48),
+    inset -3px -3px 8px rgba(255, 255, 255, 0.1),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.24);
 }
 
-/* Selected: lighter “lit” cap on the same base (no green) */
-.app-menu-modal .app-menu-tray__diff-btn.app-menu-tray__diff-btn--on,
-.app-menu-modal .app-menu-tray__diff-btn.app-menu-tray__diff-btn--on:hover:not(:disabled) {
-  background: var(--app-menu-sort-surface-emphasis, color-mix(in srgb, var(--color-white) 12%, var(--color-slate-mid)));
-  color: var(--color-white);
-  border: 1.5px solid color-mix(in srgb, var(--color-white) 34%, #3d4650);
-  text-shadow: 0 1px 0 color-mix(in srgb, var(--color-black) 22%, transparent);
+.app-menu-modal .app-menu-tray__diff-btn:hover:not(:disabled) {
+  background: var(--color-slate-mid);
+  color: #dcdce0;
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--color-white) 14%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--color-white) 12%, transparent),
-    0 2px 6px color-mix(in srgb, var(--color-black) 20%, transparent);
+    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
+    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
   transform: none;
 }
 
 .app-menu-modal .app-menu-tray__diff-btn.app-menu-tray__diff-btn--on:hover:not(:disabled) {
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--color-white) 18%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--color-white) 16%, transparent),
-    0 3px 8px color-mix(in srgb, var(--color-black) 24%, transparent);
+    inset 4px 4px 11px rgba(0, 0, 0, 0.48),
+    inset -3px -3px 8px rgba(255, 255, 255, 0.1),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.24);
+}
+
+.app-menu-modal .app-menu-tray__diff-btn:active:not(:disabled) {
+  /* Momentary press + matches selected `--on` chrome. */
+  transition: none;
+  transform: none;
+  box-shadow:
+    inset 4px 4px 11px rgba(0, 0, 0, 0.48),
+    inset -3px -3px 8px rgba(255, 255, 255, 0.1),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.24);
+}
+
+.app-menu-modal .app-menu-tray__diff-btn:disabled {
+  opacity: 0.5;
+  filter: none;
+  box-shadow: none;
+  cursor: not-allowed;
 }
 
 .app-bottom-center-controls__menu-btn {

@@ -101,3 +101,23 @@
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__clear.btn--label-wrap {
   white-space: normal;
 }
+
+/* Main rack action row (Sort, Hands, Call/Swap, Discard/Ignore, …): slightly bolder + more tracking. */
+.panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell {
+  font-weight: 600;
+  letter-spacing: max(0.028em, calc(0.042em + 0.026rem));
+}
+
+.panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1 {
+  letter-spacing: max(0.016em, calc(0.026em + 0.016rem));
+}
+
+/* Charleston action row: same label weight + tracking as main rack (was main-only before). */
+.panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell {
+  font-weight: 600;
+  letter-spacing: max(0.028em, calc(0.042em + 0.026rem));
+}
+
+.panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1 {
+  letter-spacing: max(0.016em, calc(0.026em + 0.016rem));
+}

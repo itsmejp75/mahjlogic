@@ -51,17 +51,42 @@
   padding-bottom: 0.58rem;
 }
 
-/* Game settings: same face as hand Sort (dark gray, white / near-white type) */
+/* Game settings: same pill face as main rack `.rack-bottom-bar .btn.rack-bottom-tile-cell` (part-0069 default; `:active` uses rack press inset). */
 .app-menu-modal .app-menu-tray__item:not(.app-menu-tray__item--switch) {
   box-sizing: border-box;
-  border: 1.5px solid var(--app-menu-rim-hairline, color-mix(in srgb, var(--color-white) 18%, #1f2429));
-  background: var(--app-menu-sort-surface, var(--color-slate-mid));
-  color: var(--color-white);
-  /* Don’t animate box-shadow — repaints during hover read as horizontal nudge next to scrollbar */
-  transition: border-color 0.14s ease, background-color 0.14s ease;
+  border: none;
+  background: var(--color-slate-mid);
+  color: #dcdce0;
+  text-shadow: none;
+  /* Outrank global `.app-menu-tray__item { text-transform: uppercase }` — title case for full-width actions (e.g. New Game). */
+  text-transform: capitalize;
+  box-shadow:
+    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
+    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
+  transition: box-shadow 0.14s ease, transform 0.12s ease;
+}
+
+.app-menu-modal .app-menu-tray__item:not(.app-menu-tray__item--switch):hover:not(:disabled) {
+  /* No hover tint — match rack neutral (part-0067 hover is optional; menu freezes default face). */
+  background: var(--color-slate-mid);
+  color: #dcdce0;
+  box-shadow:
+    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
+    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
+  transform: none;
+}
+
+.app-menu-modal .app-menu-tray__item:not(.app-menu-tray__item--switch):active:not(:disabled) {
+  /* Pressed face — same as `.rack-bottom-bar .btn.rack-bottom-tile-cell:active` (part-0069). */
+  transition: none;
+  transform: none;
+  box-shadow:
+    inset 4px 4px 11px rgba(0, 0, 0, 0.48),
+    inset -3px -3px 8px rgba(255, 255, 255, 0.1),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.24);
 }
 
 .app-menu-modal .app-menu-tray__item:not(.app-menu-tray__item--switch):disabled {
-  opacity: 0.52;
+  opacity: 0.5;
   filter: none;
 }

@@ -213,8 +213,13 @@
   vertical-align: baseline;
 }
 
+/* Logo-only cell: `.rack-bottom-tile-cell` uses overflow:hidden for text labels (part-0001).
+   That clips the Mah Jongg SVG hint so often only the lower strokes pulse. */
+.panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong.rack-bottom-tile-cell--c5-6 {
+  overflow: visible;
+}
+
 .btn--mahj__logo-stack {
-  --mahj-logo-blue: #00b4d8;
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -226,30 +231,19 @@
   display: none;
 }
 
-.btn--mahjong-hint .btn--mahj__logo-stack::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background-color: var(--mahj-logo-blue);
-  mask: url('../../assets/mahj-logo.svg') center / contain no-repeat;
-  -webkit-mask: url('../../assets/mahj-logo.svg') center / contain no-repeat;
-  animation: mahjong-logo-hint-cycle 4.5s ease-in-out infinite;
-}
-
 .btn--mahjong-hint .btn--mahj__logo-stack .btn--mahj__img {
   position: relative;
   z-index: 0;
-  opacity: 0;
+  opacity: 1;
+  animation: mahjong-logo-hint-img-cycle 4.5s ease-in-out infinite;
 }
 
-.app-layout[data-animations='off'] .btn--mahjong-hint .btn--mahj__logo-stack::after {
+.app-layout[data-animations='off'] .btn--mahjong-hint .btn--mahj__logo-stack .btn--mahj__img {
   animation: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .btn--mahjong-hint .btn--mahj__logo-stack::after {
+  .btn--mahjong-hint .btn--mahj__logo-stack .btn--mahj__img {
     animation: none !important;
   }
 }

@@ -8,11 +8,78 @@
 
 
 
-/* When Suggested list is open, keep the same face color; drop shadow for a flatter “pressed” read. */
-.btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open {
-  background: #9a5fab;
-  color: var(--color-white);
-  box-shadow: none;
+/* When suggested hands tray is open — same held-down slate as popup Hands chip + menu year pills. */
+.btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open:not(:disabled) {
+  background: var(--color-slate-mid);
+  color: #dcdce0;
+  text-shadow: none;
+  box-shadow:
+    inset 4px 4px 11px rgba(0, 0, 0, 0.48),
+    inset -3px -3px 8px rgba(255, 255, 255, 0.1),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.24);
+}
+
+.btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open:hover:not(:disabled) {
+  background: var(--color-slate-mid);
+  color: #dcdce0;
+  box-shadow:
+    inset 4px 4px 11px rgba(0, 0, 0, 0.48),
+    inset -3px -3px 8px rgba(255, 255, 255, 0.1),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.24);
+}
+
+.btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open:disabled {
+  background: var(--color-slate-mid);
+  color: #dcdce0;
+  text-shadow: none;
+  box-shadow:
+    inset 4px 4px 11px rgba(0, 0, 0, 0.48),
+    inset -3px -3px 8px rgba(255, 255, 255, 0.1),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.24);
+}
+
+/* Main rack (table actions): label color — wins over part-0064 / 0067 / 0071 / rules above. */
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--rack-neutral.rack-bottom-tile-cell--c1:not(:disabled),
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--rack-neutral.rack-bottom-tile-cell--c1:disabled,
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c3-4:not(:disabled),
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c3-4:disabled,
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open.rack-bottom-tile-cell--c3-4:not(:disabled),
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open.rack-bottom-tile-cell--c3-4:disabled,
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled,
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:not(:disabled),
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:disabled {
+  color: #DCDCE0;
+}
+
+/* Charleston rack row: same muted label color as main (Sort / Hands / Swap / Pass). */
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--rack-neutral.rack-bottom-tile-cell--c1:not(:disabled),
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--rack-neutral.rack-bottom-tile-cell--c1:disabled,
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c3-4:not(:disabled),
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c3-4:disabled,
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open.rack-bottom-tile-cell--c3-4:not(:disabled),
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open.rack-bottom-tile-cell--c3-4:disabled,
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled,
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.rack-bottom-tile-cell--c12-14:not(:disabled),
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.rack-bottom-tile-cell--c12-14:disabled {
+  color: #DCDCE0;
+}
+
+/* Hand-rack Menu: hamburger bars use `currentColor` (part-0020) — align with Sort (#DCDCE0). */
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:not(:disabled),
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:disabled,
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:hover:not(:disabled),
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn--open:not(:disabled),
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn--open:hover:not(:disabled),
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:active:not(:disabled),
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:not(:disabled),
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:disabled,
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:hover:not(:disabled),
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn--open:not(:disabled),
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn--open:hover:not(:disabled),
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:active:not(:disabled) {
+  color: #DCDCE0;
 }
 
 /* ── Suggested Hands: outer = fixed slot (slide Y only). Painted shell = .suggested-hands-popup__user-shift (moves with drag). */
