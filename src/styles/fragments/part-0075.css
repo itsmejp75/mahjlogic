@@ -188,6 +188,7 @@
 .sortable-tile-wrap .tile-face,
 .pass-strip__tile-wrap .tile-face,
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face,
+.hands-sheet__tile-cell .tile-face,
 .exposure-rack__slot .tile-face,
 .discard-entry .tile-face,
 .mahjong-win__bots-review-tile .tile-face {
@@ -201,13 +202,15 @@
 .sortable-tile-wrap .tile-face:not(.tile--joker)::after,
 .pass-strip__tile-wrap .tile-face:not(.tile--joker)::after,
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face:not(.tile--joker)::after,
+.hands-sheet__tile-cell .tile-face:not(.tile--joker)::after,
 .exposure-rack__slot .tile-face:not(.tile--joker)::after,
 .discard-entry .tile-face:not(.tile--joker)::after,
 .mahjong-win__bots-review-tile .tile-face:not(.tile--joker)::after {
   content: '';
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
+  /* Padding-box `inset: 0` leaves the face’s 1px border undimmed (bright halo). Pull to border box. */
+  inset: calc(-1 * var(--rack-tile-face-bw));
+  border-radius: var(--tile-face-border-radius);
   pointer-events: none;
   z-index: 1;
   background: var(--suggest-dim-overlay);
@@ -219,6 +222,7 @@
 .sortable-tile-wrap .tile-face.tile--joker,
 .pass-strip__tile-wrap .tile-face.tile--joker,
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face.tile--joker,
+.hands-sheet__tile-cell .tile-face.tile--joker,
 .exposure-rack__slot .tile-face.tile--joker,
 .discard-entry .tile-face.tile--joker,
 .mahjong-win__bots-review-tile .tile-face.tile--joker {
@@ -230,6 +234,7 @@
 .sortable-tile-wrap--suggest-dim .tile-face:not(.tile--joker)::after,
 .pass-strip__tile-wrap--suggest-dim .tile-face:not(.tile--joker)::after,
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim .tile-face:not(.tile--joker)::after,
+.hands-sheet__tile-cell--suggest-dim .tile-face:not(.tile--joker)::after,
 .exposure-rack__slot--suggest-dim .tile-face:not(.tile--joker)::after,
 .discard-entry--suggest-dim .tile-face:not(.tile--joker)::after,
 .mahjong-win__bots-review-tile--dim .tile-face:not(.tile--joker)::after {
@@ -239,19 +244,13 @@
 .sortable-tile-wrap--suggest-dim .tile-face.tile--joker,
 .pass-strip__tile-wrap--suggest-dim .tile-face.tile--joker,
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim .tile-face.tile--joker,
+.hands-sheet__tile-cell--suggest-dim .tile-face.tile--joker,
 .exposure-rack__slot--suggest-dim .tile-face.tile--joker,
 .discard-entry--suggest-dim .tile-face.tile--joker,
 .mahjong-win__bots-review-tile--dim .tile-face.tile--joker {
   /* ~ match other tiles’ 38% black overlay in luminance (ring + J included). */
   --tile-face-suggest-dim-inset: var(--suggest-dim-inset-shadow);
   filter: brightness(0.64);
-}
-
-/* End-game overlays: default `inset: 0` on the dim layer is the padding box, so the face’s 1px border
-   stays undimmed. Pull `::after` out to the border box to match the visible tile edge. */
-.wall-game-dialog .mahjong-win__bots-review-tile .tile-face:not(.tile--joker)::after {
-  inset: calc(-1 * var(--rack-tile-face-bw));
-  border-radius: var(--tile-face-border-radius);
 }
 
 /* Post-game / wall-game modals: tile faces are much smaller than the main rack. The dim hairline
@@ -271,6 +270,8 @@
 .hands-list__row-hit--with-tiles
   .hands-list__pattern-tile-cell--suggest-dim.hands-list__pattern-tile-cell--suggest-best
   .tile-face:not(.tile--joker)::after,
+.hands-sheet__tile-cell--suggest-dim.hands-sheet__tile-cell--suggest-best
+  .tile-face:not(.tile--joker)::after,
 .exposure-rack__slot--suggest-dim.exposure-rack__slot--suggest-best .tile-face:not(.tile--joker)::after,
 .discard-entry--suggest-dim.discard-entry--suggest-need .tile-face:not(.tile--joker)::after {
   opacity: 0;
@@ -282,6 +283,7 @@
 .hands-list__row-hit--with-tiles
   .hands-list__pattern-tile-cell--suggest-dim.hands-list__pattern-tile-cell--suggest-best
   .tile-face.tile--joker,
+.hands-sheet__tile-cell--suggest-dim.hands-sheet__tile-cell--suggest-best .tile-face.tile--joker,
 .exposure-rack__slot--suggest-dim.exposure-rack__slot--suggest-best .tile-face.tile--joker,
 .discard-entry--suggest-dim.discard-entry--suggest-need .tile-face.tile--joker {
   --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
@@ -289,7 +291,8 @@
 }
 
 .sortable-tile-wrap--suggest-dim.sortable-tile-wrap--selected .tile-face,
-.sortable-tile-wrap--suggest-dim.sortable-tile-wrap--suggest-best .tile-face {
+.sortable-tile-wrap--suggest-dim.sortable-tile-wrap--suggest-best .tile-face,
+.hands-sheet__tile-cell--suggest-dim.hands-sheet__tile-cell--suggest-best .tile-face {
   opacity: 1;
 }
 

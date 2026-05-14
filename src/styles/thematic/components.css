@@ -1530,47 +1530,6 @@
 
 
 
-/* Suggested-hands: same steel ring as other panels, on the **dragged** inner shell (not the fixed outer). */
-.suggested-hands-popup__user-shift::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  box-sizing: border-box;
-  background: linear-gradient(to bottom, #4a5568 0%, transparent 10%);
-  -webkit-mask:
-    linear-gradient(var(--color-white) 0 0) content-box,
-    linear-gradient(var(--color-white) 0 0);
-  mask:
-    linear-gradient(var(--color-white) 0 0) content-box,
-    linear-gradient(var(--color-white) 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-  z-index: 10;
-}
-
-.suggested-hands-popup__user-shift::after {
-  content: '';
-  position: absolute;
-  inset: 1px;
-  border-radius: var(--suggested-popup-radius, 0.75rem);
-  padding: 1px;
-  box-sizing: border-box;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.07) 0%, transparent 10%);
-  -webkit-mask:
-    linear-gradient(var(--color-white) 0 0) content-box,
-    linear-gradient(var(--color-white) 0 0);
-  mask:
-    linear-gradient(var(--color-white) 0 0) content-box,
-    linear-gradient(var(--color-white) 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-  z-index: 10;
-}
-
 /* Panels with no border-radius: suppress the curved gradient ring and use a flat
    inset box-shadow instead so the highlight shows only on the top edge. */
 .app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker::before,
@@ -2040,15 +1999,23 @@
   color: var(--color-white);
 }
 
-/* Inactive: dim label + face like joker Swap (`opacity: 0.5` on unavailable rack cells). */
-.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:disabled:not(.btn--discard) {
-  background: #007791;
+/* Inactive Ignore / Discard: same fill as inactive rack Mah Jongg (part-0071 / part-0063). */
+.app[data-color-buttons='on'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.rack-bottom-tile-cell--c12-14:disabled:not(.btn--discard),
+.app[data-color-buttons='on']
+  .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.rack-bottom-tile-cell--c12-14.btn--discard:disabled {
+  background: #9a5fab;
   color: var(--color-white);
   opacity: 0.5;
 }
 
-.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14.btn--discard:disabled {
-  background: #007791;
+.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.rack-bottom-tile-cell--c12-14:disabled:not(.btn--discard),
+.app[data-color-buttons='off']
+  .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.rack-bottom-tile-cell--c12-14.btn--discard:disabled {
+  background: var(--color-slate-mid);
   color: var(--color-white);
   opacity: 0.5;
   filter: none;
@@ -2115,16 +2082,29 @@
   top: 0.15em;
 }
 
-/* Main rack: Joker swap shares the Call column — #6A0DAD (see `.btn--joker-swap-action`). */
+/* Main + Charleston rack: Call and joker Swap share c9–10 — enabled #6A0DAD; inactive matches rack Mah Jongg. */
 .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
+.rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
   .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled) {
   background: #6a0dad;
   color: var(--color-white);
 }
 
-.rack-bottom-bar--main.rack-bottom-bar--tile-grid
+.app[data-color-buttons='on'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled,
+.app[data-color-buttons='on'] .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
   .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled {
-  background: #6a0dad;
+  background: #9a5fab;
+  color: var(--color-white);
+  opacity: 0.5;
+}
+
+.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled,
+.app[data-color-buttons='off'] .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
+  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled {
+  background: var(--color-slate-mid);
   color: var(--color-white);
   opacity: 0.5;
 }
@@ -2169,16 +2149,16 @@
   max-width: 100%;
   padding: 0.4rem 0.45rem;
   border-radius: 0.38rem;
-  /* Solid coach-teal tint (not the translucent token alone) so the box reads on `--window-surface`.
-     3-way mixes with --coach-teal-bg + var(--color-white) could collapse to an invisible match with the panel. */
+  /* #334155 @ 50% — same slate as suggested-hand selected row (see `--hands-row-active-fill`). */
   border: 1px solid var(--coach-teal-border);
-  background: color-mix(in srgb, var(--coach-teal) 11%, var(--bg-elevated) 89%);
+  background: rgba(51, 65, 85, 0.5);
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .pass-box--over {
-  background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
-  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
+  /* Interior keyed off `--coach-teal-border` (see `--rack-teal-slot-highlight-fill` in index.css). */
+  background: var(--rack-teal-slot-highlight-fill);
+  border-color: var(--coach-teal-border);
   box-shadow: none;
 }
 
@@ -2216,9 +2196,9 @@
   color: var(--color-white);
 }
 
-/* Disabled while not passable: same fill as enabled; dim like Swap / other unavailable rack cells. */
-.btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):disabled {
-  background: #006767;
+/* Disabled while not passable: same inactive face as rack Mah Jongg (part-0071 / part-0063). */
+.app[data-color-buttons='on'] .btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):disabled {
+  background: #9a5fab;
   color: var(--color-white);
   opacity: 0.5;
   filter: none;
@@ -2301,8 +2281,8 @@
   width: calc(3 * var(--rack-tile-w) + 2 * var(--rack-tile-gap));
   flex-shrink: 0;
   box-sizing: border-box;
-  /* Unified 3-tile box — same fill/border as `.pass-box` (visible on dark panel chrome). */
-  background: color-mix(in srgb, var(--coach-teal) 11%, var(--bg-elevated) 89%);
+  /* Unified 3-tile box — same fill as `.pass-box` (#334155 @ 50%). */
+  background: rgba(51, 65, 85, 0.5);
   border: 1px solid var(--coach-teal-border);
   border-radius: 0.38rem;
   transition: background 0.15s ease, border-color 0.15s ease;
@@ -2320,14 +2300,14 @@
 
 /* Drop target: same stronger fill + border as call box --over */
 .pass-strip-tail--over .pass-strip-tail__inner {
-  background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
-  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
+  background: var(--rack-teal-slot-highlight-fill);
+  border-color: var(--coach-teal-border);
 }
 
 /* Dragging FROM the box: keep it bright */
 .pass-strip-tail__inner:has(.pass-strip__tile-wrap--dragging) {
-  background: color-mix(in srgb, var(--coach-teal) 18%, var(--bg-elevated) 82%);
-  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
+  background: var(--rack-teal-slot-highlight-fill-mid);
+  border-color: var(--coach-teal-border);
 }
 
 /* Charleston: tiles exit the pass box toward the pass direction before the exchange commits. */
@@ -2554,6 +2534,7 @@
 .sortable-tile-wrap .tile-face,
 .pass-strip__tile-wrap .tile-face,
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face,
+.hands-sheet__tile-cell .tile-face,
 .exposure-rack__slot .tile-face,
 .discard-entry .tile-face,
 .mahjong-win__bots-review-tile .tile-face {
@@ -2567,13 +2548,15 @@
 .sortable-tile-wrap .tile-face:not(.tile--joker)::after,
 .pass-strip__tile-wrap .tile-face:not(.tile--joker)::after,
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face:not(.tile--joker)::after,
+.hands-sheet__tile-cell .tile-face:not(.tile--joker)::after,
 .exposure-rack__slot .tile-face:not(.tile--joker)::after,
 .discard-entry .tile-face:not(.tile--joker)::after,
 .mahjong-win__bots-review-tile .tile-face:not(.tile--joker)::after {
   content: '';
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
+  /* Padding-box `inset: 0` leaves the face’s 1px border undimmed (bright halo). Pull to border box. */
+  inset: calc(-1 * var(--rack-tile-face-bw));
+  border-radius: var(--tile-face-border-radius);
   pointer-events: none;
   z-index: 1;
   background: var(--suggest-dim-overlay);
@@ -2585,6 +2568,7 @@
 .sortable-tile-wrap .tile-face.tile--joker,
 .pass-strip__tile-wrap .tile-face.tile--joker,
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face.tile--joker,
+.hands-sheet__tile-cell .tile-face.tile--joker,
 .exposure-rack__slot .tile-face.tile--joker,
 .discard-entry .tile-face.tile--joker,
 .mahjong-win__bots-review-tile .tile-face.tile--joker {
@@ -2596,6 +2580,7 @@
 .sortable-tile-wrap--suggest-dim .tile-face:not(.tile--joker)::after,
 .pass-strip__tile-wrap--suggest-dim .tile-face:not(.tile--joker)::after,
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim .tile-face:not(.tile--joker)::after,
+.hands-sheet__tile-cell--suggest-dim .tile-face:not(.tile--joker)::after,
 .exposure-rack__slot--suggest-dim .tile-face:not(.tile--joker)::after,
 .discard-entry--suggest-dim .tile-face:not(.tile--joker)::after,
 .mahjong-win__bots-review-tile--dim .tile-face:not(.tile--joker)::after {
@@ -2605,19 +2590,13 @@
 .sortable-tile-wrap--suggest-dim .tile-face.tile--joker,
 .pass-strip__tile-wrap--suggest-dim .tile-face.tile--joker,
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim .tile-face.tile--joker,
+.hands-sheet__tile-cell--suggest-dim .tile-face.tile--joker,
 .exposure-rack__slot--suggest-dim .tile-face.tile--joker,
 .discard-entry--suggest-dim .tile-face.tile--joker,
 .mahjong-win__bots-review-tile--dim .tile-face.tile--joker {
   /* ~ match other tiles’ 38% black overlay in luminance (ring + J included). */
   --tile-face-suggest-dim-inset: var(--suggest-dim-inset-shadow);
   filter: brightness(0.64);
-}
-
-/* End-game overlays: default `inset: 0` on the dim layer is the padding box, so the face’s 1px border
-   stays undimmed. Pull `::after` out to the border box to match the visible tile edge. */
-.wall-game-dialog .mahjong-win__bots-review-tile .tile-face:not(.tile--joker)::after {
-  inset: calc(-1 * var(--rack-tile-face-bw));
-  border-radius: var(--tile-face-border-radius);
 }
 
 /* Post-game / wall-game modals: tile faces are much smaller than the main rack. The dim hairline
@@ -2637,6 +2616,8 @@
 .hands-list__row-hit--with-tiles
   .hands-list__pattern-tile-cell--suggest-dim.hands-list__pattern-tile-cell--suggest-best
   .tile-face:not(.tile--joker)::after,
+.hands-sheet__tile-cell--suggest-dim.hands-sheet__tile-cell--suggest-best
+  .tile-face:not(.tile--joker)::after,
 .exposure-rack__slot--suggest-dim.exposure-rack__slot--suggest-best .tile-face:not(.tile--joker)::after,
 .discard-entry--suggest-dim.discard-entry--suggest-need .tile-face:not(.tile--joker)::after {
   opacity: 0;
@@ -2648,6 +2629,7 @@
 .hands-list__row-hit--with-tiles
   .hands-list__pattern-tile-cell--suggest-dim.hands-list__pattern-tile-cell--suggest-best
   .tile-face.tile--joker,
+.hands-sheet__tile-cell--suggest-dim.hands-sheet__tile-cell--suggest-best .tile-face.tile--joker,
 .exposure-rack__slot--suggest-dim.exposure-rack__slot--suggest-best .tile-face.tile--joker,
 .discard-entry--suggest-dim.discard-entry--suggest-need .tile-face.tile--joker {
   --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
@@ -2655,7 +2637,8 @@
 }
 
 .sortable-tile-wrap--suggest-dim.sortable-tile-wrap--selected .tile-face,
-.sortable-tile-wrap--suggest-dim.sortable-tile-wrap--suggest-best .tile-face {
+.sortable-tile-wrap--suggest-dim.sortable-tile-wrap--suggest-best .tile-face,
+.hands-sheet__tile-cell--suggest-dim.hands-sheet__tile-cell--suggest-best .tile-face {
   opacity: 1;
 }
 
@@ -3060,8 +3043,8 @@
 
 /* Call-staging: same chrome as `.pass-box--over` when a tile is dragged over the exposure rack. */
 .staging-meld-drop-zone--over {
-  background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
-  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
+  background: var(--rack-teal-slot-highlight-fill);
+  border-color: var(--coach-teal-border);
   box-shadow: none;
 }
 
@@ -3409,6 +3392,8 @@
 .hands-panel__content {
   flex: 1;
   min-height: 0;
+  /* Selected suggested-hand row fill: #334155 at 50% opacity (rgba — reliable over dark scroll areas). */
+  --hands-row-active-fill: rgba(51, 65, 85, 0.5);
 }
 
 .hands-panel__list-column {
@@ -3471,14 +3456,20 @@
 }
 
 .hands-list__freeze-header .hands-list__header-meta {
-  font-size: 0.62rem;
-  font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
+  font-family: 'Figtree', var(--sans);
+  font-size: var(--app-ui-control-fs-sm);
+  font-weight: 400;
+  line-height: var(--btn-line-height);
+  letter-spacing: var(--btn-letter-spacing);
+  text-transform: capitalize;
   text-align: center;
-  color: color-mix(in srgb, var(--text) 64%, var(--bg) 36%);
+  /* Same label ink as rack `Hands` (`.suggested-hands-tab`, part-0103 / part-0064). */
+  color: #dcdce0;
   width: 100%;
+}
+
+.app[data-color-buttons='off'] .panel--hands .hands-list__freeze-header .hands-list__header-meta {
+  color: var(--color-white);
 }
 
 .hands-list__freeze-header .hands-list__cell--away {
@@ -3545,7 +3536,7 @@
   font-size: 0.62rem;
   font-weight: 600;
   letter-spacing: 0.07em;
-  text-transform: uppercase;
+  text-transform: none;
   align-self: center;
   box-sizing: border-box;
   padding: 0 0.1rem;
@@ -3606,7 +3597,7 @@
   --hands-row-pattern-gap: var(--rack-tile-gap);
   --hands-strip-em: 0.9rem;
   --hands-preview-tile-w: var(--hands-strip-em);
-  --hands-preview-tile-h: calc(var(--hands-strip-em) * 1.3);
+  --hands-preview-tile-h: calc(var(--hands-strip-em) * 4 / 3);
   --hands-preview-strip-w: calc(
     14 * var(--hands-preview-tile-w) + 13 * var(--hands-row-pattern-gap)
   );
@@ -3670,37 +3661,49 @@
   overflow: visible;
 }
 
-.hands-list.hands-list--tiles-excel > .hands-list__row--active > .hands-list__row-hit--with-tiles {
-  border-radius: 0.5rem;
-}
-
 .hands-list__row--active {
   background: transparent;
   box-shadow: none;
 }
 
 /*
- * Hands-only (no Tiles rack-guide): full 1px inset ring on all sides (rounded).
- * With Tiles on, `.hands-list__row--rack-guide` adds the white guide ring + teal left band.
+ * Selected row: custom fill. `overflow: hidden` clips the fill to the row bounds.
  */
 .hands-list__row--active .hands-list__row-hit {
-  border-radius: 0.5rem;
-  background: color-mix(in srgb, var(--coach-teal) 8%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--coach-teal) 44%, rgba(255, 255, 255, 0.22));
+  border-radius: 0;
+  overflow: hidden;
+  background: var(--hands-row-active-fill);
+  box-shadow: none;
 }
 
-.hands-list__row--active .hands-list__row-hit:hover {
-  background: color-mix(in srgb, var(--coach-teal) 10%, transparent);
+/*
+ * Selected row: tile column + gaps use same fill as Away / Points (`--hands-row-active-fill`).
+ */
+.hands-list__row--active .hands-list__row-hit--with-tiles > .hands-list__cell--tiles {
+  background: var(--hands-row-active-fill);
 }
 
-.hands-list__row--active.hands-list__row--rack-guide .hands-list__row-hit {
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
-    inset 3px 0 0 0 color-mix(in srgb, var(--coach-teal) 52%, transparent);
+.hands-list__row--active .hands-list__row-hit--with-tiles > .hands-list__cell--tiles .hands-list__pattern-tiles {
+  margin: 0;
+  background: var(--hands-row-active-fill);
+  border-radius: 0;
+}
+
+.hands-list__row--active .hands-list__pattern-tiles-grid {
+  background: var(--hands-row-active-fill);
+}
+
+.hands-list__row--active .hands-list__pattern-tiles-stack-row {
+  background: var(--hands-row-active-fill);
+}
+
+.hands-list__row--active .hands-list__pattern-tiles-stack-row--active {
+  background: var(--hands-row-active-fill);
+  box-shadow: none;
 }
 
 .hands-list__row--rack-guide:not(.hands-list__row--active) .hands-list__row-hit {
-  border-radius: 0.5rem;
+  border-radius: 0;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
 }
 
@@ -3748,7 +3751,6 @@
   margin: 0;
 }
 
-.hands-list__freeze-header.hands-list__row-hit:hover,
 .hands-list__freeze-header.hands-list__row-hit:focus-visible,
 .hands-list__freeze-header.hands-list__row-hit:focus {
   background: var(--bg-elevated, var(--window-surface, var(--bg)));
@@ -3759,7 +3761,7 @@
 /* Tiles on: row uses parent subgrid (see .hands-list--tiles-excel). */
 .hands-list:not(.hands-list--tiles-excel) .hands-list__row-hit--with-tiles {
   --hands-preview-tile-w: var(--hands-strip-em);
-  --hands-preview-tile-h: calc(var(--hands-strip-em) * 1.3);
+  --hands-preview-tile-h: calc(var(--hands-strip-em) * 4 / 3);
   --hands-preview-strip-w: calc(
     14 * var(--hands-preview-tile-w) + 13 * var(--hands-row-pattern-gap)
   );
@@ -3823,18 +3825,14 @@
 
 .hands-list__row-hit--with-tiles > .hands-list__cell--category-clickable {
   cursor: pointer;
-  border-radius: 0.35rem;
+  border-radius: 0;
   transition: background-color 0.12s ease;
   user-select: none;
   -webkit-user-select: none;
 }
 
-.hands-list__row-hit--with-tiles > .hands-list__cell--category-clickable:hover {
-  background: color-mix(in srgb, var(--coach-teal) 6%, transparent);
-}
-
 .hands-list__row-hit--with-tiles > .hands-list__cell--category-clickable:focus-visible {
-  outline: 2px solid var(--coach-teal);
+  outline: 2px solid rgba(255, 255, 255, 0.55);
   outline-offset: -2px;
 }
 
@@ -3997,12 +3995,8 @@
   padding-block: 0.12rem;
 }
 
-.hands-list__row-hit:hover {
-  background: color-mix(in srgb, var(--coach-teal) 8%, transparent);
-}
-
 .hands-list__row-hit:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--coach-teal) 55%, transparent);
+  outline: 2px solid rgba(255, 255, 255, 0.55);
   outline-offset: -1px;
 }
 
@@ -4054,10 +4048,15 @@
   font-family: var(--mono);
   font-size: 1.02rem;
   font-weight: 600;
-  color: #e0e0e0;
+  /* Match rack `Hands` (`.suggested-hands-tab`, part-0103 / part-0064). */
+  color: #dcdce0;
   white-space: nowrap;
   text-align: right;
   flex-shrink: 0;
+}
+
+.app[data-color-buttons='off'] .panel--hands .hands-list__tiles-away {
+  color: var(--color-white);
 }
 
 .hands-list--tiles-excel .hands-list__tiles-away {
@@ -4140,19 +4139,16 @@
 }
 
 .hands-list__pattern-tiles-stack-row {
-  border-radius: 0.22rem;
+  border-radius: 0;
   padding: 0.08rem 0.12rem;
   margin: 0 -0.12rem;
   cursor: pointer;
 }
 
-.hands-list__pattern-tiles-stack-row:hover {
-  background: color-mix(in srgb, var(--coach-teal) 6%, transparent);
-}
-
 .hands-list__pattern-tiles-stack-row--active {
-  background: color-mix(in srgb, var(--coach-teal) 8%, transparent);
-  border-radius: 0.25rem;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: inset 3px 0 0 0 rgba(255, 255, 255, 0.38);
 }
 
 .hands-list__row-hit--with-tiles .hands-list__pattern-tiles {
@@ -4203,7 +4199,7 @@
 }
 
 .hands-list__pattern-tiles-grid {
-  /* One row of 14 — same aspect as rack (--hand-rack-tile-h uses ×1.3 of width term). */
+  /* One row of 14 — same 4:3 tile shape as rack (height = width × 4/3). */
   --hands-row-pattern-cols: 14;
   --hands-row-pattern-gap: var(--rack-tile-gap);
   font-size: inherit;
@@ -4251,28 +4247,46 @@
   position: relative;
   width: var(--hands-preview-tile-w);
   height: var(--hands-preview-tile-h);
-  display: flex;
-  align-items: stretch;
-  justify-content: center;
+  min-width: 0;
+  container-type: size;
+  display: grid;
+  grid-template: 1fr / 1fr;
+  place-items: stretch;
 }
 
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face {
+  grid-area: 1 / 1;
   width: 100%;
   height: 100%;
+  min-width: 0;
+  min-height: 0;
+  --rack-tile-w: 100cqw;
+  --rack-tile-h: 100cqh;
+  border-radius: calc(0.116 * var(--rack-tile-w));
   text-align: center;
+  border: none;
 }
 
-/* Match rack `sortable-tile-wrap--suggest-*` for the focused suggested line. */
-.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-best .tile-face {
-  border-radius: clamp(0.1rem, calc(0.12 * var(--hands-strip-em)), 0.35rem);
-  --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
-  --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
-}
-
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-best .tile-face,
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker .tile-face {
   border-radius: clamp(0.1rem, calc(0.12 * var(--hands-strip-em)), 0.35rem);
-  --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
-  --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.82);
+  border: none;
+}
+
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face:not(.tile--joker)::after {
+  inset: 0;
+}
+
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim .tile-face:not(.tile--joker)::after,
+.hands-sheet__tile-cell--suggest-dim .tile-face:not(.tile--joker)::after {
+  box-shadow: none;
+}
+
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim .tile-face.tile--joker,
+.hands-sheet__tile-cell--suggest-dim .tile-face.tile--joker {
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
 }
 
 .hands-list__pattern-joker-mark {
@@ -4386,12 +4400,6 @@
   padding-inline-start: calc(var(--hands-sheet-rail) + var(--hands-sheet-cell-pad-x));
 }
 
-.hands-sheet > .hands-sheet__cell--away,
-.hands-sheet > .hands-sheet__rows .hands-sheet__row > *:last-child > .hands-sheet__cell--away,
-.hands-sheet > .hands-sheet__rows .hands-sheet__row > .hands-sheet__cell--away {
-  padding-inline-end: calc(var(--hands-sheet-rail) + var(--hands-sheet-cell-pad-x));
-}
-
 .hands-sheet__rows,
 .hands-sheet__row,
 .hands-sheet__row-btn {
@@ -4429,6 +4437,31 @@
   padding-inline: var(--hands-sheet-cell-pad-x);
 }
 
+.hands-sheet__cell--values {
+  justify-content: center;
+  text-align: center;
+  border-inline-end: none;
+  padding-inline: var(--hands-sheet-cell-pad-x);
+}
+
+/* Away / Points numerals — same ink as rack `Hands` (`.suggested-hands-tab`, part-0103 / 0064). */
+.panel--hands .hands-sheet__cell--away:not(.hands-sheet__cell--header),
+.panel--hands .hands-sheet__cell--values:not(.hands-sheet__cell--header) {
+  color: #dcdce0;
+}
+
+.app[data-color-buttons='off'] .panel--hands .hands-sheet__cell--away:not(.hands-sheet__cell--header),
+.app[data-color-buttons='off'] .panel--hands .hands-sheet__cell--values:not(.hands-sheet__cell--header) {
+  color: var(--color-white);
+}
+
+.hands-sheet > .hands-sheet__cell--values,
+.hands-sheet > .hands-sheet__rows .hands-sheet__row > *:last-child > .hands-sheet__cell--values,
+.hands-sheet > .hands-sheet__rows .hands-sheet__row > .hands-sheet__cell--values {
+  padding-inline-end: calc(var(--hands-sheet-rail) + var(--hands-sheet-cell-pad-x));
+  padding-inline-start: var(--hands-sheet-cell-pad-x);
+}
+
 /* Re-inset rule above (line ~6103) overrides padding-inline-end for the last column;
    reset it here so AWAY content keeps symmetric padding and stays horizontally centered. */
 .hands-sheet > .hands-sheet__cell--away,
@@ -4439,7 +4472,7 @@
 
 /*
  * Body cells (not the column-title row) read at a slightly larger font than the headers.
- * Headers continue to use the inherited (sheet) `font-size: 1em` so they stay compact.
+ * Headers: same type scale as rack `.btn`; title-case words; ink matches rack `Hands` (part-0103 / 0064).
  */
 .hands-sheet__cell:not(.hands-sheet__cell--header) {
   font-size: 1.25em;
@@ -4451,19 +4484,21 @@
   z-index: 3;
   justify-content: center;
   text-align: center;
-  font-weight: 600;
-  /*
-   * Same size as the surrounding cell text (which scales with panel width).
-   * Compact `padding-block` + `line-height: 1` keeps the header row from growing taller.
-   */
-  font-size: 1em;
-  line-height: 1;
+  font-family: 'Figtree', var(--sans);
+  /* Slightly under main rack buttons (`--app-ui-control-fs`) so the row stays compact. */
+  font-size: var(--app-ui-control-fs-sm);
+  font-weight: 400;
+  line-height: var(--btn-line-height);
+  letter-spacing: var(--btn-letter-spacing);
+  text-transform: capitalize;
   padding-block: 0.2em;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-h, var(--text-muted, rgba(200, 200, 200, 0.9)));
+  color: #dcdce0;
   background: var(--bg-elevated, var(--window-surface, var(--bg)));
   box-shadow: 0 1px 0 color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+.app[data-color-buttons='off'] .panel--hands .hands-sheet__cell--header {
+  color: var(--color-white);
 }
 
 .hands-sheet__row-btn {
@@ -4479,16 +4514,50 @@
 }
 
 .hands-sheet__row-btn:focus-visible > .hands-sheet__cell {
-  outline: 2px solid var(--coach-teal, currentColor);
+  outline: 2px solid rgba(255, 255, 255, 0.55);
   outline-offset: -2px;
 }
 
-.hands-sheet__row-btn:hover > .hands-sheet__cell {
-  background: color-mix(in srgb, var(--coach-teal, currentColor) 6%, transparent);
+.hands-sheet__row--active > .hands-sheet__row-btn > .hands-sheet__cell--tiles {
+  background: var(--hands-row-active-fill);
+  /* Let tile corners + suggest rings paint fully; `hidden` clipped faces/outlines when the strip is tight. */
+  overflow: visible;
 }
 
-.hands-sheet__row--active > .hands-sheet__row-btn > .hands-sheet__cell {
-  background: color-mix(in srgb, var(--coach-teal, currentColor) 10%, transparent);
+.hands-sheet__row--active:not(:has(> .hands-sheet__row-btn)) > .hands-sheet__cell--tiles {
+  background: var(--hands-row-active-fill);
+  overflow: visible;
+}
+
+.hands-sheet__row--active > .hands-sheet__row-btn > .hands-sheet__cell:not(.hands-sheet__cell--tiles) {
+  background: var(--hands-row-active-fill);
+  overflow: hidden;
+}
+
+.hands-sheet__row--active .hands-sheet__cell--combined .hands-sheet__tiles-stack,
+.hands-sheet__row--active .hands-sheet__cell--combined > .hands-sheet__tiles-grid,
+.hands-sheet__row--active .hands-sheet__cell--tiles > .hands-sheet__tiles-stack,
+.hands-sheet__row--active .hands-sheet__cell--tiles > .hands-sheet__tiles-grid {
+  margin: 0;
+  background: var(--hands-row-active-fill);
+  border-radius: 0;
+}
+
+.hands-sheet__row--active .hands-sheet__tiles-stack-row,
+.hands-sheet__row--active .hands-sheet__tiles-stack-row--active {
+  background: var(--hands-row-active-fill);
+  box-shadow: none;
+}
+
+.hands-sheet__tiles-stack-row--active {
+  background: transparent;
+  border-radius: 0;
+  box-shadow: inset 3px 0 0 0 rgba(255, 255, 255, 0.38);
+}
+
+.hands-sheet__row--active .hands-sheet__tiles-stack-row--active {
+  background: var(--hands-row-active-fill);
+  box-shadow: none;
 }
 
 .hands-sheet__category {
@@ -4534,6 +4603,13 @@
   color: var(--card-c-color, #e34a4a);
 }
 
+/* Points column: boxed C precedes the number — drop hand-line leading margin; tight gap before digits. */
+.hands-sheet__cell--values .hands-sheet__card-c,
+.hands-list__tiles-away--values-col .hands-list__card-c {
+  margin-inline-start: 0;
+  margin-inline-end: 0.08em;
+}
+
 /* Tiles-only spreadsheet: two columns (tiles | away). */
 .hands-panel__content .hands-list-scroll > .hands-sheet.hands-sheet--tiles2 {
   /*
@@ -4542,7 +4618,7 @@
    * If the tile strip outgrows the panel, `.hands-list-scroll` scrolls horizontally.
    */
   --hands-sheet-away-w: 4.4em;
-  /* Match the main player rack gap so the strip reads at the same density. */
+  /* Match the main player rack gap between strip faces. */
   --hands-sheet-tile-gap: var(--player-rack-face-gap);
   --hands-sheet-cell-pad-y: clamp(0.22rem, 1cqi, 0.45rem);
   /* Tile column width = panel inline-size − away column − cell horizontal padding. */
@@ -4614,24 +4690,38 @@
   height: var(--hands-sheet-tile-h);
   border-radius: calc(0.116 * var(--hands-sheet-tile-w));
   transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.hands-sheet__tile-cell > * {
-  width: 100%;
-  height: 100%;
+  container-type: size;
+  display: grid;
+  grid-template: 1fr / 1fr;
+  place-items: stretch;
 }
 
 /*
  * Hand TileFace internally derives ALL paint (digits, letters, dots) from `--rack-tile-w` /
- * `--rack-tile-h`. Setting them on the cell makes the glyphs scale with the tile, like ink
- * painted onto each tile.
+ * `--rack-tile-h`. Size queries tie glyphs to the actual cell so the face fills the slot.
  */
 .hands-sheet__tile-cell .tile-face {
-  --rack-tile-w: var(--hands-sheet-tile-w);
-  --rack-tile-h: var(--hands-sheet-tile-h);
-  width: var(--hands-sheet-tile-w);
-  height: var(--hands-sheet-tile-h);
-  border-radius: calc(0.116 * var(--hands-sheet-tile-w));
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  --rack-tile-w: 100cqw;
+  --rack-tile-h: 100cqh;
+  --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
+  border-radius: var(--tile-face-border-radius);
+  border: none;
+}
+
+.hands-sheet__tile-cell--suggest-joker .tile-face,
+.hands-sheet__tile-cell--suggest-best .tile-face {
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.82);
+  border: none;
+}
+
+.hands-sheet__tile-cell .tile-face:not(.tile--joker)::after {
+  inset: 0;
 }
 
 /*
@@ -4861,16 +4951,13 @@
 
 .hands-sheet__combined-header {
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   flex-wrap: wrap;
   justify-content: center;
   gap: 0.25em;
-  font-weight: 600;
-  /* Inherit the scaled sheet font; compact line-height keeps cell height fixed. */
-  font-size: 1em;
-  line-height: 1;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
 }
 
 .hands-sheet__combined-sep {
@@ -4903,10 +4990,6 @@
   cursor: pointer;
 }
 
-.hands-sheet__combined-head-btn:hover {
-  background: color-mix(in srgb, var(--coach-teal, currentColor) 6%, transparent);
-}
-
 .hands-sheet__tiles-stack {
   display: flex;
   flex-direction: column;
@@ -4918,34 +5001,14 @@
 .hands-sheet__tiles-stack-row {
   display: flex;
   justify-content: flex-start;
-  border-radius: 4px;
+  border-radius: 0;
   padding: 0.1rem 0.2rem;
   cursor: pointer;
   background: transparent;
 }
 
-.hands-sheet__tiles-stack-row:hover,
 .hands-sheet__tiles-stack-row:focus-visible {
-  background: color-mix(in srgb, var(--coach-teal, currentColor) 6%, transparent);
   outline: none;
-}
-
-.hands-sheet__tiles-stack-row--active {
-  background: color-mix(in srgb, var(--coach-teal, currentColor) 12%, transparent);
-}
-
-.hands-sheet__tile-cell--suggest-best {
-  outline: 1.5px solid color-mix(in srgb, var(--coach-teal, currentColor) 80%, white);
-  outline-offset: 1px;
-}
-
-.hands-sheet__tile-cell--suggest-joker {
-  outline: 1.5px dashed color-mix(in srgb, var(--coach-teal, currentColor) 60%, white);
-  outline-offset: 1px;
-}
-
-.hands-sheet__tile-cell--suggest-dim {
-  opacity: 0.55;
 }
 
 .hands-sheet__tile-joker-mark {
@@ -4972,7 +5035,7 @@
       0.42rem,
       calc((var(--hands-strip-inner) - 13 * var(--hands-row-pattern-gap)) / 14)
     );
-    --hands-preview-tile-h: calc(var(--hands-preview-tile-w) * 1.3);
+    --hands-preview-tile-h: calc(var(--hands-preview-tile-w) * 4 / 3);
     --hands-strip-em: var(--hands-preview-tile-w);
     --hands-preview-strip-w: calc(
       14 * var(--hands-preview-tile-w) + 13 * var(--hands-row-pattern-gap)
@@ -5221,7 +5284,7 @@
   width: 100%;
   min-width: 0;
   height: auto;
-  aspect-ratio: 10 / 13;
+  aspect-ratio: 3 / 4;
   align-self: center;
 }
 
@@ -5480,38 +5543,37 @@
   margin-inline: auto;
 }
 
-/* Inline discard slot: same border + fill as call-initiate / pass-box */
+/* Inline discard slot: same border + fill as Charleston `.pass-box` */
 .exposure-rack__slot--east-discard-slot .east-discard-staging.east-discard-staging--inline {
   border: 1px solid var(--coach-teal-border);
   border-radius: 0.38rem;
-  background: color-mix(in srgb, var(--coach-teal) 11%, var(--bg-elevated) 89%);
+  background: rgba(51, 65, 85, 0.5);
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .exposure-rack__slot--east-discard-slot .east-discard-staging.east-discard-staging--inline:has(.east-discard-staging__tile) {
   outline: none;
-  background: color-mix(in srgb, var(--coach-teal) 14%, var(--bg-elevated) 86%);
+  background: rgba(51, 65, 85, 0.5);
 }
 
 .exposure-rack__slot--east-discard-slot
   .east-discard-staging.east-discard-staging--inline.east-discard-staging--over:not(:has(.east-discard-staging__tile)) {
   outline: none;
-  background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
-  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
+  background: var(--rack-teal-slot-highlight-fill);
+  border-color: var(--coach-teal-border);
 }
 
 .exposure-rack__slot--east-discard-slot
   .east-discard-staging.east-discard-staging--inline.east-discard-staging--over:has(.east-discard-staging__tile) {
-  box-shadow: none;
-  background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
-  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
+  background: var(--rack-teal-slot-highlight-fill);
+  border-color: var(--coach-teal-border);
 }
 
 /* Hovering the staged tile should be visibly brighter than the base green slot. */
 .exposure-rack__slot--east-discard-slot
   .east-discard-staging.east-discard-staging--inline:has(.east-discard-staging__tile:hover) {
   background: color-mix(in srgb, var(--coach-teal-bg) 92%, var(--bg-elevated) 8%);
-  border-color: color-mix(in srgb, var(--coach-teal) 40%, var(--border) 34%, var(--bg-elevated) 26%);
+  border-color: var(--coach-teal-border);
 }
 
 /* Pass tail cells use the same geometry as the rest of the Charleston exposure row */
@@ -5578,8 +5640,8 @@
   min-height: calc(var(--hand-rack-tile-h) * 1.1);
   padding: 0.5rem 0.65rem;
   border-radius: 0.38rem;
-  border: 1px solid color-mix(in srgb, var(--coach-teal) 32%, var(--border) 40%, var(--bg-elevated) 28%);
-  background: color-mix(in srgb, var(--coach-teal-bg) 80%, var(--bg-elevated) 20%);
+  border: 1px solid var(--coach-teal-border);
+  background: rgba(51, 65, 85, 0.5);
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
@@ -5600,8 +5662,8 @@
 }
 
 .east-discard-staging--over {
-  background: color-mix(in srgb, var(--coach-teal) 28%, var(--bg-elevated));
-  border-color: color-mix(in srgb, var(--coach-teal) 40%, var(--border) 34%, var(--bg-elevated) 26%);
+  background: var(--rack-teal-slot-highlight-fill);
+  border-color: var(--coach-teal-border);
 }
 
 .east-discard-staging__placeholder {
@@ -6546,14 +6608,11 @@
   box-shadow: none;
 }
 
-/* ── Suggested Hands: outer = fixed slot (slide Y only). Painted shell = .suggested-hands-popup__user-shift (moves with drag). */
+/* ── Suggested Hands: absolute overlay on discard tray (child of `.discard-tracker__content`). */
 .suggested-hands-popup {
-  position: fixed;
-  /* `left` / `right` are set in JS so the left can include a drag offset (see `suggestedPanelLeftDelta`). */
-  right: calc(var(--app-h-pad) + var(--bot-panel-outer-w));
-  /* `top` from the bottom edge of the rack action shell (or discard top as fallback);
-     `bottom` from discardTrackerPanelRef. No CSS fallback — avoids a full-viewport flash. */
-  z-index: 300;
+  position: absolute;
+  inset: 0;
+  z-index: 12;
   /* Tokens (inherit to inner shell and children) */
   --text-h: var(--window-fg);
   --text: var(--window-fg-muted);
@@ -6572,8 +6631,11 @@
   --suggested-popup-resize-inset: 0.12rem;
   display: flex;
   flex-direction: column;
+  justify-content: flex-end;
+  align-items: stretch;
   min-height: 0;
-  /* Hidden below viewport until --open */
+  overflow: hidden;
+  /* Hidden below tray until --open */
   transform: translateY(calc(100% + 2rem));
   opacity: 0;
   visibility: hidden;
@@ -6585,10 +6647,9 @@
 }
 
 /*
- * Inner content area — flush under the popup's rounded frame so the sticky column header
- * background reaches the popup window edges. Border, radius, and inline padding are stripped
- * here (and again in the `.dark-tray-rim` override below) — the outer `.suggested-hands-popup__user-shift`
- * still provides the visible frame and rounding via its `border` + `overflow: hidden`.
+ * Inner panel inside the overlay shell: scrolls while the outer `.suggested-hands-popup` handles
+ * slide motion (`transform`) so sticky column headers keep working. Border / radius zeroed so the
+ * sheet reads flush under the tray chrome (`.suggested-hands-popup__user-shift` on this node).
  */
 .suggested-hands-popup .panel--hands {
   background: var(--window-inner-surface);
@@ -7134,9 +7195,9 @@
 }
 
 /*
- * Suggested-hands popup: panel sits flush under the popup's rounded frame (no inner rim border).
- * Border + box-shadow are zeroed so the sticky header background can run all the way out to the
- * outer `.suggested-hands-popup__user-shift` border.
+ * Suggested-hands popup: inner panel sits flush under the tray chrome (no inner rim border).
+ * Border + box-shadow are zeroed so the sticky header background can run out to the
+ * `.suggested-hands-popup__user-shift` surface on the same `section`.
  */
 .suggested-hands-popup .panel--hands {
   border: none;
@@ -7467,9 +7528,9 @@ html[data-native-app] .app-play-split {
 
 
 /*
- * Suggested-hands popup: panel sits flush under the popup's rounded frame (no inner rim border).
- * Border + box-shadow are zeroed so the sticky header background can run all the way out to the
- * outer `.suggested-hands-popup__user-shift` border.
+ * Suggested-hands popup: inner panel sits flush under the tray chrome (no inner rim border).
+ * Border + box-shadow are zeroed so the sticky header background can run out to the
+ * `.suggested-hands-popup__user-shift` surface on the same `section`.
  */
 .suggested-hands-popup .panel--hands {
   border: none;

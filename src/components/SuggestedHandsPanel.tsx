@@ -20,37 +20,55 @@ import type { CardInk } from '../card/cardText'
 import type { PracticePattern } from '../card/practicePatterns'
 import type { TileDef, TileInstance } from '../mahjong/types'
 import type { SuggestedHandLine } from '../training/types'
+import { suggestedHandSectionMenuLabel } from '../suggestedHands/filterSettings'
 import { CardColoredText } from './CardColoredText'
 import { TileFace } from './TileFace'
 
 const CLICK_DELAY_MS = 280
 
-/** NMJL card value display: X = may be exposed; C = concealed (matches CSV Values column). */
+/** NMJL card value: concealed lines show C + points on the card; exposed lines show points only (no X). */
 function formatSuggestedHandValue(points: number, closed: boolean): string {
-  return `${closed ? 'C' : 'X'}${points}`
+  return closed ? `C${points}` : `${points}`
 }
 
-function SuggestedHandValueDisplay({ points, closed }: { points: number; closed: boolean }) {
+/** Tiles rack-guide “lit” row — matches `.hands-list__row--rack-guide` (tiles on + row selected). */
+function sheetRowLitEdge(lit: boolean, edge: 'start' | 'mid' | 'end'): string {
+  if (!lit) return ''
+  if (edge === 'start') return 'hands-sheet__cell--row-lit hands-sheet__cell--row-lit-start'
+  if (edge === 'end') return 'hands-sheet__cell--row-lit hands-sheet__cell--row-lit-end'
+  return 'hands-sheet__cell--row-lit hands-sheet__cell--row-lit-mid'
+}
+
+function SuggestedHandValueDisplay({
+  points,
+  closed,
+  variant = 'sheet',
+}: {
+  points: number
+  closed: boolean
+  /** `list` = compact hands list; `sheet` = spreadsheet — boxed C matches the hand-line marker in that layout. */
+  variant?: 'list' | 'sheet'
+}) {
+  const cClass = variant === 'list' ? 'hands-list__card-c' : 'hands-sheet__card-c'
   if (closed) {
     return (
       <>
-        <span className="hands-sheet__value-c">C</span>
+        <span className={cClass} aria-label="Concealed hand">
+          C
+        </span>
         {points}
       </>
     )
   }
-  return (
-    <>
-      X{points}
-    </>
-  )
+  return <>{points}</>
 }
 
 /**
  * Suits use real rack tile colors (bamboo/dot/crak face).
  * Specific dragons (red/green/soap) always use their natural ink — title-segment ink must not
  * override a resolved dragon color (e.g. navy title ink turning a red dragon blue).
- * Generic "any" dragons and all other non-suit tiles use the card-column ink.
+ * Flowers / winds / jokers never take suit-column red/green/navy — same as
+ * `resolveCardInkForPreviewSlot` in `cardInkTileSkin.ts`. Remaining non-suit tiles use the card ink.
  */
 function stripTileFaceCardInk(def: TileDef, ink: CardInk | undefined): CardInk | undefined {
   if (def.cat === 'suit') return undefined
@@ -59,6 +77,8 @@ function stripTileFaceCardInk(def: TileDef, ink: CardInk | undefined): CardInk |
     if (def.dragon === 'green') return 'green'
     if (def.dragon === 'soap') return 'navy'
   }
+  if (def.cat === 'flower') return 'rack-flower'
+  if (def.cat === 'wind' || def.cat === 'joker') return 'rack-wind'
   return ink
 }
 
@@ -82,8 +102,6 @@ type Props = {
   onPatternDoubleClick: (patternId: string, focusKey?: string) => void
   handsListOn: boolean
   tilesGuideOn: boolean
-  onHandsListOnChange: (on: boolean) => void
-  onTilesGuideOnChange: (on: boolean) => void
   rackTilesForSuggestedStrip: TileInstance[]
   /**
    * Same ids as `rackTilesForSuggestedStrip`, but jokers in open melds use their stand-in `TileDef`
@@ -101,6 +119,12 @@ type Props = {
   cardPatterns: PracticePattern[]
   /** Section order on the active card (same semantics as built-in practice card order). */
   cardSectionOrder: readonly string[]
+  /**
+   * When true, this panel sits inside the discard-tray overlay shell: adds the tray surface
+   * class (`suggested-hands-popup__user-shift`) on the root `section`. Motion and dialog chrome
+   * live on the parent `.suggested-hands-popup` wrapper in `App`.
+   */
+  discardTraySurface?: boolean
 }
 
 export function SuggestedHandsPanel({
@@ -119,6 +143,7 @@ export function SuggestedHandsPanel({
   hideConcealedHands,
   cardPatterns,
   cardSectionOrder,
+  discardTraySurface,
 }: Props) {
   const sections = useMemo(() => {
     const uniq = Array.from(new Set(hands.map((h) => h.section)))
@@ -316,8 +341,16 @@ export function SuggestedHandsPanel({
     return { gridTemplateAreas: handsRowGridTemplateAreas(showHandCategoryLabels, tilesGuideOn) }
   }, [handsListSpreadsheet3, showHandCategoryLabels, tilesGuideOn])
 
+  const rootClassName = [
+    'panel',
+    'panel--hands',
+    discardTraySurface ? 'suggested-hands-popup__user-shift' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
   return (
-    <section className="panel panel--hands" aria-label="Suggested hands">
+    <section className={rootClassName} aria-label="Suggested hands">
       {handsListOn || tilesGuideOn ? (
         <div className="hands-panel__content">
           <div className="hands-panel__list-column">
@@ -333,8 +366,7 @@ export function SuggestedHandsPanel({
                     role="columnheader"
                   >
                     <span className="hands-sheet__combined-header">
-                      Category <span className="hands-sheet__combined-sep">/</span> Hands{' '}
-                      <span className="hands-sheet__combined-sep">/</span> Tiles
+                      Category <span className="hands-sheet__combined-sep">/</span> Hands & Tiles
                     </span>
                   </div>
                   <div
@@ -347,7 +379,7 @@ export function SuggestedHandsPanel({
                     className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--values"
                     role="columnheader"
                   >
-                    Values
+                    Points
                   </div>
                   <ol className="hands-sheet__rows" aria-label="Suggested hand and tile lines">
                     {listRowsForHandsPanel.map((h) => {
@@ -373,8 +405,9 @@ export function SuggestedHandsPanel({
                         activePatternId === allKey ||
                         (variantKeys.length > 0 &&
                           variantKeys.some((k) => k === activePatternId))
+                      const rowLit = tilesGuideOn && rowIsFocused
                       const cardRef = suggestedHandCardRefDisplay(h)
-                      const ariaLabel = `${h.section} #${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points, h.closed)}`
+                      const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} #${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points, h.closed)}`
                       const handTitleNode = (
                         <span className="hands-sheet__hand-title" aria-label={h.title}>
                           {h.titleSegments?.length ? (
@@ -439,7 +472,7 @@ export function SuggestedHandsPanel({
                       const headerLine = (
                         <div className="hands-sheet__combined-header-line">
                           <span className="hands-sheet__category">
-                            {h.section}
+                            {suggestedHandSectionMenuLabel(h.section)}
                             <span className="hands-sheet__section-num">#{cardRef}</span>
                           </span>
                           <span className="hands-sheet__combined-divider" aria-hidden="true">
@@ -462,7 +495,12 @@ export function SuggestedHandsPanel({
                           {showVariantStack ? (
                             <>
                               <div
-                                className="hands-sheet__cell hands-sheet__cell--combined"
+                                className={[
+                                  'hands-sheet__cell hands-sheet__cell--combined',
+                                  sheetRowLitEdge(rowLit, 'start'),
+                                ]
+                                  .filter(Boolean)
+                                  .join(' ')}
                                 role="cell"
                               >
                                 <button
@@ -478,7 +516,7 @@ export function SuggestedHandsPanel({
                                     cancelScheduledClick()
                                     onPatternDoubleClick(h.id, allKey)
                                   }}
-                                  aria-label={`${h.section} #${cardRef}, ${h.title} — highlight all variants`}
+                                  aria-label={`${suggestedHandSectionMenuLabel(h.section)} #${cardRef}, ${h.title} — highlight all variants`}
                                   aria-pressed={activePatternId === allKey}
                                 >
                                   {headerLine}
@@ -534,14 +572,24 @@ export function SuggestedHandsPanel({
                                 </div>
                               </div>
                               <div
-                                className="hands-sheet__cell hands-sheet__cell--away"
+                                className={[
+                                  'hands-sheet__cell hands-sheet__cell--away',
+                                  sheetRowLitEdge(rowLit, 'mid'),
+                                ]
+                                  .filter(Boolean)
+                                  .join(' ')}
                                 role="cell"
                                 aria-label={`${h.tilesNeededRough} tiles away`}
                               >
                                 {h.tilesNeededRough}
                               </div>
                               <div
-                                className="hands-sheet__cell hands-sheet__cell--values"
+                                className={[
+                                  'hands-sheet__cell hands-sheet__cell--values',
+                                  sheetRowLitEdge(rowLit, 'end'),
+                                ]
+                                  .filter(Boolean)
+                                  .join(' ')}
                                 role="cell"
                                 aria-label={`Hand value ${formatSuggestedHandValue(h.points, h.closed)}`}
                               >
@@ -562,26 +610,41 @@ export function SuggestedHandsPanel({
                               aria-pressed={rowIsFocused}
                             >
                               <div
-                                className="hands-sheet__cell hands-sheet__cell--combined"
+                                className={[
+                                  'hands-sheet__cell hands-sheet__cell--combined',
+                                  sheetRowLitEdge(rowLit, 'start'),
+                                ]
+                                  .filter(Boolean)
+                                  .join(' ')}
                                 role="cell"
                               >
                                 {headerLine}
                                 {rowStripSlots.length > 0
                                   ? renderTileRow(
                                       rowStripSlots,
-                                      activePatternId === h.id,
+                                      rowIsFocused,
                                       `${h.id}`,
                                     )
                                   : null}
                               </div>
                               <div
-                                className="hands-sheet__cell hands-sheet__cell--away"
+                                className={[
+                                  'hands-sheet__cell hands-sheet__cell--away',
+                                  sheetRowLitEdge(rowLit, 'mid'),
+                                ]
+                                  .filter(Boolean)
+                                  .join(' ')}
                                 role="cell"
                               >
                                 {h.tilesNeededRough}
                               </div>
                               <div
-                                className="hands-sheet__cell hands-sheet__cell--values"
+                                className={[
+                                  'hands-sheet__cell hands-sheet__cell--values',
+                                  sheetRowLitEdge(rowLit, 'end'),
+                                ]
+                                  .filter(Boolean)
+                                  .join(' ')}
                                 role="cell"
                               >
                                 <SuggestedHandValueDisplay points={h.points} closed={h.closed} />
@@ -615,7 +678,7 @@ export function SuggestedHandsPanel({
                     className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--values"
                     role="columnheader"
                   >
-                    Values
+                    Points
                   </div>
                   <ol className="hands-sheet__rows" aria-label="Suggested tile lines">
                     {listRowsForHandsPanel.map((h) => {
@@ -641,8 +704,9 @@ export function SuggestedHandsPanel({
                         activePatternId === allKey ||
                         (variantKeys.length > 0 &&
                           variantKeys.some((k) => k === activePatternId))
+                      const rowLit = tilesGuideOn && rowIsFocused
                       const cardRef = suggestedHandCardRefDisplay(h)
-                      const ariaLabel = `${h.section} #${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points, h.closed)}`
+                      const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} #${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points, h.closed)}`
                       const renderTileRow = (
                         slots: SuggestedStripSlot[],
                         isActiveRow: boolean,
@@ -692,7 +756,12 @@ export function SuggestedHandsPanel({
                           {showVariantStack ? (
                             <>
                               <div
-                                className="hands-sheet__cell hands-sheet__cell--tiles"
+                                className={[
+                                  'hands-sheet__cell hands-sheet__cell--tiles',
+                                  sheetRowLitEdge(rowLit, 'start'),
+                                ]
+                                  .filter(Boolean)
+                                  .join(' ')}
                                 role="cell"
                               >
                                 <div
@@ -744,14 +813,24 @@ export function SuggestedHandsPanel({
                                 </div>
                               </div>
                               <div
-                                className="hands-sheet__cell hands-sheet__cell--away"
+                                className={[
+                                  'hands-sheet__cell hands-sheet__cell--away',
+                                  sheetRowLitEdge(rowLit, 'mid'),
+                                ]
+                                  .filter(Boolean)
+                                  .join(' ')}
                                 role="cell"
                                 aria-label={`${h.tilesNeededRough} tiles away`}
                               >
                                 {h.tilesNeededRough}
                               </div>
                               <div
-                                className="hands-sheet__cell hands-sheet__cell--values"
+                                className={[
+                                  'hands-sheet__cell hands-sheet__cell--values',
+                                  sheetRowLitEdge(rowLit, 'end'),
+                                ]
+                                  .filter(Boolean)
+                                  .join(' ')}
                                 role="cell"
                                 aria-label={`Hand value ${formatSuggestedHandValue(h.points, h.closed)}`}
                               >
@@ -772,25 +851,40 @@ export function SuggestedHandsPanel({
                               aria-pressed={rowIsFocused}
                             >
                               <div
-                                className="hands-sheet__cell hands-sheet__cell--tiles"
+                                className={[
+                                  'hands-sheet__cell hands-sheet__cell--tiles',
+                                  sheetRowLitEdge(rowLit, 'start'),
+                                ]
+                                  .filter(Boolean)
+                                  .join(' ')}
                                 role="cell"
                               >
                                 {rowStripSlots.length > 0
                                   ? renderTileRow(
                                       rowStripSlots,
-                                      activePatternId === h.id,
+                                      rowIsFocused,
                                       `${h.id}`,
                                     )
                                   : null}
                               </div>
                               <div
-                                className="hands-sheet__cell hands-sheet__cell--away"
+                                className={[
+                                  'hands-sheet__cell hands-sheet__cell--away',
+                                  sheetRowLitEdge(rowLit, 'mid'),
+                                ]
+                                  .filter(Boolean)
+                                  .join(' ')}
                                 role="cell"
                               >
                                 {h.tilesNeededRough}
                               </div>
                               <div
-                                className="hands-sheet__cell hands-sheet__cell--values"
+                                className={[
+                                  'hands-sheet__cell hands-sheet__cell--values',
+                                  sheetRowLitEdge(rowLit, 'end'),
+                                ]
+                                  .filter(Boolean)
+                                  .join(' ')}
                                 role="cell"
                               >
                                 <SuggestedHandValueDisplay points={h.points} closed={h.closed} />
@@ -826,14 +920,15 @@ export function SuggestedHandsPanel({
                     className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--values"
                     role="columnheader"
                   >
-                    Values
+                    Points
                   </div>
                   <ol className="hands-sheet__rows" aria-label="Suggested hand lines">
                     {listRowsForHandsPanel.map((h) => {
                       const rowKey = handEntryKey(h)
                       const isFocused = activePatternId === rowKey
+                      const rowLit = tilesGuideOn && isFocused
                       const cardRef = suggestedHandCardRefDisplay(h)
-                      const ariaLabel = `${h.section} #${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points, h.closed)}`
+                      const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} #${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points, h.closed)}`
                       return (
                         <li
                           key={rowKey}
@@ -857,13 +952,29 @@ export function SuggestedHandsPanel({
                             aria-label={ariaLabel}
                             aria-pressed={isFocused}
                           >
-                            <div className="hands-sheet__cell hands-sheet__cell--cat" role="cell">
+                            <div
+                              className={[
+                                'hands-sheet__cell hands-sheet__cell--cat',
+                                sheetRowLitEdge(rowLit, 'start'),
+                              ]
+                                .filter(Boolean)
+                                .join(' ')}
+                              role="cell"
+                            >
                               <span className="hands-sheet__category">
-                                {h.section}
+                                {suggestedHandSectionMenuLabel(h.section)}
                                 <span className="hands-sheet__section-num">#{cardRef}</span>
                               </span>
                             </div>
-                            <div className="hands-sheet__cell hands-sheet__cell--hand" role="cell">
+                            <div
+                              className={[
+                                'hands-sheet__cell hands-sheet__cell--hand',
+                                sheetRowLitEdge(rowLit, 'mid'),
+                              ]
+                                .filter(Boolean)
+                                .join(' ')}
+                              role="cell"
+                            >
                               <span className="hands-sheet__hand-title" aria-label={h.title}>
                                 {h.titleSegments?.length ? (
                                   <>
@@ -889,10 +1000,26 @@ export function SuggestedHandsPanel({
                                 ) : null}
                               </span>
                             </div>
-                            <div className="hands-sheet__cell hands-sheet__cell--away" role="cell">
+                            <div
+                              className={[
+                                'hands-sheet__cell hands-sheet__cell--away',
+                                sheetRowLitEdge(rowLit, 'mid'),
+                              ]
+                                .filter(Boolean)
+                                .join(' ')}
+                              role="cell"
+                            >
                               {h.tilesNeededRough}
                             </div>
-                            <div className="hands-sheet__cell hands-sheet__cell--values" role="cell">
+                            <div
+                              className={[
+                                'hands-sheet__cell hands-sheet__cell--values',
+                                sheetRowLitEdge(rowLit, 'end'),
+                              ]
+                                .filter(Boolean)
+                                .join(' ')}
+                              role="cell"
+                            >
                               <SuggestedHandValueDisplay points={h.points} closed={h.closed} />
                             </div>
                           </button>
@@ -950,7 +1077,7 @@ export function SuggestedHandsPanel({
                       .join(' ')}
                   >
                     <div className="hands-list__header-meta">
-                      {handsListOn ? 'Hands/Tiles' : 'Tiles'}
+                      {handsListOn ? 'Hands & Tiles' : 'Tiles'}
                     </div>
                   </div>
                 ) : null}
@@ -986,7 +1113,7 @@ export function SuggestedHandsPanel({
                     .filter(Boolean)
                     .join(' ')}
                 >
-                  <div className="hands-list__header-meta">Values</div>
+                  <div className="hands-list__header-meta">Points</div>
                 </div>
               </div>
             <ol
@@ -1021,7 +1148,7 @@ export function SuggestedHandsPanel({
                 const cardRef = suggestedHandCardRefDisplay(h)
                 const rowAriaLabel =
                   !handsListOn || !showHandCategoryLabels
-                    ? `${h.section} #${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points, h.closed)}`
+                    ? `${suggestedHandSectionMenuLabel(h.section)} #${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points, h.closed)}`
                     : undefined
                 const outerClass = [
                   'hands-list__row-hit',
@@ -1056,7 +1183,7 @@ export function SuggestedHandsPanel({
                   ? {
                       role: 'button' as const,
                       tabIndex: 0,
-                      'aria-label': `${h.section} #${cardRef}, ${h.title} — highlight all variants`,
+                      'aria-label': `${suggestedHandSectionMenuLabel(h.section)} #${cardRef}, ${h.title} — highlight all variants`,
                       'aria-pressed': activePatternId === categoryClickKey,
                       onClick: (e: React.MouseEvent) => {
                         e.stopPropagation()
@@ -1089,7 +1216,7 @@ export function SuggestedHandsPanel({
                             {...categoryCellProps}
                           >
                             <span className="hands-list__with-tiles-category">
-                              {h.section}
+                              {suggestedHandSectionMenuLabel(h.section)}
                               <span className="hands-list__section-num">#{cardRef}</span>
                             </span>
                             {handsListOn ? (
@@ -1206,10 +1333,9 @@ export function SuggestedHandsPanel({
                               ) : rowStripSlots.length > 0 ? (
                                 <div className="hands-list__pattern-tiles-grid" role="presentation">
                                   {rowStripSlots.map((slot, i) => {
-                                    const isActiveRow = activePatternId === h.id
-                                    const showJokerGuide = tilesGuideOn && isActiveRow && slot.jokerSuggested
-                                    const suggestBestRing = tilesGuideOn && isActiveRow && slot.highlight
-                                    const dimPatternSlot = tilesGuideOn && isActiveRow && !slot.highlight && !slot.jokerSuggested
+                                    const showJokerGuide = tilesGuideOn && rowIsFocused && slot.jokerSuggested
+                                    const suggestBestRing = tilesGuideOn && rowIsFocused && slot.highlight
+                                    const dimPatternSlot = tilesGuideOn && rowIsFocused && !slot.highlight && !slot.jokerSuggested
                                     return (
                                       <div
                                         key={`${h.id}-${i}`}
@@ -1260,7 +1386,7 @@ export function SuggestedHandsPanel({
                             className="hands-list__tiles-away hands-list__tiles-away--values-col"
                             aria-label={`Hand value ${formatSuggestedHandValue(h.points, h.closed)}`}
                           >
-                            <SuggestedHandValueDisplay points={h.points} closed={h.closed} />
+                            <SuggestedHandValueDisplay points={h.points} closed={h.closed} variant="list" />
                           </span>
                         </div>
                       </>

@@ -127,15 +127,23 @@
   color: var(--color-white);
 }
 
-/* Inactive: dim label + face like joker Swap (`opacity: 0.5` on unavailable rack cells). */
-.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:disabled:not(.btn--discard) {
-  background: #007791;
+/* Inactive Ignore / Discard: same fill as inactive rack Mah Jongg (part-0071 / part-0063). */
+.app[data-color-buttons='on'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.rack-bottom-tile-cell--c12-14:disabled:not(.btn--discard),
+.app[data-color-buttons='on']
+  .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.rack-bottom-tile-cell--c12-14.btn--discard:disabled {
+  background: #9a5fab;
   color: var(--color-white);
   opacity: 0.5;
 }
 
-.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14.btn--discard:disabled {
-  background: #007791;
+.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.rack-bottom-tile-cell--c12-14:disabled:not(.btn--discard),
+.app[data-color-buttons='off']
+  .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.rack-bottom-tile-cell--c12-14.btn--discard:disabled {
+  background: var(--color-slate-mid);
   color: var(--color-white);
   opacity: 0.5;
   filter: none;
@@ -321,16 +329,29 @@
   top: 0.15em;
 }
 
-/* Main rack: Call and joker Swap share c9–10 — same face (#6A0DAD color on; gray mode in part-0064). */
+/* Main + Charleston rack: Call and joker Swap share c9–10 — enabled #6A0DAD; inactive matches rack Mah Jongg. */
 .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
+.rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
   .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled) {
   background: #6a0dad;
   color: var(--color-white);
 }
 
-.rack-bottom-bar--main.rack-bottom-bar--tile-grid
+.app[data-color-buttons='on'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled,
+.app[data-color-buttons='on'] .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
   .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled {
-  background: #6a0dad;
+  background: #9a5fab;
+  color: var(--color-white);
+  opacity: 0.5;
+}
+
+.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled,
+.app[data-color-buttons='off'] .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
+  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled {
+  background: var(--color-slate-mid);
   color: var(--color-white);
   opacity: 0.5;
 }

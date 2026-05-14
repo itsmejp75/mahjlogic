@@ -17,8 +17,8 @@
   min-height: calc(var(--hand-rack-tile-h) * 1.1);
   padding: 0.5rem 0.65rem;
   border-radius: 0.38rem;
-  border: 1px solid color-mix(in srgb, var(--coach-teal) 32%, var(--border) 40%, var(--bg-elevated) 28%);
-  background: color-mix(in srgb, var(--coach-teal-bg) 80%, var(--bg-elevated) 20%);
+  border: 1px solid var(--coach-teal-border);
+  background: rgba(51, 65, 85, 0.5);
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
@@ -49,8 +49,9 @@
 }
 
 .east-discard-staging--over {
-  background: color-mix(in srgb, var(--coach-teal) 28%, var(--bg-elevated));
-  border-color: color-mix(in srgb, var(--coach-teal) 40%, var(--border) 34%, var(--bg-elevated) 26%);
+  /* Match Charleston pass / call — fill from `--coach-teal-border` family */
+  background: var(--rack-teal-slot-highlight-fill);
+  border-color: var(--coach-teal-border);
 }
 
 .east-discard-staging__placeholder {

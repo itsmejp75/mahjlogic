@@ -133,6 +133,8 @@
 .hands-panel__content {
   flex: 1;
   min-height: 0;
+  /* Selected suggested-hand row fill: #334155 at 50% opacity (rgba — reliable over dark scroll areas). */
+  --hands-row-active-fill: rgba(51, 65, 85, 0.5);
 }
 
 .hands-panel__list-column {
@@ -195,14 +197,20 @@
 }
 
 .hands-list__freeze-header .hands-list__header-meta {
-  font-size: 0.62rem;
-  font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
+  font-family: 'Figtree', var(--sans);
+  font-size: var(--app-ui-control-fs-sm);
+  font-weight: 400;
+  line-height: var(--btn-line-height);
+  letter-spacing: var(--btn-letter-spacing);
+  text-transform: capitalize;
   text-align: center;
-  color: color-mix(in srgb, var(--text) 64%, var(--bg) 36%);
+  /* Same label ink as rack `Hands` (`.suggested-hands-tab`, part-0103 / part-0064). */
+  color: #dcdce0;
   width: 100%;
+}
+
+.app[data-color-buttons='off'] .panel--hands .hands-list__freeze-header .hands-list__header-meta {
+  color: var(--color-white);
 }
 
 .hands-list__freeze-header .hands-list__cell--away {
@@ -283,7 +291,7 @@
   font-size: 0.62rem;
   font-weight: 600;
   letter-spacing: 0.07em;
-  text-transform: uppercase;
+  text-transform: none;
   align-self: center;
   box-sizing: border-box;
   padding: 0 0.1rem;
@@ -340,12 +348,12 @@
 /* Tiles mode: one column track set on the list; each row subgrids so vertical rules line up. */
 .hands-list.hands-list--tiles-excel {
   display: grid;
-  --hands-grid-away-w: 3.25rem;
-  --hands-grid-values-w: 4.35rem;
+  --hands-grid-away-w: 2.85rem;
+  --hands-grid-values-w: 3.25rem;
   --hands-row-pattern-gap: var(--rack-tile-gap);
   --hands-strip-em: 0.9rem;
   --hands-preview-tile-w: var(--hands-strip-em);
-  --hands-preview-tile-h: calc(var(--hands-strip-em) * 1.3);
+  --hands-preview-tile-h: calc(var(--hands-strip-em) * 4 / 3);
   --hands-preview-strip-w: calc(
     14 * var(--hands-preview-tile-w) + 13 * var(--hands-row-pattern-gap)
   );
@@ -416,37 +424,50 @@
   overflow: visible;
 }
 
-.hands-list.hands-list--tiles-excel > .hands-list__row--active > .hands-list__row-hit--with-tiles {
-  border-radius: 0.5rem;
-}
-
 .hands-list__row--active {
   background: transparent;
   box-shadow: none;
 }
 
 /*
- * Hands-only (no Tiles rack-guide): full 1px inset ring on all sides (rounded).
- * With Tiles on, `.hands-list__row--rack-guide` adds the white guide ring + teal left band.
+ * Selected row: custom fill. `overflow: hidden` clips the fill to the row bounds.
  */
 .hands-list__row--active .hands-list__row-hit {
-  border-radius: 0.5rem;
-  background: color-mix(in srgb, var(--coach-teal) 8%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--coach-teal) 44%, rgba(255, 255, 255, 0.22));
+  border-radius: 0;
+  overflow: hidden;
+  background: var(--hands-row-active-fill);
+  box-shadow: none;
 }
 
-.hands-list__row--active .hands-list__row-hit:hover {
-  background: color-mix(in srgb, var(--coach-teal) 10%, transparent);
+/*
+ * Selected row: tile column + gaps use same fill as Away / Points (`--hands-row-active-fill`).
+ */
+.hands-list__row--active .hands-list__row-hit--with-tiles > .hands-list__cell--tiles {
+  background: var(--hands-row-active-fill);
 }
 
-.hands-list__row--active.hands-list__row--rack-guide .hands-list__row-hit {
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
-    inset 3px 0 0 0 color-mix(in srgb, var(--coach-teal) 52%, transparent);
+.hands-list__row--active .hands-list__row-hit--with-tiles > .hands-list__cell--tiles .hands-list__pattern-tiles {
+  margin: 0;
+  background: var(--hands-row-active-fill);
+  border-radius: 0;
+}
+
+.hands-list__row--active .hands-list__pattern-tiles-grid {
+  background: var(--hands-row-active-fill);
+}
+
+.hands-list__row--active .hands-list__pattern-tiles-stack-row {
+  background: var(--hands-row-active-fill);
+}
+
+.hands-list__row--active .hands-list__pattern-tiles-stack-row--active {
+  background: var(--hands-row-active-fill);
+  box-shadow: none;
 }
 
 .hands-list__row--rack-guide:not(.hands-list__row--active) .hands-list__row-hit {
-  border-radius: 0.5rem;
+  border-radius: 0;
+  overflow: hidden;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
 }
 
@@ -494,7 +515,6 @@
   margin: 0;
 }
 
-.hands-list__freeze-header.hands-list__row-hit:hover,
 .hands-list__freeze-header.hands-list__row-hit:focus-visible,
 .hands-list__freeze-header.hands-list__row-hit:focus {
   background: var(--bg-elevated, var(--window-surface, var(--bg)));
@@ -505,12 +525,12 @@
 /* Tiles on: row uses parent subgrid (see .hands-list--tiles-excel). */
 .hands-list:not(.hands-list--tiles-excel) .hands-list__row-hit--with-tiles {
   --hands-preview-tile-w: var(--hands-strip-em);
-  --hands-preview-tile-h: calc(var(--hands-strip-em) * 1.3);
+  --hands-preview-tile-h: calc(var(--hands-strip-em) * 4 / 3);
   --hands-preview-strip-w: calc(
     14 * var(--hands-preview-tile-w) + 13 * var(--hands-row-pattern-gap)
   );
-  --hands-grid-away-w: 4rem;
-  --hands-grid-values-w: 4.35rem;
+  --hands-grid-away-w: 3.35rem;
+  --hands-grid-values-w: 3.25rem;
   display: grid;
   grid-template-columns:
     minmax(var(--hands-preview-strip-w), 1fr)
@@ -574,18 +594,14 @@
 
 .hands-list__row-hit--with-tiles > .hands-list__cell--category-clickable {
   cursor: pointer;
-  border-radius: 0.35rem;
+  border-radius: 0;
   transition: background-color 0.12s ease;
   user-select: none;
   -webkit-user-select: none;
 }
 
-.hands-list__row-hit--with-tiles > .hands-list__cell--category-clickable:hover {
-  background: color-mix(in srgb, var(--coach-teal) 6%, transparent);
-}
-
 .hands-list__row-hit--with-tiles > .hands-list__cell--category-clickable:focus-visible {
-  outline: 2px solid var(--coach-teal);
+  outline: 2px solid rgba(255, 255, 255, 0.55);
   outline-offset: -2px;
 }
 
@@ -768,12 +784,8 @@
   padding-block: 0.12rem;
 }
 
-.hands-list__row-hit:hover {
-  background: color-mix(in srgb, var(--coach-teal) 8%, transparent);
-}
-
 .hands-list__row-hit:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--coach-teal) 55%, transparent);
+  outline: 2px solid rgba(255, 255, 255, 0.55);
   outline-offset: -1px;
 }
 
@@ -825,10 +837,15 @@
   font-family: var(--mono);
   font-size: 1.02rem;
   font-weight: 600;
-  color: #e0e0e0;
+  /* Match rack `Hands` (`.suggested-hands-tab`, part-0103 / part-0064). */
+  color: #dcdce0;
   white-space: nowrap;
   text-align: right;
   flex-shrink: 0;
+}
+
+.app[data-color-buttons='off'] .panel--hands .hands-list__tiles-away {
+  color: var(--color-white);
 }
 
 .hands-list--tiles-excel .hands-list__tiles-away {
@@ -912,19 +929,16 @@
 }
 
 .hands-list__pattern-tiles-stack-row {
-  border-radius: 0.22rem;
+  border-radius: 0;
   padding: 0.08rem 0.12rem;
   margin: 0 -0.12rem;
   cursor: pointer;
 }
 
-.hands-list__pattern-tiles-stack-row:hover {
-  background: color-mix(in srgb, var(--coach-teal) 6%, transparent);
-}
-
 .hands-list__pattern-tiles-stack-row--active {
-  background: color-mix(in srgb, var(--coach-teal) 8%, transparent);
-  border-radius: 0.25rem;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: inset 3px 0 0 0 rgba(255, 255, 255, 0.38);
 }
 
 .hands-list__row-hit--with-tiles .hands-list__pattern-tiles {
@@ -975,7 +989,7 @@
 }
 
 .hands-list__pattern-tiles-grid {
-  /* One row of 14 — same aspect as rack (--hand-rack-tile-h uses ×1.3 of width term). */
+  /* One row of 14 — same 4:3 tile shape as rack (height = width × 4/3). */
   --hands-row-pattern-cols: 14;
   --hands-row-pattern-gap: var(--rack-tile-gap);
   font-size: inherit;
@@ -1023,28 +1037,50 @@
   position: relative;
   width: var(--hands-preview-tile-w);
   height: var(--hands-preview-tile-h);
-  display: flex;
-  align-items: stretch;
-  justify-content: center;
+  min-width: 0;
+  /* Grid + size container: face fills the slot so row fill does not show as a “frame”. */
+  container-type: size;
+  display: grid;
+  grid-template: 1fr / 1fr;
+  place-items: stretch;
 }
 
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face {
+  grid-area: 1 / 1;
   width: 100%;
   height: 100%;
+  min-width: 0;
+  min-height: 0;
+  --rack-tile-w: 100cqw;
+  --rack-tile-h: 100cqh;
+  border-radius: calc(0.116 * var(--rack-tile-w));
   text-align: center;
+  /* No hairline border — on dark rows it reads as an unwanted “surround”; highlight uses inset ring only. */
+  border: none;
 }
 
-/* Match rack `sortable-tile-wrap--suggest-*` for the focused suggested line. */
-.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-best .tile-face {
-  border-radius: clamp(0.1rem, calc(0.12 * var(--hands-strip-em)), 0.35rem);
-  --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
-  --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
-}
-
+/* Single crisp inset ring on the face edge (no soft vignette stack — avoids a second “rim” past the tile). */
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-best .tile-face,
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker .tile-face {
   border-radius: clamp(0.1rem, calc(0.12 * var(--hands-strip-em)), 0.35rem);
-  --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
-  --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.82);
+  border: none;
+}
+
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face:not(.tile--joker)::after {
+  inset: 0;
+}
+
+/* Dim strip tiles: keep flat overlay only (see part-0075 `::after`); drop inset vignette on small faces. */
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim .tile-face:not(.tile--joker)::after,
+.hands-sheet__tile-cell--suggest-dim .tile-face:not(.tile--joker)::after {
+  box-shadow: none;
+}
+
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim .tile-face.tile--joker,
+.hands-sheet__tile-cell--suggest-dim .tile-face.tile--joker {
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
 }
 
 .hands-list__pattern-joker-mark {
@@ -1115,14 +1151,16 @@
   /* Padding scales with text (em) so cells expand evenly when the panel resizes. */
   --hands-sheet-cell-pad-y: 0.4em;
   --hands-sheet-cell-pad-x: 0.65em;
+  /* Tighter horizontal pad only for Away / Points so fixed tracks can stay narrow without clipping. */
+  --hands-sheet-metric-pad-x: 0.42em;
   --hands-sheet-border: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
   /*
    * Shared AWAY / VALUES column widths — fixed tracks in all sheet modes so headers line up
    * with body cells. Tiles modes keep the same values on `.hands-sheet--tiles2`.
    */
-  --hands-sheet-away-w: 4.4em;
-  /* Wide enough for uppercase “VALUES” + letter-spacing inside pad/rail insets (was clipping “V”). */
-  --hands-sheet-values-w: 6em;
+  --hands-sheet-away-w: 3.35em;
+  /* "Points" header + concealed `C` + 2-3 digit values; pad uses `--hands-sheet-metric-pad-x`. */
+  --hands-sheet-values-w: 4.35em;
   /*
    * Title row "rails": negative margin extends the sheet past the panel's inline padding so
    * the sticky title row background reaches the panel edge. Panel `overflow: hidden` clips
@@ -1196,32 +1234,49 @@
    * in `em` would resolve to ~1.25× the value and overflow the fixed grid track.
    */
   /* Symmetric horizontal padding so the number stays centered under the AWAY header. */
-  padding-inline: var(--hands-sheet-cell-pad-x);
+  padding-inline: var(--hands-sheet-metric-pad-x);
 }
 
 .hands-sheet__cell--values {
   justify-content: center;
   text-align: center;
   border-inline-end: none;
-  padding-inline: var(--hands-sheet-cell-pad-x);
+  padding-inline: var(--hands-sheet-metric-pad-x);
+}
+
+/* Away / Points numerals — same ink as rack `Hands` (`.suggested-hands-tab`, part-0103 / 0064). */
+.panel--hands .hands-sheet__cell--away:not(.hands-sheet__cell--header),
+.panel--hands .hands-sheet__cell--values:not(.hands-sheet__cell--header) {
+  color: #dcdce0;
+}
+
+.app[data-color-buttons='off'] .panel--hands .hands-sheet__cell--away:not(.hands-sheet__cell--header),
+.app[data-color-buttons='off'] .panel--hands .hands-sheet__cell--values:not(.hands-sheet__cell--header) {
+  color: var(--color-white);
+}
+
+/* Metric columns: never ellipsis long digit strings; clip only if the track is truly too small. */
+.hands-sheet__cell--away:not(.hands-sheet__cell--header),
+.hands-sheet__cell--values:not(.hands-sheet__cell--header) {
+  text-overflow: clip;
 }
 
 .hands-sheet > .hands-sheet__cell--values,
 .hands-sheet > .hands-sheet__rows .hands-sheet__row > *:last-child > .hands-sheet__cell--values,
 .hands-sheet > .hands-sheet__rows .hands-sheet__row > .hands-sheet__cell--values {
-  padding-inline-end: calc(var(--hands-sheet-rail) + var(--hands-sheet-cell-pad-x));
-  padding-inline-start: var(--hands-sheet-cell-pad-x);
+  padding-inline-end: calc(var(--hands-sheet-rail) + var(--hands-sheet-metric-pad-x));
+  padding-inline-start: var(--hands-sheet-metric-pad-x);
 }
 
 /* AWAY is no longer the outermost column — keep symmetric insets in the track. */
 .hands-sheet > .hands-sheet__cell--away,
 .hands-sheet > .hands-sheet__rows .hands-sheet__row > .hands-sheet__cell--away {
-  padding-inline: var(--hands-sheet-cell-pad-x);
+  padding-inline: var(--hands-sheet-metric-pad-x);
 }
 
 /*
  * Body cells (not the column-title row) read at a slightly larger font than the headers.
- * Headers continue to use the inherited (sheet) `font-size: 1em` so they stay compact.
+ * Headers: same type scale as rack `.btn`; title-case words; ink matches rack `Hands` (part-0103 / 0064).
  */
 .hands-sheet__cell:not(.hands-sheet__cell--header) {
   font-size: 1.25em;
@@ -1233,19 +1288,21 @@
   z-index: 3;
   justify-content: center;
   text-align: center;
-  font-weight: 600;
-  /*
-   * Same size as the surrounding cell text (which scales with panel width).
-   * Compact `padding-block` + `line-height: 1` keeps the header row from growing taller.
-   */
-  font-size: 1em;
-  line-height: 1;
+  font-family: 'Figtree', var(--sans);
+  /* Slightly under main rack buttons (`--app-ui-control-fs`) so the row stays compact. */
+  font-size: var(--app-ui-control-fs-sm);
+  font-weight: 400;
+  line-height: var(--btn-line-height);
+  letter-spacing: var(--btn-letter-spacing);
+  text-transform: capitalize;
   padding-block: 0.2em;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-h, var(--text-muted, rgba(200, 200, 200, 0.9)));
+  color: #dcdce0;
   background: var(--bg-elevated, var(--window-surface, var(--bg)));
   box-shadow: 0 1px 0 color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+.app[data-color-buttons='off'] .panel--hands .hands-sheet__cell--header {
+  color: var(--color-white);
 }
 
 .hands-sheet__cell--header.hands-sheet__cell--values {
@@ -1266,16 +1323,57 @@
 }
 
 .hands-sheet__row-btn:focus-visible > .hands-sheet__cell {
-  outline: 2px solid var(--coach-teal, currentColor);
+  outline: 2px solid rgba(255, 255, 255, 0.55);
   outline-offset: -2px;
 }
 
-.hands-sheet__row-btn:hover > .hands-sheet__cell {
-  background: color-mix(in srgb, var(--coach-teal, currentColor) 6%, transparent);
+.hands-sheet__row--active > .hands-sheet__row-btn > .hands-sheet__cell--tiles {
+  background: var(--hands-row-active-fill);
+  /* Let tile corners + suggest rings paint fully; `hidden` clipped faces/outlines when the strip is tight. */
+  overflow: visible;
 }
 
-.hands-sheet__row--active > .hands-sheet__row-btn > .hands-sheet__cell {
-  background: color-mix(in srgb, var(--coach-teal, currentColor) 10%, transparent);
+.hands-sheet__row--active > .hands-sheet__row-btn > .hands-sheet__cell:not(.hands-sheet__cell--tiles) {
+  background: var(--hands-row-active-fill);
+  overflow: hidden;
+}
+
+/* Variant stack rows: cells sit directly under the row (no `.hands-sheet__row-btn` wrapper). */
+.hands-sheet__row--active:not(:has(> .hands-sheet__row-btn)) > .hands-sheet__cell--tiles {
+  background: var(--hands-row-active-fill);
+  overflow: visible;
+}
+
+.hands-sheet__row--active:not(:has(> .hands-sheet__row-btn)) > .hands-sheet__cell:not(.hands-sheet__cell--tiles) {
+  background: var(--hands-row-active-fill);
+  overflow: hidden;
+}
+
+/* Tile strip + flex gaps: same row fill as Away / Points. */
+.hands-sheet__row--active .hands-sheet__cell--combined .hands-sheet__tiles-stack,
+.hands-sheet__row--active .hands-sheet__cell--combined > .hands-sheet__tiles-grid,
+.hands-sheet__row--active .hands-sheet__cell--tiles > .hands-sheet__tiles-stack,
+.hands-sheet__row--active .hands-sheet__cell--tiles > .hands-sheet__tiles-grid {
+  margin: 0;
+  background: var(--hands-row-active-fill);
+  border-radius: 0;
+}
+
+.hands-sheet__row--active .hands-sheet__tiles-stack-row,
+.hands-sheet__row--active .hands-sheet__tiles-stack-row--active {
+  background: var(--hands-row-active-fill);
+  box-shadow: none;
+}
+
+.hands-sheet__tiles-stack-row--active {
+  background: transparent;
+  border-radius: 0;
+  box-shadow: inset 3px 0 0 0 rgba(255, 255, 255, 0.38);
+}
+
+.hands-sheet__row--active .hands-sheet__tiles-stack-row--active {
+  background: var(--hands-row-active-fill);
+  box-shadow: none;
 }
 
 .hands-sheet__category {
@@ -1321,10 +1419,11 @@
   color: var(--card-c-color, #e34a4a);
 }
 
-/* Concealed “C” in Values column — same red as .hands-sheet__card-c, no badge box. */
-.hands-sheet__value-c {
-  color: var(--card-c-color, #e34a4a);
-  font-weight: 600;
+/* Points column: boxed C precedes the number — drop hand-line leading margin; tight gap before digits. */
+.hands-sheet__cell--values .hands-sheet__card-c,
+.hands-list__tiles-away--values-col .hands-list__card-c {
+  margin-inline-start: 0;
+  margin-inline-end: 0.08em;
 }
 
 /* Tiles-only spreadsheet: tile strip | away | values. */
@@ -1333,10 +1432,9 @@
    * Tiles column fills available width; Away / Values sized in `em` so headers never clip.
    * If the tile strip outgrows the panel, `.hands-list-scroll` scrolls horizontally.
    */
-  --hands-sheet-away-w: 4.4em;
-  /* Wide enough for uppercase “VALUES” + letter-spacing inside pad/rail insets (was clipping “V”). */
-  --hands-sheet-values-w: 6em;
-  /* Match the main player rack gap so the strip reads at the same density. */
+  --hands-sheet-away-w: 3.35em;
+  --hands-sheet-values-w: 4.35em;
+  /* Match the main player rack gap between strip faces. */
   --hands-sheet-tile-gap: var(--player-rack-face-gap);
   --hands-sheet-cell-pad-y: clamp(0.22rem, 1cqi, 0.45rem);
   /* Tile column width = panel inline-size − away − values − cell horizontal padding. */
@@ -1408,24 +1506,39 @@
   height: var(--hands-sheet-tile-h);
   border-radius: calc(0.116 * var(--hands-sheet-tile-w));
   transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.hands-sheet__tile-cell > * {
-  width: 100%;
-  height: 100%;
+  container-type: size;
+  display: grid;
+  grid-template: 1fr / 1fr;
+  place-items: stretch;
 }
 
 /*
  * Hand TileFace internally derives ALL paint (digits, letters, dots) from `--rack-tile-w` /
- * `--rack-tile-h`. Setting them on the cell makes the glyphs scale with the tile, like ink
- * painted onto each tile.
+ * `--rack-tile-h`. Size queries tie glyphs to the actual cell so the face fills the slot.
  */
 .hands-sheet__tile-cell .tile-face {
-  --rack-tile-w: var(--hands-sheet-tile-w);
-  --rack-tile-h: var(--hands-sheet-tile-h);
-  width: var(--hands-sheet-tile-w);
-  height: var(--hands-sheet-tile-h);
-  border-radius: calc(0.116 * var(--hands-sheet-tile-w));
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  --rack-tile-w: 100cqw;
+  --rack-tile-h: 100cqh;
+  --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
+  border-radius: var(--tile-face-border-radius);
+  border: none;
+}
+
+/* Same edge-aligned ring as the list strip (no soft vignette stack). */
+.hands-sheet__tile-cell--suggest-joker .tile-face,
+.hands-sheet__tile-cell--suggest-best .tile-face {
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.82);
+  border: none;
+}
+
+.hands-sheet__tile-cell .tile-face:not(.tile--joker)::after {
+  inset: 0;
 }
 
 /*
@@ -1666,16 +1779,13 @@
 
 .hands-sheet__combined-header {
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   flex-wrap: wrap;
   justify-content: center;
   gap: 0.25em;
-  font-weight: 600;
-  /* Inherit the scaled sheet font; compact line-height keeps cell height fixed. */
-  font-size: 1em;
-  line-height: 1;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
 }
 
 .hands-sheet__combined-sep {
@@ -1708,10 +1818,6 @@
   cursor: pointer;
 }
 
-.hands-sheet__combined-head-btn:hover {
-  background: color-mix(in srgb, var(--coach-teal, currentColor) 6%, transparent);
-}
-
 .hands-sheet__tiles-stack {
   display: flex;
   flex-direction: column;
@@ -1723,34 +1829,14 @@
 .hands-sheet__tiles-stack-row {
   display: flex;
   justify-content: flex-start;
-  border-radius: 4px;
+  border-radius: 0;
   padding: 0.1rem 0.2rem;
   cursor: pointer;
   background: transparent;
 }
 
-.hands-sheet__tiles-stack-row:hover,
 .hands-sheet__tiles-stack-row:focus-visible {
-  background: color-mix(in srgb, var(--coach-teal, currentColor) 6%, transparent);
   outline: none;
-}
-
-.hands-sheet__tiles-stack-row--active {
-  background: color-mix(in srgb, var(--coach-teal, currentColor) 12%, transparent);
-}
-
-.hands-sheet__tile-cell--suggest-best {
-  outline: 1.5px solid color-mix(in srgb, var(--coach-teal, currentColor) 80%, white);
-  outline-offset: 1px;
-}
-
-.hands-sheet__tile-cell--suggest-joker {
-  outline: 1.5px dashed color-mix(in srgb, var(--coach-teal, currentColor) 60%, white);
-  outline-offset: 1px;
-}
-
-.hands-sheet__tile-cell--suggest-dim {
-  opacity: 0.55;
 }
 
 .hands-sheet__tile-joker-mark {
@@ -1779,7 +1865,7 @@
       0.42rem,
       calc((var(--hands-strip-inner) - 13 * var(--hands-row-pattern-gap)) / 14)
     );
-    --hands-preview-tile-h: calc(var(--hands-preview-tile-w) * 1.3);
+    --hands-preview-tile-h: calc(var(--hands-preview-tile-w) * 4 / 3);
     --hands-strip-em: var(--hands-preview-tile-w);
     --hands-preview-strip-w: calc(
       14 * var(--hands-preview-tile-w) + 13 * var(--hands-row-pattern-gap)
@@ -2033,7 +2119,7 @@
   width: 100%;
   min-width: 0;
   height: auto;
-  aspect-ratio: 10 / 13;
+  aspect-ratio: 3 / 4;
   align-self: center;
 }
 

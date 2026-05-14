@@ -9,9 +9,9 @@
 
 
 /*
- * Suggested-hands popup: panel sits flush under the popup's rounded frame (no inner rim border).
- * Border + box-shadow are zeroed so the sticky header background can run all the way out to the
- * outer `.suggested-hands-popup__user-shift` border.
+ * Suggested-hands popup: inner panel sits flush under the tray chrome (no inner rim border).
+ * Border + box-shadow are zeroed so the sticky header background can run out to the
+ * `.suggested-hands-popup__user-shift` surface on the same `section`.
  */
 .suggested-hands-popup .panel--hands {
   border: none;
@@ -300,7 +300,8 @@
     bottom: var(--pwa-landscape-inline-end);
   }
 
-  html:not([data-native-app]) .suggested-hands-popup {
+  /* Fixed suggested-hands slot removed — overlay lives in discard tray (`.suggested-hands-popup--discard-overlay`). */
+  html:not([data-native-app]) .suggested-hands-popup:not(.suggested-hands-popup--discard-overlay) {
     right: calc(var(--pwa-landscape-inline-end) + var(--bot-panel-outer-w));
   }
 }

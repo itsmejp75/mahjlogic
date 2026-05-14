@@ -37,6 +37,14 @@
   gap: 0.4rem;
 }
 
+/* Same Hands / Tiles chips as the suggested-hands tray — centered in the menu block */
+.app-menu-modal__diff-block .app-menu-modal__suggested-hands-toolbar.suggested-hands-popup__header-controls {
+  justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.12rem 0 0;
+}
+
 /* Minimalist / Illustrative: category lines — side accent lines, centered label. */
 .app-menu-modal__diff-block--tile-graphics .app-menu-modal__tile-graphics-category {
   display: flex;

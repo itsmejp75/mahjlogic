@@ -34,8 +34,8 @@
 
 /* Call-staging: same chrome as `.pass-box--over` when a tile is dragged over the exposure rack. */
 .staging-meld-drop-zone--over {
-  background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
+  background: var(--rack-teal-slot-highlight-fill);
+  box-shadow: inset 0 0 0 1px var(--coach-teal-border);
 }
 
 /* ── Call prompt ── */

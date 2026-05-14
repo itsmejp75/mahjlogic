@@ -1,5 +1,23 @@
 import { PRACTICE_CARD_SECTION_ORDER } from '../card/practicePatterns'
 
+/**
+ * Canonical `PracticePattern.section` / CSV category keys → short labels for the suggested-hands
+ * menu and the suggested-hands list (storage and filters still use the canonical keys).
+ */
+const SUGGESTED_HAND_SECTION_DISPLAY_LABEL: Readonly<Record<string, string>> = {
+  '2026': 'Year',
+  '2468': '2468',
+  'ANY LIKE NUMBERS': 'Like #',
+  'QUINTS': 'Quint',
+  'CONSECUTIVE RUN': 'Run',
+  'CONSECUTIVE RUNS': 'Run',
+  '13579': '13579',
+  'WINDS - DRAGONS': 'W&D',
+  'WINDS-DRAGONS': 'W&D',
+  '369': '369',
+  'SINGLES AND PAIRS': 'S&P',
+}
+
 /** When `'1'`, hands marked concealed (C) are omitted from the suggested list. */
 export const HIDE_CONCEALED_HANDS_STORAGE_KEY = 'mahjlogic:suggested-hands-hide-concealed'
 
@@ -53,10 +71,12 @@ function titleCaseMenuSegment(seg: string): string {
 }
 
 /**
- * Display label for the suggested-hands filter menu (card section keys stay canonical for storage).
- * Title case per word; hyphenated names get each segment title-cased (e.g. Winds-Dragons).
+ * Display label for suggested-hands UI (menu toggles, list category column).
+ * Uses compact NMJL abbreviations when defined; otherwise title-case words / hyphen segments.
  */
 export function suggestedHandSectionMenuLabel(section: string): string {
+  const mapped = SUGGESTED_HAND_SECTION_DISPLAY_LABEL[section]
+  if (mapped != null) return mapped
   return section
     .split(/\s+/)
     .map((token) => (token.includes('-') ? token.split('-').map(titleCaseMenuSegment).join('-') : titleCaseMenuSegment(token)))

@@ -32,16 +32,16 @@
   max-width: 100%;
   padding: 0.4rem 0.45rem;
   border-radius: 0.38rem;
-  /* Solid coach-teal tint (not the translucent token alone) so the box reads on `--window-surface`.
-     3-way mixes with --coach-teal-bg + var(--color-white) could collapse to an invisible match with the panel. */
+  /* #334155 @ 50% — same slate as suggested-hand selected row (see `--hands-row-active-fill`). */
   border: 1px solid var(--coach-teal-border);
-  background: color-mix(in srgb, var(--coach-teal) 11%, var(--bg-elevated) 89%);
+  background: rgba(51, 65, 85, 0.5);
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .pass-box--over {
-  background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
-  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
+  /* Interior keyed off `--coach-teal-border` (see `--rack-teal-slot-highlight-fill` in index.css). */
+  background: var(--rack-teal-slot-highlight-fill);
+  border-color: var(--coach-teal-border);
   box-shadow: none;
 }
 
@@ -106,9 +106,9 @@
   color: var(--color-white);
 }
 
-/* Disabled while not passable: same fill as enabled; dim like Swap / other unavailable rack cells. */
-.btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):disabled {
-  background: #006767;
+/* Disabled while not passable: same inactive face as rack Mah Jongg (part-0071 / part-0063). */
+.app[data-color-buttons='on'] .btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):disabled {
+  background: #9a5fab;
   color: var(--color-white);
   opacity: 0.5;
   filter: none;

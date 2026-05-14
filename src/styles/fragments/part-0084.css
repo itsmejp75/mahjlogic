@@ -16,24 +16,24 @@
 
 .app .panel--hand .exposure-rack__call-initiate-target--near {
   border-radius: 0.35rem;
-  /* Match `.pass-box`: solid teal tint on `--window-surface` (same as Charleston pass box). */
+  /* Match Charleston `.pass-box`: #334155 @ 50% + coach-teal border; `--over` uses teal wash (below). */
   border: 1px solid var(--coach-teal-border);
-  background: color-mix(in srgb, var(--coach-teal) 11%, var(--bg-elevated) 89%);
+  background: rgba(51, 65, 85, 0.5);
   transition: background 0.15s ease, border-color 0.15s ease;
   box-sizing: border-box;
 }
 
 .app .panel--hand .exposure-rack__call-initiate-target--near.exposure-rack__call-initiate-target--over {
-  background: color-mix(in srgb, var(--coach-teal) 30%, var(--bg-elevated) 70%);
-  border-color: color-mix(in srgb, var(--coach-teal) 42%, var(--border) 35%, var(--bg-elevated) 23%);
+  background: var(--rack-teal-slot-highlight-fill);
+  border-color: var(--coach-teal-border);
 }
 
-/* Bot-turn incoming discard — same box chrome as call-initiate / pass-box */
+/* Bot-turn incoming discard — same idle/highlight chrome as Charleston pass box + call-initiate */
 .panel--hand .exposure-rack__slot--incoming-discard {
   justify-content: center;
   box-sizing: border-box;
   border: 1px solid var(--coach-teal-border);
-  background: color-mix(in srgb, var(--coach-teal) 11%, var(--bg-elevated) 89%);
+  background: rgba(51, 65, 85, 0.5);
   border-radius: 0.38rem;
   transition: background 0.15s ease, border-color 0.15s ease;
 }

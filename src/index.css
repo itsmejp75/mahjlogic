@@ -64,6 +64,12 @@
   --coach-teal: #0d5c55;
   --coach-teal-bg: rgba(13, 92, 85, 0.1);
   --coach-teal-border: rgba(13, 92, 85, 0.35);
+  /*
+   * Pass / Charleston / discard / call drag-over interior — built from `--coach-teal-border` so fill
+   * matches the same teal opacity family as the 1px edge (avoids solid `--coach-teal` @ 30% looking “off”).
+   */
+  --rack-teal-slot-highlight-fill: color-mix(in srgb, var(--coach-teal-border) 58%, var(--bg-elevated) 42%);
+  --rack-teal-slot-highlight-fill-mid: color-mix(in srgb, var(--coach-teal-border) 36%, var(--bg-elevated) 64%);
   --stop-red: #b91c1c;
   --stop-red-border: rgba(185, 28, 28, 0.35);
   --shadow:
@@ -141,6 +147,8 @@
     --coach-teal: #5eead4;
     --coach-teal-bg: rgba(94, 234, 212, 0.08);
     --coach-teal-border: rgba(94, 234, 212, 0.35);
+    --rack-teal-slot-highlight-fill: color-mix(in srgb, var(--coach-teal-border) 58%, var(--bg-elevated) 42%);
+    --rack-teal-slot-highlight-fill-mid: color-mix(in srgb, var(--coach-teal-border) 36%, var(--bg-elevated) 64%);
     --stop-red: #f87171;
     --stop-red-border: rgba(248, 113, 113, 0.35);
     --shadow:

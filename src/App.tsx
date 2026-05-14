@@ -174,16 +174,6 @@ const LS_KEY_BOT_WINS = 'mahjlogic.botWinsEnabled'
 
 const BOT_WINS_LABEL = 'Bot wins'
 const LS_KEY_ANIMATIONS = 'mahjlogic.animationsEnabled'
-/** When true, height/width of Suggested hands panel are saved when closed and restored on next open. */
-const LS_KEY_SUGGESTED_HANDS_PANEL_HEIGHT = 'mahjlogic.suggestedHandsPanelHeight'
-/** When "1", explicit height was set by bottom-edge / bottom-corner drag — layout uses fixed `top` + `height` (grow downward). */
-const LS_KEY_SUGGESTED_HANDS_HEIGHT_PIN_TOP = 'mahjlogic.suggestedHandsHeightPinTop'
-/** Viewport Y of the outer popup top when {@link LS_KEY_SUGGESTED_HANDS_HEIGHT_PIN_TOP} is set. */
-const LS_KEY_SUGGESTED_HANDS_PANEL_PINNED_TOP = 'mahjlogic.suggestedHandsPanelPinnedTop'
-const LS_KEY_SUGGESTED_HANDS_RIGHT_DELTA = 'mahjlogic.suggestedHandsRightDelta'
-const LS_KEY_SUGGESTED_HANDS_LEFT_DELTA = 'mahjlogic.suggestedHandsLeftDelta'
-const LS_KEY_SUGGESTED_HANDS_OFFSET_X = 'mahjlogic.suggestedHandsOffsetX'
-const LS_KEY_SUGGESTED_HANDS_OFFSET_Y = 'mahjlogic.suggestedHandsOffsetY'
 const LS_KEY_BOT_DIFFICULTY = 'mahjlogic.botDifficulty'
 /**
  * Tile face style (`TILE_GRAPHICS` / `data-tile-graphics`). Product default is Prism (`solid-color`).
@@ -283,73 +273,6 @@ function readAnimationsEnabledFromStorage(): boolean {
     return v === 'true' || v === '1'
   } catch {
     return true
-  }
-}
-
-function readSuggestedPanelHeightFromStorage(): number | null {
-  try {
-    const v = localStorage.getItem(LS_KEY_SUGGESTED_HANDS_PANEL_HEIGHT)
-    if (v == null) return null
-    const n = parseFloat(v)
-    return Number.isFinite(n) ? n : null
-  } catch {
-    return null
-  }
-}
-
-function readSuggestedPanelHeightPinTopFromStorage(): boolean {
-  try {
-    return localStorage.getItem(LS_KEY_SUGGESTED_HANDS_HEIGHT_PIN_TOP) === '1'
-  } catch {
-    return false
-  }
-}
-
-function readSuggestedPanelPinnedTopPxFromStorage(): number | null {
-  try {
-    const v = localStorage.getItem(LS_KEY_SUGGESTED_HANDS_PANEL_PINNED_TOP)
-    if (v == null) return null
-    const n = parseFloat(v)
-    return Number.isFinite(n) ? n : null
-  } catch {
-    return null
-  }
-}
-
-function readSuggestedPanelRightDeltaFromStorage(): number | null {
-  try {
-    const v = localStorage.getItem(LS_KEY_SUGGESTED_HANDS_RIGHT_DELTA)
-    if (v == null) return null
-    const n = parseFloat(v)
-    return Number.isFinite(n) ? n : null
-  } catch {
-    return null
-  }
-}
-
-function readSuggestedPanelLeftDeltaFromStorage(): number | null {
-  try {
-    const v = localStorage.getItem(LS_KEY_SUGGESTED_HANDS_LEFT_DELTA)
-    if (v == null) return null
-    const n = parseFloat(v)
-    return Number.isFinite(n) ? n : null
-  } catch {
-    return null
-  }
-}
-
-/** Drag nudge (px) — persisted with suggested-hands panel layout. */
-function readSuggestedPanelPositionOffsetFromStorage(): { x: number; y: number } | null {
-  try {
-    const xs = localStorage.getItem(LS_KEY_SUGGESTED_HANDS_OFFSET_X)
-    const ys = localStorage.getItem(LS_KEY_SUGGESTED_HANDS_OFFSET_Y)
-    if (xs == null && ys == null) return null
-    const x = xs != null ? parseFloat(xs) : 0
-    const y = ys != null ? parseFloat(ys) : 0
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return null
-    return { x, y }
-  } catch {
-    return null
   }
 }
 
@@ -2800,508 +2723,13 @@ export default function App() {
     return () => window.removeEventListener('storage', onStorage)
   }, [])
 
-  // Discard bottom edge + optional top from the rack action wells (so the tray can extend upward).
   const discardTrackerPanelRef = useRef<HTMLElement>(null)
-  const suggestedPopupTopAnchorCharlestonRef = useRef<HTMLDivElement | null>(null)
-  const suggestedPopupTopAnchorMainRef = useRef<HTMLDivElement | null>(null)
-  const [suggestedPopupTop, setSuggestedPopupTop] = useState<number | null>(null)
-  const [suggestedPopupBottom, setSuggestedPopupBottom] = useState<number | null>(null)
-  const [suggestedPopupRight, setSuggestedPopupRight] = useState<number | null>(null)
-  const [suggestedPanelHeight, setSuggestedPanelHeight] = useState<number | null>(null)
-  /**
-   * When true, explicit height uses fixed viewport `top` + `height` (omit `bottom`) so bottom-edge /
-   * bottom-corner drags grow the window downward instead of upward from the discard anchor.
-   */
-  const [suggestedPanelHeightPinsTop, setSuggestedPanelHeightPinsTop] = useState(false)
-  const suggestedPanelHeightPinsTopRef = useRef(false)
-  useEffect(() => {
-    suggestedPanelHeightPinsTopRef.current = suggestedPanelHeightPinsTop
-  }, [suggestedPanelHeightPinsTop])
-  /** Pixels added to the measured `right` (larger = narrower; smaller = wider). Cleared on panel close. */
-  const [suggestedPanelRightDelta, setSuggestedPanelRightDelta] = useState<number | null>(null)
-  /** Pixels added to `var(--app-h-pad)` on the left — drag the left edge or top-left / bottom-left corners. Cleared on close. */
-  const [suggestedPanelLeftDelta, setSuggestedPanelLeftDelta] = useState(0)
-  const suggestedPanelLeftDeltaRef = useRef(0)
-  suggestedPanelLeftDeltaRef.current = suggestedPanelLeftDelta
-  /**
-   * User drag of the Suggested hands header: translate the fixed panel. Cleared when the panel
-   * closes. Does not use the same persistence as width/height.
-   */
-  const [suggestedPanelPositionOffset, setSuggestedPanelPositionOffset] = useState<{
-    x: number
-    y: number
-  }>({ x: 0, y: 0 })
-  const suggestedPanelPositionOffsetRef = useRef(suggestedPanelPositionOffset)
-  suggestedPanelPositionOffsetRef.current = suggestedPanelPositionOffset
-  const suggestedPopupRef = useRef<HTMLDivElement>(null)
-  const suggestedPopupRightRef = useRef<number | null>(null)
-  suggestedPopupRightRef.current = suggestedPopupRight
-  /** Top-edge resize (height) vs header drag (move) — do not use one ref for both behaviors. */
-  const suggestedPanelDragRef = useRef<
-    | {
-        kind: 'resizeHeight'
-        /** Top: drag the top border (grow upward). Bottom: drag the bottom border. */
-        edge: 'top' | 'bottom'
-        startY: number
-        startHeight: number
-        /** When resizing the top edge while {@link suggestedPanelHeightPinsTop} is true, move `top` with height. */
-        startOuterTop?: number
-        moved: boolean
-      }
-    | {
-        kind: 'move'
-        startPointerX: number
-        startPointerY: number
-        startOffsetX: number
-        startOffsetY: number
-        startRect: DOMRect
-      }
-    | null
-  >(null)
-  const rightEdgeDragRef = useRef<{
-    startX: number
-    startRightCss: number
-    leftBound: number
-    moved: boolean
-  } | null>(null)
-  const leftEdgeDragRef = useRef<{
-    startX: number
-    startLeftDelta: number
-    startRect: DOMRect
-    moved: boolean
-  } | null>(null)
-  /** One of four corners: combined horizontal + vertical resize. */
-  const cornerResizeRef = useRef<{
-    which: 'tr' | 'tl' | 'br' | 'bl'
-    startX: number
-    startY: number
-    startHeight: number
-    startRightCss: number
-    startLeftDelta: number
-    startRect: DOMRect
-    leftBound: number
-    moved: boolean
-    /** `outer.getBoundingClientRect().top` at pointerdown — br/bl only; committed once drag crosses threshold. */
-    startOuterTop?: number
-  } | null>(null)
-
-  const onDragHandlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === 'mouse' && e.button !== 0) return
-    e.preventDefault()
-    const popup = suggestedPopupRef.current
-    if (!popup) return
-    const r = popup.getBoundingClientRect()
-    const o = suggestedPanelPositionOffsetRef.current
-    suggestedPanelDragRef.current = {
-      kind: 'move',
-      startPointerX: e.clientX,
-      startPointerY: e.clientY,
-      startOffsetX: o.x,
-      startOffsetY: o.y,
-      startRect: r,
-    }
-    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-  }, [])
-
-  const onTopEdgePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === 'mouse' && e.button !== 0) return
-    e.preventDefault()
-    e.stopPropagation()
-    const popup = suggestedPopupRef.current
-    if (!popup) return
-    const outer = popup.parentElement ?? popup
-    const shellH = outer.getBoundingClientRect().height
-    suggestedPanelDragRef.current = {
-      kind: 'resizeHeight',
-      edge: 'top',
-      startY: e.clientY,
-      startHeight: shellH,
-      startOuterTop: suggestedPanelHeightPinsTopRef.current ? outer.getBoundingClientRect().top : undefined,
-      moved: false,
-    }
-    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-  }, [])
-
-  const onBottomEdgePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === 'mouse' && e.button !== 0) return
-    e.preventDefault()
-    e.stopPropagation()
-    const popup = suggestedPopupRef.current
-    if (!popup) return
-    const outer = popup.parentElement ?? popup
-    const r = outer.getBoundingClientRect()
-    const shellH = r.height
-    /* Defer pin + height until the pointer actually moves — avoids a subpixel “snap” on press/hover noise. */
-    suggestedPanelDragRef.current = {
-      kind: 'resizeHeight',
-      edge: 'bottom',
-      startY: e.clientY,
-      startHeight: shellH,
-      startOuterTop: r.top,
-      moved: false,
-    }
-    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-  }, [])
-
-  const onDragHandlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    const drag = suggestedPanelDragRef.current
-    if (!drag) return
-    if (drag.kind === 'resizeHeight') {
-      const delta =
-        drag.edge === 'top' ? drag.startY - e.clientY : e.clientY - drag.startY
-      if (Math.abs(delta) > 4) {
-        if (!drag.moved) {
-          drag.moved = true
-          if (drag.edge === 'bottom' && drag.startOuterTop !== undefined) {
-            setSuggestedPanelHeightPinsTop(true)
-            setSuggestedPopupTop(drag.startOuterTop)
-          }
-        }
-      }
-      if (!drag.moved) return
-      const minH = 120
-      const maxH = window.innerHeight
-      const newH = Math.max(minH, Math.min(maxH, drag.startHeight + delta))
-      setSuggestedPanelHeight(newH)
-      if (drag.edge === 'top' && drag.startOuterTop !== undefined) {
-        setSuggestedPopupTop(drag.startOuterTop - (newH - drag.startHeight))
-      }
-      return
-    }
-    if (drag.kind === 'move') {
-      const dX = e.clientX - drag.startPointerX
-      const dY = e.clientY - drag.startPointerY
-      const M = 6
-      const iW = window.innerWidth
-      const iH = window.innerHeight
-      const w = drag.startRect.width
-      const h = drag.startRect.height
-      const cLeft = drag.startRect.left + dX
-      const cTop = drag.startRect.top + dY
-      const cLeftClamped = Math.max(M, Math.min(cLeft, iW - M - w))
-      const cTopClamped = Math.max(M, Math.min(cTop, iH - M - h))
-      const adjX = cLeftClamped - drag.startRect.left
-      const adjY = cTopClamped - drag.startRect.top
-      setSuggestedPanelPositionOffset({
-        x: drag.startOffsetX + adjX,
-        y: drag.startOffsetY + adjY,
-      })
-    }
-  }, [])
-
-  const onDragHandlePointerUp = useCallback(() => {
-    const drag = suggestedPanelDragRef.current
-    if (!drag) return
-    suggestedPanelDragRef.current = null
-    if (drag.kind === 'move') {
-      const p = suggestedPanelPositionOffsetRef.current
-      const T = 0.5
-      if (
-        Math.abs(p.x - drag.startOffsetX) < T &&
-        Math.abs(p.y - drag.startOffsetY) < T
-      ) {
-        setSuggestedPanelHandsOn(false)
-      }
-    }
-  }, [setSuggestedPanelHandsOn])
-
-  const MIN_SUGGESTED_PANEL_PX = 200
-
-  const onRightEdgePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === 'mouse' && e.button !== 0) return
-    e.preventDefault()
-    e.stopPropagation()
-    const el = suggestedPopupRef.current
-    if (!el) return
-    /* `right` / `left` apply to the fixed outer shell; inner has drag `transform` — use outer geometry. */
-    const outer = el.parentElement ?? el
-    const r = outer.getBoundingClientRect()
-    rightEdgeDragRef.current = {
-      startX: e.clientX,
-      startRightCss: window.innerWidth - r.right,
-      leftBound: r.left,
-      moved: false,
-    }
-    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-  }, [])
-
-  const onRightEdgePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    const d = rightEdgeDragRef.current
-    if (!d) return
-    const dx = e.clientX - d.startX
-    if (Math.abs(dx) > 3) d.moved = true
-    if (!d.moved) return
-    const w = window.innerWidth
-    const minR = 0
-    const maxR = w - d.leftBound - MIN_SUGGESTED_PANEL_PX
-    const newRight = Math.max(minR, Math.min(maxR, d.startRightCss - dx))
-    const base = suggestedPopupRightRef.current
-    if (base == null) return
-    setSuggestedPanelRightDelta(Math.abs(newRight - base) < 0.5 ? null : newRight - base)
-  }, [])
-
-  const onRightEdgePointerUp = useCallback(() => {
-    rightEdgeDragRef.current = null
-  }, [])
-
-  const onLeftEdgePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === 'mouse' && e.button !== 0) return
-    e.preventDefault()
-    e.stopPropagation()
-    const el = suggestedPopupRef.current
-    if (!el) return
-    const outer = el.parentElement ?? el
-    const r = outer.getBoundingClientRect()
-    leftEdgeDragRef.current = {
-      startX: e.clientX,
-      startLeftDelta: suggestedPanelLeftDeltaRef.current,
-      startRect: r,
-      moved: false,
-    }
-    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-  }, [])
-
-  const onLeftEdgePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    const d = leftEdgeDragRef.current
-    if (!d) return
-    const dx = e.clientX - d.startX
-    if (Math.abs(dx) > 3) d.moved = true
-    if (!d.moved) return
-    const r0 = d.startRect
-    const minDdx = 6 - r0.left
-    const maxDdx = r0.width - MIN_SUGGESTED_PANEL_PX
-    const ddx = Math.max(minDdx, Math.min(maxDdx, dx))
-    setSuggestedPanelLeftDelta(d.startLeftDelta + ddx)
-  }, [])
-
-  const onLeftEdgePointerUp = useCallback(() => {
-    leftEdgeDragRef.current = null
-  }, [])
-
-  const onCornerPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === 'mouse' && e.button !== 0) return
-    e.preventDefault()
-    e.stopPropagation()
-    const which = (e.currentTarget as HTMLElement).getAttribute(
-      'data-suggested-resize-corner',
-    ) as 'tr' | 'tl' | 'br' | 'bl' | null
-    if (which == null) return
-    const inner = suggestedPopupRef.current
-    if (!inner) return
-    const outer = inner.parentElement ?? inner
-    const rOuter = outer.getBoundingClientRect()
-    const shellH = rOuter.height
-    /* Pin + explicit height only after pointer moves (see onCornerPointerMove) — no jump on mere press/hover. */
-    cornerResizeRef.current = {
-      which,
-      startX: e.clientX,
-      startY: e.clientY,
-      startHeight: shellH,
-      startRightCss: window.innerWidth - rOuter.right,
-      startLeftDelta: suggestedPanelLeftDeltaRef.current,
-      startRect: rOuter,
-      leftBound: rOuter.left,
-      moved: false,
-      startOuterTop: which === 'br' || which === 'bl' ? rOuter.top : undefined,
-    }
-    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-  }, [])
-
-  const onCornerPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    const c = cornerResizeRef.current
-    if (!c) return
-    const dx = e.clientX - c.startX
-    const dyy = e.clientY - c.startY
-    const crossed = Math.abs(dx) > 3 || Math.abs(dyy) > 4
-    if (!c.moved) {
-      if (!crossed) return
-      c.moved = true
-      if (c.which === 'br' || c.which === 'bl') {
-        setSuggestedPanelHeightPinsTop(true)
-        if (c.startOuterTop !== undefined) setSuggestedPopupTop(c.startOuterTop)
-      } else {
-        setSuggestedPanelHeightPinsTop(false)
-      }
-    }
-    const minH = 120
-    const maxH = window.innerHeight
-    const dyFromTop = c.startY - e.clientY
-    const dyFromBottom = e.clientY - c.startY
-    const baseR = suggestedPopupRightRef.current
-    const wWin = window.innerWidth
-    const minR = 0
-    const maxR = wWin - c.leftBound - MIN_SUGGESTED_PANEL_PX
-
-    const applyRight = () => {
-      if (baseR == null) return
-      const newRight = Math.max(minR, Math.min(maxR, c.startRightCss - dx))
-      setSuggestedPanelRightDelta(
-        Math.abs(newRight - baseR) < 0.5 ? null : newRight - baseR,
-      )
-    }
-
-    const applyLeft = () => {
-      const r0 = c.startRect
-      const minDdx = 6 - r0.left
-      const maxDdx = r0.width - MIN_SUGGESTED_PANEL_PX
-      const ddx = Math.max(minDdx, Math.min(maxDdx, dx))
-      setSuggestedPanelLeftDelta(c.startLeftDelta + ddx)
-    }
-
-    switch (c.which) {
-      case 'tr':
-        setSuggestedPanelHeight(Math.max(minH, Math.min(maxH, c.startHeight + dyFromTop)))
-        applyRight()
-        break
-      case 'tl':
-        setSuggestedPanelHeight(Math.max(minH, Math.min(maxH, c.startHeight + dyFromTop)))
-        applyLeft()
-        break
-      case 'br':
-        setSuggestedPanelHeight(Math.max(minH, Math.min(maxH, c.startHeight + dyFromBottom)))
-        applyRight()
-        break
-      case 'bl':
-        setSuggestedPanelHeight(Math.max(minH, Math.min(maxH, c.startHeight + dyFromBottom)))
-        applyLeft()
-        break
-      default:
-        break
-    }
-  }, [])
-
-  const onCornerPointerUp = useCallback(() => {
-    cornerResizeRef.current = null
-  }, [])
 
   const lastSuggestedPanelOpenRef = useRef(suggestedPanelHandsOn)
-  /** Defer `left` / nudge / height reset until the shell’s slide-down transition ends (avoids a flash to the default slot). */
-  const suggestedPanelCloseLayoutResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const panelSizeOnLatestRenderRef = useRef({
-    h: null as number | null,
-    d: null as number | null,
-    l: 0,
-    px: 0,
-    py: 0,
-    pinTop: false,
-    pinTopY: null as number | null,
-  })
-  panelSizeOnLatestRenderRef.current = {
-    h: suggestedPanelHeight,
-    d: suggestedPanelRightDelta,
-    l: suggestedPanelLeftDelta,
-    px: suggestedPanelPositionOffset.x,
-    py: suggestedPanelPositionOffset.y,
-    pinTop: suggestedPanelHeightPinsTop,
-    pinTopY: suggestedPopupTop,
-  }
-
-  useEffect(() => {
-    if (suggestedPanelHandsOn) {
-      if (suggestedPanelCloseLayoutResetTimerRef.current != null) {
-        clearTimeout(suggestedPanelCloseLayoutResetTimerRef.current)
-        suggestedPanelCloseLayoutResetTimerRef.current = null
-      }
-    }
-  }, [suggestedPanelHandsOn])
-
-  useEffect(
-    () => () => {
-      if (suggestedPanelCloseLayoutResetTimerRef.current != null) {
-        clearTimeout(suggestedPanelCloseLayoutResetTimerRef.current)
-        suggestedPanelCloseLayoutResetTimerRef.current = null
-      }
-    },
-    [],
-  )
-
   useEffect(() => {
     const wasOpen = lastSuggestedPanelOpenRef.current
     if (wasOpen && !suggestedPanelHandsOn) {
       if (suggestedFocusHandKeyRef.current) setSuggestedPinnedHandKey(suggestedFocusHandKeyRef.current)
-      const { h, d, l, px, py, pinTop, pinTopY } = panelSizeOnLatestRenderRef.current
-      try {
-        if (h != null) {
-          localStorage.setItem(LS_KEY_SUGGESTED_HANDS_PANEL_HEIGHT, String(h))
-          if (pinTop && pinTopY != null) {
-            localStorage.setItem(LS_KEY_SUGGESTED_HANDS_HEIGHT_PIN_TOP, '1')
-            localStorage.setItem(LS_KEY_SUGGESTED_HANDS_PANEL_PINNED_TOP, String(pinTopY))
-          } else {
-            localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_HEIGHT_PIN_TOP)
-            localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_PANEL_PINNED_TOP)
-          }
-        } else {
-          localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_PANEL_HEIGHT)
-          localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_HEIGHT_PIN_TOP)
-          localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_PANEL_PINNED_TOP)
-        }
-        if (d != null) {
-          localStorage.setItem(LS_KEY_SUGGESTED_HANDS_RIGHT_DELTA, String(d))
-        } else {
-          localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_RIGHT_DELTA)
-        }
-        if (l !== 0) {
-          localStorage.setItem(LS_KEY_SUGGESTED_HANDS_LEFT_DELTA, String(l))
-        } else {
-          localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_LEFT_DELTA)
-        }
-        if (px === 0 && py === 0) {
-          localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_OFFSET_X)
-          localStorage.removeItem(LS_KEY_SUGGESTED_HANDS_OFFSET_Y)
-        } else {
-          localStorage.setItem(LS_KEY_SUGGESTED_HANDS_OFFSET_X, String(px))
-          localStorage.setItem(LS_KEY_SUGGESTED_HANDS_OFFSET_Y, String(py))
-        }
-      } catch {
-        /* ignore */
-      }
-      if (suggestedPanelCloseLayoutResetTimerRef.current != null) {
-        clearTimeout(suggestedPanelCloseLayoutResetTimerRef.current)
-        suggestedPanelCloseLayoutResetTimerRef.current = null
-      }
-      const resetLayout = () => {
-        setSuggestedPanelHeight(null)
-        setSuggestedPanelHeightPinsTop(false)
-        setSuggestedPanelRightDelta(null)
-        setSuggestedPanelLeftDelta(0)
-        setSuggestedPanelPositionOffset({ x: 0, y: 0 })
-        suggestedPanelCloseLayoutResetTimerRef.current = null
-      }
-      const resetDelayMs = animationsEnabledRef.current ? 320 : 0
-      if (resetDelayMs > 0) {
-        suggestedPanelCloseLayoutResetTimerRef.current = setTimeout(resetLayout, resetDelayMs)
-      } else {
-        resetLayout()
-      }
-    } else if (!wasOpen && suggestedPanelHandsOn) {
-      const h0 = readSuggestedPanelHeightFromStorage()
-      const d0 = readSuggestedPanelRightDeltaFromStorage()
-      const l0 = readSuggestedPanelLeftDeltaFromStorage()
-      const pos0 = readSuggestedPanelPositionOffsetFromStorage()
-      const pinTop0 = readSuggestedPanelHeightPinTopFromStorage()
-      const pinnedTop0 = readSuggestedPanelPinnedTopPxFromStorage()
-      if (h0 != null) {
-        setSuggestedPanelHeight(h0)
-        if (pinTop0 && pinnedTop0 != null) {
-          setSuggestedPanelHeightPinsTop(true)
-          setSuggestedPopupTop(pinnedTop0)
-        } else {
-          setSuggestedPanelHeightPinsTop(false)
-        }
-      } else {
-        setSuggestedPanelHeightPinsTop(false)
-      }
-      if (d0 != null) {
-        setSuggestedPanelRightDelta(d0)
-      }
-      if (l0 != null) {
-        setSuggestedPanelLeftDelta(l0)
-      }
-      if (pos0 != null) {
-        setSuggestedPanelPositionOffset(pos0)
-      } else {
-        setSuggestedPanelPositionOffset({ x: 0, y: 0 })
-      }
     }
     lastSuggestedPanelOpenRef.current = suggestedPanelHandsOn
   }, [suggestedPanelHandsOn])
@@ -3361,51 +2789,6 @@ export default function App() {
     }
     setMenuCardId(next)
   }, [menuCardId, mainPhase])
-
-  useEffect(() => {
-    const disc = discardTrackerPanelRef.current
-    if (!disc) return
-    /** Ignore subpixel / hover flicker from ResizeObserver (stabilizes height when bottom corners are near the tracker). */
-    const last = { top: null as number | null, bottom: null as number | null, right: null as number | null }
-    const LAYOUT_ANCHOR_EPS_PX = 2
-    const update = () => {
-      const dRect = disc.getBoundingClientRect()
-      const topFromAction = charlestonDone
-        ? suggestedPopupTopAnchorMainRef.current?.getBoundingClientRect().bottom
-        : suggestedPopupTopAnchorCharlestonRef.current?.getBoundingClientRect().bottom
-      if (!suggestedPanelHeightPinsTopRef.current) {
-        const nextTop = topFromAction ?? dRect.top
-        if (last.top == null || Math.abs(last.top - nextTop) >= LAYOUT_ANCHOR_EPS_PX) {
-          last.top = nextTop
-          setSuggestedPopupTop(nextTop)
-        }
-      }
-      const nextBottom = window.innerHeight - dRect.bottom
-      if (last.bottom == null || Math.abs(last.bottom - nextBottom) >= LAYOUT_ANCHOR_EPS_PX) {
-        last.bottom = nextBottom
-        setSuggestedPopupBottom(nextBottom)
-      }
-      const nextRight = window.innerWidth - dRect.right
-      if (last.right == null || Math.abs(last.right - nextRight) >= LAYOUT_ANCHOR_EPS_PX) {
-        last.right = nextRight
-        setSuggestedPopupRight(nextRight)
-      }
-    }
-    update()
-    const ro = new ResizeObserver(update)
-    ro.observe(disc)
-    const a = charlestonDone
-      ? suggestedPopupTopAnchorMainRef.current
-      : suggestedPopupTopAnchorCharlestonRef.current
-    if (a) ro.observe(a)
-    window.addEventListener('scroll', update, { passive: true })
-    window.addEventListener('resize', update, { passive: true })
-    return () => {
-      ro.disconnect()
-      window.removeEventListener('scroll', update)
-      window.removeEventListener('resize', update)
-    }
-  }, [charlestonDone, mainPhase])
 
   const charlestonGlowTileIds = useMemo(() => {
     if (charlestonDone || charlestonNewTileIds.length === 0) return null
@@ -6142,11 +5525,6 @@ export default function App() {
     (mainPhase === 'mahjong-declared' && mahjongWinReviewing) ||
     wallGameReviewShiftNewGameToMainRack
 
-  const suggestedPopupRightForStyle: number | undefined =
-    suggestedPopupRight != null
-      ? suggestedPopupRight + (suggestedPanelRightDelta ?? 0)
-      : undefined
-
   return (
     <div
       className="app"
@@ -6320,6 +5698,35 @@ export default function App() {
                       aria-hidden="true"
                     />
                   ))}
+                </div>
+              </div>
+              <div className="app-menu-modal__diff-block">
+                <div className="app-menu-modal__subhead" id="app-menu-sh-settings-heading">
+                  Suggested hands settings
+                </div>
+                <div
+                  className="suggested-hands-popup__header-controls app-menu-modal__suggested-hands-toolbar"
+                  role="toolbar"
+                  aria-labelledby="app-menu-sh-settings-heading"
+                >
+                  <button
+                    type="button"
+                    className={['hands-panel__display-toggle', suggestedHandsListOn ? 'hands-panel__display-toggle--on' : ''].filter(Boolean).join(' ')}
+                    aria-pressed={suggestedHandsListOn}
+                    aria-label="Show suggested hand lines"
+                    onClick={() => setSuggestedHandsListOn((v) => !v)}
+                  >
+                    Hands
+                  </button>
+                  <button
+                    type="button"
+                    className={['hands-panel__display-toggle', suggestedPanelTilesOn ? 'hands-panel__display-toggle--on' : ''].filter(Boolean).join(' ')}
+                    aria-pressed={suggestedPanelTilesOn}
+                    aria-label="Show tile patterns"
+                    onClick={() => setSuggestedPanelTilesOn((v) => !v)}
+                  >
+                    Tiles
+                  </button>
                 </div>
               </div>
               <div className="app-menu-modal__suggested-hand-filters">
@@ -7094,7 +6501,6 @@ export default function App() {
                             </div>
                             <div
                               className="panel-hand-rack__charleston-actions-well"
-                              ref={suggestedPopupTopAnchorCharlestonRef}
                             >
                             <div
                               className="rack-bottom-bar rack-bottom-bar--charleston rack-bottom-bar--tile-grid"
@@ -7484,7 +6890,6 @@ export default function App() {
                             {mainPhase !== 'bot-mahjong' && mainPhase !== 'dead-hand' ? (
                               <div
                                 className="panel-hand-rack__action-well"
-                                ref={suggestedPopupTopAnchorMainRef}
                               >
                               <div
                                 className="rack-bottom-bar rack-bottom-bar--main rack-bottom-bar--tile-grid"
@@ -7766,6 +7171,41 @@ export default function App() {
                             </div>
                           ) : null}
                         </DiscardPileDropZone>
+                        {showSuggestedHandsPanel ? (
+                          <div
+                            id="suggested-hands-popup"
+                            className={[
+                              'suggested-hands-popup',
+                              'suggested-hands-popup--discard-overlay',
+                              suggestedPanelHandsOn ? 'suggested-hands-popup--open' : '',
+                            ]
+                              .filter(Boolean)
+                              .join(' ')}
+                            role="dialog"
+                            aria-label="Suggested Hands"
+                            aria-modal="false"
+                            aria-hidden={!suggestedPanelHandsOn}
+                          >
+                            <SuggestedHandsPanel
+                              discardTraySurface
+                              hands={eastSuggestedHands}
+                              activePatternId={suggestedFocusHandKey}
+                              pinnedPatternId={suggestedPinnedHandKey}
+                              onPatternClick={onSuggestedPatternClick}
+                              onPatternDoubleClick={onSuggestedPatternDoubleClick}
+                              handsListOn={suggestedHandsListOn}
+                              tilesGuideOn={suggestedPanelTilesOn}
+                              rackTilesForSuggestedStrip={rackForSuggestedHandsUi}
+                              rackTilesForPatternMatch={rackForSuggestedPatternMatch}
+                              exposureTileIdsForSuggestedStrip={suggestedHandsExposureTileIds}
+                              uncheckedSections={suggestedHandsUncheckedSections}
+                              onUncheckedSectionsChange={setSuggestedHandsUncheckedSections}
+                              hideConcealedHands={suggestedHandsHideConcealed}
+                              cardPatterns={cardPatterns}
+                              cardSectionOrder={cardSectionOrder}
+                            />
+                          </div>
+                        ) : null}
                       </div>
                       {/*
                         Invisible column: same droppables + ExposureRack props as the old visible bot panel
@@ -7821,202 +7261,6 @@ export default function App() {
                     </div>
                   </section>
                 </div>
-                  {showSuggestedHandsPanel ? (
-                    <div
-                      id="suggested-hands-popup"
-                      className={['suggested-hands-popup', suggestedPanelHandsOn ? 'suggested-hands-popup--open' : ''].filter(Boolean).join(' ')}
-                      style={{
-                        left: `calc(var(--app-h-pad) + ${suggestedPanelLeftDelta}px)`,
-                        ...(suggestedPanelHeight != null
-                          ? suggestedPanelHeightPinsTop
-                            ? {
-                                top: suggestedPopupTop ?? undefined,
-                                right: suggestedPopupRightForStyle,
-                                bottom: undefined,
-                                height: suggestedPanelHeight,
-                              }
-                            : {
-                                top: 'auto',
-                                right: suggestedPopupRightForStyle,
-                                bottom: suggestedPopupBottom ?? undefined,
-                                height: suggestedPanelHeight,
-                              }
-                          : {
-                              top: suggestedPopupTop ?? undefined,
-                              right: suggestedPopupRightForStyle,
-                              bottom: suggestedPopupBottom ?? undefined,
-                            }),
-                      }}
-                      role="dialog"
-                      aria-label="Suggested Hands"
-                      aria-modal="false"
-                      aria-hidden={!suggestedPanelHandsOn}
-                    >
-                      <div
-                        ref={suggestedPopupRef}
-                        className="suggested-hands-popup__user-shift"
-                        style={
-                          suggestedPanelPositionOffset.x !== 0 || suggestedPanelPositionOffset.y !== 0
-                            ? {
-                                transform: `translate(${suggestedPanelPositionOffset.x}px, ${suggestedPanelPositionOffset.y}px)`,
-                              }
-                            : undefined
-                        }
-                      >
-                      <div
-                        className="suggested-hands-popup__top-edge"
-                        role="separator"
-                        aria-orientation="horizontal"
-                        aria-label="Drag to resize height"
-                        tabIndex={-1}
-                        onPointerDown={onTopEdgePointerDown}
-                        onPointerMove={onDragHandlePointerMove}
-                        onPointerUp={onDragHandlePointerUp}
-                        onPointerCancel={onDragHandlePointerUp}
-                      />
-                      <div
-                        className="suggested-hands-popup__drag-handle"
-                        role="button"
-                        aria-label="Drag to move the window. Tap without dragging to close. Drag the top or bottom margin for height, the left or right edge for width, or any corner for both."
-                        tabIndex={0}
-                        onPointerDown={onDragHandlePointerDown}
-                        onPointerMove={onDragHandlePointerMove}
-                        onPointerUp={onDragHandlePointerUp}
-                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setSuggestedPanelHandsOn(false) } }}
-                      >
-                        <span className="suggested-hands-popup__drag-pip" aria-hidden="true" />
-                        <span className="suggested-hands-popup__drag-label">Suggested Hands</span>
-                        <div className="suggested-hands-popup__header-controls" role="toolbar" aria-label="Suggested hands display">
-                          <button
-                            type="button"
-                            className={['hands-panel__display-toggle', suggestedHandsListOn ? 'hands-panel__display-toggle--on' : ''].filter(Boolean).join(' ')}
-                            aria-pressed={suggestedHandsListOn}
-                            aria-label="Show suggested hand lines"
-                            onClick={(e) => { e.stopPropagation(); setSuggestedHandsListOn((v) => !v) }}
-                            onPointerDown={(e) => e.stopPropagation()}
-                          >
-                            Hands
-                          </button>
-                          <button
-                            type="button"
-                            className={['hands-panel__display-toggle', suggestedPanelTilesOn ? 'hands-panel__display-toggle--on' : ''].filter(Boolean).join(' ')}
-                            aria-pressed={suggestedPanelTilesOn}
-                            aria-label="Show tile patterns"
-                            onClick={(e) => { e.stopPropagation(); setSuggestedPanelTilesOn((v) => !v) }}
-                            onPointerDown={(e) => e.stopPropagation()}
-                          >
-                            Tiles
-                          </button>
-                        </div>
-                        <button
-                          type="button"
-                          className="suggested-hands-popup__close"
-                          aria-label="Close suggested hands"
-                          onClick={(e) => { e.stopPropagation(); setSuggestedPanelHandsOn(false) }}
-                          onPointerDown={(e) => e.stopPropagation()}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                      <SuggestedHandsPanel
-                        hands={eastSuggestedHands}
-                        activePatternId={suggestedFocusHandKey}
-                        pinnedPatternId={suggestedPinnedHandKey}
-                        onPatternClick={onSuggestedPatternClick}
-                        onPatternDoubleClick={onSuggestedPatternDoubleClick}
-                        handsListOn={suggestedHandsListOn}
-                        tilesGuideOn={suggestedPanelTilesOn}
-                        onHandsListOnChange={setSuggestedHandsListOn}
-                        onTilesGuideOnChange={setSuggestedPanelTilesOn}
-                        rackTilesForSuggestedStrip={rackForSuggestedHandsUi}
-                        rackTilesForPatternMatch={rackForSuggestedPatternMatch}
-                        exposureTileIdsForSuggestedStrip={suggestedHandsExposureTileIds}
-                        uncheckedSections={suggestedHandsUncheckedSections}
-                        onUncheckedSectionsChange={setSuggestedHandsUncheckedSections}
-                        hideConcealedHands={suggestedHandsHideConcealed}
-                        cardPatterns={cardPatterns}
-                        cardSectionOrder={cardSectionOrder}
-                      />
-                      <div
-                        className="suggested-hands-popup__right-edge"
-                        role="separator"
-                        aria-orientation="vertical"
-                        aria-label="Drag to resize width"
-                        tabIndex={-1}
-                        onPointerDown={onRightEdgePointerDown}
-                        onPointerMove={onRightEdgePointerMove}
-                        onPointerUp={onRightEdgePointerUp}
-                        onPointerCancel={onRightEdgePointerUp}
-                      />
-                      <div
-                        className="suggested-hands-popup__bottom-edge"
-                        role="separator"
-                        aria-orientation="horizontal"
-                        aria-label="Drag to resize height from the bottom"
-                        tabIndex={-1}
-                        onPointerDown={onBottomEdgePointerDown}
-                        onPointerMove={onDragHandlePointerMove}
-                        onPointerUp={onDragHandlePointerUp}
-                        onPointerCancel={onDragHandlePointerUp}
-                      />
-                      <div
-                        className="suggested-hands-popup__left-edge"
-                        role="separator"
-                        aria-orientation="vertical"
-                        aria-label="Drag to resize width from the left"
-                        tabIndex={-1}
-                        onPointerDown={onLeftEdgePointerDown}
-                        onPointerMove={onLeftEdgePointerMove}
-                        onPointerUp={onLeftEdgePointerUp}
-                        onPointerCancel={onLeftEdgePointerUp}
-                      />
-                      <div
-                        className="suggested-hands-popup__resize-corner suggested-hands-popup__resize-corner--tr"
-                        data-suggested-resize-corner="tr"
-                        role="separator"
-                        aria-label="Drag to resize width and height"
-                        tabIndex={-1}
-                        onPointerDown={onCornerPointerDown}
-                        onPointerMove={onCornerPointerMove}
-                        onPointerUp={onCornerPointerUp}
-                        onPointerCancel={onCornerPointerUp}
-                      />
-                      <div
-                        className="suggested-hands-popup__resize-corner suggested-hands-popup__resize-corner--tl"
-                        data-suggested-resize-corner="tl"
-                        role="separator"
-                        aria-label="Drag to resize width and height"
-                        tabIndex={-1}
-                        onPointerDown={onCornerPointerDown}
-                        onPointerMove={onCornerPointerMove}
-                        onPointerUp={onCornerPointerUp}
-                        onPointerCancel={onCornerPointerUp}
-                      />
-                      <div
-                        className="suggested-hands-popup__resize-corner suggested-hands-popup__resize-corner--br"
-                        data-suggested-resize-corner="br"
-                        role="separator"
-                        aria-label="Drag to resize width and height"
-                        tabIndex={-1}
-                        onPointerDown={onCornerPointerDown}
-                        onPointerMove={onCornerPointerMove}
-                        onPointerUp={onCornerPointerUp}
-                        onPointerCancel={onCornerPointerUp}
-                      />
-                      <div
-                        className="suggested-hands-popup__resize-corner suggested-hands-popup__resize-corner--bl"
-                        data-suggested-resize-corner="bl"
-                        role="separator"
-                        aria-label="Drag to resize width and height"
-                        tabIndex={-1}
-                        onPointerDown={onCornerPointerDown}
-                        onPointerMove={onCornerPointerMove}
-                        onPointerUp={onCornerPointerUp}
-                        onPointerCancel={onCornerPointerUp}
-                      />
-                      </div>
-                    </div>
-                  ) : null}
                 </div>
             ) : null}
               <DragOverlay dropAnimation={null}>
