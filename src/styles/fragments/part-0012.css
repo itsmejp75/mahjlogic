@@ -52,3 +52,112 @@
   width: 100%;
   min-width: 0;
 }
+
+/* Main hand tray: Mahjong win review — logo floats above buttons; fade in ~3s (exposure row uses 2s). */
+.panel--hand .panel-hand-rack__hand-tray .hand-bank:has(.hand-bank__main-rack-watermark) {
+  position: relative;
+  overflow: visible;
+}
+
+.panel--hand .hand-bank__main-rack-watermark {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+  user-select: none;
+  z-index: 2;
+  opacity: 0;
+  animation: main-rack-watermark-fade-in 3s ease forwards;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.panel--hand .hand-bank__main-rack-watermark--interactive {
+  pointer-events: auto;
+}
+
+.panel--hand .hand-bank__mj-review-actions {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  box-sizing: border-box;
+  /* Same control height as `.panel-hand-rack__action-well` row (part-0026 / part-0007). */
+  height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
+  min-height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
+  align-items: stretch;
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.panel--hand .hand-bank__mj-review-actions-spacer {
+  grid-column: 1 / 11;
+  min-height: 0;
+  pointer-events: none;
+}
+
+.panel--hand .hand-bank__mj-review-actions > .btn.rack-bottom-tile-cell {
+  height: 100%;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Full bank overlay: logo paints above the button row; pointer-events pass through to buttons. */
+.panel--hand .hand-bank__mj-review-logo-float {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.panel--hand .hand-bank__mj-review-logo-float .rack-logo-watermark {
+  max-height: none;
+  height: auto;
+  width: min(
+    100%,
+    calc(6 * var(--hand-rack-tile-w, var(--rack-tile-w)) + 5 * var(--player-rack-face-gap))
+  );
+  max-width: min(
+    100%,
+    calc(6 * var(--hand-rack-tile-w, var(--rack-tile-w)) + 5 * var(--player-rack-face-gap))
+  );
+  overflow: visible;
+}
+
+.panel--hand .hand-bank__mj-review-logo-float .rack-logo-watermark__img {
+  max-height: calc(var(--rack-tile-h) * 0.95);
+  height: calc(var(--rack-tile-h) * 0.9);
+}
+
+.panel--hand .hand-bank:has(.hand-bank__main-rack-watermark) .hand-row {
+  position: relative;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel--hand .hand-bank__main-rack-watermark {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+.app-layout[data-animations='off'] .panel--hand .hand-bank__main-rack-watermark {
+  animation: none;
+  opacity: 1;
+}
+
+@keyframes main-rack-watermark-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

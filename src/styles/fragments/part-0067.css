@@ -78,7 +78,8 @@
  * no visible effect when the cell is already 100% wide.
  */
 .panel--hand .rack-bottom-bar--tile-grid > .rack-bottom-tile-cell,
-.panel--hand .rack-bottom-bar--tile-grid > .btn.rack-bottom-tile-cell {
+.panel--hand .rack-bottom-bar--tile-grid > .btn.rack-bottom-tile-cell,
+.panel--hand .hand-bank__mj-review-actions > .hand-bank__mj-review-actions-spacer {
   box-sizing: border-box;
   min-width: 0;
   max-width: none;
@@ -236,6 +237,48 @@
   z-index: 0;
   opacity: 1;
   animation: mahjong-logo-hint-img-cycle 4.5s ease-in-out infinite;
+}
+
+/*
+ * After Mah Jongg win → Review: MAHJ stays disabled but should look physically pressed in.
+ * Tile-grid `:active` clears shadows (above); mirror rack press from part-0069.
+ */
+.panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.btn--mahjong-rack-pressed-in.rack-bottom-tile-cell--c5-6:disabled {
+  opacity: 1;
+  filter: none;
+  transition: none;
+  transform: none;
+  box-shadow:
+    inset 4px 4px 11px rgba(0, 0, 0, 0.48),
+    inset -3px -3px 8px rgba(255, 255, 255, 0.1),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.24);
+}
+
+.panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.btn--mahjong-rack-pressed-in.rack-bottom-tile-cell--c5-6:not(:disabled) {
+  transition: none;
+  transform: none;
+  box-shadow:
+    inset 4px 4px 11px rgba(0, 0, 0, 0.48),
+    inset -3px -3px 8px rgba(255, 255, 255, 0.1),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.24);
+}
+
+.app-layout[data-animations='off']
+  .panel--hand
+  .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.btn--mahjong-rack-pressed-in.rack-bottom-tile-cell--c5-6
+  .btn--mahj__logo-stack
+  .btn--mahj__img {
+  animation: none;
+}
+
+.app[data-color-buttons='off']
+  .panel--hand
+  .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.btn--mahjong-rack-pressed-in.rack-bottom-tile-cell--c5-6:disabled {
+  opacity: 1;
 }
 
 .app-layout[data-animations='off'] .btn--mahjong-hint .btn--mahj__logo-stack .btn--mahj__img {

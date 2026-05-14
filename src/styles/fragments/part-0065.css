@@ -90,8 +90,10 @@
   justify-self: start;
 }
 
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c2-4,
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c3-5,
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c9-11,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c11-13,
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14 {
   width: var(--rack-tile-btn-inner-3);
   max-width: var(--rack-tile-btn-inner-3);

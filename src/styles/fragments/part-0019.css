@@ -72,3 +72,17 @@
 .rack-bottom-tile-cell--c8-9 {
   grid-column: 8 / 10;
 }
+
+/* Mahjong win review (hand tray): Replay under rack slots 2–4; New Game under 11–13. */
+.rack-bottom-tile-cell--c2-4 {
+  grid-column: 2 / 5;
+}
+
+.rack-bottom-tile-cell--c11-13 {
+  grid-column: 11 / 14;
+}
+
+/* Three face-widths + two gaps: columns 3–5 (shared width token with c2-4 / c11-13). */
+.rack-bottom-tile-cell--c3-5 {
+  grid-column: 3 / 6;
+}

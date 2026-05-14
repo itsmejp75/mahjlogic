@@ -4442,6 +4442,7 @@ export default function App() {
       setSuggestedSuppressedHandKey(null)
       setSuggestedDeadTileGuide(null)
       setSuggestedDeadTableGuide(null)
+      setSuggestedPanelHandsOn(false)
     }
   }, [mainPhase])
 
@@ -4449,6 +4450,7 @@ export default function App() {
   const handsButtonLongPressFired = useRef(false)
 
   const onHandsButtonPointerDown = useCallback(() => {
+    if (mainPhase === 'mahjong-declared') return
     handsButtonLongPressFired.current = false
     handsButtonLongPressTimer.current = setTimeout(() => {
       handsButtonLongPressFired.current = true
@@ -4458,7 +4460,7 @@ export default function App() {
       setSuggestedDeadTileGuide(null)
       setSuggestedDeadTableGuide(null)
     }, 500)
-  }, [])
+  }, [mainPhase])
 
   const onHandsButtonPointerUpOrLeave = useCallback(() => {
     if (handsButtonLongPressTimer.current != null) {
@@ -4468,12 +4470,13 @@ export default function App() {
   }, [])
 
   const onHandsButtonClick = useCallback(() => {
+    if (mainPhase === 'mahjong-declared') return
     if (handsButtonLongPressFired.current) {
       handsButtonLongPressFired.current = false
       return
     }
     setSuggestedPanelHandsOn((v) => !v)
-  }, [])
+  }, [mainPhase])
 
   const onSuggestedPatternClick = useCallback((handKey: string) => {
     setSuggestedFocusHandKey((cur) => (cur === handKey ? null : handKey))
@@ -6141,7 +6144,9 @@ export default function App() {
   /** Discard tracker + suggested hands row below rack (always on so layout is visible during Charleston). */
   const showPlaySplitRow = true
 
-  const showSuggestedHandsPanel = mainPhase !== 'mahjong-declared' && mainPhase !== 'bot-mahjong' && mainPhase !== 'dead-hand'
+  /** Suggested-hands tab + popup shell: hidden only on dead hand / bot Mah Jongg (no rack action row). */
+  const showSuggestedHandsPanel =
+    mainPhase !== 'dead-hand' && mainPhase !== 'bot-mahjong'
 
   /** Hand action bar is hidden in these phases; keep Menu on the bot column toolbar. */
   const menuInBotExposuresToolbar =
@@ -7161,7 +7166,9 @@ export default function App() {
                                     'suggested-hands-tab',
                                     'rack-bottom-tile-cell',
                                     'rack-bottom-tile-cell--c3-4',
-                                    suggestedPanelHandsOn ? 'suggested-hands-tab--open' : '',
+                                    suggestedPanelHandsOn && mainPhase !== 'mahjong-declared'
+                                      ? 'suggested-hands-tab--open'
+                                      : '',
                                   ]
                                     .filter(Boolean)
                                     .join(' ')}
@@ -7171,7 +7178,7 @@ export default function App() {
                                   onPointerUp={onHandsButtonPointerUpOrLeave}
                                   onPointerLeave={onHandsButtonPointerUpOrLeave}
                                   onPointerCancel={onHandsButtonPointerUpOrLeave}
-                                  aria-expanded={suggestedPanelHandsOn}
+                                  aria-expanded={mainPhase !== 'mahjong-declared' && suggestedPanelHandsOn}
                                   aria-controls="suggested-hands-popup"
                                 >
                                   Hands
@@ -7192,8 +7199,8 @@ export default function App() {
                               <button
                                 type="button"
                                 className="btn btn--rack-neutral btn--logic rack-bottom-tile-cell rack-bottom-tile-cell--c7-8"
-                                aria-label="Logic hints"
-                                onClick={() => setSuggestedPanelHandsOn(true)}
+                                aria-label="Logic"
+                                onClick={() => {}}
                               >
                                 <img className="btn--logic__img" src={logicLogoSrc} alt="Logic" draggable={false} />
                               </button>
@@ -7397,7 +7404,41 @@ export default function App() {
                           <div className="panel-hand-rack__hand-tray">
                             {mainPhase !== 'bot-mahjong' && (
                             <div className="rack-stage__rack-bottom">
-                                <HandBank>
+                                <HandBank
+                                  watermarkOverlayClassName={
+                                    mainPhase === 'mahjong-declared' && mahjongWinReviewing
+                                      ? 'hand-bank__main-rack-watermark--interactive'
+                                      : undefined
+                                  }
+                                  watermark={
+                                    mainPhase === 'mahjong-declared' && mahjongWinReviewing ? (
+                                      <>
+                                        <div
+                                          className="hand-bank__mj-review-actions rack-bottom-bar rack-bottom-bar--main rack-bottom-bar--tile-grid"
+                                          role="group"
+                                          aria-label="Mah Jongg review actions"
+                                        >
+                                          <div
+                                            className="hand-bank__mj-review-actions-spacer"
+                                            aria-hidden
+                                          />
+                                          <button
+                                            type="button"
+                                            className="btn btn--rack-neutral rack-bottom-tile-cell rack-bottom-tile-cell--c11-13"
+                                            onClick={() => {
+                                              void newHand()
+                                            }}
+                                          >
+                                            New Game
+                                          </button>
+                                        </div>
+                                        <div className="hand-bank__mj-review-logo-float" aria-hidden>
+                                          <RackLogoWatermark />
+                                        </div>
+                                      </>
+                                    ) : undefined
+                                  }
+                                >
                                   <SortableHand
                                     tiles={mainPhase === 'mahjong-declared' ? [] : visibleHandTiles}
                                     sortableOrder={undefined}
@@ -7436,14 +7477,37 @@ export default function App() {
                                 >
                                   <button
                                     type="button"
-                                    className="btn rack-bottom-tile-cell rack-bottom-tile-cell--c1-7"
+                                    className="btn rack-bottom-tile-cell"
                                     onClick={newHand}
                                   >
                                     Replay
                                   </button>
                                   <button
                                     type="button"
-                                    className="btn btn--primary rack-bottom-tile-cell rack-bottom-tile-cell--c8-14"
+                                    className={[
+                                      'btn',
+                                      'btn--primary',
+                                      'charleston-pass-btn',
+                                      'suggested-hands-tab',
+                                      'rack-bottom-tile-cell',
+                                      suggestedPanelHandsOn ? 'suggested-hands-tab--open' : '',
+                                    ]
+                                      .filter(Boolean)
+                                      .join(' ')}
+                                    aria-label="Suggested hands"
+                                    onClick={onHandsButtonClick}
+                                    onPointerDown={onHandsButtonPointerDown}
+                                    onPointerUp={onHandsButtonPointerUpOrLeave}
+                                    onPointerLeave={onHandsButtonPointerUpOrLeave}
+                                    onPointerCancel={onHandsButtonPointerUpOrLeave}
+                                    aria-expanded={suggestedPanelHandsOn}
+                                    aria-controls="suggested-hands-popup"
+                                  >
+                                    Hands
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn--primary rack-bottom-tile-cell"
                                     onClick={newHand}
                                   >
                                     New Game
@@ -7497,7 +7561,9 @@ export default function App() {
                                       'suggested-hands-tab',
                                       'rack-bottom-tile-cell',
                                       'rack-bottom-tile-cell--c3-4',
-                                      suggestedPanelHandsOn ? 'suggested-hands-tab--open' : '',
+                                      suggestedPanelHandsOn && mainPhase !== 'mahjong-declared'
+                                        ? 'suggested-hands-tab--open'
+                                        : '',
                                     ]
                                       .filter(Boolean)
                                       .join(' ')}
@@ -7507,7 +7573,7 @@ export default function App() {
                                     onPointerUp={onHandsButtonPointerUpOrLeave}
                                     onPointerLeave={onHandsButtonPointerUpOrLeave}
                                     onPointerCancel={onHandsButtonPointerUpOrLeave}
-                                    aria-expanded={suggestedPanelHandsOn}
+                                    aria-expanded={mainPhase !== 'mahjong-declared' && suggestedPanelHandsOn}
                                     aria-controls="suggested-hands-popup"
                                   >
                                     Hands
@@ -7518,6 +7584,9 @@ export default function App() {
                                   className={[
                                     'btn btn--mahjong rack-bottom-tile-cell rack-bottom-tile-cell--c5-6',
                                     mahjongButtonEnabled && mahjongWinLegallyAvailable ? 'btn--mahjong-hint' : '',
+                                    mainPhase === 'mahjong-declared' && mahjongWinReviewing
+                                      ? 'btn--mahjong-rack-pressed-in'
+                                      : '',
                                   ]
                                     .filter(Boolean)
                                     .join(' ')}
@@ -7537,8 +7606,8 @@ export default function App() {
                                 <button
                                   type="button"
                                   className="btn btn--rack-neutral btn--logic rack-bottom-tile-cell rack-bottom-tile-cell--c7-8"
-                                  aria-label="Logic hints"
-                                  onClick={() => setSuggestedPanelHandsOn(true)}
+                                  aria-label="Logic"
+                                  onClick={() => {}}
                                 >
                                   <img className="btn--logic__img" src={logicLogoSrc} alt="Logic" draggable={false} />
                                 </button>
