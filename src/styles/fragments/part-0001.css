@@ -27,6 +27,7 @@
 
 
 /* Shared: rack-aligned control typography (deduped from 8 rules) */
+.rack-bottom-bar--wall-game .btn.rack-wall-game__btn,
 .rack-bottom-bar--wall-game .btn.rack-bottom-tile-cell,
 .rack-bottom-tile-cell:not(.rack-bottom-wall),
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__clear,

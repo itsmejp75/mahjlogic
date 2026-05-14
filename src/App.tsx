@@ -198,9 +198,6 @@ const LS_KEY_UNDO = 'mahjlogic.undoEnabled'
 const UNDO_LABEL = 'Undo'
 const LS_KEY_DEAD_HAND_WARNINGS = 'mahjlogic.deadHandWarningsEnabled'
 const DEAD_HAND_WARNINGS_LABEL = 'Dead hand warnings'
-/** Highlight the Mah Jongg rack button when a declaration would succeed (self-draw or on a live discard). */
-const LS_KEY_MAHJONG_HINT = 'mahjlogic.mahjongHintEnabled'
-const MAHJONG_HINT_LABEL = 'Mah Jongg hint'
 const LS_KEY_DEAD_TILE_HINT = 'mahjlogic.deadTileHintEnabled'
 const DEAD_TILE_HINT_LABEL = 'Dead tile(s) hint'
 const LS_KEY_CONCEALED_HAND_REMINDER = 'mahjlogic.concealedHandReminderEnabled'
@@ -369,16 +366,6 @@ function readBotDifficultyFromStorage(): BotDifficulty {
 function readDeadHandWarningsFromStorage(): boolean {
   try {
     const v = localStorage.getItem(LS_KEY_DEAD_HAND_WARNINGS)
-    if (v === null) return true
-    return v === 'true' || v === '1'
-  } catch {
-    return true
-  }
-}
-
-function readMahjongHintFromStorage(): boolean {
-  try {
-    const v = localStorage.getItem(LS_KEY_MAHJONG_HINT)
     if (v === null) return true
     return v === 'true' || v === '1'
   } catch {
@@ -2593,7 +2580,6 @@ export default function App() {
   const [deadHandWarningsEnabled, setDeadHandWarningsEnabled] = useState<boolean>(() =>
     readDeadHandWarningsFromStorage(),
   )
-  const [mahjongHintEnabled, setMahjongHintEnabled] = useState<boolean>(() => readMahjongHintFromStorage())
   const [deadTileHintEnabled, setDeadTileHintEnabled] = useState<boolean>(() =>
     readDeadTileHintFromStorage(),
   )
@@ -2649,18 +2635,6 @@ export default function App() {
       const next = !v
       try {
         localStorage.setItem(LS_KEY_DEAD_HAND_WARNINGS, next ? 'true' : 'false')
-      } catch {
-        /* ignore */
-      }
-      return next
-    })
-  }, [])
-
-  const toggleMahjongHint = useCallback(() => {
-    setMahjongHintEnabled((v) => {
-      const next = !v
-      try {
-        localStorage.setItem(LS_KEY_MAHJONG_HINT, next ? 'true' : 'false')
       } catch {
         /* ignore */
       }
@@ -2748,10 +2722,6 @@ export default function App() {
       const d = readDeadHandWarningsFromStorage()
       return prev === d ? prev : d
     })
-    setMahjongHintEnabled((prev) => {
-      const m = readMahjongHintFromStorage()
-      return prev === m ? prev : m
-    })
     setDeadTileHintEnabled((prev) => {
       const d = readDeadTileHintFromStorage()
       return prev === d ? prev : d
@@ -2809,9 +2779,6 @@ export default function App() {
         const on = e.newValue === 'true' || e.newValue === '1'
         setDeadHandWarningsEnabled(on)
         deadHandWarningsEnabledRef.current = on
-      } else if (e.key === LS_KEY_MAHJONG_HINT) {
-        if (e.newValue == null) return
-        setMahjongHintEnabled(e.newValue === 'true' || e.newValue === '1')
       } else if (e.key === LS_KEY_DEAD_TILE_HINT) {
         if (e.newValue == null) return
         setDeadTileHintEnabled(e.newValue === 'true' || e.newValue === '1')
@@ -3925,13 +3892,16 @@ export default function App() {
 
   /** Matches `declareMahjong` success preconditions for the main rack MAHJ control (self-draw vs live discard). */
   const mahjongWinLegallyAvailable = useMemo(() => {
-    if (!charlestonDone || !mahjongHintEnabled) return false
+    if (!charlestonDone) return false
     if (mainPhase === 'east-discard') {
       return summarizeRackTowardWin(suggestedRankInput).bestTilesAway === 0
     }
-    if (mainPhase === 'bot-turn' && activeBotDiscard) {
+    if (
+      (mainPhase === 'bot-turn' || mainPhase === 'call-staging') &&
+      activeBotDiscard
+    ) {
       return hasLegalMahjongOnBotDiscard({
-        mainPhase: 'bot-turn',
+        mainPhase,
         activeBotDiscard,
         hand,
         eastExposures,
@@ -3943,7 +3913,6 @@ export default function App() {
     return false
   }, [
     charlestonDone,
-    mahjongHintEnabled,
     mainPhase,
     suggestedRankInput,
     activeBotDiscard,
@@ -6127,7 +6096,7 @@ export default function App() {
   const mahjongButtonEnabled =
     charlestonDone &&
     (mainPhase === 'east-discard' ||
-      (mainPhase === 'bot-turn' && !!activeBotDiscard))
+      ((mainPhase === 'bot-turn' || mainPhase === 'call-staging') && !!activeBotDiscard))
   const mainGamePrimaryDisabled =
     mainPhase === 'east-discard'
       ? !pendingEastDiscardTile
@@ -6150,7 +6119,28 @@ export default function App() {
 
   /** Hand action bar is hidden in these phases; keep Menu on the bot column toolbar. */
   const menuInBotExposuresToolbar =
-    mainPhase === 'wall-game' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand'
+    mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand'
+
+  /** Same meld filter as East `ExposureRack` during `wall-game` (drops oversized practice dumps). */
+  const eastExposureWallGameDisplayedTileCount = useMemo(
+    () =>
+      eastExposures
+        .filter(
+          (exp) => mainPhase !== 'wall-game' || exp.tiles.length <= WALL_GAME_MAX_EXPOSURE_MELD_TILES,
+        )
+        .reduce((sum, exp) => sum + exp.tiles.length, 0),
+    [eastExposures, mainPhase],
+  )
+
+  /** >9 face tiles: no room for trailing New Game on the exposure row — use main-rack MJ review overlay instead. */
+  const wallGameReviewShiftNewGameToMainRack =
+    mainPhase === 'wall-game' &&
+    wallGameReviewing &&
+    eastExposureWallGameDisplayedTileCount > 9
+
+  const handBankMjStylePostGameOverlay =
+    (mainPhase === 'mahjong-declared' && mahjongWinReviewing) ||
+    wallGameReviewShiftNewGameToMainRack
 
   const suggestedPopupRightForStyle: number | undefined =
     suggestedPopupRight != null
@@ -6435,16 +6425,6 @@ export default function App() {
                     id="app-menu-label-dead-hand-warnings"
                   >
                     {DEAD_HAND_WARNINGS_LABEL}
-                  </span>
-                </div>
-                <div className="app-menu-modal__row app-menu-modal__row--toggle">
-                  <AppMenuSettingSwitch
-                    labelId="app-menu-label-mahjong-hint"
-                    pressed={mahjongHintEnabled}
-                    onToggle={toggleMahjongHint}
-                  />
-                  <span className="app-menu-modal__label" id="app-menu-label-mahjong-hint">
-                    {MAHJONG_HINT_LABEL}
                   </span>
                 </div>
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
@@ -6795,10 +6775,7 @@ export default function App() {
               The wall ran out — no one drew a winning tile.
             </p>
             {postGameWallGameReview ? (
-              <div className="wall-game-dialog__review mahjong-win__bots-review" aria-labelledby="wall-game-review-heading">
-                <h3 id="wall-game-review-heading" className="mahjong-win__bots-review-title">
-                  All seats (practice card)
-                </h3>
+              <div className="wall-game-dialog__review mahjong-win__bots-review" aria-labelledby="wall-game-title">
                 <ul className="mahjong-win__bots-review-list">
                   {postGameWallGameReview.rows[0] ? (
                     <li key={postGameWallGameReview.rows[0].label} className="mahjong-win__bots-review-card">
@@ -7336,7 +7313,8 @@ export default function App() {
                               watermark={<RackLogoWatermark />}
                               hideWatermark={
                                 (mainPhase === 'mahjong-declared' && mahjongWinReviewing) ||
-                                (mainPhase === 'bot-mahjong' && botMahjongWinReviewing)
+                                (mainPhase === 'bot-mahjong' && botMahjongWinReviewing) ||
+                                wallGameReviewShiftNewGameToMainRack
                               }
                               ariaLabel="Your exposures"
                               reserveLastSlotForDiscard={mainPhase !== 'call-staging' && mainPhase !== 'mahjong-declared' && mainPhase !== 'bot-mahjong'}
@@ -7397,6 +7375,41 @@ export default function App() {
                                 ) : null
                               }
                               suffixSlotCount={mainPhase === 'call-staging' && showCallStagingDoneButton ? 1 : 0}
+                              reserveTrailingSlots={
+                                mainPhase === 'wall-game' &&
+                                wallGameReviewing &&
+                                !wallGameReviewShiftNewGameToMainRack
+                                  ? 3
+                                  : 0
+                              }
+                              trailingSuffix={
+                                mainPhase === 'wall-game' &&
+                                wallGameReviewing &&
+                                !wallGameReviewShiftNewGameToMainRack ? (
+                                  <div
+                                    className="exposure-rack__wall-game-new-game"
+                                    role="listitem"
+                                  >
+                                    <button
+                                      type="button"
+                                      className={[
+                                        'btn',
+                                        'btn--primary',
+                                        'charleston-pass-btn',
+                                        'suggested-hands-tab',
+                                        'rack-bottom-tile-cell',
+                                        'exposure-rack__wall-game-new-game__btn',
+                                      ].join(' ')}
+                                      aria-label="New game"
+                                      onClick={() => {
+                                        void newHand()
+                                      }}
+                                    >
+                                      New Game
+                                    </button>
+                                  </div>
+                                ) : null
+                              }
                             />
                             </EastOwnJokerSwapDropZone>
                             </StagingMeldDropZone>
@@ -7406,17 +7419,21 @@ export default function App() {
                             <div className="rack-stage__rack-bottom">
                                 <HandBank
                                   watermarkOverlayClassName={
-                                    mainPhase === 'mahjong-declared' && mahjongWinReviewing
+                                    handBankMjStylePostGameOverlay
                                       ? 'hand-bank__main-rack-watermark--interactive'
                                       : undefined
                                   }
                                   watermark={
-                                    mainPhase === 'mahjong-declared' && mahjongWinReviewing ? (
+                                    handBankMjStylePostGameOverlay ? (
                                       <>
                                         <div
                                           className="hand-bank__mj-review-actions rack-bottom-bar rack-bottom-bar--main rack-bottom-bar--tile-grid"
                                           role="group"
-                                          aria-label="Mah Jongg review actions"
+                                          aria-label={
+                                            wallGameReviewShiftNewGameToMainRack
+                                              ? 'Wall game review actions'
+                                              : 'Mah Jongg review actions'
+                                          }
                                         >
                                           <div
                                             className="hand-bank__mj-review-actions-spacer"
@@ -7469,51 +7486,6 @@ export default function App() {
                                 className="panel-hand-rack__action-well"
                                 ref={suggestedPopupTopAnchorMainRef}
                               >
-                              {mainPhase === 'wall-game' ? (
-                                <div
-                                  className="rack-bottom-bar rack-bottom-bar--wall-game"
-                                  role="group"
-                                  aria-label="Wall game actions"
-                                >
-                                  <button
-                                    type="button"
-                                    className="btn rack-bottom-tile-cell"
-                                    onClick={newHand}
-                                  >
-                                    Replay
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className={[
-                                      'btn',
-                                      'btn--primary',
-                                      'charleston-pass-btn',
-                                      'suggested-hands-tab',
-                                      'rack-bottom-tile-cell',
-                                      suggestedPanelHandsOn ? 'suggested-hands-tab--open' : '',
-                                    ]
-                                      .filter(Boolean)
-                                      .join(' ')}
-                                    aria-label="Suggested hands"
-                                    onClick={onHandsButtonClick}
-                                    onPointerDown={onHandsButtonPointerDown}
-                                    onPointerUp={onHandsButtonPointerUpOrLeave}
-                                    onPointerLeave={onHandsButtonPointerUpOrLeave}
-                                    onPointerCancel={onHandsButtonPointerUpOrLeave}
-                                    aria-expanded={suggestedPanelHandsOn}
-                                    aria-controls="suggested-hands-popup"
-                                  >
-                                    Hands
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="btn btn--primary rack-bottom-tile-cell"
-                                    onClick={newHand}
-                                  >
-                                    New Game
-                                  </button>
-                                </div>
-                              ) : (
                               <div
                                 className="rack-bottom-bar rack-bottom-bar--main rack-bottom-bar--tile-grid"
                                 role="group"
@@ -7685,7 +7657,6 @@ export default function App() {
                                   </span>
                                 ) : null}
                               </div>
-                            )}
                               </div>
                             ) : null}
                           </div>
@@ -7739,7 +7710,7 @@ export default function App() {
                       ) : null}
                     </div>
                     <div className="discard-tracker__shell">
-                      <div className="discard-tracker__content discard-tracker__content--ghost-inset">
+                      <div className="discard-tracker__content">
                         <DiscardPileDropZone
                           swapDropActive={jokerSwapUiActive}
                           onContainerNode={(node) => {

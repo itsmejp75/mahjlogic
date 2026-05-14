@@ -8,32 +8,49 @@
 
 
 
-/* Same 14-column grid + insets as the main tile action bar; inner-7 wide controls. */
+/*
+ * Wall game (rack review): Replay (left) · Menu (center) · New Game (right).
+ * Each control is 3 face-widths + 2 inter-face gaps; columns share the full rack action width.
+ */
 .panel--hand .rack-bottom-bar--wall-game {
   display: grid;
-  grid-template-columns: repeat(14, var(--hand-rack-fill-tile-w, var(--hand-rack-tile-w)));
-  column-gap: var(--player-rack-face-gap);
-  row-gap: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
   width: 100%;
-  max-width: none;
+  max-width: 100%;
   box-sizing: border-box;
   padding-inline: var(--hand-rack-tray-inset-inline);
   margin: 0;
-  align-items: center;
   transform: translateX(var(--hand-rack-action-row-nudge-x));
+  --rack-wall-game-action-w: calc(
+    3 * var(--hand-rack-fill-tile-w, var(--hand-rack-tile-w)) + 2 * var(--player-rack-face-gap)
+  );
 }
 
-.panel--hand .rack-bottom-bar--wall-game > * {
-  grid-row: 1;
-}
-
-.panel--hand .rack-bottom-bar--wall-game .rack-bottom-tile-cell {
-  flex: none;
-}
-
-.panel--hand .rack-bottom-bar--wall-game .btn.rack-bottom-tile-cell {
-  width: var(--rack-tile-btn-inner-7);
-  max-width: var(--rack-tile-btn-inner-7);
-  margin-inline-start: var(--rack-tile-face-bw);
+.panel--hand .rack-bottom-bar--wall-game > .rack-wall-game__btn--replay {
   justify-self: start;
+  width: var(--rack-wall-game-action-w);
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.panel--hand .rack-bottom-bar--wall-game > .rack-wall-game__btn-wrap--menu {
+  display: flex;
+  justify-content: center;
+  justify-self: center;
+  width: var(--rack-wall-game-action-w);
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.panel--hand .rack-bottom-bar--wall-game > .rack-wall-game__btn-wrap--menu > .btn {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.panel--hand .rack-bottom-bar--wall-game > .rack-wall-game__btn--new-game {
+  justify-self: end;
+  width: var(--rack-wall-game-action-w);
+  max-width: 100%;
+  box-sizing: border-box;
 }

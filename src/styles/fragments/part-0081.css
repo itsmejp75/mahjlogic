@@ -2130,6 +2130,82 @@
   cursor: not-allowed;
 }
 
+/* Wall-game review: three tile slots (11–13) before reserved discard — shell only; button matches Hands + action row height. */
+.panel--hand .exposure-rack__wall-game-new-game {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: calc(3 * var(--rack-tile-w) + 2 * var(--rack-tile-gap));
+  min-width: calc(3 * var(--rack-tile-w) + 2 * var(--rack-tile-gap));
+  margin: 0;
+  padding: 0;
+}
+
+/* Same height, padding, radius, label color, and purple fill as main-rack Hands (part-0026 / 0001 / 0071 / 0103). */
+.panel--hand .exposure-rack__wall-game-new-game__btn.rack-bottom-tile-cell {
+  width: var(--rack-tile-btn-inner-3);
+  max-width: 100%;
+  min-height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
+  height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
+  padding: 0.14rem 0.05rem;
+  box-sizing: border-box;
+  border: none;
+  border-radius: var(--rack-tile-btn-border-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: min(
+    var(--rack-hand-action-label-fs),
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.52),
+    calc(var(--rack-tile-btn-inner-3) / 7.6)
+  );
+  white-space: nowrap;
+  font-weight: 600;
+  letter-spacing: max(0.028em, calc(0.042em + 0.026rem));
+}
+
+.panel--hand
+  .exposure-rack__wall-game-new-game__btn.btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell:not(
+    :disabled
+  ),
+.panel--hand
+  .exposure-rack__wall-game-new-game__btn.btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell:disabled {
+  color: #dcdce0;
+}
+
+/*
+ * Inset shading + press depth: same tokens as hand-rack Menu + MJ hint (part-0067).
+ * (Main rack `.rack-bottom-bar--tile-grid` cells are intentionally flat; this control is on the exposure row.)
+ */
+.panel--hand .exposure-rack__wall-game-new-game__btn.rack-bottom-tile-cell:not(:disabled) {
+  box-shadow:
+    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
+    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
+  transition: box-shadow 0.14s ease, transform 0.12s ease;
+}
+
+.panel--hand .exposure-rack__wall-game-new-game__btn.rack-bottom-tile-cell:hover:not(:disabled) {
+  box-shadow:
+    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
+    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
+  transform: none;
+}
+
+.panel--hand .exposure-rack__wall-game-new-game__btn.rack-bottom-tile-cell:active:not(:disabled) {
+  transition: none;
+  transform: none;
+  box-shadow:
+    inset 4px 4px 11px rgba(0, 0, 0, 0.48),
+    inset -3px -3px 8px rgba(255, 255, 255, 0.1),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.24);
+}
+
+.panel--hand .exposure-rack__wall-game-new-game__btn.rack-bottom-tile-cell:disabled {
+  box-shadow: none;
+}
+
 .exposure-rack__slot--suggest-best .tile-face,
 .exposure-rack__slot--called .tile-face {
   border-radius: 0.35rem;

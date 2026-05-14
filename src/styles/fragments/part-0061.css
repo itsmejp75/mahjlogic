@@ -17,11 +17,6 @@
   flex-direction: column;
 }
 
-.discard-tracker__content--ghost-inset {
-  box-sizing: border-box;
-  padding-inline-end: var(--bot-panel-ghost-w);
-}
-
 .panel--discard-tracker[data-joker-swap-dnd='on'] .bot-dnd-ghost-column {
   pointer-events: auto;
 }
@@ -96,6 +91,7 @@
 
 .discard-tracker__content {
   flex: 1 1 0;
+  min-width: 0;
   min-height: 0;
   position: relative;
   overflow: hidden;
@@ -103,54 +99,47 @@
   border-radius: var(--tile-tray-shell-radius);
 }
 
-/*
- * Play-split discard tray: width + bot gutter; container so 15 tiles + gaps fill inner tray evenly
- * (drop zone uses same --bot-exposure-inner-pad as tile↔tray edge).
- */
+/* Tray shell matches the rack column width; inner drop zone uses the same inset as the hand tray. */
 .app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker .discard-tracker__content {
   box-sizing: border-box;
-  width: calc(100% - var(--discard-tray-gap-to-bot) - var(--play-split-lower-box-edge-inset));
-  margin-inline-start: var(--play-split-lower-box-edge-inset);
-  /* Slight negative margin nudges the tray content a few px past its panel's
-     trailing edge so the tray rim sits flush against the column gutter. */
-  margin-inline-end: calc(var(--discard-tray-gap-to-bot) - 5px);
-  container-type: inline-size;
-  container-name: discard-tray;
+  width: 100%;
+  margin-inline: 0;
 }
 
 /*
- * Fallback when container queries are unavailable: blend bot ref with a hand-tied cap
- * (15 slots in a 14-wide row → ~14/15 of `--hand-rack-tile-w` at equal track width).
+ * 26 discards across the full open discard box.
+ * Fallback uses `:root` `--hand-rack-tile-w` when container queries are unavailable.
+ * Tile chip: height : width = 4 : 3.
  */
 .panel--discard-tracker .discard-pile {
-  --rack-tile-w: min(var(--bot-tile-w-ref), calc(var(--hand-rack-tile-w) * 14 / 15));
-  --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
+  gap: var(--player-rack-face-gap);
+  --rack-tile-w: max(
+    1px,
+    calc(
+      (14 * var(--hand-rack-tile-w) + 13 * var(--player-rack-face-gap) - 25 * var(--player-rack-face-gap)) / 26
+    )
+  );
+  --rack-tile-h: calc(var(--rack-tile-w) * 4 / 3);
 }
 
-/* 15 columns + 14 gaps across tray inner width; symmetric inset via drop-zone inset. */
-@container discard-tray (min-width: 0px) {
+@container play-split-rack-lock (min-width: 0px) {
   .panel--discard-tracker .discard-pile {
-    /* Fit tray; cap by the same hand scale so tiles resize with the East rack, not a separate curve. */
-    --rack-tile-w: min(
-      max(
-        1px,
-        calc(
-          (
-            100cqw
-            - 2 * var(--bot-exposure-inner-pad)
-            - 14 * var(--rack-tile-gap)
-          ) / 15
-        )
-      ),
-      calc(var(--hand-rack-tile-w) * 14 / 15)
+    --rack-tile-w: max(
+      1px,
+      calc(
+        (
+          100cqi
+          - 25 * var(--player-rack-face-gap)
+        ) / 26
+      )
     );
-    --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
+    --rack-tile-h: calc(var(--rack-tile-w) * 4 / 3);
   }
 }
 
 .discard-tracker__content .discard-pile-drop-zone {
   position: absolute;
-  inset: var(--bot-exposure-inner-pad);
+  inset: 0;
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior-y: contain;

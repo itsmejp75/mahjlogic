@@ -46,23 +46,4 @@
   transform: none;
 }
 
-/*
- * ============================================================================
- * Pin discard column ↔ bot column gap to a constant width
- * ============================================================================
- *
- * The side-by-side sizing rules live behind `@media (min-width: 36.01rem)` in
- * `src/styles/fragments/part-0054.css` and `src/styles/thematic/components.css`.
- * Below 576 px those rules drop out: the discard falls back to a different width
- * formula (no `--bot-toolbar-exposure-nudge-left` subtraction, no `+8px`) while
- * `.app-play-split__right-stack` loses its negative margin — the discard's right
- * edge slides left relative to the bot panel's left edge and the gray separator
- * appears to widen.
- *
- * Re-apply the wide-state rules unconditionally so they hold at every viewport
- * width. At ≥ 576 px this duplicates the media-gated declarations (no-op). At
- * < 576 px it keeps the visible gap at `separator + right-pull − 8px`.
- */
-.app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker {
-  width: calc(100% - var(--discard-tray-right-pull));
-}
+/* Discard ↔ rack alignment: `play-split-rack-lock` + full-width panel in `part-0039.css` / `part-0061.css`. */

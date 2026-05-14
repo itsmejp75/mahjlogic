@@ -285,9 +285,29 @@
   animation: none;
 }
 
+/* Legal Mah Jongg with Animations off: no keyframe — use a steady ring so the affordance still reads. */
+.app-layout[data-animations='off']
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.btn--mahjong-hint.rack-bottom-tile-cell--c5-6:not(:disabled) {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--color-white) 42%, transparent),
+    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
+    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .btn--mahjong-hint .btn--mahj__logo-stack .btn--mahj__img {
     animation: none !important;
+  }
+
+  .panel--hand
+    .rack-bottom-bar--tile-grid
+    .btn.btn--mahjong.btn--mahjong-hint.rack-bottom-tile-cell--c5-6:not(:disabled) {
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--color-white) 42%, transparent),
+      inset 2px 2px 5px rgba(255, 255, 255, 0.12),
+      inset -3px -3px 7px rgba(0, 0, 0, 0.35);
   }
 }
 

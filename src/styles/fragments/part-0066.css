@@ -7,11 +7,4 @@
 /* ---- part-0069.css (from base.css, layout.css, components.css, animations.css) ---- */
 
 
-
-.panel--hand .rack-bottom-bar--wall-game > .rack-bottom-tile-cell,
-.panel--hand .rack-bottom-bar--wall-game > .btn.rack-bottom-tile-cell {
-  width: 100%;
-  max-width: none;
-  margin-inline-start: 0;
-  justify-self: stretch;
-}
+/* Wall game rack action strip layout: see `part-0018.css` (`.rack-bottom-bar--wall-game`). */

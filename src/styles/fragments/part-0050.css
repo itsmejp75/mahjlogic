@@ -55,12 +55,14 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  box-sizing: content-box;
-  padding-left: 0px;
-  padding-right: 0px;
-  margin-left: 0px;
-  margin-right: 0px;
+  box-sizing: border-box;
+  /* Keep the left edge flush; reserve the rack window inset on the right so the lower shell doesn't overrun. */
+  padding-inline-start: 0;
+  padding-inline-end: var(--hand-window-pad-inline);
+  margin-inline: 0;
   text-align: center;
+  container-type: inline-size;
+  container-name: play-split-rack-lock;
 }
 
 .app-play-split__right {

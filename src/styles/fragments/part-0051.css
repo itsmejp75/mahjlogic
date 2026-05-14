@@ -8,12 +8,4 @@
 
 
 
-/* Side-by-side: discard right edge is `--play-split-discard-bot-separator` from the visible bot
-   left edge (same as horizontal gaps between bot exposure row trays). Formula:
-     discard_width = left-col 100% − bot-stack-nudge − gap
-   (bot-stack-nudge is the leftward shift on __right-stack that defines the visible panel origin). */
-@media (min-width: 36.01rem) {
-  .app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker {
-    width: calc(100% - var(--discard-tray-right-pull));
-  }
-}
+/* Discard width / horizontal inset: `part-0039.css` + `play-split-rack-lock` on `.app-play-split__left`. */
