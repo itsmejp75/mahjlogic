@@ -384,31 +384,32 @@
     filter: brightness(1.38);
   }
   5.556% {
-    filter: brightness(1);
+    /* Trough: darker than neutral so the flash reads stronger; peak stays at 1.38 above. */
+    filter: brightness(0.46);
   }
   11.111% {
     filter: brightness(1.38);
   }
   16.667% {
-    filter: brightness(1);
+    filter: brightness(0.46);
   }
   22.222% {
     filter: brightness(1.38);
   }
   27.778% {
-    filter: brightness(1);
+    filter: brightness(0.46);
   }
   33.333% {
     filter: brightness(1.38);
   }
   38.889% {
-    filter: brightness(1);
+    filter: brightness(0.46);
   }
   44.444% {
     filter: brightness(1.38);
   }
   50% {
-    filter: brightness(1);
+    filter: brightness(0.46);
   }
   55.556% {
     filter: brightness(1.38);

@@ -28,7 +28,6 @@ import {
 import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { buildAmericanDeck, dealOpeningFour, shuffle } from './mahjong/deck'
-import { tileShortLabel } from './mahjong/labels'
 import type { ClaimType, DiscardEntry, EastExposure, Seat, Suit, TileDef, TileInstance } from './mahjong/types'
 import { findExactMatches, sortTiles, tileDefsEqual, type SortMode } from './mahjong/tileUtils'
 import { PASS_BOX_ID, passDropIndex, type PassSlots } from './mahjong/passTargets'
@@ -541,10 +540,13 @@ function DiscardPileDropZone({
 function OpponentExposureDropZone({
   seat,
   active,
+  showWatermark = true,
   children,
 }: {
   seat: 'South' | 'West' | 'North'
   active: boolean
+  /** Seat labels are hidden when the rack is used only as an invisible DnD/hint layer. */
+  showWatermark?: boolean
   children: ReactNode
 }) {
   const { setNodeRef, isOver } = useDroppable({
@@ -562,7 +564,9 @@ function OpponentExposureDropZone({
         .filter(Boolean)
         .join(' ')}
     >
-      <span className="bot-exposure-row__watermark" aria-hidden="true">{seat}</span>
+      {showWatermark ? (
+        <span className="bot-exposure-row__watermark" aria-hidden="true">{seat}</span>
+      ) : null}
       {children}
     </li>
   )
@@ -2545,7 +2549,6 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuOpenPrevRef = useRef(false)
   const menuContainerRef = useRef<HTMLDivElement>(null)
-  const botExposuresToolbarWellRef = useRef<HTMLDivElement>(null)
   const [suggestedHandsListOn, setSuggestedHandsListOn] = useState(true)
   const [wallGameReviewing, setWallGameReviewing] = useState(false)
   const [mahjongWinReviewing, setMahjongWinReviewing] = useState(false)
@@ -3364,7 +3367,6 @@ export default function App() {
     drawnTileId,
     activeBotIndex,
     activeBotDiscard,
-    botTurnBanner,
     eastExposures,
     botExposures,
     pendingEastDiscardTile,
@@ -3404,7 +3406,6 @@ export default function App() {
       const topFromAction = charlestonDone
         ? suggestedPopupTopAnchorMainRef.current?.getBoundingClientRect().bottom
         : suggestedPopupTopAnchorCharlestonRef.current?.getBoundingClientRect().bottom
-      const toolbarBorderLeft = botExposuresToolbarWellRef.current?.getBoundingClientRect().left
       if (!suggestedPanelHeightPinsTopRef.current) {
         const nextTop = topFromAction ?? dRect.top
         if (last.top == null || Math.abs(last.top - nextTop) >= LAYOUT_ANCHOR_EPS_PX) {
@@ -3417,13 +3418,8 @@ export default function App() {
         last.bottom = nextBottom
         setSuggestedPopupBottom(nextBottom)
       }
-      const nextRight = toolbarBorderLeft == null ? null : window.innerWidth - toolbarBorderLeft
-      if (nextRight == null) {
-        if (last.right !== null) {
-          last.right = null
-          setSuggestedPopupRight(null)
-        }
-      } else if (last.right == null || Math.abs(last.right - nextRight) >= LAYOUT_ANCHOR_EPS_PX) {
+      const nextRight = window.innerWidth - dRect.right
+      if (last.right == null || Math.abs(last.right - nextRight) >= LAYOUT_ANCHOR_EPS_PX) {
         last.right = nextRight
         setSuggestedPopupRight(nextRight)
       }
@@ -3435,7 +3431,6 @@ export default function App() {
       ? suggestedPopupTopAnchorMainRef.current
       : suggestedPopupTopAnchorCharlestonRef.current
     if (a) ro.observe(a)
-    if (botExposuresToolbarWellRef.current) ro.observe(botExposuresToolbarWellRef.current)
     window.addEventListener('scroll', update, { passive: true })
     window.addEventListener('resize', update, { passive: true })
     return () => {
@@ -6152,15 +6147,6 @@ export default function App() {
   const menuInBotExposuresToolbar =
     mainPhase === 'wall-game' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand'
 
-  const botDiscardStatusLine =
-    charlestonDone && mainPhase === 'bot-turn' && activeBotDiscard
-      ? botTurnBanner
-        ? `${BOT_LABELS[botTurnBanner.callerBotIndex]} called ${tileShortLabel(
-            botTurnBanner.calledDef,
-          )}, discarded ${tileShortLabel(activeBotDiscard.def)}`
-        : `${BOT_LABELS[activeBotIndex ?? 0]} discarded ${tileShortLabel(activeBotDiscard.def)}`
-      : null
-
   const suggestedPopupRightForStyle: number | undefined =
     suggestedPopupRight != null
       ? suggestedPopupRight + (suggestedPanelRightDelta ?? 0)
@@ -7341,6 +7327,10 @@ export default function App() {
                               suggestedTileGuide={suggestedTileGuideForRack}
                               highlightCalledTile={mainPhase === 'call-staging'}
                               watermark={<RackLogoWatermark />}
+                              hideWatermark={
+                                (mainPhase === 'mahjong-declared' && mahjongWinReviewing) ||
+                                (mainPhase === 'bot-mahjong' && botMahjongWinReviewing)
+                              }
                               ariaLabel="Your exposures"
                               reserveLastSlotForDiscard={mainPhase !== 'call-staging' && mainPhase !== 'mahjong-declared' && mainPhase !== 'bot-mahjong'}
                               lastSlotTile={
@@ -7645,157 +7635,152 @@ export default function App() {
                   <section
                     ref={discardTrackerPanelRef}
                     className="panel panel--discard-tracker"
-                    aria-labelledby="discard-heading"
+                    aria-label="Discard tracker"
+                    data-joker-swap-dnd={jokerSwapUiActive ? 'on' : 'off'}
                   >
                     <div className="panel__title-row panel__title-row--discard-tracker">
-                      <h2 id="discard-heading" className="panel__title">
-                        Discard Tracker
-                      </h2>
-                      {botDiscardStatusLine ? (
-                        <p
-                          id="discard-tracker-status"
-                          className="discard-tracker__status"
-                          aria-live="polite"
+                      {menuInBotExposuresToolbar ? (
+                        <div
+                          ref={menuContainerRef}
+                          className="app-menu-anchor app-menu-anchor--discard-tracker"
+                          role="group"
+                          aria-label="Menu"
                         >
-                          {botDiscardStatusLine}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="discard-tracker__content">
-                    <DiscardPileDropZone
-                      swapDropActive={jokerSwapUiActive}
-                      onContainerNode={(node) => {
-                        discardPileScrollElRef.current = node
-                      }}
-                    >
-                      {displayedDiscardPile.length > 0 ? (
-                        <div className="discard-pile" role="list" aria-label="Committed discards">
-                          {discardTrackerEntries.map(({ tile, seat, flyAnimate }) => {
-                            const needRing =
-                              suggestedDiscardNeedIds != null && suggestedDiscardNeedIds.has(tile.id)
-                            const isDead =
-                              !!suggestedDeadTableGuideForView?.discardDeadIds.has(tile.id)
-                            const isDim = isDead || (suggestedDiscardPileCanDim && !needRing)
-                            return (
-                              <div
-                                key={tile.id}
-                                className={[
-                                  'discard-entry',
-                                  `discard-entry--${seat}`,
-                                  needRing ? 'discard-entry--suggest-need' : '',
-                                  isDead ? 'discard-entry--suggest-dying' : '',
-                                  isDim ? 'discard-entry--suggest-dim' : '',
-                                ]
-                                  .filter(Boolean)
-                                  .join(' ')}
-                                role="listitem"
-                                aria-label={`${seat} discard`}
-                              >
-                                <DiscardPileFlyInTile
-                                  tileId={tile.id}
-                                  animate={flyAnimate}
-                                  onDropInEnd={() => {
-                                    popDiscardDropInId(tile.id)
-                                  }}
-                                >
-                                  <TileFace def={tile.def} />
-                                </DiscardPileFlyInTile>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      ) : null}
-                      {mainPhase === 'east-discard' && pendingJokerSwapTileId ? (
-                        <div className="discard-pile__actions">
                           <button
                             type="button"
-                            className="btn btn--rack-neutral"
-                            onClick={executeJokerSwapFromSlot}
+                            className={[
+                              'btn app-bottom-center-controls__menu-btn',
+                              menuOpen ? 'app-bottom-center-controls__menu-btn--open' : '',
+                            ]
+                              .filter(Boolean)
+                              .join(' ')}
+                            aria-label="Menu"
+                            aria-haspopup="dialog"
+                            aria-expanded={menuOpen}
+                            aria-controls={menuOpen ? 'app-menu-modal' : undefined}
+                            onClick={() => setMenuOpen((v) => !v)}
                           >
-                            Swap
+                            <span className="hand-rack-menu-hamburger" aria-hidden>
+                              <span className="hand-rack-menu-hamburger__bar" />
+                              <span className="hand-rack-menu-hamburger__bar" />
+                              <span className="hand-rack-menu-hamburger__bar" />
+                            </span>
                           </button>
                         </div>
                       ) : null}
-                    </DiscardPileDropZone>
-                    </div>{/* discard-tracker__content */}
-                  </section>
-                </div>
-                <div className="app-play-split__right">
-                  <div className="app-play-split__right-stack">
-                    <section
-                      className="panel panel--bot-exposures"
-                      aria-labelledby="bot-exposures-heading"
-                    >
-                      <div className="panel--bot-exposures__toolbar">
-                        <div
-                          ref={botExposuresToolbarWellRef}
-                          className="panel--bot-exposures__toolbar-well"
+                    </div>
+                    <div className="discard-tracker__shell">
+                      <div className="discard-tracker__content discard-tracker__content--ghost-inset">
+                        <DiscardPileDropZone
+                          swapDropActive={jokerSwapUiActive}
+                          onContainerNode={(node) => {
+                            discardPileScrollElRef.current = node
+                          }}
                         >
-                          {menuInBotExposuresToolbar ? (
-                            <div ref={menuContainerRef} className="app-menu-anchor" role="group" aria-label="Menu">
-                              <button
-                                type="button"
-                                className={['btn app-bottom-center-controls__menu-btn', menuOpen ? 'app-bottom-center-controls__menu-btn--open' : ''].filter(Boolean).join(' ')}
-                                aria-label="Menu"
-                                aria-haspopup="dialog"
-                                aria-expanded={menuOpen}
-                                aria-controls={menuOpen ? 'app-menu-modal' : undefined}
-                                onClick={() => setMenuOpen((v) => !v)}
-                              />
+                          {displayedDiscardPile.length > 0 ? (
+                            <div className="discard-pile" role="list" aria-label="Committed discards">
+                              {discardTrackerEntries.map(({ tile, seat, flyAnimate }) => {
+                                const needRing =
+                                  suggestedDiscardNeedIds != null && suggestedDiscardNeedIds.has(tile.id)
+                                const isDead =
+                                  !!suggestedDeadTableGuideForView?.discardDeadIds.has(tile.id)
+                                const isDim = isDead || (suggestedDiscardPileCanDim && !needRing)
+                                return (
+                                  <div
+                                    key={tile.id}
+                                    className={[
+                                      'discard-entry',
+                                      `discard-entry--${seat}`,
+                                      needRing ? 'discard-entry--suggest-need' : '',
+                                      isDead ? 'discard-entry--suggest-dying' : '',
+                                      isDim ? 'discard-entry--suggest-dim' : '',
+                                    ]
+                                      .filter(Boolean)
+                                      .join(' ')}
+                                    role="listitem"
+                                    aria-label={`${seat} discard`}
+                                  >
+                                    <DiscardPileFlyInTile
+                                      tileId={tile.id}
+                                      animate={flyAnimate}
+                                      onDropInEnd={() => {
+                                        popDiscardDropInId(tile.id)
+                                      }}
+                                    >
+                                      <TileFace def={tile.def} />
+                                    </DiscardPileFlyInTile>
+                                  </div>
+                                )
+                              })}
                             </div>
                           ) : null}
-                        </div>
-                      </div>
-                      <div className="panel--bot-exposures__body">
-                        <div className="panel__title-row">
-                          <h2 id="bot-exposures-heading" className="panel__title">
-                            Bot Exposure
-                          </h2>
-                        </div>
-                        <ul className="bot-exposures__list">
-                          {BOT_RAIL_LABELS.map((label) => {
-                            const melds = botExposures
-                              .map((exp, globalIdx) => ({ exp, globalIdx }))
-                              .filter(({ exp }) => exp.seat === label)
-                              .filter(
-                                ({ exp }) =>
-                                  mainPhase !== 'wall-game' ||
-                                  exp.tiles.length <= WALL_GAME_MAX_EXPOSURE_MELD_TILES,
-                              )
-                              .map(({ exp, globalIdx }) => ({
-                                tiles: exp.tiles,
-                                dropZoneId:
-                                  jokerSwapUiActive && exp.tiles.some((t) => t.def.cat === 'joker')
-                                    ? botExposureSwapDropId(globalIdx)
-                                    : undefined,
-                              }))
-                            return (
-                              <OpponentExposureDropZone
-                                key={label}
-                                seat={label}
-                                active={jokerSwapUiActive}
+                          {mainPhase === 'east-discard' && pendingJokerSwapTileId ? (
+                            <div className="discard-pile__actions">
+                              <button
+                                type="button"
+                                className="btn btn--rack-neutral"
+                                onClick={executeJokerSwapFromSlot}
                               >
-                                <ExposureRack
-                                  melds={melds}
-                                  slotCount={12}
-                                  ariaLabel={`${label} exposures`}
-                                  flyInTileIds={animationsEnabled ? botExposureFlyInTileIds : null}
-                                  suggestedTileGuide={botExposureSuggestedTileGuide}
-                                  suggestedDeadTileIds={
-                                    suggestedDeadTableGuideForView?.botExposureDeadIds ?? null
-                                  }
-                                  botJokerBorderMenuOn={false}
-                                  jokerSwapHintBounceTileIds={jokerSwapHintBounceIds?.jokers ?? null}
-                                  jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
-                                />
-                              </OpponentExposureDropZone>
-                            )
-                          })}
-                        </ul>
-                        <div className="panel--bot-exposures__body-fill" aria-hidden="true" />
+                                Swap
+                              </button>
+                            </div>
+                          ) : null}
+                        </DiscardPileDropZone>
                       </div>
-                    </section>
-                  </div>
+                      {/*
+                        Invisible column: same droppables + ExposureRack props as the old visible bot panel
+                        so joker swap collision and hint state stay wired until exposures are redesigned.
+                      */}
+                      <div className="bot-dnd-ghost-column" aria-hidden="true">
+                        <div className="panel panel--bot-exposures panel--bot-exposures--dnd-ghost">
+                          <div className="panel--bot-exposures__body">
+                            <ul className="bot-exposures__list">
+                              {BOT_RAIL_LABELS.map((label) => {
+                                const melds = botExposures
+                                  .map((exp, globalIdx) => ({ exp, globalIdx }))
+                                  .filter(({ exp }) => exp.seat === label)
+                                  .filter(
+                                    ({ exp }) =>
+                                      mainPhase !== 'wall-game' ||
+                                      exp.tiles.length <= WALL_GAME_MAX_EXPOSURE_MELD_TILES,
+                                  )
+                                  .map(({ exp, globalIdx }) => ({
+                                    tiles: exp.tiles,
+                                    dropZoneId:
+                                      jokerSwapUiActive && exp.tiles.some((t) => t.def.cat === 'joker')
+                                        ? botExposureSwapDropId(globalIdx)
+                                        : undefined,
+                                  }))
+                                return (
+                                  <OpponentExposureDropZone
+                                    key={label}
+                                    seat={label}
+                                    active={jokerSwapUiActive}
+                                    showWatermark={false}
+                                  >
+                                    <ExposureRack
+                                      melds={melds}
+                                      slotCount={12}
+                                      ariaLabel={`${label} exposures`}
+                                      flyInTileIds={animationsEnabled ? botExposureFlyInTileIds : null}
+                                      suggestedTileGuide={botExposureSuggestedTileGuide}
+                                      suggestedDeadTileIds={
+                                        suggestedDeadTableGuideForView?.botExposureDeadIds ?? null
+                                      }
+                                      botJokerBorderMenuOn={false}
+                                      jokerSwapHintBounceTileIds={jokerSwapHintBounceIds?.jokers ?? null}
+                                      jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
+                                    />
+                                  </OpponentExposureDropZone>
+                                )
+                              })}
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                </div>
                   {showSuggestedHandsPanel ? (
                     <div
                       id="suggested-hands-popup"
@@ -7993,7 +7978,6 @@ export default function App() {
                     </div>
                   ) : null}
                 </div>
-              </div>
             ) : null}
               <DragOverlay dropAnimation={null}>
                 {dragOverlayMeldTiles ? (

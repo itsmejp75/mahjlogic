@@ -8,10 +8,8 @@
 
 
 
-/* Hide bot/discard panel headings while keeping tray layout intact. */
-.panel--discard-tracker > .panel__title-row,
-.panel--bot-exposures__body > .panel__title-row,
-.discard-tracker__status {
+/* Hide legacy bot panel heading (visible bot column removed). */
+.panel--bot-exposures__body > .panel__title-row {
   display: none;
 }
 

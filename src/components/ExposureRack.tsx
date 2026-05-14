@@ -571,6 +571,11 @@ type Props = {
     staggerDelayMs: number
     baseDelayMs: number
   } | null
+  /**
+   * When true, fades out the exposure watermark (same as `exposure-rack__watermark--hidden`).
+   * Use after opening post-game review so a full winning-hand strip is not overlaid on the logo.
+   */
+  hideWatermark?: boolean
 }
 
 export function ExposureRack({
@@ -602,6 +607,7 @@ export function ExposureRack({
   jokerSwapHintBounceTileIds = null,
   jokerSwapHintBounceEpoch = 0,
   callStagingWaveFlyIn = null,
+  hideWatermark = false,
 }: Props) {
   const totalExposed = melds.reduce((n, m) => n + m.tiles.length, 0)
   const tailReserved = reserveTrailingSlots + (reserveLastSlotForDiscard ? 1 : 0)
@@ -637,7 +643,7 @@ export function ExposureRack({
         <div
           className={[
             'exposure-rack__watermark',
-            filledMeldCount >= 2 ? 'exposure-rack__watermark--hidden' : '',
+            filledMeldCount >= 2 || hideWatermark ? 'exposure-rack__watermark--hidden' : '',
           ]
             .filter(Boolean)
             .join(' ')}

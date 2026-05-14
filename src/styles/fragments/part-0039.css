@@ -15,9 +15,8 @@
   --discard-tray-gap-to-bot: 0px;
   flex: 1 1 0;
   min-height: 0;
-  /* Separator strip to bot + `--discard-tray-right-pull` (tune on `.app-play-split`). */
   align-self: flex-start;
-  width: calc(100% - var(--play-split-discard-bot-separator) - var(--discard-tray-right-pull));
+  width: calc(100% - var(--discard-tray-right-pull));
   max-width: 100%;
   padding-inline-end: 0;
   max-height: none;

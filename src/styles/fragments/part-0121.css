@@ -64,11 +64,5 @@
  * < 576 px it keeps the visible gap at `separator + right-pull − 8px`.
  */
 .app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker {
-  width: calc(
-    100%
-    - var(--bot-toolbar-exposure-nudge-left)
-    - var(--play-split-discard-bot-separator)
-    - var(--discard-tray-right-pull)
-    + 8px
-  );
+  width: calc(100% - var(--discard-tray-right-pull));
 }

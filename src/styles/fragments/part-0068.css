@@ -16,9 +16,8 @@
     var(--play-tray-h-divider);
 }
 
-/* Discard + bot: one token from `.app-play-split` (see `--play-split-tray-panel-padding-bottom`). */
-.app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker,
-.app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures {
+/* Lower discard strip: bottom padding matches the old discard + bot row (see `--play-split-tray-panel-padding-bottom`). */
+.app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker {
   padding-bottom: var(--play-split-tray-panel-padding-bottom);
 }
 

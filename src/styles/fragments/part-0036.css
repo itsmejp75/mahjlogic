@@ -102,8 +102,8 @@
   --play-split-lower-toolbar-button-group-nudge-x: -2.5px;
   /* Pull the discard tray’s right edge left (increase to move further left). */
   --discard-tray-right-pull: 0.55rem;
-  /* Window strip between discard column and bot column — same as `.bot-exposures__list` row gap. */
-  --play-split-discard-bot-separator: calc(var(--rack-stack-gap-y) + 4px);
+  /* Former strip between discard and the visible bot column (bot UI is redesigned; ghost keeps width). */
+  --play-split-discard-bot-separator: 0px;
   --lower-box-edge-trim: 4px;
   /*
    * Single bottom padding for **both** lower tray panels (discard + bot). Together with
@@ -140,16 +140,18 @@
   --bot-exposure-inner-pad: 4px;
   --tile-tray-shell-radius: calc(var(--tile-face-border-radius) + var(--bot-exposure-inner-pad));
   /*
-   * Just-fit budget: 12 scaled faces + 11 gaps + tray inner pad + panel inline pad (end side).
-   * `--play-split-discard-bot-join-pad` is 0 here but stays in the formula for tweaks.
+   * Width of the invisible bot DnD column (matches the old visible bot column math).
+   * `--bot-panel-outer-w` is 0 now that the visible right column is gone; popup `right` and
+   * suggested-hands CSS use it so the panel clears the viewport edge.
    */
-  --bot-panel-outer-w: calc(
+  --bot-panel-ghost-w: calc(
     var(--play-split-discard-bot-join-pad)
     + var(--hand-window-pad-inline)
     + 12 * var(--bot-tile-w-ref) * var(--bot-exposure-tile-scale)
     + 11 * var(--bot-exposure-tile-gap-budget)
     + 2 * var(--bot-exposure-inner-pad)
   );
+  --bot-panel-outer-w: 0px;
 }
 
 .app-play-split .panel {
