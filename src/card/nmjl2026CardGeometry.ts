@@ -18,7 +18,13 @@ import {
 
 type Geometry = Pick<
   PracticePattern,
-  'groups' | 'matches' | 'titleSegments' | 'cardLineFromGroupSlotMap' | 'jokerEligibleGroupToDisplaySlot'
+  | 'groups'
+  | 'matches'
+  | 'titleSegments'
+  | 'cardLineFromGroupSlotMap'
+  | 'jokerEligibleGroupToDisplaySlot'
+  | 'previewSlotsFromGroups'
+  | 'skipStripTitleReorder'
 >
 type Test = (def: TileDef) => boolean
 
@@ -236,7 +242,23 @@ function buildRankGroups(row: Nmjl2026CsvHandRow, rankSlots: RankSlot[]): Patter
   ]
 }
 
+/**
+ * 2026 NMJL `13579-4` style: six-tile suit block with one odd rank paired (e.g. `113579`), and both
+ * other suits show a kong of that pair rank. The card prints the “1” example; matcher must try every
+ * odd pair rank — see `odd-pair-kongs-triple` in `practicePatterns.ts`.
+ */
+function isOddPairKongsTripleRow(row: Nmjl2026CsvHandRow): boolean {
+  const p = row.parenthesis.toLowerCase()
+  return p.includes('pair any odd') && p.includes('kongs match pair')
+}
+
 function buildGroupsAndMatches(row: Nmjl2026CsvHandRow): { groups: PatternGroup[]; matches: Test } {
+  if (isOddPairKongsTripleRow(row)) {
+    return {
+      groups: [{ kind: 'odd-pair-kongs-triple', odds: [1, 3, 5, 7, 9] }],
+      matches: suit(1, 3, 5, 7, 9),
+    }
+  }
   const groups: PatternGroup[] = []
   const matchTests: Test[] = []
   const rankSlots: RankSlot[] = []
@@ -313,9 +335,13 @@ function buildGroupsAndMatches(row: Nmjl2026CsvHandRow): { groups: PatternGroup[
 
 export function nmjl2026GeometryFromCsvRow(row: Nmjl2026CsvHandRow): Geometry {
   const { groups, matches } = buildGroupsAndMatches(row)
+  const oddPairKongs = groups.some((g) => g.kind === 'odd-pair-kongs-triple')
   return {
     groups,
     matches,
     titleSegments: titleSegmentsForRow(row),
+    // Six-tile suit block uses placeholder rank 1 in title preview; matcher selects the real pair
+    // rank dynamically, so the strip must come from groups and skip title reordering.
+    ...(oddPairKongs ? { previewSlotsFromGroups: true, skipStripTitleReorder: true } : {}),
   }
 }

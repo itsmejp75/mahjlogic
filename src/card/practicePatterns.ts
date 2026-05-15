@@ -800,21 +800,21 @@ export const PRACTICE_PATTERNS: PracticePattern[] = [
     matches: suit(5, 7, 9),
   },
   {
-    id: '13579-4',
-    section: '13579',
-    cardHandCode: '4',
-    points: 25,
-    closed: false,
-    roughTarget: 14,
-    title: '113579 1111 1111',
-    titleSegments: [g('113579 '), r('1111 '), n('1111 ')],
-    cardParenthesis: '(Any 3 Suits, Pair Any Odd No., Kongs Match Pair)',
-    previewSlotsFromGroups: true,
-    skipStripTitleReorder: true,
-    // 2026 NMJL: pair rank R ∈ odds appears twice in one suit with the other four odds once each;
-    // the other two suits each show a kong of R (113579… / 133579… / … / 135799… on the card).
-    groups: [{ kind: 'odd-pair-kongs-triple', odds: [1, 3, 5, 7, 9] }],
-    matches: suit(1, 3, 5, 7, 9),
+    id: '13579-4', section: '13579', points: 25, closed: false, roughTarget: 14,
+    title: '1111 333 5555 DDD',
+    titleSegments: [r('1111 333 '), g('5555 DDD')],
+    // Card: 1111 333 red (suit A); 5555 + DDD green (suit B, dragon matches suit B). Two distinct suits.
+    groups: [
+      {
+        kind: 'suit-permute',
+        colorGroups: [
+          [{ rank: 1, need: 4, canUseJoker: true }, { rank: 3, need: 3, canUseJoker: true }],
+          [{ rank: 5, need: 4, canUseJoker: true }],
+        ],
+        colorGroupDragonCounts: [0, 3],
+      },
+    ],
+    matches: or(suit(1, 3, 5), dragon),
   },
   {
     id: '13579-5', section: '13579', points: 25, closed: false, roughTarget: 14,
