@@ -992,8 +992,12 @@ function focusedPatternNeedForDeadHintDef(
   return need
 }
 
-function createNewRound(): RoundState {
-  const deck = shuffle(buildAmericanDeck())
+/** Pre-deal wall order: East 14, South/West/North 13 each, then wall — matches `dealOpeningFour`. */
+function roundOpeningDeckOrder(r: Pick<RoundState, 'hand' | 'bots' | 'wall'>): TileInstance[] {
+  return [...r.hand, ...r.bots[0], ...r.bots[1], ...r.bots[2], ...r.wall]
+}
+
+function roundStateFromOpeningDeck(deck: TileInstance[]): RoundState {
   const { east, south, west, north, wall } = dealOpeningFour(deck)
   return {
     hand: east,
@@ -1028,6 +1032,10 @@ function createNewRound(): RoundState {
     botWin: null,
     playerWinMethod: null,
   }
+}
+
+function createNewRound(): RoundState {
+  return roundStateFromOpeningDeck(shuffle(buildAmericanDeck()))
 }
 
 function charlestonIncomingHandTileIds(
@@ -2436,7 +2444,12 @@ function AppMenuSettingSwitch({
 }
 
 export default function App() {
-  const [round, setRound] = useState<RoundState>(() => createNewRound())
+  const replayOpeningDeckRef = useRef<TileInstance[] | null>(null)
+  const [round, setRound] = useState<RoundState>(() => {
+    const r = createNewRound()
+    replayOpeningDeckRef.current = roundOpeningDeckOrder(r)
+    return r
+  })
   const [suggestedFocusHandKey, setSuggestedFocusHandKey] = useState<string | null>(null)
   const suggestedFocusHandKeyRef = useRef<string | null>(null)
   suggestedFocusHandKeyRef.current = suggestedFocusHandKey
@@ -4467,7 +4480,7 @@ export default function App() {
 
   const charlestonRackRoundTitleText = charlestonRackRoundTitle(charlestonPhase)
 
-  const performNewHandDeal = useCallback(() => {
+  const performNewHandDeal = useCallback((opts?: { replayLastOpening?: boolean }) => {
     const m = menuCardIdRef.current
     const c = committedCardIdRef.current
 
@@ -4511,12 +4524,29 @@ export default function App() {
       setCommittedCardId(m)
       setActiveCardPatterns(patternsForCard(m))
     }
-    setRound(createNewRound())
+    const replay =
+      opts?.replayLastOpening === true &&
+      replayOpeningDeckRef.current != null &&
+      replayOpeningDeckRef.current.length === 152
+    const nextRound = replay
+      ? roundStateFromOpeningDeck([...replayOpeningDeckRef.current])
+      : (() => {
+          const r = createNewRound()
+          replayOpeningDeckRef.current = roundOpeningDeckOrder(r)
+          return r
+        })()
+    setRound(nextRound)
   }, [])
 
   /** @returns true (menu may close); card-change warning is shown from `requestPlayableCard` when needed. */
   const newHand = useCallback((): boolean => {
     performNewHandDeal()
+    return true
+  }, [performNewHandDeal])
+
+  /** Same opening wall + seats as the last fresh deal; reshuffle only via New Game. */
+  const replayHand = useCallback((): boolean => {
+    performNewHandDeal({ replayLastOpening: true })
     return true
   }, [performNewHandDeal])
 
@@ -6237,7 +6267,7 @@ export default function App() {
               >
                 Review
               </button>
-              <button type="button" className="btn btn--primary wall-game-dialog__action-btn" onClick={newHand}>
+              <button type="button" className="btn btn--primary wall-game-dialog__action-btn" onClick={replayHand}>
                 Replay
               </button>
             </div>
@@ -6315,7 +6345,7 @@ export default function App() {
               >
                 Review
               </button>
-              <button type="button" className="btn btn--primary wall-game-dialog__action-btn" onClick={newHand}>
+              <button type="button" className="btn btn--primary wall-game-dialog__action-btn" onClick={replayHand}>
                 Replay
               </button>
             </div>
@@ -6393,7 +6423,7 @@ export default function App() {
               >
                 Review
               </button>
-              <button type="button" className="btn btn--primary wall-game-dialog__action-btn" onClick={newHand}>
+              <button type="button" className="btn btn--primary wall-game-dialog__action-btn" onClick={replayHand}>
                 Replay
               </button>
             </div>

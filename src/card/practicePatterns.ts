@@ -105,6 +105,21 @@ export type PracticePattern = {
   groups?: PatternGroup[]
   /** Returns true if this tile type/rank is useful for this hand. */
   matches: (def: TileDef) => boolean
+  /**
+   * When the matcher emits strip tiles in **group-append order** but the printed card line uses a
+   * different order: display index `d` shows the tile from group-strip index `cardLineFromGroupSlotMap[d]`.
+   * Length must equal `roughTarget` when set. NMJL CSV hands can set the same field when title
+   * segments are insufficient.
+   */
+  cardLineFromGroupSlotMap?: readonly number[]
+  /**
+   * Joker eligibility from `patternPreviewJokerEligibleBySlot` is indexed in **card/display** order.
+   * Greedy strip assignment walks **group** order; for group slot `g`, use eligibility from display
+   * index `jokerEligibleGroupToDisplaySlot[g]`. When omitted but `cardLineFromGroupSlotMap` is set,
+   * the inverse of that map is used. Set explicitly when the strip is not permuted but joker flags
+   * still need realignment (e.g. `like-4`).
+   */
+  jokerEligibleGroupToDisplaySlot?: readonly number[]
 }
 
 // ── tile-type helpers ─────────────────────────────────────────────────────────
@@ -117,7 +132,7 @@ export const flower = (def: TileDef) => def.cat === 'flower'
 export const dragon = (def: TileDef) => def.cat === 'dragon'
 export const wind = (def: TileDef) => def.cat === 'wind'
 export const anySuit = (def: TileDef) => def.cat === 'suit'
-/** Bam + crak only — like-number kongs opposing the soap (dot) column on `FFF 1111 DDD 1111`. */
+/** Bam + crak only — legacy / opposing-column like-number layouts. */
 export const bamCrakSuit = (def: TileDef) => def.cat === 'suit' && (def.suit === 'bam' || def.suit === 'crak')
 export const redDrg = (def: TileDef) => def.cat === 'dragon' && def.dragon === 'red'
 export const grnDrg = (def: TileDef) => def.cat === 'dragon' && def.dragon === 'green'
@@ -161,6 +176,7 @@ export const PRACTICE_PATTERNS: PracticePattern[] = [
     titleSegments: [n('22 4444 '), r('666 '), g('666 '), n('88')],
     // Three color slots: navy(22+4444+88) | red(666) | green(666).
     // Card order is interleaved: [22 4444][666-red][666-green][88], custom reorder applied.
+    cardLineFromGroupSlotMap: [0, 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 13, 6, 7],
     groups: [
       {
         kind: 'suit-permute',
@@ -281,6 +297,8 @@ export const PRACTICE_PATTERNS: PracticePattern[] = [
     id: 'like-2', section: 'ANY LIKE NUMBERS', points: 25, closed: false, roughTarget: 14,
     title: 'FF 1111 DD 1111 DD (any #)',
     titleSegments: [fl('FF '), r('1111 DD '), g('1111 DD ')],
+    // Group order stacks both kongs then both DD pairs; card interleaves kong/DD per suit column.
+    cardLineFromGroupSlotMap: [0, 1, 2, 3, 4, 5, 10, 11, 6, 7, 8, 9, 12, 13],
     // 2 flowers + 8 suit tiles of same rank (4+4) + 2 pairs of different dragon types
     groups: [
       { kind: 'fixed',       need: 2,      test: flower },
@@ -292,20 +310,23 @@ export const PRACTICE_PATTERNS: PracticePattern[] = [
   },
   {
     id: 'like-3', section: 'ANY LIKE NUMBERS', points: 25, closed: false, roughTarget: 14,
-    title: 'FFF 1111 DDD 1111 (any #)',
-    titleSegments: [fl('FFF '), r('1111 '), n('DDD '), g('1111')],
-    // 3 flowers + 8 suit tiles same rank in **bam + crak** (opposing soap/dot column) + **3 soaps**
+    title: 'FF 1111 11 1111 DD (any #)',
+    titleSegments: [fl('FF '), r('1111 '), g('11 '), n('1111 '), g('DD ')],
+    cardParenthesis: '(Any 3 Suits w Any Dragon)',
+    // 2026 NMJL: 2 flowers + same rank in three suits (4+2+4) + any dragon pair (card line order).
     groups: [
-      { kind: 'fixed',       need: 3,      test: flower },
-      { kind: 'shared-rank-suits', needs: [4,4], test: bamCrakSuit },
-      { kind: 'fixed',       need: 3,      test: soapDrg },
+      { kind: 'fixed', need: 2, test: flower },
+      { kind: 'shared-rank-suits', needs: [4, 2, 4], test: anySuit },
+      { kind: 'fixed', need: 2, test: dragon },
     ],
-    matches: or(flower, bamCrakSuit, soapDrg),
+    matches: or(flower, anySuit, dragon),
   },
   {
     id: 'like-4', section: 'ANY LIKE NUMBERS', points: 30, closed: true, roughTarget: 14,
     title: '11 DD 111 DDD 1111 (any #)',
     titleSegments: [r('11 DD '), g('111 DDD '), n('1111')],
+    // Card line order vs group-append order — only joker-eligibility indexing needs this map.
+    jokerEligibleGroupToDisplaySlot: [0, 1, 4, 5, 6, 10, 11, 12, 13, 2, 3, 7, 8, 9],
     // 9 suit tiles of same rank (2+3+4) + 2 pairs/pung of different dragon types
     groups: [
       { kind: 'shared-rank-suits', needs: [2,3,4], test: anySuit },
@@ -339,6 +360,8 @@ export const PRACTICE_PATTERNS: PracticePattern[] = [
     id: 'math-2', section: 'MATH', points: 25, closed: false, roughTarget: 14,
     title: 'DDDD 3333 × 7777 = 21',
     titleSegments: [n('DDDD '), r('3333 × '), g('7777 '), sp('= '), n('2'), n('1')],
+    // Suit-locked block appends ranks 2,1 after dragons; card prints DDDD | 3333 | 7777 | 2 | 1.
+    cardLineFromGroupSlotMap: [0, 1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 4, 5],
     // Navy “DDDD” + navy “21” = one suit: four matching dragons + ranks 2 & 1 in that suit.
     // Red 3333 and green 7777 are the other two suit slots.
     groups: [
@@ -643,6 +666,8 @@ export const PRACTICE_PATTERNS: PracticePattern[] = [
     id: 'consec-6', section: 'CONSECUTIVE RUNS', points: 30, closed: false, roughTarget: 14,
     title: '1111 22 22 22 3333',
     titleSegments: [n('1111 '), r('22 '), n('22 '), g('22 '), n('3333')],
+    // Group order: A-kong, A-pair, B-pair, C-pair, A-kong2 — card interleaves the three (N+1) pairs.
+    cardLineFromGroupSlotMap: [0, 1, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 8, 9],
     // Card: outer NNNN/(N+2)×4 + middle (N+1) pairs in all three suits.
     groups: [
       {
@@ -711,6 +736,8 @@ export const PRACTICE_PATTERNS: PracticePattern[] = [
     id: '13579-1b', section: '13579', points: 25, closed: false, roughTarget: 14,
     title: '11 333 5555 777 99',
     titleSegments: [n('11 333 '), g('5555 '), n('777 99')],
+    // Group order places 5555 last; card prints 5555 after 333 and before 777 99.
+    cardLineFromGroupSlotMap: [0, 1, 2, 3, 4, 10, 11, 12, 13, 5, 6, 7, 8, 9],
     // Two inks: navy (11 333 777 99 = suit A) and green (5555 = suit B).
     groups: [
       {

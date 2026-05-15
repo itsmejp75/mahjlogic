@@ -155,51 +155,73 @@ function SortableTile({
   const handFlyInIdsKey = handTileFlyIn?.ids.join('\u0001') ?? ''
   useLayoutEffect(() => {
     if (!runFlyLayout) return
-    const el = wrapRef.current
-    const flyEl = flyInRef.current
-    if (!el || !flyEl) return
-    const tileRect = el.getBoundingClientRect()
-    const tileCx = tileRect.left + tileRect.width / 2
-    const tileCy = tileRect.top + tileRect.height / 2
 
-    let ox: number
-    let oy: number
-    // Charleston / wall receive: always wins over generic "just drawn" so we never fall through
-    // to the rack-local wall-draw path when both flags are true.
-    if (isHandFlyIn && handTileFlyIn) {
-      // Short slide from the pass direction (neighbor exchange), not a full-screen fly.
-      const w = tileRect.width
-      const h = tileRect.height
-      switch (handTileFlyIn.from) {
-        case 'right':
-          ox = tileCx + w * 1.25
-          oy = tileCy
-          break
-        case 'left':
-          ox = tileCx - w * 1.25
-          oy = tileCy
-          break
-        case 'across':
-        default:
-          ox = tileCx
-          oy = tileCy - h * 1.2
-          break
+    let raf1 = 0
+    let raf2 = 0
+
+    const apply = () => {
+      const el = wrapRef.current
+      const flyEl = flyInRef.current
+      if (!el || !flyEl) return
+      // WebKit (standalone PWA / iOS): first layout pass can read before the rack grid resolves.
+      void el.offsetHeight
+      const tileRect = el.getBoundingClientRect()
+      const tileCx = tileRect.left + tileRect.width / 2
+      const tileCy = tileRect.top + tileRect.height / 2
+
+      let ox: number
+      let oy: number
+      if (isHandFlyIn && handTileFlyIn) {
+        const w = tileRect.width
+        const h = tileRect.height
+        switch (handTileFlyIn.from) {
+          case 'right':
+            ox = tileCx + w * 1.25
+            oy = tileCy
+            break
+          case 'left':
+            ox = tileCx - w * 1.25
+            oy = tileCy
+            break
+          case 'across':
+          default:
+            ox = tileCx
+            oy = tileCy - h * 1.2
+            break
+        }
+      } else if (isJustDrawn && drawInFromRackBottom) {
+        const h = tileRect.height
+        ox = tileCx
+        oy = tileCy + h * 1.05
+      } else if (isJustDrawn) {
+        const h = tileRect.height
+        ox = tileCx
+        oy = tileCy - h * 1.2
+      } else {
+        return
       }
-    } else if (isJustDrawn && drawInFromRackBottom) {
-      // Joker swap: same “wave up” origin as call tiles into exposure (`ExposureRack` `flyOrigin="below"`).
-      const h = tileRect.height
-      ox = tileCx
-      oy = tileCy + h * 1.05
-    } else if (isJustDrawn) {
-      // Wall draw (no seat fly-in): drop in from above this tile’s slot — same vertical offset as `across` receive.
-      const h = tileRect.height
-      ox = tileCx
-      oy = tileCy - h * 1.2
-    } else {
-      return
+      flyEl.style.setProperty('--draw-anim-dx', `${ox - tileCx}px`)
+      flyEl.style.setProperty('--draw-anim-dy', `${oy - tileCy}px`)
     }
-    flyEl.style.setProperty('--draw-anim-dx', `${ox - tileCx}px`)
-    flyEl.style.setProperty('--draw-anim-dy', `${oy - tileCy}px`)
+
+    apply()
+
+    if (isHandFlyIn && handTileFlyIn) {
+      const el = wrapRef.current
+      if (el) {
+        const r = el.getBoundingClientRect()
+        if (r.width < 6 || r.height < 6) {
+          raf1 = requestAnimationFrame(() => {
+            raf2 = requestAnimationFrame(apply)
+          })
+        }
+      }
+    }
+
+    return () => {
+      cancelAnimationFrame(raf1)
+      cancelAnimationFrame(raf2)
+    }
   }, [
     runFlyLayout,
     isJustDrawn,
@@ -245,6 +267,7 @@ function SortableTile({
         ref={flyInRef}
         className={[
           runFlyLayout ? 'sortable-tile-wrap__fly sortable-tile-wrap--just-drawn' : 'sortable-tile-wrap__fly',
+          handFlyInWaveDelayMs != null ? 'sortable-tile-wrap--opening-deal-wave' : '',
           runFlyLayout && isJustDrawn && drawInFromRackBottom ? 'exposure-rack__call-staging-fly-up' : '',
           jokerSwapHintBounce && !runFlyLayout ? 'sortable-tile-wrap__fly--joker-swap-hint-bounce' : '',
         ]

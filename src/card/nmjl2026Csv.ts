@@ -87,28 +87,52 @@ export function nmjl2026RowKey(row: Nmjl2026CsvHandRow): string {
   return `${row.category}\t${row.handNum}`
 }
 
+/**
+ * Every 2026 league hand id starts with this string so it **never** equals a mock practice-card id
+ * from `PRACTICE_PATTERNS` (for example `like-3`, `2468-2`).
+ */
+export const NMJL_2026_PATTERN_ID_PREFIX = 'nmjl2026:' as const
+
+export function isNmjl2026LeaguePatternId(id: string): boolean {
+  return id.startsWith(NMJL_2026_PATTERN_ID_PREFIX)
+}
+
+/**
+ * Stable id for one CSV row. Always prefixed — mock card and 2026 league stay disjoint.
+ */
 export function nmjl2026PatternId(row: Nmjl2026CsvHandRow): string {
   const h = row.handNum.replace(/[^a-zA-Z0-9]/g, '') || row.handNum
+  let base: string
   switch (row.category) {
     case '2026':
-      return `2026-${row.handNum}`
+      base = `2026-${row.handNum}`
+      break
     case '2468':
-      return `2468-${row.handNum}`
+      base = `2468-${row.handNum}`
+      break
     case 'ANY LIKE NUMBERS':
-      return `like-${row.handNum}`
+      base = `like-${row.handNum}`
+      break
     case 'QUINTS':
-      return `quint-${row.handNum}`
+      base = `quint-${row.handNum}`
+      break
     case 'CONSECUTIVE RUN':
-      return `consec-${row.handNum}`
+      base = `consec-${row.handNum}`
+      break
     case '13579':
-      return `13579-${row.handNum}`
+      base = `13579-${row.handNum}`
+      break
     case 'WINDS - DRAGONS':
-      return `wd-${row.handNum}`
+      base = `wd-${row.handNum}`
+      break
     case '369':
-      return `369-${row.handNum}`
+      base = `369-${row.handNum}`
+      break
     case 'SINGLES AND PAIRS':
-      return `sp-${row.handNum}`
+      base = `sp-${row.handNum}`
+      break
     default:
-      return `nmjl-${h}`
+      base = `nmjl-${h}`
   }
+  return `${NMJL_2026_PATTERN_ID_PREFIX}${base}`
 }

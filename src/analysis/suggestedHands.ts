@@ -4,17 +4,13 @@ import { collectSwappableJokerTileIds } from '../mahjong/jokerSwapTarget'
 import type { CardInk } from '../card/cardText'
 import {
   firstOpposingConsecutiveStandInPairFromTitle,
+  jokerEligibleGroupToDisplayFromPattern,
   patternLinePreviewCardInks,
   patternLinePreviewDefs,
   patternLinePreviewGroupOrderDefs,
   patternLinePreviewSlots,
   patternPreviewJokerEligibleBySlot,
-  reorderConsec6GroupTileDefsToDisplay,
-  reorderLikeThreeGroupTileDefsToDisplay,
-  reorderLikeTwoGroupTileDefsToDisplay,
-  reorderMath2GroupTileDefsToDisplay,
-  reorder2468_2GroupTileDefsToDisplay,
-  reorder13579_1bGroupTileDefsToDisplay,
+  reorderTileDefsByCardLineFromGroupMap,
   srsDragonCoupledColumn,
 } from '../card/patternLinePreview'
 import { getActiveCardPatterns } from '../card/activeCardPatternsScope'
@@ -1327,14 +1323,23 @@ function buildPreviewSlotKindsFromGroups(
   return { kinds, slotTileIdByStripIndex }
 }
 
-/** `like-2` group-order assignment → NMJL card line order (kong₁, DD₁, kong₂, DD₂). */
-function permuteLikeTwoStripAssignment(a: PreviewStripAssignment): PreviewStripAssignment {
-  const map = [0, 1, 2, 3, 4, 5, 10, 11, 6, 7, 8, 9, 12, 13]
+/** Card-order joker flags → indices aligned with group-append `defs` for greedy placement. */
+function jokerEligibleForGroupOrderStrip(cardOrderElig: readonly boolean[], p: PracticePattern): boolean[] {
+  const gToD = jokerEligibleGroupToDisplayFromPattern(p, cardOrderElig.length)
+  if (!gToD) return [...cardOrderElig]
+  return gToD.map((d) => cardOrderElig[d]!)
+}
+
+/** Group-order strip assignment → card line order using `PracticePattern.cardLineFromGroupSlotMap`. */
+function permutePreviewStripAssignmentByCardLine(
+  a: PreviewStripAssignment,
+  map: readonly number[] | undefined,
+): PreviewStripAssignment {
+  if (!map || a.kinds.length !== map.length) return a
   const n = a.kinds.length
-  if (n !== 14) return a
   const kinds: PreviewSlotSuggestKind[] = new Array(n).fill(null)
   const slotTileIdByStripIndex: (string | null)[] = new Array(n).fill(null)
-  for (let d = 0; d < 14; d++) {
+  for (let d = 0; d < n; d++) {
     const g = map[d]!
     kinds[d] = a.kinds[g]!
     slotTileIdByStripIndex[d] = a.slotTileIdByStripIndex[g]!
@@ -1342,165 +1347,8 @@ function permuteLikeTwoStripAssignment(a: PreviewStripAssignment): PreviewStripA
   return { kinds, slotTileIdByStripIndex }
 }
 
-/** `like-3` group-order assignment → NMJL card line order (FFF, 1111, DDD, 1111). */
-function permuteLikeThreeStripAssignment(a: PreviewStripAssignment): PreviewStripAssignment {
-  const map = [0, 1, 2, 3, 4, 5, 6, 11, 12, 13, 7, 8, 9, 10]
-  const n = a.kinds.length
-  if (n !== 14) return a
-  const kinds: PreviewSlotSuggestKind[] = new Array(n).fill(null)
-  const slotTileIdByStripIndex: (string | null)[] = new Array(n).fill(null)
-  for (let d = 0; d < 14; d++) {
-    const g = map[d]!
-    kinds[d] = a.kinds[g]!
-    slotTileIdByStripIndex[d] = a.slotTileIdByStripIndex[g]!
-  }
-  return { kinds, slotTileIdByStripIndex }
-}
-
-/**
- * `consec-6` group-order assignment → NMJL card line order (1111(A)|22(A)|22(B)|22(C)|3333(A)).
- * The permutation map is self-inverse (same map converts group→card and card→group).
- */
-function permuteConsec6StripAssignment(a: PreviewStripAssignment): PreviewStripAssignment {
-  // Card order for consec-6: 1111(A)|22(B)|22(A)|22(C)|3333(A)
-  // group order: [1111(0-3)][22A(4-5)][3333(6-9)][22B(10-11)][22C(12-13)]
-  const map = [0, 1, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 8, 9]
-  const n = a.kinds.length
-  if (n !== 14) return a
-  const kinds: PreviewSlotSuggestKind[] = new Array(n).fill(null)
-  const slotTileIdByStripIndex: (string | null)[] = new Array(n).fill(null)
-  for (let d = 0; d < 14; d++) {
-    const g = map[d]!
-    kinds[d] = a.kinds[g]!
-    slotTileIdByStripIndex[d] = a.slotTileIdByStripIndex[g]!
-  }
-  return { kinds, slotTileIdByStripIndex }
-}
-
-/** `patternPreviewJokerEligibleBySlot` is card/display order; group-order `defs` need flags per group index. */
-function reorderLikeTwoJokerEligibleToGroupOrder(elig: readonly boolean[]): boolean[] {
-  const gToD = [0, 1, 2, 3, 4, 5, 8, 9, 10, 11, 6, 7, 12, 13]
-  if (elig.length !== 14) return [...elig]
-  return gToD.map((d) => elig[d]!)
-}
-
-/** `patternPreviewJokerEligibleBySlot` is card/display order; convert to group order for `like-3`. */
-function reorderLikeThreeJokerEligibleToGroupOrder(elig: readonly boolean[]): boolean[] {
-  const gToD = [0, 1, 2, 3, 4, 5, 6, 10, 11, 12, 13, 7, 8, 9]
-  if (elig.length !== 14) return [...elig]
-  return gToD.map((d) => elig[d]!)
-}
-
-/**
- * `patternPreviewJokerEligibleBySlot` is card/display order; convert to group order for `like-4`.
- * Card order:  11(0-1) DD(2-3) 111(4-6) DDD(7-9) 1111(10-13)
- * Group order: 11(0-1) 111(2-4) 1111(5-8) DD(9-10) DDD(11-13)
- * gToD[g] = card-order position whose eligibility applies to group-order slot g.
- */
-function reorderLikeFourJokerEligibleToGroupOrder(elig: readonly boolean[]): boolean[] {
-  const gToD = [0, 1, 4, 5, 6, 10, 11, 12, 13, 2, 3, 7, 8, 9]
-  if (elig.length !== 14) return [...elig]
-  return gToD.map((d) => elig[d]!)
-}
-
-/**
- * `patternPreviewJokerEligibleBySlot` is card/display order; convert to group order for `consec-6`.
- * gToD[g] = display position that holds group-index g.
- * group[4,5] (22A) → display[6,7]; group[6-9] (3333) → display[10-13]; group[10,11] (22B) → display[4,5]; group[12,13] (22C) → display[8,9].
- */
-function reorderConsec6JokerEligibleToGroupOrder(elig: readonly boolean[]): boolean[] {
-  const gToD = [0, 1, 2, 3, 6, 7, 10, 11, 12, 13, 4, 5, 8, 9]
-  if (elig.length !== 14) return [...elig]
-  return gToD.map((d) => elig[d]!)
-}
-
-/**
- * `math-2` group-order assignment → NMJL card line order (DDDD|3333|7777|2|1).
- * Group order: [DDDD(0-3)][2(4)][1(5)][3333(6-9)][7777(10-13)]
- * Card order:  [DDDD(0-3)][3333(4-7)][7777(8-11)][2(12)][1(13)]
- */
-function permuteMath2StripAssignment(a: PreviewStripAssignment): PreviewStripAssignment {
-  const map = [0, 1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 4, 5]
-  const n = a.kinds.length
-  if (n !== 14) return a
-  const kinds: PreviewSlotSuggestKind[] = new Array(n).fill(null)
-  const slotTileIdByStripIndex: (string | null)[] = new Array(n).fill(null)
-  for (let d = 0; d < 14; d++) {
-    const g = map[d]!
-    kinds[d] = a.kinds[g]!
-    slotTileIdByStripIndex[d] = a.slotTileIdByStripIndex[g]!
-  }
-  return { kinds, slotTileIdByStripIndex }
-}
-
-/**
- * `2468-2` group-order assignment → NMJL card line order ([22 4444][666-red][666-green][88]).
- * Group order: [22(0-1)][4444(2-5)][88(6-7)][666-red(8-10)][666-green(11-13)]
- * Card order:  [22(0-1)][4444(2-5)][666-red(6-8)][666-green(9-11)][88(12-13)]
- */
-function permute2468_2StripAssignment(a: PreviewStripAssignment): PreviewStripAssignment {
-  const map = [0, 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 13, 6, 7]
-  const n = a.kinds.length
-  if (n !== 14) return a
-  const kinds: PreviewSlotSuggestKind[] = new Array(n).fill(null)
-  const slotTileIdByStripIndex: (string | null)[] = new Array(n).fill(null)
-  for (let d = 0; d < 14; d++) {
-    const g = map[d]!
-    kinds[d] = a.kinds[g]!
-    slotTileIdByStripIndex[d] = a.slotTileIdByStripIndex[g]!
-  }
-  return { kinds, slotTileIdByStripIndex }
-}
-
-/**
- * `patternPreviewJokerEligibleBySlot` is card/display order; convert to group order for `2468-2`.
- * Inverse map (group→display): [0,1,2,3,4,5, 12,13, 6,7,8,9,10,11]
- */
-function reorder2468_2JokerEligibleToGroupOrder(elig: readonly boolean[]): boolean[] {
-  const gToD = [0, 1, 2, 3, 4, 5, 12, 13, 6, 7, 8, 9, 10, 11]
-  if (elig.length !== 14) return [...elig]
-  return gToD.map((d) => elig[d]!)
-}
-
-/**
- * `patternPreviewJokerEligibleBySlot` is card/display order; convert to group order for `math-2`.
- * gToD[g] = the display position that holds group-index g.
- * Group positions 4-5 (the 2,1 ranks) land at display positions 12-13; 6-13 (3333+7777) land at 4-11.
- */
-function reorderMath2JokerEligibleToGroupOrder(elig: readonly boolean[]): boolean[] {
-  const gToD = [0, 1, 2, 3, 12, 13, 4, 5, 6, 7, 8, 9, 10, 11]
-  if (elig.length !== 14) return [...elig]
-  return gToD.map((d) => elig[d]!)
-}
-
-/**
- * `13579-1b` group-order assignment → NMJL card line order (11 333 5555 777 99).
- * Group order: colorGroup[0]=[1×2, 3×3, 7×3, 9×2] at 0-9; colorGroup[1]=[5×4] at 10-13.
- * Forward map (display→group): 5s move from group[10-13] to display[5-8]; 7s/9s shift right.
- */
-function permute13579_1bStripAssignment(a: PreviewStripAssignment): PreviewStripAssignment {
-  const map = [0, 1, 2, 3, 4, 10, 11, 12, 13, 5, 6, 7, 8, 9]
-  const n = a.kinds.length
-  if (n !== 14) return a
-  const kinds: PreviewSlotSuggestKind[] = new Array(n).fill(null)
-  const slotTileIdByStripIndex: (string | null)[] = new Array(n).fill(null)
-  for (let d = 0; d < 14; d++) {
-    const g = map[d]!
-    kinds[d] = a.kinds[g]!
-    slotTileIdByStripIndex[d] = a.slotTileIdByStripIndex[g]!
-  }
-  return { kinds, slotTileIdByStripIndex }
-}
-
-/**
- * `patternPreviewJokerEligibleBySlot` is card/display order; convert to group order for `13579-1b`.
- * gToD[g] = the display position that holds group-index g.
- * Group[5-7] (7s) land at display[9-11]; group[8-9] (9s) land at display[12-13]; group[10-13] (5s) land at display[5-8].
- */
-function reorder13579_1bJokerEligibleToGroupOrder(elig: readonly boolean[]): boolean[] {
-  const gToD = [0, 1, 2, 3, 4, 9, 10, 11, 12, 13, 5, 6, 7, 8]
-  if (elig.length !== 14) return [...elig]
-  return gToD.map((d) => elig[d]!)
+function maybePermuteAssignmentToCardLine(p: PracticePattern, r: PreviewStripAssignment): PreviewStripAssignment {
+  return permutePreviewStripAssignmentByCardLine(r, p.cardLineFromGroupSlotMap)
 }
 
 /**
@@ -1641,28 +1489,7 @@ export function computePreviewStripAssignment(
   if (defs.length === 0) return { kinds: [], slotTileIdByStripIndex: [] }
 
   const usedMeta = usedMetaArg ?? greedyPatternMatchDetail(rackForPattern, p, greedyOpts).usedMeta
-  let jokerEligible = patternPreviewJokerEligibleBySlot(p)
-  if (p.id === 'like-2' && jokerEligible.length === 14) {
-    jokerEligible = reorderLikeTwoJokerEligibleToGroupOrder(jokerEligible)
-  }
-  if (p.id === 'like-3' && jokerEligible.length === 14) {
-    jokerEligible = reorderLikeThreeJokerEligibleToGroupOrder(jokerEligible)
-  }
-  if (p.id === 'like-4' && jokerEligible.length === 14) {
-    jokerEligible = reorderLikeFourJokerEligibleToGroupOrder(jokerEligible)
-  }
-  if (p.id === 'consec-6' && jokerEligible.length === 14) {
-    jokerEligible = reorderConsec6JokerEligibleToGroupOrder(jokerEligible)
-  }
-  if (p.id === 'math-2' && jokerEligible.length === 14) {
-    jokerEligible = reorderMath2JokerEligibleToGroupOrder(jokerEligible)
-  }
-  if (p.id === '2468-2' && jokerEligible.length === 14) {
-    jokerEligible = reorder2468_2JokerEligibleToGroupOrder(jokerEligible)
-  }
-  if (p.id === '13579-1b' && jokerEligible.length === 14) {
-    jokerEligible = reorder13579_1bJokerEligibleToGroupOrder(jokerEligible)
-  }
+  const jokerEligible = jokerEligibleForGroupOrderStrip(patternPreviewJokerEligibleBySlot(p), p)
   const spans = groupPreviewIndexSpans(p)
 
   if (p.groups && spans && usedMeta.length > 0) {
@@ -1677,23 +1504,11 @@ export function computePreviewStripAssignment(
     if (nMarks > 0) {
       redistributeJokerPreviewMarksToFirstMeld(r.kinds, defs, jokerEligible, nMarks, r.slotTileIdByStripIndex, rackJokerTileIds)
     }
-    if (p.id === 'like-2' && r.kinds.length === 14) return permuteLikeTwoStripAssignment(r)
-    if (p.id === 'like-3' && r.kinds.length === 14) return permuteLikeThreeStripAssignment(r)
-    if (p.id === 'consec-6' && r.kinds.length === 14) return permuteConsec6StripAssignment(r)
-    if (p.id === 'math-2' && r.kinds.length === 14) return permuteMath2StripAssignment(r)
-    if (p.id === '2468-2' && r.kinds.length === 14) return permute2468_2StripAssignment(r)
-    if (p.id === '13579-1b' && r.kinds.length === 14) return permute13579_1bStripAssignment(r)
-    return r
+    return maybePermuteAssignmentToCardLine(p, r)
   }
   if (usedMeta.length > 0) {
     const r = buildPreviewKindsByCategoryPartition(p, rackForPattern, defs, usedMeta, bestIds, jokerEligible)
-    if (p.id === 'like-2' && r.kinds.length === 14) return permuteLikeTwoStripAssignment(r)
-    if (p.id === 'like-3' && r.kinds.length === 14) return permuteLikeThreeStripAssignment(r)
-    if (p.id === 'consec-6' && r.kinds.length === 14) return permuteConsec6StripAssignment(r)
-    if (p.id === 'math-2' && r.kinds.length === 14) return permuteMath2StripAssignment(r)
-    if (p.id === '2468-2' && r.kinds.length === 14) return permute2468_2StripAssignment(r)
-    if (p.id === '13579-1b' && r.kinds.length === 14) return permute13579_1bStripAssignment(r)
-    return r
+    return maybePermuteAssignmentToCardLine(p, r)
   }
 
   const byId = new Map(rackForPattern.map((t) => [t.id, t] as const))
@@ -1748,13 +1563,7 @@ export function computePreviewStripAssignment(
   )
 
   const r = { kinds, slotTileIdByStripIndex }
-  if (p.id === 'like-2' && kinds.length === 14) return permuteLikeTwoStripAssignment(r)
-  if (p.id === 'like-3' && kinds.length === 14) return permuteLikeThreeStripAssignment(r)
-  if (p.id === 'consec-6' && kinds.length === 14) return permuteConsec6StripAssignment(r)
-  if (p.id === 'math-2' && kinds.length === 14) return permuteMath2StripAssignment(r)
-  if (p.id === '2468-2' && kinds.length === 14) return permute2468_2StripAssignment(r)
-  if (p.id === '13579-1b' && kinds.length === 14) return permute13579_1bStripAssignment(r)
-  return r
+  return maybePermuteAssignmentToCardLine(p, r)
 }
 
 function rackAfterPriorGroups(
@@ -2503,20 +2312,7 @@ function buildSuggestedStripSlotsFromStripDefs(
   /** Skip internal title-order reorder (caller will do its own reordering). */
   skipTitleReorder = false,
 ): SuggestedStripSlot[] {
-  const rawDefs =
-    p.id === 'like-2' && stripDefsGroup.length === 14
-      ? reorderLikeTwoGroupTileDefsToDisplay(stripDefsGroup)
-      : p.id === 'like-3' && stripDefsGroup.length === 14
-        ? reorderLikeThreeGroupTileDefsToDisplay(stripDefsGroup)
-      : p.id === 'consec-6' && stripDefsGroup.length === 14
-        ? reorderConsec6GroupTileDefsToDisplay(stripDefsGroup)
-        : p.id === 'math-2' && stripDefsGroup.length === 14
-          ? reorderMath2GroupTileDefsToDisplay(stripDefsGroup)
-          : p.id === '2468-2' && stripDefsGroup.length === 14
-            ? reorder2468_2GroupTileDefsToDisplay(stripDefsGroup)
-            : p.id === '13579-1b' && stripDefsGroup.length === 14
-              ? reorder13579_1bGroupTileDefsToDisplay(stripDefsGroup)
-              : stripDefsGroup
+  const rawDefs = reorderTileDefsByCardLineFromGroupMap(stripDefsGroup, p.cardLineFromGroupSlotMap)
   const defs = normalizeSuggestedStripTargetDefs(rawDefs).slice(0, p.roughTarget)
   const cardInks = patternLinePreviewCardInks(p)
   if (defs.length === 0) return []
@@ -3735,13 +3531,7 @@ function stripOrderedHandIdsForPattern(
       : defsByDisplay.map(() => null)
   const slotDefsInAssignmentOrder = (() => {
     if (stripDefs.length !== slots.length) return defsByDisplay
-    if (pinnedP.id === 'like-2' && stripDefs.length === 14) return reorderLikeTwoGroupTileDefsToDisplay(stripDefs)
-    if (pinnedP.id === 'like-3' && stripDefs.length === 14) return reorderLikeThreeGroupTileDefsToDisplay(stripDefs)
-    if (pinnedP.id === 'consec-6' && stripDefs.length === 14) return reorderConsec6GroupTileDefsToDisplay(stripDefs)
-    if (pinnedP.id === 'math-2' && stripDefs.length === 14) return reorderMath2GroupTileDefsToDisplay(stripDefs)
-    if (pinnedP.id === '2468-2' && stripDefs.length === 14) return reorder2468_2GroupTileDefsToDisplay(stripDefs)
-    if (pinnedP.id === '13579-1b' && stripDefs.length === 14) return reorder13579_1bGroupTileDefsToDisplay(stripDefs)
-    return stripDefs
+    return reorderTileDefsByCardLineFromGroupMap(stripDefs, pinnedP.cardLineFromGroupSlotMap)
   })()
 
   let orderedSlotDefs = slotDefsInAssignmentOrder

@@ -519,7 +519,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sortable-tile-wrap__fly.sortable-tile-wrap--just-drawn {
+  /*
+   * Opening-deal wave: keep per-tile `animation-delay` (inline) so the rack reads like desktop.
+   * Other fly-ins still drop the stagger for reduced-motion users.
+   */
+  .sortable-tile-wrap__fly.sortable-tile-wrap--just-drawn:not(.sortable-tile-wrap--opening-deal-wave) {
     animation-delay: 0s !important;
   }
 }

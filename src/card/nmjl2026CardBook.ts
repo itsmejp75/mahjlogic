@@ -2,6 +2,7 @@
  * 2026 National Mah Jongg League card — **only** from `data/2026-nmjl-card.csv`.
  * Does not use or merge `PRACTICE_PATTERNS` (Mock card). Geometry, hand text, colors,
  * parentheses, values, and hand numbers are generated row-by-row from the CSV.
+ * Pattern `id` values use `NMJL_2026_PATTERN_ID_PREFIX` so they never match mock card ids.
  */
 import type { PracticePattern } from './practicePatterns'
 import csvRaw from './data/2026-nmjl-card.csv?raw'

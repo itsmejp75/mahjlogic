@@ -18,6 +18,7 @@ export function isPlayableCardId(s: string | null | undefined): s is PlayableCar
 }
 
 export function patternsForCard(id: PlayableCardId): PracticePattern[] {
+  // Mock vs league are separate arrays; league ids are prefixed (`nmjl2026:…`) — see `nmjl2026PatternId`.
   return id === 'mock' ? PRACTICE_PATTERNS : NMJL_2026_PATTERNS
 }
 

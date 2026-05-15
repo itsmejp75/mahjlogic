@@ -868,119 +868,51 @@ export function patternLinePreviewGroupOrderDefs(p: PracticePattern): TileDef[] 
   return patternLinePreviewGroupOrderSlots(p).map((s) => s.def)
 }
 
-/** Card order for `like-2`: FF, kong₁, DD₁, kong₂, DD₂ (group order stacks both kongs then both pairs). */
-function permuteLikeTwoCardStripOrderSlots(slots: readonly PatternPreviewSlot[]): PatternPreviewSlot[] {
-  if (slots.length !== 14) return [...slots]
-  const map = [0, 1, 2, 3, 4, 5, 10, 11, 6, 7, 8, 9, 12, 13]
-  return map.map((g) => slots[g]!)
-}
-
-/** Same index map as {@link permuteLikeTwoCardStripOrderSlots} for resolved strip defs. */
-export function reorderLikeTwoGroupTileDefsToDisplay(defs: readonly TileDef[]): TileDef[] {
-  if (defs.length !== 14) return [...defs]
-  const map = [0, 1, 2, 3, 4, 5, 10, 11, 6, 7, 8, 9, 12, 13]
+/**
+ * Display index `d` shows the tile from **group-append** strip index `map[d]`.
+ * When `map` is omitted or the wrong length, returns a shallow copy of `defs`.
+ */
+export function reorderTileDefsByCardLineFromGroupMap(
+  defs: readonly TileDef[],
+  map: readonly number[] | undefined,
+): TileDef[] {
+  if (!map || defs.length !== map.length) return [...defs]
   return map.map((g) => defs[g]!)
 }
 
-/**
- * Card order for `like-3`: FFF, 1111(A), DDD, 1111(B).
- * Group order renders [FFF][1111(A)][1111(B)][DDD], so move DDD into the middle.
- */
-const LIKE_3_MAP = [0, 1, 2, 3, 4, 5, 6, 11, 12, 13, 7, 8, 9, 10] as const
-
-function permuteLikeThreeCardStripOrderSlots(slots: readonly PatternPreviewSlot[]): PatternPreviewSlot[] {
-  if (slots.length !== 14) return [...slots]
-  return LIKE_3_MAP.map((g) => slots[g]!)
-}
-
-/** Same index map as {@link permuteLikeThreeCardStripOrderSlots} for resolved strip defs. */
-export function reorderLikeThreeGroupTileDefsToDisplay(defs: readonly TileDef[]): TileDef[] {
-  if (defs.length !== 14) return [...defs]
-  return LIKE_3_MAP.map((g) => defs[g]!)
+/** Same permutation as {@link reorderTileDefsByCardLineFromGroupMap} for preview slots. */
+export function permutePatternPreviewSlotsByCardLineMap(
+  slots: readonly PatternPreviewSlot[],
+  map: readonly number[] | undefined,
+): PatternPreviewSlot[] {
+  if (!map || slots.length !== map.length) return [...slots]
+  return map.map((g) => slots[g]!)
 }
 
 /**
- * Card order for `consec-6`: 1111(A)|22(B)|22(A)|22(C)|3333(A).
- * titleSegments: n('1111') r('22') n('22') g('22') n('3333')
- * Group order: colorGroup[0]=A puts [1111(0-3)][22A(4-5)][3333(6-9)] first,
- *              colorGroup[1]=B puts [22B(10-11)], colorGroup[2]=C puts [22C(12-13)].
- * Map puts B-22 first (display 4-5), then A-22 in middle (6-7), then C-22 (8-9), then 3333 (10-13).
+ * Greedy assignment walks **group** order; joker flags from `patternPreviewJokerEligibleBySlot` are
+ * **card/display** order. For group slot `g`, use eligibility from display index `result[g]`.
+ * If `jokerEligibleGroupToDisplaySlot` is set, it wins; otherwise the inverse of
+ * `cardLineFromGroupSlotMap` is used when that map matches `n`.
  */
-const CONSEC_6_MAP = [0, 1, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 8, 9] as const
-
-function permuteConsec6CardStripOrderSlots(slots: readonly PatternPreviewSlot[]): PatternPreviewSlot[] {
-  if (slots.length !== 14) return [...slots]
-  return CONSEC_6_MAP.map((g) => slots[g]!)
+export function jokerEligibleGroupToDisplayFromPattern(
+  p: PracticePattern,
+  n: number,
+): readonly number[] | null {
+  const direct = p.jokerEligibleGroupToDisplaySlot
+  if (direct?.length === n) return direct
+  const m = p.cardLineFromGroupSlotMap
+  if (!m || m.length !== n) return null
+  const inv = new Array<number>(n)
+  for (let d = 0; d < n; d++) inv[m[d]!] = d
+  return inv
 }
 
-/** Same index map as {@link permuteConsec6CardStripOrderSlots} for resolved strip defs. */
-export function reorderConsec6GroupTileDefsToDisplay(defs: readonly TileDef[]): TileDef[] {
-  if (defs.length !== 14) return [...defs]
-  return CONSEC_6_MAP.map((g) => defs[g]!)
-}
-
-/**
- * Card order for `math-2`: DDDD(suit-A)|3333(suit-B)|7777(suit-C)|2(suit-A)|1(suit-A).
- * Group order: suit-locked renders [DDDD][2][1] at indices 0-5, suit-permute renders [3333][7777] at 6-13.
- * This permutation moves the 2,1 block (group indices 4-5) to the end (display indices 12-13).
- */
-export const MATH_2_MAP = [0, 1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 4, 5] as const
-
-function permuteMath2CardStripOrderSlots(slots: readonly PatternPreviewSlot[]): PatternPreviewSlot[] {
-  if (slots.length !== 14) return [...slots]
-  return MATH_2_MAP.map((g) => slots[g]!)
-}
-
-/** Same index map as {@link permuteMath2CardStripOrderSlots} for resolved strip defs. */
-export function reorderMath2GroupTileDefsToDisplay(defs: readonly TileDef[]): TileDef[] {
-  if (defs.length !== 14) return [...defs]
-  return MATH_2_MAP.map((g) => defs[g]!)
-}
-
-/**
- * Card order for `2468-2`: [22 4444][666-red][666-green][88].
- * Group order: colorGroup[0]=navy puts [22(0-1)][4444(2-5)][88(6-7)], then red[666(8-10)], green[666(11-13)].
- * Forward map (display→group): 8s move from group[6-7] to display[12-13]; 6s shift up to display[6-11].
- */
-const LIKE_2468_2_MAP = [0, 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 13, 6, 7] as const
-
-function permute2468_2CardStripOrderSlots(slots: readonly PatternPreviewSlot[]): PatternPreviewSlot[] {
-  if (slots.length !== 14) return [...slots]
-  return LIKE_2468_2_MAP.map((g) => slots[g]!)
-}
-
-/** Same index map as {@link permute2468_2CardStripOrderSlots} for resolved strip defs. */
-export function reorder2468_2GroupTileDefsToDisplay(defs: readonly TileDef[]): TileDef[] {
-  if (defs.length !== 14) return [...defs]
-  return LIKE_2468_2_MAP.map((g) => defs[g]!)
-}
-
-/**
- * Card order for `13579-1b`: 11 333 5555 777 99 (two colors — suit A has 1s/3s/7s/9s, suit B has 5s).
- * Group order: colorGroup[0]=[1×2, 3×3, 7×3, 9×2] at indices 0-9, colorGroup[1]=[5×4] at indices 10-13.
- * Forward map (display→group): 5s move from group[10-13] to display[5-8]; 7s/9s shift right.
- */
-const MAP_13579_1B = [0, 1, 2, 3, 4, 10, 11, 12, 13, 5, 6, 7, 8, 9] as const
-
-function permute13579_1bCardStripOrderSlots(slots: readonly PatternPreviewSlot[]): PatternPreviewSlot[] {
-  if (slots.length !== 14) return [...slots]
-  return MAP_13579_1B.map((g) => slots[g]!)
-}
-
-/** Same index map as {@link permute13579_1bCardStripOrderSlots} for resolved strip defs. */
-export function reorder13579_1bGroupTileDefsToDisplay(defs: readonly TileDef[]): TileDef[] {
-  if (defs.length !== 14) return [...defs]
-  return MAP_13579_1B.map((g) => defs[g]!)
-}
-
-function applyLikeTwoCardStripOrderIfNeeded(p: PracticePattern, slots: readonly PatternPreviewSlot[]): PatternPreviewSlot[] {
-  if (p.id === 'like-2' && slots.length === 14) return permuteLikeTwoCardStripOrderSlots(slots)
-  if (p.id === 'like-3' && slots.length === 14) return permuteLikeThreeCardStripOrderSlots(slots)
-  if (p.id === 'consec-6' && slots.length === 14) return permuteConsec6CardStripOrderSlots(slots)
-  if (p.id === 'math-2' && slots.length === 14) return permuteMath2CardStripOrderSlots(slots)
-  if (p.id === '2468-2' && slots.length === 14) return permute2468_2CardStripOrderSlots(slots)
-  if (p.id === '13579-1b' && slots.length === 14) return permute13579_1bCardStripOrderSlots(slots)
-  return [...slots]
+function applyCardLineFromGroupSlotMapIfNeeded(
+  p: PracticePattern,
+  slots: readonly PatternPreviewSlot[],
+): PatternPreviewSlot[] {
+  return permutePatternPreviewSlotsByCardLineMap(slots, p.cardLineFromGroupSlotMap)
 }
 
 /** Ordered preview cells with **card PDF** ink for each mini tile (suggested hands strip). */
@@ -995,7 +927,7 @@ export function patternLinePreviewSlots(p: PracticePattern): PatternPreviewSlot[
   const grpSlice = fromGrp.slice(0, p.roughTarget)
 
   if (grpSlice.length === p.roughTarget) {
-    return applyLikeTwoCardStripOrderIfNeeded(p, grpSlice)
+    return applyCardLineFromGroupSlotMapIfNeeded(p, grpSlice)
   }
 
   return grpSlice.length > 0 ? grpSlice : (fromSeg?.slice(0, p.roughTarget) ?? [])

@@ -16,7 +16,10 @@ import {
   wind,
 } from './practicePatterns'
 
-type Geometry = Pick<PracticePattern, 'groups' | 'matches' | 'titleSegments'>
+type Geometry = Pick<
+  PracticePattern,
+  'groups' | 'matches' | 'titleSegments' | 'cardLineFromGroupSlotMap' | 'jokerEligibleGroupToDisplaySlot'
+>
 type Test = (def: TileDef) => boolean
 
 type ColorRun = { ink: CardInk; text: string }
