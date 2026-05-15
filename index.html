@@ -16,6 +16,42 @@
       html {
         background-color: #1a1e24;
       }
+      /*
+       * iOS PWA: `apple-touch-startup-image` only fires when a media query matches the device
+       * exactly; portrait launches (or unmatched sizes) fall back to a white screen. This
+       * inline cover paints `#121419` + logo immediately after HTML loads so there is no
+       * white flash before React mounts.  Hidden in the browser tab so only the installed
+       * PWA / home-screen app sees it.
+       */
+      #pwa-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background-color: #121419;
+        pointer-events: none;
+        opacity: 1;
+        transition: opacity 240ms ease-out;
+      }
+      #pwa-splash > img {
+        width: min(38vw, 220px);
+        height: auto;
+      }
+      #pwa-splash.is-hidden {
+        opacity: 0;
+        visibility: hidden;
+      }
+      html[data-native-app] #pwa-splash,
+      html[data-home-screen-app] #pwa-splash {
+        display: flex;
+      }
+      @media (display-mode: standalone) {
+        #pwa-splash {
+          display: flex;
+        }
+      }
     </style>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=14" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=14" />
@@ -125,6 +161,10 @@
     </script>
   </head>
   <body>
+    <!-- Installed-PWA splash cover; hidden by `main.tsx` once React mounts. Browser tabs ignore it. -->
+    <div id="pwa-splash" aria-hidden="true">
+      <img src="/icon-192.png?v=14" alt="" />
+    </div>
     <div id="root"></div>
     <!--
       Removed the previous `document.body.style.height = window.innerHeight + 'px'` boot script.
