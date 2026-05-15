@@ -3599,6 +3599,93 @@ function buildPinnedPatternFromComboStr(
   return { ...basePattern, groups: pinnedGroups }
 }
 
+/**
+ * Natural tile fits a `patternLinePreviewDefs` cell (stand-in suit on the card vs your real suit).
+ */
+function naturalMatchesTitlePreviewSlot(nat: TileDef, disp: TileDef, p: PracticePattern): boolean {
+  if (tileDefsEqual(nat, disp)) return true
+  if (stripSlotAcceptsNatural(p, disp, nat)) return true
+  if (nat.cat === 'suit' && disp.cat === 'suit' && nat.rank === disp.rank) return true
+  return false
+}
+
+/**
+ * Permute group-order strip assignment into **title-segment / card line** order (`patternLinePreviewDefs`).
+ * Used when greedy preview slots follow `groups` (e.g. 2026 W&D #6: suit block then winds) but the
+ * printed line interleaves suit ranks with winds (`1 N 2 EE …`).
+ *
+ * Jokers: assign **naturals first**, then walk the card left-to-right and place jokers in the first
+ * joker-eligible gaps (same “first incomplete meld” rule as `redistributeJokerPreviewMarksToFirstMeld`).
+ * A single-pass findIndex would pair a joker with the first unused *strip index* that allows a joker,
+ * which can be a later kong (e.g. 2222) before the first DDD on the card.
+ */
+function reorderSlotAssignmentsToTitlePreviewSlots(
+  slots: (string | null)[],
+  displayDefs: readonly TileDef[],
+  rack: TileInstance[],
+  p: PracticePattern,
+  jokerEligible: boolean[],
+): { slots: (string | null)[]; defs: TileDef[] } | null {
+  if (slots.length !== displayDefs.length) return null
+  const byId = new Map(rack.map((t) => [t.id, t] as const))
+  const used = new Set<number>()
+  const outSlots: (string | null)[] = displayDefs.map(() => null)
+
+  for (let j = 0; j < displayDefs.length; j++) {
+    const want = displayDefs[j]!
+    const idx = slots.findIndex((_, i) => {
+      if (used.has(i)) return false
+      const id = slots[i]
+      if (id == null) return false
+      const t = byId.get(id)
+      if (!t || t.def.cat === 'joker') return false
+      return naturalMatchesTitlePreviewSlot(t.def, want, p)
+    })
+    if (idx >= 0) {
+      used.add(idx)
+      outSlots[j] = slots[idx]!
+    }
+  }
+
+  const jokerSrc = slots
+    .map((id, i) => (id != null ? { i, id } : null))
+    .filter(
+      (x): x is { i: number; id: string } =>
+        x != null && !used.has(x.i) && byId.get(x.id)?.def.cat === 'joker',
+    )
+    .sort((a, b) => a.i - b.i)
+
+  let jokerK = 0
+  for (let j = 0; j < displayDefs.length; j++) {
+    if (outSlots[j] != null) continue
+    const want = displayDefs[j]!
+    if (!previewSlotAllowsJoker(want, p, j, jokerEligible)) continue
+    const src = jokerSrc[jokerK++]
+    if (!src) break
+    used.add(src.i)
+    outSlots[j] = src.id
+  }
+
+  for (let j = 0; j < displayDefs.length; j++) {
+    if (outSlots[j] != null) continue
+    const want = displayDefs[j]!
+    const idx = slots.findIndex((_, i) => {
+      if (used.has(i)) return false
+      const id = slots[i]
+      if (id == null) return false
+      const t = byId.get(id)
+      if (!t || t.def.cat === 'joker') return false
+      return naturalMatchesTitlePreviewSlot(t.def, want, p)
+    })
+    if (idx < 0) continue
+    used.add(idx)
+    outSlots[j] = slots[idx]!
+  }
+
+  if (outSlots.some((x) => x == null)) return null
+  return { slots: outSlots as string[], defs: [...displayDefs] }
+}
+
 /** Compute the strip-ordered, deduplicated list of hand-tile IDs that the pinned pattern uses. */
 function stripOrderedHandIdsForPattern(
   pinnedP: PracticePattern,
@@ -3631,9 +3718,9 @@ function stripOrderedHandIdsForPattern(
     stripDefs,
     greedyOpts,
   )
-  // `slotTileIdByStripIndex` is in **suggested-hands** line order (after internal permute for
-  // e.g. like-2, consec-6). `patternLinePreviewDefs` is the same left-to-right sequence as the
-  // double-click / strip preview, not the raw `resolveStrip` group order.
+  // `slotTileIdByStripIndex` follows `computePreviewStripAssignment` defs (usually group order,
+  // plus per-pattern permutes like like-2 / consec-6). `patternLinePreviewDefs` is the printed
+  // card line (title segments) — the same read as the strip + double-click rack sort.
   const displayDefs = patternLinePreviewDefs(pinnedP)
   const defsByDisplay =
     displayDefs.length > 0 && displayDefs.length === slotTileIdByStripIndex.length
@@ -3677,6 +3764,17 @@ function stripOrderedHandIdsForPattern(
       slots.splice(0, slots.length, ...reorderedSlots)
       orderedSlotDefs = reorderedDefs
     }
+  }
+  const titlePreviewReorder = reorderSlotAssignmentsToTitlePreviewSlots(
+    slots,
+    displayDefs,
+    rackForPattern,
+    pinnedP,
+    jokerEli,
+  )
+  if (titlePreviewReorder) {
+    slots.splice(0, slots.length, ...titlePreviewReorder.slots)
+    orderedSlotDefs = titlePreviewReorder.defs
   }
   const n = Math.min(slots.length, orderedSlotDefs.length)
   const byId = new Map(rackForPattern.map((t) => [t.id, t] as const))

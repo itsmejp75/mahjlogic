@@ -7,15 +7,15 @@ import { PRACTICE_CARD_SECTION_ORDER } from '../card/practicePatterns'
 const SUGGESTED_HAND_SECTION_DISPLAY_LABEL: Readonly<Record<string, string>> = {
   '2026': 'Year',
   '2468': '2468',
-  'ANY LIKE NUMBERS': 'Like #',
-  'QUINTS': 'Quint',
-  'CONSECUTIVE RUN': 'Run',
-  'CONSECUTIVE RUNS': 'Run',
+  'ANY LIKE NUMBERS': 'Like #s',
+  'QUINTS': 'Quints',
+  'CONSECUTIVE RUN': 'Runs',
+  'CONSECUTIVE RUNS': 'Runs',
   '13579': '13579',
-  'WINDS - DRAGONS': 'W&D',
-  'WINDS-DRAGONS': 'W&D',
+  'WINDS - DRAGONS': 'W&Ds',
+  'WINDS-DRAGONS': 'W&Ds',
   '369': '369',
-  'SINGLES AND PAIRS': 'S&P',
+  'SINGLES AND PAIRS': 'S&Ps',
 }
 
 /** When `'1'`, hands marked concealed (C) are omitted from the suggested list. */

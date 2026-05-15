@@ -407,7 +407,7 @@ export function SuggestedHandsPanel({
                           variantKeys.some((k) => k === activePatternId))
                       const rowLit = tilesGuideOn && rowIsFocused
                       const cardRef = suggestedHandCardRefDisplay(h)
-                      const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} #${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points, h.closed)}`
+                      const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points, h.closed)}`
                       const handTitleNode = (
                         <span className="hands-sheet__hand-title" aria-label={h.title}>
                           {h.titleSegments?.length ? (
@@ -473,7 +473,7 @@ export function SuggestedHandsPanel({
                         <div className="hands-sheet__combined-header-line">
                           <span className="hands-sheet__category">
                             {suggestedHandSectionMenuLabel(h.section)}
-                            <span className="hands-sheet__section-num">#{cardRef}</span>
+                            <span className="hands-sheet__section-num"> - {cardRef}</span>
                           </span>
                           <span className="hands-sheet__combined-divider" aria-hidden="true">
                             ·
@@ -516,7 +516,7 @@ export function SuggestedHandsPanel({
                                     cancelScheduledClick()
                                     onPatternDoubleClick(h.id, allKey)
                                   }}
-                                  aria-label={`${suggestedHandSectionMenuLabel(h.section)} #${cardRef}, ${h.title} — highlight all variants`}
+                                  aria-label={`${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title} — highlight all variants`}
                                   aria-pressed={activePatternId === allKey}
                                 >
                                   {headerLine}
@@ -706,7 +706,7 @@ export function SuggestedHandsPanel({
                           variantKeys.some((k) => k === activePatternId))
                       const rowLit = tilesGuideOn && rowIsFocused
                       const cardRef = suggestedHandCardRefDisplay(h)
-                      const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} #${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points, h.closed)}`
+                      const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points, h.closed)}`
                       const renderTileRow = (
                         slots: SuggestedStripSlot[],
                         isActiveRow: boolean,
@@ -928,7 +928,7 @@ export function SuggestedHandsPanel({
                       const isFocused = activePatternId === rowKey
                       const rowLit = tilesGuideOn && isFocused
                       const cardRef = suggestedHandCardRefDisplay(h)
-                      const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} #${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points, h.closed)}`
+                      const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points, h.closed)}`
                       return (
                         <li
                           key={rowKey}
@@ -963,7 +963,7 @@ export function SuggestedHandsPanel({
                             >
                               <span className="hands-sheet__category">
                                 {suggestedHandSectionMenuLabel(h.section)}
-                                <span className="hands-sheet__section-num">#{cardRef}</span>
+                                <span className="hands-sheet__section-num"> - {cardRef}</span>
                               </span>
                             </div>
                             <div
@@ -1148,7 +1148,7 @@ export function SuggestedHandsPanel({
                 const cardRef = suggestedHandCardRefDisplay(h)
                 const rowAriaLabel =
                   !handsListOn || !showHandCategoryLabels
-                    ? `${suggestedHandSectionMenuLabel(h.section)} #${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points, h.closed)}`
+                    ? `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points, h.closed)}`
                     : undefined
                 const outerClass = [
                   'hands-list__row-hit',
@@ -1183,7 +1183,7 @@ export function SuggestedHandsPanel({
                   ? {
                       role: 'button' as const,
                       tabIndex: 0,
-                      'aria-label': `${suggestedHandSectionMenuLabel(h.section)} #${cardRef}, ${h.title} — highlight all variants`,
+                      'aria-label': `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title} — highlight all variants`,
                       'aria-pressed': activePatternId === categoryClickKey,
                       onClick: (e: React.MouseEvent) => {
                         e.stopPropagation()
@@ -1217,7 +1217,7 @@ export function SuggestedHandsPanel({
                           >
                             <span className="hands-list__with-tiles-category">
                               {suggestedHandSectionMenuLabel(h.section)}
-                              <span className="hands-list__section-num">#{cardRef}</span>
+                              <span className="hands-list__section-num"> - {cardRef}</span>
                             </span>
                             {handsListOn ? (
                               <span
