@@ -11,6 +11,13 @@ import {
 
 const SUITS: Suit[] = ['bam', 'dot', 'crak']
 
+/** Six-tile column order for 13579 #4: odds below `pairRank`, then the pair, then odds above. */
+export function oddPairKongsTripleSixPackRanks(odds: readonly number[], pairRank: number): number[] {
+  const below = odds.filter((r) => r < pairRank)
+  const above = odds.filter((r) => r > pairRank)
+  return [...below, pairRank, pairRank, ...above]
+}
+
 /** Suits that pass `test` as suit tiles at a reference rank (for SRS preview column order). */
 function suitsAllowedAtRank(test: (d: TileDef) => boolean, rank: number): Suit[] {
   return SUITS.filter((s) => test({ cat: 'suit', suit: s, rank }))
@@ -192,8 +199,37 @@ export function firstOpposingConsecutiveStandInPairFromTitle(
   return null
 }
 
+function appendOddPairKongsTriple(
+  out: TileDef[],
+  flags: boolean[] | null,
+  g: Extract<PatternGroup, { kind: 'odd-pair-kongs-triple' }>,
+  pairRank: number,
+) {
+  const odds = g.odds
+  const s0 = SUITS[0]!
+  const s1 = SUITS[1]!
+  const s2 = SUITS[2]!
+  for (const r of oddPairKongsTripleSixPackRanks(odds, pairRank)) {
+    pushSuit(out, s0, r, 1)
+    if (flags) pushJokerFlagRun(flags, 1, false)
+  }
+  for (let k = 0; k < 4; k++) {
+    pushSuit(out, s1, pairRank, 1)
+    if (flags) pushJokerFlagRun(flags, 1, true)
+  }
+  for (let k = 0; k < 4; k++) {
+    pushSuit(out, s2, pairRank, 1)
+    if (flags) pushJokerFlagRun(flags, 1, true)
+  }
+}
+
 function appendGroupWithJokerFlags(out: TileDef[], flags: boolean[], p: PracticePattern, g: PatternGroup) {
   switch (g.kind) {
+    case 'odd-pair-kongs-triple': {
+      const pairRank = g.odds[0] ?? 1
+      appendOddPairKongsTriple(out, flags, g, pairRank)
+      return
+    }
     case 'fixed': {
       if (g.test({ cat: 'flower', flower: 1 })) {
         pushFlower(out, g.need)
@@ -446,7 +482,7 @@ export function patternPreviewJokerEligibleBySlot(p: PracticePattern): boolean[]
   if (!p.groups?.length) return out
 
   const fromSeg = buildPreviewSlotsFromTitleSegments(p)
-  if (fromSeg != null && fromSeg.length >= p.roughTarget && p.titleSegments?.length) {
+  if (!p.previewSlotsFromGroups && fromSeg != null && fromSeg.length >= p.roughTarget && p.titleSegments?.length) {
     const jFromTitle: boolean[] = []
     for (const seg of p.titleSegments) {
       appendTitleSegmentJokerEligible(jFromTitle, seg)
@@ -486,6 +522,11 @@ export function patternPreviewJokerEligibleBySlot(p: PracticePattern): boolean[]
 
 function appendGroup(out: TileDef[], p: PracticePattern, g: PatternGroup) {
   switch (g.kind) {
+    case 'odd-pair-kongs-triple': {
+      const pairRank = g.odds[0] ?? 1
+      appendOddPairKongsTriple(out, null, g, pairRank)
+      break
+    }
     case 'fixed': {
       appendFixed(out, g.need, g.test)
       break
@@ -843,6 +884,8 @@ function groupPreviewSlotCountForPatternLine(g: PatternGroup): number {
       return g.colorGroups.reduce((acc, cg, ci) =>
         acc + cg.reduce((sum, sg) => sum + sg.need, 0) + (g.colorGroupDragonCounts?.[ci] ?? 0), 0)
         + (g.trailingDragonCount ?? 0)
+    case 'odd-pair-kongs-triple':
+      return 14
     default:
       return 0
   }
@@ -919,7 +962,7 @@ function applyCardLineFromGroupSlotMapIfNeeded(
 export function patternLinePreviewSlots(p: PracticePattern): PatternPreviewSlot[] {
   const fromSeg = buildPreviewSlotsFromTitleSegments(p)
 
-  if (fromSeg != null && fromSeg.length >= p.roughTarget) {
+  if (!p.previewSlotsFromGroups && fromSeg != null && fromSeg.length >= p.roughTarget) {
     return fromSeg.slice(0, p.roughTarget)
   }
 

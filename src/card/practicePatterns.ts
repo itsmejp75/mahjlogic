@@ -56,6 +56,15 @@ export type PatternGroup =
    */
   | { kind: 'suit-locked-consec'; numGroups: number; rankCount: number; dragonCount: number }
   /**
+   * 2026 **13579 #4** style: three distinct suits. One suit holds six tiles — each rank in `odds`
+   * exactly once except **one** rank appears twice (the pair). The other two suits each hold a
+   * kong of **that same pair rank** (“kongs match pair”).
+   */
+  | {
+      kind: 'odd-pair-kongs-triple'
+      odds: readonly number[]
+    }
+  /**
    * Card **ink colors** = distinct **suit slots** (A / B / C), not fixed bam/dot/crak — see
    * `nmjlSuitSlots.ts`. Each outer `colorGroups[i]` is one slot; inner arrays are rank runs in
    * that slot. Matcher tries every assignment of real suits to slots and picks the best fill.
@@ -112,6 +121,13 @@ export type PracticePattern = {
    * segments are insufficient.
    */
   cardLineFromGroupSlotMap?: readonly number[]
+  /**
+   * When true, `patternLinePreviewSlots` / defs use **group** metadata even if `titleSegments` parse
+   * to a full hand (ranks on the card are placeholders vs. matcher semantics — e.g. 13579 #4).
+   */
+  previewSlotsFromGroups?: boolean
+  /** Skip realigning greedy strip cells to title preview order (paired with `previewSlotsFromGroups`). */
+  skipStripTitleReorder?: boolean
   /**
    * Joker eligibility from `patternPreviewJokerEligibleBySlot` is indexed in **card/display** order.
    * Greedy strip assignment walks **group** order; for group slot `g`, use eligibility from display
@@ -784,21 +800,21 @@ export const PRACTICE_PATTERNS: PracticePattern[] = [
     matches: suit(5, 7, 9),
   },
   {
-    id: '13579-4', section: '13579', points: 25, closed: false, roughTarget: 14,
-    title: '1111 333 5555 DDD',
-    titleSegments: [r('1111 333 '), g('5555 DDD')],
-    // Card: 1111 333 red (suit A); 5555 + DDD green (suit B, dragon matches suit B). Two distinct suits.
-    groups: [
-      {
-        kind: 'suit-permute',
-        colorGroups: [
-          [{ rank: 1, need: 4, canUseJoker: true }, { rank: 3, need: 3, canUseJoker: true }],
-          [{ rank: 5, need: 4, canUseJoker: true }],
-        ],
-        colorGroupDragonCounts: [0, 3],
-      },
-    ],
-    matches: or(suit(1, 3, 5), dragon),
+    id: '13579-4',
+    section: '13579',
+    cardHandCode: '4',
+    points: 25,
+    closed: false,
+    roughTarget: 14,
+    title: '113579 1111 1111',
+    titleSegments: [g('113579 '), r('1111 '), n('1111 ')],
+    cardParenthesis: '(Any 3 Suits, Pair Any Odd No., Kongs Match Pair)',
+    previewSlotsFromGroups: true,
+    skipStripTitleReorder: true,
+    // 2026 NMJL: pair rank R ∈ odds appears twice in one suit with the other four odds once each;
+    // the other two suits each show a kong of R (113579… / 133579… / … / 135799… on the card).
+    groups: [{ kind: 'odd-pair-kongs-triple', odds: [1, 3, 5, 7, 9] }],
+    matches: suit(1, 3, 5, 7, 9),
   },
   {
     id: '13579-5', section: '13579', points: 25, closed: false, roughTarget: 14,

@@ -5,6 +5,7 @@ import type { CardInk } from '../card/cardText'
 import {
   firstOpposingConsecutiveStandInPairFromTitle,
   jokerEligibleGroupToDisplayFromPattern,
+  oddPairKongsTripleSixPackRanks,
   patternLinePreviewCardInks,
   patternLinePreviewDefs,
   patternLinePreviewGroupOrderDefs,
@@ -191,6 +192,8 @@ function countGroupPreviewSlots(g: PatternGroup): number {
       return g.colorGroups.reduce((acc, cg, ci) =>
         acc + cg.reduce((sum, sg) => sum + sg.need, 0) + (g.colorGroupDragonCounts?.[ci] ?? 0), 0)
         + (g.trailingDragonCount ?? 0)
+    case 'odd-pair-kongs-triple':
+      return 14
     default:
       return 0
   }
@@ -225,6 +228,8 @@ function previewDefFitsGroupTileType(d: TileDef, g: PatternGroup): boolean {
         (g.colorGroupDragonCounts?.some((dc) => dc > 0) ?? false) ||
         (g.trailingDragonCount ?? 0) > 0
       ))
+    case 'odd-pair-kongs-triple':
+      return d.cat === 'suit'
     default:
       return true
   }
@@ -250,6 +255,109 @@ export function groupPreviewIndexSpans(p: PracticePattern): [number, number][] |
   }
   if (c !== defsLen) return null
   return spans
+}
+
+/** Natural fill, joker-capable kong gaps, and exposure fill for one (pairRank, suit-perm) — 13579 #4. */
+function oddPairKongsTripleScoreParts(
+  rack: readonly TileInstance[],
+  odds: readonly number[],
+  pairRank: number,
+  perm: readonly Suit[],
+  exposureTileIds: ReadonlySet<string> | undefined,
+  noJokers: boolean,
+): { exposureFill: number; naturalTotal: number; totalWithJokers: number } {
+  const jokerCount = rack.filter((t) => t.def.cat === 'joker').length
+  const sixRanks = oddPairKongsTripleSixPackRanks(odds, pairRank)
+  const s0 = perm[0]!
+  const s1 = perm[1]!
+  const s2 = perm[2]!
+  let sixNat = 0
+  let exposureFill = 0
+  const sixNeedByRank = new Map<number, number>()
+  for (const r of sixRanks) {
+    sixNeedByRank.set(r, (sixNeedByRank.get(r) ?? 0) + 1)
+  }
+  for (const [r, need] of sixNeedByRank) {
+    const matching = rack.filter((t) => t.def.cat === 'suit' && t.def.suit === s0 && t.def.rank === r)
+    sixNat += Math.min(matching.length, need)
+    if (exposureTileIds) {
+      exposureFill += Math.min(matching.filter((t) => exposureTileIds.has(t.id)).length, need)
+    }
+  }
+  const m1 = rack.filter((t) => t.def.cat === 'suit' && t.def.suit === s1 && t.def.rank === pairRank)
+  const m1nat = Math.min(m1.length, 4)
+  if (exposureTileIds) {
+    exposureFill += Math.min(m1.filter((t) => exposureTileIds.has(t.id)).length, 4)
+  }
+  const m2 = rack.filter((t) => t.def.cat === 'suit' && t.def.suit === s2 && t.def.rank === pairRank)
+  const m2nat = Math.min(m2.length, 4)
+  if (exposureTileIds) {
+    exposureFill += Math.min(m2.filter((t) => exposureTileIds.has(t.id)).length, 4)
+  }
+  const naturalTotal = sixNat + m1nat + m2nat
+  const kongJokerSlots = Math.max(0, 4 - m1nat) + Math.max(0, 4 - m2nat)
+  const jokerFill = noJokers ? 0 : Math.min(jokerCount, kongJokerSlots)
+  const totalWithJokers = naturalTotal + jokerFill
+  return { exposureFill, naturalTotal, totalWithJokers }
+}
+
+/**
+ * Best (pair rank, suit assignment) for `odd-pair-kongs-triple`: exposure naturals first, then
+ * **total tiles toward 14** (naturals + jokers standing in for unfilled kong cells only — six-pack
+ * singles/pair cannot use jokers per NMJL). This matches the end of {@link computeGroupMatch} for
+ * this single group so we do not pick a worse line when jokers complete a kong-heavy variant.
+ */
+function pickBestOddPairKongsTriple(
+  rack: readonly TileInstance[],
+  odds: readonly number[],
+  exposureTileIds: ReadonlySet<string> | undefined,
+  lockedSuits: ReadonlySet<Suit> | undefined,
+  noJokers: boolean,
+): { pairRank: number; perm: Suit[] } {
+  let bestExposureFill = -1
+  let bestTotalWithJokers = -1
+  let bestNatural = -1
+  let bestSupport = -1
+  let bestPairRank = odds[0] ?? 1
+  let bestPerm: Suit[] = SUITS
+
+  const rankSupport = (r: number) =>
+    rack.filter((t) => t.def.cat === 'suit' && t.def.rank === r).length
+
+  for (const pairRank of odds) {
+    const support = rankSupport(pairRank)
+    for (const perm of suitPermutations(3)) {
+      if (lockedSuits && lockedSuits.size > 0 && perm.some((s) => lockedSuits.has(s))) continue
+      const { exposureFill, naturalTotal, totalWithJokers } = oddPairKongsTripleScoreParts(
+        rack,
+        odds,
+        pairRank,
+        perm,
+        exposureTileIds,
+        noJokers,
+      )
+      const better =
+        exposureFill > bestExposureFill ||
+        (exposureFill === bestExposureFill && totalWithJokers > bestTotalWithJokers) ||
+        (exposureFill === bestExposureFill &&
+          totalWithJokers === bestTotalWithJokers &&
+          naturalTotal > bestNatural) ||
+        (exposureFill === bestExposureFill &&
+          totalWithJokers === bestTotalWithJokers &&
+          naturalTotal === bestNatural &&
+          (support > bestSupport || (support === bestSupport && pairRank > bestPairRank)))
+
+      if (better) {
+        bestExposureFill = exposureFill
+        bestTotalWithJokers = totalWithJokers
+        bestNatural = naturalTotal
+        bestSupport = support
+        bestPairRank = pairRank
+        bestPerm = perm
+      }
+    }
+  }
+  return { pairRank: bestPairRank, perm: bestPerm }
 }
 
 function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: GroupMatchOpts): number {
@@ -751,6 +859,33 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
         break
       }
 
+      case 'odd-pair-kongs-triple': {
+        const odds = g.odds
+        const { pairRank: bestPairRank, perm: bestPerm } = pickBestOddPairKongsTriple(
+          remaining,
+          odds,
+          opts?.exposureTileIds,
+          undefined,
+          noJokers,
+        )
+        const sixRanksTake = oddPairKongsTripleSixPackRanks(odds, bestPairRank)
+        const s0t = bestPerm[0]!
+        const s1t = bestPerm[1]!
+        const s2t = bestPerm[2]!
+        for (const r of sixRanksTake) {
+          const m = take((d) => d.cat === 'suit' && d.suit === s0t && d.rank === r, 1)
+          total += m
+          noteJokerSlots(1, m)
+        }
+        const m1 = take((d) => d.cat === 'suit' && d.suit === s1t && d.rank === bestPairRank, 4)
+        total += m1
+        noteJokerSlots(4, m1)
+        const m2 = take((d) => d.cat === 'suit' && d.suit === s2t && d.rank === bestPairRank, 4)
+        total += m2
+        noteJokerSlots(4, m2)
+        break
+      }
+
       case 'suit-permute': {
         // Card ink “colors” = distinct suit slots A/B/C — assign real suits via every permutation.
         // Same outer-array index = same slot (same chosen suit); different index = different suit.
@@ -1113,6 +1248,10 @@ function groupNeedForDef(
       }
       return maxNeed > 0 ? maxNeed : null
     }
+
+    case 'odd-pair-kongs-triple':
+      if (_def.cat !== 'suit' || !group.odds.includes(_def.rank)) return null
+      return 4
 
     default:
       return null
@@ -1970,6 +2109,27 @@ function resolveStripTargetDefsForGreedyMatch(
         }
         break
       }
+      case 'odd-pair-kongs-triple': {
+        const odds = g.odds
+        const { pairRank: bestPairRank, perm: bestPerm } = pickBestOddPairKongsTriple(
+          rem,
+          odds,
+          exposureTileIds,
+          lockedSuits,
+          p.section === 'SINGLES AND PAIRS',
+        )
+        let idx = a
+        const sixOut = oddPairKongsTripleSixPackRanks(odds, bestPairRank)
+        const s0o = bestPerm[0]!
+        const s1o = bestPerm[1]!
+        const s2o = bestPerm[2]!
+        for (const r of sixOut) {
+          for (let k = 0; k < 1 && idx < b; k++) out[idx++] = { cat: 'suit', suit: s0o, rank: r }
+        }
+        for (let k = 0; k < 4 && idx < b; k++) out[idx++] = { cat: 'suit', suit: s1o, rank: bestPairRank }
+        for (let k = 0; k < 4 && idx < b; k++) out[idx++] = { cat: 'suit', suit: s2o, rank: bestPairRank }
+        break
+      }
       case 'suit-permute': {
         const drgForSuitPerm = { bam: 'green' as const, dot: 'soap' as const, crak: 'red' as const }
         const n = g.colorGroups.length
@@ -2217,12 +2377,27 @@ export type SuggestedStripSlot = {
   jokerSuggested: boolean
 }
 
-function stripDefsMatchRelaxed(a: TileDef, b: TileDef): boolean {
-  if (a.cat !== b.cat) return false
-  if (a.cat === 'suit' && b.cat === 'suit') return a.rank === b.rank
-  if (a.cat === 'wind' && b.cat === 'wind') return a.wind === b.wind
-  if (a.cat === 'dragon' && b.cat === 'dragon') {
-    return a.dragon === b.dragon || a.dragon === 'any' || b.dragon === 'any'
+/**
+ * When pairing title-line preview cells to greedy strip defs for reorder, suit columns must
+ * match; rank may differ because NMJL “any like numbers” lines print `1` as a placeholder while
+ * the strip shows the resolved rank from the rack.
+ */
+function stripDefsMatchForTitleReorder(stripDef: TileDef, titleDef: TileDef, p: PracticePattern): boolean {
+  if (stripDef.cat !== titleDef.cat) return false
+  if (stripDef.cat === 'suit' && titleDef.cat === 'suit') {
+    if (stripDef.suit !== titleDef.suit) return false
+    if (stripDef.rank === titleDef.rank) return true
+    const likeNumbersPlaceholder =
+      p.section === 'ANY LIKE NUMBERS' || p.id.startsWith('like-')
+    return likeNumbersPlaceholder && titleDef.rank === 1
+  }
+  if (stripDef.cat === 'wind' && titleDef.cat === 'wind') return stripDef.wind === titleDef.wind
+  if (stripDef.cat === 'dragon' && titleDef.cat === 'dragon') {
+    return (
+      stripDef.dragon === titleDef.dragon ||
+      stripDef.dragon === 'any' ||
+      titleDef.dragon === 'any'
+    )
   }
   return true
 }
@@ -2241,7 +2416,7 @@ function reorderStripToTitleOrder(
     let found = -1
     for (let gi = 0; gi < groupDefs.length; gi++) {
       if (used.has(gi)) continue
-      if (stripDefsMatchRelaxed(groupDefs[gi]!, tp.def)) {
+      if (stripDefsMatchForTitleReorder(groupDefs[gi]!, tp.def, p)) {
         found = gi
         break
       }
@@ -3005,7 +3180,18 @@ export function buildSuggestedStripSlotRowsWithVariants(
     return { rows: altPerm.rows, ocVariantSuffixes: [], ocAllSuffix: '' }
   }
   return {
-    rows: [buildSuggestedStripSlotsFromStripDefs(p, rack, usedOrder, bestIdsForAssignment, um, stripResolved, true)],
+    rows: [
+      buildSuggestedStripSlotsFromStripDefs(
+        p,
+        rack,
+        usedOrder,
+        bestIdsForAssignment,
+        um,
+        stripResolved,
+        true,
+        p.skipStripTitleReorder === true,
+      ),
+    ],
     ocVariantSuffixes: [],
     ocAllSuffix: '',
   }
@@ -4099,6 +4285,7 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
     const matchedInHand = p.groups?.length
       ? computeGroupMatch(rackForPattern, p.groups, {
           noJokers: p.section === 'SINGLES AND PAIRS',
+          leftToRight: true,
           ...groupMatchExposureOpts,
         })
       : rackForPattern.filter((t) => p.matches(t.def)).length

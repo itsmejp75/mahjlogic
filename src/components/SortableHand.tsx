@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { useRef, useLayoutEffect, useEffect, useState } from 'react'
+import { useRef, useLayoutEffect, useEffect, useState, useMemo } from 'react'
 import { useDndContext } from '@dnd-kit/core'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -51,6 +51,7 @@ function SortableTile({
   jokerSwapHintBounceEpoch = 0,
   externalShift = false,
   externalPreviewActive = false,
+  deferHandFlyMeasure = false,
   shiftPhase = null,
 }: {
   tile: TileInstance
@@ -84,6 +85,8 @@ function SortableTile({
   externalShift?: boolean
   /** Ignore dnd-kit transforms while a non-hand tile previews insertion into the rack. */
   externalPreviewActive?: boolean
+  /** After the first `--draw-anim-*` measure, re-measure on the next two frames (opening deal / WebKit PWA hand grid). */
+  deferHandFlyMeasure?: boolean
   /**
    * Post-removal slide animation:
    *   `'pre'`  — tile is parked one column to the right (its old position) with no transition.
@@ -206,7 +209,11 @@ function SortableTile({
 
     apply()
 
-    if (isHandFlyIn && handTileFlyIn) {
+    if (deferHandFlyMeasure) {
+      raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(apply)
+      })
+    } else if (isHandFlyIn && handTileFlyIn) {
       const el = wrapRef.current
       if (el) {
         const r = el.getBoundingClientRect()
@@ -230,6 +237,7 @@ function SortableTile({
     handFlyInIdsKey,
     tile.id,
     drawInFromRackBottom,
+    deferHandFlyMeasure,
   ])
 
   const flyStyle: CSSProperties | undefined =
@@ -391,6 +399,20 @@ export function SortableHand({
   externalInsertPreviewIndex = null,
 }: Props) {
   const renderIds = sortableOrder ?? tiles.map((t) => t.id)
+  const deferHandFlyMeasure =
+    handTileFlyIn != null &&
+    handTileFlyIn.ids.length > 1 &&
+    handTileFlyIn.staggerWaveDelayMs != null
+  const handFlyInVisualWaveIndexById = useMemo(() => {
+    if (!handTileFlyIn?.staggerWaveDelayMs) return null
+    const idSet = new Set(handTileFlyIn.ids)
+    const m = new Map<string, number>()
+    let wave = 0
+    for (const rid of renderIds) {
+      if (idSet.has(rid)) m.set(rid, wave++)
+    }
+    return m
+  }, [handTileFlyIn, renderIds])
   const g = suggestedTileGuide
   const deadGuide = suggestedDeadTileGuide
   const externalPreviewActive = externalInsertPreviewIndex != null
@@ -491,9 +513,16 @@ export function SortableHand({
           const isDeadCause = !!deadGuide?.skullIds.has(tile.id)
           const isHandFlyIn = !!handTileFlyIn?.ids.includes(tile.id)
           const waveMs = handTileFlyIn?.staggerWaveDelayMs
+          const waveVisualIdx =
+            handFlyInVisualWaveIndexById != null && isHandFlyIn
+              ? handFlyInVisualWaveIndexById.get(tile.id)
+              : undefined
           const handFlyInWaveDelayMs =
-            waveMs != null && isHandFlyIn && handTileFlyIn
-              ? Math.max(0, handTileFlyIn.ids.indexOf(tile.id)) * waveMs
+            waveMs != null &&
+            isHandFlyIn &&
+            handTileFlyIn &&
+            waveVisualIdx !== undefined
+              ? waveVisualIdx * waveMs
               : undefined
           const shiftPhase: 'pre' | 'post' | null =
             removalShift && index >= removalShift.fromIndex
@@ -517,6 +546,7 @@ export function SortableHand({
               isHandFlyIn={isHandFlyIn}
               handTileFlyIn={handTileFlyIn}
               handFlyInWaveDelayMs={handFlyInWaveDelayMs}
+              deferHandFlyMeasure={deferHandFlyMeasure}
               drawInFromRackBottom={handJokerSwapFlyInFromBelowId === tile.id}
               rackNewMark={!!rackNewMarkTileIds?.has(tile.id)}
               jokerSwapHintBounce={jokerSwapHintBounceTileIds?.has(tile.id) ?? false}

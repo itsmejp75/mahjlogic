@@ -63,6 +63,7 @@ import {
   writePlayableCardToStorage,
 } from './card/cardCatalog'
 import type { PatternGroup, PracticePattern } from './card/practicePatterns'
+import { oddPairKongsTripleSixPackRanks } from './card/patternLinePreview'
 import { getActiveCardPatterns, setActiveCardPatterns } from './card/activeCardPatternsScope'
 import {
   buildPinnedPatternsFromFocusKey,
@@ -859,6 +860,25 @@ function deadHintGroupNeedVariants(
       }
       return variants
     }
+    case 'odd-pair-kongs-triple': {
+      const variants: Array<Map<string, { def: TileDef; need: number }>> = []
+      for (const pairRank of group.odds) {
+        const sixRanks = oddPairKongsTripleSixPackRanks(group.odds, pairRank)
+        for (const assignment of deadHintSuitPermutations(3)) {
+          const needs = new Map<string, { def: TileDef; need: number }>()
+          const s0 = assignment[0]!
+          const s1 = assignment[1]!
+          const s2 = assignment[2]!
+          for (const r of sixRanks) {
+            addDeadHintNeed(needs, { cat: 'suit', suit: s0, rank: r }, 1)
+          }
+          addDeadHintNeed(needs, { cat: 'suit', suit: s1, rank: pairRank }, 4)
+          addDeadHintNeed(needs, { cat: 'suit', suit: s2, rank: pairRank }, 4)
+          variants.push(needs)
+        }
+      }
+      return variants
+    }
     default:
       return [new Map()]
   }
@@ -966,6 +986,11 @@ function groupNeedForDeadHintDef(group: PatternGroup, def: TileDef): number | nu
       if (def.cat === 'dragon') {
         return minPositiveNeed(...(group.colorGroupDragonCounts ?? []), group.trailingDragonCount ?? null)
       }
+      return null
+    case 'odd-pair-kongs-triple':
+      if (def.cat !== 'suit' || !group.odds.includes(def.rank)) return null
+      return 4
+    default:
       return null
   }
 }
@@ -4566,12 +4591,13 @@ export default function App() {
       setCommittedCardId(m)
       setActiveCardPatterns(patternsForCard(m))
     }
+    const snap = replayOpeningDeckRef.current
     const replay =
       opts?.replayLastOpening === true &&
-      replayOpeningDeckRef.current != null &&
-      replayOpeningDeckRef.current.length === 152
+      snap != null &&
+      snap.length === 152
     const nextRound = replay
-      ? roundStateFromOpeningDeck([...replayOpeningDeckRef.current])
+      ? roundStateFromOpeningDeck([...snap])
       : (() => {
           const r = createNewRound()
           replayOpeningDeckRef.current = roundOpeningDeckOrder(r)

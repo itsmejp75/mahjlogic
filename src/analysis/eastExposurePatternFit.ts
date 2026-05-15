@@ -1,4 +1,5 @@
 import type { TileDef, TileInstance } from '../mahjong/types'
+import { oddPairKongsTripleSixPackRanks } from '../card/patternLinePreview'
 import { suitPermutations } from '../card/nmjlSuitSlots'
 import { getActiveCardPatterns } from '../card/activeCardPatternsScope'
 import type { PatternGroup, PracticePattern } from '../card/practicePatterns'
@@ -390,6 +391,28 @@ function branchesSuitPermute(
   return out
 }
 
+function branchesOddPairKongsTriple(
+  g: Extract<PatternGroup, { kind: 'odd-pair-kongs-triple' }>,
+): Map<string, number>[] {
+  const out: Map<string, number>[] = []
+  for (const pairRank of g.odds) {
+    const sixRanks = oddPairKongsTripleSixPackRanks(g.odds, pairRank)
+    for (const perm of suitPermutations(3)) {
+      const s0 = perm[0]!
+      const s1 = perm[1]!
+      const s2 = perm[2]!
+      const m = new Map<string, number>()
+      for (const r of sixRanks) {
+        inc(m, keyFromDef({ cat: 'suit', suit: s0, rank: r }), 1)
+      }
+      inc(m, keyFromDef({ cat: 'suit', suit: s1, rank: pairRank }), 4)
+      inc(m, keyFromDef({ cat: 'suit', suit: s2, rank: pairRank }), 4)
+      out.push(m)
+    }
+  }
+  return out
+}
+
 function branchesForGroup(g: PatternGroup): Map<string, number>[] {
   switch (g.kind) {
     case 'fixed':
@@ -410,6 +433,8 @@ function branchesForGroup(g: PatternGroup): Map<string, number>[] {
       return branchesSuitLockedConsecMulti(g)
     case 'suit-permute':
       return branchesSuitPermute(g)
+    case 'odd-pair-kongs-triple':
+      return branchesOddPairKongsTriple(g)
     default:
       return []
   }
