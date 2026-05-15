@@ -24,6 +24,15 @@
   will-change: transform;
 }
 
+.app-layout[data-joker-swap-hint='on'][data-animations='on'][data-joker-swap-hint-iter='1']
+  :is(
+    .sortable-tile-wrap__fly--joker-swap-hint-bounce,
+    .east-discard-staging__tile--joker-swap-hint-bounce .tile-face,
+    .exposure-rack__slot--joker-swap-hint-bounce .tile-face
+  ) {
+  animation-iteration-count: 1;
+}
+
 /* Lift the bouncing tile above its sibling slots within the same row. */
 .app-layout[data-joker-swap-hint='on'][data-animations='on']
   .sortable-tile-wrap:has(.sortable-tile-wrap__fly--joker-swap-hint-bounce),

@@ -631,7 +631,8 @@ export function ExposureRack({
     .map((meld) => meld.sortableMeldId)
     .filter((id): id is string => id != null)
 
-  const filledMeldCount = melds.filter((m) => m.tiles.length > 0 && !m.dropZoneId).length
+  // Count every meld that actually shows tiles (including joker-swap droppables: they still cover the watermark).
+  const filledMeldCount = melds.filter((m) => m.tiles.length > 0).length
 
   return (
     <div

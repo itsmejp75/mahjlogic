@@ -145,7 +145,7 @@
   box-sizing: border-box;
 }
 
-/* Single line: seat · away · section #N · pattern text */
+/* Single line: seat · away · section - N · pattern text (matches suggested-hands card ref) */
 .mahjong-win__bots-review-header {
   display: flex;
   flex-wrap: wrap;

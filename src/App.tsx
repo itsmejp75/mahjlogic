@@ -68,6 +68,7 @@ import {
   buildPinnedPatternsFromFocusKey,
   computeRackPatternHighlightIds,
   greedyPatternMatchDetail,
+  jokerSwapHandHintUsesSingleBounceIteration,
   rankSuggestedHands,
   focusKeyForSuggestedHandLine,
   sortHandForSuggestedPattern,
@@ -194,6 +195,9 @@ const LS_KEY_CONCEALED_HAND_REMINDER = 'mahjlogic.concealedHandReminderEnabled'
 const CONCEALED_HAND_REMINDER_LABEL = 'Concealed hand reminder'
 const JOKER_SWAP_HINT_BOUNCE_DELAY_MS = 500
 const JOKER_SWAP_HINT_BOUNCE_DURATION_MS = 1700
+/** One full keyframe cycle of `joker-swap-hint-dock-bounce` (matches CSS `animation-duration`). */
+const JOKER_SWAP_HINT_BOUNCE_ITERATIONS_FULL = 4
+const JOKER_SWAP_HINT_BOUNCE_ITERATIONS_SINGLE = 1
 /** The keyframe has returned to translateY(0) at 52%; the rest of the iteration is idle. */
 const JOKER_SWAP_HINT_BOUNCE_VISIBLE_MS = JOKER_SWAP_HINT_BOUNCE_DURATION_MS * 0.52
 
@@ -992,7 +996,7 @@ function focusedPatternNeedForDeadHintDef(
   return need
 }
 
-/** Pre-deal wall order: East 14, South/West/North 13 each, then wall — matches `dealOpeningFour`. */
+/** Pre-Charleston wall order: East 14, South/West/North 13 each, then wall — matches `dealOpeningFour` on the shuffled deck. */
 function roundOpeningDeckOrder(r: Pick<RoundState, 'hand' | 'bots' | 'wall'>): TileInstance[] {
   return [...r.hand, ...r.bots[0], ...r.bots[1], ...r.bots[2], ...r.wall]
 }
@@ -3036,6 +3040,31 @@ export default function App() {
     return findNextJokerSwapTarget(botExposures, eastExposures, candidate.def)
   }, [pendingJokerSwapTileId, pendingEastDiscardTile, hand, botExposures, eastExposures])
 
+  /**
+   * Same ids as `rackForSuggestedHandsUi` (below), but jokers in open melds use the tile they represent
+   * for distance / strip matching (NMJL) — declared early for joker-swap hint bounce timing.
+   */
+  const rackForSuggestedPatternMatch = useMemo(
+    () => {
+      const exposureIds = new Set(eastExposures.flatMap((e) => e.tiles).map((t) => t.id))
+      const rack = tileInstancesWithClaimMeldJokersResolved(
+        [
+          ...hand,
+          ...(pendingEastDiscardTile ? [pendingEastDiscardTile] : []),
+          ...(passSlots.filter(Boolean) as TileInstance[]),
+        ],
+        eastExposures,
+      )
+      return [...rack].sort((a, b) => Number(exposureIds.has(b.id)) - Number(exposureIds.has(a.id)))
+    },
+    [hand, pendingEastDiscardTile, passSlots, eastExposures],
+  )
+
+  const suggestedHandsExposureTileIds = useMemo((): ReadonlySet<string> | undefined => {
+    const ids = eastExposures.flatMap((e) => e.tiles).map((t) => t.id)
+    return ids.length > 0 ? new Set(ids) : undefined
+  }, [eastExposures])
+
   /** Joker swap hint (dock-bounce): only starts during East's discard turn. */
   const activeJokerSwapHintBounceIds = useMemo(() => {
     if (mainPhase !== 'east-discard' || !jokerSwapUiActive || !animationsEnabled) {
@@ -3056,6 +3085,45 @@ export default function App() {
     if (hand_.size === 0 && jokers.size === 0) return null
     return { hand: hand_, jokers }
   }, [mainPhase, jokerSwapUiActive, animationsEnabled, hand, pendingEastDiscardTile, botExposures, eastExposures])
+
+  const suggestedLineFocusActiveForJokerSwapHint = useMemo(() => {
+    if (!suggestedFocusHandKey) return false
+    if (suggestedSuppressedHandKey === suggestedFocusHandKey) return false
+    if (
+      mainPhase === 'mahjong-declared' ||
+      mainPhase === 'bot-mahjong' ||
+      mainPhase === 'dead-hand' ||
+      mainPhase === 'wall-game'
+    )
+      return false
+    return true
+  }, [suggestedFocusHandKey, suggestedSuppressedHandKey, mainPhase])
+
+  const jokerSwapHandHintSingleBounce = useMemo(
+    () =>
+      jokerSwapHandHintUsesSingleBounceIteration({
+        focusKey: suggestedFocusHandKey,
+        suppressedFocusKey: suggestedSuppressedHandKey,
+        lineFocusActive: suggestedLineFocusActiveForJokerSwapHint,
+        patterns: cardPatterns,
+        rack: rackForSuggestedPatternMatch,
+        bounceHandIds: activeJokerSwapHintBounceIds?.hand,
+        exposureTileIds: suggestedHandsExposureTileIds,
+      }),
+    [
+      suggestedFocusHandKey,
+      suggestedSuppressedHandKey,
+      suggestedLineFocusActiveForJokerSwapHint,
+      cardPatterns,
+      rackForSuggestedPatternMatch,
+      activeJokerSwapHintBounceIds,
+      suggestedHandsExposureTileIds,
+    ],
+  )
+
+  const jokerSwapHintBounceIterationCount = jokerSwapHandHintSingleBounce
+    ? JOKER_SWAP_HINT_BOUNCE_ITERATIONS_SINGLE
+    : JOKER_SWAP_HINT_BOUNCE_ITERATIONS_FULL
 
   const [settlingJokerSwapHintBounceIds, setSettlingJokerSwapHintBounceIds] = useState<{
     hand: ReadonlySet<string>
@@ -3131,10 +3199,12 @@ export default function App() {
 
   useEffect(() => {
     if (!jokerSwapBounceIsActive) return
-    const totalMs = JOKER_SWAP_HINT_BOUNCE_DELAY_MS + JOKER_SWAP_HINT_BOUNCE_DURATION_MS * 4
+    const totalMs =
+      JOKER_SWAP_HINT_BOUNCE_DELAY_MS +
+      JOKER_SWAP_HINT_BOUNCE_DURATION_MS * jokerSwapHintBounceIterationCount
     const t = window.setTimeout(() => setJokerSwapBounceAnimDone(true), totalMs)
     return () => window.clearTimeout(t)
-  }, [jokerSwapBounceIsActive])
+  }, [jokerSwapBounceIsActive, jokerSwapHintBounceIterationCount])
 
   useEffect(() => {
     setJokerSwapBounceAnimDone(false)
@@ -3334,34 +3404,6 @@ export default function App() {
     ],
     [hand, pendingEastDiscardTile, passSlots, eastExposures],
   )
-
-  /**
-   * Same ids as `rackForSuggestedHandsUi`, but jokers in open melds use the tile they represent
-   * for distance / strip matching (NMJL) — do not use for `TileFace` (would draw the natural).
-   */
-  const rackForSuggestedPatternMatch = useMemo(
-    () => {
-      const exposureIds = new Set(eastExposures.flatMap((e) => e.tiles).map((t) => t.id))
-      const rack = tileInstancesWithClaimMeldJokersResolved(
-        [
-          ...hand,
-          ...(pendingEastDiscardTile ? [pendingEastDiscardTile] : []),
-          ...(passSlots.filter(Boolean) as TileInstance[]),
-        ],
-        eastExposures,
-      )
-      // Focus/highlight matching should spend matching slots on locked exposure tiles before
-      // identical loose hand tiles. This matters after a bot redeems one of East's exposed jokers:
-      // the replacement natural in the exposure is now committed to that line.
-      return [...rack].sort((a, b) => Number(exposureIds.has(b.id)) - Number(exposureIds.has(a.id)))
-    },
-    [hand, pendingEastDiscardTile, passSlots, eastExposures],
-  )
-
-  const suggestedHandsExposureTileIds = useMemo((): ReadonlySet<string> | undefined => {
-    const ids = eastExposures.flatMap((e) => e.tiles).map((t) => t.id)
-    return ids.length > 0 ? new Set(ids) : undefined
-  }, [eastExposures])
 
   /**
    * True when the focused suggested-hand line is concealed (NMJL "C") — drives the red CONCEALED
@@ -4544,7 +4586,7 @@ export default function App() {
     return true
   }, [performNewHandDeal])
 
-  /** Same opening wall + seats as the last fresh deal; reshuffle only via New Game. */
+  /** Same shuffled deck + opening deal as before Charleston on the last fresh deal (reshuffle only via New Game). */
   const replayHand = useCallback((): boolean => {
     performNewHandDeal({ replayLastOpening: true })
     return true
@@ -6442,6 +6484,7 @@ export default function App() {
         className="app-layout"
         data-animations={animationsEnabled ? 'on' : 'off'}
         data-joker-swap-hint="on"
+        data-joker-swap-hint-iter={jokerSwapHandHintSingleBounce ? '1' : '4'}
       >
         <div className="app-main">
           <div

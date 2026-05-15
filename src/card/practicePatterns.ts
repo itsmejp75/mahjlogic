@@ -255,6 +255,7 @@ export const PRACTICE_PATTERNS: PracticePattern[] = [
     id: '2468-7', section: '2468', points: 30, closed: false, roughTarget: 14,
     title: 'FF 2222 44 66 8888',
     titleSegments: [fl('FF '), r('2222 '), n('44 66 '), g('8888')],
+    cardParenthesis: '(Any 2 Suits, Kong 2,4,6, or 8)',
     // Card: 2222 red (slot A); 44 66 navy (slot B, same suit); 8888 green (slot C). Three distinct suits.
     groups: [
       { kind: 'fixed', need: 2, test: flower },

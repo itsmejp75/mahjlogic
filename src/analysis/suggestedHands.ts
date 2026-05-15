@@ -17,6 +17,7 @@ import { getActiveCardPatterns } from '../card/activeCardPatternsScope'
 import { suitPermutations } from '../card/nmjlSuitSlots'
 import type { PatternGroup, PracticePattern } from '../card/practicePatterns'
 import type { SuggestedHandLine } from '../training/types'
+import { suggestedHandSectionMenuLabel } from '../suggestedHands/filterSettings'
 import type { BotExposure } from './types'
 import {
   claimMeldsFitPracticePattern,
@@ -2689,6 +2690,9 @@ function buildSuitPermuteStripVariantRows(
   bestIdsForAssignment: ReadonlySet<string>,
   usedMeta: readonly GroupUsedMeta[] | null,
   stripResolved: TileDef[],
+  /** Must match {@link resolveStripTargetDefsForGreedyMatch}: same exposure-first tie-break so
+   * strip rows / discard-need defs stay aligned with greedy `usedOrder` after claims. */
+  exposureTileIds?: ReadonlySet<string>,
 ): { rows: SuggestedStripSlot[][]; maxFill: number } | null {
   const groups = p.groups
   if (!groups?.length) return null
@@ -2740,7 +2744,9 @@ function buildSuitPermuteStripVariantRows(
   const combos: { perm: Suit[]; base: number }[] = []
   const comboFills: number[] = []
   let bestFill = -1
+  let bestExposureFill = -1
   let bestComboIdx = -1
+  const useExposureBias = exposureTileIds && exposureTileIds.size > 0
 
   for (const base of searchBases) {
     for (const perm of perms) {
@@ -2750,32 +2756,51 @@ function buildSuitPermuteStripVariantRows(
         continue
       }
       let fill = 0
+      let exposureFill = 0
       for (let ci = 0; ci < nSlots; ci++) {
         const s = perm[ci]!
         for (const sg of g.colorGroups[ci]!) {
           const rank = sg.rank - 1 + base
-          fill += Math.min(
-            rem.filter((t) => t.def.cat === 'suit' && t.def.suit === s && t.def.rank === rank).length,
-            sg.need,
+          const matching = rem.filter(
+            (t) => t.def.cat === 'suit' && t.def.suit === s && t.def.rank === rank,
           )
+          const count = matching.length
+          fill += Math.min(count, sg.need)
+          if (useExposureBias) {
+            exposureFill += Math.min(matching.filter((t) => exposureTileIds!.has(t.id)).length, sg.need)
+          }
         }
         const dc = g.colorGroupDragonCounts?.[ci] ?? 0
         if (dc > 0) {
           const drg = drgForSuitVar[s]
-          fill += Math.min(rem.filter((t) => t.def.cat === 'dragon' && t.def.dragon === drg).length, dc)
+          const matching = rem.filter((t) => t.def.cat === 'dragon' && t.def.dragon === drg)
+          fill += Math.min(matching.length, dc)
+          if (useExposureBias) {
+            exposureFill += Math.min(matching.filter((t) => exposureTileIds!.has(t.id)).length, dc)
+          }
         }
       }
       if (tdc > 0) {
         const remaining = SUITS.find((s) => !perm.includes(s))
         if (remaining) {
           const drg = drgForSuitVar[remaining]
-          fill += Math.min(rem.filter((t) => t.def.cat === 'dragon' && t.def.dragon === drg).length, tdc)
+          const matching = rem.filter((t) => t.def.cat === 'dragon' && t.def.dragon === drg)
+          fill += Math.min(matching.length, tdc)
+          if (useExposureBias) {
+            exposureFill += Math.min(matching.filter((t) => exposureTileIds!.has(t.id)).length, tdc)
+          }
         }
       }
       combos.push({ perm, base })
       comboFills.push(fill)
-      if (fill > bestFill) {
+      const better = useExposureBias
+        ? bestComboIdx < 0 ||
+          exposureFill > bestExposureFill ||
+          (exposureFill === bestExposureFill && fill > bestFill)
+        : bestComboIdx < 0 || fill > bestFill
+      if (better) {
         bestFill = fill
+        if (useExposureBias) bestExposureFill = exposureFill
         bestComboIdx = combos.length - 1
       }
     }
@@ -2974,6 +2999,7 @@ export function buildSuggestedStripSlotRowsWithVariants(
     bestIdsForAssignment,
     usedMeta,
     stripResolved,
+    exposureTileIds,
   )
   if (altPerm) {
     return { rows: altPerm.rows, ocVariantSuffixes: [], ocAllSuffix: '' }
@@ -3070,6 +3096,50 @@ function collectNeededNaturalDefsFromStripRows(rows: SuggestedStripSlot[][]): Ti
     }
   }
   return out
+}
+
+/**
+ * Non-exposure rack tiles (concealed + staged pick + pass slots) that could still be played from
+ * your hand — used only to decide whether discard-tracker “need” rings stay on.
+ */
+function concealedRackTilesForDiscardCoach(
+  rack: TileInstance[],
+  exposureTileIds?: ReadonlySet<string>,
+): TileInstance[] {
+  if (!exposureTileIds || exposureTileIds.size === 0) return rack
+  return rack.filter((t) => !exposureTileIds.has(t.id))
+}
+
+/**
+ * When the strip still shows open cells for def D but your concealed naturals of D already meet
+ * or exceed that multiset count, you are not “short” that tile in the discard tracker anymore —
+ * drop D from discard need highlights so the tray stops dimming (e.g. right after you draw the
+ * copy you were hunting).
+ */
+function stripNeedDefsRequiringMoreFromDiscards(
+  needDefs: TileDef[],
+  rack: TileInstance[],
+  exposureTileIds?: ReadonlySet<string>,
+): TileDef[] {
+  if (needDefs.length === 0) return needDefs
+  const concealed = concealedRackTilesForDiscardCoach(rack, exposureTileIds)
+  const needByKey = new Map<string, number>()
+  for (const d of needDefs) {
+    const k = fullDefKey(d)
+    needByKey.set(k, (needByKey.get(k) ?? 0) + 1)
+  }
+  const haveByKey = new Map<string, number>()
+  for (const t of concealed) {
+    if (t.def.cat === 'joker') continue
+    const k = fullDefKey(t.def)
+    haveByKey.set(k, (haveByKey.get(k) ?? 0) + 1)
+  }
+  const satisfiedKeys = new Set<string>()
+  for (const [k, need] of needByKey) {
+    if ((haveByKey.get(k) ?? 0) >= need) satisfiedKeys.add(k)
+  }
+  if (satisfiedKeys.size === 0) return needDefs
+  return needDefs.filter((d) => !satisfiedKeys.has(fullDefKey(d)))
 }
 
 function discardIdsMatchingNeededDefs(
@@ -3234,7 +3304,8 @@ export function computeSuggestedDiscardNeedHighlightIds(
       exposureTileIds,
     )
     const rows = pickStripRowsForFocusKey(p.id, fk, isMulti, result)
-    const needDefs = collectNeededNaturalDefsFromStripRows(rows)
+    const needDefsRaw = collectNeededNaturalDefsFromStripRows(rows)
+    const needDefs = stripNeedDefsRequiringMoreFromDiscards(needDefsRaw, rack, exposureTileIds)
     return discardIdsMatchingNeededDefs(discards, needDefs)
   }
 
@@ -3351,6 +3422,88 @@ export function buildPinnedPatternsFromFocusKey(
     return pp ? [pp] : []
   }
   return []
+}
+
+const FOCUS_KEY_VARIANT_SEPS = ['::tier::', '::oc::', '::ocall::'] as const
+
+function focusKeyVariantSeparator(focusKey: string): number {
+  return FOCUS_KEY_VARIANT_SEPS.map((s) => focusKey.indexOf(s))
+    .filter((i) => i >= 0)
+    .reduce((m, i) => (m < 0 ? i : Math.min(m, i)), -1)
+}
+
+/**
+ * Joker swap dock-bounce: when a suggested line is focused, if any swappable hand natural that is
+ * also highlighted for that line sits on a strip slot where jokers may not substitute (printed
+ * pair / single / short run on the card), run the bounce animation once instead of looping.
+ */
+export function jokerSwapHandHintUsesSingleBounceIteration(args: {
+  focusKey: string | null
+  suppressedFocusKey: string | null
+  /** Same gate as rack suggested highlights (Charleston done + in-play phases). */
+  lineFocusActive: boolean
+  patterns: PracticePattern[]
+  rack: TileInstance[]
+  bounceHandIds: ReadonlySet<string> | null | undefined
+  exposureTileIds: ReadonlySet<string> | undefined
+}): boolean {
+  const {
+    focusKey,
+    suppressedFocusKey,
+    lineFocusActive,
+    patterns,
+    rack,
+    bounceHandIds,
+    exposureTileIds,
+  } = args
+  if (!lineFocusActive || !focusKey || suppressedFocusKey === focusKey) return false
+  const bounce = bounceHandIds
+  if (!bounce || bounce.size === 0) return false
+
+  const variantSep = focusKeyVariantSeparator(focusKey)
+  const patternId = variantSep >= 0 ? focusKey.slice(0, variantSep) : focusKey
+  const p = patterns.find((x) => x.id === patternId)
+  if (!p) return false
+
+  const pinnedPatterns =
+    variantSep >= 0 ? buildPinnedPatternsFromFocusKey(p, focusKey) : []
+  const candidates = pinnedPatterns.length > 0 ? pinnedPatterns : [p]
+
+  for (const bid of bounce) {
+    for (const pinnedP of candidates) {
+      if (jokerSwapHintNaturalInNonJokerStripSlot(pinnedP, rack, bid, exposureTileIds)) return true
+    }
+  }
+  return false
+}
+
+function jokerSwapHintNaturalInNonJokerStripSlot(
+  pinnedP: PracticePattern,
+  rack: TileInstance[],
+  tileId: string,
+  exposureTileIds: ReadonlySet<string> | undefined,
+): boolean {
+  const greedyUiOpts = exposureTileIds && exposureTileIds.size > 0 ? { exposureTileIds } : undefined
+  const detail = greedyPatternMatchDetail(rack, pinnedP, greedyUiOpts)
+  const bestIds = computeRackPatternHighlightIds(rack, pinnedP, detail, exposureTileIds)
+  if (!bestIds.has(tileId)) return false
+
+  const assign = computePreviewStripAssignment(
+    pinnedP,
+    rack,
+    detail.usedOrder,
+    bestIds,
+    detail.usedMeta,
+    null,
+    greedyUiOpts,
+  )
+  const jElig = patternPreviewJokerEligibleBySlot(pinnedP)
+  const n = Math.min(assign.slotTileIdByStripIndex.length, jElig.length)
+  for (let i = 0; i < n; i++) {
+    if (assign.slotTileIdByStripIndex[i] !== tileId) continue
+    return jElig[i] !== true
+  }
+  return false
 }
 
 /** Returns true when the focus key represents a multi-combo "all" / category selection
@@ -3813,6 +3966,14 @@ export function suggestedHandCardRefDisplay(line: SuggestedHandLine): string {
   const c = line.cardHandCode?.trim()
   if (c) return c
   return String(line.cardLineNumber)
+}
+
+/**
+ * Category + hand # in the same form as the suggested-hands card column (e.g. `2468 - 6`), not
+ * `2468 #6` — keeps Mah Jongg / wall-game overlays aligned with the rack card display.
+ */
+export function suggestedHandCategoryDashCardRef(line: SuggestedHandLine): string {
+  return `${suggestedHandSectionMenuLabel(line.section)} - ${suggestedHandCardRefDisplay(line)}`
 }
 
 /**

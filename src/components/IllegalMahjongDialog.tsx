@@ -4,9 +4,10 @@ import type { PracticePattern } from '../card/practicePatterns'
 import {
   getRackTilesNotHelpingPattern,
   rankSuggestedHands,
-  suggestedHandCardRefDisplay,
+  suggestedHandCategoryDashCardRef,
   type RankSuggestedHandsInput,
 } from '../analysis/suggestedHands'
+import { suggestedHandSectionMenuLabel } from '../suggestedHands/filterSettings'
 import type { SuggestedHandLine } from '../training/types'
 import { CardColoredText } from './CardColoredText'
 import { TileFace } from './TileFace'
@@ -133,7 +134,7 @@ export function IllegalMahjongDialog({ rankInput, onDismiss }: Props) {
                 >
                   {sections.map((sec) => (
                     <option key={sec} value={sec}>
-                      {sec}
+                      {suggestedHandSectionMenuLabel(sec)}
                     </option>
                   ))}
                 </select>
@@ -148,7 +149,7 @@ export function IllegalMahjongDialog({ rankInput, onDismiss }: Props) {
                 >
                   {handsInActiveSection.map((l) => (
                     <option key={l.id} value={l.id}>
-                      #{suggestedHandCardRefDisplay(l)} — {l.title}
+                      {suggestedHandCategoryDashCardRef(l)} — {l.title}
                       {l.closed ? ' (C)' : ''}
                     </option>
                   ))}
@@ -159,7 +160,7 @@ export function IllegalMahjongDialog({ rankInput, onDismiss }: Props) {
             {selected ? (
               <div className="mahjong-blocked-modal__white-panel">
                 <p className="mahjong-blocked-modal__line-summary">
-                  {selected.section} #{suggestedHandCardRefDisplay(selected)} — {selected.tilesNeededRough} tiles away (
+                  {suggestedHandCategoryDashCardRef(selected)} — {selected.tilesNeededRough} tiles away (
                   {selected.closed ? 'Concealed' : 'Exposed'}, {selected.points}
                   pt)
                 </p>

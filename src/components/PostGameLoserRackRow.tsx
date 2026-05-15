@@ -1,5 +1,10 @@
 import { useMemo, useState } from 'react'
-import { postGameRackAndHighlights, suggestedHandCardRefDisplay, type RankSuggestedHandsInput } from '../analysis/suggestedHands'
+import {
+  postGameRackAndHighlights,
+  suggestedHandCardRefDisplay,
+  suggestedHandCategoryDashCardRef,
+  type RankSuggestedHandsInput,
+} from '../analysis/suggestedHands'
 import type { TileInstance } from '../mahjong/types'
 import type { SuggestedHandLine } from '../training/types'
 import { TileFace } from './TileFace'
@@ -29,8 +34,7 @@ function segmentRackIntoExposureRuns(
 }
 
 function lineLabelPlain(line: SuggestedHandLine): string {
-  const ref = suggestedHandCardRefDisplay(line)
-  return `${line.section} #${ref} — ${line.title}`
+  return `${suggestedHandCategoryDashCardRef(line)} — ${line.title}`
 }
 
 export type PostGameLoserRackRowProps = {
@@ -94,9 +98,7 @@ export function PostGameLoserRackRow({
         {bestTilesAway === 0 ? '0 away' : `${bestTilesAway} away`}
       </span>
       {line.section ? (
-        <span className="mahjong-win__bots-review-ref">
-          {line.section} #{suggestedHandCardRefDisplay(line)}
-        </span>
+        <span className="mahjong-win__bots-review-ref">{suggestedHandCategoryDashCardRef(line)}</span>
       ) : null}
       <div className="post-game-tied__pattern-line mahjong-win__bots-review-pattern">
         {line.titleSegments ? <CardColoredText segments={line.titleSegments} /> : line.title}
