@@ -96,7 +96,29 @@
   position: relative;
   overflow: hidden;
   background: var(--window-inner-surface);
-  border-radius: var(--tile-tray-shell-radius);
+  /* Tray shell corners match discard tile faces (0.116 × tile width), not tile-tray-shell-radius. */
+  border-radius: var(--discard-tray-tile-corner-r, var(--tile-face-border-radius));
+  container-type: inline-size;
+  container-name: discard-tray;
+}
+
+/* Tile corner radius at this tray width — used by the container + hands overlay only (tiles unchanged). */
+@container discard-tray (min-width: 0px) {
+  .discard-tracker__content {
+    --discard-tray-rack-tile-w: max(
+      1px,
+      calc((100cqw - 25 * var(--player-rack-face-gap)) / 26)
+    );
+    --discard-tray-tile-corner-r: calc(0.116 * var(--discard-tray-rack-tile-w));
+  }
+}
+
+/*
+ * Allow the hands overlay to extend above the content box for peek-drag (negative peek).
+ * Discard tiles stay covered by the sheet at peek 0; clip comes from the rounded shell.
+ */
+.panel--discard-tracker[data-suggested-hands-open='on'] .discard-tracker__content {
+  overflow: visible;
 }
 
 /* Tray shell matches the rack column width; inner drop zone uses the same inset as the hand tray. */

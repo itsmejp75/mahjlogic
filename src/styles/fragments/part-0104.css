@@ -34,12 +34,149 @@
   border-radius: var(--suggested-popup-radius) var(--suggested-popup-radius) 0 0;
   color: var(--window-fg);
   /*
-   * Inline padding is 0 so the hands spreadsheet flows under the popup's rounded frame
-   * (corners are clipped by `overflow: hidden` + `border-radius`). Vertical padding keeps the
-   * sticky column header off the top curve; horizontal stays 0 for edge-to-edge rails.
+   * No padding — top/bottom were leaving bands above the sticky header and below the last
+   * tile row; tiles and sheet chrome should meet the rounded wrapper edges (see base `.panel`
+   * 1rem block padding overridden on `.suggested-hands-popup .panel--hands`).
    */
-  padding: var(--hand-window-pad-inline) 0;
+  padding: 0;
   overflow: hidden;
   gap: 0;
   transition: none;
+}
+
+/*
+ * Discard overlay: root `section` is both `.panel--hands` and `.__user-shift`. Base part-0103 sets
+ * `border-radius: 0` on `.suggested-hands-popup .panel--hands` (sheet rails) — that leaves the
+ * inner surface square; when the header row is rounded and peek-drag shortens the panel, a dark
+ * square corner shows past “Points”. Restore the shell’s top radius on this combined node.
+ */
+.suggested-hands-popup .panel--hands.suggested-hands-popup__user-shift {
+  border-top-left-radius: var(--suggested-popup-radius);
+  border-top-right-radius: var(--suggested-popup-radius);
+}
+
+/* Flush with `.suggested-hands-popup__user-shift` top — avoid extra band above sticky header. */
+.suggested-hands-popup .hands-list-scroll {
+  margin-top: 0;
+}
+
+/* Discard overlay: hands-only spreadsheet — slightly tighter horizontal cell padding on narrow widths. */
+.suggested-hands-popup .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) {
+  --hands-sheet-cell-pad-x: 0.52em;
+}
+
+/*
+ * Discard overlay: drag the column-header row to shrink the sheet from the top (peek gap shows
+ * discards). `pointer-events: none` on the shell + `auto` on the panel lets the gap receive hits.
+ */
+.suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open {
+  background: transparent;
+  pointer-events: none;
+  justify-content: flex-start;
+}
+
+.suggested-hands-popup--discard-overlay .panel--hands {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  width: 100%;
+  position: relative;
+  z-index: 2;
+  /*
+   * Peek 0 + top-extend = sheet flush to `.discard-tracker__content` top; peek drag adds on top of
+   * that inset (reveal discards below) or reduces toward 0 (sheet moves up into exposure band).
+   */
+  margin-top: calc(
+    var(--suggested-overlay-top-extend, 0px) + var(--suggested-overlay-top-peek, 0px)
+  );
+  min-height: calc(
+    100% - var(--suggested-overlay-top-extend, 0px) - var(--suggested-overlay-top-peek, 0px)
+  );
+  max-height: calc(
+    100% - var(--suggested-overlay-top-extend, 0px) - var(--suggested-overlay-top-peek, 0px)
+  );
+}
+
+/* Production grid lines in the discard overlay (part-0081 DEBUG salmon borders stay elsewhere). */
+.suggested-hands-popup .hands-panel__content .hands-list-scroll > .hands-sheet {
+  --hands-sheet-border: 1px solid color-mix(in srgb, var(--window-border) 55%, transparent);
+  --hands-sheet-debug-grid-border: var(--hands-sheet-border);
+}
+
+.suggested-hands-popup--discard-overlay.suggested-hands-popup--open .panel--hands {
+  pointer-events: auto;
+}
+
+.suggested-hands-popup--discard-overlay:not(.suggested-hands-popup--open) .panel--hands {
+  pointer-events: none;
+}
+
+/* Header row tap closes the discard overlay — pointer cursor only when header is not resizable. */
+.suggested-hands-popup
+  .panel--hands--tray-header-dismiss:not(.panel--hands--tray-header-resizable)
+  .hands-list__freeze-header,
+.suggested-hands-popup
+  .panel--hands--tray-header-dismiss:not(.panel--hands--tray-header-resizable)
+  .hands-sheet__cell--header {
+  cursor: pointer;
+}
+
+.suggested-hands-popup .panel--hands--tray-header-resizable .hands-list__freeze-header,
+.suggested-hands-popup .panel--hands--tray-header-resizable .hands-sheet__cell--header {
+  cursor: ns-resize;
+  touch-action: none;
+}
+
+/*
+ * Header row uses the same top corner radius as discard tray tiles (`--suggested-popup-radius`
+ * → `--discard-tray-tile-corner-r`). Only the outer window corners are rounded.
+ */
+.suggested-hands-popup .hands-sheet > .hands-sheet__cell--header.hands-sheet__cell--cat,
+.suggested-hands-popup .hands-sheet > .hands-sheet__cell--header.hands-sheet__cell--hand,
+.suggested-hands-popup .hands-sheet > .hands-sheet__cell--header.hands-sheet__cell--tiles,
+.suggested-hands-popup .hands-sheet > .hands-sheet__cell--header.hands-sheet__cell--away {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.suggested-hands-popup .hands-sheet > .hands-sheet__cell--header.hands-sheet__cell--pin {
+  border-top-left-radius: var(--suggested-popup-radius);
+  border-top-right-radius: 0;
+}
+
+.suggested-hands-popup .hands-sheet > .hands-sheet__cell--header.hands-sheet__cell--values {
+  border-top-right-radius: var(--suggested-popup-radius);
+  border-top-left-radius: 0;
+}
+
+.suggested-hands-popup
+  .hands-sheet:not(:has(> .hands-sheet__cell--header.hands-sheet__cell--pin))
+  > .hands-sheet__cell--header:first-of-type {
+  border-top-left-radius: var(--suggested-popup-radius);
+  border-top-right-radius: 0;
+}
+
+.suggested-hands-popup .hands-list__freeze-header .hands-list__cell--values {
+  border-top-right-radius: var(--suggested-popup-radius);
+  border-top-left-radius: 0;
+}
+
+.suggested-hands-popup .hands-list__freeze-header .hands-list__cell--pin.hands-list__header-cell {
+  border-top-left-radius: var(--suggested-popup-radius);
+  border-top-right-radius: 0;
+  /* Match sticky header row so the bar is continuous above the pin column (no inner-surface gap). */
+  background: var(--color-slate-mid);
+}
+
+.suggested-hands-popup
+  .hands-list__freeze-header:not(:has(.hands-list__cell--pin.hands-list__header-cell))
+  > .hands-list__header-cell:first-of-type {
+  border-top-left-radius: var(--suggested-popup-radius);
+  border-top-right-radius: 0;
+}
+
+.suggested-hands-popup
+  .hands-list__freeze-header
+  > .hands-list__header-cell:not(.hands-list__cell--pin):not(.hands-list__cell--values) {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
 }

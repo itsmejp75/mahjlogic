@@ -87,6 +87,7 @@ import { CharlestonPassStripInstructionMain } from './components/CharlestonPassS
 import { PostGameLoserRackRow } from './components/PostGameLoserRackRow'
 import { IllegalMahjongDialog } from './components/IllegalMahjongDialog'
 import { SuggestedHandsPanel } from './components/SuggestedHandsPanel'
+import { WallTilesRemainCell } from './components/WallTilesRemainCell'
 import {
   HIDE_CONCEALED_HANDS_STORAGE_KEY,
   readHideConcealedHandsFromStorage,
@@ -2495,7 +2496,25 @@ export default function App() {
     discardDeadIds: ReadonlySet<string>
   } | null>(null)
   const [suggestedPanelHandsOn, setSuggestedPanelHandsOn] = useState(false)
-  const [suggestedPinnedHandKey, setSuggestedPinnedHandKey] = useState<string | null>(null)
+  /** Vertical peek (px): drag suggested-hands header down to reveal more of the discard strip above the sheet. */
+  const [suggestedDiscardOverlayPeekPx, setSuggestedDiscardOverlayPeekPx] = useState(0)
+  const suggestedHandsPopupRef = useRef<HTMLDivElement>(null)
+  const eastExposureRackTopRef = useRef<HTMLDivElement>(null)
+  const [suggestedDiscardOverlayBounds, setSuggestedDiscardOverlayBounds] = useState({
+    topExtendPx: 0,
+    bottomExtendPx: 0,
+    viewportTopPx: 0,
+    viewportLeftPx: 0,
+    viewportWidthPx: 0,
+    viewportBottomPx: 0,
+  })
+  const suggestedDiscardOverlayInitialPeekPendingRef = useRef(false)
+  const [suggestedPinnedHandKeys, setSuggestedPinnedHandKeys] = useState<string[]>([])
+  const toggleSuggestedPinnedHandKey = useCallback((key: string) => {
+    setSuggestedPinnedHandKeys((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+    )
+  }, [])
   const [suggestedSuppressedHandKey, setSuggestedSuppressedHandKey] = useState<string | null>(null)
   const [suggestedCategoryResetEpoch, setSuggestedCategoryResetEpoch] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -2771,9 +2790,26 @@ export default function App() {
   useEffect(() => {
     const wasOpen = lastSuggestedPanelOpenRef.current
     if (wasOpen && !suggestedPanelHandsOn) {
-      if (suggestedFocusHandKeyRef.current) setSuggestedPinnedHandKey(suggestedFocusHandKeyRef.current)
+      if (suggestedFocusHandKeyRef.current) {
+        const k = suggestedFocusHandKeyRef.current
+        setSuggestedPinnedHandKeys((prev) => (prev.includes(k) ? prev : [...prev, k]))
+      }
     }
     lastSuggestedPanelOpenRef.current = suggestedPanelHandsOn
+  }, [suggestedPanelHandsOn])
+
+  useLayoutEffect(() => {
+    if (suggestedPanelHandsOn) {
+      suggestedDiscardOverlayInitialPeekPendingRef.current = true
+      return
+    }
+    suggestedDiscardOverlayInitialPeekPendingRef.current = false
+    /* Reset peek after the sheet close transition — immediate reset changes `max-height` mid-slide and reads jerky. */
+    const peekResetMs = 320
+    const t = window.setTimeout(() => {
+      setSuggestedDiscardOverlayPeekPx(0)
+    }, peekResetMs)
+    return () => window.clearTimeout(t)
   }, [suggestedPanelHandsOn])
 
   useEffect(() => {
@@ -3870,7 +3906,7 @@ export default function App() {
   useEffect(() => {
     if (mainPhase === 'mahjong-declared' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand' || mainPhase === 'wall-game') {
       setSuggestedFocusHandKey(null)
-      setSuggestedPinnedHandKey(null)
+      setSuggestedPinnedHandKeys([])
       setSuggestedSuppressedHandKey(null)
       setSuggestedDeadTileGuide(null)
       setSuggestedDeadTableGuide(null)
@@ -3887,7 +3923,7 @@ export default function App() {
     handsButtonLongPressTimer.current = setTimeout(() => {
       handsButtonLongPressFired.current = true
       setSuggestedFocusHandKey(null)
-      setSuggestedPinnedHandKey(null)
+      setSuggestedPinnedHandKeys([])
       setSuggestedSuppressedHandKey(null)
       setSuggestedDeadTileGuide(null)
       setSuggestedDeadTableGuide(null)
@@ -3912,13 +3948,11 @@ export default function App() {
 
   const onSuggestedPatternClick = useCallback((handKey: string) => {
     setSuggestedFocusHandKey((cur) => (cur === handKey ? null : handKey))
-    setSuggestedPinnedHandKey(null)
     setSuggestedSuppressedHandKey(null)
   }, [])
 
   const onSuggestedPatternDoubleClick = useCallback((patternId: string, focusKey?: string) => {
     setSuggestedFocusHandKey(focusKey ?? patternId)
-    setSuggestedPinnedHandKey(null)
     setSuggestedSuppressedHandKey(null)
     pushRound((r) => ({
       ...r,
@@ -4562,7 +4596,7 @@ export default function App() {
     setEastDiscardIntoHandPreview(null)
     setPassStripFlyOut(null)
     setSuggestedFocusHandKey(null)
-    setSuggestedPinnedHandKey(null)
+    setSuggestedPinnedHandKeys([])
     setSuggestedSuppressedHandKey(null)
     setSuggestedCategoryResetEpoch((epoch) => epoch + 1)
     if (passStripFlyoutTimerRef.current) {
@@ -5598,6 +5632,114 @@ export default function App() {
   const showSuggestedHandsPanel =
     mainPhase !== 'dead-hand' && mainPhase !== 'bot-mahjong'
 
+  const updateSuggestedDiscardOverlayBounds = useCallback(() => {
+    const popup = suggestedHandsPopupRef.current
+    const content = popup?.parentElement
+    const exposureTopEl = eastExposureRackTopRef.current
+    const discardPanel = discardTrackerPanelRef.current
+    if (!content || !exposureTopEl || !discardPanel) {
+      setSuggestedDiscardOverlayBounds((prev) =>
+        prev.topExtendPx === 0 &&
+          prev.bottomExtendPx === 0 &&
+          prev.viewportTopPx === 0 &&
+          prev.viewportLeftPx === 0 &&
+          prev.viewportWidthPx === 0 &&
+          prev.viewportBottomPx === 0
+          ? prev
+          : {
+              topExtendPx: 0,
+              bottomExtendPx: 0,
+              viewportTopPx: 0,
+              viewportLeftPx: 0,
+              viewportWidthPx: 0,
+              viewportBottomPx: 0,
+            },
+      )
+      return
+    }
+
+    const contentRect = content.getBoundingClientRect()
+    const exposureRect = exposureTopEl.getBoundingClientRect()
+    const discardRect = discardPanel.getBoundingClientRect()
+    const viewportH = window.visualViewport?.height ?? window.innerHeight
+    const next = {
+      topExtendPx: Math.max(0, Math.ceil(contentRect.top - exposureRect.top)),
+      bottomExtendPx: Math.max(0, Math.ceil(discardRect.bottom - contentRect.bottom)),
+      viewportTopPx: Math.max(0, Math.floor(exposureRect.top)),
+      viewportLeftPx: Math.max(0, Math.floor(contentRect.left)),
+      viewportWidthPx: Math.max(1, Math.ceil(contentRect.width)),
+      viewportBottomPx: Math.max(0, Math.ceil(viewportH - discardRect.bottom)),
+    }
+    setSuggestedDiscardOverlayBounds((prev) =>
+      prev.topExtendPx === next.topExtendPx &&
+        prev.bottomExtendPx === next.bottomExtendPx &&
+        prev.viewportTopPx === next.viewportTopPx &&
+        prev.viewportLeftPx === next.viewportLeftPx &&
+        prev.viewportWidthPx === next.viewportWidthPx &&
+        prev.viewportBottomPx === next.viewportBottomPx
+        ? prev
+        : next,
+    )
+    if (suggestedDiscardOverlayInitialPeekPendingRef.current) {
+      /* Peek 0 + CSS top-extend = flush to discard content top; drag adjusts peek only. */
+      setSuggestedDiscardOverlayPeekPx(0)
+      suggestedDiscardOverlayInitialPeekPendingRef.current = false
+    }
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!showSuggestedHandsPanel || !showPlaySplitRow) {
+      setSuggestedDiscardOverlayBounds((prev) =>
+        prev.topExtendPx === 0 &&
+          prev.bottomExtendPx === 0 &&
+          prev.viewportTopPx === 0 &&
+          prev.viewportLeftPx === 0 &&
+          prev.viewportWidthPx === 0 &&
+          prev.viewportBottomPx === 0
+          ? prev
+          : {
+              topExtendPx: 0,
+              bottomExtendPx: 0,
+              viewportTopPx: 0,
+              viewportLeftPx: 0,
+              viewportWidthPx: 0,
+              viewportBottomPx: 0,
+            },
+      )
+      return
+    }
+
+    updateSuggestedDiscardOverlayBounds()
+    let raf = 0
+    const scheduleUpdate = () => {
+      window.cancelAnimationFrame(raf)
+      raf = window.requestAnimationFrame(updateSuggestedDiscardOverlayBounds)
+    }
+
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(scheduleUpdate)
+    for (const node of [
+      suggestedHandsPopupRef.current?.parentElement,
+      eastExposureRackTopRef.current,
+      discardTrackerPanelRef.current,
+    ]) {
+      if (node) ro?.observe(node)
+    }
+    window.addEventListener('resize', scheduleUpdate)
+    window.visualViewport?.addEventListener('resize', scheduleUpdate)
+    return () => {
+      window.cancelAnimationFrame(raf)
+      ro?.disconnect()
+      window.removeEventListener('resize', scheduleUpdate)
+      window.visualViewport?.removeEventListener('resize', scheduleUpdate)
+    }
+  }, [
+    updateSuggestedDiscardOverlayBounds,
+    showPlaySplitRow,
+    showSuggestedHandsPanel,
+    mainPhase,
+    suggestedPanelHandsOn,
+  ])
+
   /** Hand action bar is hidden in these phases; keep Menu on the bot column toolbar. */
   const menuInBotExposuresToolbar =
     mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand'
@@ -6535,7 +6677,7 @@ export default function App() {
                     <>
                       <div className="rack-stage rack-stage--charleston" role="group">
                         <div className="rack-stage__rack-col">
-                          <div className="rack-stage__rack-top">
+                          <div ref={eastExposureRackTopRef} className="rack-stage__rack-top">
                             <SortableContext items={charlestonPassSortableItems} strategy={rectSortingStrategy}>
                             <ExposureRack
                               className="exposure-rack--charleston-pass"
@@ -6718,15 +6860,13 @@ export default function App() {
                                   ) : 'Call'}
                                 </button>
                               )}
-                              <div
+                              <WallTilesRemainCell
+                                count={wall.length}
                                 className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell rack-bottom-tile-cell--c11${
                                   wall.length >= OPENING_WALL_TILES ? ' rack-bottom-wall--full' : ''
                                 }${wall.length === 0 ? ' rack-bottom-wall--empty' : ''}`}
                                 style={wallRemainHeatStyle(wall.length)}
-                                aria-label={`${wall.length} tiles remaining in wall`}
-                              >
-                                <span className="rack-bottom-wall__num">{wall.length}</span>
-                              </div>
+                              />
                               <button
                                 type="button"
                                 className="btn btn--primary charleston-pass-btn rack-bottom-tile-cell rack-bottom-tile-cell--c12-14"
@@ -6763,7 +6903,7 @@ export default function App() {
                       <div className="rack-stage rack-stage--main-rack">
                         <div className="rack-stage__rack-col">
                           <SortableContext items={sortableItems} strategy={rectSortingStrategy}>
-                          <div className="rack-stage__rack-top">
+                          <div ref={eastExposureRackTopRef} className="rack-stage__rack-top">
                             <StagingMeldDropZone active={mainPhase === 'call-staging'}>
                             <EastOwnJokerSwapDropZone active={jokerSwapUiActive}>
                             <ExposureRack
@@ -7119,15 +7259,13 @@ export default function App() {
                                     ) : 'Call'}
                                   </button>
                                 )}
-                                <div
+                                <WallTilesRemainCell
+                                  count={wall.length}
                                   className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell rack-bottom-tile-cell--c11${
                                     wall.length >= OPENING_WALL_TILES ? ' rack-bottom-wall--full' : ''
                                   }${wall.length === 0 ? ' rack-bottom-wall--empty' : ''}`}
                                   style={wallRemainHeatStyle(wall.length)}
-                                  aria-label={`${wall.length} tiles remaining in wall`}
-                                >
-                                  <span className="rack-bottom-wall__num">{wall.length}</span>
-                                </div>
+                                />
                                 <button
                                   type="button"
                                   className={[
@@ -7181,6 +7319,7 @@ export default function App() {
                     className="panel panel--discard-tracker"
                     aria-label="Discard tracker"
                     data-joker-swap-dnd={jokerSwapUiActive ? 'on' : 'off'}
+                    data-suggested-hands-open={suggestedPanelHandsOn ? 'on' : 'off'}
                   >
                     <div className="panel__title-row panel__title-row--discard-tracker">
                       {menuInBotExposuresToolbar ? (
@@ -7272,6 +7411,7 @@ export default function App() {
                         </DiscardPileDropZone>
                         {showSuggestedHandsPanel ? (
                           <div
+                            ref={suggestedHandsPopupRef}
                             id="suggested-hands-popup"
                             className={[
                               'suggested-hands-popup',
@@ -7284,16 +7424,34 @@ export default function App() {
                             aria-label="Suggested Hands"
                             aria-modal="false"
                             aria-hidden={!suggestedPanelHandsOn}
+                            style={
+                              {
+                                ['--suggested-overlay-top-peek' as string]: `${suggestedDiscardOverlayPeekPx}px`,
+                                ['--suggested-overlay-top-extend' as string]: `${suggestedDiscardOverlayBounds.topExtendPx}px`,
+                                ['--suggested-overlay-bottom-extend' as string]: `${suggestedDiscardOverlayBounds.bottomExtendPx}px`,
+                                ['--suggested-overlay-viewport-top' as string]: `${suggestedDiscardOverlayBounds.viewportTopPx}px`,
+                                ['--suggested-overlay-viewport-left' as string]: `${suggestedDiscardOverlayBounds.viewportLeftPx}px`,
+                                ['--suggested-overlay-viewport-width' as string]: `${suggestedDiscardOverlayBounds.viewportWidthPx}px`,
+                                ['--suggested-overlay-viewport-bottom' as string]: `${suggestedDiscardOverlayBounds.viewportBottomPx}px`,
+                              } as CSSProperties
+                            }
                           >
                             <SuggestedHandsPanel
                               discardTraySurface
+                              discardOverlayPeekPx={suggestedDiscardOverlayPeekPx}
+                              onDiscardOverlayPeekPxChange={setSuggestedDiscardOverlayPeekPx}
+                              discardOverlayMeasureRef={suggestedHandsPopupRef}
+                              onTrayHeaderClick={() => setSuggestedPanelHandsOn(false)}
+                              onPinnedPatternChange={toggleSuggestedPinnedHandKey}
                               hands={eastSuggestedHands}
                               activePatternId={suggestedFocusHandKey}
-                              pinnedPatternId={suggestedPinnedHandKey}
+                              pinnedHandKeys={suggestedPinnedHandKeys}
                               onPatternClick={onSuggestedPatternClick}
                               onPatternDoubleClick={onSuggestedPatternDoubleClick}
                               handsListOn={suggestedHandsListOn}
                               tilesGuideOn={suggestedPanelTilesOn}
+                              onHandsListToggle={() => setSuggestedHandsListOn((v) => !v)}
+                              onTilesGuideToggle={() => setSuggestedPanelTilesOn((v) => !v)}
                               rackTilesForSuggestedStrip={rackForSuggestedHandsUi}
                               rackTilesForPatternMatch={rackForSuggestedPatternMatch}
                               exposureTileIdsForSuggestedStrip={suggestedHandsExposureTileIds}

@@ -1,10 +1,14 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   type CSSProperties,
   type Dispatch,
+  type MouseEvent,
+  type PointerEvent,
+  type RefObject,
   type SetStateAction,
 } from 'react'
 import {
@@ -25,10 +29,84 @@ import { CardColoredText } from './CardColoredText'
 import { TileFace } from './TileFace'
 
 const CLICK_DELAY_MS = 280
+const PEEK_DRAG_THRESHOLD_PX = 10
+const PEEK_DRAG_CLICK_SUPPRESS_MS = 180
+/** Used when the sheet has not laid out yet (no measurable header/row). */
+const SUGGESTED_SHEET_MIN_FALLBACK_PX = 112
+
+type StripRowsEntry = {
+  rows: SuggestedStripSlot[][]
+  ocVariantSuffixes: string[]
+  ocAllSuffix: string
+}
+
+function handEntryKeyForLine(h: SuggestedHandLine): string {
+  return h.consecRanksTier
+    ? `${h.id}::tier::${h.consecRanksTier.combos.map((c) => `${c.base}:${c.perm.join('-')}`).join('|')}`
+    : h.id
+}
+
+/** Stable id for one suggested-hands row pin (matches strip `allKey` / list `categoryClickKey`). */
+function suggestedRowPinKey(h: SuggestedHandLine, stripEntry: StripRowsEntry | undefined): string {
+  const rowStripVariants = stripEntry?.rows ?? []
+  const showVariantStack = rowStripVariants.length > 1
+  if (showVariantStack && !h.consecRanksTier && stripEntry?.ocAllSuffix) {
+    return `${h.id}::${stripEntry.ocAllSuffix}`
+  }
+  return handEntryKeyForLine(h)
+}
+
+/**
+ * Minimum panel height so the discard-overlay resize always leaves the sticky header
+ * plus at least one hand/tile row visible (measured from DOM).
+ */
+function measureMinSuggestedSheetPx(scrollRoot: HTMLElement): number {
+  const sheet = scrollRoot.querySelector('.hands-sheet')
+  if (sheet instanceof HTMLElement) {
+    const headerCells = sheet.querySelectorAll(':scope > .hands-sheet__cell--header')
+    let headerH = 0
+    for (const c of headerCells) {
+      if (c instanceof HTMLElement) {
+        headerH = Math.max(headerH, c.getBoundingClientRect().height)
+      }
+    }
+    const rows = sheet.querySelector('.hands-sheet__rows')
+    const firstRowEl = rows?.querySelector(':scope > .hands-sheet__row')
+    const rowH =
+      firstRowEl instanceof HTMLElement ? firstRowEl.getBoundingClientRect().height : 52
+    return Math.max(SUGGESTED_SHEET_MIN_FALLBACK_PX, Math.ceil(headerH + rowH + 8))
+  }
+
+  const freeze = scrollRoot.querySelector('.hands-list__freeze-header')
+  const list = scrollRoot.querySelector('.hands-list')
+  const firstListRowEl = list?.querySelector(':scope > .hands-list__row')
+  if (freeze instanceof HTMLElement) {
+    const fh = freeze.getBoundingClientRect().height
+    const rh =
+      firstListRowEl instanceof HTMLElement
+        ? firstListRowEl.getBoundingClientRect().height
+        : 52
+    return Math.max(SUGGESTED_SHEET_MIN_FALLBACK_PX, Math.ceil(fh + rh + 8))
+  }
+
+  return SUGGESTED_SHEET_MIN_FALLBACK_PX
+}
 
 /** NMJL card value: concealed lines show C + points on the card; exposed lines show points only (no X). */
 function formatSuggestedHandValue(points: number, closed: boolean): string {
   return closed ? `C${points}` : `${points}`
+}
+
+/** Parenthetical card note (hands-only sheet shows it under the main card line, like Hands & Tiles). */
+function suggestedHandParenText(h: SuggestedHandLine): string | null {
+  const p = h.cardParenthesis?.trim()
+  if (p) return p
+  const m = h.title.match(/(\([^)]+\))/)
+  return m ? m[1] : null
+}
+
+function suggestedHandPlainTitleWithoutParen(h: SuggestedHandLine): string {
+  return h.title.replace(/\s*(\([^)]+\))\s*$/, '').trim() || h.title
 }
 
 /** Tiles rack-guide “lit” row — matches `.hands-list__row--rack-guide` (tiles on + row selected). */
@@ -84,24 +162,66 @@ function stripTileFaceCardInk(def: TileDef, ink: CardInk | undefined): CardInk |
 
 /**
  * Compact-mode (2-col) inline grid-template-areas.
+ * Leading `pin` column matches `--hands-list-pin-w` on `.hands-list--tiles-excel`.
  */
 function handsRowGridTemplateAreas(cat: boolean, tiles: boolean): string {
   if (cat) {
-    if (tiles) return "'category away values' 'tiles awayPad valuesPad'"
-    return "'category away values'"
+    if (tiles) {
+      return "'pin category category away values' 'pin tiles tiles awayPad valuesPad'"
+    }
+    return "'pin category category away values'"
   }
-  return "'tiles away values'"
+  return "'pin tiles tiles away values'"
+}
+
+function SuggestedHandPinCell({
+  pressed,
+  onToggle,
+}: {
+  pressed: boolean
+  onToggle: () => void
+}) {
+  return (
+    <button
+      type="button"
+      className={['hands-suggested-pin', pressed ? 'hands-suggested-pin--pressed' : '']
+        .filter(Boolean)
+        .join(' ')}
+      aria-label={pressed ? 'Unpin this hand from top of list' : 'Pin this hand to top of list'}
+      aria-pressed={pressed}
+      onClick={(e) => {
+        e.stopPropagation()
+        e.preventDefault()
+        onToggle()
+      }}
+    >
+      <svg
+        className="hands-suggested-pin__svg"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        aria-hidden
+      >
+        <path
+          fill="currentColor"
+          d="M16.5 3.25H7.5c-.41 0-.75.34-.75.75v.64c0 .24.12.47.32.61l1.68 1.2v5.3l-2.63 2.63a.75.75 0 0 0-.22.53V16c0 .41.34.75.75.75h4.6v4.75c0 .2.08.39.22.53l.53.53.53-.53a.75.75 0 0 0 .22-.53v-4.75h4.6c.41 0 .75-.34.75-.75v-1.09a.75.75 0 0 0-.22-.53l-2.63-2.63v-5.3l1.68-1.2c.2-.14.32-.37.32-.61V4c0-.41-.34-.75-.75-.75Z"
+        />
+      </svg>
+    </button>
+  )
 }
 
 type Props = {
   hands: SuggestedHandLine[]
   activePatternId: string | null
-  /** When set, this hand stays at the top of the list regardless of tiles-away order. */
-  pinnedPatternId?: string | null
+  /** Pinned suggested row keys (see {@link suggestedRowPinKey}). Toggle via {@link onPinnedPatternChange}. */
+  pinnedHandKeys?: readonly string[]
   onPatternClick: (handKey: string) => void
   onPatternDoubleClick: (patternId: string, focusKey?: string) => void
   handsListOn: boolean
   tilesGuideOn: boolean
+  onHandsListToggle?: () => void
+  onTilesGuideToggle?: () => void
   rackTilesForSuggestedStrip: TileInstance[]
   /**
    * Same ids as `rackTilesForSuggestedStrip`, but jokers in open melds use their stand-in `TileDef`
@@ -125,16 +245,29 @@ type Props = {
    * live on the parent `.suggested-hands-popup` wrapper in `App`.
    */
   discardTraySurface?: boolean
+  /**
+   * When set (discard-tray overlay), a click on the sticky column-header row dismisses the tray.
+   */
+  onTrayHeaderClick?: () => void
+  /** Current top “peek” height in px — empty strip above the sheet (shows discards). */
+  discardOverlayPeekPx?: number
+  /** Updates peek while dragging the header; measure ref must be the overlay shell (`#suggested-hands-popup`). */
+  onDiscardOverlayPeekPxChange?: (px: number) => void
+  discardOverlayMeasureRef?: RefObject<HTMLElement | null>
+  /** Toggle whether `handKey` is pinned (add/remove from {@link pinnedHandKeys}). */
+  onPinnedPatternChange?: (handKey: string) => void
 }
 
 export function SuggestedHandsPanel({
   hands,
   activePatternId,
-  pinnedPatternId,
+  pinnedHandKeys = [],
   onPatternClick,
   onPatternDoubleClick,
   handsListOn,
   tilesGuideOn,
+  onHandsListToggle,
+  onTilesGuideToggle,
   rackTilesForSuggestedStrip,
   rackTilesForPatternMatch,
   exposureTileIdsForSuggestedStrip,
@@ -144,6 +277,11 @@ export function SuggestedHandsPanel({
   cardPatterns,
   cardSectionOrder,
   discardTraySurface,
+  onTrayHeaderClick,
+  discardOverlayPeekPx = 0,
+  onDiscardOverlayPeekPxChange,
+  discardOverlayMeasureRef,
+  onPinnedPatternChange,
 }: Props) {
   const sections = useMemo(() => {
     const uniq = Array.from(new Set(hands.map((h) => h.section)))
@@ -163,6 +301,22 @@ export function SuggestedHandsPanel({
     [sections, uncheckedSections],
   )
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const peekDragRef = useRef<{
+    pointerId: number
+    startY: number
+    startPeek: number
+  } | null>(null)
+  const headerPointerSlopRef = useRef(false)
+  /** Pointerdown target when a discard-overlay header peek-drag may start (used for tap-to-dismiss). */
+  const headerPointerDownTargetRef = useRef<Element | null>(null)
+  const suppressHeaderClickUntilRef = useRef(0)
+  const discardOverlayPeekRef = useRef(discardOverlayPeekPx)
+  useEffect(() => {
+    discardOverlayPeekRef.current = discardOverlayPeekPx
+  }, [discardOverlayPeekPx])
+
+  const handsListScrollRef = useRef<HTMLDivElement>(null)
+  const minSheetHeightPxRef = useRef(SUGGESTED_SHEET_MIN_FALLBACK_PX)
 
   /** If every section that appears in the current ranking is turned off, revert to all on. */
   useEffect(() => {
@@ -202,68 +356,7 @@ export function SuggestedHandsPanel({
     [hands, checkedSections],
   )
 
-  const displayHands = useMemo(() => {
-    const base = hideConcealedHands ? filtered.filter((h) => !h.closed) : filtered
-    const rank = new Map(cardSectionOrder.map((s, i) => [s, i]))
-    const isPinned = (h: SuggestedHandLine) => {
-      if (!pinnedPatternId) return false
-      if (h.id === pinnedPatternId) return true
-      if (pinnedPatternId.startsWith(`${h.id}::tier::`) ||
-          pinnedPatternId.startsWith(`${h.id}::oc::`) ||
-          pinnedPatternId.startsWith(`${h.id}::ocall::`)) return true
-      return false
-    }
-    return [...base].sort((a, b) => {
-      const ap = isPinned(a) ? 0 : 1
-      const bp = isPinned(b) ? 0 : 1
-      if (ap !== bp) return ap - bp
-      if (a.tilesNeededRough !== b.tilesNeededRough) return a.tilesNeededRough - b.tilesNeededRough
-      const ra = rank.get(a.section) ?? 999
-      const rb = rank.get(b.section) ?? 999
-      if (ra !== rb) return ra - rb
-      const oa = suggestedHandCardRefOrder(a)
-      const ob = suggestedHandCardRefOrder(b)
-      if (oa !== ob) return oa - ob
-      return a.id.localeCompare(b.id)
-    })
-  }, [filtered, hideConcealedHands, cardSectionOrder, pinnedPatternId])
-
-  const listRowsForHandsPanel = displayHands
-
-  const handEntryKey = useCallback(
-    (h: (typeof filtered)[number]) =>
-      h.consecRanksTier
-        ? `${h.id}::tier::${h.consecRanksTier.combos.map((c) => `${c.base}:${c.perm.join('-')}`).join('|')}`
-        : h.id,
-    [],
-  )
-
-  useEffect(() => {
-    if (activePatternId == null) return
-    const matches = listRowsForHandsPanel.some((h) => {
-      if (handEntryKey(h) === activePatternId) return true
-      if (h.consecRanksTier) {
-        return h.consecRanksTier.combos.some(
-          (c) => `${h.id}::tier::${c.base}:${c.perm.join('-')}` === activePatternId,
-        )
-      }
-      if (
-        activePatternId.startsWith(`${h.id}::oc::`) ||
-        activePatternId.startsWith(`${h.id}::ocall::`)
-      ) {
-        return true
-      }
-      return false
-    })
-    if (matches) return
-    onPatternClick(activePatternId)
-  }, [activePatternId, listRowsForHandsPanel, onPatternClick, handEntryKey])
-
-  type StripRowsEntry = {
-    rows: SuggestedStripSlot[][]
-    ocVariantSuffixes: string[]
-    ocAllSuffix: string
-  }
+  const handEntryKey = useCallback((h: (typeof filtered)[number]) => handEntryKeyForLine(h), [])
 
   const stripSlotRowsByKey = useMemo(() => {
     if (!tilesGuideOn || rackTilesForSuggestedStrip.length === 0)
@@ -326,6 +419,60 @@ export function SuggestedHandsPanel({
     cardPatterns,
   ])
 
+  const displayHands = useMemo(() => {
+    const base = hideConcealedHands ? filtered.filter((h) => !h.closed) : filtered
+    const rank = new Map(cardSectionOrder.map((s, i) => [s, i]))
+    const pinnedSet = new Set(pinnedHandKeys)
+    const isPinned = (h: SuggestedHandLine) => {
+      if (pinnedSet.size === 0) return false
+      const entry = stripSlotRowsByKey.get(handEntryKeyForLine(h))
+      return pinnedSet.has(suggestedRowPinKey(h, entry))
+    }
+    return [...base].sort((a, b) => {
+      const ap = isPinned(a) ? 0 : 1
+      const bp = isPinned(b) ? 0 : 1
+      if (ap !== bp) return ap - bp
+      if (a.tilesNeededRough !== b.tilesNeededRough) return a.tilesNeededRough - b.tilesNeededRough
+      const ra = rank.get(a.section) ?? 999
+      const rb = rank.get(b.section) ?? 999
+      if (ra !== rb) return ra - rb
+      const oa = suggestedHandCardRefOrder(a)
+      const ob = suggestedHandCardRefOrder(b)
+      if (oa !== ob) return oa - ob
+      return a.id.localeCompare(b.id)
+    })
+  }, [filtered, hideConcealedHands, cardSectionOrder, pinnedHandKeys, stripSlotRowsByKey])
+
+  const listRowsForHandsPanel = displayHands
+
+  const emitRowPinToggle = useCallback(
+    (pinKey: string) => {
+      onPinnedPatternChange?.(pinKey)
+    },
+    [onPinnedPatternChange],
+  )
+
+  useEffect(() => {
+    if (activePatternId == null) return
+    const matches = listRowsForHandsPanel.some((h) => {
+      if (handEntryKey(h) === activePatternId) return true
+      if (h.consecRanksTier) {
+        return h.consecRanksTier.combos.some(
+          (c) => `${h.id}::tier::${c.base}:${c.perm.join('-')}` === activePatternId,
+        )
+      }
+      if (
+        activePatternId.startsWith(`${h.id}::oc::`) ||
+        activePatternId.startsWith(`${h.id}::ocall::`)
+      ) {
+        return true
+      }
+      return false
+    })
+    if (matches) return
+    onPatternClick(activePatternId)
+  }, [activePatternId, listRowsForHandsPanel, onPatternClick, handEntryKey])
+
   const showHandCategoryLabels = handsListOn
   /** Three explicit columns: category line | hand line | away (hands on, tiles off). */
   const handsListSpreadsheet3 = handsListOn && !tilesGuideOn
@@ -333,41 +480,282 @@ export function SuggestedHandsPanel({
   const handsListSpreadsheetTiles2 = !handsListOn && tilesGuideOn
   /** Two explicit columns: stacked (category + hand + tile strip) | away (hands on + tiles on). */
   const handsListSpreadsheetTilesHands = handsListOn && tilesGuideOn
+  const showSuggestedListContent = handsListOn || tilesGuideOn
 
   const rowHitGridStyle = useMemo((): CSSProperties => {
     if (handsListSpreadsheet3) {
-      return { gridTemplateAreas: "'section hand away values'" }
+      return { gridTemplateAreas: "'pin section hand away values'" }
     }
     return { gridTemplateAreas: handsRowGridTemplateAreas(showHandCategoryLabels, tilesGuideOn) }
   }, [handsListSpreadsheet3, showHandCategoryLabels, tilesGuideOn])
+
+  const trayHeaderPeekResize = !!(
+    onDiscardOverlayPeekPxChange && discardOverlayMeasureRef
+  )
+
+  const displayModeHeaderButtons = (
+    <div className="hands-sheet__display-toggles" role="toolbar" aria-label="Suggested hands display">
+      <button
+        type="button"
+        className={[
+          'hands-sheet__display-toggle',
+          handsListOn ? 'hands-sheet__display-toggle--on' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+        aria-pressed={handsListOn}
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          onHandsListToggle?.()
+        }}
+      >
+        Hands
+      </button>
+      <button
+        type="button"
+        className={[
+          'hands-sheet__display-toggle',
+          tilesGuideOn ? 'hands-sheet__display-toggle--on' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+        aria-pressed={tilesGuideOn}
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          onTilesGuideToggle?.()
+        }}
+      >
+        Tiles
+      </button>
+    </div>
+  )
+
+  useLayoutEffect(() => {
+    if (!trayHeaderPeekResize) return
+    const scrollEl = handsListScrollRef.current
+    if (!scrollEl) return
+    const syncMin = () => {
+      minSheetHeightPxRef.current = measureMinSuggestedSheetPx(scrollEl)
+    }
+    syncMin()
+    const ro = new ResizeObserver(syncMin)
+    ro.observe(scrollEl)
+    for (const sel of ['.hands-sheet', '.hands-list', '.hands-list__freeze-header']) {
+      const node = scrollEl.querySelector(sel)
+      if (node instanceof HTMLElement) ro.observe(node)
+    }
+    return () => ro.disconnect()
+  }, [
+    trayHeaderPeekResize,
+    handsListOn,
+    tilesGuideOn,
+    listRowsForHandsPanel.length,
+    rackTilesForSuggestedStrip.length,
+    pinnedHandKeys.length,
+  ])
+
+  const handleScrollPointerDownCapture = useCallback(
+    (e: PointerEvent<HTMLDivElement>) => {
+      if (!onDiscardOverlayPeekPxChange || !discardOverlayMeasureRef?.current) return
+      const t = e.target
+      if (!(t instanceof Element)) return
+      /*
+       * Header peek-drag uses setPointerCapture on this scroll root. That would swallow the
+       * Hands/Tiles toggle buttons' pointer stream so they never receive a real `click`.
+       */
+      if (t.closest('.hands-sheet__display-toggles')) return
+      if (
+        !t.closest('.hands-list__freeze-header') &&
+        !t.closest('.hands-sheet__cell--header')
+      ) {
+        return
+      }
+      if (e.button !== 0) return
+      const scrollEl = handsListScrollRef.current
+      if (scrollEl) {
+        minSheetHeightPxRef.current = measureMinSuggestedSheetPx(scrollEl)
+      }
+      headerPointerDownTargetRef.current = t
+      peekDragRef.current = {
+        pointerId: e.pointerId,
+        startY: e.clientY,
+        startPeek: discardOverlayPeekRef.current,
+      }
+      headerPointerSlopRef.current = false
+      e.currentTarget.setPointerCapture(e.pointerId)
+    },
+    [onDiscardOverlayPeekPxChange, discardOverlayMeasureRef],
+  )
+
+  const handleScrollPointerMove = useCallback(
+    (e: PointerEvent<HTMLDivElement>) => {
+      const d = peekDragRef.current
+      if (!d || e.pointerId !== d.pointerId || !onDiscardOverlayPeekPxChange) return
+      const dy = e.clientY - d.startY
+      if (Math.abs(dy) >= PEEK_DRAG_THRESHOLD_PX) headerPointerSlopRef.current = true
+      if (!headerPointerSlopRef.current) return
+      const shell = discardOverlayMeasureRef?.current
+      if (!shell) return
+      const minH = Math.ceil(minSheetHeightPxRef.current)
+      const shellH = shell.getBoundingClientRect().height
+      const topExtendPx = (() => {
+        const raw = getComputedStyle(shell)
+          .getPropertyValue('--suggested-overlay-top-extend')
+          .trim()
+        const n = parseFloat(raw)
+        return Number.isFinite(n) ? Math.max(0, n) : 0
+      })()
+      /*
+       * Peek is added to the content-align inset (0 = flush to discard content top).
+       * Negative peek drags the sheet up into the exposure band; positive reveals discards.
+       */
+      const minPeek = -topExtendPx
+      const maxPeek = Math.max(0, shellH - topExtendPx - minH)
+      onDiscardOverlayPeekPxChange(
+        Math.max(minPeek, Math.min(maxPeek, d.startPeek + dy)),
+      )
+    },
+    [onDiscardOverlayPeekPxChange, discardOverlayMeasureRef],
+  )
+
+  const handleScrollPointerUpOrCancel = useCallback(
+    (e: PointerEvent<HTMLDivElement>) => {
+      const d = peekDragRef.current
+      if (!d || e.pointerId !== d.pointerId) return
+      const downTarget = headerPointerDownTargetRef.current
+      headerPointerDownTargetRef.current = null
+      peekDragRef.current = null
+      const hadSlop = headerPointerSlopRef.current
+      if (hadSlop) {
+        suppressHeaderClickUntilRef.current = performance.now() + PEEK_DRAG_CLICK_SUPPRESS_MS
+      }
+      headerPointerSlopRef.current = false
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId)
+      } catch {
+        /* capture already released */
+      }
+      /*
+       * `setPointerCapture` on header pointerdown (peek drag) prevents a reliable `click` on the
+       * scroll container — dismiss from pointerup for a tap (no slop), excluding pin / buttons.
+       */
+      if (
+        onTrayHeaderClick &&
+        !hadSlop &&
+        downTarget instanceof Element &&
+        !downTarget.closest('.hands-suggested-pin') &&
+        !downTarget.closest('button') &&
+        (downTarget.closest('.hands-list__freeze-header') ||
+          downTarget.closest('.hands-sheet__cell--header'))
+      ) {
+        onTrayHeaderClick()
+        suppressHeaderClickUntilRef.current = performance.now() + 80
+      }
+    },
+    [onTrayHeaderClick],
+  )
+
+  const handleTrayHeaderAreaClick = useCallback(
+    (e: MouseEvent<HTMLDivElement>) => {
+      if (performance.now() < suppressHeaderClickUntilRef.current) {
+        return
+      }
+      if (!onTrayHeaderClick) return
+      const t = e.target
+      if (!(t instanceof Element)) return
+      if (
+        t.closest('.hands-list__freeze-header') ||
+        t.closest('.hands-sheet__cell--header')
+      ) {
+        onTrayHeaderClick()
+      }
+    },
+    [onTrayHeaderClick],
+  )
 
   const rootClassName = [
     'panel',
     'panel--hands',
     discardTraySurface ? 'suggested-hands-popup__user-shift' : '',
+    onTrayHeaderClick ? 'panel--hands--tray-header-dismiss' : '',
+    trayHeaderPeekResize ? 'panel--hands--tray-header-resizable' : '',
   ]
     .filter(Boolean)
     .join(' ')
 
   return (
     <section className={rootClassName} aria-label="Suggested hands">
-      {handsListOn || tilesGuideOn ? (
-        <div className="hands-panel__content">
+      <div className="hands-panel__content">
           <div className="hands-panel__list-column">
-            <div className="hands-list-scroll">
-              {handsListSpreadsheetTilesHands ? (
+            <div
+              ref={handsListScrollRef}
+              className="hands-list-scroll"
+              {...(onTrayHeaderClick ? { onClick: handleTrayHeaderAreaClick } : {})}
+              {...(trayHeaderPeekResize
+                ? {
+                    onPointerDownCapture: handleScrollPointerDownCapture,
+                    onPointerMove: handleScrollPointerMove,
+                    onPointerUp: handleScrollPointerUpOrCancel,
+                    onPointerCancel: handleScrollPointerUpOrCancel,
+                  }
+                : {})}
+            >
+            {!showSuggestedListContent ? (
+              <div
+                className="hands-sheet hands-sheet--tiles2 hands-sheet--header-only"
+                id="hands-list"
+                role="grid"
+              >
+                {onPinnedPatternChange ? (
+                  <div
+                    className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--pin"
+                    role="columnheader"
+                    aria-hidden
+                  />
+                ) : null}
+                <div
+                  className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--tiles"
+                  role="columnheader"
+                >
+                  {displayModeHeaderButtons}
+                </div>
+                <div
+                  className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--away"
+                  role="columnheader"
+                  aria-hidden
+                />
+                <div
+                  className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--values"
+                  role="columnheader"
+                  aria-hidden
+                />
+              </div>
+            ) : handsListSpreadsheetTilesHands ? (
                 <div
                   className="hands-sheet hands-sheet--tiles2 hands-sheet--tilesHands"
                   id="hands-list"
                   role="grid"
                 >
+                  {onPinnedPatternChange ? (
+                    <div
+                      className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--pin"
+                      role="columnheader"
+                      aria-hidden
+                    />
+                  ) : null}
                   <div
-                    className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--tiles hands-sheet__cell--combined"
+                    className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--cat"
                     role="columnheader"
                   >
-                    <span className="hands-sheet__combined-header">
-                      Category <span className="hands-sheet__combined-sep">/</span> Hands & Tiles
-                    </span>
+                    Category
+                  </div>
+                  <div
+                    className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--hand"
+                    role="columnheader"
+                  >
+                    {displayModeHeaderButtons}
                   </div>
                   <div
                     className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--away"
@@ -400,6 +788,7 @@ export function SuggestedHandsPanel({
                         showVariantStack && !h.consecRanksTier && stripEntry?.ocAllSuffix
                           ? `${h.id}::${stripEntry.ocAllSuffix}`
                           : handEntryKey(h)
+                      const rowPinKey = suggestedRowPinKey(h, stripEntry)
                       const rowIsFocused =
                         activePatternId === handEntryKey(h) ||
                         activePatternId === allKey ||
@@ -408,30 +797,28 @@ export function SuggestedHandsPanel({
                       const rowLit = tilesGuideOn && rowIsFocused
                       const cardRef = suggestedHandCardRefDisplay(h)
                       const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points, h.closed)}`
+                      const parenText = suggestedHandParenText(h)
                       const handTitleNode = (
                         <span className="hands-sheet__hand-title" aria-label={h.title}>
                           {h.titleSegments?.length ? (
                             <>
                               <CardColoredText segments={h.titleSegments} />
-                              {(() => {
-                                const paren = h.cardParenthesis?.trim()
-                                if (paren) {
-                                  return <span className="hands-sheet__paren">{paren}</span>
-                                }
-                                const m = h.title.match(/(\([^)]+\))/)
-                                return m ? (
-                                  <span className="hands-sheet__paren">{m[1]}</span>
-                                ) : null
-                              })()}
+                              {h.closed ? (
+                                <span className="hands-sheet__card-c" aria-label="Concealed hand">
+                                  C
+                                </span>
+                              ) : null}
                             </>
                           ) : (
-                            h.title
+                            <>
+                              {parenText ? suggestedHandPlainTitleWithoutParen(h) : h.title}
+                              {h.closed ? (
+                                <span className="hands-sheet__card-c" aria-label="Concealed hand">
+                                  C
+                                </span>
+                              ) : null}
+                            </>
                           )}
-                          {h.closed ? (
-                            <span className="hands-sheet__card-c" aria-label="Concealed hand">
-                              C
-                            </span>
-                          ) : null}
                         </span>
                       )
                       const renderTileRow = (
@@ -492,6 +879,14 @@ export function SuggestedHandsPanel({
                             .join(' ')}
                           role="row"
                         >
+                          {onPinnedPatternChange ? (
+                            <div className="hands-sheet__cell hands-sheet__cell--pin" role="cell">
+                              <SuggestedHandPinCell
+                                pressed={pinnedHandKeys.includes(rowPinKey)}
+                                onToggle={() => emitRowPinToggle(rowPinKey)}
+                              />
+                            </div>
+                          ) : null}
                           {showVariantStack ? (
                             <>
                               <div
@@ -662,11 +1057,18 @@ export function SuggestedHandsPanel({
                   id="hands-list"
                   role="grid"
                 >
+                  {onPinnedPatternChange ? (
+                    <div
+                      className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--pin"
+                      role="columnheader"
+                      aria-hidden
+                    />
+                  ) : null}
                   <div
                     className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--tiles"
                     role="columnheader"
                   >
-                    Tiles
+                    {displayModeHeaderButtons}
                   </div>
                   <div
                     className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--away"
@@ -699,6 +1101,7 @@ export function SuggestedHandsPanel({
                         showVariantStack && !h.consecRanksTier && stripEntry?.ocAllSuffix
                           ? `${h.id}::${stripEntry.ocAllSuffix}`
                           : handEntryKey(h)
+                      const rowPinKey = suggestedRowPinKey(h, stripEntry)
                       const rowIsFocused =
                         activePatternId === handEntryKey(h) ||
                         activePatternId === allKey ||
@@ -753,6 +1156,14 @@ export function SuggestedHandsPanel({
                             .join(' ')}
                           role="row"
                         >
+                          {onPinnedPatternChange ? (
+                            <div className="hands-sheet__cell hands-sheet__cell--pin" role="cell">
+                              <SuggestedHandPinCell
+                                pressed={pinnedHandKeys.includes(rowPinKey)}
+                                onToggle={() => emitRowPinToggle(rowPinKey)}
+                              />
+                            </div>
+                          ) : null}
                           {showVariantStack ? (
                             <>
                               <div
@@ -898,6 +1309,13 @@ export function SuggestedHandsPanel({
                 </div>
               ) : handsListSpreadsheet3 ? (
                 <div className="hands-sheet" id="hands-list" role="grid">
+                  {onPinnedPatternChange ? (
+                    <div
+                      className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--pin"
+                      role="columnheader"
+                      aria-hidden
+                    />
+                  ) : null}
                   <div
                     className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--cat"
                     role="columnheader"
@@ -908,7 +1326,7 @@ export function SuggestedHandsPanel({
                     className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--hand"
                     role="columnheader"
                   >
-                    Hands
+                    {displayModeHeaderButtons}
                   </div>
                   <div
                     className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--away"
@@ -925,6 +1343,8 @@ export function SuggestedHandsPanel({
                   <ol className="hands-sheet__rows" aria-label="Suggested hand lines">
                     {listRowsForHandsPanel.map((h) => {
                       const rowKey = handEntryKey(h)
+                      const stripEntryForPin = stripSlotRowsByKey.get(handEntryKey(h))
+                      const rowPinKey = suggestedRowPinKey(h, stripEntryForPin)
                       const isFocused = activePatternId === rowKey
                       const rowLit = tilesGuideOn && isFocused
                       const cardRef = suggestedHandCardRefDisplay(h)
@@ -940,6 +1360,14 @@ export function SuggestedHandsPanel({
                             .join(' ')}
                           role="row"
                         >
+                          {onPinnedPatternChange ? (
+                            <div className="hands-sheet__cell hands-sheet__cell--pin" role="cell">
+                              <SuggestedHandPinCell
+                                pressed={pinnedHandKeys.includes(rowPinKey)}
+                                onToggle={() => emitRowPinToggle(rowPinKey)}
+                              />
+                            </div>
+                          ) : null}
                           <button
                             type="button"
                             className="hands-sheet__row-btn"
@@ -954,7 +1382,7 @@ export function SuggestedHandsPanel({
                           >
                             <div
                               className={[
-                                'hands-sheet__cell hands-sheet__cell--cat',
+                                'hands-sheet__cell hands-sheet__cell--combined hands-sheet__cell--combined-hands',
                                 sheetRowLitEdge(rowLit, 'start'),
                               ]
                                 .filter(Boolean)
@@ -965,40 +1393,44 @@ export function SuggestedHandsPanel({
                                 {suggestedHandSectionMenuLabel(h.section)}
                                 <span className="hands-sheet__section-num"> - {cardRef}</span>
                               </span>
-                            </div>
-                            <div
-                              className={[
-                                'hands-sheet__cell hands-sheet__cell--hand',
-                                sheetRowLitEdge(rowLit, 'mid'),
-                              ]
-                                .filter(Boolean)
-                                .join(' ')}
-                              role="cell"
-                            >
-                              <span className="hands-sheet__hand-title" aria-label={h.title}>
-                                {h.titleSegments?.length ? (
-                                  <>
-                                    <CardColoredText segments={h.titleSegments} />
-                                    {(() => {
-                                      const paren = h.cardParenthesis?.trim()
-                                      if (paren) {
-                                        return <span className="hands-sheet__paren">{paren}</span>
-                                      }
-                                      const m = h.title.match(/(\([^)]+\))/)
-                                      return m ? (
-                                        <span className="hands-sheet__paren">{m[1]}</span>
-                                      ) : null
-                                    })()}
-                                  </>
-                                ) : (
-                                  h.title
-                                )}
-                                {h.closed ? (
-                                  <span className="hands-sheet__card-c" aria-label="Concealed hand">
-                                    C
-                                  </span>
-                                ) : null}
-                              </span>
+                              {(() => {
+                                const parenText = suggestedHandParenText(h)
+                                return (
+                                  <div
+                                    className="hands-sheet__hand-stack"
+                                    aria-label={h.title}
+                                  >
+                                    <div className="hands-sheet__hand-stack-main">
+                                      <span className="hands-sheet__hand-title-line">
+                                        {h.titleSegments?.length ? (
+                                          <>
+                                            <CardColoredText segments={h.titleSegments} />
+                                            {h.closed ? (
+                                              <span className="hands-sheet__card-c" aria-label="Concealed hand">
+                                                C
+                                              </span>
+                                            ) : null}
+                                          </>
+                                        ) : (
+                                          <>
+                                            {parenText ? suggestedHandPlainTitleWithoutParen(h) : h.title}
+                                            {h.closed ? (
+                                              <span className="hands-sheet__card-c" aria-label="Concealed hand">
+                                                C
+                                              </span>
+                                            ) : null}
+                                          </>
+                                        )}
+                                      </span>
+                                    </div>
+                                    {parenText ? (
+                                      <div className="hands-sheet__hand-stack-detail">
+                                        <span className="hands-sheet__paren">{parenText}</span>
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                )
+                              })()}
                             </div>
                             <div
                               className={[
@@ -1042,6 +1474,13 @@ export function SuggestedHandsPanel({
                 style={rowHitGridStyle}
                 aria-hidden="true"
               >
+                {onPinnedPatternChange ? (
+                  <div
+                    className="hands-list__cell hands-list__cell--pin hands-list__header-cell"
+                    style={{ gridArea: 'pin' }}
+                    aria-hidden
+                  />
+                ) : null}
                 {showHandCategoryLabels ? (
                   <div
                     className={[
@@ -1142,6 +1581,7 @@ export function SuggestedHandsPanel({
                 const categoryClickKey = showConsecVariantStack && !h.consecRanksTier && stripEntry?.ocAllSuffix
                   ? `${h.id}::${stripEntry.ocAllSuffix}`
                   : handEntryKey(h)
+                const rowPinKey = suggestedRowPinKey(h, stripEntry)
                 const rowIsFocused = activePatternId === handEntryKey(h) ||
                   activePatternId === categoryClickKey ||
                   (variantKeys.length > 0 && variantKeys.some((k) => k === activePatternId))
@@ -1227,6 +1667,11 @@ export function SuggestedHandsPanel({
                                 {h.titleSegments?.length ? (
                                   <>
                                     <CardColoredText segments={h.titleSegments} />
+                                    {h.closed ? (
+                                      <span className="hands-list__card-c" aria-label="Concealed hand">
+                                        C
+                                      </span>
+                                    ) : null}
                                     {(() => {
                                       const paren = h.cardParenthesis?.trim()
                                       if (paren) {
@@ -1239,13 +1684,15 @@ export function SuggestedHandsPanel({
                                     })()}
                                   </>
                                 ) : (
-                                  h.title
+                                  <>
+                                    {h.title}
+                                    {h.closed ? (
+                                      <span className="hands-list__card-c" aria-label="Concealed hand">
+                                        C
+                                      </span>
+                                    ) : null}
+                                  </>
                                 )}
-                                {h.closed ? (
-                                  <span className="hands-list__card-c" aria-label="Concealed hand">
-                                    C
-                                  </span>
-                                ) : null}
                               </span>
                             ) : null}
                           </div>
@@ -1393,6 +1840,17 @@ export function SuggestedHandsPanel({
                 )
                 return (
                   <li key={handEntryKey(h)} className={liClassName}>
+                    {onPinnedPatternChange ? (
+                      <div
+                        className="hands-list__cell hands-list__cell--pin"
+                        style={{ gridArea: 'pin' }}
+                      >
+                        <SuggestedHandPinCell
+                          pressed={pinnedHandKeys.includes(rowPinKey)}
+                          onToggle={() => emitRowPinToggle(rowPinKey)}
+                        />
+                      </div>
+                    ) : null}
                     {showConsecVariantStack ? (
                       <div {...outerStackedProps}>{innerCells}</div>
                     ) : (
@@ -1406,14 +1864,9 @@ export function SuggestedHandsPanel({
             </ol>
               </>
               )}
-            </div>
           </div>
         </div>
-      ) : (
-        <p className="hands-panel__list-off" role="status">
-          Hands list is hidden — turn on Hands or Tiles to see suggested lines.
-        </p>
-      )}
+      </div>
     </section>
   )
 }

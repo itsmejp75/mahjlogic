@@ -1829,6 +1829,49 @@ function fillSpanTileDefs(out: TileDef[], a: number, tiles: TileInstance[]) {
   }
 }
 
+const DRAGON_PAIR_ORDER: readonly Dragon[] = ['green', 'red', 'soap']
+
+/**
+ * Reorder matched naturals so each **pair** of strip cells shows two identical dragons when the
+ * multiset supports it (e.g. RR+GG, RRRR). Greedy `usedMeta` order can interleave types when a
+ * single `fixed` dragon span still spans two pairs (legacy geometry) or when pairing is ambiguous.
+ */
+function orderDragonTilesForAdjacentPairs(tiles: TileInstance[]): TileInstance[] {
+  if (tiles.length !== 2 && tiles.length !== 4) return tiles
+  if (!tiles.every((t) => t.def.cat === 'dragon')) return tiles
+  if (tiles.length === 2) {
+    const [x, y] = tiles
+    if (!x || !y) return tiles
+    if (x.def.cat === 'dragon' && y.def.cat === 'dragon' && x.def.dragon === y.def.dragon) return tiles
+    return tiles
+  }
+  const byType = new Map<Dragon, TileInstance[]>()
+  for (const t of tiles) {
+    if (t.def.cat !== 'dragon') return tiles
+    const d = t.def.dragon
+    const arr = byType.get(d) ?? []
+    arr.push(t)
+    byType.set(d, arr)
+  }
+  const ranked = [...byType.entries()].sort((a, b) => b[1].length - a[1].length)
+  const top = ranked[0]
+  if (!top) return tiles
+  const arr0 = top[1]
+  if (arr0.length >= 4) return arr0.slice(0, 4)
+  if (arr0.length === 2 && ranked.length >= 2 && ranked[1]![1].length >= 2) {
+    const arr1 = ranked[1]![1]
+    return [...arr0.slice(0, 2), ...arr1.slice(0, 2)]
+  }
+  // e.g. 2+2+2 across three dragon types — show two pairs in deterministic ink order (variants can stack later).
+  const pairTypes = DRAGON_PAIR_ORDER.filter((d) => (byType.get(d)?.length ?? 0) >= 2)
+  if (pairTypes.length >= 2) {
+    const a = byType.get(pairTypes[0]!)!.slice(0, 2)
+    const b = byType.get(pairTypes[1]!)!.slice(0, 2)
+    return [...a, ...b]
+  }
+  return tiles
+}
+
 function isDragonKey(k: string): k is Dragon {
   return k === 'red' || k === 'green' || k === 'soap'
 }
@@ -1891,7 +1934,11 @@ function resolveStripTargetDefsForGreedyMatch(
       case 'fixed': {
         const taken = metaNatTilesForGroup(rack, usedMeta, gi)
         if (taken.length > 0) {
-          fillSpanTileDefs(out, a, taken)
+          const ordered =
+            taken.length >= 2 && taken.every((t) => t.def.cat === 'dragon')
+              ? orderDragonTilesForAdjacentPairs(taken)
+              : taken
+          fillSpanTileDefs(out, a, ordered)
         }
         break
       }
@@ -2385,8 +2432,8 @@ export type SuggestedStripSlot = {
 function stripDefsMatchForTitleReorder(stripDef: TileDef, titleDef: TileDef, p: PracticePattern): boolean {
   if (stripDef.cat !== titleDef.cat) return false
   if (stripDef.cat === 'suit' && titleDef.cat === 'suit') {
-    if (stripDef.suit !== titleDef.suit) return false
     if (stripDef.rank === titleDef.rank) return true
+    if (stripDef.suit !== titleDef.suit) return false
     const likeNumbersPlaceholder =
       p.section === 'ANY LIKE NUMBERS' || p.id.startsWith('like-')
     return likeNumbersPlaceholder && titleDef.rank === 1
@@ -3817,8 +3864,10 @@ function reorderSlotAssignmentsToTitlePreviewSlots(
     outSlots[j] = slots[idx]!
   }
 
-  if (outSlots.some((x) => x == null)) return null
-  return { slots: outSlots as string[], defs: [...displayDefs] }
+  // Incomplete racks (e.g. missing E/W on 2026 W&D #8) still reorder matched tiles into card-line
+  // order so year soap sits in the digit run — do not fall back to group order (soap after S).
+  if (!outSlots.some((x) => x != null)) return null
+  return { slots: outSlots, defs: [...displayDefs] }
 }
 
 /** Compute the strip-ordered, deduplicated list of hand-tile IDs that the pinned pattern uses. */
@@ -4248,6 +4297,34 @@ function cardBookForRankInput(input: RankSuggestedHandsInput): PracticePattern[]
   return input.patterns ?? getActiveCardPatterns()
 }
 
+/**
+ * True when every `suit-permute` color slot has the same rank/dragon shape and there is no
+ * trailing-dragon tail. Suit assignments then only reorder the strip (same multiset of tiles
+ * toward the hand); permutations at a fixed "like number" base should not stack as separate rows.
+ */
+function suitPermuteConsecSlotsAreReorderOnly(
+  g: Extract<PatternGroup, { kind: 'suit-permute' }>,
+): boolean {
+  if (!g.consecRanks) return false
+  if ((g.trailingDragonCount ?? 0) > 0) return false
+  const n = g.colorGroups.length
+  if (n < 2) return false
+  const slotSig = (i: number): string => {
+    const cg = g.colorGroups[i]!
+    const part = [...cg]
+      .map((sg) => `${sg.rank}:${sg.need}`)
+      .sort()
+      .join(',')
+    const dc = g.colorGroupDragonCounts?.[i] ?? 0
+    return `${part}|d${dc}`
+  }
+  const s0 = slotSig(0)
+  for (let i = 1; i < n; i++) {
+    if (slotSig(i) !== s0) return false
+  }
+  return true
+}
+
 export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHandLine[] {
   const { hand, wallRemaining, discards, exposures } = input
   const playerClaimMelds = input.playerClaimMelds ?? []
@@ -4405,12 +4482,21 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
     }
 
     const tierEntries: SuggestedHandLine[] = []
+    const collapsePermutationTiers = suitPermuteConsecSlotsAreReorderOnly(consecPermuteGroup)
     for (const [total, tierCombos] of [...byTotal.entries()].sort((a, b) => b[0] - a[0])) {
       const tierNeeded = Math.max(0, p.roughTarget - total)
       // Sort within tier: by base ascending, then perm lexicographically.
-      const sorted = [...tierCombos].sort((a, b) =>
+      let sorted = [...tierCombos].sort((a, b) =>
         a.base !== b.base ? a.base - b.base : a.perm.join('').localeCompare(b.perm.join('')),
       )
+      if (collapsePermutationTiers) {
+        const seenBase = new Set<number>()
+        sorted = sorted.filter((c) => {
+          if (seenBase.has(c.base)) return false
+          seenBase.add(c.base)
+          return true
+        })
+      }
       tierEntries.push({
         id: p.id,
         title: p.title,

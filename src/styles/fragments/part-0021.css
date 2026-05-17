@@ -106,7 +106,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  line-height: 0;
+  line-height: 1;
   text-align: center;
   font-family: 'Figtree', var(--sans);
   font-size: min(
@@ -153,9 +153,17 @@
 }
 
 .rack-bottom-wall__num {
-  line-height: 0;
+  font-size: 0.95em;
+  line-height: 1;
   display: block;
   text-align: center;
+}
+
+/* Override thematic wall cell `letter-spacing: 0.02em` — em is tiny on the count; use px. */
+.panel--hand .rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell .rack-bottom-wall__num {
+  font-weight: 700;
+  letter-spacing: -0.6px;
+  opacity: 0.9;
 }
 
 /* Opening wall (99 tiles): uniform green — gradient heat begins after the first tile is drawn/discarded. */

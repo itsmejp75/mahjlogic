@@ -25,7 +25,7 @@
 }
 
 /* Local Roboto (assets/fonts/Roboto): variable font covering weights 100–900.
-   Charleston pass-box instruction text uses this family. */
+   Available via `--sans` fallback; not required for Charleston pass copy (Figtree). */
 @font-face {
   font-family: 'Roboto';
   font-style: normal;

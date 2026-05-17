@@ -807,7 +807,7 @@
   font-family: 'Noto Sans Arabic', var(--sans);
   font-size: min(1.792rem, calc(var(--rack-bottom-action-fs) * 2.048));
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
   color: var(--color-off-black);
@@ -6621,8 +6621,8 @@
   --border: var(--window-border);
   --code-bg: color-mix(in srgb, var(--window-fg) 11%, var(--window-surface));
   --panel-lower-header-fade-h: clamp(3rem, 11vw, 4.5rem);
-  /* Shared by resize handles (inner box is the border for arc math). */
-  --suggested-popup-radius: 0.75rem;
+  /* Match `.discard-tracker__content` (`--tile-tray-shell-radius` from `.app-dnd-frame`). */
+  --suggested-popup-radius: var(--tile-tray-shell-radius, 0.75rem);
   --suggested-popup-resize-stroke: 2px;
   --suggested-popup-edge-inset: 0.14rem;
   --suggested-popup-fillet-r: calc(

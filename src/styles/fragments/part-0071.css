@@ -213,6 +213,13 @@
   font-variation-settings: 'wght' 600;
 }
 
+/* Match pass copy to the same face as `1st CHARLESTON` (Figtree semibold). */
+.panel--hand .pass-strip-tail .pass-strip-tail__instruction {
+  font-family: 'Figtree', var(--sans);
+  font-weight: 600;
+  font-variation-settings: 'wght' 600;
+}
+
 /* Separator under title: match the visible title text width. */
 .pass-strip-tail__header--overlay:has(.pass-strip-tail__instruction) .pass-strip-tail__title {
   width: fit-content;
@@ -220,7 +227,12 @@
   box-sizing: border-box;
   padding-top: clamp(0.08rem, calc(var(--pass-strip-box-w) * 0.018), 0.24rem);
   padding-bottom: clamp(0.08rem, calc(var(--pass-strip-box-w) * 0.018), 0.24rem);
-  border-bottom: 1px solid color-mix(in srgb, #f2f2e9 28%, var(--coach-teal-border) 72%);
+  border-bottom: 1px solid
+    color-mix(
+      in srgb,
+      #334155 38%,
+      color-mix(in srgb, #f2f2e9 28%, var(--coach-teal-border) 72%) 62%
+    );
 }
 
 /* Stacked “Pass 3 Left / -OR- / 0 to STOP”: reclaim a little vertical space for larger type. */
@@ -238,12 +250,13 @@
 }
 
 .pass-strip-tail__instruction {
-  font-family: 'Roboto', var(--sans);
-  font-weight: 700;
+  font-family: 'Figtree', var(--sans);
+  font-weight: 600;
+  font-variation-settings: 'wght' 600;
   font-size: var(--pass-strip-header-fs);
   line-height: 1.14;
   letter-spacing: clamp(0.032em, calc(var(--pass-strip-box-w) * 0.00026), 0.072em);
-  color: #DCDCE0;
+  color: #c2c2c8;
   margin: 0;
   padding: 0;
   max-width: 100%;
@@ -259,6 +272,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.pass-strip-tail__instruction .pass-strip-tail__instruction-paren {
+  color: #9a9aa3;
+}
+
+.pass-strip-tail__instruction-paren--close {
+  margin-inline-end: 0.42em;
 }
 
 .pass-strip-tail__instruction--stacked {
@@ -285,13 +306,14 @@
 
 .pass-strip-tail__instruction-or {
   display: block;
-  font-family: 'Roboto', var(--sans);
-  font-weight: 400;
+  font-family: 'Figtree', var(--sans);
+  font-weight: 500;
+  font-variation-settings: 'wght' 500;
   font-style: italic;
   font-size: calc(var(--pass-strip-header-fs) * 0.62);
   letter-spacing: clamp(0.048em, calc(var(--pass-strip-box-w) * 0.00092), 0.14em);
   line-height: 1.08;
-  color: #DCDCE0;
+  color: #b6b6bd;
   text-shadow:
     0 0 0.18rem color-mix(in srgb, var(--bg-elevated) 88%, transparent),
     0 0 0.38rem color-mix(in srgb, var(--bg-elevated) 65%, transparent),
@@ -303,19 +325,20 @@
   margin-block: clamp(0.015rem, calc(var(--pass-strip-box-w) * 0.005), 0.12rem);
 }
 
-/* Inlined in `0 TO STOP`: warm accent like stacked `-OR-` (parent line is `#e0a86e`). */
+/* Inlined in `0 TO STOP`: warm accent like stacked `-OR-` (parent line is `#c99458`). */
 .pass-strip-tail__instruction-or--inline {
   display: inline;
   font-style: italic;
   letter-spacing: clamp(0.048em, calc(var(--pass-strip-box-w) * 0.00088), 0.14em);
   vertical-align: 0.02em;
-  color: #c5a882;
+  color: #b89870;
 }
 
 .pass-strip-tail__instruction-line--0-to-stop {
   white-space: nowrap;
-  font-weight: 700;
-  color: #e0a86e;
+  font-weight: 600;
+  font-variation-settings: 'wght' 600;
+  color: #c99458;
 }
 
 /* Widen “0” / “Stop” only — not the inline “to” (user request). */

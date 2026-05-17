@@ -1,5 +1,23 @@
+import type { ReactNode } from 'react'
 import type { CharlestonPhase } from '../mahjong/charleston'
 import { charlestonPassStripInstruction } from '../mahjong/charleston'
+
+/** Dim only the parentheses around a leading qualifier (e.g. `(Blind)`). */
+function passInstructionWithDimParens(text: string): ReactNode {
+  if (!text.startsWith('(')) return text
+  const close = text.indexOf(')')
+  if (close <= 0) return text
+  const inner = text.slice(1, close)
+  const rest = text.slice(close + 1)
+  return (
+    <>
+      <span className="pass-strip-tail__instruction-paren">(</span>
+      {inner}
+      <span className="pass-strip-tail__instruction-paren pass-strip-tail__instruction-paren--close">)</span>
+      {rest}
+    </>
+  )
+}
 
 /** Centered “Pass 3 …” copy for the Charleston pass box. */
 export function CharlestonPassStripInstructionMain({ phase }: { phase: CharlestonPhase }) {
@@ -28,5 +46,7 @@ export function CharlestonPassStripInstructionMain({ phase }: { phase: Charlesto
   }
 
   const text = charlestonPassStripInstruction(phase)
-  return <p className="pass-strip-tail__instruction">{text}</p>
+  return (
+    <p className="pass-strip-tail__instruction">{passInstructionWithDimParens(text)}</p>
+  )
 }

@@ -211,14 +211,14 @@
 }
 
 /* Shared inner-tray rim: full-width shadows follow each tray’s `border-radius`; border top + soft
-   inline edges read against the wrapper; bottom pair matches discard / hand exposure.
+   inline edges read against the wrapper; bottom pair matches hand exposure / bot trays.
+   Discard content (`.discard-tracker__content`) is flat — see rule immediately below.
    Note: `.suggested-hands-popup .panel--hands` is intentionally excluded — the suggested-hands
    spreadsheet runs flush under the popup frame, so its inner rim border would interrupt the
    sticky column header background extending to the popup window edges. */
 .panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass),
 .panel--hand .rack-stage__rack-top .exposure-rack.exposure-rack--charleston-pass,
 .hand-bank,
-.discard-tracker__content,
 .panel--bot-exposures .app-opponents-rail__cell,
 .panel--bot-exposures__toolbar-well,
 .panel--hand .panel-hand-rack__action-well,
@@ -231,6 +231,12 @@
   /* TEMP-DEBUG: inset rim highlight/shadow disabled while diagnosing tile/button row alignment.
    * To restore the recessed bevel, replace `none` with the four `var(--dark-tray-rim-shadow-*)`
    * tokens stacked (was: shadow-up-1, shadow-up-2, shadow-down-1, shadow-down-2). */
+  box-shadow: none;
+}
+
+/* Discard tray: no rim border or inset tray shadows (flush with panel chrome). */
+.discard-tracker__content {
+  border: none;
   box-shadow: none;
 }
 

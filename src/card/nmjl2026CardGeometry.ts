@@ -310,8 +310,18 @@ function buildGroupsAndMatches(row: Nmjl2026CsvHandRow): { groups: PatternGroup[
     groups.push(...rankGroups)
   }
   if (!rankSlots.some((slot) => slot.ranks.size > 0)) {
-    const dragonNeed = rankSlots.reduce((sum, slot) => sum + slot.dragonCount, 0)
-    pushFixedGroup(groups, dragonNeed, dragon)
+    const dragonOnlySlots = rankSlots.filter((slot) => slot.dragonCount > 0)
+    // NMJL prints separate ink rows for each `DD` (e.g. W&D 7a/7b: green `DD` then red `DD`).
+    // One merged `fixed` group of 4 lets the matcher place four naturals as “any four dragons”,
+    // which breaks **pair** semantics in the strip. Emit one `fixed` group per ink row instead.
+    if (dragonOnlySlots.length > 1) {
+      for (const slot of dragonOnlySlots) {
+        if (slot.dragonCount > 0) pushFixedGroup(groups, slot.dragonCount, dragon)
+      }
+    } else {
+      const dragonNeed = rankSlots.reduce((sum, slot) => sum + slot.dragonCount, 0)
+      if (dragonNeed > 0) pushFixedGroup(groups, dragonNeed, dragon)
+    }
   }
 
   const exactRanks = rankSlots.flatMap((slot) => [...slot.ranks.keys()])

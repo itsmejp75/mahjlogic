@@ -87,8 +87,11 @@
 /* ── Suggested Hands: absolute overlay on discard tray (child of `.discard-tracker__content`). */
 .suggested-hands-popup {
   position: absolute;
-  inset: 0;
-  z-index: 12;
+  top: calc(-1 * var(--suggested-overlay-top-extend, 0px));
+  right: 0;
+  bottom: calc(-1 * var(--suggested-overlay-bottom-extend, 0px));
+  left: 0;
+  z-index: 100;
   /* Tokens (inherit to inner shell and children) */
   --text-h: var(--window-fg);
   --text: var(--window-fg-muted);
@@ -97,8 +100,8 @@
   --border: var(--window-border);
   --code-bg: color-mix(in srgb, var(--window-fg) 11%, var(--window-surface));
   --panel-lower-header-fade-h: clamp(3rem, 11vw, 4.5rem);
-  /* Shared by resize handles (inner box is the border for arc math). */
-  --suggested-popup-radius: 0.75rem;
+  /* Match `.discard-tracker__content` (`--tile-tray-shell-radius` from `.app-dnd-frame`). */
+  --suggested-popup-radius: var(--tile-tray-shell-radius, 0.75rem);
   --suggested-popup-resize-stroke: 2px;
   --suggested-popup-edge-inset: 0.14rem;
   --suggested-popup-fillet-r: calc(
@@ -123,6 +126,46 @@
 }
 
 /*
+ * Peek-drag can extend the hands sheet above the discard tray (into the exposure/button band).
+ * Lift the whole lower split above `.app-rack-stage` and stop clipping on the discard panel shell.
+ */
+.app-dnd-frame:has(.panel--discard-tracker[data-suggested-hands-open='on']) .app-rack-stage {
+  position: relative;
+  z-index: 1;
+}
+
+.app-dnd-frame:has(.panel--discard-tracker[data-suggested-hands-open='on']) .app-play-split {
+  position: relative;
+  z-index: 100;
+  overflow: visible;
+}
+
+.app-dnd-frame:has(.panel--discard-tracker[data-suggested-hands-open='on'])
+  .app-play-split
+  > .app-play-split__left
+  > .panel--discard-tracker {
+  overflow: visible;
+}
+
+.app-dnd-frame:has(.panel--discard-tracker[data-suggested-hands-open='on']) .discard-tracker__shell {
+  overflow: visible;
+}
+
+/*
+ * Discard-tray overlay: extend above/below `.discard-tracker__content` so header peek-drag
+ * can move the sheet up into the exposure band (peek→0) or down to reveal discards (peek↑).
+ * Panel top aligns to the content edge at peek 0 via `--suggested-overlay-top-extend` (part-0104).
+ */
+.suggested-hands-popup.suggested-hands-popup--discard-overlay {
+  top: calc(-1 * var(--suggested-overlay-top-extend, 0px));
+  bottom: calc(-1 * var(--suggested-overlay-bottom-extend, 0px));
+  width: auto;
+  z-index: 1000;
+  /* Same radius as `.discard-tracker__content` / discard tile corners (not tile-tray-shell-radius). */
+  --suggested-popup-radius: var(--discard-tray-tile-corner-r, var(--tile-face-border-radius, 0.35rem));
+}
+
+/*
  * Inner panel inside the overlay shell: scrolls while the outer `.suggested-hands-popup` handles
  * slide motion (`transform`) so sticky column headers keep working. Border / radius zeroed so the
  * sheet rails read flush under the tray chrome (`.suggested-hands-popup__user-shift` on this node).
@@ -138,8 +181,10 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  /* Run edge-to-edge under the popup frame; rails on the hands-sheet collapse to 0 below. */
-  padding-inline: 0;
+  /* Run edge-to-edge under the popup frame; rails on the hands-sheet collapse to 0 below.
+   * Block padding must be 0 — base `.panel` uses 1rem vertical padding which otherwise
+   * leaves empty bands above/below the sheet inside the discard overlay. */
+  padding: 0;
   border-radius: 0;
   --hands-panel-pad-x: 0px;
 }
@@ -148,9 +193,10 @@
   transform: translateY(0);
   opacity: 1;
   visibility: visible;
+  /* Match base `.suggested-hands-popup` timing for transform/opacity so removing `--open` does not swap curves mid-close. */
   transition:
     transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 0.22s ease,
+    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
     visibility 0s linear 0s;
   pointer-events: auto;
 }
