@@ -130,6 +130,29 @@
  * Header row uses the same top corner radius as discard tray tiles (`--suggested-popup-radius`
  * → `--discard-tray-tile-corner-r`). Only the outer window corners are rounded.
  */
+.suggested-hands-popup .hands-panel__content .hands-list-scroll > .hands-sheet {
+  border-top-left-radius: var(--suggested-popup-radius);
+  border-top-right-radius: var(--suggested-popup-radius);
+  overflow: hidden;
+}
+
+/*
+ * Hands + Tiles paints the sticky title band with a full-width `::before` (part-0081). Match
+ * the discard-tray shell radius so toggling Tiles does not change the upper corners.
+ */
+.suggested-hands-popup .hands-sheet.hands-sheet--tilesHands::before {
+  border-top-left-radius: var(--suggested-popup-radius);
+  border-top-right-radius: var(--suggested-popup-radius);
+}
+
+.suggested-hands-popup .hands-list__freeze-header.hands-list__row-hit {
+  border-top-left-radius: var(--suggested-popup-radius);
+  border-top-right-radius: var(--suggested-popup-radius);
+  /* Base part-0081 sets `overflow: visible` — clip the row to the shell radius so discard
+   * does not show as a square wedge behind rounded header cells. */
+  overflow: hidden;
+}
+
 .suggested-hands-popup .hands-sheet > .hands-sheet__cell--header.hands-sheet__cell--cat,
 .suggested-hands-popup .hands-sheet > .hands-sheet__cell--header.hands-sheet__cell--hand,
 .suggested-hands-popup .hands-sheet > .hands-sheet__cell--header.hands-sheet__cell--tiles,
@@ -176,7 +199,9 @@
 
 .suggested-hands-popup
   .hands-list__freeze-header
-  > .hands-list__header-cell:not(.hands-list__cell--pin):not(.hands-list__cell--values) {
+  > .hands-list__header-cell:not(.hands-list__cell--pin):not(.hands-list__cell--values):not(
+    :first-of-type
+  ) {
   border-top-left-radius: 0;
   border-top-right-radius: 0;
 }

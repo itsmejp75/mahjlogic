@@ -160,6 +160,43 @@ function stripTileFaceCardInk(def: TileDef, ink: CardInk | undefined): CardInk |
   return ink
 }
 
+function renderSheetTileRow(
+  slots: SuggestedStripSlot[],
+  isActiveRow: boolean,
+  keyPrefix: string,
+) {
+  return (
+    <div className="hands-sheet__tiles-grid" role="presentation">
+      {slots.map((slot, i) => {
+        const showJokerGuide = isActiveRow && slot.jokerSuggested
+        const suggestBest = isActiveRow && slot.highlight
+        const dim = isActiveRow && !slot.highlight && !slot.jokerSuggested
+        return (
+          <div
+            key={`${keyPrefix}-${i}`}
+            className={[
+              'hands-sheet__tile-cell',
+              showJokerGuide ? 'hands-sheet__tile-cell--suggest-joker' : '',
+              suggestBest ? 'hands-sheet__tile-cell--suggest-best' : '',
+              dim ? 'hands-sheet__tile-cell--suggest-dim' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            <TileFace
+              def={slot.displayDef}
+              cardInk={stripTileFaceCardInk(slot.displayDef, slot.cardInk)}
+            />
+            {showJokerGuide ? (
+              <span className="hands-sheet__tile-joker-mark">JOKER</span>
+            ) : null}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 /**
  * Compact-mode (2-col) inline grid-template-areas.
  * Leading `pin` column matches `--hands-list-pin-w` on `.hands-list--tiles-excel`.
@@ -218,9 +255,7 @@ type Props = {
   pinnedHandKeys?: readonly string[]
   onPatternClick: (handKey: string) => void
   onPatternDoubleClick: (patternId: string, focusKey?: string) => void
-  handsListOn: boolean
   tilesGuideOn: boolean
-  onHandsListToggle?: () => void
   onTilesGuideToggle?: () => void
   rackTilesForSuggestedStrip: TileInstance[]
   /**
@@ -264,9 +299,7 @@ export function SuggestedHandsPanel({
   pinnedHandKeys = [],
   onPatternClick,
   onPatternDoubleClick,
-  handsListOn,
   tilesGuideOn,
-  onHandsListToggle,
   onTilesGuideToggle,
   rackTilesForSuggestedStrip,
   rackTilesForPatternMatch,
@@ -473,21 +506,18 @@ export function SuggestedHandsPanel({
     onPatternClick(activePatternId)
   }, [activePatternId, listRowsForHandsPanel, onPatternClick, handEntryKey])
 
+  const handsListOn = true
   const showHandCategoryLabels = handsListOn
-  /** Three explicit columns: category line | hand line | away (hands on, tiles off). */
-  const handsListSpreadsheet3 = handsListOn && !tilesGuideOn
-  /** Two explicit columns: tile strip | away (hands off, tiles on). */
-  const handsListSpreadsheetTiles2 = !handsListOn && tilesGuideOn
-  /** Two explicit columns: stacked (category + hand + tile strip) | away (hands on + tiles on). */
-  const handsListSpreadsheetTilesHands = handsListOn && tilesGuideOn
+  /** Same pin | category | hand | away | values sheet for hands-only and hands+tiles (tiles swap into detail row). */
+  const handsListSpreadsheetHands = handsListOn
   const showSuggestedListContent = handsListOn || tilesGuideOn
 
   const rowHitGridStyle = useMemo((): CSSProperties => {
-    if (handsListSpreadsheet3) {
+    if (handsListSpreadsheetHands) {
       return { gridTemplateAreas: "'pin section hand away values'" }
     }
     return { gridTemplateAreas: handsRowGridTemplateAreas(showHandCategoryLabels, tilesGuideOn) }
-  }, [handsListSpreadsheet3, showHandCategoryLabels, tilesGuideOn])
+  }, [handsListSpreadsheetHands, showHandCategoryLabels, tilesGuideOn])
 
   const trayHeaderPeekResize = !!(
     onDiscardOverlayPeekPxChange && discardOverlayMeasureRef
@@ -495,23 +525,6 @@ export function SuggestedHandsPanel({
 
   const displayModeHeaderButtons = (
     <div className="hands-sheet__display-toggles" role="toolbar" aria-label="Suggested hands display">
-      <button
-        type="button"
-        className={[
-          'hands-sheet__display-toggle',
-          handsListOn ? 'hands-sheet__display-toggle--on' : '',
-        ]
-          .filter(Boolean)
-          .join(' ')}
-        aria-pressed={handsListOn}
-        onClick={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          onHandsListToggle?.()
-        }}
-      >
-        Hands
-      </button>
       <button
         type="button"
         className={[
@@ -563,7 +576,7 @@ export function SuggestedHandsPanel({
       if (!(t instanceof Element)) return
       /*
        * Header peek-drag uses setPointerCapture on this scroll root. That would swallow the
-       * Hands/Tiles toggle buttons' pointer stream so they never receive a real `click`.
+       * Tiles toggle button's pointer stream so it never receives a real `click`.
        */
       if (t.closest('.hands-sheet__display-toggles')) return
       if (
@@ -732,583 +745,17 @@ export function SuggestedHandsPanel({
                   aria-hidden
                 />
               </div>
-            ) : handsListSpreadsheetTilesHands ? (
+              ) : handsListSpreadsheetHands ? (
                 <div
-                  className="hands-sheet hands-sheet--tiles2 hands-sheet--tilesHands"
+                  className={[
+                    'hands-sheet',
+                    tilesGuideOn ? 'hands-sheet--detail-tiles' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
                   id="hands-list"
                   role="grid"
                 >
-                  {onPinnedPatternChange ? (
-                    <div
-                      className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--pin"
-                      role="columnheader"
-                      aria-hidden
-                    />
-                  ) : null}
-                  <div
-                    className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--cat"
-                    role="columnheader"
-                  >
-                    Category
-                  </div>
-                  <div
-                    className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--hand"
-                    role="columnheader"
-                  >
-                    {displayModeHeaderButtons}
-                  </div>
-                  <div
-                    className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--away"
-                    role="columnheader"
-                  >
-                    Away
-                  </div>
-                  <div
-                    className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--values"
-                    role="columnheader"
-                  >
-                    Points
-                  </div>
-                  <ol className="hands-sheet__rows" aria-label="Suggested hand and tile lines">
-                    {listRowsForHandsPanel.map((h) => {
-                      const stripEntry = stripSlotRowsByKey.get(handEntryKey(h))
-                      const rowStripVariants = stripEntry?.rows ?? []
-                      const rowStripSlots = rowStripVariants[0] ?? []
-                      const showVariantStack = rowStripVariants.length > 1
-                      const variantKeys: string[] = showVariantStack
-                        ? h.consecRanksTier
-                          ? h.consecRanksTier.combos.map(
-                              (c) => `${h.id}::tier::${c.base}:${c.perm.join('-')}`,
-                            )
-                          : stripEntry?.ocVariantSuffixes.length === rowStripVariants.length
-                            ? stripEntry!.ocVariantSuffixes.map((suf) => `${h.id}::${suf}`)
-                            : []
-                        : []
-                      const allKey =
-                        showVariantStack && !h.consecRanksTier && stripEntry?.ocAllSuffix
-                          ? `${h.id}::${stripEntry.ocAllSuffix}`
-                          : handEntryKey(h)
-                      const rowPinKey = suggestedRowPinKey(h, stripEntry)
-                      const rowIsFocused =
-                        activePatternId === handEntryKey(h) ||
-                        activePatternId === allKey ||
-                        (variantKeys.length > 0 &&
-                          variantKeys.some((k) => k === activePatternId))
-                      const rowLit = tilesGuideOn && rowIsFocused
-                      const cardRef = suggestedHandCardRefDisplay(h)
-                      const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points, h.closed)}`
-                      const parenText = suggestedHandParenText(h)
-                      const handTitleNode = (
-                        <span className="hands-sheet__hand-title" aria-label={h.title}>
-                          {h.titleSegments?.length ? (
-                            <>
-                              <CardColoredText segments={h.titleSegments} />
-                              {h.closed ? (
-                                <span className="hands-sheet__card-c" aria-label="Concealed hand">
-                                  C
-                                </span>
-                              ) : null}
-                            </>
-                          ) : (
-                            <>
-                              {parenText ? suggestedHandPlainTitleWithoutParen(h) : h.title}
-                              {h.closed ? (
-                                <span className="hands-sheet__card-c" aria-label="Concealed hand">
-                                  C
-                                </span>
-                              ) : null}
-                            </>
-                          )}
-                        </span>
-                      )
-                      const renderTileRow = (
-                        slots: SuggestedStripSlot[],
-                        isActiveRow: boolean,
-                        keyPrefix: string,
-                      ) => (
-                        <div className="hands-sheet__tiles-grid" role="presentation">
-                          {slots.map((slot, i) => {
-                            const showJokerGuide = isActiveRow && slot.jokerSuggested
-                            const suggestBest = isActiveRow && slot.highlight
-                            const dim =
-                              isActiveRow && !slot.highlight && !slot.jokerSuggested
-                            return (
-                              <div
-                                key={`${keyPrefix}-${i}`}
-                                className={[
-                                  'hands-sheet__tile-cell',
-                                  showJokerGuide ? 'hands-sheet__tile-cell--suggest-joker' : '',
-                                  suggestBest ? 'hands-sheet__tile-cell--suggest-best' : '',
-                                  dim ? 'hands-sheet__tile-cell--suggest-dim' : '',
-                                ]
-                                  .filter(Boolean)
-                                  .join(' ')}
-                              >
-                                <TileFace
-                                  def={slot.displayDef}
-                                  cardInk={stripTileFaceCardInk(slot.displayDef, slot.cardInk)}
-                                />
-                                {showJokerGuide ? (
-                                  <span className="hands-sheet__tile-joker-mark">JOKER</span>
-                                ) : null}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )
-                      const headerLine = (
-                        <div className="hands-sheet__combined-header-line">
-                          <span className="hands-sheet__category">
-                            {suggestedHandSectionMenuLabel(h.section)}
-                            <span className="hands-sheet__section-num"> - {cardRef}</span>
-                          </span>
-                          <span className="hands-sheet__combined-divider" aria-hidden="true">
-                            ·
-                          </span>
-                          {handTitleNode}
-                        </div>
-                      )
-                      return (
-                        <li
-                          key={handEntryKey(h)}
-                          className={[
-                            'hands-sheet__row',
-                            rowIsFocused ? 'hands-sheet__row--active' : '',
-                          ]
-                            .filter(Boolean)
-                            .join(' ')}
-                          role="row"
-                        >
-                          {onPinnedPatternChange ? (
-                            <div className="hands-sheet__cell hands-sheet__cell--pin" role="cell">
-                              <SuggestedHandPinCell
-                                pressed={pinnedHandKeys.includes(rowPinKey)}
-                                onToggle={() => emitRowPinToggle(rowPinKey)}
-                              />
-                            </div>
-                          ) : null}
-                          {showVariantStack ? (
-                            <>
-                              <div
-                                className={[
-                                  'hands-sheet__cell hands-sheet__cell--combined',
-                                  sheetRowLitEdge(rowLit, 'start'),
-                                ]
-                                  .filter(Boolean)
-                                  .join(' ')}
-                                role="cell"
-                              >
-                                <button
-                                  type="button"
-                                  className="hands-sheet__combined-head-btn"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    scheduleSingleClick(allKey)
-                                  }}
-                                  onDoubleClick={(e) => {
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                    cancelScheduledClick()
-                                    onPatternDoubleClick(h.id, allKey)
-                                  }}
-                                  aria-label={`${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title} — highlight all variants`}
-                                  aria-pressed={activePatternId === allKey}
-                                >
-                                  {headerLine}
-                                </button>
-                                <div
-                                  className="hands-sheet__tiles-stack"
-                                  role="group"
-                                  aria-label="Consecutive suit pair options for this line"
-                                >
-                                  {rowStripVariants.map((slots, vi) => {
-                                    const variantKey = variantKeys[vi] ?? allKey
-                                    const isActiveRow =
-                                      activePatternId === variantKey ||
-                                      activePatternId === allKey
-                                    return (
-                                      <div
-                                        key={`${h.id}-var-${vi}`}
-                                        role="button"
-                                        tabIndex={0}
-                                        className={[
-                                          'hands-sheet__tiles-stack-row',
-                                          isActiveRow
-                                            ? 'hands-sheet__tiles-stack-row--active'
-                                            : '',
-                                        ]
-                                          .filter(Boolean)
-                                          .join(' ')}
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          scheduleSingleClick(variantKey)
-                                        }}
-                                        onDoubleClick={(e) => {
-                                          e.preventDefault()
-                                          e.stopPropagation()
-                                          cancelScheduledClick()
-                                          onPatternDoubleClick(h.id, variantKey)
-                                        }}
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter' || e.key === ' ') {
-                                            e.preventDefault()
-                                            e.stopPropagation()
-                                            scheduleSingleClick(variantKey)
-                                          }
-                                        }}
-                                        aria-pressed={isActiveRow}
-                                      >
-                                        {slots.length > 0
-                                          ? renderTileRow(slots, isActiveRow, `${h.id}-v${vi}`)
-                                          : null}
-                                      </div>
-                                    )
-                                  })}
-                                </div>
-                              </div>
-                              <div
-                                className={[
-                                  'hands-sheet__cell hands-sheet__cell--away',
-                                  sheetRowLitEdge(rowLit, 'mid'),
-                                ]
-                                  .filter(Boolean)
-                                  .join(' ')}
-                                role="cell"
-                                aria-label={`${h.tilesNeededRough} tiles away`}
-                              >
-                                {h.tilesNeededRough}
-                              </div>
-                              <div
-                                className={[
-                                  'hands-sheet__cell hands-sheet__cell--values',
-                                  sheetRowLitEdge(rowLit, 'end'),
-                                ]
-                                  .filter(Boolean)
-                                  .join(' ')}
-                                role="cell"
-                                aria-label={`Hand value ${formatSuggestedHandValue(h.points, h.closed)}`}
-                              >
-                                <SuggestedHandValueDisplay points={h.points} closed={h.closed} />
-                              </div>
-                            </>
-                          ) : (
-                            <button
-                              type="button"
-                              className="hands-sheet__row-btn"
-                              onClick={() => scheduleSingleClick(handEntryKey(h))}
-                              onDoubleClick={(e) => {
-                                e.preventDefault()
-                                cancelScheduledClick()
-                                onPatternDoubleClick(h.id)
-                              }}
-                              aria-label={ariaLabel}
-                              aria-pressed={rowIsFocused}
-                            >
-                              <div
-                                className={[
-                                  'hands-sheet__cell hands-sheet__cell--combined',
-                                  sheetRowLitEdge(rowLit, 'start'),
-                                ]
-                                  .filter(Boolean)
-                                  .join(' ')}
-                                role="cell"
-                              >
-                                {headerLine}
-                                {rowStripSlots.length > 0
-                                  ? renderTileRow(
-                                      rowStripSlots,
-                                      rowIsFocused,
-                                      `${h.id}`,
-                                    )
-                                  : null}
-                              </div>
-                              <div
-                                className={[
-                                  'hands-sheet__cell hands-sheet__cell--away',
-                                  sheetRowLitEdge(rowLit, 'mid'),
-                                ]
-                                  .filter(Boolean)
-                                  .join(' ')}
-                                role="cell"
-                              >
-                                {h.tilesNeededRough}
-                              </div>
-                              <div
-                                className={[
-                                  'hands-sheet__cell hands-sheet__cell--values',
-                                  sheetRowLitEdge(rowLit, 'end'),
-                                ]
-                                  .filter(Boolean)
-                                  .join(' ')}
-                                role="cell"
-                              >
-                                <SuggestedHandValueDisplay points={h.points} closed={h.closed} />
-                              </div>
-                            </button>
-                          )}
-                        </li>
-                      )
-                    })}
-                  </ol>
-                </div>
-              ) : handsListSpreadsheetTiles2 ? (
-                <div
-                  className="hands-sheet hands-sheet--tiles2"
-                  id="hands-list"
-                  role="grid"
-                >
-                  {onPinnedPatternChange ? (
-                    <div
-                      className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--pin"
-                      role="columnheader"
-                      aria-hidden
-                    />
-                  ) : null}
-                  <div
-                    className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--tiles"
-                    role="columnheader"
-                  >
-                    {displayModeHeaderButtons}
-                  </div>
-                  <div
-                    className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--away"
-                    role="columnheader"
-                  >
-                    Away
-                  </div>
-                  <div
-                    className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--values"
-                    role="columnheader"
-                  >
-                    Points
-                  </div>
-                  <ol className="hands-sheet__rows" aria-label="Suggested tile lines">
-                    {listRowsForHandsPanel.map((h) => {
-                      const stripEntry = stripSlotRowsByKey.get(handEntryKey(h))
-                      const rowStripVariants = stripEntry?.rows ?? []
-                      const rowStripSlots = rowStripVariants[0] ?? []
-                      const showVariantStack = rowStripVariants.length > 1
-                      const variantKeys: string[] = showVariantStack
-                        ? h.consecRanksTier
-                          ? h.consecRanksTier.combos.map(
-                              (c) => `${h.id}::tier::${c.base}:${c.perm.join('-')}`,
-                            )
-                          : stripEntry?.ocVariantSuffixes.length === rowStripVariants.length
-                            ? stripEntry!.ocVariantSuffixes.map((suf) => `${h.id}::${suf}`)
-                            : []
-                        : []
-                      const allKey =
-                        showVariantStack && !h.consecRanksTier && stripEntry?.ocAllSuffix
-                          ? `${h.id}::${stripEntry.ocAllSuffix}`
-                          : handEntryKey(h)
-                      const rowPinKey = suggestedRowPinKey(h, stripEntry)
-                      const rowIsFocused =
-                        activePatternId === handEntryKey(h) ||
-                        activePatternId === allKey ||
-                        (variantKeys.length > 0 &&
-                          variantKeys.some((k) => k === activePatternId))
-                      const rowLit = tilesGuideOn && rowIsFocused
-                      const cardRef = suggestedHandCardRefDisplay(h)
-                      const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points, h.closed)}`
-                      const renderTileRow = (
-                        slots: SuggestedStripSlot[],
-                        isActiveRow: boolean,
-                        keyPrefix: string,
-                      ) => (
-                        <div className="hands-sheet__tiles-grid" role="presentation">
-                          {slots.map((slot, i) => {
-                            const showJokerGuide = isActiveRow && slot.jokerSuggested
-                            const suggestBest = isActiveRow && slot.highlight
-                            const dim =
-                              isActiveRow && !slot.highlight && !slot.jokerSuggested
-                            return (
-                              <div
-                                key={`${keyPrefix}-${i}`}
-                                className={[
-                                  'hands-sheet__tile-cell',
-                                  showJokerGuide ? 'hands-sheet__tile-cell--suggest-joker' : '',
-                                  suggestBest ? 'hands-sheet__tile-cell--suggest-best' : '',
-                                  dim ? 'hands-sheet__tile-cell--suggest-dim' : '',
-                                ]
-                                  .filter(Boolean)
-                                  .join(' ')}
-                              >
-                                <TileFace
-                                  def={slot.displayDef}
-                                  cardInk={stripTileFaceCardInk(slot.displayDef, slot.cardInk)}
-                                />
-                                {showJokerGuide ? (
-                                  <span className="hands-sheet__tile-joker-mark">JOKER</span>
-                                ) : null}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )
-                      return (
-                        <li
-                          key={handEntryKey(h)}
-                          className={[
-                            'hands-sheet__row',
-                            rowIsFocused ? 'hands-sheet__row--active' : '',
-                          ]
-                            .filter(Boolean)
-                            .join(' ')}
-                          role="row"
-                        >
-                          {onPinnedPatternChange ? (
-                            <div className="hands-sheet__cell hands-sheet__cell--pin" role="cell">
-                              <SuggestedHandPinCell
-                                pressed={pinnedHandKeys.includes(rowPinKey)}
-                                onToggle={() => emitRowPinToggle(rowPinKey)}
-                              />
-                            </div>
-                          ) : null}
-                          {showVariantStack ? (
-                            <>
-                              <div
-                                className={[
-                                  'hands-sheet__cell hands-sheet__cell--tiles',
-                                  sheetRowLitEdge(rowLit, 'start'),
-                                ]
-                                  .filter(Boolean)
-                                  .join(' ')}
-                                role="cell"
-                              >
-                                <div
-                                  className="hands-sheet__tiles-stack"
-                                  role="group"
-                                  aria-label="Consecutive suit pair options for this line"
-                                >
-                                  {rowStripVariants.map((slots, vi) => {
-                                    const variantKey = variantKeys[vi] ?? allKey
-                                    const isActiveRow =
-                                      activePatternId === variantKey ||
-                                      activePatternId === allKey
-                                    return (
-                                      <div
-                                        key={`${h.id}-var-${vi}`}
-                                        role="button"
-                                        tabIndex={0}
-                                        className={[
-                                          'hands-sheet__tiles-stack-row',
-                                          isActiveRow ? 'hands-sheet__tiles-stack-row--active' : '',
-                                        ]
-                                          .filter(Boolean)
-                                          .join(' ')}
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          scheduleSingleClick(variantKey)
-                                        }}
-                                        onDoubleClick={(e) => {
-                                          e.preventDefault()
-                                          e.stopPropagation()
-                                          cancelScheduledClick()
-                                          onPatternDoubleClick(h.id, variantKey)
-                                        }}
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter' || e.key === ' ') {
-                                            e.preventDefault()
-                                            e.stopPropagation()
-                                            scheduleSingleClick(variantKey)
-                                          }
-                                        }}
-                                        aria-pressed={isActiveRow}
-                                      >
-                                        {slots.length > 0
-                                          ? renderTileRow(slots, isActiveRow, `${h.id}-v${vi}`)
-                                          : null}
-                                      </div>
-                                    )
-                                  })}
-                                </div>
-                              </div>
-                              <div
-                                className={[
-                                  'hands-sheet__cell hands-sheet__cell--away',
-                                  sheetRowLitEdge(rowLit, 'mid'),
-                                ]
-                                  .filter(Boolean)
-                                  .join(' ')}
-                                role="cell"
-                                aria-label={`${h.tilesNeededRough} tiles away`}
-                              >
-                                {h.tilesNeededRough}
-                              </div>
-                              <div
-                                className={[
-                                  'hands-sheet__cell hands-sheet__cell--values',
-                                  sheetRowLitEdge(rowLit, 'end'),
-                                ]
-                                  .filter(Boolean)
-                                  .join(' ')}
-                                role="cell"
-                                aria-label={`Hand value ${formatSuggestedHandValue(h.points, h.closed)}`}
-                              >
-                                <SuggestedHandValueDisplay points={h.points} closed={h.closed} />
-                              </div>
-                            </>
-                          ) : (
-                            <button
-                              type="button"
-                              className="hands-sheet__row-btn"
-                              onClick={() => scheduleSingleClick(handEntryKey(h))}
-                              onDoubleClick={(e) => {
-                                e.preventDefault()
-                                cancelScheduledClick()
-                                onPatternDoubleClick(h.id)
-                              }}
-                              aria-label={ariaLabel}
-                              aria-pressed={rowIsFocused}
-                            >
-                              <div
-                                className={[
-                                  'hands-sheet__cell hands-sheet__cell--tiles',
-                                  sheetRowLitEdge(rowLit, 'start'),
-                                ]
-                                  .filter(Boolean)
-                                  .join(' ')}
-                                role="cell"
-                              >
-                                {rowStripSlots.length > 0
-                                  ? renderTileRow(
-                                      rowStripSlots,
-                                      rowIsFocused,
-                                      `${h.id}`,
-                                    )
-                                  : null}
-                              </div>
-                              <div
-                                className={[
-                                  'hands-sheet__cell hands-sheet__cell--away',
-                                  sheetRowLitEdge(rowLit, 'mid'),
-                                ]
-                                  .filter(Boolean)
-                                  .join(' ')}
-                                role="cell"
-                              >
-                                {h.tilesNeededRough}
-                              </div>
-                              <div
-                                className={[
-                                  'hands-sheet__cell hands-sheet__cell--values',
-                                  sheetRowLitEdge(rowLit, 'end'),
-                                ]
-                                  .filter(Boolean)
-                                  .join(' ')}
-                                role="cell"
-                              >
-                                <SuggestedHandValueDisplay points={h.points} closed={h.closed} />
-                              </div>
-                            </button>
-                          )}
-                        </li>
-                      )
-                    })}
-                  </ol>
-                </div>
-              ) : handsListSpreadsheet3 ? (
-                <div className="hands-sheet" id="hands-list" role="grid">
                   {onPinnedPatternChange ? (
                     <div
                       className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--pin"
@@ -1343,10 +790,11 @@ export function SuggestedHandsPanel({
                   <ol className="hands-sheet__rows" aria-label="Suggested hand lines">
                     {listRowsForHandsPanel.map((h) => {
                       const rowKey = handEntryKey(h)
-                      const stripEntryForPin = stripSlotRowsByKey.get(handEntryKey(h))
-                      const rowPinKey = suggestedRowPinKey(h, stripEntryForPin)
-                      const isFocused = activePatternId === rowKey
-                      const rowLit = tilesGuideOn && isFocused
+                      const stripEntry = stripSlotRowsByKey.get(handEntryKey(h))
+                      const rowStripSlots = stripEntry?.rows[0] ?? []
+                      const rowPinKey = suggestedRowPinKey(h, stripEntry)
+                      const rowIsFocused = activePatternId === rowKey
+                      const rowLit = tilesGuideOn && rowIsFocused
                       const cardRef = suggestedHandCardRefDisplay(h)
                       const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points, h.closed)}`
                       return (
@@ -1354,7 +802,7 @@ export function SuggestedHandsPanel({
                           key={rowKey}
                           className={[
                             'hands-sheet__row',
-                            isFocused ? 'hands-sheet__row--active' : '',
+                            rowIsFocused ? 'hands-sheet__row--active' : '',
                           ]
                             .filter(Boolean)
                             .join(' ')}
@@ -1378,7 +826,7 @@ export function SuggestedHandsPanel({
                               onPatternDoubleClick(h.id)
                             }}
                             aria-label={ariaLabel}
-                            aria-pressed={isFocused}
+                            aria-pressed={rowIsFocused}
                           >
                             <div
                               className={[
@@ -1394,7 +842,8 @@ export function SuggestedHandsPanel({
                                 <span className="hands-sheet__section-num"> - {cardRef}</span>
                               </span>
                               {(() => {
-                                const parenText = suggestedHandParenText(h)
+                                const parenText = !tilesGuideOn ? suggestedHandParenText(h) : null
+                                const showTileDetail = tilesGuideOn && rowStripSlots.length > 0
                                 return (
                                   <div
                                     className="hands-sheet__hand-stack"
@@ -1423,7 +872,11 @@ export function SuggestedHandsPanel({
                                         )}
                                       </span>
                                     </div>
-                                    {parenText ? (
+                                    {showTileDetail ? (
+                                      <div className="hands-sheet__hand-stack-detail">
+                                        {renderSheetTileRow(rowStripSlots, rowLit, rowKey)}
+                                      </div>
+                                    ) : parenText ? (
                                       <div className="hands-sheet__hand-stack-detail">
                                         <span className="hands-sheet__paren">{parenText}</span>
                                       </div>

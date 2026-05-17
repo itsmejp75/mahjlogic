@@ -1588,6 +1588,32 @@
   white-space: normal;
 }
 
+/*
+ * Tiles toggle: keep the hands-only column grid; swap parenthetical detail for a tile strip
+ * in `.hands-sheet__hand-stack-detail` (no layout switch to `.hands-sheet--tilesHands`).
+ */
+.hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2).hands-sheet--detail-tiles {
+  --hands-sheet-tile-gap: var(--player-rack-face-gap);
+  --hands-sheet-tile-col: calc(
+    100cqi - var(--hands-sheet-pin-w) - var(--hands-sheet-category-w) - var(--hands-sheet-away-w) -
+      var(--hands-sheet-values-w) - 4 * var(--hands-sheet-cell-pad-x)
+  );
+  --hands-sheet-tile-w: max(
+    0.85rem,
+    calc((var(--hands-sheet-tile-col) - 13 * var(--hands-sheet-tile-gap)) / 14)
+  );
+  --hands-sheet-tile-h: calc(var(--hands-sheet-tile-w) * 4 / 3);
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2).hands-sheet--detail-tiles
+  .hands-sheet__hand-stack-detail
+  .hands-sheet__tiles-grid {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)

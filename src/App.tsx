@@ -2520,7 +2520,6 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuOpenPrevRef = useRef(false)
   const menuContainerRef = useRef<HTMLDivElement>(null)
-  const [suggestedHandsListOn, setSuggestedHandsListOn] = useState(true)
   const [wallGameReviewing, setWallGameReviewing] = useState(false)
   const [mahjongWinReviewing, setMahjongWinReviewing] = useState(false)
   const [botMahjongWinReviewing, setBotMahjongWinReviewing] = useState(false)
@@ -2796,20 +2795,6 @@ export default function App() {
       }
     }
     lastSuggestedPanelOpenRef.current = suggestedPanelHandsOn
-  }, [suggestedPanelHandsOn])
-
-  useLayoutEffect(() => {
-    if (suggestedPanelHandsOn) {
-      suggestedDiscardOverlayInitialPeekPendingRef.current = true
-      return
-    }
-    suggestedDiscardOverlayInitialPeekPendingRef.current = false
-    /* Reset peek after the sheet close transition — immediate reset changes `max-height` mid-slide and reads jerky. */
-    const peekResetMs = 320
-    const t = window.setTimeout(() => {
-      setSuggestedDiscardOverlayPeekPx(0)
-    }, peekResetMs)
-    return () => window.clearTimeout(t)
   }, [suggestedPanelHandsOn])
 
   useEffect(() => {
@@ -5632,6 +5617,20 @@ export default function App() {
   const showSuggestedHandsPanel =
     mainPhase !== 'dead-hand' && mainPhase !== 'bot-mahjong'
 
+  useLayoutEffect(() => {
+    if (suggestedPanelHandsOn) {
+      suggestedDiscardOverlayInitialPeekPendingRef.current = true
+      return
+    }
+    suggestedDiscardOverlayInitialPeekPendingRef.current = false
+    /* Reset peek after the sheet close transition — immediate reset changes `max-height` mid-slide and reads jerky. */
+    const peekResetMs = 320
+    const t = window.setTimeout(() => {
+      setSuggestedDiscardOverlayPeekPx(0)
+    }, peekResetMs)
+    return () => window.clearTimeout(t)
+  }, [suggestedPanelHandsOn])
+
   const updateSuggestedDiscardOverlayBounds = useCallback(() => {
     const popup = suggestedHandsPopupRef.current
     const content = popup?.parentElement
@@ -5949,15 +5948,6 @@ export default function App() {
                   role="toolbar"
                   aria-labelledby="app-menu-sh-settings-heading"
                 >
-                  <button
-                    type="button"
-                    className={['hands-panel__display-toggle', suggestedHandsListOn ? 'hands-panel__display-toggle--on' : ''].filter(Boolean).join(' ')}
-                    aria-pressed={suggestedHandsListOn}
-                    aria-label="Show suggested hand lines"
-                    onClick={() => setSuggestedHandsListOn((v) => !v)}
-                  >
-                    Hands
-                  </button>
                   <button
                     type="button"
                     className={['hands-panel__display-toggle', suggestedPanelTilesOn ? 'hands-panel__display-toggle--on' : ''].filter(Boolean).join(' ')}
@@ -7448,9 +7438,7 @@ export default function App() {
                               pinnedHandKeys={suggestedPinnedHandKeys}
                               onPatternClick={onSuggestedPatternClick}
                               onPatternDoubleClick={onSuggestedPatternDoubleClick}
-                              handsListOn={suggestedHandsListOn}
                               tilesGuideOn={suggestedPanelTilesOn}
-                              onHandsListToggle={() => setSuggestedHandsListOn((v) => !v)}
                               onTilesGuideToggle={() => setSuggestedPanelTilesOn((v) => !v)}
                               rackTilesForSuggestedStrip={rackForSuggestedHandsUi}
                               rackTilesForPatternMatch={rackForSuggestedPatternMatch}

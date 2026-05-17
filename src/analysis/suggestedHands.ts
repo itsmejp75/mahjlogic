@@ -3782,13 +3782,13 @@ function buildPinnedPatternFromComboStr(
 }
 
 /**
- * Natural tile fits a `patternLinePreviewDefs` cell (stand-in suit on the card vs your real suit).
+ * Natural tile fits a card-line preview cell. Uses resolved suit+rank when available; does not
+ * match rank across different suit slots (e.g. 13579-8b: 5d must not fill a stand-in 5b cell).
  */
 function naturalMatchesTitlePreviewSlot(nat: TileDef, disp: TileDef, p: PracticePattern): boolean {
   if (tileDefsEqual(nat, disp)) return true
   if (stripSlotAcceptsNatural(p, disp, nat)) return true
-  if (nat.cat === 'suit' && disp.cat === 'suit' && nat.rank === disp.rank) return true
-  return false
+  return stripDefsMatchForTitleReorder(nat, disp, p)
 }
 
 /**
@@ -3803,18 +3803,18 @@ function naturalMatchesTitlePreviewSlot(nat: TileDef, disp: TileDef, p: Practice
  */
 function reorderSlotAssignmentsToTitlePreviewSlots(
   slots: (string | null)[],
-  displayDefs: readonly TileDef[],
+  cardLineDefs: readonly TileDef[],
   rack: TileInstance[],
   p: PracticePattern,
   jokerEligible: boolean[],
 ): { slots: (string | null)[]; defs: TileDef[] } | null {
-  if (slots.length !== displayDefs.length) return null
+  if (slots.length !== cardLineDefs.length) return null
   const byId = new Map(rack.map((t) => [t.id, t] as const))
   const used = new Set<number>()
-  const outSlots: (string | null)[] = displayDefs.map(() => null)
+  const outSlots: (string | null)[] = cardLineDefs.map(() => null)
 
-  for (let j = 0; j < displayDefs.length; j++) {
-    const want = displayDefs[j]!
+  for (let j = 0; j < cardLineDefs.length; j++) {
+    const want = cardLineDefs[j]!
     const idx = slots.findIndex((_, i) => {
       if (used.has(i)) return false
       const id = slots[i]
@@ -3838,9 +3838,9 @@ function reorderSlotAssignmentsToTitlePreviewSlots(
     .sort((a, b) => a.i - b.i)
 
   let jokerK = 0
-  for (let j = 0; j < displayDefs.length; j++) {
+  for (let j = 0; j < cardLineDefs.length; j++) {
     if (outSlots[j] != null) continue
-    const want = displayDefs[j]!
+    const want = cardLineDefs[j]!
     if (!previewSlotAllowsJoker(want, p, j, jokerEligible)) continue
     const src = jokerSrc[jokerK++]
     if (!src) break
@@ -3848,9 +3848,9 @@ function reorderSlotAssignmentsToTitlePreviewSlots(
     outSlots[j] = src.id
   }
 
-  for (let j = 0; j < displayDefs.length; j++) {
+  for (let j = 0; j < cardLineDefs.length; j++) {
     if (outSlots[j] != null) continue
-    const want = displayDefs[j]!
+    const want = cardLineDefs[j]!
     const idx = slots.findIndex((_, i) => {
       if (used.has(i)) return false
       const id = slots[i]
@@ -3867,7 +3867,7 @@ function reorderSlotAssignmentsToTitlePreviewSlots(
   // Incomplete racks (e.g. missing E/W on 2026 W&D #8) still reorder matched tiles into card-line
   // order so year soap sits in the digit run — do not fall back to group order (soap after S).
   if (!outSlots.some((x) => x != null)) return null
-  return { slots: outSlots, defs: [...displayDefs] }
+  return { slots: outSlots, defs: [...cardLineDefs] }
 }
 
 /** Compute the strip-ordered, deduplicated list of hand-tile IDs that the pinned pattern uses. */
@@ -3943,9 +3943,12 @@ function stripOrderedHandIdsForPattern(
       orderedSlotDefs = reorderedDefs
     }
   }
+  /* Resolved perm suits in title order — not stand-in preview suits (green→bam, etc.). */
+  const cardLineDefs =
+    titleOrderDefs && titleOrderDefs.length === slots.length ? titleOrderDefs : displayDefs
   const titlePreviewReorder = reorderSlotAssignmentsToTitlePreviewSlots(
     slots,
-    displayDefs,
+    cardLineDefs,
     rackForPattern,
     pinnedP,
     jokerEli,
