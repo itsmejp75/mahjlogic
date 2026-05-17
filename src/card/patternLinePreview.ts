@@ -911,6 +911,47 @@ export function patternLinePreviewGroupOrderDefs(p: PracticePattern): TileDef[] 
   return patternLinePreviewGroupOrderSlots(p).map((s) => s.def)
 }
 
+/** True when a title-line preview cell and a group-append cell are the same meld slot. */
+function previewDefMatchesGroupCell(line: TileDef, grp: TileDef): boolean {
+  if (tileDefsEqual(line, grp)) return true
+  if (line.cat === 'dragon' && grp.cat === 'dragon') return line.dragon === grp.dragon
+  if (line.cat === 'wind' && grp.cat === 'wind') return line.wind === grp.wind
+  if (line.cat === 'flower' && grp.cat === 'flower') return line.flower === grp.flower
+  if (line.cat === 'suit' && grp.cat === 'suit') return line.rank === grp.rank
+  return false
+}
+
+/**
+ * When the printed hand order (title segments) differs from `appendAllGroups` order — e.g. 2026
+ * Year #4 `22 00 222` with soap inserted after suit-permute in groups — build
+ * `cardLineFromGroupSlotMap` so rack sort and strip assignment follow the card line.
+ */
+export function inferCardLineFromGroupSlotMap(p: PracticePattern): number[] | undefined {
+  if (!p.groups?.length) return undefined
+  const fromSeg = buildPreviewSlotsFromTitleSegments(p)
+  if (!fromSeg || fromSeg.length !== p.roughTarget) return undefined
+  const grpDefs = patternLinePreviewGroupOrderDefs(p)
+  const lineDefs = fromSeg.map((s) => s.def)
+  if (grpDefs.length !== lineDefs.length) return undefined
+
+  const used = new Set<number>()
+  const map: number[] = []
+  for (const want of lineDefs) {
+    let gIdx = -1
+    for (let g = 0; g < grpDefs.length; g++) {
+      if (used.has(g)) continue
+      if (previewDefMatchesGroupCell(want, grpDefs[g]!)) {
+        gIdx = g
+        break
+      }
+    }
+    if (gIdx < 0) return undefined
+    used.add(gIdx)
+    map.push(gIdx)
+  }
+  return map
+}
+
 /**
  * Display index `d` shows the tile from **group-append** strip index `map[d]`.
  * When `map` is omitted or the wrong length, returns a shallow copy of `defs`.

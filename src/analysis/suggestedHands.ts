@@ -3809,6 +3809,16 @@ function reorderSlotAssignmentsToTitlePreviewSlots(
   jokerEligible: boolean[],
 ): { slots: (string | null)[]; defs: TileDef[] } | null {
   if (slots.length !== cardLineDefs.length) return null
+  /*
+   * `computePreviewStripAssignment` already permuted group-order slots to card line via
+   * `cardLineFromGroupSlotMap` — do not run findIndex rematch (it pairs duplicate ranks in
+   * group order, e.g. Year #4 `22` before `00`).
+   */
+  const map = p.cardLineFromGroupSlotMap
+  if (map?.length === slots.length) {
+    if (!slots.some((x) => x != null)) return null
+    return { slots: [...slots], defs: [...cardLineDefs] }
+  }
   const byId = new Map(rack.map((t) => [t.id, t] as const))
   const used = new Set<number>()
   const outSlots: (string | null)[] = cardLineDefs.map(() => null)

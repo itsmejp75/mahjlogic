@@ -455,16 +455,19 @@ export function SuggestedHandsPanel({
   const displayHands = useMemo(() => {
     const base = hideConcealedHands ? filtered.filter((h) => !h.closed) : filtered
     const rank = new Map(cardSectionOrder.map((s, i) => [s, i]))
-    const pinnedSet = new Set(pinnedHandKeys)
-    const isPinned = (h: SuggestedHandLine) => {
-      if (pinnedSet.size === 0) return false
+    const pinIndex = new Map(pinnedHandKeys.map((key, i) => [key, i]))
+    const pinOrderFor = (h: SuggestedHandLine): number | null => {
+      if (pinIndex.size === 0) return null
       const entry = stripSlotRowsByKey.get(handEntryKeyForLine(h))
-      return pinnedSet.has(suggestedRowPinKey(h, entry))
+      const key = suggestedRowPinKey(h, entry)
+      return pinIndex.has(key) ? pinIndex.get(key)! : null
     }
     return [...base].sort((a, b) => {
-      const ap = isPinned(a) ? 0 : 1
-      const bp = isPinned(b) ? 0 : 1
-      if (ap !== bp) return ap - bp
+      const ap = pinOrderFor(a)
+      const bp = pinOrderFor(b)
+      if (ap !== null && bp !== null) return ap - bp
+      if (ap !== null) return -1
+      if (bp !== null) return 1
       if (a.tilesNeededRough !== b.tilesNeededRough) return a.tilesNeededRough - b.tilesNeededRough
       const ra = rank.get(a.section) ?? 999
       const rb = rank.get(b.section) ?? 999

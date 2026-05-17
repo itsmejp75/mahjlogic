@@ -58,6 +58,15 @@
 /* Flush with `.suggested-hands-popup__user-shift` top — avoid extra band above sticky header. */
 .suggested-hands-popup .hands-list-scroll {
   margin-top: 0;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Hands-only sheet: body scroll lives on `.hands-sheet__rows` (part-0081), not the outer shell. */
+.suggested-hands-popup .hands-list-scroll:has(> .hands-sheet:not(.hands-sheet--tiles2)) {
+  overflow-y: visible;
 }
 
 /* Discard overlay: hands-only spreadsheet — slightly tighter horizontal cell padding on narrow widths. */
@@ -133,7 +142,12 @@
 .suggested-hands-popup .hands-panel__content .hands-list-scroll > .hands-sheet {
   border-top-left-radius: var(--suggested-popup-radius);
   border-top-right-radius: var(--suggested-popup-radius);
-  overflow: hidden;
+  /*
+   * Do not set overflow:hidden on the full sheet — it becomes a scroll container and blocks
+   * `.hands-list-scroll` from scrolling the hand list (regression from hands/tiles layout pass).
+   * Top corners are rounded via per-header cell rules below; the panel shell clips the rails.
+   */
+  overflow: visible;
 }
 
 /*

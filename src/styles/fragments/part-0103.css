@@ -166,9 +166,10 @@
 }
 
 /*
- * Inner panel inside the overlay shell: scrolls while the outer `.suggested-hands-popup` handles
- * slide motion (`transform`) so sticky column headers keep working. Border / radius zeroed so the
- * sheet rails read flush under the tray chrome (`.suggested-hands-popup__user-shift` on this node).
+ * Inner panel inside the overlay shell: `.hands-list-scroll` scrolls while the outer
+ * `.suggested-hands-popup` handles slide motion (`transform`) so sticky column headers keep working.
+ * Border / radius zeroed so the sheet rails read flush under the tray chrome
+ * (`.suggested-hands-popup__user-shift` on this node).
  */
 .suggested-hands-popup .panel--hands {
   background: var(--window-inner-surface);
@@ -179,7 +180,6 @@
   overflow: hidden;
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
   overscroll-behavior: contain;
   /* Run edge-to-edge under the popup frame; rails on the hands-sheet collapse to 0 below.
    * Block padding must be 0 — base `.panel` uses 1rem vertical padding which otherwise

@@ -1174,7 +1174,8 @@
 }
 
 /*
- * Hands-only spreadsheet: one true grid contains the sticky header AND every body row.
+ * Hands-only spreadsheet: one grid for the header row + body; only `.hands-sheet__rows` scrolls
+ * so the scrollbar track starts below the Away / Points header (not through the title row).
  * Category + Hands may wrap; `minmax(0, …)` on text columns keeps the grid within the panel
  * (no horizontal scroll). Tiles modes override columns on `.hands-sheet--tiles2`.
  */
@@ -1228,6 +1229,39 @@
    */
   font-size: clamp(0.78rem, 2.05cqi, 2.35rem);
   line-height: 1.2;
+}
+
+/* Scroll on the list body only — header row stays fixed above the scrollbar track. */
+.hands-panel__content .hands-list-scroll:has(> .hands-sheet:not(.hands-sheet--tiles2)) {
+  overflow-y: visible;
+}
+
+.hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) {
+  flex: 1;
+  min-height: 0;
+  align-self: stretch;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: visible;
+}
+
+.hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) > .hands-sheet__rows {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-content: start;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+  overflow-x: visible;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) > .hands-sheet__cell--header {
+  position: relative;
+  top: auto;
 }
 
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2)::after {

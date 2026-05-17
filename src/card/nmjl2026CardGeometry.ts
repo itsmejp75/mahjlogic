@@ -1,6 +1,7 @@
 import type { TileDef } from '../mahjong/types'
 import type { CardInk, CardTextSeg } from './cardText'
 import type { Nmjl2026CsvHandRow } from './nmjl2026Csv'
+import { inferCardLineFromGroupSlotMap } from './patternLinePreview'
 import type { PatternGroup, PracticePattern } from './practicePatterns'
 import {
   anySuit,
@@ -346,7 +347,7 @@ function buildGroupsAndMatches(row: Nmjl2026CsvHandRow): { groups: PatternGroup[
 export function nmjl2026GeometryFromCsvRow(row: Nmjl2026CsvHandRow): Geometry {
   const { groups, matches } = buildGroupsAndMatches(row)
   const oddPairKongs = groups.some((g) => g.kind === 'odd-pair-kongs-triple')
-  return {
+  const base: Geometry = {
     groups,
     matches,
     titleSegments: titleSegmentsForRow(row),
@@ -354,4 +355,20 @@ export function nmjl2026GeometryFromCsvRow(row: Nmjl2026CsvHandRow): Geometry {
     // rank dynamically, so the strip must come from groups and skip title reordering.
     ...(oddPairKongs ? { previewSlotsFromGroups: true, skipStripTitleReorder: true } : {}),
   }
+  const cardLineFromGroupSlotMap = inferCardLineFromGroupSlotMap({
+    ...base,
+    id: '_infer',
+    section: row.category,
+    title: row.hand.trim(),
+    points: row.points,
+    closed: row.closed,
+    roughTarget: 14,
+  })
+  if (
+    cardLineFromGroupSlotMap &&
+    !cardLineFromGroupSlotMap.every((g, d) => g === d)
+  ) {
+    return { ...base, cardLineFromGroupSlotMap }
+  }
+  return base
 }
