@@ -5,12 +5,11 @@
  * App icons (default): PWA + Capacitor — uses src/assets/mahjlogic-app-icon-button.svg (same bird+M as
  * the in-app menu chip). Tab favicon copies mahjlogic-favicon.svg (same mark + #121419 + pad).
  *
- * Tab favicon only: copies src/assets/mahjlogic-favicon.svg → public/favicon.svg (expanded
- * viewBox so the tab glyph matches install-chip padding). Raster PNG fallbacks use
- * mahjlogic-app-icon-button.svg + the same 7% inset as manifest icons — identical pipeline to icon-192.
+ * Tab favicon only: copies src/assets/mahjlogic-favicon.svg → public/favicon.svg (square
+ * canvas with built-in dark inset). Raster PNG fallbacks use the same favicon SVG with
+ * no extra Puppeteer padding by default (padding lives in the SVG viewBox).
  *
- * Inset: Tab favicon raster defaults match app icons (7%) so omnibox/tab PNGs align with the
- * install-chip artwork; override with FAVICON_SAFE_INSET_PERCENT. App icons: APP_ICON_SAFE_INSET_PERCENT.
+ * Inset: FAVICON_SAFE_INSET_PERCENT (default 0). App icons: APP_ICON_SAFE_INSET_PERCENT (default 7).
  *
  * Desktop Chrome often keeps using old bitmaps for the omnibox “Open in app” chip even after you
  * regenerate PNGs. Bump the `?v=` query on manifest `icons[].src` (and `apple-touch-icon` in
@@ -37,16 +36,16 @@ const positionalPath = positional[0]
 
 const svgPath = path.resolve(positionalPath ?? (faviconOnly ? faviconSvgSrc : appIconSvgSrc))
 /** SVG file read for Puppeteer raster (may differ from svgPath when copying padded favicon.svg). */
-const rasterSvgPath = positionalPath ? svgPath : faviconOnly ? appIconSvgSrc : svgPath
+const rasterSvgPath = positionalPath ? svgPath : faviconOnly ? faviconSvgSrc : svgPath
 const masterPng = path.join(root, '.tmp-app-icon-master.png')
 /** Install / launcher PNG background (matches menu app-icon chip). */
 const ICON_CANVAS_BG = '#121419'
 
-/** Edge padding (% of 1024 master). Favicon raster defaults match app icons (7%). */
+/** Edge padding (% of 1024 master). Favicon SVG already includes dark inset (default 0). */
 function safeInsetPercent() {
   if (faviconOnly) {
     return Number(
-      process.env.FAVICON_SAFE_INSET_PERCENT ?? process.env.ICON_SAFE_INSET_PERCENT ?? 7,
+      process.env.FAVICON_SAFE_INSET_PERCENT ?? process.env.ICON_SAFE_INSET_PERCENT ?? 0,
     )
   }
   return Number(
