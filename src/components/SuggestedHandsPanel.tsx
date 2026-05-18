@@ -349,6 +349,7 @@ export function SuggestedHandsPanel({
   const headerPointerDownAtRef = useRef(0)
   const suppressHeaderClickUntilRef = useRef(0)
   const peekDragShellSuppressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const peekDragWindowCleanupRef = useRef<(() => void) | null>(null)
   const discardOverlayPeekRef = useRef(discardOverlayPeekPx)
   useEffect(() => {
     discardOverlayPeekRef.current = discardOverlayPeekPx
@@ -400,6 +401,75 @@ export function SuggestedHandsPanel({
       syncPeekDragShellBlock('off')
     },
     [syncPeekDragShellBlock],
+  )
+
+  const detachPeekDragWindowListeners = useCallback(() => {
+    peekDragWindowCleanupRef.current?.()
+    peekDragWindowCleanupRef.current = null
+  }, [])
+
+  const finishPeekDrag = useCallback(
+    (e: PointerEvent<HTMLDivElement> | globalThis.PointerEvent) => {
+      const d = peekDragRef.current
+      if (!d || e.pointerId !== d.pointerId) return
+      detachPeekDragWindowListeners()
+      const downTarget = headerPointerDownTargetRef.current
+      headerPointerDownTargetRef.current = null
+      peekDragRef.current = null
+      const hadSlop = headerPointerSlopRef.current
+      const pressMs = performance.now() - headerPointerDownAtRef.current
+      const isHeaderRelease =
+        downTarget instanceof Element &&
+        !downTarget.closest('.hands-suggested-pin') &&
+        !downTarget.closest('button') &&
+        (downTarget.closest('.hands-list__freeze-header') ||
+          downTarget.closest('.hands-sheet__cell--header'))
+      const isHeaderDismissTap =
+        onTrayHeaderClick &&
+        !hadSlop &&
+        isHeaderRelease &&
+        pressMs <= HEADER_DISMISS_MAX_MS
+      if (hadSlop || isHeaderRelease) {
+        suppressHeaderClickUntilRef.current = performance.now() + PEEK_DRAG_CLICK_SUPPRESS_MS
+        e.preventDefault()
+        syncPeekDragShellBlock('suppress')
+      } else {
+        syncPeekDragShellBlock('off')
+      }
+      headerPointerSlopRef.current = false
+      const scrollEl = handsListScrollRef.current
+      try {
+        scrollEl?.releasePointerCapture(e.pointerId)
+      } catch {
+        /* capture already released */
+      }
+      if (isHeaderDismissTap) {
+        onTrayHeaderClick()
+      }
+    },
+    [detachPeekDragWindowListeners, onTrayHeaderClick, syncPeekDragShellBlock],
+  )
+
+  const attachPeekDragWindowListeners = useCallback(() => {
+    detachPeekDragWindowListeners()
+    const onWindowPointerEnd = (ev: globalThis.PointerEvent) => {
+      finishPeekDrag(ev)
+    }
+    window.addEventListener('pointerup', onWindowPointerEnd)
+    window.addEventListener('pointercancel', onWindowPointerEnd)
+    peekDragWindowCleanupRef.current = () => {
+      window.removeEventListener('pointerup', onWindowPointerEnd)
+      window.removeEventListener('pointercancel', onWindowPointerEnd)
+    }
+  }, [detachPeekDragWindowListeners, finishPeekDrag])
+
+  useEffect(
+    () => () => {
+      detachPeekDragWindowListeners()
+      peekDragRef.current = null
+      headerPointerSlopRef.current = false
+    },
+    [detachPeekDragWindowListeners],
   )
 
   const scheduleSingleClick = useCallback(
@@ -639,14 +709,24 @@ export function SuggestedHandsPanel({
       headerPointerSlopRef.current = false
       syncPeekDragShellBlock('active')
       e.currentTarget.setPointerCapture(e.pointerId)
+      attachPeekDragWindowListeners()
     },
-    [onDiscardOverlayPeekPxChange, discardOverlayMeasureRef, syncPeekDragShellBlock],
+    [
+      onDiscardOverlayPeekPxChange,
+      discardOverlayMeasureRef,
+      syncPeekDragShellBlock,
+      attachPeekDragWindowListeners,
+    ],
   )
 
   const handleScrollPointerMove = useCallback(
     (e: PointerEvent<HTMLDivElement>) => {
       const d = peekDragRef.current
       if (!d || e.pointerId !== d.pointerId || !onDiscardOverlayPeekPxChange) return
+      if (e.pointerType === 'mouse' && (e.buttons & 1) === 0) {
+        finishPeekDrag(e)
+        return
+      }
       const dy = e.clientY - d.startY
       if (Math.abs(dy) >= PEEK_DRAG_THRESHOLD_PX) headerPointerSlopRef.current = true
       if (!headerPointerSlopRef.current) return
@@ -672,51 +752,14 @@ export function SuggestedHandsPanel({
         Math.max(minPeek, Math.min(maxPeek, d.startPeek + dy)),
       )
     },
-    [onDiscardOverlayPeekPxChange, discardOverlayMeasureRef],
+    [onDiscardOverlayPeekPxChange, discardOverlayMeasureRef, finishPeekDrag],
   )
 
   const handleScrollPointerUpOrCancel = useCallback(
     (e: PointerEvent<HTMLDivElement>) => {
-      const d = peekDragRef.current
-      if (!d || e.pointerId !== d.pointerId) return
-      const downTarget = headerPointerDownTargetRef.current
-      headerPointerDownTargetRef.current = null
-      peekDragRef.current = null
-      const hadSlop = headerPointerSlopRef.current
-      const pressMs = performance.now() - headerPointerDownAtRef.current
-      const isHeaderRelease =
-        downTarget instanceof Element &&
-        !downTarget.closest('.hands-suggested-pin') &&
-        !downTarget.closest('button') &&
-        (downTarget.closest('.hands-list__freeze-header') ||
-          downTarget.closest('.hands-sheet__cell--header'))
-      const isHeaderDismissTap =
-        onTrayHeaderClick &&
-        !hadSlop &&
-        isHeaderRelease &&
-        pressMs <= HEADER_DISMISS_MAX_MS
-      if (hadSlop || isHeaderRelease) {
-        suppressHeaderClickUntilRef.current = performance.now() + PEEK_DRAG_CLICK_SUPPRESS_MS
-        e.preventDefault()
-        syncPeekDragShellBlock('suppress')
-      } else {
-        syncPeekDragShellBlock('off')
-      }
-      headerPointerSlopRef.current = false
-      try {
-        e.currentTarget.releasePointerCapture(e.pointerId)
-      } catch {
-        /* capture already released */
-      }
-      /*
-       * `setPointerCapture` on header pointerdown (peek drag) prevents a reliable `click` on the
-       * scroll container — dismiss from pointerup for a quick tap (no slop, short press) only.
-       */
-      if (isHeaderDismissTap) {
-        onTrayHeaderClick()
-      }
+      finishPeekDrag(e)
     },
-    [onTrayHeaderClick, syncPeekDragShellBlock],
+    [finishPeekDrag],
   )
 
   const handleTrayHeaderAreaClick = useCallback(
@@ -764,6 +807,7 @@ export function SuggestedHandsPanel({
                     onPointerMove: handleScrollPointerMove,
                     onPointerUp: handleScrollPointerUpOrCancel,
                     onPointerCancel: handleScrollPointerUpOrCancel,
+                    onLostPointerCapture: handleScrollPointerUpOrCancel,
                   }
                 : {})}
             >
@@ -818,9 +862,8 @@ export function SuggestedHandsPanel({
                   <div
                     className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--cat"
                     role="columnheader"
-                  >
-                    Category
-                  </div>
+                    aria-hidden
+                  />
                   <div
                     className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--hand"
                     role="columnheader"
@@ -997,14 +1040,16 @@ export function SuggestedHandsPanel({
                       .join(' ')}
                   >
                     {tilesGuideOn ? (
-                      <span className="hands-list__header-meta hands-list__with-tiles-category">
-                        Category
-                      </span>
+                      <span
+                        className="hands-list__header-meta hands-list__with-tiles-category"
+                        aria-hidden
+                      />
                     ) : (
                       <div className="hands-list__header-category-pair">
-                        <span className="hands-list__header-meta hands-list__header-pair--category">
-                          Category
-                        </span>
+                        <span
+                          className="hands-list__header-meta hands-list__header-pair--category"
+                          aria-hidden
+                        />
                         <span className="hands-list__header-meta">Hands</span>
                       </div>
                     )}

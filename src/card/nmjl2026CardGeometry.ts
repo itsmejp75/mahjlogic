@@ -149,11 +149,25 @@ function slotColorGroup(slot: RankSlot, flexibleConsec: boolean, minRank: number
 }
 
 /**
+ * Dragons on inks with no suit ranks (e.g. `red:DDD` beside `green:135 777 999`). For opposing-
+ * dragon hands, fold into the suit-locked group's `opposingDragons` instead of a generic `rank`
+ * dragon group (which would wrongly highlight matching green dragons on a bam line).
+ */
+function opposingDragonNeedFromSlots(rankSlots: RankSlot[], mainSlot: RankSlot): number {
+  let need = mainSlot.dragonCount
+  for (const s of rankSlots) {
+    if (s.ranks.size === 0 && s.dragonCount > 0) need += s.dragonCount
+  }
+  return need
+}
+
+/**
  * Dragons that live on “ink” rows with **no suit ranks** (e.g. `green:DDD` next to `blue:1234`)
  * must become their own meld groups. Previously `buildRankGroups` only looked at slots with
  * `ranks.size > 0`, so Wind–Dragons 2 lost two pungs and Quints 3 lost the opposing DDDD.
  */
-function dragonOrphanRankGroups(rankSlots: RankSlot[]): PatternGroup[] {
+function dragonOrphanRankGroups(row: Nmjl2026CsvHandRow, rankSlots: RankSlot[]): PatternGroup[] {
+  if (isOpposingDragonParenthetical(row)) return []
   return rankSlots
     .filter((s) => s.ranks.size === 0 && s.dragonCount > 0)
     .map((s) => ({ kind: 'rank' as const, need: s.dragonCount, test: dragon }))
@@ -175,7 +189,7 @@ function buildRankGroups(row: Nmjl2026CsvHandRow, rankSlots: RankSlot[]): Patter
           colorGroups: slotsWithRanks.map((slot) => slotColorGroup(slot, false, 1)),
           colorGroupDragonCounts: slotsWithRanks.map((slot) => slot.dragonCount),
         },
-        ...dragonOrphanRankGroups(rankSlots),
+        ...dragonOrphanRankGroups(row, rankSlots),
       ]
     }
 
@@ -188,7 +202,7 @@ function buildRankGroups(row: Nmjl2026CsvHandRow, rankSlots: RankSlot[]): Patter
         : [{ kind: 'suit-locked-rank', need: needs[0] ?? 0, test: anySuit }]
     const dragonOnRankSlots = slotsWithRanks.reduce((sum, slot) => sum + slot.dragonCount, 0)
     if (dragonOnRankSlots > 0) groups.push({ kind: 'fixed', need: dragonOnRankSlots, test: dragon })
-    groups.push(...dragonOrphanRankGroups(rankSlots))
+    groups.push(...dragonOrphanRankGroups(row, rankSlots))
     return groups
   }
 
@@ -212,21 +226,23 @@ function buildRankGroups(row: Nmjl2026CsvHandRow, rankSlots: RankSlot[]): Patter
           colorGroupDragonCounts: slot.dragonCount > 0 ? [slot.dragonCount] : undefined,
           consecRanks: true,
         },
-        ...dragonOrphanRankGroups(rankSlots),
+        ...dragonOrphanRankGroups(row, rankSlots),
       ]
     }
+    const opposingNeed = isOpposingDragonParenthetical(row)
+      ? opposingDragonNeedFromSlots(rankSlots, slot)
+      : 0
     return [
       {
         kind: 'suit-locked',
         rankNeeds,
         dragonCount: anyDragon ? 0 : slot.dragonCount,
-        opposingDragons:
-          isOpposingDragonParenthetical(row) && slot.dragonCount > 0 ? { need: slot.dragonCount } : undefined,
+        opposingDragons: opposingNeed > 0 ? { need: opposingNeed } : undefined,
       },
       ...(anyDragon && !isOpposingDragonParenthetical(row) && slot.dragonCount > 0
         ? ([{ kind: 'fixed', need: slot.dragonCount, test: dragon }] as PatternGroup[])
         : []),
-      ...dragonOrphanRankGroups(rankSlots),
+      ...dragonOrphanRankGroups(row, rankSlots),
     ]
   }
 
@@ -239,7 +255,7 @@ function buildRankGroups(row: Nmjl2026CsvHandRow, rankSlots: RankSlot[]): Patter
       colorGroupDragonCounts,
       consecRanks: flexibleConsec ? true : undefined,
     },
-    ...dragonOrphanRankGroups(rankSlots),
+    ...dragonOrphanRankGroups(row, rankSlots),
   ]
 }
 
