@@ -31,6 +31,8 @@ import { TileFace } from './TileFace'
 const CLICK_DELAY_MS = 280
 const PEEK_DRAG_THRESHOLD_PX = 10
 const PEEK_DRAG_CLICK_SUPPRESS_MS = 180
+/** Header tap-to-close only when press duration is below this (hold + release does not dismiss). */
+const HEADER_DISMISS_MAX_MS = 350
 /** Blocks pass-through + rack ghost taps while resizing the discard overlay (see part-0104.css). */
 const PEEK_DRAG_SHELL_CLASS = 'suggested-hands-popup--peek-dragging'
 /** Used when the sheet has not laid out yet (no measurable header/row). */
@@ -344,6 +346,7 @@ export function SuggestedHandsPanel({
   const headerPointerSlopRef = useRef(false)
   /** Pointerdown target when a discard-overlay header peek-drag may start (used for tap-to-dismiss). */
   const headerPointerDownTargetRef = useRef<Element | null>(null)
+  const headerPointerDownAtRef = useRef(0)
   const suppressHeaderClickUntilRef = useRef(0)
   const peekDragShellSuppressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const discardOverlayPeekRef = useRef(discardOverlayPeekPx)
@@ -627,6 +630,7 @@ export function SuggestedHandsPanel({
         minSheetHeightPxRef.current = measureMinSuggestedSheetPx(scrollEl)
       }
       headerPointerDownTargetRef.current = t
+      headerPointerDownAtRef.current = performance.now()
       peekDragRef.current = {
         pointerId: e.pointerId,
         startY: e.clientY,
@@ -679,7 +683,19 @@ export function SuggestedHandsPanel({
       headerPointerDownTargetRef.current = null
       peekDragRef.current = null
       const hadSlop = headerPointerSlopRef.current
-      if (hadSlop) {
+      const pressMs = performance.now() - headerPointerDownAtRef.current
+      const isHeaderRelease =
+        downTarget instanceof Element &&
+        !downTarget.closest('.hands-suggested-pin') &&
+        !downTarget.closest('button') &&
+        (downTarget.closest('.hands-list__freeze-header') ||
+          downTarget.closest('.hands-sheet__cell--header'))
+      const isHeaderDismissTap =
+        onTrayHeaderClick &&
+        !hadSlop &&
+        isHeaderRelease &&
+        pressMs <= HEADER_DISMISS_MAX_MS
+      if (hadSlop || isHeaderRelease) {
         suppressHeaderClickUntilRef.current = performance.now() + PEEK_DRAG_CLICK_SUPPRESS_MS
         e.preventDefault()
         syncPeekDragShellBlock('suppress')
@@ -694,19 +710,10 @@ export function SuggestedHandsPanel({
       }
       /*
        * `setPointerCapture` on header pointerdown (peek drag) prevents a reliable `click` on the
-       * scroll container — dismiss from pointerup for a tap (no slop), excluding pin / buttons.
+       * scroll container — dismiss from pointerup for a quick tap (no slop, short press) only.
        */
-      if (
-        onTrayHeaderClick &&
-        !hadSlop &&
-        downTarget instanceof Element &&
-        !downTarget.closest('.hands-suggested-pin') &&
-        !downTarget.closest('button') &&
-        (downTarget.closest('.hands-list__freeze-header') ||
-          downTarget.closest('.hands-sheet__cell--header'))
-      ) {
+      if (isHeaderDismissTap) {
         onTrayHeaderClick()
-        suppressHeaderClickUntilRef.current = performance.now() + 80
       }
     },
     [onTrayHeaderClick, syncPeekDragShellBlock],
@@ -715,6 +722,9 @@ export function SuggestedHandsPanel({
   const handleTrayHeaderAreaClick = useCallback(
     (e: MouseEvent<HTMLDivElement>) => {
       if (performance.now() < suppressHeaderClickUntilRef.current) {
+        return
+      }
+      if (performance.now() - headerPointerDownAtRef.current > HEADER_DISMISS_MAX_MS) {
         return
       }
       if (!onTrayHeaderClick) return
