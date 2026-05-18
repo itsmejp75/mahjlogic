@@ -31,6 +31,8 @@ import { TileFace } from './TileFace'
 const CLICK_DELAY_MS = 280
 const PEEK_DRAG_THRESHOLD_PX = 10
 const PEEK_DRAG_CLICK_SUPPRESS_MS = 180
+/** Blocks pass-through + rack ghost taps while resizing the discard overlay (see part-0104.css). */
+const PEEK_DRAG_SHELL_CLASS = 'suggested-hands-popup--peek-dragging'
 /** Used when the sheet has not laid out yet (no measurable header/row). */
 const SUGGESTED_SHEET_MIN_FALLBACK_PX = 112
 
@@ -343,6 +345,7 @@ export function SuggestedHandsPanel({
   /** Pointerdown target when a discard-overlay header peek-drag may start (used for tap-to-dismiss). */
   const headerPointerDownTargetRef = useRef<Element | null>(null)
   const suppressHeaderClickUntilRef = useRef(0)
+  const peekDragShellSuppressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const discardOverlayPeekRef = useRef(discardOverlayPeekPx)
   useEffect(() => {
     discardOverlayPeekRef.current = discardOverlayPeekPx
@@ -364,6 +367,36 @@ export function SuggestedHandsPanel({
       if (clickTimerRef.current != null) clearTimeout(clickTimerRef.current)
     },
     [],
+  )
+
+  const syncPeekDragShellBlock = useCallback(
+    (mode: 'active' | 'suppress' | 'off') => {
+      const shell = discardOverlayMeasureRef?.current
+      if (!shell) return
+      if (peekDragShellSuppressTimerRef.current != null) {
+        clearTimeout(peekDragShellSuppressTimerRef.current)
+        peekDragShellSuppressTimerRef.current = null
+      }
+      if (mode === 'active' || mode === 'suppress') {
+        shell.classList.add(PEEK_DRAG_SHELL_CLASS)
+      } else {
+        shell.classList.remove(PEEK_DRAG_SHELL_CLASS)
+      }
+      if (mode === 'suppress') {
+        peekDragShellSuppressTimerRef.current = setTimeout(() => {
+          shell.classList.remove(PEEK_DRAG_SHELL_CLASS)
+          peekDragShellSuppressTimerRef.current = null
+        }, PEEK_DRAG_CLICK_SUPPRESS_MS)
+      }
+    },
+    [discardOverlayMeasureRef],
+  )
+
+  useEffect(
+    () => () => {
+      syncPeekDragShellBlock('off')
+    },
+    [syncPeekDragShellBlock],
   )
 
   const scheduleSingleClick = useCallback(
@@ -600,9 +633,10 @@ export function SuggestedHandsPanel({
         startPeek: discardOverlayPeekRef.current,
       }
       headerPointerSlopRef.current = false
+      syncPeekDragShellBlock('active')
       e.currentTarget.setPointerCapture(e.pointerId)
     },
-    [onDiscardOverlayPeekPxChange, discardOverlayMeasureRef],
+    [onDiscardOverlayPeekPxChange, discardOverlayMeasureRef, syncPeekDragShellBlock],
   )
 
   const handleScrollPointerMove = useCallback(
@@ -612,6 +646,7 @@ export function SuggestedHandsPanel({
       const dy = e.clientY - d.startY
       if (Math.abs(dy) >= PEEK_DRAG_THRESHOLD_PX) headerPointerSlopRef.current = true
       if (!headerPointerSlopRef.current) return
+      e.preventDefault()
       const shell = discardOverlayMeasureRef?.current
       if (!shell) return
       const minH = Math.ceil(minSheetHeightPxRef.current)
@@ -646,6 +681,10 @@ export function SuggestedHandsPanel({
       const hadSlop = headerPointerSlopRef.current
       if (hadSlop) {
         suppressHeaderClickUntilRef.current = performance.now() + PEEK_DRAG_CLICK_SUPPRESS_MS
+        e.preventDefault()
+        syncPeekDragShellBlock('suppress')
+      } else {
+        syncPeekDragShellBlock('off')
       }
       headerPointerSlopRef.current = false
       try {
@@ -670,7 +709,7 @@ export function SuggestedHandsPanel({
         suppressHeaderClickUntilRef.current = performance.now() + 80
       }
     },
-    [onTrayHeaderClick],
+    [onTrayHeaderClick, syncPeekDragShellBlock],
   )
 
   const handleTrayHeaderAreaClick = useCallback(

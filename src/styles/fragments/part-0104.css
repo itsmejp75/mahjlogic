@@ -84,6 +84,18 @@
   justify-content: flex-start;
 }
 
+/*
+ * Header peek-drag: the overlay shell is normally pointer-events:none so the gap above the
+ * sheet passes hits to the rack. While resizing, block that pass-through and rack ghost taps.
+ */
+.suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open.suggested-hands-popup--peek-dragging {
+  pointer-events: auto;
+}
+
+.app-dnd-frame:has(.suggested-hands-popup--peek-dragging) .panel--hand .sortable-tile-wrap {
+  pointer-events: none;
+}
+
 .suggested-hands-popup--discard-overlay .panel--hands {
   box-sizing: border-box;
   flex: 1 1 auto;
