@@ -10,7 +10,7 @@
 
 /*
  * Suggested-hands sheet: fills the overlay width; grows up from the bottom of the discard tray.
- * Outer `.suggested-hands-popup` is slide-only (`translateY`) so open/close stays a straight vertical move.
+ * Discard overlay: outer shell is positioned only; this node slides (`translateY`) open/closed.
  */
 .suggested-hands-popup__user-shift {
   position: relative;
@@ -50,9 +50,40 @@
  * inner surface square; when the header row is rounded and peek-drag shortens the panel, a dark
  * square corner shows past “Points”. Restore the shell’s top radius on this combined node.
  */
-.suggested-hands-popup .panel--hands.suggested-hands-popup__user-shift {
+.suggested-hands-popup:not(.suggested-hands-popup--discard-overlay)
+  .panel--hands.suggested-hands-popup__user-shift {
   border-top-left-radius: var(--suggested-popup-radius);
   border-top-right-radius: var(--suggested-popup-radius);
+}
+
+/*
+ * Discard tray: match `.discard-tracker__content` on all four corners so the sheet does not flash
+ * square lower corners while sliding up past the outer panel chrome.
+ */
+.suggested-hands-popup.suggested-hands-popup--discard-overlay
+  .panel--hands.suggested-hands-popup__user-shift {
+  border-radius: var(--suggested-popup-radius);
+}
+
+.suggested-hands-popup.suggested-hands-popup--discard-overlay:not(.suggested-hands-popup--open)
+  .panel--hands.suggested-hands-popup__user-shift {
+  transform: translateY(100%);
+  transform-origin: bottom center;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
+  .panel--hands.suggested-hands-popup__user-shift {
+  /* Resize lives on the overlay shell/height so the bottom stays anchored. */
+  transform: translateY(0);
+  transform-origin: bottom center;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.app-layout[data-animations='off']
+  .suggested-hands-popup.suggested-hands-popup--discard-overlay
+  .panel--hands.suggested-hands-popup__user-shift {
+  transition: none;
 }
 
 /* Flush with `.suggested-hands-popup__user-shift` top — avoid extra band above sticky header. */
@@ -80,8 +111,11 @@
  */
 .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open {
   background: transparent;
+  opacity: 1;
+  visibility: visible;
   pointer-events: none;
-  justify-content: flex-start;
+  /* Drawer rises from the bottom inner edge of the discard window. */
+  justify-content: flex-end;
 }
 
 /*
@@ -98,29 +132,48 @@
 
 .suggested-hands-popup--discard-overlay .panel--hands {
   box-sizing: border-box;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   width: 100%;
   position: relative;
-  z-index: 2;
+  z-index: 1;
+  margin: 0;
   /*
-   * Peek 0 + top-extend = sheet flush to `.discard-tracker__content` top; peek drag adds on top of
-   * that inset (reveal discards below) or reduces toward 0 (sheet moves up into exposure band).
+   * Bottom-anchored sheet: positive peek shrinks height (gap shows discards). Negative peek
+   * grows the overlay shell upward (part-0103), so 100% fills the larger shell without clipping.
    */
-  margin-top: calc(
-    var(--suggested-overlay-top-extend, 0px) + var(--suggested-overlay-top-peek, 0px)
-  );
-  min-height: calc(
-    100% - var(--suggested-overlay-top-extend, 0px) - var(--suggested-overlay-top-peek, 0px)
-  );
-  max-height: calc(
-    100% - var(--suggested-overlay-top-extend, 0px) - var(--suggested-overlay-top-peek, 0px)
-  );
+  min-height: 0;
+  height: calc(100% - max(0px, var(--suggested-overlay-top-peek, 0px)));
+  max-height: calc(100% - max(0px, var(--suggested-overlay-top-peek, 0px)));
 }
 
-/* Production grid lines in the discard overlay (part-0081 DEBUG salmon borders stay elsewhere). */
+.suggested-hands-popup--discard-overlay .hands-panel__content {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Internal grid lines in the discard overlay (part-0081 DEBUG salmon borders stay elsewhere). */
 .suggested-hands-popup .hands-panel__content .hands-list-scroll > .hands-sheet {
   --hands-sheet-border: 1px solid color-mix(in srgb, var(--window-border) 55%, transparent);
   --hands-sheet-debug-grid-border: var(--hands-sheet-border);
+}
+
+/*
+ * Discard tray: drop the spreadsheet outer frame (side/top/bottom) so the sheet reads flush
+ * with `.discard-tracker__content`; keep per-cell grid lines inside.
+ */
+.suggested-hands-popup--discard-overlay .hands-panel__content .hands-list-scroll > .hands-sheet {
+  border-block-start: none;
+  border-inline-start: none;
+}
+
+.suggested-hands-popup--discard-overlay .hands-sheet__cell--values {
+  border-inline-end: none;
+}
+
+.suggested-hands-popup--discard-overlay .hands-sheet__rows > .hands-sheet__row:last-child .hands-sheet__cell {
+  border-block-end: none;
 }
 
 .suggested-hands-popup--discard-overlay.suggested-hands-popup--open .panel--hands {

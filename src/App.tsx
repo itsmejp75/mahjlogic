@@ -6657,7 +6657,17 @@ export default function App() {
           >
           </div>
 
-            <div className="app-dnd-frame">
+            <div
+              className={[
+                'app-dnd-frame',
+                suggestedPanelHandsOn ? 'app-dnd-frame--suggested-hands-open' : '',
+                suggestedPanelHandsOn && suggestedDiscardOverlayPeekPx < 0
+                  ? 'app-dnd-frame--suggested-hands-peek-above'
+                  : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
               <div className="app-rack-stage">
             {/* ── Hand ── */}
             <section className="panel panel--hand" aria-label="Your hand, East">
@@ -7407,6 +7417,9 @@ export default function App() {
                               'suggested-hands-popup',
                               'suggested-hands-popup--discard-overlay',
                               suggestedPanelHandsOn ? 'suggested-hands-popup--open' : '',
+                              suggestedPanelHandsOn && suggestedDiscardOverlayPeekPx < 0
+                                ? 'suggested-hands-popup--peek-above'
+                                : '',
                             ]
                               .filter(Boolean)
                               .join(' ')}

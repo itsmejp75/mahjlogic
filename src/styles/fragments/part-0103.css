@@ -126,43 +126,131 @@
 }
 
 /*
- * Peek-drag can extend the hands sheet above the discard tray (into the exposure/button band).
- * Lift the whole lower split above `.app-rack-stage` and stop clipping on the discard panel shell.
+ * Peek-drag / peek-above can extend the hands sheet into the exposure + rack button band.
+ * Lift the lower split above `.app-rack-stage` and stop clipping on the discard panel shell.
  */
-.app-dnd-frame:has(.panel--discard-tracker[data-suggested-hands-open='on']) .app-rack-stage {
+.app-dnd-frame--suggested-hands-open,
+.app-dnd-frame:has(.panel--discard-tracker[data-suggested-hands-open='on']) {
   position: relative;
-  z-index: 1;
+  isolation: isolate;
 }
 
+.app-dnd-frame--suggested-hands-open .app-rack-stage,
+.app-dnd-frame:has(.panel--discard-tracker[data-suggested-hands-open='on']) .app-rack-stage {
+  position: relative;
+  z-index: 0;
+}
+
+.app-dnd-frame--suggested-hands-open .app-play-split,
 .app-dnd-frame:has(.panel--discard-tracker[data-suggested-hands-open='on']) .app-play-split {
   position: relative;
   z-index: 100;
   overflow: visible;
 }
 
-.app-dnd-frame:has(.panel--discard-tracker[data-suggested-hands-open='on'])
-  .app-play-split
-  > .app-play-split__left
-  > .panel--discard-tracker {
+.app-dnd-frame--suggested-hands-peek-above .app-play-split,
+.app-dnd-frame:has(.suggested-hands-popup--peek-dragging) .app-play-split,
+.app-dnd-frame:has(.suggested-hands-popup--peek-above) .app-play-split {
+  z-index: 1000;
+}
+
+.app-dnd-frame--suggested-hands-peek-above .app-rack-stage {
+  z-index: 0;
+  pointer-events: none;
+}
+
+.panel--discard-tracker[data-suggested-hands-open='on']:has(
+    .suggested-hands-popup--peek-dragging
+  ),
+.panel--discard-tracker[data-suggested-hands-open='on']:has(.suggested-hands-popup--peek-above) {
+  overflow: visible;
+  z-index: 2;
+}
+
+.panel--discard-tracker[data-suggested-hands-open='on']
+  .discard-tracker__shell:has(.suggested-hands-popup--peek-dragging),
+.panel--discard-tracker[data-suggested-hands-open='on']
+  .discard-tracker__shell:has(.suggested-hands-popup--peek-above) {
   overflow: visible;
 }
 
-.app-dnd-frame:has(.panel--discard-tracker[data-suggested-hands-open='on']) .discard-tracker__shell {
+.app-dnd-frame--suggested-hands-peek-above .panel--discard-tracker,
+.app-dnd-frame--suggested-hands-peek-above .discard-tracker__shell,
+.app-dnd-frame--suggested-hands-peek-above .discard-tracker__content {
   overflow: visible;
 }
 
 /*
- * Discard-tray overlay: extend above/below `.discard-tracker__content` so header peek-drag
- * can move the sheet up into the exposure band (peek→0) or down to reveal discards (peek↑).
- * Panel top aligns to the content edge at peek 0 via `--suggested-overlay-top-extend` (part-0104).
+ * Discard-tray overlay: fill `.discard-tracker__content` only (no top/bottom extend). The sheet
+ * slides up inside this clip. Peek-drag into the exposure band temporarily allows overflow.
  */
 .suggested-hands-popup.suggested-hands-popup--discard-overlay {
-  top: calc(-1 * var(--suggested-overlay-top-extend, 0px));
-  bottom: calc(-1 * var(--suggested-overlay-bottom-extend, 0px));
+  top: min(0px, var(--suggested-overlay-top-peek, 0px));
+  right: 0;
+  bottom: 0;
+  left: 0;
   width: auto;
-  z-index: 1000;
+  z-index: 5;
   /* Same radius as `.discard-tracker__content` / discard tile corners (not tile-tray-shell-radius). */
   --suggested-popup-radius: var(--discard-tray-tile-corner-r, var(--tile-face-border-radius, 0.35rem));
+  border-radius: var(--suggested-popup-radius);
+  /*
+   * Peek-extend makes the shell much taller than the visible sheet. Slide motion lives on
+   * `.panel--hands.suggested-hands-popup__user-shift` (part-0104) so the tray rises inside the
+   * discard wrapper, not from the bottom of the viewport.
+   */
+  transform: none;
+  transition:
+    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    visibility 0s linear 0.3s;
+}
+
+.suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open {
+  transform: none;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    visibility 0s linear 0s;
+}
+
+/*
+ * Peek resize: unclip the shell and paint above rack chrome. Negative peek grows the shell
+ * upward via `top` above, keeping the sheet's bottom anchored to the discard window.
+ */
+.suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--peek-dragging,
+.suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--peek-above {
+  overflow: visible;
+  z-index: 20;
+}
+
+/*
+ * Once the tray is pulled above the discard window, take it out of the rack/discard stacking
+ * contexts entirely. This keeps the header in front of the rack buttons and preserves the
+ * discard-content bottom anchor so lower rows remain scrollable.
+ */
+.suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--peek-above {
+  position: fixed;
+  top: calc(
+    var(--suggested-overlay-viewport-top, 0px)
+    + var(--suggested-overlay-top-extend, 0px)
+    + min(0px, var(--suggested-overlay-top-peek, 0px))
+  );
+  right: auto;
+  bottom: calc(
+    var(--suggested-overlay-viewport-bottom, 0px)
+    + var(--suggested-overlay-bottom-extend, 0px)
+  );
+  left: var(--suggested-overlay-viewport-left, 0px);
+  width: var(--suggested-overlay-viewport-width, auto);
+  z-index: 10000;
+}
+
+.suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--peek-dragging
+  .panel--hands.suggested-hands-popup__user-shift,
+.suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--peek-above
+  .panel--hands.suggested-hands-popup__user-shift {
+  z-index: 2;
 }
 
 /*

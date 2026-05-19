@@ -114,10 +114,13 @@
 }
 
 /*
- * Allow the hands overlay to extend above the content box for peek-drag (negative peek).
- * Discard tiles stay covered by the sheet at peek 0; clip comes from the rounded shell.
+ * Hands sheet stays clipped to the discard window; only peek-drag lifts overflow so the sheet
+ * can move into the exposure band (see part-0103 `:has(.suggested-hands-popup--peek-dragging)`).
  */
-.panel--discard-tracker[data-suggested-hands-open='on'] .discard-tracker__content {
+.panel--discard-tracker[data-suggested-hands-open='on']
+  .discard-tracker__content:has(.suggested-hands-popup--peek-dragging),
+.panel--discard-tracker[data-suggested-hands-open='on']
+  .discard-tracker__content:has(.suggested-hands-popup--peek-above) {
   overflow: visible;
 }
 

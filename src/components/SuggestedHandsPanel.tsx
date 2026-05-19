@@ -743,11 +743,11 @@ export function SuggestedHandsPanel({
         return Number.isFinite(n) ? Math.max(0, n) : 0
       })()
       /*
-       * Peek is added to the content-align inset (0 = flush to discard content top).
-       * Negative peek drags the sheet up into the exposure band; positive reveals discards.
+       * Positive peek shrinks the bottom-anchored sheet (reveals discards above). Negative peek
+       * translates the sheet up into the exposure band (up to topExtendPx above the content box).
        */
       const minPeek = -topExtendPx
-      const maxPeek = Math.max(0, shellH - topExtendPx - minH)
+      const maxPeek = Math.max(0, shellH - minH)
       onDiscardOverlayPeekPxChange(
         Math.max(minPeek, Math.min(maxPeek, d.startPeek + dy)),
       )
