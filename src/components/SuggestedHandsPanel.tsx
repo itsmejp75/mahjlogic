@@ -886,9 +886,25 @@ export function SuggestedHandsPanel({
                     {listRowsForHandsPanel.map((h) => {
                       const rowKey = handEntryKey(h)
                       const stripEntry = stripSlotRowsByKey.get(handEntryKey(h))
-                      const rowStripSlots = stripEntry?.rows[0] ?? []
+                      const rowStripVariants = stripEntry?.rows ?? []
+                      const rowStripSlots = rowStripVariants[0] ?? []
+                      const showVariantStack = tilesGuideOn && rowStripVariants.length > 1
+                      const variantKeys: string[] = showVariantStack
+                        ? h.consecRanksTier
+                          ? h.consecRanksTier.combos.map((c) => `${h.id}::tier::${c.base}:${c.perm.join('-')}`)
+                          : (stripEntry?.ocVariantSuffixes.length === rowStripVariants.length
+                              ? stripEntry!.ocVariantSuffixes.map((suf) => `${h.id}::${suf}`)
+                              : [])
+                        : []
+                      const categoryClickKey =
+                        showVariantStack && !h.consecRanksTier && stripEntry?.ocAllSuffix
+                          ? `${h.id}::${stripEntry.ocAllSuffix}`
+                          : rowKey
                       const rowPinKey = suggestedRowPinKey(h, stripEntry)
-                      const rowIsFocused = activePatternId === rowKey
+                      const rowIsFocused =
+                        activePatternId === rowKey ||
+                        activePatternId === categoryClickKey ||
+                        (variantKeys.length > 0 && variantKeys.some((k) => k === activePatternId))
                       const rowLit = tilesGuideOn && rowIsFocused
                       const cardRef = suggestedHandCardRefDisplay(h)
                       const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points, h.closed)}`
@@ -914,11 +930,11 @@ export function SuggestedHandsPanel({
                           <button
                             type="button"
                             className="hands-sheet__row-btn"
-                            onClick={() => scheduleSingleClick(rowKey)}
+                            onClick={() => scheduleSingleClick(categoryClickKey)}
                             onDoubleClick={(e) => {
                               e.preventDefault()
                               cancelScheduledClick()
-                              onPatternDoubleClick(h.id)
+                              onPatternDoubleClick(h.id, categoryClickKey)
                             }}
                             aria-label={ariaLabel}
                             aria-pressed={rowIsFocused}
@@ -938,7 +954,8 @@ export function SuggestedHandsPanel({
                               </span>
                               {(() => {
                                 const parenText = !tilesGuideOn ? suggestedHandParenText(h) : null
-                                const showTileDetail = tilesGuideOn && rowStripSlots.length > 0
+                                const showTileDetail =
+                                  tilesGuideOn && (showVariantStack || rowStripSlots.length > 0)
                                 return (
                                   <div
                                     className="hands-sheet__hand-stack"
@@ -969,7 +986,54 @@ export function SuggestedHandsPanel({
                                     </div>
                                     {showTileDetail ? (
                                       <div className="hands-sheet__hand-stack-detail">
-                                        {renderSheetTileRow(rowStripSlots, rowLit, rowKey)}
+                                        {showVariantStack ? (
+                                          <div
+                                            className="hands-list__pattern-tiles-stack"
+                                            role="group"
+                                            aria-label="Flexible tile options for this line"
+                                          >
+                                            {rowStripVariants.map((slots, vi) => {
+                                              const variantKey = variantKeys[vi] ?? categoryClickKey
+                                              const isActiveVariant =
+                                                activePatternId === variantKey || activePatternId === categoryClickKey
+                                              return (
+                                                <div
+                                                  key={`${rowKey}-sheet-var-${vi}`}
+                                                  role="button"
+                                                  tabIndex={0}
+                                                  className={[
+                                                    'hands-list__pattern-tiles-stack-row',
+                                                    'hands-list__pattern-tiles-stack-row--btn',
+                                                    isActiveVariant ? 'hands-list__pattern-tiles-stack-row--active' : '',
+                                                  ].filter(Boolean).join(' ')}
+                                                  onClick={(e) => {
+                                                    e.preventDefault()
+                                                    e.stopPropagation()
+                                                    scheduleSingleClick(variantKey)
+                                                  }}
+                                                  onDoubleClick={(e) => {
+                                                    e.preventDefault()
+                                                    e.stopPropagation()
+                                                    cancelScheduledClick()
+                                                    onPatternDoubleClick(h.id, variantKey)
+                                                  }}
+                                                  onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' || e.key === ' ') {
+                                                      e.preventDefault()
+                                                      e.stopPropagation()
+                                                      scheduleSingleClick(variantKey)
+                                                    }
+                                                  }}
+                                                  aria-pressed={isActiveVariant}
+                                                >
+                                                  {renderSheetTileRow(slots, isActiveVariant, `${variantKey}-${vi}`)}
+                                                </div>
+                                              )
+                                            })}
+                                          </div>
+                                        ) : (
+                                          renderSheetTileRow(rowStripSlots, rowLit, rowKey)
+                                        )}
                                       </div>
                                     ) : parenText ? (
                                       <div className="hands-sheet__hand-stack-detail">
