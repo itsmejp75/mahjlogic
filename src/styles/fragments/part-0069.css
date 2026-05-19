@@ -112,7 +112,6 @@
   color: var(--color-white);
   opacity: 0.5;
   filter: none;
-  box-shadow: none;
   cursor: not-allowed;
 }
 

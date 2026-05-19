@@ -21,7 +21,6 @@
   color: var(--color-white);
   opacity: 0.5;
   filter: none;
-  box-shadow: none;
 }
 
 /* Wins cascade over the block above: post–MJ review pressed-in must stay visible (part-0067). */

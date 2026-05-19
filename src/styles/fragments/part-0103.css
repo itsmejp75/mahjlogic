@@ -68,6 +68,20 @@
   color: #DCDCE0;
 }
 
+/*
+ * Inactive Mah Jongg / Call / Swap / Pass / Discard: keep muted fills + opacity; restore inset
+ * depth like Sort / Menu (part-0067 / part-0069). Wins over generic `:disabled { box-shadow: none }`.
+ */
+.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong.rack-bottom-tile-cell--c5-6:disabled:not(.btn--mahjong-rack-pressed-in),
+.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled,
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
+  .btn.btn--primary.charleston-pass-btn.rack-bottom-tile-cell--c12-14:disabled:not(.suggested-hands-tab),
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:disabled {
+  box-shadow:
+    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
+    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
+}
+
 /* Hand-rack Menu: hamburger bars use `currentColor` (part-0020) — align with Sort (#DCDCE0). */
 .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:not(:disabled),
 .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:disabled,
