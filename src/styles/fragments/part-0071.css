@@ -274,6 +274,63 @@
   justify-content: center;
 }
 
+.pass-strip-tail__instruction-copy {
+  position: relative;
+  display: inline-block;
+}
+
+.pass-strip-tail__instruction-right-chevron {
+  position: absolute;
+  left: calc(100% + clamp(0.16rem, calc(var(--pass-strip-box-w) * 0.026), 0.34rem));
+  top: 50%;
+  width: calc(var(--pass-strip-header-fs) * 0.34);
+  height: calc(var(--pass-strip-header-fs) * 0.34);
+  border-top: max(1px, calc(var(--pass-strip-header-fs) * 0.095)) solid currentColor;
+  border-right: max(1px, calc(var(--pass-strip-header-fs) * 0.095)) solid currentColor;
+  opacity: 0.9;
+  transform: translateY(-50%) rotate(45deg);
+  pointer-events: none;
+}
+
+.pass-strip-tail__instruction-up-chevron {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + clamp(0.08rem, calc(var(--pass-strip-box-w) * 0.012), 0.16rem));
+  width: calc(var(--pass-strip-header-fs) * 0.34);
+  height: calc(var(--pass-strip-header-fs) * 0.34);
+  border-top: max(1px, calc(var(--pass-strip-header-fs) * 0.095)) solid currentColor;
+  border-right: max(1px, calc(var(--pass-strip-header-fs) * 0.095)) solid currentColor;
+  opacity: 0.9;
+  transform: translateX(-50%) rotate(-45deg);
+  pointer-events: none;
+}
+
+.pass-strip-tail__instruction-left-chevron {
+  position: absolute;
+  right: calc(100% + clamp(0.16rem, calc(var(--pass-strip-box-w) * 0.026), 0.34rem));
+  top: 50%;
+  width: calc(var(--pass-strip-header-fs) * 0.34);
+  height: calc(var(--pass-strip-header-fs) * 0.34);
+  border-top: max(1px, calc(var(--pass-strip-header-fs) * 0.095)) solid currentColor;
+  border-right: max(1px, calc(var(--pass-strip-header-fs) * 0.095)) solid currentColor;
+  opacity: 0.9;
+  transform: translateY(-50%) rotate(-135deg);
+  pointer-events: none;
+}
+
+.pass-strip-tail__instruction--blind-right,
+.pass-strip-tail__instruction--blind-left {
+  flex-direction: column;
+  gap: clamp(0.01rem, calc(var(--pass-strip-box-w) * 0.003), 0.06rem);
+  line-height: 1.02;
+}
+
+.pass-strip-tail__instruction-blind-label {
+  display: block;
+  line-height: 1;
+  transform: translateY(calc(var(--pass-strip-header-fs) * -0.12));
+}
+
 .pass-strip-tail__instruction .pass-strip-tail__instruction-paren {
   color: #9a9aa3;
 }

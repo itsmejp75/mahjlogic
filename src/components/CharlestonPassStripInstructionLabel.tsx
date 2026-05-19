@@ -27,7 +27,10 @@ export function CharlestonPassStripInstructionMain({ phase }: { phase: Charlesto
     const line = charlestonPassStripInstruction('left2')
     return (
       <div className="pass-strip-tail__instruction pass-strip-tail__instruction--stacked">
-        <span className="pass-strip-tail__instruction-line">{line}</span>
+        <span className="pass-strip-tail__instruction-line pass-strip-tail__instruction-copy">
+          {line}
+          <span className="pass-strip-tail__instruction-left-chevron" aria-hidden />
+        </span>
         <span className="pass-strip-tail__instruction-or" aria-hidden>
           -OR-
         </span>
@@ -46,6 +49,60 @@ export function CharlestonPassStripInstructionMain({ phase }: { phase: Charlesto
   }
 
   const text = charlestonPassStripInstruction(phase)
+  if (text === 'Pass 3 Right') {
+    return (
+      <p className="pass-strip-tail__instruction pass-strip-tail__instruction--with-right-chevron">
+        <span className="pass-strip-tail__instruction-copy">
+          {passInstructionWithDimParens(text)}
+          <span className="pass-strip-tail__instruction-right-chevron" aria-hidden />
+        </span>
+      </p>
+    )
+  }
+
+  if (text === 'Pass 3 Across' || text === 'Pass 0-3 Across') {
+    return (
+      <p className="pass-strip-tail__instruction pass-strip-tail__instruction--with-up-chevron">
+        <span className="pass-strip-tail__instruction-copy">
+          {passInstructionWithDimParens(text)}
+          <span className="pass-strip-tail__instruction-up-chevron" aria-hidden />
+        </span>
+      </p>
+    )
+  }
+
+  if (text === '(Blind) Pass 0-3 Right') {
+    return (
+      <p className="pass-strip-tail__instruction pass-strip-tail__instruction--blind-right">
+        <span className="pass-strip-tail__instruction-blind-label">
+          <span className="pass-strip-tail__instruction-paren">(</span>
+          Blind
+          <span className="pass-strip-tail__instruction-paren pass-strip-tail__instruction-paren--close">)</span>
+        </span>
+        <span className="pass-strip-tail__instruction-copy">
+          Pass 0-3 Right
+          <span className="pass-strip-tail__instruction-right-chevron" aria-hidden />
+        </span>
+      </p>
+    )
+  }
+
+  if (text === '(Blind) Pass 0-3 Left') {
+    return (
+      <p className="pass-strip-tail__instruction pass-strip-tail__instruction--blind-left">
+        <span className="pass-strip-tail__instruction-blind-label">
+          <span className="pass-strip-tail__instruction-paren">(</span>
+          Blind
+          <span className="pass-strip-tail__instruction-paren pass-strip-tail__instruction-paren--close">)</span>
+        </span>
+        <span className="pass-strip-tail__instruction-copy">
+          Pass 0-3 Left
+          <span className="pass-strip-tail__instruction-left-chevron" aria-hidden />
+        </span>
+      </p>
+    )
+  }
+
   return (
     <p className="pass-strip-tail__instruction">{passInstructionWithDimParens(text)}</p>
   )
