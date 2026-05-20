@@ -6355,6 +6355,16 @@ export default function App() {
               <div className="app-menu-modal__body-footer app-menu-modal__body-footer--settings-toggles">
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
                   <AppMenuSettingSwitch
+                    labelId="app-menu-label-discard-tray-sizing-test"
+                    pressed={discardTraySizingTestCols > 0}
+                    onToggle={toggleDiscardTraySizingTest}
+                  />
+                  <span className="app-menu-modal__label" id="app-menu-label-discard-tray-sizing-test">
+                    36-col discard test
+                  </span>
+                </div>
+                <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                  <AppMenuSettingSwitch
                     labelId="app-menu-label-undo"
                     pressed={undoEnabled}
                     onToggle={toggleUndo}
@@ -6429,18 +6439,6 @@ export default function App() {
                     {CONCEALED_HAND_REMINDER_LABEL}
                   </span>
                 </div>
-                {import.meta.env.DEV ? (
-                  <div className="app-menu-modal__row app-menu-modal__row--toggle">
-                    <AppMenuSettingSwitch
-                      labelId="app-menu-label-discard-tray-sizing-test"
-                      pressed={discardTraySizingTestCols > 0}
-                      onToggle={toggleDiscardTraySizingTest}
-                    />
-                    <span className="app-menu-modal__label" id="app-menu-label-discard-tray-sizing-test">
-                      36-col discard test
-                    </span>
-                  </div>
-                ) : null}
               </div>
             </div>
           </div>
