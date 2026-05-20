@@ -16,6 +16,7 @@
   flex: 1 1 0;
   width: 100%;
   min-width: 0;
+  padding-inline-end: 0;
   justify-content: flex-end;
   align-items: stretch;
   text-align: start;
@@ -164,6 +165,9 @@
   display: flex;
   flex-direction: column;
   flex: 0 0 auto;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   height: auto;
   min-height: unset;
   overflow: visible;
@@ -194,14 +198,30 @@
   width: 100%;
 }
 
+/*
+ * Drop zone must stay in normal flow inside `.discard-tracker__strip-stack`.
+ * Base rule `.discard-tracker__content .discard-pile-drop-zone { position: absolute; inset: 0 }`
+ * fills the whole tray and paints over the opponent exposure rows (overlap bug).
+ */
 .panel--discard-tracker[data-discard-tray-test-cols='36']
+  .discard-tracker__content
   .discard-tracker__strip-stack
-  .discard-pile-drop-zone {
-  position: static;
+  > .discard-pile-drop-zone {
+  position: relative;
   inset: unset;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  z-index: auto;
   flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
   height: auto;
+  min-height: 0;
   overflow: visible;
+  overflow-x: visible;
+  overflow-y: visible;
 }
 
 .panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-pile {
@@ -311,18 +331,48 @@
 }
 
 @container play-split-rack-lock (min-width: 0px) {
-  .panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-tracker__content {
+  .panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-tracker__content,
+  .panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-pile {
     --rack-tile-w: max(1px, calc((100cqi - 35 * var(--player-rack-face-gap)) / 36));
     --rack-tile-h: calc(var(--rack-tile-w) * 4 / 3);
+    --tile-face-glyph-fs: calc(var(--rack-tile-w) * 0.74);
     --exposure-slot-h: var(--rack-tile-h);
+  }
+
+  .panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-pile {
+    grid-template-columns: repeat(36, minmax(0, 1fr));
   }
 }
 
 @container discard-tray (min-width: 0px) {
-  .panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-tracker__content {
+  .panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-tracker__content,
+  .panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-pile {
     --rack-tile-w: max(1px, calc((100cqw - 35 * var(--player-rack-face-gap)) / 36));
     --rack-tile-h: calc(var(--rack-tile-w) * 4 / 3);
+    --tile-face-glyph-fs: calc(var(--rack-tile-w) * 0.74);
     --exposure-slot-h: var(--rack-tile-h);
+  }
+
+  .panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-pile {
+    grid-template-columns: repeat(36, minmax(0, 1fr));
+  }
+}
+
+/* Mobile / narrow: full play-split width when container queries are flaky. */
+@media (max-height: 31.25rem) and (orientation: landscape) {
+  .panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-tracker__content,
+  .panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-pile {
+    --rack-tile-w: max(
+      1px,
+      calc((100cqi - 35 * var(--player-rack-face-gap)) / 36)
+    );
+    --rack-tile-h: calc(var(--rack-tile-w) * 4 / 3);
+    --tile-face-glyph-fs: calc(var(--rack-tile-w) * 0.74);
+    --exposure-slot-h: var(--rack-tile-h);
+  }
+
+  .panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-pile {
+    grid-template-columns: repeat(36, minmax(0, 1fr));
   }
 }
 
