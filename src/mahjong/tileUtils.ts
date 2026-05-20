@@ -1,4 +1,16 @@
-import type { TileDef, TileInstance } from './types'
+import type { DiscardEntry, TileDef, TileInstance } from './types'
+
+/** How many committed discards in `pile` match `def` (jokers / flowers use `tileDefsEqual` rules). */
+export function countDiscardEntriesMatchingDef(
+  pile: readonly DiscardEntry[],
+  def: TileDef,
+): number {
+  let n = 0
+  for (const e of pile) {
+    if (tileDefsEqual(e.tile.def, def)) n += 1
+  }
+  return n
+}
 
 /** True when `a` and `b` represent the exact same tile definition. */
 export function tileDefsEqual(a: TileDef, b: TileDef): boolean {

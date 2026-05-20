@@ -20,6 +20,8 @@ type Props = {
   cardInk?: CardInk
   /** Your rack: tiny bottom-center mark for tiles just received (Charleston, draw, joker swap) until the turn ends. */
   rackNewMark?: boolean
+  /** Compact glyph: suit tiles show rank only (e.g. `1` not `1D`); suit color classes unchanged. */
+  compactRankOnly?: boolean
 }
 
 /**
@@ -57,7 +59,14 @@ function categoryClass(def: TileDef): string {
   }
 }
 
-export function TileFace({ def, elevated, rackSuitStacked, cardInk, rackNewMark }: Props) {
+export function TileFace({
+  def,
+  elevated,
+  rackSuitStacked,
+  cardInk,
+  rackNewMark,
+  compactRankOnly = false,
+}: Props) {
   const skinClass =
     cardInk != null
       ? ['tile-face--card-skin', CARD_INK_TO_TILE_SKIN_CLASS[cardInk]].filter(Boolean).join(' ')
@@ -87,6 +96,10 @@ export function TileFace({ def, elevated, rackSuitStacked, cardInk, rackNewMark 
             </span>
           </div>
         </>
+      ) : compactRankOnly && def.cat === 'suit' ? (
+        <span className="tile-face__glyph">
+          <span className="tile-face__glyph-num">{def.rank}</span>
+        </span>
       ) : (
         <span className="tile-face__glyph">{renderGlyphChars(tileShortLabel(def))}</span>
       )}

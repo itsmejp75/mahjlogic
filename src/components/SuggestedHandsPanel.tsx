@@ -40,24 +40,36 @@ const SUGGESTED_SHEET_MIN_FALLBACK_PX = 112
 
 type StripRowsEntry = {
   rows: SuggestedStripSlot[][]
+  /** Per-row variant focus-key suffix (parallel to {@link rows}). Format:
+   *  - `tier::<base>:<perm>` for suit-permute consecRanks
+   *  - `oc::<r>-<s1>-<s2>` for opposing-consec
+   *  Empty array when {@link rows}.length <= 1 or when the line has no flexible variants.
+   */
   ocVariantSuffixes: string[]
-  ocAllSuffix: string
 }
 
+/** A single concrete focus key per suggested-hand line. Tied flexible variants are split into
+ * separate lines (sub-best `consecRanksTier` at line build, primary-tier flex via
+ * {@link expandedHandsRows} at panel level), so this never returns a multi-combo key. */
 function handEntryKeyForLine(h: SuggestedHandLine): string {
-  return h.consecRanksTier
-    ? `${h.id}::tier::${h.consecRanksTier.combos.map((c) => `${c.base}:${c.perm.join('-')}`).join('|')}`
-    : h.id
+  if (h.consecRanksTier && h.consecRanksTier.combos.length > 0) {
+    const c = h.consecRanksTier.combos[0]!
+    return `${h.id}::tier::${c.base}:${c.perm.join('-')}`
+  }
+  return h.id
 }
 
-/** Stable id for one suggested-hands row pin (matches strip `allKey` / list `categoryClickKey`). */
-function suggestedRowPinKey(h: SuggestedHandLine, stripEntry: StripRowsEntry | undefined): string {
-  const rowStripVariants = stripEntry?.rows ?? []
-  const showVariantStack = rowStripVariants.length > 1
-  if (showVariantStack && !h.consecRanksTier && stripEntry?.ocAllSuffix) {
-    return `${h.id}::${stripEntry.ocAllSuffix}`
-  }
-  return handEntryKeyForLine(h)
+/** One concrete row in the rendered suggested-hands list. Multi-variant flex hands fan out to
+ * one entry per tied variant; each entry owns its own focus key, strip, and pin key. */
+type ExpandedHandsRow = {
+  line: SuggestedHandLine
+  focusKey: string
+  /** Strip slots when "Tiles" is on; undefined otherwise (no strip rendered for the row). */
+  stripSlots: SuggestedStripSlot[] | undefined
+  /** Stable react key — unique across every expanded row in the list. */
+  reactKey: string
+  /** Pin toggle key — same as {@link focusKey} so each variant pins independently. */
+  pinKey: string
 }
 
 /**
@@ -514,16 +526,17 @@ export function SuggestedHandsPanel({
       const p = patternCache.get(h.id) ?? cardPatterns.find((x) => x.id === h.id)
       patternCache.set(h.id, p)
       if (!p) {
-        m.set(key, { rows: [], ocVariantSuffixes: [], ocAllSuffix: '' })
+        m.set(key, { rows: [], ocVariantSuffixes: [] })
         continue
       }
       if (h.consecRanksTier) {
+        // After the line-build split, each tier line has exactly one combo — render its single row.
         const rows: SuggestedStripSlot[][] = []
         for (const { perm, base } of h.consecRanksTier.combos) {
           const row = buildConsecRanksTierStripRow(p, rackMatch, perm, base, rackDisplay)
           if (row) rows.push(row)
         }
-        m.set(key, { rows, ocVariantSuffixes: [], ocAllSuffix: '' })
+        m.set(key, { rows, ocVariantSuffixes: [] })
         continue
       }
       const detail = greedyPatternMatchDetail(rackMatch, p, greedyOpts)
@@ -544,7 +557,6 @@ export function SuggestedHandsPanel({
       m.set(key, {
         rows: result.rows,
         ocVariantSuffixes: result.ocVariantSuffixes,
-        ocAllSuffix: result.ocAllSuffix,
       })
     }
     return m
@@ -564,9 +576,21 @@ export function SuggestedHandsPanel({
     const pinIndex = new Map(pinnedHandKeys.map((key, i) => [key, i]))
     const pinOrderFor = (h: SuggestedHandLine): number | null => {
       if (pinIndex.size === 0) return null
-      const entry = stripSlotRowsByKey.get(handEntryKeyForLine(h))
-      const key = suggestedRowPinKey(h, entry)
-      return pinIndex.has(key) ? pinIndex.get(key)! : null
+      // Pin matches when ANY of the line's variant focus keys is pinned (covers expanded
+      // variant rows that pin per-variant). Rank by the earliest matching pin index.
+      const baseKey = handEntryKeyForLine(h)
+      let best: number | null = pinIndex.has(baseKey) ? pinIndex.get(baseKey)! : null
+      const entry = stripSlotRowsByKey.get(baseKey)
+      if (entry && entry.rows.length > 1 && entry.ocVariantSuffixes.length === entry.rows.length) {
+        for (const suf of entry.ocVariantSuffixes) {
+          const k = `${h.id}::${suf}`
+          if (pinIndex.has(k)) {
+            const idx = pinIndex.get(k)!
+            if (best == null || idx < best) best = idx
+          }
+        }
+      }
+      return best
     }
     return [...base].sort((a, b) => {
       const ap = pinOrderFor(a)
@@ -587,6 +611,46 @@ export function SuggestedHandsPanel({
 
   const listRowsForHandsPanel = displayHands
 
+  /** Flat list of rows actually rendered in the panel. Lines with multiple tied flexible
+   * variants (suit-permute / opposing-consec) fan out to one entry per variant when the "Tiles"
+   * guide is on; otherwise one entry per line carrying the line's primary focus key. */
+  const expandedHandsRows = useMemo<ExpandedHandsRow[]>(() => {
+    const out: ExpandedHandsRow[] = []
+    for (const h of listRowsForHandsPanel) {
+      const baseKey = handEntryKeyForLine(h)
+      const entry = stripSlotRowsByKey.get(baseKey)
+      const variantCount = entry?.rows.length ?? 0
+      const canExpand =
+        tilesGuideOn &&
+        !h.consecRanksTier &&
+        variantCount > 1 &&
+        entry !== undefined &&
+        entry.ocVariantSuffixes.length === variantCount
+      if (canExpand) {
+        for (let i = 0; i < variantCount; i++) {
+          const suf = entry!.ocVariantSuffixes[i]!
+          const fk = `${h.id}::${suf}`
+          out.push({
+            line: h,
+            focusKey: fk,
+            stripSlots: entry!.rows[i]!,
+            reactKey: fk,
+            pinKey: fk,
+          })
+        }
+        continue
+      }
+      out.push({
+        line: h,
+        focusKey: baseKey,
+        stripSlots: entry?.rows[0],
+        reactKey: baseKey,
+        pinKey: baseKey,
+      })
+    }
+    return out
+  }, [listRowsForHandsPanel, stripSlotRowsByKey, tilesGuideOn])
+
   const emitRowPinToggle = useCallback(
     (pinKey: string) => {
       onPinnedPatternChange?.(pinKey)
@@ -596,24 +660,12 @@ export function SuggestedHandsPanel({
 
   useEffect(() => {
     if (activePatternId == null) return
-    const matches = listRowsForHandsPanel.some((h) => {
-      if (handEntryKey(h) === activePatternId) return true
-      if (h.consecRanksTier) {
-        return h.consecRanksTier.combos.some(
-          (c) => `${h.id}::tier::${c.base}:${c.perm.join('-')}` === activePatternId,
-        )
-      }
-      if (
-        activePatternId.startsWith(`${h.id}::oc::`) ||
-        activePatternId.startsWith(`${h.id}::ocall::`)
-      ) {
-        return true
-      }
-      return false
-    })
+    // Active pattern key is still valid as long as ANY rendered row matches it (each expanded
+    // variant carries its own concrete focus key, so we just check the expanded list).
+    const matches = expandedHandsRows.some((r) => r.focusKey === activePatternId)
     if (matches) return
     onPatternClick(activePatternId)
-  }, [activePatternId, listRowsForHandsPanel, onPatternClick, handEntryKey])
+  }, [activePatternId, expandedHandsRows, onPatternClick])
 
   const handsListOn = true
   const showHandCategoryLabels = handsListOn
@@ -883,28 +935,12 @@ export function SuggestedHandsPanel({
                     Points
                   </div>
                   <ol className="hands-sheet__rows" aria-label="Suggested hand lines">
-                    {listRowsForHandsPanel.map((h) => {
-                      const rowKey = handEntryKey(h)
-                      const stripEntry = stripSlotRowsByKey.get(handEntryKey(h))
-                      const rowStripVariants = stripEntry?.rows ?? []
-                      const rowStripSlots = rowStripVariants[0] ?? []
-                      const showVariantStack = tilesGuideOn && rowStripVariants.length > 1
-                      const variantKeys: string[] = showVariantStack
-                        ? h.consecRanksTier
-                          ? h.consecRanksTier.combos.map((c) => `${h.id}::tier::${c.base}:${c.perm.join('-')}`)
-                          : (stripEntry?.ocVariantSuffixes.length === rowStripVariants.length
-                              ? stripEntry!.ocVariantSuffixes.map((suf) => `${h.id}::${suf}`)
-                              : [])
-                        : []
-                      const categoryClickKey =
-                        showVariantStack && !h.consecRanksTier && stripEntry?.ocAllSuffix
-                          ? `${h.id}::${stripEntry.ocAllSuffix}`
-                          : rowKey
-                      const rowPinKey = suggestedRowPinKey(h, stripEntry)
-                      const rowIsFocused =
-                        activePatternId === rowKey ||
-                        activePatternId === categoryClickKey ||
-                        (variantKeys.length > 0 && variantKeys.some((k) => k === activePatternId))
+                    {expandedHandsRows.map((row) => {
+                      const h = row.line
+                      const rowKey = row.reactKey
+                      const focusKey = row.focusKey
+                      const rowStripSlots = row.stripSlots ?? []
+                      const rowIsFocused = activePatternId === focusKey
                       const rowLit = tilesGuideOn && rowIsFocused
                       const cardRef = suggestedHandCardRefDisplay(h)
                       const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points, h.closed)}`
@@ -922,19 +958,19 @@ export function SuggestedHandsPanel({
                           {onPinnedPatternChange ? (
                             <div className="hands-sheet__cell hands-sheet__cell--pin" role="cell">
                               <SuggestedHandPinCell
-                                pressed={pinnedHandKeys.includes(rowPinKey)}
-                                onToggle={() => emitRowPinToggle(rowPinKey)}
+                                pressed={pinnedHandKeys.includes(row.pinKey)}
+                                onToggle={() => emitRowPinToggle(row.pinKey)}
                               />
                             </div>
                           ) : null}
                           <button
                             type="button"
                             className="hands-sheet__row-btn"
-                            onClick={() => scheduleSingleClick(categoryClickKey)}
+                            onClick={() => scheduleSingleClick(focusKey)}
                             onDoubleClick={(e) => {
                               e.preventDefault()
                               cancelScheduledClick()
-                              onPatternDoubleClick(h.id, categoryClickKey)
+                              onPatternDoubleClick(h.id, focusKey)
                             }}
                             aria-label={ariaLabel}
                             aria-pressed={rowIsFocused}
@@ -954,8 +990,7 @@ export function SuggestedHandsPanel({
                               </span>
                               {(() => {
                                 const parenText = !tilesGuideOn ? suggestedHandParenText(h) : null
-                                const showTileDetail =
-                                  tilesGuideOn && (showVariantStack || rowStripSlots.length > 0)
+                                const showTileDetail = tilesGuideOn && rowStripSlots.length > 0
                                 return (
                                   <div
                                     className="hands-sheet__hand-stack"
@@ -986,54 +1021,7 @@ export function SuggestedHandsPanel({
                                     </div>
                                     {showTileDetail ? (
                                       <div className="hands-sheet__hand-stack-detail">
-                                        {showVariantStack ? (
-                                          <div
-                                            className="hands-list__pattern-tiles-stack"
-                                            role="group"
-                                            aria-label="Flexible tile options for this line"
-                                          >
-                                            {rowStripVariants.map((slots, vi) => {
-                                              const variantKey = variantKeys[vi] ?? categoryClickKey
-                                              const isActiveVariant =
-                                                activePatternId === variantKey || activePatternId === categoryClickKey
-                                              return (
-                                                <div
-                                                  key={`${rowKey}-sheet-var-${vi}`}
-                                                  role="button"
-                                                  tabIndex={0}
-                                                  className={[
-                                                    'hands-list__pattern-tiles-stack-row',
-                                                    'hands-list__pattern-tiles-stack-row--btn',
-                                                    isActiveVariant ? 'hands-list__pattern-tiles-stack-row--active' : '',
-                                                  ].filter(Boolean).join(' ')}
-                                                  onClick={(e) => {
-                                                    e.preventDefault()
-                                                    e.stopPropagation()
-                                                    scheduleSingleClick(variantKey)
-                                                  }}
-                                                  onDoubleClick={(e) => {
-                                                    e.preventDefault()
-                                                    e.stopPropagation()
-                                                    cancelScheduledClick()
-                                                    onPatternDoubleClick(h.id, variantKey)
-                                                  }}
-                                                  onKeyDown={(e) => {
-                                                    if (e.key === 'Enter' || e.key === ' ') {
-                                                      e.preventDefault()
-                                                      e.stopPropagation()
-                                                      scheduleSingleClick(variantKey)
-                                                    }
-                                                  }}
-                                                  aria-pressed={isActiveVariant}
-                                                >
-                                                  {renderSheetTileRow(slots, isActiveVariant, `${variantKey}-${vi}`)}
-                                                </div>
-                                              )
-                                            })}
-                                          </div>
-                                        ) : (
-                                          renderSheetTileRow(rowStripSlots, rowLit, rowKey)
-                                        )}
+                                        {renderSheetTileRow(rowStripSlots, rowLit, rowKey)}
                                       </div>
                                     ) : parenText ? (
                                       <div className="hands-sheet__hand-stack-detail">
@@ -1180,25 +1168,11 @@ export function SuggestedHandsPanel({
                 .join(' ')}
               id="hands-list"
             >
-              {listRowsForHandsPanel.map((h) => {
-                const stripEntry = stripSlotRowsByKey.get(handEntryKey(h))
-                const rowStripVariants = stripEntry?.rows ?? []
-                const rowStripSlots = rowStripVariants[0] ?? []
-                const showConsecVariantStack = tilesGuideOn && rowStripVariants.length > 1
-                const variantKeys: string[] = showConsecVariantStack
-                  ? h.consecRanksTier
-                    ? h.consecRanksTier.combos.map((c) => `${h.id}::tier::${c.base}:${c.perm.join('-')}`)
-                    : (stripEntry?.ocVariantSuffixes.length === rowStripVariants.length
-                        ? stripEntry!.ocVariantSuffixes.map((suf) => `${h.id}::${suf}`)
-                        : [])
-                  : []
-                const categoryClickKey = showConsecVariantStack && !h.consecRanksTier && stripEntry?.ocAllSuffix
-                  ? `${h.id}::${stripEntry.ocAllSuffix}`
-                  : handEntryKey(h)
-                const rowPinKey = suggestedRowPinKey(h, stripEntry)
-                const rowIsFocused = activePatternId === handEntryKey(h) ||
-                  activePatternId === categoryClickKey ||
-                  (variantKeys.length > 0 && variantKeys.some((k) => k === activePatternId))
+              {expandedHandsRows.map((row) => {
+                const h = row.line
+                const focusKey = row.focusKey
+                const rowStripSlots = row.stripSlots ?? []
+                const rowIsFocused = activePatternId === focusKey
                 const cardRef = suggestedHandCardRefDisplay(h)
                 const rowAriaLabel =
                   !handsListOn || !showHandCategoryLabels
@@ -1209,11 +1183,11 @@ export function SuggestedHandsPanel({
                   'hands-list__row-hit--with-tiles',
                   showHandCategoryLabels ? 'hands-list__row-hit--with-category' : '',
                 ].filter(Boolean).join(' ')
-                const handleRowClick = () => { scheduleSingleClick(categoryClickKey) }
+                const handleRowClick = () => { scheduleSingleClick(focusKey) }
                 const handleRowDblClick = (e: React.MouseEvent) => {
                   e.preventDefault()
                   cancelScheduledClick()
-                  onPatternDoubleClick(h.id)
+                  onPatternDoubleClick(h.id, focusKey)
                 }
                 const outerSharedProps = {
                   className: outerClass,
@@ -1224,40 +1198,11 @@ export function SuggestedHandsPanel({
                   onClick: handleRowClick,
                   onDoubleClick: handleRowDblClick,
                 }
-                const outerStackedProps = {
-                  className: outerClass,
-                  style: rowHitGridStyle,
-                }
                 const liClassName = [
                   'hands-list__row',
                   rowIsFocused ? 'hands-list__row--active' : '',
                   tilesGuideOn && rowIsFocused ? 'hands-list__row--rack-guide' : '',
                 ].filter(Boolean).join(' ')
-                const categoryCellProps = showConsecVariantStack
-                  ? {
-                      role: 'button' as const,
-                      tabIndex: 0,
-                      'aria-label': `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title} — highlight all variants`,
-                      'aria-pressed': activePatternId === categoryClickKey,
-                      onClick: (e: React.MouseEvent) => {
-                        e.stopPropagation()
-                        scheduleSingleClick(categoryClickKey)
-                      },
-                      onDoubleClick: (e: React.MouseEvent) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        cancelScheduledClick()
-                        onPatternDoubleClick(h.id, categoryClickKey)
-                      },
-                      onKeyDown: (e: React.KeyboardEvent) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          scheduleSingleClick(categoryClickKey)
-                        }
-                      },
-                    }
-                  : {}
                 const innerCells = (
                       <>
                         {showHandCategoryLabels ? (
@@ -1265,9 +1210,7 @@ export function SuggestedHandsPanel({
                             className={[
                               'hands-list__cell',
                               'hands-list__cell--category',
-                              showConsecVariantStack ? 'hands-list__cell--category-clickable' : '',
                             ].filter(Boolean).join(' ')}
-                            {...categoryCellProps}
                           >
                             <span className="hands-list__with-tiles-category">
                               {suggestedHandSectionMenuLabel(h.section)}
@@ -1313,85 +1256,8 @@ export function SuggestedHandsPanel({
                         ) : null}
                         {tilesGuideOn ? (
                           <div className="hands-list__cell hands-list__cell--tiles">
-                            <div
-                              className={[
-                                'hands-list__pattern-tiles',
-                                showConsecVariantStack ? 'hands-list__pattern-tiles--tie-stack' : '',
-                              ]
-                                .filter(Boolean)
-                                .join(' ')}
-                            >
-                              {showConsecVariantStack ? (
-                                <div
-                                  className="hands-list__pattern-tiles-stack"
-                                  role="group"
-                                  aria-label="Consecutive suit pair options for this line"
-                                >
-                                  {rowStripVariants.map((slots, vi) => {
-                                    const variantKey = variantKeys[vi] ?? categoryClickKey
-                                    const isActiveRow = activePatternId === variantKey || activePatternId === categoryClickKey
-                                    return (
-                                      <div
-                                        key={`${h.id}-var-${vi}`}
-                                        role="button"
-                                        tabIndex={0}
-                                        className={[
-                                          'hands-list__pattern-tiles-stack-row',
-                                          'hands-list__pattern-tiles-stack-row--btn',
-                                          isActiveRow ? 'hands-list__pattern-tiles-stack-row--active' : '',
-                                        ].filter(Boolean).join(' ')}
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          scheduleSingleClick(variantKey)
-                                        }}
-                                        onDoubleClick={(e) => {
-                                          e.preventDefault()
-                                          e.stopPropagation()
-                                          cancelScheduledClick()
-                                          onPatternDoubleClick(h.id, variantKey)
-                                        }}
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter' || e.key === ' ') {
-                                            e.preventDefault()
-                                            e.stopPropagation()
-                                            scheduleSingleClick(variantKey)
-                                          }
-                                        }}
-                                        aria-pressed={isActiveRow}
-                                      >
-                                        {slots.length > 0 ? (
-                                          <div className="hands-list__pattern-tiles-grid" role="presentation">
-                                            {slots.map((slot, i) => {
-                                              const showJokerGuide = tilesGuideOn && isActiveRow && slot.jokerSuggested
-                                              const suggestBestRing = tilesGuideOn && isActiveRow && slot.highlight
-                                              const dimPatternSlot = tilesGuideOn && isActiveRow && !slot.highlight && !slot.jokerSuggested
-                                              return (
-                                                <div
-                                                  key={`${h.id}-v${vi}-${i}`}
-                                                  className={[
-                                                    'hands-list__pattern-tile-cell',
-                                                    showJokerGuide ? 'hands-list__pattern-tile-cell--suggest-joker' : '',
-                                                    suggestBestRing ? 'hands-list__pattern-tile-cell--suggest-best' : '',
-                                                    dimPatternSlot ? 'hands-list__pattern-tile-cell--suggest-dim' : '',
-                                                  ].filter(Boolean).join(' ')}
-                                                >
-                                                  <TileFace
-                                                    def={slot.displayDef}
-                                                    cardInk={stripTileFaceCardInk(slot.displayDef, slot.cardInk)}
-                                                  />
-                                                  {showJokerGuide ? (
-                                                    <span className="hands-list__pattern-joker-mark">JOKER</span>
-                                                  ) : null}
-                                                </div>
-                                              )
-                                            })}
-                                          </div>
-                                        ) : null}
-                                      </div>
-                                    )
-                                  })}
-                                </div>
-                              ) : rowStripSlots.length > 0 ? (
+                            <div className="hands-list__pattern-tiles">
+                              {rowStripSlots.length > 0 ? (
                                 <div className="hands-list__pattern-tiles-grid" role="presentation">
                                   {rowStripSlots.map((slot, i) => {
                                     const showJokerGuide = tilesGuideOn && rowIsFocused && slot.jokerSuggested
@@ -1399,7 +1265,7 @@ export function SuggestedHandsPanel({
                                     const dimPatternSlot = tilesGuideOn && rowIsFocused && !slot.highlight && !slot.jokerSuggested
                                     return (
                                       <div
-                                        key={`${h.id}-${i}`}
+                                        key={`${row.reactKey}-${i}`}
                                         className={[
                                           'hands-list__pattern-tile-cell',
                                           showJokerGuide ? 'hands-list__pattern-tile-cell--suggest-joker' : '',
@@ -1453,25 +1319,21 @@ export function SuggestedHandsPanel({
                       </>
                 )
                 return (
-                  <li key={handEntryKey(h)} className={liClassName}>
+                  <li key={row.reactKey} className={liClassName}>
                     {onPinnedPatternChange ? (
                       <div
                         className="hands-list__cell hands-list__cell--pin"
                         style={{ gridArea: 'pin' }}
                       >
                         <SuggestedHandPinCell
-                          pressed={pinnedHandKeys.includes(rowPinKey)}
-                          onToggle={() => emitRowPinToggle(rowPinKey)}
+                          pressed={pinnedHandKeys.includes(row.pinKey)}
+                          onToggle={() => emitRowPinToggle(row.pinKey)}
                         />
                       </div>
                     ) : null}
-                    {showConsecVariantStack ? (
-                      <div {...outerStackedProps}>{innerCells}</div>
-                    ) : (
-                      <button type="button" {...outerSharedProps}>
-                        {innerCells}
-                      </button>
-                    )}
+                    <button type="button" {...outerSharedProps}>
+                      {innerCells}
+                    </button>
                   </li>
                 )
               })}

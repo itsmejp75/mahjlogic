@@ -901,64 +901,16 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
           ? Array.from({ length: 9 - maxRankOff }, (_, i) => i + 1)
           : [1]
 
-        let bestFill = 0
-        let bestExposureFill = -1
+        let bestScore = { fill: -1, exposureFill: -1, maxSlotFill: -1, slotSquareFill: -1 }
         let bestPerm: Suit[] = []
         let bestBase = 1
 
         for (const base of searchBases) {
           for (const perm of suitPermutations(n)) {
-            let fill = 0
-            let exposureFill = 0
-            for (let ci = 0; ci < n; ci++) {
-              const s = perm[ci]!
-              for (const sg of g.colorGroups[ci]!) {
-                const rank = sg.rank - 1 + base
-                const matching = remaining.filter(
-                  t => t.def.cat === 'suit' && t.def.suit === s && t.def.rank === rank
-                )
-                const count = matching.length
-                fill += Math.min(count, sg.need)
-                if (opts?.exposureTileIds) {
-                  exposureFill += Math.min(
-                    matching.filter((t) => opts.exposureTileIds!.has(t.id)).length,
-                    sg.need,
-                  )
-                }
-              }
-              // Count dragons of this slot's assigned suit (e.g. DDDD in a middle color slot).
-              const dc = g.colorGroupDragonCounts?.[ci] ?? 0
-              if (dc > 0) {
-                const drg = drgForSuitPerm[s]
-                const matching = remaining.filter(t => t.def.cat === 'dragon' && t.def.dragon === drg)
-                fill += Math.min(matching.length, dc)
-                if (opts?.exposureTileIds) {
-                  exposureFill += Math.min(
-                    matching.filter((t) => opts.exposureTileIds!.has(t.id)).length,
-                    dc,
-                  )
-                }
-              }
-            }
-            // Count trailing dragons — suit not assigned to any slot in this permutation.
-            if (tdcPerm > 0) {
-              const trailSuit = SUITS.find(s => !perm.includes(s))
-              if (trailSuit) {
-                const drg = drgForSuitPerm[trailSuit]
-                const matching = remaining.filter(t => t.def.cat === 'dragon' && t.def.dragon === drg)
-                fill += Math.min(matching.length, tdcPerm)
-                if (opts?.exposureTileIds) {
-                  exposureFill += Math.min(
-                    matching.filter((t) => opts.exposureTileIds!.has(t.id)).length,
-                    tdcPerm,
-                  )
-                }
-              }
-            }
-            if (exposureFill > bestExposureFill || (exposureFill === bestExposureFill && fill > bestFill)) {
-              bestFill = fill
-              bestExposureFill = exposureFill
-              bestPerm = perm
+            const score = scoreSuitPermuteCombo(remaining, g, perm, base, opts?.exposureTileIds)
+            if (suitPermuteComboScoreBetter(score, bestScore, !!opts?.exposureTileIds)) {
+              bestScore = score
+              bestPerm = [...perm]
               bestBase = base
             }
           }
@@ -2187,53 +2139,16 @@ function resolveStripTargetDefsForGreedyMatch(
         const searchBases = g.consecRanks
           ? Array.from({ length: 9 - maxRankOff }, (_, i) => i + 1)
           : [1]
-        let bestFill = 0
-        let bestExposureFill = -1
+        let bestScore = { fill: -1, exposureFill: -1, maxSlotFill: -1, slotSquareFill: -1 }
         let bestPerm: Suit[] = []
         let bestBase = 1
         for (const base of searchBases) {
           for (const perm of suitPermutations(n)) {
             // Skip permutations that reuse a suit already committed by a suit-locked group.
             if (lockedSuits.size > 0 && perm.some((s) => lockedSuits.has(s))) continue
-            let fill = 0
-            let exposureFill = 0
-            for (let ci = 0; ci < n; ci++) {
-              const s = perm[ci]!
-              for (const sg of g.colorGroups[ci]) {
-                const rank = sg.rank - 1 + base
-                const matching = rem.filter(
-                  (t) => t.def.cat === 'suit' && t.def.suit === s && t.def.rank === rank,
-                )
-                const count = matching.length
-                fill += Math.min(count, sg.need)
-                if (exposureTileIds) {
-                  exposureFill += Math.min(matching.filter((t) => exposureTileIds.has(t.id)).length, sg.need)
-                }
-              }
-              const dc = g.colorGroupDragonCounts?.[ci] ?? 0
-              if (dc > 0) {
-                const drg = drgForSuitPerm[s]
-                const matching = rem.filter((t) => t.def.cat === 'dragon' && t.def.dragon === drg)
-                fill += Math.min(matching.length, dc)
-                if (exposureTileIds) {
-                  exposureFill += Math.min(matching.filter((t) => exposureTileIds.has(t.id)).length, dc)
-                }
-              }
-            }
-            if (tdc > 0) {
-              const remaining = SUITS.find((s) => !perm.includes(s))
-              if (remaining) {
-                const drg = drgForSuitPerm[remaining]
-                const matching = rem.filter((t) => t.def.cat === 'dragon' && t.def.dragon === drg)
-                fill += Math.min(matching.length, tdc)
-                if (exposureTileIds) {
-                  exposureFill += Math.min(matching.filter((t) => exposureTileIds.has(t.id)).length, tdc)
-                }
-              }
-            }
-            if (exposureFill > bestExposureFill || (exposureFill === bestExposureFill && fill > bestFill)) {
-              bestFill = fill
-              bestExposureFill = exposureFill
+            const score = scoreSuitPermuteCombo(rem, g, perm, base, exposureTileIds)
+            if (suitPermuteComboScoreBetter(score, bestScore, !!exposureTileIds)) {
+              bestScore = score
               bestPerm = [...perm]
               bestBase = base
             }
@@ -2776,6 +2691,82 @@ function suitPermuteVariantSuffix(base: number, perm: readonly Suit[]): string {
   return `tier::${suitPermuteComboKey(base, perm)}`
 }
 
+function scoreSuitPermuteCombo(
+  tiles: readonly TileInstance[],
+  g: Extract<PatternGroup, { kind: 'suit-permute' }>,
+  perm: readonly Suit[],
+  base: number,
+  exposureTileIds?: ReadonlySet<string>,
+): { fill: number; exposureFill: number; maxSlotFill: number; slotSquareFill: number } {
+  const drgForSuit = DRAGON_FOR_SUIT
+  let fill = 0
+  let exposureFill = 0
+  let maxSlotFill = 0
+  let slotSquareFill = 0
+
+  const addSlotFill = (slotFill: number) => {
+    maxSlotFill = Math.max(maxSlotFill, slotFill)
+    slotSquareFill += slotFill * slotFill
+    fill += slotFill
+  }
+
+  for (let ci = 0; ci < g.colorGroups.length; ci++) {
+    const s = perm[ci]!
+    let slotFill = 0
+    for (const sg of g.colorGroups[ci]!) {
+      const rank = g.consecRanks ? sg.rank - 1 + base : sg.rank
+      const matching = tiles.filter(
+        (t) => t.def.cat === 'suit' && t.def.suit === s && t.def.rank === rank,
+      )
+      const count = Math.min(matching.length, sg.need)
+      slotFill += count
+      if (exposureTileIds) {
+        exposureFill += Math.min(matching.filter((t) => exposureTileIds.has(t.id)).length, sg.need)
+      }
+    }
+    const dc = g.colorGroupDragonCounts?.[ci] ?? 0
+    if (dc > 0) {
+      const drg = drgForSuit[s]
+      const matching = tiles.filter((t) => t.def.cat === 'dragon' && t.def.dragon === drg)
+      const count = Math.min(matching.length, dc)
+      slotFill += count
+      if (exposureTileIds) {
+        exposureFill += Math.min(matching.filter((t) => exposureTileIds.has(t.id)).length, dc)
+      }
+    }
+    addSlotFill(slotFill)
+  }
+
+  const tdc = g.trailingDragonCount ?? 0
+  if (tdc > 0) {
+    const trailSuit = SUITS.find((s) => !perm.includes(s))
+    if (trailSuit) {
+      const drg = drgForSuit[trailSuit]
+      const matching = tiles.filter((t) => t.def.cat === 'dragon' && t.def.dragon === drg)
+      const count = Math.min(matching.length, tdc)
+      if (exposureTileIds) {
+        exposureFill += Math.min(matching.filter((t) => exposureTileIds.has(t.id)).length, tdc)
+      }
+      addSlotFill(count)
+    }
+  }
+
+  return { fill, exposureFill, maxSlotFill, slotSquareFill }
+}
+
+function suitPermuteComboScoreBetter(
+  candidate: { fill: number; exposureFill: number; maxSlotFill: number; slotSquareFill: number },
+  current: { fill: number; exposureFill: number; maxSlotFill: number; slotSquareFill: number },
+  useExposureBias: boolean,
+): boolean {
+  if (useExposureBias && candidate.exposureFill !== current.exposureFill) {
+    return candidate.exposureFill > current.exposureFill
+  }
+  if (candidate.fill !== current.fill) return candidate.fill > current.fill
+  if (candidate.maxSlotFill !== current.maxSlotFill) return candidate.maxSlotFill > current.maxSlotFill
+  return candidate.slotSquareFill > current.slotSquareFill
+}
+
 function cardTitleOrderDefsForSuitPermute(
   p: PracticePattern,
   g: Extract<PatternGroup, { kind: 'suit-permute' }>,
@@ -2978,10 +2969,16 @@ function buildSuitPermuteStripVariantRows(
     : [1]
 
   // Build all (perm, base) combos, compute fill for each, track the best.
-  type Combo = { perm: Suit[]; base: number; fill: number; exposureFill: number }
+  type Combo = {
+    perm: Suit[]
+    base: number
+    fill: number
+    exposureFill: number
+    maxSlotFill: number
+    slotSquareFill: number
+  }
   const combos: Combo[] = []
-  let bestFill = -1
-  let bestExposureFill = -1
+  let bestScore = { fill: -1, exposureFill: -1, maxSlotFill: -1, slotSquareFill: -1 }
   let bestComboIdx = -1
   const useExposureBias = exposureTileIds && exposureTileIds.size > 0
 
@@ -2990,58 +2987,17 @@ function buildSuitPermuteStripVariantRows(
       if (lockedSuitsForVariants.size > 0 && perm.some((s) => lockedSuitsForVariants.has(s))) {
         continue
       }
-      let fill = 0
-      let exposureFill = 0
-      for (let ci = 0; ci < nSlots; ci++) {
-        const s = perm[ci]!
-        for (const sg of g.colorGroups[ci]!) {
-          const rank = sg.rank - 1 + base
-          const matching = rem.filter(
-            (t) => t.def.cat === 'suit' && t.def.suit === s && t.def.rank === rank,
-          )
-          const count = matching.length
-          fill += Math.min(count, sg.need)
-          if (useExposureBias) {
-            exposureFill += Math.min(matching.filter((t) => exposureTileIds!.has(t.id)).length, sg.need)
-          }
-        }
-        const dc = g.colorGroupDragonCounts?.[ci] ?? 0
-        if (dc > 0) {
-          const drg = drgForSuitVar[s]
-          const matching = rem.filter((t) => t.def.cat === 'dragon' && t.def.dragon === drg)
-          fill += Math.min(matching.length, dc)
-          if (useExposureBias) {
-            exposureFill += Math.min(matching.filter((t) => exposureTileIds!.has(t.id)).length, dc)
-          }
-        }
-      }
-      if (tdc > 0) {
-        const remaining = SUITS.find((s) => !perm.includes(s))
-        if (remaining) {
-          const drg = drgForSuitVar[remaining]
-          const matching = rem.filter((t) => t.def.cat === 'dragon' && t.def.dragon === drg)
-          fill += Math.min(matching.length, tdc)
-          if (useExposureBias) {
-            exposureFill += Math.min(matching.filter((t) => exposureTileIds!.has(t.id)).length, tdc)
-          }
-        }
-      }
-      combos.push({ perm: [...perm], base, fill, exposureFill })
-      const better = useExposureBias
-        ? bestComboIdx < 0 ||
-          exposureFill > bestExposureFill ||
-          (exposureFill === bestExposureFill && fill > bestFill)
-        : bestComboIdx < 0 || fill > bestFill
-      if (better) {
-        bestFill = fill
-        if (useExposureBias) bestExposureFill = exposureFill
+      const score = scoreSuitPermuteCombo(rem, g, perm, base, exposureTileIds)
+      combos.push({ perm: [...perm], base, ...score })
+      if (bestComboIdx < 0 || suitPermuteComboScoreBetter(score, bestScore, !!useExposureBias)) {
+        bestScore = score
         bestComboIdx = combos.length - 1
       }
     }
   }
 
   if (bestComboIdx < 0) return null
-  const maxFill = bestFill
+  const maxFill = bestScore.fill
 
   const primary = combos[bestComboIdx]!
   const sorted =
@@ -3868,6 +3824,7 @@ function reorderSlotAssignmentsToTitlePreviewSlots(
   rack: TileInstance[],
   p: PracticePattern,
   jokerEligible: boolean[],
+  candidateIds?: readonly string[],
 ): { slots: (string | null)[]; defs: TileDef[] } | null {
   if (slots.length !== cardLineDefs.length) return null
   /*
@@ -3876,63 +3833,95 @@ function reorderSlotAssignmentsToTitlePreviewSlots(
    * group order, e.g. Year #4 `22` before `00`).
    */
   const map = p.cardLineFromGroupSlotMap
-  if (map?.length === slots.length) {
+  if (!candidateIds && map?.length === slots.length) {
     if (!slots.some((x) => x != null)) return null
     return { slots: [...slots], defs: [...cardLineDefs] }
   }
   const byId = new Map(rack.map((t) => [t.id, t] as const))
-  const used = new Set<number>()
+  const sourceIds =
+    candidateIds ??
+    slots.filter((id): id is string => id != null)
+  const assignedIds = new Set<string>()
   const outSlots: (string | null)[] = cardLineDefs.map(() => null)
 
   for (let j = 0; j < cardLineDefs.length; j++) {
     const want = cardLineDefs[j]!
-    const idx = slots.findIndex((_, i) => {
-      if (used.has(i)) return false
-      const id = slots[i]
-      if (id == null) return false
-      const t = byId.get(id)
+    const id = sourceIds.find((candidateId) => {
+      if (assignedIds.has(candidateId)) return false
+      const t = byId.get(candidateId)
       if (!t || t.def.cat === 'joker') return false
       return naturalMatchesTitlePreviewSlot(t.def, want, p)
     })
-    if (idx >= 0) {
-      used.add(idx)
-      outSlots[j] = slots[idx]!
+    if (id) {
+      assignedIds.add(id)
+      outSlots[j] = id
     }
   }
 
-  const jokerSrc = slots
-    .map((id, i) => (id != null ? { i, id } : null))
-    .filter(
-      (x): x is { i: number; id: string } =>
-        x != null && !used.has(x.i) && byId.get(x.id)?.def.cat === 'joker',
-    )
-    .sort((a, b) => a.i - b.i)
-
-  let jokerK = 0
   for (let j = 0; j < cardLineDefs.length; j++) {
     if (outSlots[j] != null) continue
     const want = cardLineDefs[j]!
-    if (!previewSlotAllowsJoker(want, p, j, jokerEligible)) continue
-    const src = jokerSrc[jokerK++]
-    if (!src) break
-    used.add(src.i)
-    outSlots[j] = src.id
-  }
-
-  for (let j = 0; j < cardLineDefs.length; j++) {
-    if (outSlots[j] != null) continue
-    const want = cardLineDefs[j]!
-    const idx = slots.findIndex((_, i) => {
-      if (used.has(i)) return false
-      const id = slots[i]
-      if (id == null) return false
-      const t = byId.get(id)
+    const id = sourceIds.find((candidateId) => {
+      if (assignedIds.has(candidateId)) return false
+      const t = byId.get(candidateId)
       if (!t || t.def.cat === 'joker') return false
       return naturalMatchesTitlePreviewSlot(t.def, want, p)
     })
-    if (idx < 0) continue
-    used.add(idx)
-    outSlots[j] = slots[idx]!
+    if (id) {
+      assignedIds.add(id)
+      outSlots[j] = id
+    }
+  }
+
+  const jokerSrc = sourceIds
+    .filter((id) => !assignedIds.has(id) && byId.get(id)?.def.cat === 'joker')
+    .map((id, i) => ({ i, id }))
+
+  let jokerK = 0
+  const placeJokersInMelds = (requireNaturalAnchor: boolean) => {
+    for (const [a, b] of jokerMeldPreviewIndexRanges([...cardLineDefs], jokerEligible)) {
+      let naturalCount = 0
+      for (const id of outSlots.slice(a, b)) {
+        if (id == null) continue
+        const t = byId.get(id)
+        if (t != null && t.def.cat !== 'joker') naturalCount++
+      }
+      const openSlots = outSlots.slice(a, b).filter((id) => id == null).length
+      if (openSlots === 0) continue
+      // Prefer melds that are actually in progress. A complete pung with no open slot
+      // should never attract the joker ahead of a later incomplete kong.
+      if (requireNaturalAnchor && naturalCount === 0) continue
+      if (requireNaturalAnchor && naturalCount >= b - a) continue
+      for (let j = a; j < b; j++) {
+        if (outSlots[j] != null) continue
+        const want = cardLineDefs[j]!
+        if (!previewSlotAllowsJoker(want, p, j, jokerEligible)) continue
+        const src = jokerSrc[jokerK++]
+        if (!src) return
+        assignedIds.add(src.id)
+        outSlots[j] = src.id
+      }
+    }
+  }
+  // For rack sorting, keep real jokers with a meld the player already owns part of.
+  // Otherwise a joker can jump into an earlier empty pung and split a natural group
+  // (e.g. Runs #3: 3D 3D 3D should stay together, joker belongs after 4C).
+  placeJokersInMelds(true)
+  placeJokersInMelds(false)
+
+  for (let j = 0; j < cardLineDefs.length; j++) {
+    if (outSlots[j] != null) continue
+    const want = cardLineDefs[j]!
+    const id = sourceIds.find((candidateId) => {
+      if (assignedIds.has(candidateId)) return false
+      const t = byId.get(candidateId)
+      if (!t || t.def.cat === 'joker') return false
+      return naturalMatchesTitlePreviewSlot(t.def, want, p)
+    })
+    if (id) {
+      assignedIds.add(id)
+      outSlots[j] = id
+    }
   }
 
   // Incomplete racks (e.g. missing E/W on 2026 W&D #8) still reorder matched tiles into card-line
@@ -4023,6 +4012,7 @@ function stripOrderedHandIdsForPattern(
     rackForPattern,
     pinnedP,
     jokerEli,
+    detail.usedOrder.filter((id) => bestIds.has(id)),
   )
   if (titlePreviewReorder) {
     slots.splice(0, slots.length, ...titlePreviewReorder.slots)
@@ -4085,14 +4075,12 @@ export function sortHandForSuggestedPattern(
   hand: TileInstance[],
   patternId: string,
   input: RankSuggestedHandsInput,
-  /** Optional hand-entry key to sort toward a specific stack variant (or the union of all
-   * variants for the "all" / category-row case). Recognized formats:
+  /** Optional hand-entry key to sort toward a specific flexible variant. Recognized formats:
    *  - `<patternId>::tier::<base>:<perm>` — single suit-permute consecRanks variant
-   *  - `<patternId>::tier::<c1>|<c2>|...` — multi (category "all") of suit-permute consecRanks
    *  - `<patternId>::oc::<r>-<s1>-<s2>` — single opposing-consec variant
-   *  - `<patternId>::ocall::<r1>-<s1a>-<s1b>|...` — multi (category "all") of opposing-consec
-   *  Multi-combo: union of all variants' matching tiles is sorted to the left of the rack,
-   *  in combo-order then strip-order. */
+   *  Legacy `|`-joined multi-combo keys (`::tier::a|b|...`, `::ocall::...`) are tolerated for
+   *  backwards compatibility with old saved pins; they resolve to the FIRST combo so the sort
+   *  produces a single coherent variant ordering instead of interleaving suits/colors. */
   focusKey?: string,
 ): TileInstance[] {
   const basePattern = cardBookForRankInput(input).find((x) => x.id === patternId)
@@ -4105,52 +4093,29 @@ export function sortHandForSuggestedPattern(
       ? new Set(playerClaimMelds.flatMap((e) => e.tiles).map((t) => t.id))
       : undefined
 
-  // Build pinned patterns from the focus key (handles `::tier::`, `::oc::`, and `::ocall::`).
+  // Resolve the focus key to a single concrete pinned pattern (or fall back to base).
+  // `buildPinnedPatternsFromFocusKey` may return >1 pattern for legacy `|`-joined keys;
+  // we only ever consume the first combo to avoid the interleaved-suits sort artifact.
   const pinnedPatterns: PracticePattern[] = focusKey
     ? buildPinnedPatternsFromFocusKey(basePattern, focusKey)
     : []
+  const sortPattern: PracticePattern = pinnedPatterns[0] ?? basePattern
 
-  // Effective pattern used for the "matches/not-helping/dead-copies" tail sort. For the
-  // multi-combo "all" case we fall back to the base pattern so any tile that fits ANY
-  // variant is treated as a match in the tail comparator.
   const orderedBest: TileInstance[] = []
   const seen = new Set<string>()
-  if (pinnedPatterns.length > 0) {
-    // Walk each combo in order; accumulate strip-ordered IDs with global dedup so the
-    // first combo's tiles come first, then any additional tiles only the later combos use.
-    for (const pp of pinnedPatterns) {
-      const { orderedIds } = stripOrderedHandIdsForPattern(
-        pp,
-        rackForPattern,
-        handIds,
-        exposureTileIds,
-        basePattern,
-      )
-      for (const id of orderedIds) {
-        if (seen.has(id)) continue
-        const t = hand.find((x) => x.id === id)
-        if (t) {
-          orderedBest.push(t)
-          seen.add(id)
-        }
-      }
-    }
-  } else {
-    // No tier focus — original behavior: sort toward the base pattern's primary greedy match.
-    const { orderedIds } = stripOrderedHandIdsForPattern(
-      basePattern,
-      rackForPattern,
-      handIds,
-      exposureTileIds,
-      basePattern,
-    )
-    for (const id of orderedIds) {
-      if (seen.has(id)) continue
-      const t = hand.find((x) => x.id === id)
-      if (t) {
-        orderedBest.push(t)
-        seen.add(id)
-      }
+  const { orderedIds } = stripOrderedHandIdsForPattern(
+    sortPattern,
+    rackForPattern,
+    handIds,
+    exposureTileIds,
+    basePattern,
+  )
+  for (const id of orderedIds) {
+    if (seen.has(id)) continue
+    const t = hand.find((x) => x.id === id)
+    if (t) {
+      orderedBest.push(t)
+      seen.add(id)
     }
   }
 
@@ -4216,37 +4181,33 @@ export function sortFullRackTilesForPattern(
       ? new Set(playerClaimMelds.flatMap((e) => e.tiles).map((t) => t.id))
       : undefined
 
+  // Tied flexible variants are now their own suggested-hand lines, so the focus key always
+  // resolves to a single concrete combo. Legacy `|`-joined multi-combo keys collapse to the
+  // first combo via {@link buildPinnedPatternsFromFocusKey}'s array order.
   const pinnedPatterns: PracticePattern[] = focusKey
     ? buildPinnedPatternsFromFocusKey(basePattern, focusKey)
     : []
   const ordered: TileInstance[] = []
   const seen = new Set<string>()
+  const sortPattern: PracticePattern = pinnedPatterns[0] ?? basePattern
 
-  const appendStripOrder = (pinned: PracticePattern) => {
-    const { orderedIds } = stripOrderedHandIdsForPattern(
-      pinned,
-      rackForPattern,
-      rackIds,
-      exposureTileIds,
-      basePattern,
-    )
-    for (const id of orderedIds) {
-      if (seen.has(id)) continue
-      const t = byIdRaw.get(id)
-      if (t) {
-        ordered.push(t)
-        seen.add(id)
-      }
+  const { orderedIds } = stripOrderedHandIdsForPattern(
+    sortPattern,
+    rackForPattern,
+    rackIds,
+    exposureTileIds,
+    basePattern,
+  )
+  for (const id of orderedIds) {
+    if (seen.has(id)) continue
+    const t = byIdRaw.get(id)
+    if (t) {
+      ordered.push(t)
+      seen.add(id)
     }
   }
 
-  if (pinnedPatterns.length > 0) {
-    for (const pp of pinnedPatterns) appendStripOrder(pp)
-  } else {
-    appendStripOrder(basePattern)
-  }
-
-  const pForMatch: PracticePattern = pinnedPatterns.length > 0 ? pinnedPatterns[0]! : basePattern
+  const pForMatch: PracticePattern = sortPattern
   const greedyOpts: GreedyPatternMatchOpts | undefined =
     exposureTileIds?.size ? { exposureTileIds } : undefined
   const tailDetail = greedyPatternMatchDetail(rackForPattern, pForMatch, greedyOpts)
@@ -4257,14 +4218,15 @@ export function sortFullRackTilesForPattern(
 }
 
 /**
- * Suggested-hands `focusKey` for strip sort / match detail (suit-permute stack rows only today).
- * Mirrors `SuggestedHandsPanel` double-click / tier keys.
+ * Suggested-hands `focusKey` for strip sort / match detail.
+ * Tied flexible variants are split into separate {@link SuggestedHandLine} rows at line build time
+ * (each line carries a single combo), so this returns a single-combo key — never a `|`-joined
+ * multi-combo key. Mirrors `SuggestedHandsPanel`'s click/double-click handler keys.
  */
 export function focusKeyForSuggestedHandLine(line: SuggestedHandLine): string | undefined {
   if (line.consecRanksTier && line.consecRanksTier.combos.length > 0) {
-    return `${line.id}::tier::${line.consecRanksTier.combos
-      .map((c) => `${c.base}:${c.perm.join('-')}`)
-      .join('|')}`
+    const c = line.consecRanksTier.combos[0]!
+    return `${line.id}::tier::${c.base}:${c.perm.join('-')}`
   }
   return undefined
 }
@@ -4482,7 +4444,7 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
         ? 'No discards or exposures yet — table info will tighten these estimates next.'
         : `${visibleDeadMatches} tile(s) that help this shape are already visible on discards or bot racks — fewer copies are hidden in other hands or the wall.`
 
-    let primary: SuggestedHandLine = {
+    const primary: SuggestedHandLine = {
       id: p.id,
       title: p.title,
       titleSegments: p.titleSegments,
@@ -4526,7 +4488,13 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
     // These are fixed regardless of which (perm, base) we use for the suit-permute group.
     const priorGroupsMatched = primaryDetail.usedMeta.filter((m) => m.groupIdx < gi).length
 
-    type ComboScore = { perm: Suit[]; base: number; total: number; naturalFill: number }
+    type ComboScore = {
+      perm: Suit[]
+      base: number
+      total: number
+      maxSlotFill: number
+      slotSquareFill: number
+    }
     const comboScores: ComboScore[] = []
 
     for (const base of searchBases) {
@@ -4571,14 +4539,23 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
         }
         const jokerFill = Math.min(jokerCount, jokerEligibleUnfilled)
         const total = priorGroupsMatched + naturalFill + jokerFill
-        comboScores.push({ perm, base, total, naturalFill })
+        const { maxSlotFill, slotSquareFill } = scoreSuitPermuteCombo(
+          remForPermute,
+          consecPermuteGroup,
+          perm,
+          base,
+          exposureTileIds,
+        )
+        comboScores.push({ perm, base, total, maxSlotFill, slotSquareFill })
       }
     }
 
     const sortCombos = (combos: ComboScore[]) =>
-      [...combos].sort((a, b) =>
-        a.base !== b.base ? a.base - b.base : a.perm.join('').localeCompare(b.perm.join('')),
-      )
+      [...combos].sort((a, b) => {
+        if (b.maxSlotFill !== a.maxSlotFill) return b.maxSlotFill - a.maxSlotFill
+        if (b.slotSquareFill !== a.slotSquareFill) return b.slotSquareFill - a.slotSquareFill
+        return a.base !== b.base ? a.base - b.base : a.perm.join('').localeCompare(b.perm.join(''))
+      })
     const collapsePermutationTiers = suitPermuteConsecSlotsAreReorderOnly(consecPermuteGroup)
     const maybeCollapseCombos = (combos: ComboScore[]) => {
       if (!collapsePermutationTiers) return combos
@@ -4588,16 +4565,6 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
         seenBase.add(c.base)
         return true
       })
-    }
-
-    const primaryCombos = maybeCollapseCombos(
-      sortCombos(comboScores.filter((cs) => cs.total === matchedInHand && cs.naturalFill > 0)),
-    )
-    if (primaryCombos.length > 1) {
-      primary = {
-        ...primary,
-        consecRanksTier: { combos: primaryCombos.map((c) => ({ perm: c.perm, base: c.base })) },
-      }
     }
 
     // Group combos by total matched count and produce one tier entry per distinct count
@@ -4618,24 +4585,29 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
       const tierNeeded = Math.max(0, p.roughTarget - total)
       // Sort within tier: by base ascending, then perm lexicographically.
       const sorted = maybeCollapseCombos(sortCombos(tierCombos))
-      tierEntries.push({
-        id: p.id,
-        title: p.title,
-        titleSegments: p.titleSegments,
-        matchedInHand: total,
-        tilesNeededRough: tierNeeded,
-        wallRemaining,
-        visibleDeadMatches,
-        pressure: pressureLabel(tierNeeded, wallRemaining),
-        note,
-        section: p.section,
-        points: p.points,
-        closed: p.closed,
-        cardLineNumber: cardLineNumbers.get(p.id) ?? 1,
-        cardHandCode: p.cardHandCode,
-        cardParenthesis: p.cardParenthesis,
-        consecRanksTier: { combos: sorted.map((c) => ({ perm: c.perm, base: c.base })) },
-      })
+      // Emit one suggested-hand line per tied tier combo so each tied variant has its own
+      // clickable row in the panel (keeps click → sort → highlight wired to a single concrete
+      // suit/base assignment). The panel groups identical-line metadata visually.
+      for (const c of sorted) {
+        tierEntries.push({
+          id: p.id,
+          title: p.title,
+          titleSegments: p.titleSegments,
+          matchedInHand: total,
+          tilesNeededRough: tierNeeded,
+          wallRemaining,
+          visibleDeadMatches,
+          pressure: pressureLabel(tierNeeded, wallRemaining),
+          note,
+          section: p.section,
+          points: p.points,
+          closed: p.closed,
+          cardLineNumber: cardLineNumbers.get(p.id) ?? 1,
+          cardHandCode: p.cardHandCode,
+          cardParenthesis: p.cardParenthesis,
+          consecRanksTier: { combos: [{ perm: c.perm, base: c.base }] },
+        })
+      }
     }
 
     return [primary, ...tierEntries]

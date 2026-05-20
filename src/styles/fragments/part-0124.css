@@ -1,0 +1,298 @@
+/* Discard tray column sizing preview — dev default, `?discardTrayCols=36`, or Menu toggle. */
+
+.panel--discard-tracker[data-discard-tray-test-cols='36'] {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  overflow: visible;
+}
+
+.panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-tracker__shell {
+  flex: 0 0 auto;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+}
+
+.panel--discard-tracker[data-discard-tray-test-cols='36'] > .panel__title-row {
+  display: flex;
+  align-items: center;
+  min-height: 1.35rem;
+  padding-inline: 0.35rem 0.5rem;
+}
+
+.panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-tracker__status--sizing-test {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding-inline-end: 0.35rem;
+  text-align: left;
+  color: var(--window-fg-muted, #a0aec0);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-pile {
+  grid-template-columns: repeat(36, minmax(0, 1fr));
+  --discard-tracker-count-gap: max(2px, calc(var(--rack-tile-w) * 0.1));
+  --rack-tile-w: max(
+    1px,
+    calc(
+      (14 * var(--hand-rack-tile-w) + 13 * var(--player-rack-face-gap) - 35 * var(--player-rack-face-gap)) / 36
+    )
+  );
+  --rack-tile-h: calc(var(--rack-tile-w) * 4 / 3);
+  /* Larger than default `.tile-face` glyph scale (0.74× tile width, not ~0.58×). */
+  --tile-face-glyph-fs: calc(var(--rack-tile-w) * 0.74);
+  --discard-tracker-count-h: calc(
+    var(--discard-tracker-count-gap) + var(--tile-face-glyph-fs) * 1.1
+  );
+  grid-auto-rows: calc(var(--rack-tile-h) + var(--discard-tracker-count-h));
+}
+
+@container play-split-rack-lock (min-width: 0px) {
+  .panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-pile {
+    --rack-tile-w: max(
+      1px,
+      calc((100cqi - 35 * var(--player-rack-face-gap)) / 36)
+    );
+    --rack-tile-h: calc(var(--rack-tile-w) * 4 / 3);
+    --tile-face-glyph-fs: calc(var(--rack-tile-w) * 0.74);
+  }
+}
+
+@container discard-tray (min-width: 0px) {
+  .panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-tracker__content {
+    --discard-tray-rack-tile-w: max(
+      1px,
+      calc((100cqw - 35 * var(--player-rack-face-gap)) / 36)
+    );
+    /* Tray shell corners: same 0.35rem / hand-rack-tile-w ratio as main rack (see tile faces below). */
+    --discard-tray-tile-corner-r: calc(
+      0.35rem * var(--discard-tray-rack-tile-w) / var(--hand-rack-tile-w)
+    );
+  }
+}
+
+/* Sizing strip only: larger glyphs; corner radius = main rack ratio (0.35rem ÷ hand-rack-tile-w). */
+.panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-pile .tile-face {
+  /* Override default `.tile-face` glyph scale so F–J strip matches the sizing preview. */
+  --tile-face-glyph-fs: calc(var(--rack-tile-w) * 0.74);
+  /* % tracks this face’s rendered width (main rack uses 0.35rem on --hand-rack-tile-w). */
+  --tile-face-border-radius: calc(100% * 0.35rem / var(--hand-rack-tile-w));
+  border-radius: var(--tile-face-border-radius);
+  overflow: hidden;
+}
+
+/* Same ink as wall tiles remaining (`.rack-bottom-wall`, part-0021). */
+.panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-pile .tile-face,
+.panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-pile .tile-face__glyph,
+.panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-pile .tile-face__glyph-num,
+.panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-pile .tile-face__glyph-letter {
+  color: var(--color-off-black);
+}
+
+.panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-pile .tile-face__glyph,
+.panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-pile .tile-face__glyph-num,
+.panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-pile .tile-face__glyph-letter {
+  font-size: calc(var(--rack-tile-w) * 0.74);
+}
+
+/* Fixed-slot discard tracker: tile + play count under each column. */
+.panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-entry--tracker-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--discard-tracker-count-gap);
+  overflow: visible;
+  min-height: 0;
+}
+
+.panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-entry--tracker-slot .discard-entry__fly-wrap {
+  width: 100%;
+  height: var(--rack-tile-h);
+  flex: 0 0 var(--rack-tile-h);
+  min-height: var(--rack-tile-h);
+}
+
+.panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-entry--tracker-slot .discard-entry__fly,
+.panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-entry--tracker-slot .tile-face {
+  width: 100%;
+  height: 100%;
+}
+
+/* Sort button label ink (part-0103 `.btn--rack-neutral`); size matches tile glyphs. */
+.panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-entry__play-count {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
+  font-family: 'Noto Sans Arabic', var(--sans);
+  font-size: var(--tile-face-glyph-fs);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+  color: #dcdce0;
+  text-align: center;
+}
+
+/*
+ * 36-col strip + opponent row: keep discard + exposures in one dark tray (`__content`).
+ * Drop zone must stay in normal flow — absolute + flex:0 collapses the tray to zero height.
+ */
+.panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-tracker__content {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  height: auto;
+  min-height: unset;
+  overflow: visible;
+  justify-content: flex-start;
+  gap: 0;
+  padding: 0;
+  box-sizing: border-box;
+  /*
+   * Shared tile metrics for the 36-col discard strip and the 3×12 opponent row below.
+   * `discard-tray` container (below) supplies cqw when supported.
+   */
+  --rack-tile-w: max(
+    1px,
+    calc(
+      (14 * var(--hand-rack-tile-w) + 13 * var(--player-rack-face-gap) - 35 * var(--player-rack-face-gap)) / 36
+    )
+  );
+  --rack-tile-h: calc(var(--rack-tile-w) * 4 / 3);
+  --exposure-slot-h: var(--rack-tile-h);
+}
+
+/* Discard strip + opponent row stack (no absolute drop zone — avoids a tall empty tray). */
+.panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-tracker__strip-stack {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  gap: var(--player-rack-face-gap);
+  width: 100%;
+}
+
+.panel--discard-tracker[data-discard-tray-test-cols='36']
+  .discard-tracker__strip-stack
+  .discard-pile-drop-zone {
+  position: static;
+  inset: unset;
+  flex: 0 0 auto;
+  height: auto;
+  overflow: visible;
+}
+
+.panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-pile {
+  overflow: visible;
+}
+
+.panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-tracker__bot-exposures {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+/* Opponent row: same 36-column grid as `.discard-pile` (3 seats × 12 cols). */
+
+.panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-tracker__bot-exposures-list {
+  display: grid;
+  grid-template-columns: repeat(36, minmax(0, 1fr));
+  gap: var(--player-rack-face-gap);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-tracker__bot-exposures .app-opponents-rail__cell {
+  grid-column: span 12;
+  display: block;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border-radius: 0;
+}
+
+.panel--discard-tracker[data-discard-tray-test-cols='36']
+  .discard-tracker__bot-exposures
+  .exposure-rack--discard-tracker-opponent {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--player-rack-face-gap);
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  align-items: start;
+  justify-items: stretch;
+}
+
+.panel--discard-tracker[data-discard-tray-test-cols='36']
+  .discard-tracker__bot-exposures
+  .exposure-rack--discard-tracker-opponent
+  .exposure-rack__meld-drop {
+  display: contents;
+}
+
+.panel--discard-tracker[data-discard-tray-test-cols='36']
+  .discard-tracker__bot-exposures
+  .exposure-rack--discard-tracker-opponent
+  .exposure-rack__slot {
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  height: var(--rack-tile-h);
+  justify-content: center;
+  align-items: center;
+}
+
+.panel--discard-tracker[data-discard-tray-test-cols='36']
+  .discard-tracker__bot-exposures
+  .exposure-rack--discard-tracker-opponent
+  .exposure-rack__slot
+  .tile-face {
+  width: 100%;
+  height: 100%;
+}
+
+/* Empty wells: inset rim (not outer border), dimmer than default exposure slots. */
+.panel--discard-tracker[data-discard-tray-test-cols='36']
+  .discard-tracker__bot-exposures
+  .exposure-rack--discard-tracker-opponent
+  .exposure-rack__slot--empty::before {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border: none;
+  border-radius: var(--discard-tray-tile-corner-r, var(--tile-face-border-radius, 0.35rem));
+  background: color-mix(in srgb, var(--color-white) 3%, var(--window-inner-surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-white) 9%, var(--color-black) 91%);
+}
+
+@media (prefers-color-scheme: dark) {
+  .panel--discard-tracker[data-discard-tray-test-cols='36']
+    .discard-tracker__bot-exposures
+    .exposure-rack--discard-tracker-opponent
+    .exposure-rack__slot--empty::before {
+    background: color-mix(in srgb, var(--color-white) 2.5%, var(--window-inner-surface));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-white) 8%, var(--color-black) 92%);
+  }
+}
+
+@container play-split-rack-lock (min-width: 0px) {
+  .panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-tracker__content {
+    --rack-tile-w: max(1px, calc((100cqi - 35 * var(--player-rack-face-gap)) / 36));
+    --rack-tile-h: calc(var(--rack-tile-w) * 4 / 3);
+    --exposure-slot-h: var(--rack-tile-h);
+  }
+}
+
+@container discard-tray (min-width: 0px) {
+  .panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-tracker__content {
+    --rack-tile-w: max(1px, calc((100cqw - 35 * var(--player-rack-face-gap)) / 36));
+    --rack-tile-h: calc(var(--rack-tile-w) * 4 / 3);
+    --exposure-slot-h: var(--rack-tile-h);
+  }
+}

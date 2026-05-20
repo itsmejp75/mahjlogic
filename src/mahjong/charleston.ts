@@ -156,7 +156,7 @@ export function charlestonPassStripInstructionAria(phase: CharlestonPhase): stri
 }
 
 /** Visible Pass button text on the rack Charleston bar (direction lives in the pass-strip copy). */
-export function charlestonPassButtonLabel(_phase: CharlestonPhase): string {
+export function charlestonPassButtonLabel(): string {
   return 'Pass'
 }
 

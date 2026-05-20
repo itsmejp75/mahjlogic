@@ -29,7 +29,14 @@ import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from '@d
 import { CSS } from '@dnd-kit/utilities'
 import { buildAmericanDeck, dealOpeningFour, shuffle } from './mahjong/deck'
 import type { ClaimType, DiscardEntry, EastExposure, Seat, Suit, TileDef, TileInstance } from './mahjong/types'
-import { findExactMatches, sortTiles, tileDefsEqual, type SortMode } from './mahjong/tileUtils'
+import { tileAriaLabel } from './mahjong/labels'
+import {
+  countDiscardEntriesMatchingDef,
+  findExactMatches,
+  sortTiles,
+  tileDefsEqual,
+  type SortMode,
+} from './mahjong/tileUtils'
 import { PASS_BOX_ID, passDropIndex, type PassSlots } from './mahjong/passTargets'
 import {
   applyCharlestonExchange,
@@ -172,11 +179,73 @@ const BOT_DIFFICULTY_LABEL: Record<BotDifficulty, string> = {
   unfair: 'Unfair',
 }
 
+const LS_KEY_DISCARD_TRAY_SIZING_TEST = 'mahjlogic.discardTraySizingTestCols'
+
+/** `?discardTrayCols=36` or Menu → “36-col discard test” (dev) or localStorage key above. */
+function readDiscardTraySizingTestColsFromUrl(): number {
+  if (typeof window === 'undefined') return 0
+  const raw = new URLSearchParams(window.location.search).get('discardTrayCols')
+  if (raw == null || raw === '') return 0
+  const n = Number.parseInt(raw, 10)
+  return Number.isFinite(n) && n > 0 && n <= 50 ? n : 0
+}
+
+function readDiscardTraySizingTestColsFromStorage(): number {
+  try {
+    const raw = localStorage.getItem(LS_KEY_DISCARD_TRAY_SIZING_TEST)
+    if (raw == null || raw === '') return 0
+    const n = Number.parseInt(raw, 10)
+    if (!Number.isFinite(n) || n <= 0 || n > 50) return 0
+    if (n === 35) return 36
+    return n
+  } catch {
+    return 0
+  }
+}
+
+function readDiscardTraySizingTestColsInitial(): number {
+  const fromUrl = readDiscardTraySizingTestColsFromUrl()
+  if (fromUrl > 0) return fromUrl
+  const fromStorage = readDiscardTraySizingTestColsFromStorage()
+  if (fromStorage > 0) return fromStorage
+  // Dev default: show the sizing preview until turned off (Menu or `?discardTrayCols=0`).
+  if (import.meta.env.DEV) return 36
+  return 0
+}
+
+/** Reference strip (36): F, 1d–9d, 0, 1b–9b, G, 1c–9c, R, N-E-W-S, J. */
+const DISCARD_TRAY_SIZING_TEST_SEQUENCE: readonly TileDef[] = [
+  { cat: 'flower', flower: 1 },
+  ...([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((rank) => ({ cat: 'suit', suit: 'dot', rank }) as const),
+  { cat: 'dragon', dragon: 'soap' },
+  ...([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((rank) => ({ cat: 'suit', suit: 'bam', rank }) as const),
+  { cat: 'dragon', dragon: 'green' },
+  ...([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((rank) => ({ cat: 'suit', suit: 'crak', rank }) as const),
+  { cat: 'dragon', dragon: 'red' },
+  { cat: 'wind', wind: 'N' },
+  { cat: 'wind', wind: 'E' },
+  { cat: 'wind', wind: 'W' },
+  { cat: 'wind', wind: 'S' },
+  { cat: 'joker' },
+]
+
+const DISCARD_TRAY_SIZING_TEST_COL_COUNT = DISCARD_TRAY_SIZING_TEST_SEQUENCE.length
+
+function buildDiscardTraySizingTestEntries(cols: number): DiscardEntry[] {
+  const n = Math.min(cols, DISCARD_TRAY_SIZING_TEST_SEQUENCE.length)
+  return DISCARD_TRAY_SIZING_TEST_SEQUENCE.slice(0, n).map((def, i) => ({
+    tile: { id: `discard-tray-sizing-test-${i}`, def },
+    seat: 'east' as const,
+  }))
+}
 
 const LS_KEY_BOT_WINS = 'mahjlogic.botWinsEnabled'
 
 const BOT_WINS_LABEL = 'Bot wins'
 const LS_KEY_ANIMATIONS = 'mahjlogic.animationsEnabled'
+/** When false, rack / table action buttons use neutral gray (like Sort) instead of teal, purple, etc. */
+const LS_KEY_COLOR_BUTTONS = 'mahjlogic.colorButtonsEnabled'
+const COLOR_BUTTONS_LABEL = 'Color buttons'
 const LS_KEY_BOT_DIFFICULTY = 'mahjlogic.botDifficulty'
 /**
  * Tile face style (`TILE_GRAPHICS` / `data-tile-graphics`). Product default is Prism (`solid-color`).
@@ -275,6 +344,16 @@ function readBotWinsEnabledFromStorage(): boolean {
 function readAnimationsEnabledFromStorage(): boolean {
   try {
     const v = localStorage.getItem(LS_KEY_ANIMATIONS)
+    if (v === null) return true
+    return v === 'true' || v === '1'
+  } catch {
+    return true
+  }
+}
+
+function readColorButtonsFromStorage(): boolean {
+  try {
+    const v = localStorage.getItem(LS_KEY_COLOR_BUTTONS)
     if (v === null) return true
     return v === 'true' || v === '1'
   } catch {
@@ -457,18 +536,21 @@ function OpponentExposureDropZone({
   seat,
   active,
   showWatermark = true,
+  watermarkLabel,
   children,
 }: {
-  seat: 'South' | 'West' | 'North'
+  seat: BotSeat
   active: boolean
-  /** Seat labels are hidden when the rack is used only as an invisible DnD/hint layer. */
   showWatermark?: boolean
+  /** Compass seat name when `watermarkLabel` is omitted (legacy bot column). */
+  watermarkLabel?: string
   children: ReactNode
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: botSeatSwapDropId(seat),
     disabled: !active,
   })
+  const label = watermarkLabel ?? seat
   return (
     <li
       ref={setNodeRef}
@@ -479,12 +561,79 @@ function OpponentExposureDropZone({
       ]
         .filter(Boolean)
         .join(' ')}
+      aria-label={watermarkLabel ?? undefined}
     >
       {showWatermark ? (
-        <span className="bot-exposure-row__watermark" aria-hidden="true">{seat}</span>
+        <span className="bot-exposure-row__watermark" aria-hidden="true">{label}</span>
       ) : null}
       {children}
     </li>
+  )
+}
+
+function DiscardTrackerBotExposures({
+  botExposures,
+  mainPhase,
+  jokerSwapUiActive,
+  animationsEnabled,
+  botExposureFlyInTileIds,
+  botExposureSuggestedTileGuide,
+  botExposureDeadIds,
+  jokerSwapHintBounceTileIds,
+  jokerSwapHintBounceEpoch,
+}: {
+  botExposures: BotExposure[]
+  mainPhase: MainPhase
+  jokerSwapUiActive: boolean
+  animationsEnabled: boolean
+  botExposureFlyInTileIds: ReadonlySet<string> | null
+  botExposureSuggestedTileGuide: { bestIds: ReadonlySet<string> } | null
+  botExposureDeadIds: ReadonlySet<string> | null
+  jokerSwapHintBounceTileIds: ReadonlySet<string> | null
+  jokerSwapHintBounceEpoch: number
+}) {
+  return (
+    <div className="discard-tracker__bot-exposures" aria-label="Opponent exposures">
+      <ul className="bot-exposures__list discard-tracker__bot-exposures-list">
+        {OPPONENT_EXPOSURE_SEATS.map((seat) => {
+          const melds = botExposures
+            .map((exp, globalIdx) => ({ exp, globalIdx }))
+            .filter(({ exp }) => exp.seat === seat)
+            .filter(
+              ({ exp }) =>
+                mainPhase !== 'wall-game' || exp.tiles.length <= WALL_GAME_MAX_EXPOSURE_MELD_TILES,
+            )
+            .map(({ exp, globalIdx }) => ({
+              tiles: exp.tiles,
+              dropZoneId:
+                jokerSwapUiActive && exp.tiles.some((t) => t.def.cat === 'joker')
+                  ? botExposureSwapDropId(globalIdx)
+                  : undefined,
+            }))
+          return (
+            <OpponentExposureDropZone
+              key={seat}
+              seat={seat}
+              active={jokerSwapUiActive}
+              showWatermark={false}
+            >
+              <ExposureRack
+                melds={melds}
+                slotCount={12}
+                className="exposure-rack--discard-tracker-opponent"
+                ariaLabel={`${seat} exposures`}
+                flyInTileIds={animationsEnabled ? botExposureFlyInTileIds : null}
+                suggestedTileGuide={botExposureSuggestedTileGuide}
+                suggestedDeadTileIds={botExposureDeadIds}
+                botJokerBorderMenuOn={false}
+                jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
+                jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
+              />
+            </OpponentExposureDropZone>
+          )
+        })}
+      </ul>
+    </div>
   )
 }
 
@@ -697,6 +846,22 @@ type RoundState = {
 }
 
 /**
+ * Discard pile entries shown in the strip / tracker counts — excludes a bot discard still
+ * claimable during `bot-turn` or `call-staging` until all players pass or someone claims it.
+ */
+function discardPileCommittedForDisplay(
+  r: Pick<RoundState, 'discardPile' | 'mainPhase' | 'activeBotDiscard'>,
+): RoundState['discardPile'] {
+  if (
+    (r.mainPhase === 'bot-turn' || r.mainPhase === 'call-staging') &&
+    r.activeBotDiscard
+  ) {
+    return r.discardPile.filter((e) => e.tile.id !== r.activeBotDiscard!.id)
+  }
+  return r.discardPile
+}
+
+/**
  * Tiles in the discard pile that count as “dead” for practice-card table visibility / coach hints.
  * Matches the discard strip: while a bot’s discard is still claimable (`bot-turn` / `call-staging`),
  * that tile is omitted until the claim resolves — it must not read as already in your rack or as a
@@ -705,15 +870,7 @@ type RoundState = {
 function deadDiscardTilesForRanking(
   r: Pick<RoundState, 'discardPile' | 'mainPhase' | 'activeBotDiscard'>,
 ): TileInstance[] {
-  if (
-    (r.mainPhase === 'bot-turn' || r.mainPhase === 'call-staging') &&
-    r.activeBotDiscard
-  ) {
-    return r.discardPile
-      .filter((e) => e.tile.id !== r.activeBotDiscard!.id)
-      .map((e) => e.tile)
-  }
-  return r.discardPile.map((e) => e.tile)
+  return discardPileCommittedForDisplay(r).map((e) => e.tile)
 }
 
 function totalCopiesForDeadHintDef(def: TileDef): number {
@@ -1080,8 +1237,8 @@ function charlestonIncomingHandTileIds(
 const WALL_GAME_MAX_EXPOSURE_MELD_TILES = 10
 
 const BOT_LABELS = ['South', 'West', 'North'] as const
-// Visual rail order (left→right) to match table seating around East.
-const BOT_RAIL_LABELS = ['South', 'West', 'North'] as const
+/** Left→right around East: North (cols 1–12), West (13–24), South (25–36). */
+const OPPONENT_EXPOSURE_SEATS: readonly BotSeat[] = ['North', 'West', 'South']
 const BOT_SEATS: Seat[] = ['south', 'west', 'north']
 
 function toFourHands(r: Pick<RoundState, 'hand' | 'bots'>): FourHands {
@@ -2518,6 +2675,9 @@ export default function App() {
   const [suggestedSuppressedHandKey, setSuggestedSuppressedHandKey] = useState<string | null>(null)
   const [suggestedCategoryResetEpoch, setSuggestedCategoryResetEpoch] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [discardTraySizingTestCols, setDiscardTraySizingTestCols] = useState(
+    readDiscardTraySizingTestColsInitial,
+  )
   const menuOpenPrevRef = useRef(false)
   const menuContainerRef = useRef<HTMLDivElement>(null)
   const [wallGameReviewing, setWallGameReviewing] = useState(false)
@@ -2534,6 +2694,31 @@ export default function App() {
   // ── Game options (persisted) ──────────────────────────────────────────────
   const [botWinsEnabled, setBotWinsEnabled] = useState<boolean>(() => readBotWinsEnabledFromStorage())
   const [animationsEnabled, setAnimationsEnabled] = useState<boolean>(() => readAnimationsEnabledFromStorage())
+  const [colorButtonsEnabled, setColorButtonsEnabled] = useState<boolean>(() => readColorButtonsFromStorage())
+
+  useEffect(() => {
+    const fromUrl = readDiscardTraySizingTestColsFromUrl()
+    if (fromUrl > 0) setDiscardTraySizingTestCols(fromUrl)
+  }, [])
+
+  const toggleDiscardTraySizingTest = useCallback(() => {
+    setDiscardTraySizingTestCols((prev) => {
+      const next = prev > 0 ? 0 : DISCARD_TRAY_SIZING_TEST_COL_COUNT
+      try {
+        if (next > 0) localStorage.setItem(LS_KEY_DISCARD_TRAY_SIZING_TEST, String(next))
+        else localStorage.removeItem(LS_KEY_DISCARD_TRAY_SIZING_TEST)
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }, [])
+
+  useEffect(() => {
+    if (discardTraySizingTestCols > 0 && suggestedPanelHandsOn) {
+      setSuggestedPanelHandsOn(false)
+    }
+  }, [discardTraySizingTestCols, suggestedPanelHandsOn])
   const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>(() => readBotDifficultyFromStorage())
   const botDifficultyRef = useRef(botDifficulty)
   botDifficultyRef.current = botDifficulty
@@ -2606,6 +2791,18 @@ export default function App() {
       const next = !v
       try {
         localStorage.setItem(LS_KEY_ANIMATIONS, next ? 'true' : 'false')
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }, [])
+
+  const toggleColorButtons = useCallback(() => {
+    setColorButtonsEnabled((v) => {
+      const next = !v
+      try {
+        localStorage.setItem(LS_KEY_COLOR_BUTTONS, next ? 'true' : 'false')
       } catch {
         /* ignore */
       }
@@ -2693,6 +2890,10 @@ export default function App() {
       const a = readAnimationsEnabledFromStorage()
       return prev === a ? prev : a
     })
+    setColorButtonsEnabled((prev) => {
+      const c = readColorButtonsFromStorage()
+      return prev === c ? prev : c
+    })
     setBotDifficulty((prev) => {
       const b = readBotDifficultyFromStorage()
       return prev === b ? prev : b
@@ -2751,6 +2952,9 @@ export default function App() {
         const on = e.newValue === 'true' || e.newValue === '1'
         setAnimationsEnabled(on)
         animationsEnabledRef.current = on
+      } else if (e.key === LS_KEY_COLOR_BUTTONS) {
+        if (e.newValue == null) return
+        setColorButtonsEnabled(e.newValue === 'true' || e.newValue === '1')
       } else if (e.key === LS_KEY_BOT_DIFFICULTY) {
         if (e.newValue == null) return
         if (isBotDifficulty(e.newValue)) setBotDifficulty(e.newValue)
@@ -2984,10 +3188,12 @@ export default function App() {
   const handTileFlyInKey = handTileFlyIn
     ? `${handTileFlyIn.from}:${[...handTileFlyIn.ids].sort().join(',')}:${handTileFlyIn.staggerWaveDelayMs ?? 0}`
     : ''
+  const handTileFlyInCount = handTileFlyIn?.ids.length ?? 0
+  const handTileFlyInStaggerMs = handTileFlyIn?.staggerWaveDelayMs ?? 0
   useEffect(() => {
-    if (!handTileFlyInKey || !handTileFlyIn) return
-    const stagger = handTileFlyIn.staggerWaveDelayMs ?? 0
-    const n = handTileFlyIn.ids.length
+    if (!handTileFlyInKey) return
+    const stagger = handTileFlyInStaggerMs
+    const n = handTileFlyInCount
     const waveTailMs = n > 0 && stagger > 0 ? (n - 1) * stagger : 0
     /** ~one `tile-drop-in` duration (340ms) after the last tile’s delay, plus buffer. */
     const clearMs = 340 + waveTailMs + 90
@@ -2995,7 +3201,7 @@ export default function App() {
       setRound((r) => (r.handTileFlyIn ? { ...r, handTileFlyIn: null } : r))
     }, clearMs)
     return () => window.clearTimeout(t)
-  }, [handTileFlyInKey])
+  }, [handTileFlyInKey, handTileFlyInCount, handTileFlyInStaggerMs])
 
   useEffect(() => {
     if (!handJokerSwapFlyInFromBelowId) return
@@ -3265,14 +3471,11 @@ export default function App() {
 
   /** Shown in the discard strip only after all passes / claims resolve — not while East (or bots) may still claim it. */
   const displayedDiscardPile = useMemo(() => {
-    if (
-      (mainPhase === 'bot-turn' || mainPhase === 'call-staging') &&
-      activeBotDiscard
-    ) {
-      return discardPile.filter((e) => e.tile.id !== activeBotDiscard.id)
+    if (discardTraySizingTestCols > 0) {
+      return buildDiscardTraySizingTestEntries(DISCARD_TRAY_SIZING_TEST_COL_COUNT)
     }
-    return discardPile
-  }, [discardPile, mainPhase, activeBotDiscard])
+    return discardPileCommittedForDisplay({ discardPile, mainPhase, activeBotDiscard })
+  }, [discardPile, mainPhase, activeBotDiscard, discardTraySizingTestCols])
 
   /**
    * Discard-tracker fly-in: detect newly displayed tile ids **during render** so the first paint
@@ -3281,7 +3484,7 @@ export default function App() {
    */
   const pendingDiscardFlyInIdsRef = useRef(new Set<string>())
   const prevDiscardIdsSnapshotRef = useRef<string[]>([])
-  const [discardFlyEndEpoch, setDiscardFlyEndEpoch] = useState(0)
+  const [, setDiscardFlyEndEpoch] = useState(0)
 
   useMemo(() => {
     const now = displayedDiscardPile.map((e) => e.tile.id)
@@ -3296,25 +3499,44 @@ export default function App() {
     const prev = prevDiscardIdsSnapshotRef.current
     const added = now.filter((id) => !prev.includes(id))
     prevDiscardIdsSnapshotRef.current = now
-    if (animationsEnabled && added.length > 0) {
+    if (
+      discardTraySizingTestCols === 0 &&
+      animationsEnabled &&
+      added.length > 0
+    ) {
       for (const id of added) pending.add(id)
     }
-  }, [displayedDiscardPile, animationsEnabled])
+  }, [displayedDiscardPile, animationsEnabled, discardTraySizingTestCols])
 
   const popDiscardDropInId = useCallback((id: string) => {
     if (!pendingDiscardFlyInIdsRef.current.delete(id)) return
     setDiscardFlyEndEpoch((e) => e + 1)
   }, [])
 
+  /** 36-slot tracker: committed discards per reference tile (`tileDefsEqual`). */
+  const discardTrackerSlotPlayCounts = useMemo(() => {
+    if (discardTraySizingTestCols === 0) return null
+    const committedPile = discardPileCommittedForDisplay({
+      discardPile,
+      mainPhase,
+      activeBotDiscard,
+    })
+    return DISCARD_TRAY_SIZING_TEST_SEQUENCE.map((def) =>
+      countDiscardEntriesMatchingDef(committedPile, def),
+    )
+  }, [discardPile, mainPhase, activeBotDiscard, discardTraySizingTestCols])
+
+  const discardTrackerUsesFixedSlots = discardTraySizingTestCols > 0
+
   /** Bot-turn discard box: tile flies in from that seat’s direction (same 0.3s vector feel as Charleston pass fly-out). */
-  const discardTrackerEntries = useMemo(
-    () =>
-      displayedDiscardPile.map((entry) => ({
-        ...entry,
-        flyAnimate: animationsEnabled && pendingDiscardFlyInIdsRef.current.has(entry.tile.id),
-      })),
-    [displayedDiscardPile, animationsEnabled, discardFlyEndEpoch],
-  )
+  const discardTrackerEntries = displayedDiscardPile.map((entry, slotIndex) => ({
+    ...entry,
+    playCount: discardTrackerSlotPlayCounts?.[slotIndex] ?? 0,
+    flyAnimate:
+      !discardTrackerUsesFixedSlots &&
+      animationsEnabled &&
+      pendingDiscardFlyInIdsRef.current.has(entry.tile.id),
+  }))
 
   const incomingBotDiscardFlyFrom = useMemo((): HandTileFlyInFrom | null => {
     if (mainPhase !== 'bot-turn' || !activeBotDiscard || activeBotIndex == null) return null
@@ -3854,6 +4076,7 @@ export default function App() {
     botExposures,
     rackForSuggestedHandsUi,
     cardPatterns,
+    mainPhase,
   ])
 
   useEffect(() => {
@@ -3956,7 +4179,7 @@ export default function App() {
         focusKey,
       ),
     }))
-  }, [])
+  }, [pushRound])
 
   const postGameBotReview = useMemo(() => {
     if (mainPhase !== 'mahjong-declared') return null
@@ -4731,7 +4954,7 @@ export default function App() {
     if (blockedByJoker) {
       setCharlestonPassError('Error: Jokers can not be passed during Charleston')
     }
-  }, [])
+  }, [pushRound])
 
   const skipToCourtesyPass = useCallback(() => {
     if (passStripFlyoutTimerRef.current) {
@@ -4756,7 +4979,7 @@ export default function App() {
         selectedHandTileId: null,
       }
     })
-  }, [])
+  }, [pushRound])
 
   const onCharlestonPassButtonClick = useCallback(() => {
     const passSlotCount = passSlots.filter(Boolean).length
@@ -4996,7 +5219,7 @@ export default function App() {
     const pick = jokerSwapPick
     setPendingJokerSwapTileId(null)
     pushRound((r) => applyEastNaturalForExposedJoker(r, { ...pick, eastTileId: pid }))
-  }, [jokerSwapUiActive, pendingJokerSwapTileId, pendingEastDiscardTile, jokerSwapPick])
+  }, [jokerSwapUiActive, pendingJokerSwapTileId, pendingEastDiscardTile, jokerSwapPick, pushRound])
 
   const sortHand = useCallback(() => {
     const nextMode: SortMode = sortModeRef.current === 'suit' ? 'number' : 'suit'
@@ -5503,10 +5726,6 @@ export default function App() {
       endCallInitiateTrack,
       initiateCall,
       activeBotDiscard?.id,
-      eastExposures,
-      botExposures,
-      wall,
-      discardPile,
       handInsertIndexFromOver,
       handVisualInsertIndexFromPointer,
     ],
@@ -5768,7 +5987,7 @@ export default function App() {
     <div
       className="app"
       data-tile-graphics={tileGraphics}
-      data-color-buttons="off"
+      data-color-buttons={colorButtonsEnabled ? 'on' : 'off'}
       data-animations={animationsEnabled ? 'on' : 'off'}
     >
       {menuOpen ? (
@@ -6053,6 +6272,16 @@ export default function App() {
                 </div>
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
                   <AppMenuSettingSwitch
+                    labelId="app-menu-label-color-buttons"
+                    pressed={colorButtonsEnabled}
+                    onToggle={toggleColorButtons}
+                  />
+                  <span className="app-menu-modal__label" id="app-menu-label-color-buttons">
+                    {COLOR_BUTTONS_LABEL}
+                  </span>
+                </div>
+                <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                  <AppMenuSettingSwitch
                     labelId="app-menu-label-dead-hand-warnings"
                     pressed={deadHandWarningsEnabled}
                     onToggle={toggleDeadHandWarnings}
@@ -6084,6 +6313,18 @@ export default function App() {
                     {CONCEALED_HAND_REMINDER_LABEL}
                   </span>
                 </div>
+                {import.meta.env.DEV ? (
+                  <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                    <AppMenuSettingSwitch
+                      labelId="app-menu-label-discard-tray-sizing-test"
+                      pressed={discardTraySizingTestCols > 0}
+                      onToggle={toggleDiscardTraySizingTest}
+                    />
+                    <span className="app-menu-modal__label" id="app-menu-label-discard-tray-sizing-test">
+                      36-col discard test
+                    </span>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
@@ -6875,7 +7116,7 @@ export default function App() {
                                 aria-disabled={!passReady || passStripFlyOut != null}
                                 onClick={onCharlestonPassButtonClick}
                               >
-                                {charlestonPassButtonLabel(charlestonPhase)}
+                                {charlestonPassButtonLabel()}
                               </button>
                               {undoEnabled && canUndo ? (
                                 <span
@@ -7320,8 +7561,16 @@ export default function App() {
                     aria-label="Discard tracker"
                     data-joker-swap-dnd={jokerSwapUiActive ? 'on' : 'off'}
                     data-suggested-hands-open={suggestedPanelHandsOn ? 'on' : 'off'}
+                    {...(discardTraySizingTestCols > 0
+                      ? { 'data-discard-tray-test-cols': String(DISCARD_TRAY_SIZING_TEST_COL_COUNT) }
+                      : {})}
                   >
                     <div className="panel__title-row panel__title-row--discard-tracker">
+                      {discardTraySizingTestCols > 0 ? (
+                        <p className="discard-tracker__status discard-tracker__status--sizing-test" aria-live="polite">
+                          Sizing test: {DISCARD_TRAY_SIZING_TEST_COL_COUNT} tiles — Menu to turn off
+                        </p>
+                      ) : null}
                       {menuInBotExposuresToolbar ? (
                         <div
                           ref={menuContainerRef}
@@ -7354,26 +7603,44 @@ export default function App() {
                     </div>
                     <div className="discard-tracker__shell">
                       <div className="discard-tracker__content">
+                        <div className="discard-tracker__strip-stack">
                         <DiscardPileDropZone
                           swapDropActive={jokerSwapUiActive}
                           onContainerNode={(node) => {
                             discardPileScrollElRef.current = node
                           }}
                         >
-                          {displayedDiscardPile.length > 0 ? (
-                            <div className="discard-pile" role="list" aria-label="Committed discards">
-                              {discardTrackerEntries.map(({ tile, seat, flyAnimate }) => {
+                          {displayedDiscardPile.length > 0 || discardTraySizingTestCols > 0 ? (
+                            <div
+                              className="discard-pile"
+                              role="list"
+                              aria-label={
+                                discardTrackerUsesFixedSlots
+                                  ? 'Discard tracker'
+                                  : 'Committed discards'
+                              }
+                            >
+                              {discardTrackerEntries.map(({ tile, seat, flyAnimate, playCount }) => {
                                 const needRing =
-                                  suggestedDiscardNeedIds != null && suggestedDiscardNeedIds.has(tile.id)
+                                  !discardTrackerUsesFixedSlots &&
+                                  suggestedDiscardNeedIds != null &&
+                                  suggestedDiscardNeedIds.has(tile.id)
                                 const isDead =
+                                  !discardTrackerUsesFixedSlots &&
                                   !!suggestedDeadTableGuideForView?.discardDeadIds.has(tile.id)
-                                const isDim = isDead || (suggestedDiscardPileCanDim && !needRing)
+                                const isDim =
+                                  !discardTrackerUsesFixedSlots &&
+                                  (isDead || (suggestedDiscardPileCanDim && !needRing))
+                                const tileLabel = tileAriaLabel(tile.def)
                                 return (
                                   <div
                                     key={tile.id}
                                     className={[
                                       'discard-entry',
                                       `discard-entry--${seat}`,
+                                      discardTrackerUsesFixedSlots
+                                        ? 'discard-entry--tracker-slot'
+                                        : '',
                                       needRing ? 'discard-entry--suggest-need' : '',
                                       isDead ? 'discard-entry--suggest-dying' : '',
                                       isDim ? 'discard-entry--suggest-dim' : '',
@@ -7381,17 +7648,34 @@ export default function App() {
                                       .filter(Boolean)
                                       .join(' ')}
                                     role="listitem"
-                                    aria-label={`${seat} discard`}
+                                    aria-label={
+                                      discardTrackerUsesFixedSlots
+                                        ? playCount > 0
+                                          ? `${tileLabel}, ${playCount} discarded`
+                                          : tileLabel
+                                        : `${seat} discard`
+                                    }
                                   >
-                                    <DiscardPileFlyInTile
-                                      tileId={tile.id}
-                                      animate={flyAnimate}
-                                      onDropInEnd={() => {
-                                        popDiscardDropInId(tile.id)
-                                      }}
-                                    >
-                                      <TileFace def={tile.def} />
-                                    </DiscardPileFlyInTile>
+                                    {discardTrackerUsesFixedSlots ? (
+                                      <>
+                                        <div className="discard-entry__fly-wrap">
+                                          <TileFace def={tile.def} compactRankOnly />
+                                        </div>
+                                        {playCount > 0 ? (
+                                          <span className="discard-entry__play-count">{playCount}</span>
+                                        ) : null}
+                                      </>
+                                    ) : (
+                                      <DiscardPileFlyInTile
+                                        tileId={tile.id}
+                                        animate={flyAnimate}
+                                        onDropInEnd={() => {
+                                          popDiscardDropInId(tile.id)
+                                        }}
+                                      >
+                                        <TileFace def={tile.def} />
+                                      </DiscardPileFlyInTile>
+                                    )}
                                   </div>
                                 )
                               })}
@@ -7409,6 +7693,18 @@ export default function App() {
                             </div>
                           ) : null}
                         </DiscardPileDropZone>
+                        <DiscardTrackerBotExposures
+                          botExposures={botExposures}
+                          mainPhase={mainPhase}
+                          jokerSwapUiActive={jokerSwapUiActive}
+                          animationsEnabled={animationsEnabled}
+                          botExposureFlyInTileIds={botExposureFlyInTileIds}
+                          botExposureSuggestedTileGuide={botExposureSuggestedTileGuide}
+                          botExposureDeadIds={suggestedDeadTableGuideForView?.botExposureDeadIds ?? null}
+                          jokerSwapHintBounceTileIds={jokerSwapHintBounceIds?.jokers ?? null}
+                          jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
+                        />
+                        </div>
                         {showSuggestedHandsPanel ? (
                           <div
                             ref={suggestedHandsPopupRef}
@@ -7464,57 +7760,6 @@ export default function App() {
                             />
                           </div>
                         ) : null}
-                      </div>
-                      {/*
-                        Invisible column: same droppables + ExposureRack props as the old visible bot panel
-                        so joker swap collision and hint state stay wired until exposures are redesigned.
-                      */}
-                      <div className="bot-dnd-ghost-column" aria-hidden="true">
-                        <div className="panel panel--bot-exposures panel--bot-exposures--dnd-ghost">
-                          <div className="panel--bot-exposures__body">
-                            <ul className="bot-exposures__list">
-                              {BOT_RAIL_LABELS.map((label) => {
-                                const melds = botExposures
-                                  .map((exp, globalIdx) => ({ exp, globalIdx }))
-                                  .filter(({ exp }) => exp.seat === label)
-                                  .filter(
-                                    ({ exp }) =>
-                                      mainPhase !== 'wall-game' ||
-                                      exp.tiles.length <= WALL_GAME_MAX_EXPOSURE_MELD_TILES,
-                                  )
-                                  .map(({ exp, globalIdx }) => ({
-                                    tiles: exp.tiles,
-                                    dropZoneId:
-                                      jokerSwapUiActive && exp.tiles.some((t) => t.def.cat === 'joker')
-                                        ? botExposureSwapDropId(globalIdx)
-                                        : undefined,
-                                  }))
-                                return (
-                                  <OpponentExposureDropZone
-                                    key={label}
-                                    seat={label}
-                                    active={jokerSwapUiActive}
-                                    showWatermark={false}
-                                  >
-                                    <ExposureRack
-                                      melds={melds}
-                                      slotCount={12}
-                                      ariaLabel={`${label} exposures`}
-                                      flyInTileIds={animationsEnabled ? botExposureFlyInTileIds : null}
-                                      suggestedTileGuide={botExposureSuggestedTileGuide}
-                                      suggestedDeadTileIds={
-                                        suggestedDeadTableGuideForView?.botExposureDeadIds ?? null
-                                      }
-                                      botJokerBorderMenuOn={false}
-                                      jokerSwapHintBounceTileIds={jokerSwapHintBounceIds?.jokers ?? null}
-                                      jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
-                                    />
-                                  </OpponentExposureDropZone>
-                                )
-                              })}
-                            </ul>
-                          </div>
-                        </div>
                       </div>
                     </div>
                   </section>

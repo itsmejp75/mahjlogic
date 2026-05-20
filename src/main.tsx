@@ -40,7 +40,7 @@ function hidePwaSplashAfterFirstPaint() {
   window.setTimeout(hide, 4000)
 }
 
-function AppWithNativeSplashHandoff() {
+export function AppWithNativeSplashHandoff() {
   useEffect(() => {
     hidePwaSplashAfterFirstPaint()
 

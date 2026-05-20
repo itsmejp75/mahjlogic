@@ -135,7 +135,7 @@ export function chooseBotCharlestonPass(
   const rack = [...hand]
   const notHelpingRack = getRackTilesNotHelpingPattern(rack, p)
   const handIds = new Set(hand.map((t) => t.id))
-  let nonHelpers = notHelpingRack.filter((t) => handIds.has(t.id) && t.def.cat !== 'joker')
+  const nonHelpers = notHelpingRack.filter((t) => handIds.has(t.id) && t.def.cat !== 'joker')
 
   if (difficulty === 'normal' && nonHelpers.length >= n && Math.random() < 0.11) {
     return pickRandomPass(hand, n)

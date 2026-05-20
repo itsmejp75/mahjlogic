@@ -155,6 +155,7 @@ function SortableTile({
   }
   const flyInRef = useRef<HTMLDivElement | null>(null)
   const runFlyLayout = isJustDrawn || isHandFlyIn
+  const handFlyInFrom = handTileFlyIn?.from
   const handFlyInIdsKey = handTileFlyIn?.ids.join('\u0001') ?? ''
   useLayoutEffect(() => {
     if (!runFlyLayout) return
@@ -174,10 +175,10 @@ function SortableTile({
 
       let ox: number
       let oy: number
-      if (isHandFlyIn && handTileFlyIn) {
+      if (isHandFlyIn && handFlyInFrom) {
         const w = tileRect.width
         const h = tileRect.height
-        switch (handTileFlyIn.from) {
+        switch (handFlyInFrom) {
           case 'right':
             ox = tileCx + w * 1.25
             oy = tileCy
@@ -213,7 +214,7 @@ function SortableTile({
       raf1 = requestAnimationFrame(() => {
         raf2 = requestAnimationFrame(apply)
       })
-    } else if (isHandFlyIn && handTileFlyIn) {
+    } else if (isHandFlyIn) {
       const el = wrapRef.current
       if (el) {
         const r = el.getBoundingClientRect()
@@ -233,7 +234,7 @@ function SortableTile({
     runFlyLayout,
     isJustDrawn,
     isHandFlyIn,
-    handTileFlyIn?.from,
+    handFlyInFrom,
     handFlyInIdsKey,
     tile.id,
     drawInFromRackBottom,
@@ -489,16 +490,24 @@ export function SortableHand({
   const [justDrawnId, setJustDrawnId] = useState<string | null>(null)
   const prevHighlightedRef = useRef<string | null | undefined>(undefined)
 
-  useEffect(() => {
+  // Set fly-in before paint so the tile never flashes at rest then animates (setTimeout(0) caused a double glitch).
+  useLayoutEffect(() => {
     const prev = prevHighlightedRef.current
     prevHighlightedRef.current = highlightedTileId ?? null
-    if (!animationsEnabled) return
+    if (!animationsEnabled) {
+      setJustDrawnId(null)
+      return
+    }
     if (highlightedTileId && highlightedTileId !== prev) {
       setJustDrawnId(highlightedTileId)
-      const timer = setTimeout(() => setJustDrawnId(null), 380)
-      return () => clearTimeout(timer)
     }
   }, [highlightedTileId, animationsEnabled])
+
+  useEffect(() => {
+    if (!justDrawnId) return
+    const timer = window.setTimeout(() => setJustDrawnId(null), 380)
+    return () => window.clearTimeout(timer)
+  }, [justDrawnId])
 
   return (
     <div className="hand-row" role="list" aria-label="Your hand">
