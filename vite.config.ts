@@ -37,4 +37,27 @@ function cssLinkBeforeModuleScript(): Plugin {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), cssLinkBeforeModuleScript()],
+  build: {
+    // Keep each emitted JS chunk under Vite’s 500 kB warning threshold (monolithic App + suggestedHands).
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) {
+            if (id.includes('/analysis/suggestedHands')) return 'suggested-hands'
+            if (
+              id.includes('/card/practicePatterns') ||
+              id.includes('/card/nmjl2026Patterns')
+            ) {
+              return 'patterns'
+            }
+            return undefined
+          }
+          if (id.includes('react-dom') || /\/react\//.test(id)) return 'react-vendor'
+          if (id.includes('@dnd-kit')) return 'dnd-kit'
+          if (id.includes('@capacitor')) return 'capacitor'
+          return 'vendor'
+        },
+      },
+    },
+  },
 })

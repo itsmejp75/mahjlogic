@@ -19,9 +19,9 @@
       /*
        * iOS PWA: `apple-touch-startup-image` only fires when a media query matches the device
        * exactly; portrait launches (or unmatched sizes) fall back to a white screen. This
-       * inline cover paints `#121419` + logo immediately after HTML loads so there is no
-       * white flash before React mounts.  Hidden in the browser tab so only the installed
-       * PWA / home-screen app sees it.
+       * inline cover paints `#121419` + watermark splash (same master as
+       * `apple-touch-startup-image`) immediately after HTML loads so there is no white flash
+       * or app-icon flash before React mounts. Hidden in the browser tab.
        */
       #pwa-splash {
         position: fixed;
@@ -36,8 +36,11 @@
         transition: opacity 240ms ease-out;
       }
       #pwa-splash > img {
-        width: min(38vw, 220px);
+        width: auto;
         height: auto;
+        max-width: min(100vw, 100vh);
+        max-height: min(100vw, 100vh);
+        object-fit: contain;
       }
       #pwa-splash.is-hidden {
         opacity: 0;
@@ -161,9 +164,9 @@
     </script>
   </head>
   <body>
-    <!-- Installed-PWA splash cover; hidden by `main.tsx` once React mounts. Browser tabs ignore it. -->
+    <!-- Installed-PWA splash cover (watermark master); hidden by `main.tsx` once React mounts. -->
     <div id="pwa-splash" aria-hidden="true">
-      <img src="/icon-192.png?v=14" alt="" />
+      <img src="/Splash%20page%20-%20MahjLogic.png?v=14" alt="" />
     </div>
     <div id="root"></div>
     <!--

@@ -29,14 +29,7 @@ import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from '@d
 import { CSS } from '@dnd-kit/utilities'
 import { buildAmericanDeck, dealOpeningFour, shuffle } from './mahjong/deck'
 import type { ClaimType, DiscardEntry, EastExposure, Seat, Suit, TileDef, TileInstance } from './mahjong/types'
-import { tileAriaLabel } from './mahjong/labels'
-import {
-  countDiscardEntriesMatchingDef,
-  findExactMatches,
-  sortTiles,
-  tileDefsEqual,
-  type SortMode,
-} from './mahjong/tileUtils'
+import { findExactMatches, sortTiles, tileDefsEqual, type SortMode } from './mahjong/tileUtils'
 import { PASS_BOX_ID, passDropIndex, type PassSlots } from './mahjong/passTargets'
 import {
   applyCharlestonExchange,
@@ -179,66 +172,6 @@ const BOT_DIFFICULTY_LABEL: Record<BotDifficulty, string> = {
   unfair: 'Unfair',
 }
 
-const LS_KEY_DISCARD_TRAY_SIZING_TEST = 'mahjlogic.discardTraySizingTestCols'
-
-/** `?discardTrayCols=36` or Menu → “36-col discard test” (dev) or localStorage key above. */
-function readDiscardTraySizingTestColsFromUrl(): number {
-  if (typeof window === 'undefined') return 0
-  const raw = new URLSearchParams(window.location.search).get('discardTrayCols')
-  if (raw == null || raw === '') return 0
-  const n = Number.parseInt(raw, 10)
-  return Number.isFinite(n) && n > 0 && n <= 50 ? n : 0
-}
-
-function readDiscardTraySizingTestColsFromStorage(): number {
-  try {
-    const raw = localStorage.getItem(LS_KEY_DISCARD_TRAY_SIZING_TEST)
-    if (raw == null || raw === '') return 0
-    const n = Number.parseInt(raw, 10)
-    if (!Number.isFinite(n) || n <= 0 || n > 50) return 0
-    if (n === 35) return 36
-    return n
-  } catch {
-    return 0
-  }
-}
-
-function readDiscardTraySizingTestColsInitial(): number {
-  const fromUrl = readDiscardTraySizingTestColsFromUrl()
-  if (fromUrl > 0) return fromUrl
-  const fromStorage = readDiscardTraySizingTestColsFromStorage()
-  if (fromStorage > 0) return fromStorage
-  // Dev default: show the sizing preview until turned off (Menu or `?discardTrayCols=0`).
-  if (import.meta.env.DEV) return 36
-  return 0
-}
-
-/** Reference strip (36): F, 1d–9d, 0, 1b–9b, G, 1c–9c, R, N-E-W-S, J. */
-const DISCARD_TRAY_SIZING_TEST_SEQUENCE: readonly TileDef[] = [
-  { cat: 'flower', flower: 1 },
-  ...([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((rank) => ({ cat: 'suit', suit: 'dot', rank }) as const),
-  { cat: 'dragon', dragon: 'soap' },
-  ...([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((rank) => ({ cat: 'suit', suit: 'bam', rank }) as const),
-  { cat: 'dragon', dragon: 'green' },
-  ...([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((rank) => ({ cat: 'suit', suit: 'crak', rank }) as const),
-  { cat: 'dragon', dragon: 'red' },
-  { cat: 'wind', wind: 'N' },
-  { cat: 'wind', wind: 'E' },
-  { cat: 'wind', wind: 'W' },
-  { cat: 'wind', wind: 'S' },
-  { cat: 'joker' },
-]
-
-const DISCARD_TRAY_SIZING_TEST_COL_COUNT = DISCARD_TRAY_SIZING_TEST_SEQUENCE.length
-
-function buildDiscardTraySizingTestEntries(cols: number): DiscardEntry[] {
-  const n = Math.min(cols, DISCARD_TRAY_SIZING_TEST_SEQUENCE.length)
-  return DISCARD_TRAY_SIZING_TEST_SEQUENCE.slice(0, n).map((def, i) => ({
-    tile: { id: `discard-tray-sizing-test-${i}`, def },
-    seat: 'east' as const,
-  }))
-}
-
 const LS_KEY_BOT_WINS = 'mahjlogic.botWinsEnabled'
 
 const BOT_WINS_LABEL = 'Bot wins'
@@ -263,6 +196,8 @@ const DEAD_HAND_WARNINGS_LABEL = 'Dead hand warnings'
 const LS_KEY_DEAD_TILE_HINT = 'mahjlogic.deadTileHintEnabled'
 const DEAD_TILE_HINT_LABEL = 'Dead tile(s) hint'
 const LS_KEY_CONCEALED_HAND_REMINDER = 'mahjlogic.concealedHandReminderEnabled'
+
+const LS_KEY_DISCARD_OPPONENT_EXPOSURES = 'mahjlogic.discardTrackerOpponentExposuresOn'
 const CONCEALED_HAND_REMINDER_LABEL = 'Concealed hand reminder'
 const JOKER_SWAP_HINT_BOUNCE_DELAY_MS = 500
 const JOKER_SWAP_HINT_BOUNCE_DURATION_MS = 1700
@@ -404,6 +339,16 @@ function readUndoFromStorage(): boolean {
 function readConcealedHandReminderFromStorage(): boolean {
   try {
     const v = localStorage.getItem(LS_KEY_CONCEALED_HAND_REMINDER)
+    if (v === null) return true
+    return v === 'true' || v === '1'
+  } catch {
+    return true
+  }
+}
+
+function readDiscardOpponentExposuresOnFromStorage(): boolean {
+  try {
+    const v = localStorage.getItem(LS_KEY_DISCARD_OPPONENT_EXPOSURES)
     if (v === null) return true
     return v === 'true' || v === '1'
   } catch {
@@ -594,7 +539,8 @@ function DiscardTrackerBotExposures({
 }) {
   return (
     <div className="discard-tracker__bot-exposures" aria-label="Opponent exposures">
-      <ul className="bot-exposures__list discard-tracker__bot-exposures-list">
+      <div className="discard-tracker__bot-exposures-frame">
+        <ul className="bot-exposures__list discard-tracker__bot-exposures-list">
         {OPPONENT_EXPOSURE_SEATS.map((seat) => {
           const melds = botExposures
             .map((exp, globalIdx) => ({ exp, globalIdx }))
@@ -619,7 +565,7 @@ function DiscardTrackerBotExposures({
             >
               <ExposureRack
                 melds={melds}
-                slotCount={12}
+                slotCount={14}
                 className="exposure-rack--discard-tracker-opponent"
                 ariaLabel={`${seat} exposures`}
                 flyInTileIds={animationsEnabled ? botExposureFlyInTileIds : null}
@@ -632,7 +578,8 @@ function DiscardTrackerBotExposures({
             </OpponentExposureDropZone>
           )
         })}
-      </ul>
+        </ul>
+      </div>
     </div>
   )
 }
@@ -1237,7 +1184,7 @@ function charlestonIncomingHandTileIds(
 const WALL_GAME_MAX_EXPOSURE_MELD_TILES = 10
 
 const BOT_LABELS = ['South', 'West', 'North'] as const
-/** Left→right around East: North (cols 1–12), West (13–24), South (25–36). */
+/** Left→right around East: North, West, South — each row is 14 slots across. */
 const OPPONENT_EXPOSURE_SEATS: readonly BotSeat[] = ['North', 'West', 'South']
 const BOT_SEATS: Seat[] = ['south', 'west', 'north']
 
@@ -2675,11 +2622,11 @@ export default function App() {
   const [suggestedSuppressedHandKey, setSuggestedSuppressedHandKey] = useState<string | null>(null)
   const [suggestedCategoryResetEpoch, setSuggestedCategoryResetEpoch] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [discardTraySizingTestCols, setDiscardTraySizingTestCols] = useState(
-    readDiscardTraySizingTestColsInitial,
-  )
   const menuOpenPrevRef = useRef(false)
   const menuContainerRef = useRef<HTMLDivElement>(null)
+  const [discardOpponentExposuresOn, setDiscardOpponentExposuresOn] = useState(() =>
+    readDiscardOpponentExposuresOnFromStorage(),
+  )
   const [wallGameReviewing, setWallGameReviewing] = useState(false)
   const [mahjongWinReviewing, setMahjongWinReviewing] = useState(false)
   const [botMahjongWinReviewing, setBotMahjongWinReviewing] = useState(false)
@@ -2695,24 +2642,6 @@ export default function App() {
   const [botWinsEnabled, setBotWinsEnabled] = useState<boolean>(() => readBotWinsEnabledFromStorage())
   const [animationsEnabled, setAnimationsEnabled] = useState<boolean>(() => readAnimationsEnabledFromStorage())
   const [colorButtonsEnabled, setColorButtonsEnabled] = useState<boolean>(() => readColorButtonsFromStorage())
-
-  useEffect(() => {
-    const fromUrl = readDiscardTraySizingTestColsFromUrl()
-    if (fromUrl > 0) setDiscardTraySizingTestCols(fromUrl)
-  }, [])
-
-  const toggleDiscardTraySizingTest = useCallback(() => {
-    setDiscardTraySizingTestCols((prev) => {
-      const next = prev > 0 ? 0 : DISCARD_TRAY_SIZING_TEST_COL_COUNT
-      try {
-        if (next > 0) localStorage.setItem(LS_KEY_DISCARD_TRAY_SIZING_TEST, String(next))
-        else localStorage.removeItem(LS_KEY_DISCARD_TRAY_SIZING_TEST)
-      } catch {
-        /* ignore */
-      }
-      return next
-    })
-  }, [])
 
   const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>(() => readBotDifficultyFromStorage())
   const botDifficultyRef = useRef(botDifficulty)
@@ -2798,6 +2727,18 @@ export default function App() {
       const next = !v
       try {
         localStorage.setItem(LS_KEY_COLOR_BUTTONS, next ? 'true' : 'false')
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }, [])
+
+  const toggleDiscardOpponentExposures = useCallback(() => {
+    setDiscardOpponentExposuresOn((v) => {
+      const next = !v
+      try {
+        localStorage.setItem(LS_KEY_DISCARD_OPPONENT_EXPOSURES, next ? 'true' : 'false')
       } catch {
         /* ignore */
       }
@@ -2976,6 +2917,9 @@ export default function App() {
       } else if (e.key === HIDE_CONCEALED_HANDS_STORAGE_KEY) {
         if (e.newValue == null) return
         setSuggestedHandsHideConcealed(readHideConcealedHandsFromStorage())
+      } else if (e.key === LS_KEY_DISCARD_OPPONENT_EXPOSURES) {
+        if (e.newValue == null) return
+        setDiscardOpponentExposuresOn(e.newValue === 'true' || e.newValue === '1')
       }
     }
     window.addEventListener('storage', onStorage)
@@ -3465,12 +3409,10 @@ export default function App() {
   )
 
   /** Shown in the discard strip only after all passes / claims resolve — not while East (or bots) may still claim it. */
-  const displayedDiscardPile = useMemo(() => {
-    if (discardTraySizingTestCols > 0) {
-      return buildDiscardTraySizingTestEntries(DISCARD_TRAY_SIZING_TEST_COL_COUNT)
-    }
-    return discardPileCommittedForDisplay({ discardPile, mainPhase, activeBotDiscard })
-  }, [discardPile, mainPhase, activeBotDiscard, discardTraySizingTestCols])
+  const displayedDiscardPile = useMemo(
+    () => discardPileCommittedForDisplay({ discardPile, mainPhase, activeBotDiscard }),
+    [discardPile, mainPhase, activeBotDiscard],
+  )
 
   /**
    * Discard-tracker fly-in: detect newly displayed tile ids **during render** so the first paint
@@ -3494,43 +3436,21 @@ export default function App() {
     const prev = prevDiscardIdsSnapshotRef.current
     const added = now.filter((id) => !prev.includes(id))
     prevDiscardIdsSnapshotRef.current = now
-    if (
-      discardTraySizingTestCols === 0 &&
-      animationsEnabled &&
-      added.length > 0
-    ) {
+    if (animationsEnabled && added.length > 0) {
       for (const id of added) pending.add(id)
     }
-  }, [displayedDiscardPile, animationsEnabled, discardTraySizingTestCols])
+  }, [displayedDiscardPile, animationsEnabled])
 
   const popDiscardDropInId = useCallback((id: string) => {
     if (!pendingDiscardFlyInIdsRef.current.delete(id)) return
     setDiscardFlyEndEpoch((e) => e + 1)
   }, [])
 
-  /** 36-slot tracker: committed discards per reference tile (`tileDefsEqual`). */
-  const discardTrackerSlotPlayCounts = useMemo(() => {
-    if (discardTraySizingTestCols === 0) return null
-    const committedPile = discardPileCommittedForDisplay({
-      discardPile,
-      mainPhase,
-      activeBotDiscard,
-    })
-    return DISCARD_TRAY_SIZING_TEST_SEQUENCE.map((def) =>
-      countDiscardEntriesMatchingDef(committedPile, def),
-    )
-  }, [discardPile, mainPhase, activeBotDiscard, discardTraySizingTestCols])
-
-  const discardTrackerUsesFixedSlots = discardTraySizingTestCols > 0
-
   /** Bot-turn discard box: tile flies in from that seat’s direction (same 0.3s vector feel as Charleston pass fly-out). */
-  const discardTrackerEntries = displayedDiscardPile.map((entry, slotIndex) => ({
+  const discardTrackerEntries = displayedDiscardPile.map((entry) => ({
     ...entry,
-    playCount: discardTrackerSlotPlayCounts?.[slotIndex] ?? 0,
     flyAnimate:
-      !discardTrackerUsesFixedSlots &&
-      animationsEnabled &&
-      pendingDiscardFlyInIdsRef.current.has(entry.tile.id),
+      animationsEnabled && pendingDiscardFlyInIdsRef.current.has(entry.tile.id),
   }))
 
   const incomingBotDiscardFlyFrom = useMemo((): HandTileFlyInFrom | null => {
@@ -5850,56 +5770,6 @@ export default function App() {
     const exposureTopEl = eastExposureRackTopRef.current
     const discardPanel = discardTrackerPanelRef.current
 
-    if (discardTraySizingTestCols > 0) {
-      if (!popup || !discardPanel) {
-        setSuggestedDiscardOverlayBounds((prev) =>
-          prev.topExtendPx === 0 &&
-            prev.bottomExtendPx === 0 &&
-            prev.viewportTopPx === 0 &&
-            prev.viewportLeftPx === 0 &&
-            prev.viewportWidthPx === 0 &&
-            prev.viewportBottomPx === 0
-            ? prev
-            : {
-                topExtendPx: 0,
-                bottomExtendPx: 0,
-                viewportTopPx: 0,
-                viewportLeftPx: 0,
-                viewportWidthPx: 0,
-                viewportBottomPx: 0,
-              },
-        )
-        return
-      }
-
-      const discardRect = discardPanel.getBoundingClientRect()
-      const exposureRect = exposureTopEl?.getBoundingClientRect()
-      const viewportW = window.visualViewport?.width ?? window.innerWidth
-      const next = {
-        topExtendPx: Math.max(0, Math.floor(discardRect.top)),
-        bottomExtendPx: 0,
-        viewportTopPx: exposureRect ? Math.max(0, Math.floor(exposureRect.top)) : 0,
-        viewportLeftPx: 0,
-        viewportWidthPx: Math.max(1, Math.ceil(viewportW)),
-        viewportBottomPx: 0,
-      }
-      setSuggestedDiscardOverlayBounds((prev) =>
-        prev.topExtendPx === next.topExtendPx &&
-          prev.bottomExtendPx === next.bottomExtendPx &&
-          prev.viewportTopPx === next.viewportTopPx &&
-          prev.viewportLeftPx === next.viewportLeftPx &&
-          prev.viewportWidthPx === next.viewportWidthPx &&
-          prev.viewportBottomPx === next.viewportBottomPx
-          ? prev
-          : next,
-      )
-      if (suggestedDiscardOverlayInitialPeekPendingRef.current) {
-        setSuggestedDiscardOverlayPeekPx(0)
-        suggestedDiscardOverlayInitialPeekPendingRef.current = false
-      }
-      return
-    }
-
     const content = popup?.parentElement
     if (!content || !exposureTopEl || !discardPanel) {
       setSuggestedDiscardOverlayBounds((prev) =>
@@ -5949,7 +5819,7 @@ export default function App() {
       setSuggestedDiscardOverlayPeekPx(0)
       suggestedDiscardOverlayInitialPeekPendingRef.current = false
     }
-  }, [discardTraySizingTestCols])
+  }, [])
 
   useLayoutEffect(() => {
     if (!showSuggestedHandsPanel || !showPlaySplitRow) {
@@ -5981,10 +5851,7 @@ export default function App() {
     }
 
     const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(scheduleUpdate)
-    const boundsObserveParent =
-      discardTraySizingTestCols > 0
-        ? suggestedHandsPopupRef.current
-        : suggestedHandsPopupRef.current?.parentElement
+    const boundsObserveParent = suggestedHandsPopupRef.current?.parentElement
     for (const node of [
       boundsObserveParent,
       eastExposureRackTopRef.current,
@@ -6006,12 +5873,7 @@ export default function App() {
     showSuggestedHandsPanel,
     mainPhase,
     suggestedPanelHandsOn,
-    discardTraySizingTestCols,
   ])
-
-  /** Hand action bar is hidden in these phases; keep Menu on the bot column toolbar. */
-  const menuInBotExposuresToolbar =
-    mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand'
 
   /** Same meld filter as East `ExposureRack` during `wall-game` (drops oversized practice dumps). */
   const eastExposureWallGameDisplayedTileCount = useMemo(
@@ -6034,11 +5896,8 @@ export default function App() {
     (mainPhase === 'mahjong-declared' && mahjongWinReviewing) ||
     wallGameReviewShiftNewGameToMainRack
 
-  const renderSuggestedHandsPopup = (placement: 'discard' | 'viewport') => {
+  const renderSuggestedHandsPopup = () => {
     if (!showSuggestedHandsPanel) return null
-    const viewportSheet = placement === 'viewport'
-    if (viewportSheet && discardTraySizingTestCols === 0) return null
-    if (!viewportSheet && discardTraySizingTestCols > 0) return null
 
     const overlayStyle: CSSProperties = {
       ['--suggested-overlay-top-peek' as string]: `${suggestedDiscardOverlayPeekPx}px`,
@@ -6056,9 +5915,7 @@ export default function App() {
         id="suggested-hands-popup"
         className={[
           'suggested-hands-popup',
-          viewportSheet
-            ? 'suggested-hands-popup--viewport-bottom'
-            : 'suggested-hands-popup--discard-overlay',
+          'suggested-hands-popup--discard-overlay',
           suggestedPanelHandsOn ? 'suggested-hands-popup--open' : '',
           suggestedPanelHandsOn && suggestedDiscardOverlayPeekPx < 0
             ? 'suggested-hands-popup--peek-above'
@@ -6353,16 +6210,6 @@ export default function App() {
               </div>
               <div className="app-menu-tray__divider app-menu-modal__section-rule" role="separator" />
               <div className="app-menu-modal__body-footer app-menu-modal__body-footer--settings-toggles">
-                <div className="app-menu-modal__row app-menu-modal__row--toggle">
-                  <AppMenuSettingSwitch
-                    labelId="app-menu-label-discard-tray-sizing-test"
-                    pressed={discardTraySizingTestCols > 0}
-                    onToggle={toggleDiscardTraySizingTest}
-                  />
-                  <span className="app-menu-modal__label" id="app-menu-label-discard-tray-sizing-test">
-                    36-col discard test
-                  </span>
-                </div>
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
                   <AppMenuSettingSwitch
                     labelId="app-menu-label-undo"
@@ -7110,31 +6957,13 @@ export default function App() {
                               >
                                 Sort
                               </button>
-                              <div
-                                ref={menuContainerRef}
-                                className="app-menu-anchor app-menu-anchor--hand-rack rack-bottom-tile-cell rack-bottom-tile-cell--c2"
-                              >
-                                <button
-                                  type="button"
-                                  className={[
-                                    'btn app-bottom-center-controls__menu-btn',
-                                    menuOpen ? 'app-bottom-center-controls__menu-btn--open' : '',
-                                  ]
-                                    .filter(Boolean)
-                                    .join(' ')}
-                                  aria-label="Menu"
-                                  aria-haspopup="dialog"
-                                  aria-expanded={menuOpen}
-                                  aria-controls={menuOpen ? 'app-menu-modal' : undefined}
-                                  onClick={() => setMenuOpen((v) => !v)}
-                                >
-                                  <span className="hand-rack-menu-hamburger" aria-hidden>
-                                    <span className="hand-rack-menu-hamburger__bar" />
-                                    <span className="hand-rack-menu-hamburger__bar" />
-                                    <span className="hand-rack-menu-hamburger__bar" />
-                                  </span>
-                                </button>
-                              </div>
+                              <WallTilesRemainCell
+                                count={wall.length}
+                                className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell rack-bottom-tile-cell--c2${
+                                  wall.length >= OPENING_WALL_TILES ? ' rack-bottom-wall--full' : ''
+                                }${wall.length === 0 ? ' rack-bottom-wall--empty' : ''}`}
+                                style={wallRemainHeatStyle(wall.length)}
+                              />
                               {showSuggestedHandsPanel ? (
                                 <button
                                   type="button"
@@ -7215,13 +7044,6 @@ export default function App() {
                                   ) : 'Call'}
                                 </button>
                               )}
-                              <WallTilesRemainCell
-                                count={wall.length}
-                                className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell rack-bottom-tile-cell--c11${
-                                  wall.length >= OPENING_WALL_TILES ? ' rack-bottom-wall--full' : ''
-                                }${wall.length === 0 ? ' rack-bottom-wall--empty' : ''}`}
-                                style={wallRemainHeatStyle(wall.length)}
-                              />
                               <button
                                 type="button"
                                 className="btn btn--primary charleston-pass-btn rack-bottom-tile-cell rack-bottom-tile-cell--c12-14"
@@ -7497,31 +7319,13 @@ export default function App() {
                                 >
                                   Sort
                                 </button>
-                                <div
-                                  ref={menuContainerRef}
-                                  className="app-menu-anchor app-menu-anchor--hand-rack rack-bottom-tile-cell rack-bottom-tile-cell--c2"
-                                >
-                                  <button
-                                    type="button"
-                                    className={[
-                                      'btn app-bottom-center-controls__menu-btn',
-                                      menuOpen ? 'app-bottom-center-controls__menu-btn--open' : '',
-                                    ]
-                                      .filter(Boolean)
-                                      .join(' ')}
-                                    aria-label="Menu"
-                                    aria-haspopup="dialog"
-                                    aria-expanded={menuOpen}
-                                    aria-controls={menuOpen ? 'app-menu-modal' : undefined}
-                                    onClick={() => setMenuOpen((v) => !v)}
-                                  >
-                                    <span className="hand-rack-menu-hamburger" aria-hidden>
-                                      <span className="hand-rack-menu-hamburger__bar" />
-                                      <span className="hand-rack-menu-hamburger__bar" />
-                                      <span className="hand-rack-menu-hamburger__bar" />
-                                    </span>
-                                  </button>
-                                </div>
+                                <WallTilesRemainCell
+                                  count={wall.length}
+                                  className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell rack-bottom-tile-cell--c2${
+                                    wall.length >= OPENING_WALL_TILES ? ' rack-bottom-wall--full' : ''
+                                  }${wall.length === 0 ? ' rack-bottom-wall--empty' : ''}`}
+                                  style={wallRemainHeatStyle(wall.length)}
+                                />
                                 {showSuggestedHandsPanel ? (
                                   <button
                                     type="button"
@@ -7614,13 +7418,6 @@ export default function App() {
                                     ) : 'Call'}
                                   </button>
                                 )}
-                                <WallTilesRemainCell
-                                  count={wall.length}
-                                  className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell rack-bottom-tile-cell--c11${
-                                    wall.length >= OPENING_WALL_TILES ? ' rack-bottom-wall--full' : ''
-                                  }${wall.length === 0 ? ' rack-bottom-wall--empty' : ''}`}
-                                  style={wallRemainHeatStyle(wall.length)}
-                                />
                                 <button
                                   type="button"
                                   className={[
@@ -7675,46 +7472,8 @@ export default function App() {
                     aria-label="Discard tracker"
                     data-joker-swap-dnd={jokerSwapUiActive ? 'on' : 'off'}
                     data-suggested-hands-open={suggestedPanelHandsOn ? 'on' : 'off'}
-                    {...(discardTraySizingTestCols > 0
-                      ? { 'data-discard-tray-test-cols': String(DISCARD_TRAY_SIZING_TEST_COL_COUNT) }
-                      : {})}
+                    data-opponent-exposures={discardOpponentExposuresOn ? 'on' : 'off'}
                   >
-                    <div className="panel__title-row panel__title-row--discard-tracker">
-                      {discardTraySizingTestCols > 0 ? (
-                        <p className="discard-tracker__status discard-tracker__status--sizing-test" aria-live="polite">
-                          Sizing test: {DISCARD_TRAY_SIZING_TEST_COL_COUNT} tiles — Menu to turn off
-                        </p>
-                      ) : null}
-                      {menuInBotExposuresToolbar ? (
-                        <div
-                          ref={menuContainerRef}
-                          className="app-menu-anchor app-menu-anchor--discard-tracker"
-                          role="group"
-                          aria-label="Menu"
-                        >
-                          <button
-                            type="button"
-                            className={[
-                              'btn app-bottom-center-controls__menu-btn',
-                              menuOpen ? 'app-bottom-center-controls__menu-btn--open' : '',
-                            ]
-                              .filter(Boolean)
-                              .join(' ')}
-                            aria-label="Menu"
-                            aria-haspopup="dialog"
-                            aria-expanded={menuOpen}
-                            aria-controls={menuOpen ? 'app-menu-modal' : undefined}
-                            onClick={() => setMenuOpen((v) => !v)}
-                          >
-                            <span className="hand-rack-menu-hamburger" aria-hidden>
-                              <span className="hand-rack-menu-hamburger__bar" />
-                              <span className="hand-rack-menu-hamburger__bar" />
-                              <span className="hand-rack-menu-hamburger__bar" />
-                            </span>
-                          </button>
-                        </div>
-                      ) : null}
-                    </div>
                     <div className="discard-tracker__shell">
                       <div className="discard-tracker__content">
                         <div className="discard-tracker__strip-stack">
@@ -7724,37 +7483,21 @@ export default function App() {
                             discardPileScrollElRef.current = node
                           }}
                         >
-                          {displayedDiscardPile.length > 0 || discardTraySizingTestCols > 0 ? (
-                            <div
-                              className="discard-pile"
-                              role="list"
-                              aria-label={
-                                discardTrackerUsesFixedSlots
-                                  ? 'Discard tracker'
-                                  : 'Committed discards'
-                              }
-                            >
-                              {discardTrackerEntries.map(({ tile, seat, flyAnimate, playCount }) => {
+                          {displayedDiscardPile.length > 0 ? (
+                            <div className="discard-pile" role="list" aria-label="Committed discards">
+                              {discardTrackerEntries.map(({ tile, seat, flyAnimate }) => {
                                 const needRing =
-                                  !discardTrackerUsesFixedSlots &&
                                   suggestedDiscardNeedIds != null &&
                                   suggestedDiscardNeedIds.has(tile.id)
                                 const isDead =
-                                  !discardTrackerUsesFixedSlots &&
                                   !!suggestedDeadTableGuideForView?.discardDeadIds.has(tile.id)
-                                const isDim =
-                                  !discardTrackerUsesFixedSlots &&
-                                  (isDead || (suggestedDiscardPileCanDim && !needRing))
-                                const tileLabel = tileAriaLabel(tile.def)
+                                const isDim = isDead || (suggestedDiscardPileCanDim && !needRing)
                                 return (
                                   <div
                                     key={tile.id}
                                     className={[
                                       'discard-entry',
                                       `discard-entry--${seat}`,
-                                      discardTrackerUsesFixedSlots
-                                        ? 'discard-entry--tracker-slot'
-                                        : '',
                                       needRing ? 'discard-entry--suggest-need' : '',
                                       isDead ? 'discard-entry--suggest-dying' : '',
                                       isDim ? 'discard-entry--suggest-dim' : '',
@@ -7762,34 +7505,17 @@ export default function App() {
                                       .filter(Boolean)
                                       .join(' ')}
                                     role="listitem"
-                                    aria-label={
-                                      discardTrackerUsesFixedSlots
-                                        ? playCount > 0
-                                          ? `${tileLabel}, ${playCount} discarded`
-                                          : tileLabel
-                                        : `${seat} discard`
-                                    }
+                                    aria-label={`${seat} discard`}
                                   >
-                                    {discardTrackerUsesFixedSlots ? (
-                                      <>
-                                        <div className="discard-entry__fly-wrap">
-                                          <TileFace def={tile.def} compactRankOnly />
-                                        </div>
-                                        {playCount > 0 ? (
-                                          <span className="discard-entry__play-count">{playCount}</span>
-                                        ) : null}
-                                      </>
-                                    ) : (
-                                      <DiscardPileFlyInTile
-                                        tileId={tile.id}
-                                        animate={flyAnimate}
-                                        onDropInEnd={() => {
-                                          popDiscardDropInId(tile.id)
-                                        }}
-                                      >
-                                        <TileFace def={tile.def} />
-                                      </DiscardPileFlyInTile>
-                                    )}
+                                    <DiscardPileFlyInTile
+                                      tileId={tile.id}
+                                      animate={flyAnimate}
+                                      onDropInEnd={() => {
+                                        popDiscardDropInId(tile.id)
+                                      }}
+                                    >
+                                      <TileFace def={tile.def} />
+                                    </DiscardPileFlyInTile>
                                   </div>
                                 )
                               })}
@@ -7807,26 +7533,72 @@ export default function App() {
                             </div>
                           ) : null}
                         </DiscardPileDropZone>
-                        <DiscardTrackerBotExposures
-                          botExposures={botExposures}
-                          mainPhase={mainPhase}
-                          jokerSwapUiActive={jokerSwapUiActive}
-                          animationsEnabled={animationsEnabled}
-                          botExposureFlyInTileIds={botExposureFlyInTileIds}
-                          botExposureSuggestedTileGuide={botExposureSuggestedTileGuide}
-                          botExposureDeadIds={suggestedDeadTableGuideForView?.botExposureDeadIds ?? null}
-                          jokerSwapHintBounceTileIds={jokerSwapHintBounceIds?.jokers ?? null}
-                          jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
-                        />
+                        {discardOpponentExposuresOn ? (
+                          <DiscardTrackerBotExposures
+                            botExposures={botExposures}
+                            mainPhase={mainPhase}
+                            jokerSwapUiActive={jokerSwapUiActive}
+                            animationsEnabled={animationsEnabled}
+                            botExposureFlyInTileIds={botExposureFlyInTileIds}
+                            botExposureSuggestedTileGuide={botExposureSuggestedTileGuide}
+                            botExposureDeadIds={suggestedDeadTableGuideForView?.botExposureDeadIds ?? null}
+                            jokerSwapHintBounceTileIds={jokerSwapHintBounceIds?.jokers ?? null}
+                            jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
+                          />
+                        ) : null}
                         </div>
-                        {renderSuggestedHandsPopup('discard')}
+                        {renderSuggestedHandsPopup()}
+                        <div
+                          ref={menuContainerRef}
+                          className="app-menu-anchor-stack app-menu-anchor-stack--discard-tracker"
+                          role="group"
+                          aria-label="Discard tray controls"
+                        >
+                          <div className="app-menu-anchor app-menu-anchor--discard-tracker">
+                            <button
+                              type="button"
+                              className={[
+                                'btn btn--rack-neutral rack-bottom-tile-cell app-menu-anchor__exp-btn',
+                                discardOpponentExposuresOn ? 'rack-bottom-tile-cell--menu-open' : '',
+                              ]
+                                .filter(Boolean)
+                                .join(' ')}
+                              aria-label="Opponent exposures"
+                              aria-pressed={discardOpponentExposuresOn}
+                              onClick={toggleDiscardOpponentExposures}
+                            >
+                              Exp
+                            </button>
+                          </div>
+                          <div className="app-menu-anchor app-menu-anchor--discard-tracker">
+                            <button
+                              type="button"
+                              className={[
+                                'btn btn--rack-neutral rack-bottom-tile-cell',
+                                menuOpen ? 'rack-bottom-tile-cell--menu-open' : '',
+                              ]
+                                .filter(Boolean)
+                                .join(' ')}
+                              aria-label="Menu"
+                              aria-haspopup="dialog"
+                              aria-expanded={menuOpen}
+                              aria-controls={menuOpen ? 'app-menu-modal' : undefined}
+                              onClick={() => setMenuOpen((v) => !v)}
+                            >
+                              <span className="hand-rack-menu-hamburger" aria-hidden>
+                                <span className="hand-rack-menu-hamburger__bar" />
+                                <span className="hand-rack-menu-hamburger__bar" />
+                                <span className="hand-rack-menu-hamburger__bar" />
+                              </span>
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </section>
                 </div>
                 </div>
             ) : null}
-              {renderSuggestedHandsPopup('viewport')}
               <DragOverlay dropAnimation={null}>
                 {dragOverlayMeldTiles ? (
                   <div className="drag-overlay-meld">

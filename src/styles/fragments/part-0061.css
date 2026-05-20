@@ -64,9 +64,131 @@
   box-sizing: border-box;
 }
 
-.app-menu-anchor--discard-tracker {
-  flex-shrink: 0;
-  margin-left: auto;
+/* Discard tray: stack close (above) + menu (below); each slot keeps the original single-button shell. */
+.discard-tracker__content > .app-menu-anchor-stack--discard-tracker {
+  position: absolute;
+  right: var(--bot-exposure-inner-pad);
+  bottom: var(--bot-exposure-inner-pad);
+  left: auto;
+  top: auto;
+  transform: none;
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--rack-stack-gap-y);
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+}
+
+.discard-tracker__content > .app-menu-anchor-stack--discard-tracker > .app-menu-anchor--discard-tracker {
+  position: relative;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  top: auto;
+  transform: none;
+  z-index: auto;
+  box-sizing: border-box;
+  width: var(--rack-tile-btn-inner-1);
+  max-width: var(--rack-tile-btn-inner-1);
+  min-width: 0;
+  height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
+  min-height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
+  margin: 0;
+  padding: 0;
+  border-radius: var(--rack-tile-btn-border-radius);
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.discard-tracker__content > .app-menu-anchor-stack--discard-tracker > .app-menu-anchor--discard-tracker > .btn.rack-bottom-tile-cell {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0.14rem 0.05rem;
+  border: none;
+  border-radius: inherit;
+  font-family: 'Figtree', var(--sans);
+  font-weight: 600;
+  text-transform: none;
+  color: #dcdce0;
+  background: var(--color-slate-mid);
+  isolation: isolate;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow:
+    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
+    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
+  transition: box-shadow 0.14s ease, transform 0.12s ease;
+}
+
+.discard-tracker__content > .app-menu-anchor-stack--discard-tracker > .app-menu-anchor--discard-tracker > .btn.rack-bottom-tile-cell:hover:not(:disabled):not(.app-menu-anchor__exp-btn) {
+  background: var(--color-slate-mid);
+  color: #dcdce0;
+  box-shadow:
+    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
+    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
+  transform: none;
+}
+
+/* Exp toggle: no hover wash (on or off). */
+.discard-tracker__content > .app-menu-anchor-stack--discard-tracker > .app-menu-anchor--discard-tracker > .app-menu-anchor__exp-btn:hover:not(:disabled) {
+  background: var(--color-slate-mid);
+  color: #dcdce0;
+  box-shadow:
+    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
+    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
+  transform: none;
+}
+
+.discard-tracker__content > .app-menu-anchor-stack--discard-tracker > .app-menu-anchor--discard-tracker > .app-menu-anchor__exp-btn.rack-bottom-tile-cell--menu-open:hover:not(:disabled) {
+  box-shadow:
+    inset 4px 4px 11px rgba(0, 0, 0, 0.48),
+    inset -3px -3px 8px rgba(255, 255, 255, 0.1),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.24);
+}
+
+.discard-tracker__content > .app-menu-anchor-stack--discard-tracker > .app-menu-anchor--discard-tracker > .btn.rack-bottom-tile-cell--menu-open,
+.discard-tracker__content > .app-menu-anchor-stack--discard-tracker > .app-menu-anchor--discard-tracker > .btn.rack-bottom-tile-cell:active:not(:disabled) {
+  transition: none;
+  transform: none;
+  box-shadow:
+    inset 4px 4px 11px rgba(0, 0, 0, 0.48),
+    inset -3px -3px 8px rgba(255, 255, 255, 0.1),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.24);
+}
+
+/* Exp label: same type scale as hand-rack Sort (`.rack-bottom-tile-cell--c1`, part-0001). */
+.discard-tracker__content > .app-menu-anchor-stack--discard-tracker > .app-menu-anchor--discard-tracker > .app-menu-anchor__exp-btn {
+  font-size: min(var(--rack-hand-action-label-fs), calc(var(--hand-rack-tile-w) * 0.34));
+  letter-spacing: max(0.016em, calc(0.026em + 0.016rem));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+/* Menu: hamburger icon scale (unchanged). */
+.discard-tracker__content > .app-menu-anchor-stack--discard-tracker > .app-menu-anchor--discard-tracker > .btn.rack-bottom-tile-cell:not(.app-menu-anchor__exp-btn) {
+  font-size: min(
+    var(--rack-menu-hamburger-fs),
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.58)
+  );
+  letter-spacing: max(0.016em, calc(0.026em + 0.016rem));
+}
+
+.discard-tracker__content > .app-menu-anchor-stack--discard-tracker > .app-menu-anchor--discard-tracker .hand-rack-menu-hamburger {
+  color: inherit;
 }
 
 .panel__title-row--discard-tracker {
@@ -94,6 +216,8 @@
   min-width: 0;
   min-height: 0;
   position: relative;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   background: var(--window-inner-surface);
   /* Tray shell corners match discard tile faces (0.116 × tile width), not tile-tray-shell-radius. */
@@ -110,6 +234,12 @@
       calc((100cqw - 25 * var(--player-rack-face-gap)) / 26)
     );
     --discard-tray-tile-corner-r: calc(0.116 * var(--discard-tray-rack-tile-w));
+  }
+
+  .discard-tracker__bot-exposures .exposure-rack--discard-tracker-opponent {
+    --rack-tile-w: calc((100cqw - 13 * var(--player-rack-face-gap)) / 14 / 2);
+    --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
+    --exposure-slot-h: var(--rack-tile-h);
   }
 }
 
@@ -162,7 +292,18 @@
   }
 }
 
-.discard-tracker__content .discard-pile-drop-zone {
+/*
+ * Strip stack fills the discard window: discards scroll underneath; opponent exposures
+ * overlay centered in front (z-index above the drop zone).
+ */
+.discard-tracker__content .discard-tracker__strip-stack {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+}
+
+.discard-tracker__content .discard-tracker__strip-stack > .discard-pile-drop-zone {
   position: absolute;
   inset: 0;
   overflow-y: auto;
@@ -170,4 +311,78 @@
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
   z-index: 1;
+}
+
+.discard-tracker__content .discard-tracker__bot-exposures {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding-top: var(--bot-exposure-inner-pad);
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+/*
+ * One tray rectangle for all three opponent rows (14 slots × North / West / South).
+ */
+.discard-tracker__content .discard-tracker__bot-exposures .discard-tracker__bot-exposures-frame {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+  box-sizing: border-box;
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+  padding: var(--bot-exposure-inner-pad);
+  background: var(--window-inner-surface);
+  border: none;
+  border-radius: var(--discard-tray-tile-corner-r, var(--tile-tray-shell-radius));
+}
+
+.discard-tracker__content .discard-tracker__bot-exposures .discard-tracker__bot-exposures-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: fit-content;
+}
+
+/*
+ * Opponent exposure rows on the discard tray: 14 half-scale tiles + 13 face gaps per row
+ * (tile size is half the East rack face; same gap rhythm).
+ */
+.discard-tracker__bot-exposures .discard-tracker__bot-exposures-list .app-opponents-rail__cell {
+  width: fit-content;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.discard-tracker__bot-exposures .discard-tracker__bot-exposures-list .app-opponents-rail__cell .exposure-rack,
+.discard-tracker__bot-exposures .exposure-rack--discard-tracker-opponent {
+  --rack-tile-w: max(1px, calc((100cqw - 13 * var(--player-rack-face-gap)) / 14 / 2));
+  --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
+  --exposure-slot-h: var(--rack-tile-h);
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  gap: var(--player-rack-face-gap);
+  padding: 0;
+  padding-inline: 0;
+  margin-bottom: 0;
+  width: calc(14 * var(--rack-tile-w) + 13 * var(--player-rack-face-gap));
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.discard-tracker__bot-exposures .exposure-rack__meld-drop {
+  gap: var(--player-rack-face-gap);
+}
+
+/* Empty wells: no border; faint fill so the 14-slot rows stay visible on the tray. */
+.discard-tracker__bot-exposures .exposure-rack--discard-tracker-opponent .exposure-rack__slot--empty::before {
+  border: none;
+  background: color-mix(in srgb, var(--window-surface) 28%, transparent);
+  box-shadow: none;
 }
