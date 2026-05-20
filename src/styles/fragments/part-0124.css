@@ -1,9 +1,24 @@
 /* Discard tray column sizing preview — dev default, `?discardTrayCols=36`, or Menu toggle. */
 
+/*
+ * Full play-split column width; strip sits on the bottom (see `__left:has(…)` below).
+ * `flex-start` left a narrow centered band and huge side gutters on mobile landscape.
+ */
 .panel--discard-tracker[data-discard-tray-test-cols='36'] {
   flex: 0 0 auto;
-  align-self: flex-start;
+  align-self: stretch;
+  width: 100%;
+  max-width: 100%;
   overflow: visible;
+}
+
+.app-dnd-frame .app-play-split > .app-play-split__left:has(.panel--discard-tracker[data-discard-tray-test-cols='36']) {
+  flex: 1 1 0;
+  width: 100%;
+  min-width: 0;
+  justify-content: flex-end;
+  align-items: stretch;
+  text-align: start;
 }
 
 .panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-tracker__shell {
@@ -294,5 +309,119 @@
     --rack-tile-w: max(1px, calc((100cqw - 35 * var(--player-rack-face-gap)) / 36));
     --rack-tile-h: calc(var(--rack-tile-w) * 4 / 3);
     --exposure-slot-h: var(--rack-tile-h);
+  }
+}
+
+/*
+ * Discard-tray sizing test: hands sheet is a viewport-bottom drawer (not clipped to the tray).
+ */
+.suggested-hands-popup.suggested-hands-popup--viewport-bottom {
+  position: fixed;
+  top: auto;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  max-width: 100vw;
+  height: min(70dvh, 34rem);
+  max-height: min(70dvh, 34rem);
+  z-index: 10000;
+  --suggested-popup-radius: var(--tile-tray-shell-radius, 0.75rem);
+  border-radius: var(--suggested-popup-radius) var(--suggested-popup-radius) 0 0;
+  transform: none;
+  transition:
+    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    visibility 0s linear 0.3s;
+}
+
+.suggested-hands-popup.suggested-hands-popup--viewport-bottom:not(.suggested-hands-popup--open) {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.suggested-hands-popup.suggested-hands-popup--viewport-bottom.suggested-hands-popup--open {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    visibility 0s linear 0s;
+}
+
+.suggested-hands-popup--viewport-bottom .panel--hands.suggested-hands-popup__user-shift {
+  border-radius: var(--suggested-popup-radius) var(--suggested-popup-radius) 0 0;
+}
+
+/* Peek-drag: positive peek shrinks the sheet; negative peek grows the shell upward. */
+.suggested-hands-popup--viewport-bottom .panel--hands {
+  box-sizing: border-box;
+  flex: 0 1 auto;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  min-height: 0;
+  height: calc(100% - max(0px, var(--suggested-overlay-top-peek, 0px)));
+  max-height: calc(100% - max(0px, var(--suggested-overlay-top-peek, 0px)));
+}
+
+.suggested-hands-popup--viewport-bottom .hands-panel__content {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.suggested-hands-popup.suggested-hands-popup--viewport-bottom.suggested-hands-popup--peek-dragging,
+.suggested-hands-popup.suggested-hands-popup--viewport-bottom.suggested-hands-popup--peek-above {
+  overflow: visible;
+  z-index: 10001;
+}
+
+.suggested-hands-popup.suggested-hands-popup--viewport-bottom.suggested-hands-popup--peek-above {
+  top: calc(min(0px, var(--suggested-overlay-top-peek, 0px)));
+  bottom: 0;
+  height: auto;
+  max-height: calc(
+    min(70dvh, 34rem) - max(0px, var(--suggested-overlay-top-peek, 0px))
+  );
+}
+
+.suggested-hands-popup.suggested-hands-popup--viewport-bottom.suggested-hands-popup--open.suggested-hands-popup--peek-dragging {
+  pointer-events: auto;
+}
+
+/*
+ * iPhone landscape: native rules force discard panel `height: 100%`, which leaves a tall
+ * empty shell above the sizing strip. Shrink-wrap height; `__left` flex-end keeps the strip
+ * on the WebView bottom (same as production discard).
+ */
+@media (max-height: 31.25rem) and (orientation: landscape) {
+  html[data-native-app] .app-play-split > .app-play-split__left > .panel--discard-tracker[data-discard-tray-test-cols='36'],
+  html:not([data-native-app]) .app-play-split > .app-play-split__left > .panel--discard-tracker[data-discard-tray-test-cols='36'] {
+    height: auto;
+    min-height: 0;
+    flex: 0 0 auto;
+  }
+
+  .panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-tracker__shell,
+  .panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-tracker__content,
+  .panel--discard-tracker[data-discard-tray-test-cols='36'] .discard-tracker__strip-stack {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+/* Portrait phones: same full-bleed strip (narrow width, no centered band). */
+@media (max-width: 36rem) and (orientation: portrait) {
+  .app-dnd-frame .app-play-split > .app-play-split__left:has(.panel--discard-tracker[data-discard-tray-test-cols='36']) {
+    justify-content: flex-end;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .panel--discard-tracker[data-discard-tray-test-cols='36'] {
+    width: 100%;
+    max-width: 100%;
   }
 }

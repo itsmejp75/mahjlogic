@@ -354,10 +354,10 @@ function readAnimationsEnabledFromStorage(): boolean {
 function readColorButtonsFromStorage(): boolean {
   try {
     const v = localStorage.getItem(LS_KEY_COLOR_BUTTONS)
-    if (v === null) return true
+    if (v === null) return false
     return v === 'true' || v === '1'
   } catch {
-    return true
+    return false
   }
 }
 
@@ -2714,11 +2714,6 @@ export default function App() {
     })
   }, [])
 
-  useEffect(() => {
-    if (discardTraySizingTestCols > 0 && suggestedPanelHandsOn) {
-      setSuggestedPanelHandsOn(false)
-    }
-  }, [discardTraySizingTestCols, suggestedPanelHandsOn])
   const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>(() => readBotDifficultyFromStorage())
   const botDifficultyRef = useRef(botDifficulty)
   botDifficultyRef.current = botDifficulty
@@ -5852,9 +5847,60 @@ export default function App() {
 
   const updateSuggestedDiscardOverlayBounds = useCallback(() => {
     const popup = suggestedHandsPopupRef.current
-    const content = popup?.parentElement
     const exposureTopEl = eastExposureRackTopRef.current
     const discardPanel = discardTrackerPanelRef.current
+
+    if (discardTraySizingTestCols > 0) {
+      if (!popup || !discardPanel) {
+        setSuggestedDiscardOverlayBounds((prev) =>
+          prev.topExtendPx === 0 &&
+            prev.bottomExtendPx === 0 &&
+            prev.viewportTopPx === 0 &&
+            prev.viewportLeftPx === 0 &&
+            prev.viewportWidthPx === 0 &&
+            prev.viewportBottomPx === 0
+            ? prev
+            : {
+                topExtendPx: 0,
+                bottomExtendPx: 0,
+                viewportTopPx: 0,
+                viewportLeftPx: 0,
+                viewportWidthPx: 0,
+                viewportBottomPx: 0,
+              },
+        )
+        return
+      }
+
+      const discardRect = discardPanel.getBoundingClientRect()
+      const exposureRect = exposureTopEl?.getBoundingClientRect()
+      const viewportW = window.visualViewport?.width ?? window.innerWidth
+      const next = {
+        topExtendPx: Math.max(0, Math.floor(discardRect.top)),
+        bottomExtendPx: 0,
+        viewportTopPx: exposureRect ? Math.max(0, Math.floor(exposureRect.top)) : 0,
+        viewportLeftPx: 0,
+        viewportWidthPx: Math.max(1, Math.ceil(viewportW)),
+        viewportBottomPx: 0,
+      }
+      setSuggestedDiscardOverlayBounds((prev) =>
+        prev.topExtendPx === next.topExtendPx &&
+          prev.bottomExtendPx === next.bottomExtendPx &&
+          prev.viewportTopPx === next.viewportTopPx &&
+          prev.viewportLeftPx === next.viewportLeftPx &&
+          prev.viewportWidthPx === next.viewportWidthPx &&
+          prev.viewportBottomPx === next.viewportBottomPx
+          ? prev
+          : next,
+      )
+      if (suggestedDiscardOverlayInitialPeekPendingRef.current) {
+        setSuggestedDiscardOverlayPeekPx(0)
+        suggestedDiscardOverlayInitialPeekPendingRef.current = false
+      }
+      return
+    }
+
+    const content = popup?.parentElement
     if (!content || !exposureTopEl || !discardPanel) {
       setSuggestedDiscardOverlayBounds((prev) =>
         prev.topExtendPx === 0 &&
@@ -5903,7 +5949,7 @@ export default function App() {
       setSuggestedDiscardOverlayPeekPx(0)
       suggestedDiscardOverlayInitialPeekPendingRef.current = false
     }
-  }, [])
+  }, [discardTraySizingTestCols])
 
   useLayoutEffect(() => {
     if (!showSuggestedHandsPanel || !showPlaySplitRow) {
@@ -5935,8 +5981,12 @@ export default function App() {
     }
 
     const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(scheduleUpdate)
+    const boundsObserveParent =
+      discardTraySizingTestCols > 0
+        ? suggestedHandsPopupRef.current
+        : suggestedHandsPopupRef.current?.parentElement
     for (const node of [
-      suggestedHandsPopupRef.current?.parentElement,
+      boundsObserveParent,
       eastExposureRackTopRef.current,
       discardTrackerPanelRef.current,
     ]) {
@@ -5956,6 +6006,7 @@ export default function App() {
     showSuggestedHandsPanel,
     mainPhase,
     suggestedPanelHandsOn,
+    discardTraySizingTestCols,
   ])
 
   /** Hand action bar is hidden in these phases; keep Menu on the bot column toolbar. */
@@ -5982,6 +6033,71 @@ export default function App() {
   const handBankMjStylePostGameOverlay =
     (mainPhase === 'mahjong-declared' && mahjongWinReviewing) ||
     wallGameReviewShiftNewGameToMainRack
+
+  const renderSuggestedHandsPopup = (placement: 'discard' | 'viewport') => {
+    if (!showSuggestedHandsPanel) return null
+    const viewportSheet = placement === 'viewport'
+    if (viewportSheet && discardTraySizingTestCols === 0) return null
+    if (!viewportSheet && discardTraySizingTestCols > 0) return null
+
+    const overlayStyle: CSSProperties = {
+      ['--suggested-overlay-top-peek' as string]: `${suggestedDiscardOverlayPeekPx}px`,
+      ['--suggested-overlay-top-extend' as string]: `${suggestedDiscardOverlayBounds.topExtendPx}px`,
+      ['--suggested-overlay-bottom-extend' as string]: `${suggestedDiscardOverlayBounds.bottomExtendPx}px`,
+      ['--suggested-overlay-viewport-top' as string]: `${suggestedDiscardOverlayBounds.viewportTopPx}px`,
+      ['--suggested-overlay-viewport-left' as string]: `${suggestedDiscardOverlayBounds.viewportLeftPx}px`,
+      ['--suggested-overlay-viewport-width' as string]: `${suggestedDiscardOverlayBounds.viewportWidthPx}px`,
+      ['--suggested-overlay-viewport-bottom' as string]: `${suggestedDiscardOverlayBounds.viewportBottomPx}px`,
+    }
+
+    return (
+      <div
+        ref={suggestedHandsPopupRef}
+        id="suggested-hands-popup"
+        className={[
+          'suggested-hands-popup',
+          viewportSheet
+            ? 'suggested-hands-popup--viewport-bottom'
+            : 'suggested-hands-popup--discard-overlay',
+          suggestedPanelHandsOn ? 'suggested-hands-popup--open' : '',
+          suggestedPanelHandsOn && suggestedDiscardOverlayPeekPx < 0
+            ? 'suggested-hands-popup--peek-above'
+            : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+        role="dialog"
+        aria-label="Suggested Hands"
+        aria-modal="false"
+        aria-hidden={!suggestedPanelHandsOn}
+        style={overlayStyle}
+      >
+        <SuggestedHandsPanel
+          discardTraySurface
+          discardOverlayPeekPx={suggestedDiscardOverlayPeekPx}
+          onDiscardOverlayPeekPxChange={setSuggestedDiscardOverlayPeekPx}
+          discardOverlayMeasureRef={suggestedHandsPopupRef}
+          onTrayHeaderClick={() => setSuggestedPanelHandsOn(false)}
+          onPinnedPatternChange={toggleSuggestedPinnedHandKey}
+          hands={eastSuggestedHands}
+          activePatternId={suggestedFocusHandKey}
+          pinnedHandKeys={suggestedPinnedHandKeys}
+          onPatternClick={onSuggestedPatternClick}
+          onPatternDoubleClick={onSuggestedPatternDoubleClick}
+          tilesGuideOn={suggestedPanelTilesOn}
+          onTilesGuideToggle={() => setSuggestedPanelTilesOn((v) => !v)}
+          rackTilesForSuggestedStrip={rackForSuggestedHandsUi}
+          rackTilesForPatternMatch={rackForSuggestedPatternMatch}
+          exposureTileIdsForSuggestedStrip={suggestedHandsExposureTileIds}
+          uncheckedSections={suggestedHandsUncheckedSections}
+          onUncheckedSectionsChange={setSuggestedHandsUncheckedSections}
+          hideConcealedHands={suggestedHandsHideConcealed}
+          cardPatterns={cardPatterns}
+          cardSectionOrder={cardSectionOrder}
+        />
+      </div>
+    )
+  }
 
   return (
     <div
@@ -7705,67 +7821,14 @@ export default function App() {
                           jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
                         />
                         </div>
-                        {showSuggestedHandsPanel ? (
-                          <div
-                            ref={suggestedHandsPopupRef}
-                            id="suggested-hands-popup"
-                            className={[
-                              'suggested-hands-popup',
-                              'suggested-hands-popup--discard-overlay',
-                              suggestedPanelHandsOn ? 'suggested-hands-popup--open' : '',
-                              suggestedPanelHandsOn && suggestedDiscardOverlayPeekPx < 0
-                                ? 'suggested-hands-popup--peek-above'
-                                : '',
-                            ]
-                              .filter(Boolean)
-                              .join(' ')}
-                            role="dialog"
-                            aria-label="Suggested Hands"
-                            aria-modal="false"
-                            aria-hidden={!suggestedPanelHandsOn}
-                            style={
-                              {
-                                ['--suggested-overlay-top-peek' as string]: `${suggestedDiscardOverlayPeekPx}px`,
-                                ['--suggested-overlay-top-extend' as string]: `${suggestedDiscardOverlayBounds.topExtendPx}px`,
-                                ['--suggested-overlay-bottom-extend' as string]: `${suggestedDiscardOverlayBounds.bottomExtendPx}px`,
-                                ['--suggested-overlay-viewport-top' as string]: `${suggestedDiscardOverlayBounds.viewportTopPx}px`,
-                                ['--suggested-overlay-viewport-left' as string]: `${suggestedDiscardOverlayBounds.viewportLeftPx}px`,
-                                ['--suggested-overlay-viewport-width' as string]: `${suggestedDiscardOverlayBounds.viewportWidthPx}px`,
-                                ['--suggested-overlay-viewport-bottom' as string]: `${suggestedDiscardOverlayBounds.viewportBottomPx}px`,
-                              } as CSSProperties
-                            }
-                          >
-                            <SuggestedHandsPanel
-                              discardTraySurface
-                              discardOverlayPeekPx={suggestedDiscardOverlayPeekPx}
-                              onDiscardOverlayPeekPxChange={setSuggestedDiscardOverlayPeekPx}
-                              discardOverlayMeasureRef={suggestedHandsPopupRef}
-                              onTrayHeaderClick={() => setSuggestedPanelHandsOn(false)}
-                              onPinnedPatternChange={toggleSuggestedPinnedHandKey}
-                              hands={eastSuggestedHands}
-                              activePatternId={suggestedFocusHandKey}
-                              pinnedHandKeys={suggestedPinnedHandKeys}
-                              onPatternClick={onSuggestedPatternClick}
-                              onPatternDoubleClick={onSuggestedPatternDoubleClick}
-                              tilesGuideOn={suggestedPanelTilesOn}
-                              onTilesGuideToggle={() => setSuggestedPanelTilesOn((v) => !v)}
-                              rackTilesForSuggestedStrip={rackForSuggestedHandsUi}
-                              rackTilesForPatternMatch={rackForSuggestedPatternMatch}
-                              exposureTileIdsForSuggestedStrip={suggestedHandsExposureTileIds}
-                              uncheckedSections={suggestedHandsUncheckedSections}
-                              onUncheckedSectionsChange={setSuggestedHandsUncheckedSections}
-                              hideConcealedHands={suggestedHandsHideConcealed}
-                              cardPatterns={cardPatterns}
-                              cardSectionOrder={cardSectionOrder}
-                            />
-                          </div>
-                        ) : null}
+                        {renderSuggestedHandsPopup('discard')}
                       </div>
                     </div>
                   </section>
                 </div>
                 </div>
             ) : null}
+              {renderSuggestedHandsPopup('viewport')}
               <DragOverlay dropAnimation={null}>
                 {dragOverlayMeldTiles ? (
                   <div className="drag-overlay-meld">

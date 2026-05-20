@@ -66,6 +66,8 @@
 }
 
 .suggested-hands-popup.suggested-hands-popup--discard-overlay:not(.suggested-hands-popup--open)
+  .panel--hands.suggested-hands-popup__user-shift,
+.suggested-hands-popup.suggested-hands-popup--viewport-bottom:not(.suggested-hands-popup--open)
   .panel--hands.suggested-hands-popup__user-shift {
   transform: translateY(100%);
   transform-origin: bottom center;
@@ -73,6 +75,8 @@
 }
 
 .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
+  .panel--hands.suggested-hands-popup__user-shift,
+.suggested-hands-popup.suggested-hands-popup--viewport-bottom.suggested-hands-popup--open
   .panel--hands.suggested-hands-popup__user-shift {
   /* Resize lives on the overlay shell/height so the bottom stays anchored. */
   transform: translateY(0);
@@ -82,6 +86,9 @@
 
 .app-layout[data-animations='off']
   .suggested-hands-popup.suggested-hands-popup--discard-overlay
+  .panel--hands.suggested-hands-popup__user-shift,
+.app-layout[data-animations='off']
+  .suggested-hands-popup.suggested-hands-popup--viewport-bottom
   .panel--hands.suggested-hands-popup__user-shift {
   transition: none;
 }
@@ -109,7 +116,8 @@
  * Discard overlay: drag the column-header row to shrink the sheet from the top (peek gap shows
  * discards). `pointer-events: none` on the shell + `auto` on the panel lets the gap receive hits.
  */
-.suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open {
+.suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open,
+.suggested-hands-popup.suggested-hands-popup--viewport-bottom.suggested-hands-popup--open {
   background: transparent;
   opacity: 1;
   visibility: visible;
@@ -122,7 +130,8 @@
  * Header peek-drag: the overlay shell is normally pointer-events:none so the gap above the
  * sheet passes hits to the rack. While resizing, block that pass-through and rack ghost taps.
  */
-.suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open.suggested-hands-popup--peek-dragging {
+.suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open.suggested-hands-popup--peek-dragging,
+.suggested-hands-popup.suggested-hands-popup--viewport-bottom.suggested-hands-popup--open.suggested-hands-popup--peek-dragging {
   pointer-events: auto;
 }
 
@@ -176,11 +185,13 @@
   border-block-end: none;
 }
 
-.suggested-hands-popup--discard-overlay.suggested-hands-popup--open .panel--hands {
+.suggested-hands-popup--discard-overlay.suggested-hands-popup--open .panel--hands,
+.suggested-hands-popup--viewport-bottom.suggested-hands-popup--open .panel--hands {
   pointer-events: auto;
 }
 
-.suggested-hands-popup--discard-overlay:not(.suggested-hands-popup--open) .panel--hands {
+.suggested-hands-popup--discard-overlay:not(.suggested-hands-popup--open) .panel--hands,
+.suggested-hands-popup--viewport-bottom:not(.suggested-hands-popup--open) .panel--hands {
   pointer-events: none;
 }
 
