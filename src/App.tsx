@@ -7,7 +7,6 @@ import {
   useState,
   type CSSProperties,
   type ReactNode,
-  type RefObject,
 } from 'react'
 import {
   DndContext,
@@ -434,7 +433,7 @@ function eastExposureMeldSortId(exposureIdx: number): string {
 
 function parseEastExposureMeldSortId(id: string): number | null {
   if (!id.startsWith(EAST_EXPOSURE_MELD_SORT_ID_PREFIX)) return null
-  const raw = id.slice(EAST_EXPOSURE_MELD_SORT_ID_PREFIX)
+  const raw = id.slice(EAST_EXPOSURE_MELD_SORT_ID_PREFIX.length)
   const parsed = Number(raw)
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : null
 }
