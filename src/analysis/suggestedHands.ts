@@ -1098,12 +1098,14 @@ function fullDefKey(def: TileDef): string {
     case 'dragon': return `d:${def.dragon}`
     case 'flower': return 'f'
     case 'joker':  return 'j'
+    case 'blank':  return 'b'
   }
 }
 
 function totalCopiesForDef(def: TileDef): number {
   if (def.cat === 'flower') return 8
   if (def.cat === 'joker') return 8
+  if (def.cat === 'blank') return 6
   return 4
 }
 

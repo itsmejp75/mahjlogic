@@ -10,9 +10,8 @@
 
 /* Pass box chrome only highlights while dragging (see `--over` and `--dragging` below), not on pointer hover. */
 
-/* Drop target: same stronger fill + border as call box --over */
+/* Drop target: same drag-over glow as call / discard staging. */
 .pass-strip-tail--over .pass-strip-tail__inner {
-  /* Match `.pass-box--over` — fill from `--coach-teal-border` family; ring matches edge token. */
   background: var(--rack-teal-slot-highlight-fill);
   box-shadow: inset 0 0 0 1px var(--coach-teal-border);
 }

@@ -64,7 +64,7 @@
   box-sizing: border-box;
 }
 
-/* Discard tray: stack close (above) + menu (below); each slot keeps the original single-button shell. */
+/* Discard tray: menu stack lower-right. */
 .discard-tracker__content > .app-menu-anchor-stack--discard-tracker {
   position: absolute;
   right: var(--bot-exposure-inner-pad);
@@ -133,30 +133,13 @@
   transition: box-shadow 0.14s ease, transform 0.12s ease;
 }
 
-.discard-tracker__content > .app-menu-anchor-stack--discard-tracker > .app-menu-anchor--discard-tracker > .btn.rack-bottom-tile-cell:hover:not(:disabled):not(.app-menu-anchor__exp-btn) {
+.discard-tracker__content > .app-menu-anchor-stack--discard-tracker > .app-menu-anchor--discard-tracker > .btn.rack-bottom-tile-cell:hover:not(:disabled) {
   background: var(--color-slate-mid);
   color: #dcdce0;
   box-shadow:
     inset 2px 2px 5px rgba(255, 255, 255, 0.12),
     inset -3px -3px 7px rgba(0, 0, 0, 0.35);
   transform: none;
-}
-
-/* Exp toggle: no hover wash (on or off). */
-.discard-tracker__content > .app-menu-anchor-stack--discard-tracker > .app-menu-anchor--discard-tracker > .app-menu-anchor__exp-btn:hover:not(:disabled) {
-  background: var(--color-slate-mid);
-  color: #dcdce0;
-  box-shadow:
-    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
-    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
-  transform: none;
-}
-
-.discard-tracker__content > .app-menu-anchor-stack--discard-tracker > .app-menu-anchor--discard-tracker > .app-menu-anchor__exp-btn.rack-bottom-tile-cell--menu-open:hover:not(:disabled) {
-  box-shadow:
-    inset 4px 4px 11px rgba(0, 0, 0, 0.48),
-    inset -3px -3px 8px rgba(255, 255, 255, 0.1),
-    inset 0 0 0 2px rgba(255, 255, 255, 0.24);
 }
 
 .discard-tracker__content > .app-menu-anchor-stack--discard-tracker > .app-menu-anchor--discard-tracker > .btn.rack-bottom-tile-cell--menu-open,
@@ -169,17 +152,8 @@
     inset 0 0 0 2px rgba(255, 255, 255, 0.24);
 }
 
-/* Exp label: same type scale as hand-rack Sort (`.rack-bottom-tile-cell--c1`, part-0001). */
-.discard-tracker__content > .app-menu-anchor-stack--discard-tracker > .app-menu-anchor--discard-tracker > .app-menu-anchor__exp-btn {
-  font-size: min(var(--rack-hand-action-label-fs), calc(var(--hand-rack-tile-w) * 0.34));
-  letter-spacing: max(0.016em, calc(0.026em + 0.016rem));
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: clip;
-}
-
 /* Menu: hamburger icon scale (unchanged). */
-.discard-tracker__content > .app-menu-anchor-stack--discard-tracker > .app-menu-anchor--discard-tracker > .btn.rack-bottom-tile-cell:not(.app-menu-anchor__exp-btn) {
+.discard-tracker__content > .app-menu-anchor-stack--discard-tracker > .app-menu-anchor--discard-tracker > .btn.rack-bottom-tile-cell {
   font-size: min(
     var(--rack-menu-hamburger-fs),
     calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.58)
@@ -220,7 +194,7 @@
   flex-direction: column;
   overflow: hidden;
   background: var(--window-inner-surface);
-  /* Tray shell corners match discard tile faces (0.116 × tile width), not tile-tray-shell-radius. */
+  /* Tray shell + tile faces: corner radius = 0.116 × local tile width. */
   border-radius: var(--discard-tray-tile-corner-r, var(--tile-face-border-radius));
   container-type: inline-size;
   container-name: discard-tray;
@@ -229,15 +203,22 @@
 /* Tile corner radius at this tray width — used by the container + hands overlay only (tiles unchanged). */
 @container discard-tray (min-width: 0px) {
   .discard-tracker__content {
+    --discard-tracker-slots-across: 29;
     --discard-tray-rack-tile-w: max(
       1px,
-      calc((100cqw - 25 * var(--player-rack-face-gap)) / 26)
+      calc(
+        (
+          100cqw
+          - (var(--discard-tracker-slots-across) - 1) * var(--player-rack-face-gap)
+        ) / var(--discard-tracker-slots-across)
+      )
     );
     --discard-tray-tile-corner-r: calc(0.116 * var(--discard-tray-rack-tile-w));
+    --tile-face-border-radius: var(--discard-tray-tile-corner-r);
   }
 
-  .discard-tracker__bot-exposures .exposure-rack--discard-tracker-opponent {
-    --rack-tile-w: calc((100cqw - 13 * var(--player-rack-face-gap)) / 14 / 2);
+  .discard-tracker__overlay-grid .exposure-rack--discard-tracker-opponent {
+    --rack-tile-w: var(--discard-tray-rack-tile-w);
     --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
     --exposure-slot-h: var(--rack-tile-h);
   }
@@ -268,6 +249,7 @@
  */
 .panel--discard-tracker .discard-pile {
   gap: var(--player-rack-face-gap);
+  --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
   --rack-tile-w: max(
     1px,
     calc(
@@ -313,76 +295,204 @@
   z-index: 1;
 }
 
-.discard-tracker__content .discard-tracker__bot-exposures {
+/*
+ * Overlay grid: 3 rows × 29 slots (1 prefix + 14 bot + 14 sorted), edge-to-edge in the tray.
+ */
+.discard-tracker__content .discard-tracker__overlay-grid {
   position: absolute;
   inset: 0;
   z-index: 2;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  align-items: center;
-  padding-top: var(--bot-exposure-inner-pad);
+  gap: var(--play-tray-h-divider);
+  padding: 0;
   box-sizing: border-box;
   pointer-events: none;
 }
 
-/*
- * One tray rectangle for all three opponent rows (14 slots × North / West / South).
- */
-.discard-tracker__content .discard-tracker__bot-exposures .discard-tracker__bot-exposures-frame {
-  position: relative;
-  z-index: 1;
-  pointer-events: auto;
-  box-sizing: border-box;
-  width: fit-content;
+.discard-tracker__overlay-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  width: 100%;
   max-width: 100%;
-  margin-inline: auto;
-  padding: var(--bot-exposure-inner-pad);
-  background: var(--window-inner-surface);
-  border: none;
-  border-radius: var(--discard-tray-tile-corner-r, var(--tile-tray-shell-radius));
+  gap: var(--player-rack-face-gap);
+  pointer-events: none;
 }
 
-.discard-tracker__content .discard-tracker__bot-exposures .discard-tracker__bot-exposures-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  width: fit-content;
+.discard-tracker__overlay-row > * {
+  pointer-events: auto;
 }
 
-/*
- * Opponent exposure rows on the discard tray: 14 half-scale tiles + 13 face gaps per row
- * (tile size is half the East rack face; same gap rhythm).
- */
-.discard-tracker__bot-exposures .discard-tracker__bot-exposures-list .app-opponents-rail__cell {
+.discard-tracker__overlay-row .app-opponents-rail__cell {
   width: fit-content;
-  align-items: center;
   flex: 0 0 auto;
+  align-items: flex-start;
 }
 
-.discard-tracker__bot-exposures .discard-tracker__bot-exposures-list .app-opponents-rail__cell .exposure-rack,
-.discard-tracker__bot-exposures .exposure-rack--discard-tracker-opponent {
-  --rack-tile-w: max(1px, calc((100cqw - 13 * var(--player-rack-face-gap)) / 14 / 2));
+.discard-tracker__overlay-grid .exposure-rack--discard-tracker-opponent {
+  --rack-tile-w: max(
+    1px,
+    calc(
+      (
+        100cqw
+        - (var(--discard-tracker-slots-across, 29) - 1) * var(--player-rack-face-gap)
+      ) / var(--discard-tracker-slots-across, 29)
+    )
+  );
   --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
   --exposure-slot-h: var(--rack-tile-h);
+  --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
   flex-wrap: nowrap;
   justify-content: flex-start;
   gap: var(--player-rack-face-gap);
   padding: 0;
-  padding-inline: 0;
-  margin-bottom: 0;
-  width: calc(14 * var(--rack-tile-w) + 13 * var(--player-rack-face-gap));
-  max-width: 100%;
+  margin: 0;
   box-sizing: border-box;
 }
 
-.discard-tracker__bot-exposures .exposure-rack__meld-drop {
+.discard-tracker__overlay-grid .exposure-rack--discard-tracker-prefix {
+  width: var(--rack-tile-w);
+  max-width: var(--rack-tile-w);
+}
+
+.discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row {
+  width: calc(14 * var(--rack-tile-w) + 13 * var(--player-rack-face-gap));
+  max-width: 100%;
+}
+
+.discard-tracker__overlay-grid .exposure-rack--discard-tracker-sorted-row {
+  width: calc(14 * var(--rack-tile-w) + 13 * var(--player-rack-face-gap));
+  max-width: 100%;
+}
+
+.discard-tracker__overlay-grid .exposure-rack__meld-drop {
   gap: var(--player-rack-face-gap);
 }
 
-/* Empty wells: no border; faint fill so the 14-slot rows stay visible on the tray. */
-.discard-tracker__bot-exposures .exposure-rack--discard-tracker-opponent .exposure-rack__slot--empty::before {
+/* Empty wells: no border; faint fill so slot rows stay visible on the tray. */
+.discard-tracker__overlay-grid .exposure-rack--discard-tracker-opponent .exposure-rack__slot--empty::before {
   border: none;
+  border-radius: var(--tile-face-border-radius);
   background: color-mix(in srgb, var(--window-surface) 28%, transparent);
   box-shadow: none;
+}
+
+/* Highlight / hover rings: use tray-scaled radius, not the main-rack 0.35rem default. */
+.discard-tracker__content .exposure-rack__slot--suggest-best .tile-face,
+.discard-tracker__content .exposure-rack__slot--called .tile-face,
+.discard-tracker__content .exposure-rack__slot--staged-returnable:hover .tile-face,
+.discard-tracker__content .exposure-rack__slot--call-amendable:hover .tile-face {
+  border-radius: var(--tile-face-border-radius);
+}
+
+/* Sorted discard tray: match discard-pile tile chrome. */
+.discard-tracker__overlay-grid .sorted-discard-tray__slot .tile-face {
+  border: none;
+}
+
+.discard-tracker__overlay-grid .tile-face.tile-face--sorted-discard-dot {
+  background: var(--tg-dot, var(--card-ink-navy));
+}
+
+.discard-tracker__overlay-grid .tile-face.tile-face--sorted-discard-bam {
+  background: var(--tg-bam, var(--card-ink-green));
+}
+
+.discard-tracker__overlay-grid .tile-face.tile-face--sorted-discard-crak {
+  background: var(--tg-crak, var(--card-ink-red));
+}
+
+.discard-tracker__overlay-grid .tile-face.tile-face--sorted-discard-glyph {
+  --tile-face-glyph-fs: calc(var(--rack-tile-w) * 1.03 / 2.65 * 2);
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding-top: calc(var(--rack-tile-w) * 0.06);
+  padding-inline: calc(var(--rack-tile-w) * 0.06);
+  box-sizing: border-box;
+}
+
+.discard-tracker__overlay-grid .tile-face.tile-face--sorted-discard-glyph .tile-face__glyph,
+.discard-tracker__overlay-grid .tile-face.tile-face--sorted-discard-glyph .tile-face__glyph-num,
+.discard-tracker__overlay-grid .tile-face.tile-face--sorted-discard-glyph .tile-face__glyph-letter {
+  color: #080808;
+  font-size: var(--tile-face-glyph-fs);
+}
+
+/* Sorted discard joker: show “J” only — no inscribed ring. */
+.discard-tracker__overlay-grid .sorted-discard-tray__slot .tile-face.tile--joker::after {
+  content: none;
+  display: none;
+}
+
+.discard-tracker__overlay-grid .sorted-discard-tray__slot .tile-face.tile--joker .tile-face__glyph {
+  color: #080808;
+}
+
+.discard-tracker__overlay-grid .tile-face.tile-face--sorted-discard-glyph .tile-face__glyph {
+  position: static;
+  margin: 0;
+  line-height: 1;
+  text-align: left;
+}
+
+.discard-tracker__overlay-grid .tile-face.tile-face--sorted-discard-glyph-center {
+  justify-content: center;
+}
+
+.discard-tracker__overlay-grid .tile-face.tile-face--sorted-discard-glyph-center .tile-face__glyph {
+  text-align: center;
+}
+
+.discard-tracker__overlay-grid .sorted-discard-tray__slot {
+  position: relative;
+}
+
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--blank .tile-face,
+.discard-tracker__overlay-grid .tile-face.tile--blank {
+  border: none;
+}
+
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--suit-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.discard-tracker__overlay-grid .sorted-discard-tray__suit-label {
+  font-family: 'Noto Sans Arabic', var(--sans);
+  font-weight: 700;
+  font-size: calc(var(--rack-tile-w) * 1.12);
+  line-height: 1;
+}
+
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--suit-label-dot .sorted-discard-tray__suit-label {
+  color: var(--tg-dot, var(--card-ink-navy));
+}
+
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--suit-label-bam .sorted-discard-tray__suit-label {
+  color: var(--tg-bam, var(--card-ink-green));
+}
+
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--suit-label-crak .sorted-discard-tray__suit-label {
+  color: var(--tg-crak, var(--card-ink-red));
+}
+
+.discard-tracker__overlay-grid .sorted-discard-tray__count {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--rack-tile-w) * 0.005);
+  transform: translateX(-50%);
+  z-index: 2;
+  pointer-events: none;
+  font-family: 'Noto Sans Arabic', var(--sans);
+  font-weight: 700;
+  /* Match `.tile-face` corner glyph (`--tile-face-glyph-fs`). */
+  font-size: calc(var(--rack-tile-w) * 1.03 / 2.65 * 1.5);
+  line-height: 1;
+  color: var(--tg-ink, #080808);
 }

@@ -29,6 +29,8 @@
   --bot-tile-h-height-fit: var(--bot-tile-h-width-fit);
   --rack-tile-h: min(var(--bot-tile-h-width-fit), var(--bot-tile-h-height-fit));
   --rack-tile-w: calc(var(--rack-tile-h) / 1.3333);
+  --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
+  --tile-tray-shell-radius: calc(var(--tile-face-border-radius) + var(--bot-exposure-inner-pad));
   --rack-panel-inset: 0;
   --exposure-slot-h: var(--rack-tile-h);
 }

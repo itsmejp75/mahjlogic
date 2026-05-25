@@ -22,6 +22,16 @@ type Props = {
   rackNewMark?: boolean
   /** Compact glyph: suit tiles show rank only (e.g. `1` not `1D`); suit color classes unchanged. */
   compactRankOnly?: boolean
+  /** Sorted discard tray: glyph band in the upper portion of the face (e.g. 1D, 2D). */
+  sortedDiscardGlyph?: boolean
+  /** Sorted discard tray: center the glyph horizontally in the upper band (0, F, N, S). */
+  sortedDiscardGlyphCenter?: boolean
+  /** Sorted discard tray: paint dot blue (including soap dragon). */
+  sortedDiscardDotBlue?: boolean
+  /** Sorted discard tray: paint bam green (including green dragon). */
+  sortedDiscardBamGreen?: boolean
+  /** Sorted discard tray: paint crak red (including red dragon). */
+  sortedDiscardCrakRed?: boolean
 }
 
 /**
@@ -56,6 +66,8 @@ function categoryClass(def: TileDef): string {
       return 'tile--flower'
     case 'joker':
       return 'tile--joker'
+    case 'blank':
+      return 'tile--blank'
   }
 }
 
@@ -66,6 +78,11 @@ export function TileFace({
   cardInk,
   rackNewMark,
   compactRankOnly = false,
+  sortedDiscardGlyph = false,
+  sortedDiscardGlyphCenter = false,
+  sortedDiscardDotBlue = false,
+  sortedDiscardBamGreen = false,
+  sortedDiscardCrakRed = false,
 }: Props) {
   const skinClass =
     cardInk != null
@@ -82,6 +99,11 @@ export function TileFace({
         stackedSuit ? 'tile-face--rack-suit-stack' : '',
         elevated ? 'tile-face--elevated' : '',
         rackNewMark ? 'tile-face--rack-new-mark' : '',
+        sortedDiscardGlyph ? 'tile-face--sorted-discard-glyph' : '',
+        sortedDiscardGlyphCenter ? 'tile-face--sorted-discard-glyph-center' : '',
+        sortedDiscardDotBlue ? 'tile-face--sorted-discard-dot' : '',
+        sortedDiscardBamGreen ? 'tile-face--sorted-discard-bam' : '',
+        sortedDiscardCrakRed ? 'tile-face--sorted-discard-crak' : '',
       ]
         .filter(Boolean)
         .join(' ')}

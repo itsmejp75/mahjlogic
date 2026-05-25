@@ -49,9 +49,9 @@
 }
 
 .east-discard-staging--over {
-  /* Match Charleston pass / call — fill from `--coach-teal-border` family */
   background: var(--rack-teal-slot-highlight-fill);
-  border-color: var(--coach-teal-border);
+  border: 0;
+  box-shadow: inset 0 0 0 1px var(--coach-teal-border);
 }
 
 .east-discard-staging__placeholder {

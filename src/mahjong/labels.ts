@@ -27,6 +27,8 @@ export function tileShortLabel(def: TileDef): string {
       return 'F'
     case 'joker':
       return 'J'
+    case 'blank':
+      return 'B'
   }
 }
 
@@ -48,5 +50,7 @@ export function tileAriaLabel(def: TileDef): string {
       return `flower ${def.flower}`
     case 'joker':
       return 'joker'
+    case 'blank':
+      return 'blank tile'
   }
 }

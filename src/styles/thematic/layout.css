@@ -1840,23 +1840,26 @@
 
 
 /* Training: when dragging a hand tile within range, first empty cell shows Call affordance (teal, like pass / discard) */
-.app .panel--hand .exposure-rack__call-initiate-target--near.exposure-rack__slot--empty::before {
+.app .panel--hand .exposure-rack__call-initiate-target--near.exposure-rack__slot--empty::before,
+.app .panel--hand .exposure-rack__call-initiate-target--over.exposure-rack__slot--empty::before {
   opacity: 0;
-  transition: opacity 0.12s ease;
 }
 
 .app .panel--hand .exposure-rack__call-initiate-target--near {
   border-radius: 0.35rem;
-  /* Match Charleston `.pass-box`: #334155 @ 50% + coach-teal border; `--over` uses teal wash (below). */
-  border: 1px solid var(--coach-teal-border);
+  /* Match Charleston `.pass-box`: #334155 @ 50% + coach-teal ring; `--over` uses teal wash (below). */
+  width: calc(3 * var(--rack-tile-w) + 2 * var(--player-rack-face-gap));
+  min-height: var(--rack-tile-h);
+  border: 0;
   background: rgba(51, 65, 85, 0.5);
-  transition: background 0.15s ease, border-color 0.15s ease;
+  box-shadow: inset 0 0 0 1px var(--coach-teal-border);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
   box-sizing: border-box;
 }
 
 .app .panel--hand .exposure-rack__call-initiate-target--near.exposure-rack__call-initiate-target--over {
   background: var(--rack-teal-slot-highlight-fill);
-  border-color: var(--coach-teal-border);
+  box-shadow: inset 0 0 0 1px var(--coach-teal-border);
 }
 
 /* Bot-turn incoming discard — same idle/highlight chrome as Charleston pass box + call-initiate */

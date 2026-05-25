@@ -61,6 +61,90 @@
   color: var(--text-h, var(--fg));
 }
 
+/* Blank tiles: switch, then label with 2 / 4 / 6 chips inline immediately after. */
+.app-menu-modal__row--blank-tiles {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.app-menu-modal__blank-tiles-trail {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.38rem 0.45rem;
+  min-width: 0;
+}
+
+.app-menu-modal__blank-tiles-trail > .app-menu-modal__label {
+  flex: 0 0 auto;
+}
+
+.app-menu-modal__blank-tile-counts {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0;
+}
+
+/* Match menu toggle pill size (2.8rem × 1.55rem) — landscape press targets, not diff-row tiles. */
+.app-menu-modal .app-menu-modal__blank-tile-count-btn.btn {
+  --_blank-count-btn-w: 2.8rem;
+  --_blank-count-btn-h: 1.55rem;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  width: var(--_blank-count-btn-w);
+  min-width: var(--_blank-count-btn-w);
+  max-width: var(--_blank-count-btn-w);
+  height: var(--_blank-count-btn-h);
+  min-height: var(--_blank-count-btn-h);
+  max-height: var(--_blank-count-btn-h);
+  padding: 0;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-family: 'Figtree', var(--sans);
+  font-size: max(0.8125rem, var(--app-ui-control-fs-sm));
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--text-h, var(--fg));
+  background: color-mix(in srgb, var(--fg) 8%, var(--bg-elevated, var(--bg)));
+  border: 1px solid color-mix(in srgb, #6b7280 55%, #9ca3af 45%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-white) 35%, transparent);
+  cursor: pointer;
+  transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+}
+
+.app-menu-modal .app-menu-modal__blank-tile-count-btn.btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--fg) 12%, var(--bg-elevated, var(--bg)));
+  border-color: color-mix(in srgb, #6b7280 70%, #9ca3af 30%);
+  transform: none;
+  filter: none;
+}
+
+.app-menu-modal .app-menu-modal__blank-tile-count-btn.btn:active:not(:disabled) {
+  transform: none;
+  filter: none;
+}
+
+.app-menu-modal .app-menu-modal__blank-tile-count-btn--on.btn,
+.app-menu-modal .app-menu-modal__blank-tile-count-btn--on.btn:hover:not(:disabled) {
+  color: var(--color-white);
+  background: #22c55e;
+  border-color: color-mix(in srgb, #15803d 60%, #16a34a 40%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-white) 20%, transparent);
+}
+
+.app-menu-modal .app-menu-modal__blank-tile-count-btn.btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
 .app-menu-modal__subhead {
   margin: 0.35rem 0 0.1rem;
   font-size: var(--app-ui-control-fs-xs);

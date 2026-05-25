@@ -14,6 +14,8 @@ export type TileDef =
   | { cat: 'dragon'; dragon: Dragon }
   | { cat: 'flower'; flower: number }
   | { cat: 'joker' }
+  /** Optional house rule: redeem in hand for any tile already in the discard pile. */
+  | { cat: 'blank' }
 
 /** One physical tile in the wall or a rack (stable id for React + drag). */
 export type TileInstance = { id: string; def: TileDef }

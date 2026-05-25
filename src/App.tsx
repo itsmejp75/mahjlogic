@@ -27,9 +27,28 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { buildAmericanDeck, dealOpeningFour, shuffle } from './mahjong/deck'
+import {
+  americanDeckTileCount,
+  BLANK_TILE_COUNT_OPTIONS,
+  BLANK_TILE_DEF,
+  buildAmericanDeck,
+  dealOpeningFour,
+  DEFAULT_BLANK_TILE_COUNT,
+  isBlankTileCount,
+  shuffle,
+  STANDARD_JOKER_COUNT,
+  TEN_JOKERS_COUNT,
+} from './mahjong/deck'
+import type { BlankTileCount } from './mahjong/deck'
 import type { ClaimType, DiscardEntry, EastExposure, Seat, Suit, TileDef, TileInstance } from './mahjong/types'
-import { findExactMatches, sortTiles, tileDefsEqual, type SortMode } from './mahjong/tileUtils'
+import { tileAriaLabel } from './mahjong/labels'
+import {
+  countDiscardEntriesMatchingDef,
+  findExactMatches,
+  sortTiles,
+  tileDefsEqual,
+  type SortMode,
+} from './mahjong/tileUtils'
 import { PASS_BOX_ID, passDropIndex, type PassSlots } from './mahjong/passTargets'
 import {
   applyCharlestonExchange,
@@ -51,7 +70,6 @@ import { HandBank, HAND_BANK_ID } from './components/HandBank'
 import { TileFace } from './components/TileFace'
 import { ExposureRack } from './components/ExposureRack'
 import { RackLogoWatermark } from './components/RackLogoWatermark'
-import { DiscardPileFlyInTile } from './components/DiscardPileFlyInTile'
 import {
   PLAYABLE_CARD_IDS,
   PLAYABLE_CARD_LABEL,
@@ -197,7 +215,11 @@ const LS_KEY_DEAD_TILE_HINT = 'mahjlogic.deadTileHintEnabled'
 const DEAD_TILE_HINT_LABEL = 'Dead tile(s) hint'
 const LS_KEY_CONCEALED_HAND_REMINDER = 'mahjlogic.concealedHandReminderEnabled'
 
-const LS_KEY_DISCARD_OPPONENT_EXPOSURES = 'mahjlogic.discardTrackerOpponentExposuresOn'
+const LS_KEY_BLANK_TILES = 'mahjlogic.blankTilesEnabled'
+const LS_KEY_BLANK_TILE_COUNT = 'mahjlogic.blankTileCount'
+const LS_KEY_TEN_JOKERS = 'mahjlogic.tenJokersEnabled'
+const BLANK_TILES_LABEL = 'Blank tiles'
+const TEN_JOKERS_LABEL = '10 Jokers'
 const CONCEALED_HAND_REMINDER_LABEL = 'Concealed hand reminder'
 const JOKER_SWAP_HINT_BOUNCE_DELAY_MS = 500
 const JOKER_SWAP_HINT_BOUNCE_DURATION_MS = 1700
@@ -346,13 +368,36 @@ function readConcealedHandReminderFromStorage(): boolean {
   }
 }
 
-function readDiscardOpponentExposuresOnFromStorage(): boolean {
+function readBlankTilesEnabledFromStorage(): boolean {
   try {
-    const v = localStorage.getItem(LS_KEY_DISCARD_OPPONENT_EXPOSURES)
-    if (v === null) return true
+    const v = localStorage.getItem(LS_KEY_BLANK_TILES)
+    if (v === null) return false
     return v === 'true' || v === '1'
   } catch {
-    return true
+    return false
+  }
+}
+
+function readBlankTileCountFromStorage(): BlankTileCount {
+  try {
+    const v = localStorage.getItem(LS_KEY_BLANK_TILE_COUNT)
+    if (v != null) {
+      const n = Number(v)
+      if (isBlankTileCount(n)) return n
+    }
+  } catch {
+    /* ignore */
+  }
+  return DEFAULT_BLANK_TILE_COUNT
+}
+
+function readTenJokersEnabledFromStorage(): boolean {
+  try {
+    const v = localStorage.getItem(LS_KEY_TEN_JOKERS)
+    if (v === null) return false
+    return v === 'true' || v === '1'
+  } catch {
+    return false
   }
 }
 
@@ -389,37 +434,37 @@ function eastExposureMeldSortId(exposureIdx: number): string {
 
 function parseEastExposureMeldSortId(id: string): number | null {
   if (!id.startsWith(EAST_EXPOSURE_MELD_SORT_ID_PREFIX)) return null
-  const raw = id.slice(EAST_EXPOSURE_MELD_SORT_ID_PREFIX.length)
+  const raw = id.slice(EAST_EXPOSURE_MELD_SORT_ID_PREFIX)
   const parsed = Number(raw)
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : null
+}
+
+/** Rack drop boxes highlight and accept drops when the dragged tile overlaps them, not the pointer. */
+function collisionHitsForTileOverlappingZones(
+  args: Parameters<CollisionDetection>[0],
+  zoneIds: readonly string[],
+): ReturnType<CollisionDetection> {
+  const containers = args.droppableContainers.filter((c) => zoneIds.includes(String(c.id)))
+  if (containers.length === 0) return []
+  return rectIntersection({ ...args, droppableContainers: containers })
 }
 
 /**
  * First empty exposure cell while a bot discard is live — within 3 tile-widths the shell
  * appears; drop a hand tile here to run the same path as the Call button.
  */
-function CallInitiateFirstEmptyTarget({
-  proximityActive,
-  boxRef,
-}: {
-  proximityActive: boolean
-  boxRef: RefObject<HTMLDivElement | null>
-}) {
+function CallInitiateFirstEmptyTarget() {
   const { setNodeRef, isOver } = useDroppable({ id: CALL_INITIATE_FIRST_SLOT_ID })
-  const setRefs = (node: HTMLDivElement | null) => {
-    setNodeRef(node)
-    boxRef.current = node
-  }
   return (
     <div
-      ref={setRefs}
+      ref={setNodeRef}
       role="listitem"
       aria-label="Call — drop a hand tile here to start a claim, same as the Call button"
       className={[
         'exposure-rack__slot',
         'exposure-rack__slot--empty',
         'exposure-rack__call-initiate-target',
-        proximityActive ? 'exposure-rack__call-initiate-target--near' : '',
+        isOver ? 'exposure-rack__call-initiate-target--near' : '',
         isOver ? 'exposure-rack__call-initiate-target--over' : '',
       ]
         .filter(Boolean)
@@ -482,6 +527,7 @@ function OpponentExposureDropZone({
   active,
   showWatermark = true,
   watermarkLabel,
+  tag = 'li',
   children,
 }: {
   seat: BotSeat
@@ -489,6 +535,7 @@ function OpponentExposureDropZone({
   showWatermark?: boolean
   /** Compass seat name when `watermarkLabel` is omitted (legacy bot column). */
   watermarkLabel?: string
+  tag?: 'li' | 'div'
   children: ReactNode
 }) {
   const { setNodeRef, isOver } = useDroppable({
@@ -496,8 +543,9 @@ function OpponentExposureDropZone({
     disabled: !active,
   })
   const label = watermarkLabel ?? seat
+  const Tag = tag
   return (
-    <li
+    <Tag
       ref={setNodeRef}
       className={[
         'app-opponents-rail__cell',
@@ -512,11 +560,214 @@ function OpponentExposureDropZone({
         <span className="bot-exposure-row__watermark" aria-hidden="true">{label}</span>
       ) : null}
       {children}
-    </li>
+    </Tag>
   )
 }
 
-function DiscardTrackerBotExposures({
+/** Discard tray overlay per row: 1 prefix + 14 bot exposure + 14 sorted = 29 slots across. */
+const DISCARD_TRACKER_SLOTS_ACROSS = 29
+const DISCARD_TRACKER_BOT_PREFIX_SLOTS = 1
+const DISCARD_TRACKER_BOT_ROW_SLOTS = 14
+const DISCARD_TRACKER_SORTED_ROW_SLOTS = 14
+
+/** Row 3 of sorted discard: craks 1–9, red dragon (R), East, West, blank (B). */
+const SORTED_DISCARD_ROW3_TILES: readonly TileInstance[] = [
+  ...([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((rank) => ({
+    id: `sorted-discard-r3-c${rank}`,
+    def: { cat: 'suit' as const, suit: 'crak' as const, rank },
+  })),
+  {
+    id: 'sorted-discard-r3-red',
+    def: { cat: 'dragon' as const, dragon: 'red' as const },
+  },
+  {
+    id: 'sorted-discard-r3-e',
+    def: { cat: 'wind' as const, wind: 'E' },
+  },
+  {
+    id: 'sorted-discard-r3-w',
+    def: { cat: 'wind' as const, wind: 'W' },
+  },
+  {
+    id: 'sorted-discard-r3-blank',
+    def: BLANK_TILE_DEF,
+  },
+]
+
+/** Row 2 of sorted discard: bams 1–9, green dragon (G), North, South, joker (J). */
+const SORTED_DISCARD_ROW2_TILES: readonly TileInstance[] = [
+  ...([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((rank) => ({
+    id: `sorted-discard-r2-b${rank}`,
+    def: { cat: 'suit' as const, suit: 'bam' as const, rank },
+  })),
+  {
+    id: 'sorted-discard-r2-green',
+    def: { cat: 'dragon' as const, dragon: 'green' as const },
+  },
+  {
+    id: 'sorted-discard-r2-n',
+    def: { cat: 'wind' as const, wind: 'N' },
+  },
+  {
+    id: 'sorted-discard-r2-s',
+    def: { cat: 'wind' as const, wind: 'S' },
+  },
+  {
+    id: 'sorted-discard-r2-j',
+    def: { cat: 'joker' as const },
+  },
+]
+
+/** Row 1 of sorted discard: D label, dots 1–9, soap (0), flower. */
+const SORTED_DISCARD_ROW1_TILES: readonly TileInstance[] = [
+  ...([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((rank) => ({
+    id: `sorted-discard-r1-d${rank}`,
+    def: { cat: 'suit' as const, suit: 'dot' as const, rank },
+  })),
+  {
+    id: 'sorted-discard-r1-soap',
+    def: { cat: 'dragon' as const, dragon: 'soap' as const },
+  },
+  {
+    id: 'sorted-discard-r1-f',
+    def: { cat: 'flower' as const, flower: 1 },
+  },
+]
+
+function sortedDiscardTrayTileFaceProps(def: TileDef): {
+  compactRankOnly: boolean
+  sortedDiscardGlyph: true
+  sortedDiscardGlyphCenter: true
+  sortedDiscardDotBlue: boolean
+  sortedDiscardBamGreen: boolean
+  sortedDiscardCrakRed: boolean
+} {
+  const isDot =
+    (def.cat === 'suit' && def.suit === 'dot') ||
+    (def.cat === 'dragon' && def.dragon === 'soap')
+  const isBam =
+    (def.cat === 'suit' && def.suit === 'bam') ||
+    (def.cat === 'dragon' && def.dragon === 'green')
+  const isCrak =
+    (def.cat === 'suit' && def.suit === 'crak') ||
+    (def.cat === 'dragon' && def.dragon === 'red')
+  return {
+    compactRankOnly: def.cat === 'suit',
+    sortedDiscardGlyph: true,
+    sortedDiscardGlyphCenter: true,
+    sortedDiscardDotBlue: isDot,
+    sortedDiscardBamGreen: isBam,
+    sortedDiscardCrakRed: isCrak,
+  }
+}
+
+function SortedDiscardTrayRow({
+  tiles,
+  slotCount,
+  leadingEmptySlots = 0,
+  leadingSuitLabel,
+  leadingSuitLabelTone = 'dot',
+  trailingGlyphSlots = [],
+  ariaLabel,
+  discardPile,
+}: {
+  tiles: readonly TileInstance[]
+  slotCount: number
+  leadingEmptySlots?: number
+  /** One leading slot with a large suit letter (e.g. dot “D”, bam “B”). */
+  leadingSuitLabel?: string
+  leadingSuitLabelTone?: 'dot' | 'bam' | 'crak'
+  /** Glyph-only slots after `tiles` (no matching discard count). */
+  trailingGlyphSlots?: readonly { id: string; label: string; ariaLabel: string }[]
+  ariaLabel: string
+  discardPile: readonly DiscardEntry[]
+}) {
+  const leadingSlots = (leadingSuitLabel ? 1 : 0) + leadingEmptySlots
+  const emptyCount = Math.max(0, slotCount - leadingSlots - tiles.length - trailingGlyphSlots.length)
+  return (
+    <div
+      className="exposure-rack exposure-rack--discard-tracker-opponent exposure-rack--discard-tracker-sorted-row"
+      role="list"
+      aria-label={ariaLabel}
+    >
+      {leadingSuitLabel ? (
+        <div
+          className={[
+            'exposure-rack__slot',
+            'sorted-discard-tray__slot',
+            'sorted-discard-tray__slot--suit-label',
+            `sorted-discard-tray__slot--suit-label-${leadingSuitLabelTone}`,
+          ].join(' ')}
+          role="presentation"
+          aria-label={`${leadingSuitLabel} suit`}
+        >
+          <span className="sorted-discard-tray__suit-label" aria-hidden>
+            {leadingSuitLabel}
+          </span>
+        </div>
+      ) : null}
+      {Array.from({ length: leadingEmptySlots }, (_, i) => (
+        <div
+          key={`sorted-discard-lead-empty-${i}`}
+          className="exposure-rack__slot exposure-rack__slot--empty"
+          aria-hidden
+        />
+      ))}
+      {tiles.map((tile) => {
+        const discardCount = countDiscardEntriesMatchingDef(discardPile, tile.def)
+        return (
+          <div
+            key={tile.id}
+            className="exposure-rack__slot sorted-discard-tray__slot"
+            role="listitem"
+            aria-label={
+              discardCount > 0
+                ? `${tileAriaLabel(tile.def)}, ${discardCount} discarded`
+                : tileAriaLabel(tile.def)
+            }
+          >
+            <TileFace def={tile.def} {...sortedDiscardTrayTileFaceProps(tile.def)} />
+            <span className="sorted-discard-tray__count" aria-hidden>
+              {discardCount > 0 ? discardCount : null}
+            </span>
+          </div>
+        )
+      })}
+      {trailingGlyphSlots.map((slot) => (
+        <div
+          key={slot.id}
+          className="exposure-rack__slot sorted-discard-tray__slot sorted-discard-tray__slot--blank"
+          role="listitem"
+          aria-label={slot.ariaLabel}
+        >
+          <div
+            className={[
+              'tile-face',
+              'tile-face--sorted-discard-glyph',
+              'tile-face--sorted-discard-glyph-center',
+            ].join(' ')}
+            aria-hidden
+          >
+            <span className="tile-face__glyph">
+              <span className="tile-face__glyph-letter">{slot.label}</span>
+            </span>
+          </div>
+        </div>
+      ))}
+      {Array.from({ length: emptyCount }, (_, i) => (
+        <div
+          key={`sorted-discard-empty-${i}`}
+          className="exposure-rack__slot exposure-rack__slot--empty"
+          aria-hidden
+        />
+      ))}
+    </div>
+  )
+}
+
+/** 3 rows × 29 slots: sorted discard grid (left) and prefix + bot exposures (right). */
+function DiscardTrackerSlotGrid({
+  discardPile,
   botExposures,
   mainPhase,
   jokerSwapUiActive,
@@ -527,6 +778,7 @@ function DiscardTrackerBotExposures({
   jokerSwapHintBounceTileIds,
   jokerSwapHintBounceEpoch,
 }: {
+  discardPile: readonly DiscardEntry[]
   botExposures: BotExposure[]
   mainPhase: MainPhase
   jokerSwapUiActive: boolean
@@ -537,36 +789,81 @@ function DiscardTrackerBotExposures({
   jokerSwapHintBounceTileIds: ReadonlySet<string> | null
   jokerSwapHintBounceEpoch: number
 }) {
+  const botBandSlots =
+    DISCARD_TRACKER_BOT_PREFIX_SLOTS + DISCARD_TRACKER_BOT_ROW_SLOTS
+
   return (
-    <div className="discard-tracker__bot-exposures" aria-label="Opponent exposures">
-      <div className="discard-tracker__bot-exposures-frame">
-        <ul className="bot-exposures__list discard-tracker__bot-exposures-list">
-        {OPPONENT_EXPOSURE_SEATS.map((seat) => {
-          const melds = botExposures
-            .map((exp, globalIdx) => ({ exp, globalIdx }))
-            .filter(({ exp }) => exp.seat === seat)
-            .filter(
-              ({ exp }) =>
-                mainPhase !== 'wall-game' || exp.tiles.length <= WALL_GAME_MAX_EXPOSURE_MELD_TILES,
-            )
-            .map(({ exp, globalIdx }) => ({
-              tiles: exp.tiles,
-              dropZoneId:
-                jokerSwapUiActive && exp.tiles.some((t) => t.def.cat === 'joker')
-                  ? botExposureSwapDropId(globalIdx)
-                  : undefined,
-            }))
-          return (
+    <div
+      className="discard-tracker__overlay-grid"
+      aria-label="Discard tracker slot grid"
+      style={
+        {
+          ['--discard-tracker-slots-across' as string]: DISCARD_TRACKER_SLOTS_ACROSS,
+          ['--discard-tracker-bot-band-slots' as string]: botBandSlots,
+        } as CSSProperties
+      }
+    >
+      {OPPONENT_EXPOSURE_SEATS.map((seat, rowIdx) => {
+        const melds = botExposures
+          .map((exp, globalIdx) => ({ exp, globalIdx }))
+          .filter(({ exp }) => exp.seat === seat)
+          .filter(
+            ({ exp }) =>
+              mainPhase !== 'wall-game' || exp.tiles.length <= WALL_GAME_MAX_EXPOSURE_MELD_TILES,
+          )
+          .map(({ exp, globalIdx }) => ({
+            tiles: exp.tiles,
+            dropZoneId:
+              jokerSwapUiActive && exp.tiles.some((t) => t.def.cat === 'joker')
+                ? botExposureSwapDropId(globalIdx)
+                : undefined,
+          }))
+        return (
+          <div key={seat} className="discard-tracker__overlay-row">
+            {rowIdx === 0 ? (
+              <SortedDiscardTrayRow
+                tiles={SORTED_DISCARD_ROW1_TILES}
+                slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
+                leadingSuitLabel="D"
+                leadingSuitLabelTone="dot"
+                ariaLabel="Sorted discard row 1"
+                discardPile={discardPile}
+              />
+            ) : rowIdx === 1 ? (
+              <SortedDiscardTrayRow
+                tiles={SORTED_DISCARD_ROW2_TILES}
+                slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
+                leadingSuitLabel="B"
+                leadingSuitLabelTone="bam"
+                ariaLabel="Sorted discard row 2"
+                discardPile={discardPile}
+              />
+            ) : (
+              <SortedDiscardTrayRow
+                tiles={SORTED_DISCARD_ROW3_TILES}
+                slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
+                leadingSuitLabel="C"
+                leadingSuitLabelTone="crak"
+                ariaLabel="Sorted discard row 3"
+                discardPile={discardPile}
+              />
+            )}
+            <ExposureRack
+              melds={[]}
+              slotCount={DISCARD_TRACKER_BOT_PREFIX_SLOTS}
+              className="exposure-rack--discard-tracker-opponent exposure-rack--discard-tracker-prefix"
+              ariaLabel={`${seat} prefix`}
+            />
             <OpponentExposureDropZone
-              key={seat}
               seat={seat}
               active={jokerSwapUiActive}
               showWatermark={false}
+              tag="div"
             >
               <ExposureRack
                 melds={melds}
-                slotCount={14}
-                className="exposure-rack--discard-tracker-opponent"
+                slotCount={DISCARD_TRACKER_BOT_ROW_SLOTS}
+                className="exposure-rack--discard-tracker-opponent exposure-rack--discard-tracker-bot-row"
                 ariaLabel={`${seat} exposures`}
                 flyInTileIds={animationsEnabled ? botExposureFlyInTileIds : null}
                 suggestedTileGuide={botExposureSuggestedTileGuide}
@@ -576,10 +873,9 @@ function DiscardTrackerBotExposures({
                 jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
               />
             </OpponentExposureDropZone>
-          )
-        })}
-        </ul>
-      </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -821,7 +1117,9 @@ function deadDiscardTilesForRanking(
 }
 
 function totalCopiesForDeadHintDef(def: TileDef): number {
-  return def.cat === 'flower' || def.cat === 'joker' ? 8 : 4
+  if (def.cat === 'flower' || def.cat === 'joker') return 8
+  if (def.cat === 'blank') return 6
+  return 4
 }
 
 const DEAD_HINT_SUITS: readonly Suit[] = ['bam', 'dot', 'crak']
@@ -838,6 +1136,7 @@ function deadHintDefKey(def: TileDef): string {
     case 'dragon': return `d:${def.dragon}`
     case 'flower': return 'f'
     case 'joker': return 'j'
+    case 'blank': return 'b'
   }
 }
 
@@ -1168,8 +1467,19 @@ function roundStateFromOpeningDeck(deck: TileInstance[]): RoundState {
   }
 }
 
-function createNewRound(): RoundState {
-  return roundStateFromOpeningDeck(shuffle(buildAmericanDeck()))
+function createNewRound(
+  tenJokersEnabled: boolean,
+  blankTilesEnabled: boolean,
+  blankTileCount: BlankTileCount,
+): RoundState {
+  return roundStateFromOpeningDeck(
+    shuffle(
+      buildAmericanDeck({
+        jokerCount: tenJokersEnabled ? TEN_JOKERS_COUNT : STANDARD_JOKER_COUNT,
+        blankTileCount: blankTilesEnabled ? blankTileCount : 0,
+      }),
+    ),
+  )
 }
 
 function charlestonIncomingHandTileIds(
@@ -2580,7 +2890,11 @@ function AppMenuSettingSwitch({
 export default function App() {
   const replayOpeningDeckRef = useRef<TileInstance[] | null>(null)
   const [round, setRound] = useState<RoundState>(() => {
-    const r = createNewRound()
+    const r = createNewRound(
+      readTenJokersEnabledFromStorage(),
+      readBlankTilesEnabledFromStorage(),
+      readBlankTileCountFromStorage(),
+    )
     replayOpeningDeckRef.current = roundOpeningDeckOrder(r)
     return r
   })
@@ -2624,9 +2938,11 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuOpenPrevRef = useRef(false)
   const menuContainerRef = useRef<HTMLDivElement>(null)
-  const [discardOpponentExposuresOn, setDiscardOpponentExposuresOn] = useState(() =>
-    readDiscardOpponentExposuresOnFromStorage(),
+  const [blankTilesEnabled, setBlankTilesEnabled] = useState(() => readBlankTilesEnabledFromStorage())
+  const [blankTileCount, setBlankTileCount] = useState<BlankTileCount>(() =>
+    readBlankTileCountFromStorage(),
   )
+  const [tenJokersEnabled, setTenJokersEnabled] = useState(() => readTenJokersEnabledFromStorage())
   const [wallGameReviewing, setWallGameReviewing] = useState(false)
   const [mahjongWinReviewing, setMahjongWinReviewing] = useState(false)
   const [botMahjongWinReviewing, setBotMahjongWinReviewing] = useState(false)
@@ -2734,16 +3050,39 @@ export default function App() {
     })
   }, [])
 
-  const toggleDiscardOpponentExposures = useCallback(() => {
-    setDiscardOpponentExposuresOn((v) => {
+  const toggleTenJokers = useCallback(() => {
+    setTenJokersEnabled((v) => {
       const next = !v
       try {
-        localStorage.setItem(LS_KEY_DISCARD_OPPONENT_EXPOSURES, next ? 'true' : 'false')
+        localStorage.setItem(LS_KEY_TEN_JOKERS, next ? 'true' : 'false')
       } catch {
         /* ignore */
       }
       return next
     })
+  }, [])
+
+  const toggleBlankTiles = useCallback(() => {
+    setBlankTilesEnabled((v) => {
+      const next = !v
+      try {
+        localStorage.setItem(LS_KEY_BLANK_TILES, next ? 'true' : 'false')
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }, [])
+
+  const setBlankTileCountLevel = useCallback((count: BlankTileCount) => {
+    setBlankTileCount(count)
+    setBlankTilesEnabled(true)
+    try {
+      localStorage.setItem(LS_KEY_BLANK_TILE_COUNT, String(count))
+      localStorage.setItem(LS_KEY_BLANK_TILES, 'true')
+    } catch {
+      /* ignore */
+    }
   }, [])
 
   const toggleDeadHandWarnings = useCallback(() => {
@@ -2796,9 +3135,21 @@ export default function App() {
 
   // Keep a ref so pure-function callbacks always see the current setting value.
   const botWinsEnabledRef = useRef(botWinsEnabled)
+  const blankTilesEnabledRef = useRef(blankTilesEnabled)
+  const blankTileCountRef = useRef(blankTileCount)
+  const tenJokersEnabledRef = useRef(tenJokersEnabled)
   useEffect(() => {
     botWinsEnabledRef.current = botWinsEnabled
   }, [botWinsEnabled])
+  useEffect(() => {
+    blankTilesEnabledRef.current = blankTilesEnabled
+  }, [blankTilesEnabled])
+  useEffect(() => {
+    blankTileCountRef.current = blankTileCount
+  }, [blankTileCount])
+  useEffect(() => {
+    tenJokersEnabledRef.current = tenJokersEnabled
+  }, [tenJokersEnabled])
 
   const animationsEnabledRef = useRef(animationsEnabled)
   useEffect(() => {
@@ -2917,9 +3268,23 @@ export default function App() {
       } else if (e.key === HIDE_CONCEALED_HANDS_STORAGE_KEY) {
         if (e.newValue == null) return
         setSuggestedHandsHideConcealed(readHideConcealedHandsFromStorage())
-      } else if (e.key === LS_KEY_DISCARD_OPPONENT_EXPOSURES) {
+      } else if (e.key === LS_KEY_TEN_JOKERS) {
         if (e.newValue == null) return
-        setDiscardOpponentExposuresOn(e.newValue === 'true' || e.newValue === '1')
+        const on = e.newValue === 'true' || e.newValue === '1'
+        setTenJokersEnabled(on)
+        tenJokersEnabledRef.current = on
+      } else if (e.key === LS_KEY_BLANK_TILES) {
+        if (e.newValue == null) return
+        const on = e.newValue === 'true' || e.newValue === '1'
+        setBlankTilesEnabled(on)
+        blankTilesEnabledRef.current = on
+      } else if (e.key === LS_KEY_BLANK_TILE_COUNT) {
+        if (e.newValue == null) return
+        const n = Number(e.newValue)
+        if (isBlankTileCount(n)) {
+          setBlankTileCount(n)
+          blankTileCountRef.current = n
+        }
       }
     }
     window.addEventListener('storage', onStorage)
@@ -3050,11 +3415,8 @@ export default function App() {
   /** Natural dragged into the joker swap slot (next to discards); tap Swap — not a discard. */
   const [pendingJokerSwapTileId, setPendingJokerSwapTileId] = useState<string | null>(null)
   const gameModeRef = useRef<'training' | 'competition'>('training')
-  const callInitiateBoxRef = useRef<HTMLDivElement | null>(null)
-  const callInitiatePointerCleanup = useRef<(() => void) | null>(null)
   const lastDragPointerRef = useRef({ x: 0, y: 0 })
   const globalDragPointerCleanupRef = useRef<(() => void) | null>(null)
-  const [callInitiateNear, setCallInitiateNear] = useState(false)
   /** Drop on call-initiate: animate the called tile from the release point into the exposure slot. */
   const [callEntryMagnet, setCallEntryMagnet] = useState<{ from: { x: number; y: number } } | null>(null)
   const [charlestonPassError, setCharlestonPassError] = useState<string | null>(null)
@@ -3421,7 +3783,6 @@ export default function App() {
    */
   const pendingDiscardFlyInIdsRef = useRef(new Set<string>())
   const prevDiscardIdsSnapshotRef = useRef<string[]>([])
-  const [, setDiscardFlyEndEpoch] = useState(0)
 
   useMemo(() => {
     const now = displayedDiscardPile.map((e) => e.tile.id)
@@ -3440,18 +3801,6 @@ export default function App() {
       for (const id of added) pending.add(id)
     }
   }, [displayedDiscardPile, animationsEnabled])
-
-  const popDiscardDropInId = useCallback((id: string) => {
-    if (!pendingDiscardFlyInIdsRef.current.delete(id)) return
-    setDiscardFlyEndEpoch((e) => e + 1)
-  }, [])
-
-  /** Bot-turn discard box: tile flies in from that seat’s direction (same 0.3s vector feel as Charleston pass fly-out). */
-  const discardTrackerEntries = displayedDiscardPile.map((entry) => ({
-    ...entry,
-    flyAnimate:
-      animationsEnabled && pendingDiscardFlyInIdsRef.current.has(entry.tile.id),
-  }))
 
   const incomingBotDiscardFlyFrom = useMemo((): HandTileFlyInFrom | null => {
     if (mainPhase !== 'bot-turn' || !activeBotDiscard || activeBotIndex == null) return null
@@ -3744,19 +4093,6 @@ export default function App() {
     suggestedHandsExposureTileIds,
     cardPatterns,
   ])
-
-  /** Suggest-dim the committed discard strip only when a “need” natural is actually visible there.
-   * If the only matching discards are the live bot / call-staging tile (omitted from the strip until
-   * resolved), dimming the rest would show an all-dim tray with no need highlight — don't dim. */
-  const suggestedDiscardPileCanDim = useMemo(() => {
-    const needIds = suggestedDiscardNeedIds
-    if (!needIds || needIds.size === 0) return false
-    const shownIds = new Set(displayedDiscardPile.map((e) => e.tile.id))
-    for (const id of needIds) {
-      if (shownIds.has(id)) return true
-    }
-    return false
-  }, [suggestedDiscardNeedIds, displayedDiscardPile])
 
   /**
    * Incoming bot discard: ring when strip needs match ({@link suggestedDiscardNeedIds}) — coach-only like
@@ -4293,11 +4629,33 @@ export default function App() {
       }
       const fromPassSlot = passSlots.some((s) => s?.id === aid)
       const fromStagedDiscard = pendingEastDiscardTile?.id === aid
+      const fromHandTile = hand.some((t) => t.id === aid)
+      const fromBotDiscardForCall = activeBotDiscard?.id === aid
+
+      if (fromHandTile || fromBotDiscardForCall || fromPassSlot || fromStagedDiscard) {
+        if (!charlestonDone && (fromHandTile || fromPassSlot)) {
+          const passBoxHits = collisionHitsForTileOverlappingZones(args, [PASS_BOX_ID])
+          if (passBoxHits.length > 0) return passBoxHits
+        }
+        if (charlestonDone && mainPhase === 'east-discard' && (fromHandTile || fromStagedDiscard)) {
+          const stagingHits = collisionHitsForTileOverlappingZones(args, [EAST_DISCARD_STAGING_ID])
+          if (stagingHits.length > 0) return stagingHits
+        }
+        if (
+          charlestonDone &&
+          mainPhase === 'bot-turn' &&
+          (fromHandTile || fromBotDiscardForCall)
+        ) {
+          const callHits = collisionHitsForTileOverlappingZones(args, [CALL_INITIATE_FIRST_SLOT_ID])
+          if (callHits.length > 0) return callHits
+        }
+      }
+
       const hits = pointerWithin(args)
       if (hits.length > 0) {
         const pick = (id: string | number) => hits.find((c) => c.id === id)
         if (!charlestonDone) {
-          const fromHand = hand.some((t) => t.id === aid)
+          const fromHand = fromHandTile
           const passOccupant = hits.find((h) => passSlots.some((s) => s?.id === h.id))
           if (fromHand && passOccupant) {
             return [passOccupant]
@@ -4309,8 +4667,6 @@ export default function App() {
           ) {
             return [passOccupant]
           }
-          const pb = pick(PASS_BOX_ID)
-          if (pb) return [pb]
         }
         if (fromPassSlot || fromStagedDiscard) {
           const handTileIds = new Set(hand.map((t) => t.id))
@@ -4348,17 +4704,6 @@ export default function App() {
             if (handBankHit) return [handBankHit]
           }
         }
-        if (charlestonDone && mainPhase === 'east-discard' && pick(EAST_DISCARD_STAGING_ID)) {
-          return [pick(EAST_DISCARD_STAGING_ID)!]
-        }
-        if (
-          charlestonDone &&
-          mainPhase === 'bot-turn' &&
-          (hand.some((t) => t.id === aid) || aid === activeBotDiscard?.id) &&
-          pick(CALL_INITIATE_FIRST_SLOT_ID)
-        ) {
-          return [pick(CALL_INITIATE_FIRST_SLOT_ID)!]
-        }
         // call-staging: staged tiles are useSortable, so hand↔exposure drag is
         // handled by closestCenter detecting staged tile IDs as drop targets.
         // Only fall back to the zone id when no staged tile is under the pointer
@@ -4372,8 +4717,16 @@ export default function App() {
         ) {
           return [pick(CALL_STAGING_DROP_ID)!]
         }
-        if (charlestonDone && jokerSwapUiActive && pick(JOKER_SWAP_STAGING_ID)) {
-          return [pick(JOKER_SWAP_STAGING_ID)!]
+        // Prefer bot/East exposure melds over the discard-tray staging zone (full-area droppable under the overlay).
+        if (charlestonDone && jokerSwapUiActive) {
+          const eastMeldHit = hits.find((h) => parseEastExposureSwapDropId(String(h.id)) !== null)
+          if (eastMeldHit) return [eastMeldHit]
+          const eastSeatHit = hits.find((h) => String(h.id) === EAST_SEAT_SWAP_ID)
+          if (eastSeatHit) return [eastSeatHit]
+          const meldHit = hits.find((h) => parseBotExposureSwapDropId(String(h.id)) !== null)
+          if (meldHit) return [meldHit]
+          const seatHit = hits.find((h) => parseBotSeatSwapDropId(String(h.id)) !== null)
+          if (seatHit) return [seatHit]
         }
         if (hand.some((t) => t.id === aid)) {
           const handTileIds = new Set(hand.map((t) => t.id))
@@ -4437,21 +4790,8 @@ export default function App() {
             }
           }
         }
-        // Drag-to-bot-exposure joker swap: prefer a meld dropzone under the pointer,
-        // otherwise the seat-wide dropzone. (Without this, closestCenter falls back to
-        // the still-mounted hand-tile rect at the bottom of the screen.)
+        // Seat-wide joker swap when the pointer is just outside the meld rect but the tile overlaps.
         if (charlestonDone && jokerSwapUiActive) {
-          const eastMeldHit = hits.find((h) => parseEastExposureSwapDropId(String(h.id)) !== null)
-          if (eastMeldHit) return [eastMeldHit]
-          const eastSeatHit = hits.find((h) => String(h.id) === EAST_SEAT_SWAP_ID)
-          if (eastSeatHit) return [eastSeatHit]
-          const meldHit = hits.find((h) => parseBotExposureSwapDropId(String(h.id)) !== null)
-          if (meldHit) return [meldHit]
-          const seatHit = hits.find((h) => parseBotSeatSwapDropId(String(h.id)) !== null)
-          if (seatHit) return [seatHit]
-          // Pointer may be just outside the rect, but the tile visually overlaps the rack.
-          // rectIntersection detects overlap between the dragged tile's rect and the drop
-          // zone — matching the "when it touches the rack" expectation.
           const seatContainers = args.droppableContainers.filter(
             (c) =>
               parseBotSeatSwapDropId(String(c.id)) !== null || String(c.id) === EAST_SEAT_SWAP_ID,
@@ -4476,17 +4816,10 @@ export default function App() {
     ],
   )
 
-  const endCallInitiateTrack = useCallback(() => {
-    callInitiatePointerCleanup.current?.()
-    callInitiatePointerCleanup.current = null
-    setCallInitiateNear(false)
-  }, [])
-
   const onDragStart = useCallback(
     (e: DragStartEvent) => {
       setCharlestonPassIntoHandPreview(null)
       setEastDiscardIntoHandPreview(null)
-      endCallInitiateTrack()
       globalDragPointerCleanupRef.current?.()
       const aev = e.activatorEvent
       if (aev && 'clientX' in aev) {
@@ -4516,24 +4849,6 @@ export default function App() {
         setDragOverlayTile(fromHand ?? activeBotDiscard ?? null)
         setDragOverlayMeldTiles(null)
         setDragOverlayRackSuitStacked(true)
-        if (charlestonDone && mainPhase === 'bot-turn' && activeBotDiscard) {
-          const onMove = (ev: PointerEvent) => {
-            const el = callInitiateBoxRef.current
-            if (!el) return
-            const r = el.getBoundingClientRect()
-            if (r.width < 1 || r.height < 1) return
-            const cx = (r.left + r.right) / 2
-            const cy = (r.top + r.bottom) / 2
-            const d = Math.hypot(ev.clientX - cx, ev.clientY - cy)
-            const show = d < 3 * r.width
-            setCallInitiateNear((prev) => (prev === show ? prev : show))
-          }
-          window.addEventListener('pointermove', onMove, { passive: true })
-          callInitiatePointerCleanup.current = () => {
-            window.removeEventListener('pointermove', onMove)
-            setCallInitiateNear(false)
-          }
-        }
         return
       }
       for (const s of passSlots) {
@@ -4558,7 +4873,6 @@ export default function App() {
       hand,
       passSlots,
       pendingEastDiscardTile,
-      endCallInitiateTrack,
       charlestonDone,
       mainPhase,
       activeBotDiscard,
@@ -4681,13 +4995,12 @@ export default function App() {
   )
 
   const onDragCancel = useCallback(() => {
-    endCallInitiateTrack()
     setCharlestonPassIntoHandPreview(null)
     setEastDiscardIntoHandPreview(null)
     setDragOverlayTile(null)
     setDragOverlayMeldTiles(null)
     setDragOverlayRackSuitStacked(false)
-  }, [endCallInitiateTrack])
+  }, [])
 
   const passSlotCount = passSlots.filter(Boolean).length
   const blindPhase = !charlestonDone && charlestonAllowsBlind(charlestonPhase)
@@ -4739,6 +5052,15 @@ export default function App() {
     const w = readBotWinsEnabledFromStorage()
     setBotWinsEnabled((prev) => (prev === w ? prev : w))
     botWinsEnabledRef.current = w
+    const tenJokersOn = readTenJokersEnabledFromStorage()
+    setTenJokersEnabled((prev) => (prev === tenJokersOn ? prev : tenJokersOn))
+    tenJokersEnabledRef.current = tenJokersOn
+    const blankOn = readBlankTilesEnabledFromStorage()
+    setBlankTilesEnabled((prev) => (prev === blankOn ? prev : blankOn))
+    blankTilesEnabledRef.current = blankOn
+    const blankCount = readBlankTileCountFromStorage()
+    setBlankTileCount((prev) => (prev === blankCount ? prev : blankCount))
+    blankTileCountRef.current = blankCount
     if (m !== c) {
       try {
         writePlayableCardToStorage(m)
@@ -4749,14 +5071,15 @@ export default function App() {
       setActiveCardPatterns(patternsForCard(m))
     }
     const snap = replayOpeningDeckRef.current
+    const expectedDeckSize = americanDeckTileCount(tenJokersOn, blankOn, blankCount)
     const replay =
       opts?.replayLastOpening === true &&
       snap != null &&
-      snap.length === 152
+      snap.length === expectedDeckSize
     const nextRound = replay
       ? roundStateFromOpeningDeck([...snap])
       : (() => {
-          const r = createNewRound()
+          const r = createNewRound(tenJokersOn, blankOn, blankCount)
           replayOpeningDeckRef.current = roundOpeningDeckOrder(r)
           return r
         })()
@@ -5418,15 +5741,6 @@ export default function App() {
           return
         }
 
-        if (
-          jokerSwapUiActive &&
-          oid === JOKER_SWAP_STAGING_ID &&
-          hand.some((t) => t.id === aid && t.def.cat !== 'joker')
-        ) {
-          setPendingJokerSwapTileId(aid)
-          return
-        }
-
         // ── call-staging cross-zone drag ──────────────────────────────────────────
         if (mainPhase === 'call-staging') {
           const aidStaged = stagedCallTileIds.includes(aid)
@@ -5494,6 +5808,7 @@ export default function App() {
             if (!pick) return r
             return applyEastNaturalForExposedJoker(r, { ...pick, eastTileId: aid })
           })
+          setPendingJokerSwapTileId(null)
           return
         }
 
@@ -5622,7 +5937,6 @@ export default function App() {
           setCharlestonPassError('Jokers cannot be passed during the Charleston.')
         }
       } finally {
-        endCallInitiateTrack()
         globalDragPointerCleanupRef.current?.()
         setDragOverlayTile(null)
         setDragOverlayMeldTiles(null)
@@ -5638,7 +5952,6 @@ export default function App() {
       mainPhase,
       stagedCallTileIds,
       pushRound,
-      endCallInitiateTrack,
       initiateCall,
       activeBotDiscard?.id,
       handInsertIndexFromOver,
@@ -6285,6 +6598,57 @@ export default function App() {
                   <span className="app-menu-modal__label" id="app-menu-label-concealed-hand-reminder">
                     {CONCEALED_HAND_REMINDER_LABEL}
                   </span>
+                </div>
+                <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                  <AppMenuSettingSwitch
+                    labelId="app-menu-label-ten-jokers"
+                    pressed={tenJokersEnabled}
+                    onToggle={toggleTenJokers}
+                  />
+                  <span className="app-menu-modal__label" id="app-menu-label-ten-jokers">
+                    {TEN_JOKERS_LABEL}
+                  </span>
+                </div>
+                <div
+                  className="app-menu-modal__row app-menu-modal__row--toggle app-menu-modal__row--blank-tiles"
+                >
+                  <AppMenuSettingSwitch
+                    labelId="app-menu-label-blank-tiles"
+                    pressed={blankTilesEnabled}
+                    onToggle={toggleBlankTiles}
+                  />
+                  <div className="app-menu-modal__blank-tiles-trail">
+                    <span className="app-menu-modal__label" id="app-menu-label-blank-tiles">
+                      {BLANK_TILES_LABEL}
+                    </span>
+                    <div
+                      className="app-menu-modal__blank-tile-counts"
+                      role="radiogroup"
+                      aria-labelledby="app-menu-label-blank-tiles"
+                    >
+                      {BLANK_TILE_COUNT_OPTIONS.map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          className={[
+                            'btn',
+                            'app-menu-modal__blank-tile-count-btn',
+                            blankTilesEnabled && blankTileCount === n
+                              ? 'app-menu-modal__blank-tile-count-btn--on'
+                              : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' ')}
+                          role="radio"
+                          aria-checked={blankTilesEnabled && blankTileCount === n}
+                          disabled={!blankTilesEnabled}
+                          onClick={() => setBlankTileCountLevel(n)}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -7172,10 +7536,7 @@ export default function App() {
                               }
                               firstEmptyOverride={
                                 charlestonDone && mainPhase === 'bot-turn' && activeBotDiscard ? (
-                                  <CallInitiateFirstEmptyTarget
-                                    proximityActive={callInitiateNear}
-                                    boxRef={callInitiateBoxRef}
-                                  />
+                                  <CallInitiateFirstEmptyTarget />
                                 ) : undefined
                               }
                               suffix={
@@ -7472,80 +7833,32 @@ export default function App() {
                     aria-label="Discard tracker"
                     data-joker-swap-dnd={jokerSwapUiActive ? 'on' : 'off'}
                     data-suggested-hands-open={suggestedPanelHandsOn ? 'on' : 'off'}
-                    data-opponent-exposures={discardOpponentExposuresOn ? 'on' : 'off'}
                   >
                     <div className="discard-tracker__shell">
                       <div className="discard-tracker__content">
                         <div className="discard-tracker__strip-stack">
                         <DiscardPileDropZone
-                          swapDropActive={jokerSwapUiActive}
+                          swapDropActive={false}
                           onContainerNode={(node) => {
                             discardPileScrollElRef.current = node
                           }}
                         >
-                          {displayedDiscardPile.length > 0 ? (
-                            <div className="discard-pile" role="list" aria-label="Committed discards">
-                              {discardTrackerEntries.map(({ tile, seat, flyAnimate }) => {
-                                const needRing =
-                                  suggestedDiscardNeedIds != null &&
-                                  suggestedDiscardNeedIds.has(tile.id)
-                                const isDead =
-                                  !!suggestedDeadTableGuideForView?.discardDeadIds.has(tile.id)
-                                const isDim = isDead || (suggestedDiscardPileCanDim && !needRing)
-                                return (
-                                  <div
-                                    key={tile.id}
-                                    className={[
-                                      'discard-entry',
-                                      `discard-entry--${seat}`,
-                                      needRing ? 'discard-entry--suggest-need' : '',
-                                      isDead ? 'discard-entry--suggest-dying' : '',
-                                      isDim ? 'discard-entry--suggest-dim' : '',
-                                    ]
-                                      .filter(Boolean)
-                                      .join(' ')}
-                                    role="listitem"
-                                    aria-label={`${seat} discard`}
-                                  >
-                                    <DiscardPileFlyInTile
-                                      tileId={tile.id}
-                                      animate={flyAnimate}
-                                      onDropInEnd={() => {
-                                        popDiscardDropInId(tile.id)
-                                      }}
-                                    >
-                                      <TileFace def={tile.def} />
-                                    </DiscardPileFlyInTile>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          ) : null}
-                          {mainPhase === 'east-discard' && pendingJokerSwapTileId ? (
-                            <div className="discard-pile__actions">
-                              <button
-                                type="button"
-                                className="btn btn--rack-neutral"
-                                onClick={executeJokerSwapFromSlot}
-                              >
-                                Swap
-                              </button>
-                            </div>
-                          ) : null}
+                          <div className="discard-pile" role="list" aria-label="Committed discards" />
                         </DiscardPileDropZone>
-                        {discardOpponentExposuresOn ? (
-                          <DiscardTrackerBotExposures
-                            botExposures={botExposures}
-                            mainPhase={mainPhase}
-                            jokerSwapUiActive={jokerSwapUiActive}
-                            animationsEnabled={animationsEnabled}
-                            botExposureFlyInTileIds={botExposureFlyInTileIds}
-                            botExposureSuggestedTileGuide={botExposureSuggestedTileGuide}
-                            botExposureDeadIds={suggestedDeadTableGuideForView?.botExposureDeadIds ?? null}
-                            jokerSwapHintBounceTileIds={jokerSwapHintBounceIds?.jokers ?? null}
-                            jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
-                          />
-                        ) : null}
+                        <DiscardTrackerSlotGrid
+                          discardPile={displayedDiscardPile}
+                          botExposures={botExposures}
+                          mainPhase={mainPhase}
+                          jokerSwapUiActive={jokerSwapUiActive}
+                          animationsEnabled={animationsEnabled}
+                          botExposureFlyInTileIds={botExposureFlyInTileIds}
+                          botExposureSuggestedTileGuide={botExposureSuggestedTileGuide}
+                          botExposureDeadIds={
+                            suggestedDeadTableGuideForView?.botExposureDeadIds ?? null
+                          }
+                          jokerSwapHintBounceTileIds={jokerSwapHintBounceIds?.jokers ?? null}
+                          jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
+                        />
                         </div>
                         {renderSuggestedHandsPopup()}
                         <div
@@ -7554,22 +7867,6 @@ export default function App() {
                           role="group"
                           aria-label="Discard tray controls"
                         >
-                          <div className="app-menu-anchor app-menu-anchor--discard-tracker">
-                            <button
-                              type="button"
-                              className={[
-                                'btn btn--rack-neutral rack-bottom-tile-cell app-menu-anchor__exp-btn',
-                                discardOpponentExposuresOn ? 'rack-bottom-tile-cell--menu-open' : '',
-                              ]
-                                .filter(Boolean)
-                                .join(' ')}
-                              aria-label="Opponent exposures"
-                              aria-pressed={discardOpponentExposuresOn}
-                              onClick={toggleDiscardOpponentExposures}
-                            >
-                              Exp
-                            </button>
-                          </div>
                           <div className="app-menu-anchor app-menu-anchor--discard-tracker">
                             <button
                               type="button"

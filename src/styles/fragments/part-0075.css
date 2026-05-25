@@ -734,6 +734,10 @@
   background: var(--tg-joker, #ab47bc);
 }
 
+.tile-face.tile--blank {
+  background: var(--tg-blank, #9ca3af);
+}
+
 /*
  * Joker ring: do not use cqw/cqh here — a size container on an ancestor (e.g. bot-exposures panel)
  * can steal query resolution so the ring looks different in the hand / East exposure row vs bot.

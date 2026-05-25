@@ -31,6 +31,8 @@ export function tileDefsEqual(a: TileDef, b: TileDef): boolean {
       return true // all flowers are identical in NMJL regardless of number
     case 'joker':
       return true
+    case 'blank':
+      return true
   }
 }
 
@@ -40,8 +42,10 @@ export function tileDefsEqual(a: TileDef, b: TileDef): boolean {
  * Returns [] when `target` is a joker (jokers cannot be discarded or called).
  */
 export function findExactMatches(hand: TileInstance[], target: TileDef): TileInstance[] {
-  if (target.cat === 'joker') return []
-  return hand.filter((t) => t.def.cat !== 'joker' && tileDefsEqual(t.def, target))
+  if (target.cat === 'joker' || target.cat === 'blank') return []
+  return hand.filter(
+    (t) => t.def.cat !== 'joker' && t.def.cat !== 'blank' && tileDefsEqual(t.def, target),
+  )
 }
 
 // ── Rack sort ────────────────────────────────────────────────────────────────
@@ -61,6 +65,7 @@ function suitSortKey(def: TileDef): number {
   switch (def.cat) {
     case 'flower': return def.flower                              // 1–8
     case 'joker':  return 100
+    case 'blank':  return 105
     case 'suit':   return 200 + SUIT_NUM_IDX[def.suit]! * 10 + def.rank
     case 'dragon': return 500 + DRAGON_TAIL[def.dragon]!
     case 'wind':   return 600 + WIND_TAIL[def.wind]!
@@ -75,6 +80,7 @@ function numberSortKey(def: TileDef): number {
   switch (def.cat) {
     case 'flower': return def.flower                              // 1–8
     case 'joker':  return 100
+    case 'blank':  return 105
     case 'suit':   return 200 + def.rank * 10 + SUIT_NUM_IDX[def.suit]!
     case 'dragon': return 500 + DRAGON_TAIL[def.dragon]!
     case 'wind':   return 600 + WIND_TAIL[def.wind]!

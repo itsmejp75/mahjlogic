@@ -79,7 +79,7 @@ export function resolveCardInkForPreviewSlot(
   ctx?: PreviewLineContext,
 ): CardInk {
   if (def.cat === 'flower') return 'rack-flower'
-  if (def.cat === 'joker' || def.cat === 'wind') return 'rack-wind'
+  if (def.cat === 'joker' || def.cat === 'wind' || def.cat === 'blank') return 'rack-wind'
   if (def.cat === 'dragon') {
     if (def.dragon === 'soap') return 'navy'
     const mono = ctx?.monoSuitCardPrint
