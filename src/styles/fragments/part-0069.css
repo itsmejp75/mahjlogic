@@ -32,15 +32,15 @@
   max-width: 100%;
   padding: 0.4rem 0.45rem;
   border-radius: 0.38rem;
-  /* #334155 @ 50% — same slate + inset ring as call / discard staging. */
+  /* #00B4D8 @ 30% — same inset ring as call / discard staging. */
   border: 0;
-  background: rgba(51, 65, 85, 0.5);
+  background: rgba(0, 180, 216, 0.3);
   box-shadow: inset 0 0 0 1px var(--coach-teal-border);
   transition: background 0.15s ease, box-shadow 0.15s ease;
 }
 
 .pass-box--over {
-  background: var(--rack-teal-slot-highlight-fill);
+  background: rgba(0, 180, 216, 0.5);
   box-shadow: inset 0 0 0 1px var(--coach-teal-border);
 }
 

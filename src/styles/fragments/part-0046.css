@@ -16,8 +16,8 @@
   margin-left: calc(-1 * var(--play-split-lower-box-left-bleed));
   padding-left: var(--play-split-lower-box-left-bleed);
   display: grid;
-  grid-template-rows: repeat(3, minmax(0, 1fr));
-  align-content: stretch;
+  grid-template-rows: repeat(3, auto);
+  align-content: start;
   overflow: hidden;
   padding-bottom: 0;
 }

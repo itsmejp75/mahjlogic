@@ -1,5 +1,5 @@
 import { shuffle } from './deck'
-import type { TileInstance } from './types'
+import type { TileDef, TileInstance } from './types'
 
 /** East-dealer Charleston steps (NMJL order). `done` = finished. */
 export type CharlestonPhase =
@@ -170,13 +170,26 @@ function stripByIds(hand: TileInstance[], remove: TileInstance[]): TileInstance[
   return hand.filter((t) => !ids.has(t.id))
 }
 
+/** Jokers and blank tiles must not leave the rack during Charleston. */
+export function charlestonPassEligible(def: TileDef): boolean {
+  return def.cat !== 'joker' && def.cat !== 'blank'
+}
+
+export function charlestonPassBlockedMessage(
+  cat: Extract<TileDef['cat'], 'joker' | 'blank'>,
+): string {
+  return cat === 'joker'
+    ? 'Jokers cannot be passed during the Charleston.'
+    : 'Blank tiles cannot be passed during the Charleston.'
+}
+
 /**
  * Pick `n` distinct random tiles from a hand (Charleston choice for bots).
- * Jokers are never passed (NMJL).
+ * Jokers and blanks are never passed.
  */
 export function pickRandomPass(hand: TileInstance[], n: number): TileInstance[] {
   if (n <= 0) return []
-  const eligible = hand.filter((t) => t.def.cat !== 'joker')
+  const eligible = hand.filter((t) => charlestonPassEligible(t.def))
   if (eligible.length === 0) return []
   if (eligible.length <= n) return shuffle([...eligible])
   return shuffle([...eligible]).slice(0, n)

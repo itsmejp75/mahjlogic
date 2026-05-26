@@ -52,38 +52,45 @@ export function findExactMatches(hand: TileInstance[], target: TileDef): TileIns
 
 export type SortMode = 'suit' | 'number'
 
-// Both sorts share the same tail: White Dragon, Green Dragon, Red Dragon, N, E, W, S
-const DRAGON_TAIL: Record<string, number> = { soap: 0, green: 1, red: 2, any: 3 }
-const WIND_TAIL: Record<string, number>   = { N: 0, E: 1, W: 2, S: 3 }
-const SUIT_NUM_IDX: Record<string, number> = { dot: 0, bam: 1, crak: 2 }
+/** Rack sort: bams, then craks, then dots (within each rank group for number sort). */
+const SUIT_NUM_IDX: Record<string, number> = { bam: 0, crak: 1, dot: 2 }
+/** Dragons after numbered tiles: green (G), red (R), soap (0). */
+const DRAGON_TAIL: Record<string, number> = { green: 0, red: 1, soap: 2, any: 3 }
+/** Winds last: North, East, West, South. */
+const WIND_TAIL: Record<string, number> = { N: 0, E: 1, W: 2, S: 3 }
+
+const SORT_JOKER = 0
+const SORT_BLANK = 5
+const SORT_FLOWER_BASE = 10
+const SORT_SUIT_BASE = 100
+const SORT_DRAGON_BASE = 500
+const SORT_WIND_BASE = 600
 
 /**
- * Sort 1 — by suit: F, J, Dots 1-9, Bams 1-9, Craks 1-9,
- * then White Dragon / Green Dragon / Red Dragon, then N E W S.
+ * Sort 1 — by suit: J, F, Bams 1–9, Craks 1–9, Dots 1–9, G R 0, N E W S.
  */
 function suitSortKey(def: TileDef): number {
   switch (def.cat) {
-    case 'flower': return def.flower                              // 1–8
-    case 'joker':  return 100
-    case 'blank':  return 105
-    case 'suit':   return 200 + SUIT_NUM_IDX[def.suit]! * 10 + def.rank
-    case 'dragon': return 500 + DRAGON_TAIL[def.dragon]!
-    case 'wind':   return 600 + WIND_TAIL[def.wind]!
+    case 'joker':  return SORT_JOKER
+    case 'blank':  return SORT_BLANK
+    case 'flower': return SORT_FLOWER_BASE + def.flower
+    case 'suit':   return SORT_SUIT_BASE + SUIT_NUM_IDX[def.suit]! * 10 + def.rank
+    case 'dragon': return SORT_DRAGON_BASE + DRAGON_TAIL[def.dragon]!
+    case 'wind':   return SORT_WIND_BASE + WIND_TAIL[def.wind]!
   }
 }
 
 /**
- * Sort 2 — by number: F, J, all 1s (Dot/Bam/Crak), all 2s, …, all 9s,
- * then White Dragon / Green Dragon / Red Dragon, then N E W S.
+ * Sort 2 — by number: J, F, all 1s (Bam/Crak/Dot), …, all 9s, G R 0, N E W S.
  */
 function numberSortKey(def: TileDef): number {
   switch (def.cat) {
-    case 'flower': return def.flower                              // 1–8
-    case 'joker':  return 100
-    case 'blank':  return 105
-    case 'suit':   return 200 + def.rank * 10 + SUIT_NUM_IDX[def.suit]!
-    case 'dragon': return 500 + DRAGON_TAIL[def.dragon]!
-    case 'wind':   return 600 + WIND_TAIL[def.wind]!
+    case 'joker':  return SORT_JOKER
+    case 'blank':  return SORT_BLANK
+    case 'flower': return SORT_FLOWER_BASE + def.flower
+    case 'suit':   return SORT_SUIT_BASE + def.rank * 10 + SUIT_NUM_IDX[def.suit]!
+    case 'dragon': return SORT_DRAGON_BASE + DRAGON_TAIL[def.dragon]!
+    case 'wind':   return SORT_WIND_BASE + WIND_TAIL[def.wind]!
   }
 }
 

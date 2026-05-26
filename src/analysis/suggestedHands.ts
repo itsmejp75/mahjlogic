@@ -3512,31 +3512,29 @@ export function computeBotExposureSuggestedBestIds(
 }
 
 /**
- * For the same suggested-hand focus as the rack guide, which discard-pile tile ids are naturals
- * the pattern is still short (non-highlight strip slots) — "dead" copies of tiles you need.
- * Empty when `focusKey` is null/invalid or the strip cannot be built.
+ * Tile defs the focused suggested hand is still short — same basis as discard-pile “need” rings
+ * and sorted-discard-tracker slot highlights.
  */
-export function computeSuggestedDiscardNeedHighlightIds(
+export function computeSuggestedDiscardTrackerNeedDefs(
   focusKey: string | null,
   rack: TileInstance[],
-  discards: readonly TileInstance[],
   exposureTileIds?: ReadonlySet<string>,
   patternBook: PracticePattern[] = getActiveCardPatterns(),
-): Set<string> {
-  if (!focusKey) return new Set()
+): TileDef[] {
+  if (!focusKey) return []
   const variantSep = ['::tier::', '::oc::', '::ocall::']
     .map((s) => focusKey.indexOf(s))
     .filter((i) => i >= 0)
     .reduce((m, i) => (m < 0 ? i : Math.min(m, i)), -1)
   const patternId = variantSep >= 0 ? focusKey.slice(0, variantSep) : focusKey
   const p = patternBook.find((x) => x.id === patternId)
-  if (!p) return new Set()
+  if (!p) return []
   const greedyUiOpts: GreedyPatternMatchOpts | undefined =
     exposureTileIds && exposureTileIds.size > 0
       ? { exposureTileIds }
       : undefined
 
-  const addFromStripWork = (pinnedP: PracticePattern, isMulti: boolean, fk: string) => {
+  const addFromStripWork = (pinnedP: PracticePattern, isMulti: boolean, fk: string): TileDef[] => {
     const detail = greedyPatternMatchDetail(rack, pinnedP, greedyUiOpts)
     const rackIdSet = new Set(rack.map((t) => t.id))
     const bestIds = isMulti
@@ -3557,24 +3555,48 @@ export function computeSuggestedDiscardNeedHighlightIds(
     )
     const rows = pickStripRowsForFocusKey(p.id, fk, isMulti, result)
     const needDefsRaw = collectNeededNaturalDefsFromStripRows(rows)
-    const needDefs = stripNeedDefsRequiringMoreFromDiscards(needDefsRaw, rack, exposureTileIds)
-    return discardIdsMatchingNeededDefs(discards, needDefs)
+    return stripNeedDefsRequiringMoreFromDiscards(needDefsRaw, rack, exposureTileIds)
   }
 
   if (variantSep >= 0) {
     const pinnedPatterns = buildPinnedPatternsFromFocusKey(p, focusKey)
     if (pinnedPatterns.length > 0) {
       const isMulti = isMultiComboFocusKey(focusKey)
-      const out = new Set<string>()
+      const out: TileDef[] = []
+      const seen = new Set<string>()
       for (const pinnedP of pinnedPatterns) {
-        for (const id of addFromStripWork(pinnedP, isMulti, focusKey)) {
-          out.add(id)
+        for (const def of addFromStripWork(pinnedP, isMulti, focusKey)) {
+          const k = fullDefKey(def)
+          if (seen.has(k)) continue
+          seen.add(k)
+          out.push(def)
         }
       }
       return out
     }
   }
   return addFromStripWork(p, false, focusKey)
+}
+
+/**
+ * For the same suggested-hand focus as the rack guide, which discard-pile tile ids are naturals
+ * the pattern is still short (non-highlight strip slots) — "dead" copies of tiles you need.
+ * Empty when `focusKey` is null/invalid or the strip cannot be built.
+ */
+export function computeSuggestedDiscardNeedHighlightIds(
+  focusKey: string | null,
+  rack: TileInstance[],
+  discards: readonly TileInstance[],
+  exposureTileIds?: ReadonlySet<string>,
+  patternBook: PracticePattern[] = getActiveCardPatterns(),
+): Set<string> {
+  const needDefs = computeSuggestedDiscardTrackerNeedDefs(
+    focusKey,
+    rack,
+    exposureTileIds,
+    patternBook,
+  )
+  return discardIdsMatchingNeededDefs(discards, needDefs)
 }
 
 /**

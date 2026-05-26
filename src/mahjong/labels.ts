@@ -28,7 +28,7 @@ export function tileShortLabel(def: TileDef): string {
     case 'joker':
       return 'J'
     case 'blank':
-      return 'B'
+      return ''
   }
 }
 

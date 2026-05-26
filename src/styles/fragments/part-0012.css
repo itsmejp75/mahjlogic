@@ -53,6 +53,66 @@
   min-width: 0;
 }
 
+/* New game / Charleston: logo fades in 0→100% over 3s. */
+.panel--hand .rack-stage__rack-top .exposure-rack__watermark--fade-in .rack-logo-watermark {
+  opacity: 0;
+  animation: exposure-rack-watermark-fade-in 3s ease forwards;
+}
+
+/* Main play after Charleston: fade logo 100%→50% over 1.5s. */
+.panel--hand .rack-stage__rack-top .exposure-rack__watermark--dimmed .rack-logo-watermark {
+  opacity: 1;
+  animation: exposure-rack-watermark-dim 1.5s ease forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel--hand .rack-stage__rack-top .exposure-rack__watermark--fade-in .rack-logo-watermark {
+    animation: none;
+    opacity: 1;
+  }
+
+  .panel--hand .rack-stage__rack-top .exposure-rack__watermark--dimmed .rack-logo-watermark {
+    animation: none;
+    opacity: 0.5;
+  }
+}
+
+.app-layout[data-animations='off']
+  .panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__watermark--fade-in
+  .rack-logo-watermark {
+  animation: none;
+  opacity: 1;
+}
+
+.app-layout[data-animations='off']
+  .panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__watermark--dimmed
+  .rack-logo-watermark {
+  animation: none;
+  opacity: 0.5;
+}
+
+@keyframes exposure-rack-watermark-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes exposure-rack-watermark-dim {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.5;
+  }
+}
+
 /* Main hand tray: Mahjong win review — logo floats above buttons; fade in ~3s (exposure row uses 2s). */
 .panel--hand .panel-hand-rack__hand-tray .hand-bank:has(.hand-bank__main-rack-watermark) {
   position: relative;

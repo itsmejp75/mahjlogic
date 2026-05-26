@@ -12,14 +12,14 @@
 
 /* Drop target: same drag-over glow as call / discard staging. */
 .pass-strip-tail--over .pass-strip-tail__inner {
-  background: var(--rack-teal-slot-highlight-fill);
-  box-shadow: inset 0 0 0 1px var(--coach-teal-border);
+  background: rgba(0, 180, 216, 0.5);
+  box-shadow: none;
 }
 
 /* Dragging FROM the box: keep it bright */
 .pass-strip-tail__inner:has(.pass-strip__tile-wrap--dragging) {
-  background: var(--rack-teal-slot-highlight-fill-mid);
-  box-shadow: inset 0 0 0 1px var(--coach-teal-border);
+  background: rgba(0, 180, 216, 0.5);
+  box-shadow: none;
 }
 
 /* Charleston: tiles exit the pass box toward the pass direction before the exchange commits. */

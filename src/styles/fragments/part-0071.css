@@ -59,7 +59,7 @@
 /* Outer box footprint = exactly 3 × tile face + 2 inter-tile gaps (border-box).
 
    Panel-hand Charleston also stretches this to the rack row height (`.panel--hand` rules in `part-0072.css`).
-   Outer vertical size sync: `--charleston-pass-strip-inner-y-chrome` in `part-0117.css` (horizontal border only once padding removed). */
+   Outer vertical size sync: `--charleston-pass-strip-inner-y-chrome` in `part-0117.css`. */
 .pass-strip-tail__inner {
   display: flex;
   flex-direction: column;
@@ -72,12 +72,12 @@
   flex-shrink: 0;
   flex: 0 1 auto;
   min-height: 0;
-  /* Unified 3-tile box — same fill as `.pass-box` (#334155 @ 50%). */
-  background: rgba(51, 65, 85, 0.5);
+  /* Unified 3-tile box — same fill as `.pass-box` (#00B4D8 @ 30%). */
+  background: rgba(0, 180, 216, 0.3);
   border: 0;
   border-radius: var(--tile-face-border-radius);
-  box-shadow: inset 0 0 0 1px var(--coach-teal-border);
-  transition: background 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: none;
+  transition: background 0.15s ease;
 }
 
 /* Tile row + label stack: copy sits behind tiles; gaps / empty chrome show it; tiles paint on top. */
@@ -199,10 +199,7 @@
   min-width: 0;
   white-space: nowrap;
   overflow: hidden;
-  text-shadow:
-    0 0 0.25rem color-mix(in srgb, var(--bg-elevated) 92%, transparent),
-    0 0 0.5rem color-mix(in srgb, var(--bg-elevated) 78%, transparent),
-    0 1px 2px color-mix(in srgb, var(--color-black) 28%, transparent);
+  text-shadow: none;
 }
 
 /* Charleston rack: reinforce Figtree semibold on the round title (beats any inherited panel body face). */
@@ -262,10 +259,7 @@
   min-width: 0;
   white-space: nowrap;
   overflow: visible;
-  text-shadow:
-    0 0 0.22rem color-mix(in srgb, var(--bg-elevated) 90%, transparent),
-    0 0 0.45rem color-mix(in srgb, var(--bg-elevated) 72%, transparent),
-    0 1px 2px color-mix(in srgb, var(--color-black) 24%, transparent);
+  text-shadow: none;
   flex: 1 1 auto;
   min-height: min-content;
   display: flex;
@@ -370,10 +364,7 @@
   letter-spacing: clamp(0.048em, calc(var(--pass-strip-box-w) * 0.00092), 0.14em);
   line-height: 1.08;
   color: #b6b6bd;
-  text-shadow:
-    0 0 0.18rem color-mix(in srgb, var(--bg-elevated) 88%, transparent),
-    0 0 0.38rem color-mix(in srgb, var(--bg-elevated) 65%, transparent),
-    0 1px 2px color-mix(in srgb, var(--color-black) 22%, transparent);
+  text-shadow: none;
 }
 
 /* Extra air above/below stacked `-OR-` only (not inline `TO`). */

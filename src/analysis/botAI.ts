@@ -32,7 +32,7 @@ import {
   type RankSuggestedHandsInput,
 } from './suggestedHands'
 import { getActiveCardPatterns } from '../card/activeCardPatternsScope'
-import { pickRandomPass } from '../mahjong/charleston'
+import { charlestonPassEligible, pickRandomPass } from '../mahjong/charleston'
 import { shuffle } from '../mahjong/deck'
 import type { DiscardEntry, TileInstance } from '../mahjong/types'
 import type { BotExposure, BotSeat } from './types'
@@ -102,7 +102,7 @@ export function chooseBotCharlestonPass(
   difficulty: BotDifficulty = 'normal',
 ): TileInstance[] {
   if (n <= 0) return []
-  const eligible = hand.filter((t) => t.def.cat !== 'joker')
+  const eligible = hand.filter((t) => charlestonPassEligible(t.def))
   if (eligible.length === 0) return []
   if (eligible.length <= n) return shuffle([...eligible])
 
@@ -135,7 +135,9 @@ export function chooseBotCharlestonPass(
   const rack = [...hand]
   const notHelpingRack = getRackTilesNotHelpingPattern(rack, p)
   const handIds = new Set(hand.map((t) => t.id))
-  const nonHelpers = notHelpingRack.filter((t) => handIds.has(t.id) && t.def.cat !== 'joker')
+  const nonHelpers = notHelpingRack.filter(
+    (t) => handIds.has(t.id) && charlestonPassEligible(t.def),
+  )
 
   if (difficulty === 'normal' && nonHelpers.length >= n && Math.random() < 0.11) {
     return pickRandomPass(hand, n)

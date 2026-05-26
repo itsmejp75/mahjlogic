@@ -91,11 +91,24 @@
   /* Paired with dim: soft inner vignette + hairline; hairline is omitted in wall-game dialog at small tile scale. */
   --suggest-dim-inset-shadow: var(--suggest-dim-inset-vignette),
     inset 0 0 0 1px color-mix(in srgb, var(--color-black) 14%, transparent);
+  --suggest-dim-joker-brightness: 0.64;
   /* Paired with focus / suggest-best: soft inner light (dim counterpart, “up and out” vs sunken). */
   --suggest-highlight-inset-shadow: inset 0 0 0.5rem color-mix(in srgb, var(--color-white) 24%, transparent),
     inset 0 0 0 1px color-mix(in srgb, var(--color-white) 28%, transparent);
   /* Joker swap hint: wait from turn start (hint active) before dock bounce (see keyframes). */
   --joker-swap-hint-bounce-delay: 500ms;
+}
+
+/* Main rack + bot exposures: original suggest-dim (discard tracker sorted rows override locally). */
+.panel--hand,
+.panel--bot-exposures,
+.panel--bot-exposures--dnd-ghost,
+.discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row {
+  --suggest-dim-overlay: rgba(0, 0, 0, 0.38);
+  --suggest-dim-inset-vignette: inset 0 0 0.5rem color-mix(in srgb, var(--color-black) 22%, transparent);
+  --suggest-dim-inset-shadow: var(--suggest-dim-inset-vignette),
+    inset 0 0 0 1px color-mix(in srgb, var(--color-black) 14%, transparent);
+  --suggest-dim-joker-brightness: 0.64;
 }
 
 /* Tile graphics: menu presets (override --tg-* only) */
@@ -209,7 +222,7 @@
   --tg-dragon-any: #5c6470;
   --tg-flower: #ab47bc;
   --tg-joker: #ffc107;
-  --tg-blank: #9ca3af;
+  --tg-blank: var(--tg-wind, var(--wind-tile-bg));
   --tg-ink: #080808;
   --tg-suit-band-ink: #080808;
   --tg-joker-ring: #333333;

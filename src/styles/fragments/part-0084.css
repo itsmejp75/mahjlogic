@@ -16,27 +16,27 @@
 
 .app .panel--hand .exposure-rack__call-initiate-target--near {
   border-radius: 0.35rem;
-  /* Match Charleston `.pass-box`: #334155 @ 50% + coach-teal ring; `--over` uses teal wash (below). */
+  /* Match Charleston `.pass-box`: #00B4D8 @ 30%; `--over` at 50% (below). */
   width: calc(3 * var(--rack-tile-w) + 2 * var(--player-rack-face-gap));
   min-height: var(--rack-tile-h);
   border: 0;
-  background: rgba(51, 65, 85, 0.5);
-  box-shadow: inset 0 0 0 1px var(--coach-teal-border);
-  transition: background 0.15s ease, box-shadow 0.15s ease;
+  background: rgba(0, 180, 216, 0.3);
+  box-shadow: none;
+  transition: background 0.15s ease;
   box-sizing: border-box;
 }
 
 .app .panel--hand .exposure-rack__call-initiate-target--near.exposure-rack__call-initiate-target--over {
-  background: var(--rack-teal-slot-highlight-fill);
-  box-shadow: inset 0 0 0 1px var(--coach-teal-border);
+  background: rgba(0, 180, 216, 0.5);
+  box-shadow: none;
 }
 
 /* Bot-turn incoming discard — same idle/highlight chrome as Charleston pass box + call-initiate */
 .panel--hand .exposure-rack__slot--incoming-discard {
   justify-content: center;
   box-sizing: border-box;
-  border: 1px solid var(--coach-teal-border);
-  background: rgba(51, 65, 85, 0.5);
+  border: 0;
+  background: rgba(0, 180, 216, 0.3);
   border-radius: 0.38rem;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease;
 }

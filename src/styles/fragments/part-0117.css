@@ -99,8 +99,8 @@
     7 * var(--hand-rack-fill-tile-w) + 6 * var(--player-rack-face-gap) - 2 * var(--rack-tile-face-bw)
   );
   --hand-rack-tile-scale: 1;
-  /* Pass-strip `.pass-strip-tail__inner` chrome: horizontal border only (`padding` 0); keep post-Charleston tray min-height aligned. */
-  --charleston-pass-strip-inner-y-chrome: 2px;
+  /* Pass-strip `.pass-strip-tail__inner` chrome: no border (`padding` 0); keep post-Charleston tray min-height aligned. */
+  --charleston-pass-strip-inner-y-chrome: 0px;
 }
 
 /*

@@ -20,8 +20,8 @@
   --bot-toolbar-track-h: calc(2 * var(--bot-toolbar-pad-block) + var(--bot-toolbar-button-h));
   --bot-body-top-pad: 0px;
   --bot-body-bottom-pad: 0px;
-  /* Row↔row gaps match East rack tray dividers (`--play-tray-h-divider`). */
-  --bot-body-gap: var(--play-tray-h-divider);
+  /* Row↔row gaps in the 3-row bot body — matches discard overlay (`--discard-bot-row-gap-y`). */
+  --bot-body-gap: var(--discard-bot-row-gap-y);
   /* `--bot-exposure-tile-scale` is set on `.app-play-split` (drives bot column + these faces). */
   /* Small extra only — large bleed was crowding the tray rim / shadows vs tile height. */
   --bot-exposure-tray-vert-bleed: 0.08rem;

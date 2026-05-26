@@ -473,6 +473,11 @@ type Props = {
   ariaLabel?: string
   /** Optional centered overlay watermark rendered behind tiles. */
   watermark?: ReactNode
+  /**
+   * `intro`: fade logo 0→100% over 3s (new game / Charleston).
+   * `dimmed`: logo at 50% opacity (main play after Charleston).
+   */
+  watermarkPhase?: 'intro' | 'dimmed'
   /** Leave this many slots empty at the right for e.g. Charleston pass tiles (same row). */
   reserveTrailingSlots?: number
   /**
@@ -583,6 +588,7 @@ export function ExposureRack({
   slotCount = 14,
   ariaLabel = 'Exposures',
   watermark,
+  watermarkPhase,
   reserveTrailingSlots = 0,
   reserveLastSlotForDiscard = false,
   lastSlotTile = null,
@@ -644,6 +650,8 @@ export function ExposureRack({
         <div
           className={[
             'exposure-rack__watermark',
+            watermarkPhase === 'intro' ? 'exposure-rack__watermark--fade-in' : '',
+            watermarkPhase === 'dimmed' ? 'exposure-rack__watermark--dimmed' : '',
             filledMeldCount >= 2 || hideWatermark ? 'exposure-rack__watermark--hidden' : '',
           ]
             .filter(Boolean)

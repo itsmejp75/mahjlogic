@@ -17,9 +17,9 @@
   min-height: calc(var(--hand-rack-tile-h) * 1.1);
   padding: 0.5rem 0.65rem;
   border-radius: 0.38rem;
-  border: 1px solid var(--coach-teal-border);
-  background: rgba(51, 65, 85, 0.5);
-  transition: background 0.15s ease, border-color 0.15s ease;
+  border: 0;
+  background: rgba(0, 180, 216, 0.3);
+  transition: background 0.15s ease;
 }
 
 .east-discard-staging--inline {
@@ -49,9 +49,9 @@
 }
 
 .east-discard-staging--over {
-  background: var(--rack-teal-slot-highlight-fill);
+  background: rgba(0, 180, 216, 0.5);
   border: 0;
-  box-shadow: inset 0 0 0 1px var(--coach-teal-border);
+  box-shadow: none;
 }
 
 .east-discard-staging__placeholder {

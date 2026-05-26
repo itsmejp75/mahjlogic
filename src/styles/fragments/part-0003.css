@@ -128,6 +128,8 @@
    * Does not replace `--rack-stack-gap-y` everywhere — tray insets / horizontal split unchanged.
    */
   --play-tray-h-divider: calc((6 * var(--rack-stack-gap-y) + 8px) / 6);
+  /* Lower discard overlay + bot exposure bands: tighter uniform row↔row gap (3 rows each). */
+  --discard-bot-row-gap-y: max(2px, calc(var(--play-tray-h-divider) * 0.45));
   /* Pass/Sort/Clear etc. — wells use `+ var(--bot-exposure-inner-pad)` so inner corners match the buttons. */
   --rack-tile-btn-border-radius: 0.68rem;
   --rack-tray-inset-inline: 0.44rem;

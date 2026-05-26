@@ -122,6 +122,12 @@ export function TileFace({
         <span className="tile-face__glyph">
           <span className="tile-face__glyph-num">{def.rank}</span>
         </span>
+      ) : def.cat === 'blank' ? (
+        sortedDiscardGlyph ? (
+          <span className="tile-face__glyph">
+            <span className="tile-face__glyph-letter">B</span>
+          </span>
+        ) : null
       ) : (
         <span className="tile-face__glyph">{renderGlyphChars(tileShortLabel(def))}</span>
       )}

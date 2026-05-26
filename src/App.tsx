@@ -53,7 +53,9 @@ import {
   applyCharlestonExchange,
   charlestonAllowsBlind,
   charlestonMahjongButtonPhase,
+  charlestonPassBlockedMessage,
   charlestonPassDirections,
+  charlestonPassEligible,
   charlestonPassButtonLabel,
   charlestonPassStripInstructionAria,
   charlestonRackRoundTitle,
@@ -94,6 +96,7 @@ import {
   suggestedHandsTiedAtBest,
   summarizeRackTowardWin,
   computeSuggestedDiscardNeedHighlightIds,
+  computeSuggestedDiscardTrackerNeedDefs,
   computeBotExposureSuggestedBestIds,
   findInfeasibleBestIds,
   buildUnavailableTileDefCounts,
@@ -563,73 +566,90 @@ function OpponentExposureDropZone({
   )
 }
 
-/** Discard tray overlay per row: 1 prefix + 14 bot exposure + 14 sorted = 29 slots across. */
+/** First column of the discard-tracker bot band: compass initial (S / W / N). */
+function DiscardTrackerBotSeatLabel({ seat }: { seat: BotSeat }) {
+  const label = seat[0]
+  return (
+    <div
+      className="exposure-rack exposure-rack--discard-tracker-opponent exposure-rack--discard-tracker-prefix exposure-rack--discard-tracker-bot-seat-label"
+      role="presentation"
+      aria-label={`${seat} seat`}
+    >
+      <div
+        className="exposure-rack__slot sorted-discard-tray__slot sorted-discard-tray__slot--seat-label"
+        role="presentation"
+      >
+        <span className="sorted-discard-tray__seat-label" aria-hidden>
+          {label}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+/** Discard tray overlay per row: 1 prefix + 14 bot exposure + 13 sorted = 28 content slots (+29 for tile sizing). */
 const DISCARD_TRACKER_SLOTS_ACROSS = 29
 const DISCARD_TRACKER_BOT_PREFIX_SLOTS = 1
 const DISCARD_TRACKER_BOT_ROW_SLOTS = 14
-const DISCARD_TRACKER_SORTED_ROW_SLOTS = 14
+const DISCARD_TRACKER_SORTED_ROW_SLOTS = 13
 
-/** Row 3 of sorted discard: craks 1–9, red dragon (R), East, West, blank (B). */
-const SORTED_DISCARD_ROW3_TILES: readonly TileInstance[] = [
+/** Row 1 of sorted discard: bams 1–9, green dragon (G), North, South. */
+const SORTED_DISCARD_ROW1_TILES: readonly TileInstance[] = [
   ...([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((rank) => ({
-    id: `sorted-discard-r3-c${rank}`,
+    id: `sorted-discard-r1-b${rank}`,
+    def: { cat: 'suit' as const, suit: 'bam' as const, rank },
+  })),
+  {
+    id: 'sorted-discard-r1-green',
+    def: { cat: 'dragon' as const, dragon: 'green' as const },
+  },
+  {
+    id: 'sorted-discard-r1-n',
+    def: { cat: 'wind' as const, wind: 'N' },
+  },
+  {
+    id: 'sorted-discard-r1-s',
+    def: { cat: 'wind' as const, wind: 'S' },
+  },
+]
+
+/** Row 2 of sorted discard: craks 1–9, red dragon (R), East, West. */
+const SORTED_DISCARD_ROW2_TILES: readonly TileInstance[] = [
+  ...([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((rank) => ({
+    id: `sorted-discard-r2-c${rank}`,
     def: { cat: 'suit' as const, suit: 'crak' as const, rank },
   })),
   {
-    id: 'sorted-discard-r3-red',
+    id: 'sorted-discard-r2-red',
     def: { cat: 'dragon' as const, dragon: 'red' as const },
   },
   {
-    id: 'sorted-discard-r3-e',
+    id: 'sorted-discard-r2-e',
     def: { cat: 'wind' as const, wind: 'E' },
   },
   {
-    id: 'sorted-discard-r3-w',
+    id: 'sorted-discard-r2-w',
     def: { cat: 'wind' as const, wind: 'W' },
+  },
+]
+
+/** Row 3 of sorted discard: dots 1–9, soap (0), flower (F), blank (B) or joker (J) when blanks off. */
+const SORTED_DISCARD_ROW3_TILES: readonly TileInstance[] = [
+  ...([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((rank) => ({
+    id: `sorted-discard-r3-d${rank}`,
+    def: { cat: 'suit' as const, suit: 'dot' as const, rank },
+  })),
+  {
+    id: 'sorted-discard-r3-soap',
+    def: { cat: 'dragon' as const, dragon: 'soap' as const },
+  },
+  {
+    id: 'sorted-discard-r3-f',
+    def: { cat: 'flower' as const, flower: 1 },
   },
   {
     id: 'sorted-discard-r3-blank',
     def: BLANK_TILE_DEF,
-  },
-]
-
-/** Row 2 of sorted discard: bams 1–9, green dragon (G), North, South, joker (J). */
-const SORTED_DISCARD_ROW2_TILES: readonly TileInstance[] = [
-  ...([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((rank) => ({
-    id: `sorted-discard-r2-b${rank}`,
-    def: { cat: 'suit' as const, suit: 'bam' as const, rank },
-  })),
-  {
-    id: 'sorted-discard-r2-green',
-    def: { cat: 'dragon' as const, dragon: 'green' as const },
-  },
-  {
-    id: 'sorted-discard-r2-n',
-    def: { cat: 'wind' as const, wind: 'N' },
-  },
-  {
-    id: 'sorted-discard-r2-s',
-    def: { cat: 'wind' as const, wind: 'S' },
-  },
-  {
-    id: 'sorted-discard-r2-j',
-    def: { cat: 'joker' as const },
-  },
-]
-
-/** Row 1 of sorted discard: D label, dots 1–9, soap (0), flower. */
-const SORTED_DISCARD_ROW1_TILES: readonly TileInstance[] = [
-  ...([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((rank) => ({
-    id: `sorted-discard-r1-d${rank}`,
-    def: { cat: 'suit' as const, suit: 'dot' as const, rank },
-  })),
-  {
-    id: 'sorted-discard-r1-soap',
-    def: { cat: 'dragon' as const, dragon: 'soap' as const },
-  },
-  {
-    id: 'sorted-discard-r1-f',
-    def: { cat: 'flower' as const, flower: 1 },
   },
 ]
 
@@ -660,6 +680,14 @@ function sortedDiscardTrayTileFaceProps(def: TileDef): {
   }
 }
 
+function sortedDiscardTrackerSlotNeedsHighlight(
+  def: TileDef,
+  needDefs: readonly TileDef[] | null | undefined,
+): boolean {
+  if (!needDefs || needDefs.length === 0) return false
+  return needDefs.some((d) => tileDefsEqual(d, def))
+}
+
 function SortedDiscardTrayRow({
   tiles,
   slotCount,
@@ -669,6 +697,8 @@ function SortedDiscardTrayRow({
   trailingGlyphSlots = [],
   ariaLabel,
   discardPile,
+  blankTilesEnabled = true,
+  suggestedNeedDefs = null,
 }: {
   tiles: readonly TileInstance[]
   slotCount: number
@@ -680,6 +710,10 @@ function SortedDiscardTrayRow({
   trailingGlyphSlots?: readonly { id: string; label: string; ariaLabel: string }[]
   ariaLabel: string
   discardPile: readonly DiscardEntry[]
+  /** When false, the blank tracker slot shows joker (J) instead (blank tiles off in menu). */
+  blankTilesEnabled?: boolean
+  /** Focused suggested hand: defs still short — inner ring on matching tracker slots. */
+  suggestedNeedDefs?: readonly TileDef[] | null
 }) {
   const leadingSlots = (leadingSuitLabel ? 1 : 0) + leadingEmptySlots
   const emptyCount = Math.max(0, slotCount - leadingSlots - tiles.length - trailingGlyphSlots.length)
@@ -713,19 +747,43 @@ function SortedDiscardTrayRow({
         />
       ))}
       {tiles.map((tile) => {
-        const discardCount = countDiscardEntriesMatchingDef(discardPile, tile.def)
+        const isBlankSlot = tile.def.cat === 'blank'
+        const blankReplacedByJoker = isBlankSlot && !blankTilesEnabled
+        const trackerDef: TileDef = blankReplacedByJoker
+          ? { cat: 'joker' }
+          : tile.def
+        const discardCount = countDiscardEntriesMatchingDef(discardPile, trackerDef)
+        const hasBeenDiscarded = discardCount > 0
+        const suggestGuideOn = suggestedNeedDefs !== null
+        const suggestNeed =
+          suggestGuideOn && sortedDiscardTrackerSlotNeedsHighlight(trackerDef, suggestedNeedDefs)
+        const suggestDim = suggestGuideOn && !suggestNeed
+        const awaitingDiscard = !suggestGuideOn && !hasBeenDiscarded
         return (
           <div
             key={tile.id}
-            className="exposure-rack__slot sorted-discard-tray__slot"
+            className={[
+              'exposure-rack__slot',
+              'sorted-discard-tray__slot',
+              isBlankSlot && blankTilesEnabled ? 'sorted-discard-tray__slot--blank' : '',
+              awaitingDiscard ? 'sorted-discard-tray__slot--awaiting-discard' : '',
+              suggestDim ? 'sorted-discard-tray__slot--suggest-dim' : '',
+              suggestNeed ? 'sorted-discard-tray__slot--suggest-need' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
             role="listitem"
             aria-label={
-              discardCount > 0
-                ? `${tileAriaLabel(tile.def)}, ${discardCount} discarded`
-                : tileAriaLabel(tile.def)
+              suggestNeed
+                ? `${tileAriaLabel(trackerDef)}, needed for focused hand${
+                    discardCount > 0 ? `, ${discardCount} discarded` : ''
+                  }`
+                : discardCount > 0
+                  ? `${tileAriaLabel(trackerDef)}, ${discardCount} discarded`
+                  : tileAriaLabel(trackerDef)
             }
           >
-            <TileFace def={tile.def} {...sortedDiscardTrayTileFaceProps(tile.def)} />
+            <TileFace def={trackerDef} {...sortedDiscardTrayTileFaceProps(trackerDef)} />
             <span className="sorted-discard-tray__count" aria-hidden>
               {discardCount > 0 ? discardCount : null}
             </span>
@@ -764,7 +822,7 @@ function SortedDiscardTrayRow({
   )
 }
 
-/** 3 rows × 29 slots: sorted discard grid (left) and prefix + bot exposures (right). */
+/** 3 rows: 13-column sorted discard grid (inset) + prefix + 14-column bot exposures. */
 function DiscardTrackerSlotGrid({
   discardPile,
   botExposures,
@@ -776,6 +834,8 @@ function DiscardTrackerSlotGrid({
   botExposureDeadIds,
   jokerSwapHintBounceTileIds,
   jokerSwapHintBounceEpoch,
+  blankTilesEnabled,
+  suggestedDiscardTrackerNeedDefs,
 }: {
   discardPile: readonly DiscardEntry[]
   botExposures: BotExposure[]
@@ -787,6 +847,8 @@ function DiscardTrackerSlotGrid({
   botExposureDeadIds: ReadonlySet<string> | null
   jokerSwapHintBounceTileIds: ReadonlySet<string> | null
   jokerSwapHintBounceEpoch: number
+  blankTilesEnabled: boolean
+  suggestedDiscardTrackerNeedDefs: readonly TileDef[] | null
 }) {
   const botBandSlots =
     DISCARD_TRACKER_BOT_PREFIX_SLOTS + DISCARD_TRACKER_BOT_ROW_SLOTS
@@ -823,36 +885,35 @@ function DiscardTrackerSlotGrid({
               <SortedDiscardTrayRow
                 tiles={SORTED_DISCARD_ROW1_TILES}
                 slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
-                leadingSuitLabel="D"
-                leadingSuitLabelTone="dot"
+                leadingSuitLabel="B"
+                leadingSuitLabelTone="bam"
                 ariaLabel="Sorted discard row 1"
                 discardPile={discardPile}
+                suggestedNeedDefs={suggestedDiscardTrackerNeedDefs}
               />
             ) : rowIdx === 1 ? (
               <SortedDiscardTrayRow
                 tiles={SORTED_DISCARD_ROW2_TILES}
                 slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
-                leadingSuitLabel="B"
-                leadingSuitLabelTone="bam"
+                leadingSuitLabel="C"
+                leadingSuitLabelTone="crak"
                 ariaLabel="Sorted discard row 2"
                 discardPile={discardPile}
+                suggestedNeedDefs={suggestedDiscardTrackerNeedDefs}
               />
             ) : (
               <SortedDiscardTrayRow
                 tiles={SORTED_DISCARD_ROW3_TILES}
                 slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
-                leadingSuitLabel="C"
-                leadingSuitLabelTone="crak"
+                leadingSuitLabel="D"
+                leadingSuitLabelTone="dot"
                 ariaLabel="Sorted discard row 3"
                 discardPile={discardPile}
+                blankTilesEnabled={blankTilesEnabled}
+                suggestedNeedDefs={suggestedDiscardTrackerNeedDefs}
               />
             )}
-            <ExposureRack
-              melds={[]}
-              slotCount={DISCARD_TRACKER_BOT_PREFIX_SLOTS}
-              className="exposure-rack--discard-tracker-opponent exposure-rack--discard-tracker-prefix"
-              ariaLabel={`${seat} prefix`}
-            />
+            <DiscardTrackerBotSeatLabel seat={seat} />
             <OpponentExposureDropZone
               seat={seat}
               active={jokerSwapUiActive}
@@ -1493,8 +1554,8 @@ function charlestonIncomingHandTileIds(
 const WALL_GAME_MAX_EXPOSURE_MELD_TILES = 10
 
 const BOT_LABELS = ['South', 'West', 'North'] as const
-/** Left→right around East: North, West, South — each row is 14 slots across. */
-const OPPONENT_EXPOSURE_SEATS: readonly BotSeat[] = ['North', 'West', 'South']
+/** Discard tracker bot rows top→bottom: South, West, North — matches `BOT_LABELS`. */
+const OPPONENT_EXPOSURE_SEATS: readonly BotSeat[] = ['South', 'West', 'North']
 const BOT_SEATS: Seat[] = ['south', 'west', 'north']
 
 function toFourHands(r: Pick<RoundState, 'hand' | 'bots'>): FourHands {
@@ -4070,12 +4131,23 @@ export default function App() {
     cardPatterns,
   ])
 
-  /** Discards that match naturals the focused line is still short (incoming slot + discard tracker). */
+  const suggestedDiscardGuideActive = useMemo(() => {
+    if (!suggestedFocusHandKey) return false
+    if (suggestedSuppressedHandKey === suggestedFocusHandKey) return false
+    if (
+      mainPhase === 'mahjong-declared' ||
+      mainPhase === 'bot-mahjong' ||
+      mainPhase === 'dead-hand' ||
+      mainPhase === 'wall-game'
+    ) {
+      return false
+    }
+    return true
+  }, [suggestedFocusHandKey, suggestedSuppressedHandKey, mainPhase])
+
+  /** Discards that match naturals the focused line is still short (incoming slot + discard strip). */
   const suggestedDiscardNeedIds = useMemo(() => {
-    if (!suggestedFocusHandKey) return null
-    if (suggestedSuppressedHandKey === suggestedFocusHandKey) return null
-    if (mainPhase === 'mahjong-declared' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand' || mainPhase === 'wall-game')
-      return null
+    if (!suggestedDiscardGuideActive) return null
     return computeSuggestedDiscardNeedHighlightIds(
       suggestedFocusHandKey,
       rackForSuggestedPatternMatch,
@@ -4084,11 +4156,28 @@ export default function App() {
       cardPatterns,
     )
   }, [
+    suggestedDiscardGuideActive,
     suggestedFocusHandKey,
-    suggestedSuppressedHandKey,
-    mainPhase,
     rackForSuggestedPatternMatch,
     discardPile,
+    suggestedHandsExposureTileIds,
+    cardPatterns,
+  ])
+
+  /** Sorted discard tracker: highlight slot types still needed for the focused hand. */
+  const suggestedDiscardTrackerNeedDefs = useMemo(() => {
+    if (!suggestedDiscardGuideActive) return null
+    const defs = computeSuggestedDiscardTrackerNeedDefs(
+      suggestedFocusHandKey,
+      rackForSuggestedPatternMatch,
+      suggestedHandsExposureTileIds,
+      cardPatterns,
+    )
+    return defs.length > 0 ? defs : null
+  }, [
+    suggestedDiscardGuideActive,
+    suggestedFocusHandKey,
+    rackForSuggestedPatternMatch,
     suggestedHandsExposureTileIds,
     cardPatterns,
   ])
@@ -5102,13 +5191,14 @@ export default function App() {
       pickBotPass: (hand: TileInstance[], n: number, botIndex: 0 | 1 | 2) =>
         chooseBotCharlestonPass(hand, n, BOT_LABELS[botIndex] as BotSeat, botDifficultyRef.current),
     }
-    let blockedByJoker = false
+    let passBlockedCat: 'joker' | 'blank' | null = null
     pushRound((r) => {
       if (r.charlestonPhase === 'done') return r
       const phase = r.charlestonPhase
       const eastRack = r.passSlots.filter(Boolean) as TileInstance[]
-      if (eastRack.some((t) => t.def.cat === 'joker')) {
-        blockedByJoker = true
+      const blocked = eastRack.find((t) => !charlestonPassEligible(t.def))
+      if (blocked) {
+        passBlockedCat = blocked.def.cat === 'blank' ? 'blank' : 'joker'
         return r
       }
 
@@ -5188,8 +5278,8 @@ export default function App() {
           incoming.length > 0 && flyDir != null ? { ids: [...incoming], from: flyDir } : null,
       }
     })
-    if (blockedByJoker) {
-      setCharlestonPassError('Error: Jokers can not be passed during Charleston')
+    if (passBlockedCat) {
+      setCharlestonPassError(charlestonPassBlockedMessage(passBlockedCat))
     }
   }, [pushRound])
 
@@ -5237,7 +5327,7 @@ export default function App() {
       return
     }
     const eastRack = passSlots.filter(Boolean) as TileInstance[]
-    if (eastRack.some((t) => t.def.cat === 'joker')) {
+    if (eastRack.some((t) => !charlestonPassEligible(t.def))) {
       sendCharlestonPass()
       return
     }
@@ -5635,7 +5725,7 @@ export default function App() {
   }, [pushRound])
 
   const onHandTileActivate = useCallback((id: string) => {
-    let jokerClickBlocked = false
+    let passBlockedCat: 'joker' | 'blank' | null = null
     pushRound((r) => {
       if (r.charlestonPhase === 'done') {
         if (r.mainPhase === 'east-discard') {
@@ -5673,8 +5763,8 @@ export default function App() {
         const handIdx = r.hand.findIndex((t) => t.id === id)
         if (handIdx < 0) return r
         const tile = r.hand[handIdx]!
-        if (tile.def.cat === 'joker') {
-          jokerClickBlocked = true
+        if (!charlestonPassEligible(tile.def)) {
+          passBlockedCat = tile.def.cat === 'blank' ? 'blank' : 'joker'
           return r
         }
         const handNext = [...r.hand]
@@ -5689,8 +5779,8 @@ export default function App() {
       }
       return { ...r, selectedHandTileId: r.selectedHandTileId === id ? null : id }
     })
-    if (jokerClickBlocked) {
-      setCharlestonPassError('Jokers cannot be passed during the Charleston.')
+    if (passBlockedCat) {
+      setCharlestonPassError(charlestonPassBlockedMessage(passBlockedCat))
     }
   }, [setCharlestonPassError, pushRound])
 
@@ -5811,7 +5901,7 @@ export default function App() {
           return
         }
 
-        let jokerPassBlocked = false
+        let passBlockedCat: 'joker' | 'blank' | null = null
         pushRound((r) => {
       const passSlotsNext: PassSlots = [...r.passSlots]
       const handNext = [...r.hand]
@@ -5895,8 +5985,8 @@ export default function App() {
 
       if (!blockPass && handIdx >= 0 && passToIdx !== null) {
         const moved = handNext[handIdx]!
-        if (moved.def.cat === 'joker') {
-          jokerPassBlocked = true
+        if (!charlestonPassEligible(moved.def)) {
+          passBlockedCat = moved.def.cat === 'blank' ? 'blank' : 'joker'
           return r
         }
         handNext.splice(handIdx, 1)
@@ -5932,8 +6022,8 @@ export default function App() {
 
       return r
     })
-        if (jokerPassBlocked) {
-          setCharlestonPassError('Jokers cannot be passed during the Charleston.')
+        if (passBlockedCat) {
+          setCharlestonPassError(charlestonPassBlockedMessage(passBlockedCat))
         }
       } finally {
         globalDragPointerCleanupRef.current?.()
@@ -5959,7 +6049,7 @@ export default function App() {
   )
 
   const onPassBoxClick = useCallback(() => {
-    let jokerClickBlocked = false
+    let passBlockedCat: 'joker' | 'blank' | null = null
     pushRound((r) => {
       if (r.charlestonPhase === 'done') return r
       const emptyIdx = r.passSlots.findIndex((s) => s == null)
@@ -5967,8 +6057,9 @@ export default function App() {
       if (!r.selectedHandTileId) return r
       const handIdx = r.hand.findIndex((t) => t.id === r.selectedHandTileId)
       if (handIdx < 0) return { ...r, selectedHandTileId: null }
-      if (r.hand[handIdx]!.def.cat === 'joker') {
-        jokerClickBlocked = true
+      const tileDef = r.hand[handIdx]!.def
+      if (!charlestonPassEligible(tileDef)) {
+        passBlockedCat = tileDef.cat === 'blank' ? 'blank' : 'joker'
         return { ...r, selectedHandTileId: null }
       }
 
@@ -5983,8 +6074,8 @@ export default function App() {
 
       return { ...r, hand: handNext, passSlots: passSlotsNext, passSlotOrigins: passOriginsNext, selectedHandTileId: null }
     })
-    if (jokerClickBlocked) {
-      setCharlestonPassError('Jokers cannot be passed during the Charleston.')
+    if (passBlockedCat) {
+      setCharlestonPassError(charlestonPassBlockedMessage(passBlockedCat))
     }
   }, [setCharlestonPassError, pushRound])
 
@@ -7252,6 +7343,7 @@ export default function App() {
                                 calledTileId: exp.calledTileId,
                               }))}
                               watermark={<RackLogoWatermark />}
+                              watermarkPhase="intro"
                               suggestedTileGuide={suggestedTileGuideForRack}
                               slotCount={14}
                               reserveTrailingSlots={3}
@@ -7496,6 +7588,7 @@ export default function App() {
                               suggestedTileGuide={suggestedTileGuideForRack}
                               highlightCalledTile={mainPhase === 'call-staging'}
                               watermark={<RackLogoWatermark />}
+                              watermarkPhase="dimmed"
                               hideWatermark={
                                 (mainPhase === 'mahjong-declared' && mahjongWinReviewing) ||
                                 (mainPhase === 'bot-mahjong' && botMahjongWinReviewing) ||
@@ -7857,6 +7950,8 @@ export default function App() {
                           }
                           jokerSwapHintBounceTileIds={jokerSwapHintBounceIds?.jokers ?? null}
                           jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
+                          blankTilesEnabled={blankTilesEnabled}
+                          suggestedDiscardTrackerNeedDefs={suggestedDiscardTrackerNeedDefs}
                         />
                         </div>
                         {renderSuggestedHandsPopup()}

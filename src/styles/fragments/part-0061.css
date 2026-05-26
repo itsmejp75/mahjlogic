@@ -55,8 +55,8 @@
   flex: 1 1 0;
   min-height: 0;
   display: grid;
-  grid-template-rows: repeat(3, minmax(0, 1fr));
-  align-content: stretch;
+  grid-template-rows: repeat(3, auto);
+  align-content: start;
   overflow: hidden;
   width: calc(100% + var(--play-split-lower-box-left-bleed));
   margin-left: calc(-1 * var(--play-split-lower-box-left-bleed));
@@ -200,6 +200,16 @@
   container-name: discard-tray;
 }
 
+/* Sorted discard rows + scrollable discard pile: darker suggest-dim than main rack / bot exposures. */
+.discard-tracker__overlay-grid .exposure-rack--discard-tracker-sorted-row,
+.discard-tracker__content .discard-pile {
+  --suggest-dim-overlay: rgba(0, 0, 0, 0.56);
+  --suggest-dim-inset-vignette: inset 0 0 0.5rem color-mix(in srgb, var(--color-black) 36%, transparent);
+  --suggest-dim-inset-shadow: var(--suggest-dim-inset-vignette),
+    inset 0 0 0 1px color-mix(in srgb, var(--color-black) 24%, transparent);
+  --suggest-dim-joker-brightness: 0.52;
+}
+
 /* Tile corner radius at this tray width — used by the container + hands overlay only (tiles unchanged). */
 @container discard-tray (min-width: 0px) {
   .discard-tracker__content {
@@ -296,7 +306,7 @@
 }
 
 /*
- * Overlay grid: 3 rows × 29 slots (1 prefix + 14 bot + 14 sorted), edge-to-edge in the tray.
+ * Overlay grid: 3 rows × 29 tile widths (13 sorted + 1 prefix + 14 bot; sorted band inset 1 column).
  */
 .discard-tracker__content .discard-tracker__overlay-grid {
   position: absolute;
@@ -305,7 +315,7 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  gap: var(--play-tray-h-divider);
+  gap: var(--discard-bot-row-gap-y);
   padding: 0;
   box-sizing: border-box;
   pointer-events: none;
@@ -354,8 +364,11 @@
 }
 
 .discard-tracker__overlay-grid .exposure-rack--discard-tracker-prefix {
+  position: relative;
   width: var(--rack-tile-w);
   max-width: var(--rack-tile-w);
+  /* Keep S/W/N + bot rows at the original 29-column grid offset (13 sorted + half inset). */
+  margin-left: calc((var(--rack-tile-w) + var(--player-rack-face-gap)) * 0.5);
 }
 
 .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row {
@@ -363,9 +376,20 @@
   max-width: 100%;
 }
 
+/*
+ * Sorted discard bands (B→S, C→W, D→J) + S/W/N labels + bot exposures: inset from the tray’s
+ * right edge by `--play-tray-h-divider`. Transform only — slot/tile sizes unchanged.
+ */
+.discard-tracker__overlay-row > .exposure-rack--discard-tracker-sorted-row,
+.discard-tracker__overlay-row > .exposure-rack--discard-tracker-bot-seat-label,
+.discard-tracker__overlay-row > .app-opponents-rail__cell {
+  transform: translateX(calc(-1 * var(--play-tray-h-divider)));
+}
+
 .discard-tracker__overlay-grid .exposure-rack--discard-tracker-sorted-row {
-  width: calc(14 * var(--rack-tile-w) + 13 * var(--player-rack-face-gap));
+  width: calc(13 * var(--rack-tile-w) + 12 * var(--player-rack-face-gap));
   max-width: 100%;
+  margin-left: calc((var(--rack-tile-w) + var(--player-rack-face-gap)) * 0.5);
 }
 
 .discard-tracker__overlay-grid .exposure-rack__meld-drop {
@@ -384,8 +408,15 @@
 .discard-tracker__content .exposure-rack__slot--suggest-best .tile-face,
 .discard-tracker__content .exposure-rack__slot--called .tile-face,
 .discard-tracker__content .exposure-rack__slot--staged-returnable:hover .tile-face,
-.discard-tracker__content .exposure-rack__slot--call-amendable:hover .tile-face {
+.discard-tracker__content .exposure-rack__slot--call-amendable:hover .tile-face,
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-need .tile-face {
   border-radius: var(--tile-face-border-radius);
+}
+
+/* Focused suggested hand: inner ring on tracker slots you still need (same as discard strip). */
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-need .tile-face {
+  --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
+  --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
 }
 
 /* Sorted discard tray: match discard-pile tile chrome. */
@@ -452,22 +483,63 @@
   position: relative;
 }
 
+/* Sorted-row dim uses the shared suggest-dim `::after` overlay (part-0075); counts stay above it via z-index. */
+
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--blank .tile-face,
 .discard-tracker__overlay-grid .tile-face.tile--blank {
   border: none;
+  background: var(--tg-wind, var(--wind-tile-bg));
 }
 
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--suit-label {
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--inactive {
+  pointer-events: none;
+}
+
+.discard-tracker__overlay-grid .exposure-rack__slot.sorted-discard-tray__slot--suit-label {
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
+  position: relative;
+}
+
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--suit-label .sorted-discard-tray__suit-label {
+  position: absolute;
+  /* Centered in the label column — not between the tray edge and the first rank tile. */
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.discard-tracker__overlay-grid .exposure-rack__slot.sorted-discard-tray__slot--seat-label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--seat-label .sorted-discard-tray__seat-label {
+  position: absolute;
+  /* Centered in the label column — same as B/C/D suit labels. */
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .discard-tracker__overlay-grid .sorted-discard-tray__suit-label {
-  font-family: 'Noto Sans Arabic', var(--sans);
-  font-weight: 700;
-  font-size: calc(var(--rack-tile-w) * 1.12);
+  font-family: var(--mono-sometype);
+  font-weight: 500;
+  font-size: calc(var(--rack-tile-w) * 1.2);
   line-height: 1;
+  width: auto;
+  max-width: none;
+  text-align: center;
+  letter-spacing: 0;
+  box-sizing: border-box;
+  opacity: 0.95;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--suit-label-dot .sorted-discard-tray__suit-label {
@@ -482,6 +554,21 @@
   color: var(--tg-crak, var(--card-ink-red));
 }
 
+.discard-tracker__overlay-grid .sorted-discard-tray__seat-label {
+  font-family: var(--mono-sometype);
+  font-weight: 500;
+  font-size: calc(var(--rack-tile-w) * 1.2);
+  line-height: 1;
+  width: auto;
+  max-width: none;
+  text-align: center;
+  letter-spacing: 0;
+  box-sizing: border-box;
+  color: #6b7280;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 .discard-tracker__overlay-grid .sorted-discard-tray__count {
   position: absolute;
   left: 50%;
@@ -494,5 +581,12 @@
   /* Match `.tile-face` corner glyph (`--tile-face-glyph-fs`). */
   font-size: calc(var(--rack-tile-w) * 1.03 / 2.65 * 1.5);
   line-height: 1;
+  color: var(--tg-ink, #080808);
+}
+
+/* Counts on dimmed slots: sit above the dim overlay (z-index), full ink. */
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--awaiting-discard .sorted-discard-tray__count,
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-dim .sorted-discard-tray__count,
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--inactive .sorted-discard-tray__count {
   color: var(--tg-ink, #080808);
 }

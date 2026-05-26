@@ -16,7 +16,7 @@ export const NMJL_2026_STANDARD_LEGEND = [
 ] as const
 
 export const NMJL_2026_CHARLESTON_RULES = [
-  'Charleston: any 3 tiles may be passed except Jokers.',
+  'Charleston: any 3 tiles may be passed except Jokers and blank tiles.',
   'First Charleston (compulsory): right, across, left. May be stopped only after the first left.',
   'Courtesy pass still applies.',
   'Second Charleston (optional): left, across, right.',
