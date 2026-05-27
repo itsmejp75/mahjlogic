@@ -314,6 +314,10 @@
     max-height: min(30dvb, 15rem);
   }
 
+  .app-discard-bottom-container {
+    padding-bottom: 0;
+  }
+
   /*
    * Lower play-split fills *all* remaining vertical space below the rack so no dark strip
    * appears between the bot rows / discard tracker and the WebView bottom. Base rule caps

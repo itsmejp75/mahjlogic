@@ -144,7 +144,7 @@
   html[data-native-app] .app-main {
     box-sizing: border-box;
     padding-top: var(--app-v-pad);
-    padding-bottom: var(--app-v-pad);
+    padding-bottom: 0;
   }
 
   html[data-native-app] .app-dnd-frame {
@@ -295,7 +295,7 @@
   }
 
   html:not([data-native-app]) .app-main {
-    padding-bottom: var(--app-v-pad);
+    padding-bottom: 0;
   }
 
   html:not([data-native-app]) .app-rack-stage,
@@ -357,6 +357,16 @@ html .app-dnd-frame > .app-discard-bottom-container {
   width: 100%;
   max-width: var(--app-play-fit-inline);
   box-sizing: border-box;
+}
+
+html[data-native-app] .app-discard-bottom-container {
+  padding-bottom: 0;
+}
+
+@media (max-width: 932px) {
+  html .app-discard-bottom-container {
+    padding-bottom: 0;
+  }
 }
 
 html .app-discard-bottom-container > .panel--discard-tracker {
