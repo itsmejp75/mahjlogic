@@ -325,9 +325,9 @@
 
 /*
  * Overlay grid: 3 rows × 29 tile widths (13 sorted + 1 prefix + 14 bot; sorted band inset 1 column).
+ * Top B/C/D + S/W/N band (`.app-top-exposure-container`) uses part-0036 — flow layout + `play-split-rack-lock`.
  */
-.discard-tracker__content .discard-tracker__overlay-grid,
-.discard-tracker__tile-groups-container > .discard-tracker__overlay-grid {
+.discard-tracker__content:not(.discard-tracker__content--tile-groups-only) .discard-tracker__overlay-grid {
   position: absolute;
   inset: 0;
   z-index: 2;

@@ -387,6 +387,35 @@ html .app-play-split.app-top-exposure-container
   padding-block: 0;
 }
 
+/*
+ * Installed PWA / narrow portrait: `play-split-rack-lock` can report 0 inline size on first
+ * paint. Floor tile width from the viewport column (same inset math as `--hand-rack-usable-w`).
+ */
+@supports (width: 100dvi) {
+  @media (max-width: 932px) {
+    html .app-dnd-frame
+      .app-play-split.app-top-exposure-container
+      .discard-tracker__overlay-grid {
+      --rack-tile-w: max(
+        var(--top-discard-tray-tile-w-hand-rack),
+        calc(
+          (
+            100dvi
+            - 2 * var(--app-h-pad)
+            - 2 * var(--hand-window-pad-inline)
+            - (var(--discard-tracker-slots-across, 29) - 1) * var(--player-rack-face-gap)
+          ) / var(--discard-tracker-slots-across, 29)
+        )
+      );
+      --rack-tile-h: calc(var(--rack-tile-w) * 4 / 3);
+      --exposure-slot-h: var(--rack-tile-h);
+      --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
+      --discard-tray-rack-tile-w: var(--rack-tile-w);
+      --discard-tray-tile-corner-r: var(--tile-face-border-radius);
+    }
+  }
+}
+
 html .app-dnd-frame > .app-discard-bottom-container {
   flex: 1 1 0;
   min-height: 0;
