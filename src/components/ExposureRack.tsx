@@ -51,17 +51,42 @@ function ExposureRackFlyInTile({
   const flyRef = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
     if (!animate || flyOrigin === 'right') return
+
+    let raf1 = 0
+    let raf2 = 0
+
+    const apply = () => {
+      const el = wrapRef.current
+      const flyEl = flyRef.current
+      if (!el || !flyEl) return
+      // WebKit: first layout pass can read before the discard-tracker grid resolves.
+      void el.offsetHeight
+      const tileRect = el.getBoundingClientRect()
+      const tileCx = tileRect.left + tileRect.width / 2
+      const tileCy = tileRect.top + tileRect.height / 2
+      const h = tileRect.height
+      const ox = tileCx
+      const oy = flyOrigin === 'below' ? tileCy + h * 1.05 : tileCy - h * 1.2
+      flyEl.style.setProperty('--draw-anim-dx', `${ox - tileCx}px`)
+      flyEl.style.setProperty('--draw-anim-dy', `${oy - tileCy}px`)
+    }
+
+    apply()
+
     const el = wrapRef.current
-    const flyEl = flyRef.current
-    if (!el || !flyEl) return
-    const tileRect = el.getBoundingClientRect()
-    const tileCx = tileRect.left + tileRect.width / 2
-    const tileCy = tileRect.top + tileRect.height / 2
-    const h = tileRect.height
-    const ox = tileCx
-    const oy = flyOrigin === 'below' ? tileCy + h * 1.05 : tileCy - h * 1.2
-    flyEl.style.setProperty('--draw-anim-dx', `${ox - tileCx}px`)
-    flyEl.style.setProperty('--draw-anim-dy', `${oy - tileCy}px`)
+    if (el) {
+      const r = el.getBoundingClientRect()
+      if (r.width < 6 || r.height < 6) {
+        raf1 = requestAnimationFrame(() => {
+          raf2 = requestAnimationFrame(apply)
+        })
+      }
+    }
+
+    return () => {
+      cancelAnimationFrame(raf1)
+      cancelAnimationFrame(raf2)
+    }
   }, [animate, tileId, flyOrigin])
 
   const innerClass =

@@ -3573,9 +3573,48 @@ export default function App() {
     return () => window.clearTimeout(t)
   }, [handJokerSwapFlyInFromBelowId])
 
-  const [botExposureFlyInTileIds, setBotExposureFlyInTileIds] = useState<ReadonlySet<string> | null>(
-    null,
+  /**
+   * Bot exposure drop-in: detect new tile ids during render so the first paint already
+   * has `animate` — useEffect ran after paint and made tiles pop in then jump into motion.
+   */
+  const pendingBotExposureFlyInIdsRef = useRef(new Set<string>())
+  const prevBotExposureTileIdsSnapshotRef = useRef<string[]>([])
+  const [botExposureFlyInClearEpoch, setBotExposureFlyInClearEpoch] = useState(0)
+
+  const botExposureTileIdsNow = useMemo(
+    () => botExposures.flatMap((e) => e.tiles.map((t) => t.id)),
+    [botExposures],
   )
+
+  const botExposureFlyInTileIds = useMemo((): ReadonlySet<string> | null => {
+    void botExposureFlyInClearEpoch
+    const now = botExposureTileIdsNow
+    const pending = pendingBotExposureFlyInIdsRef.current
+    const prev = prevBotExposureTileIdsSnapshotRef.current
+
+    for (const id of [...pending]) {
+      if (!now.includes(id)) pending.delete(id)
+    }
+
+    if (animationsEnabled) {
+      for (const id of now) {
+        if (!prev.includes(id)) pending.add(id)
+      }
+    }
+
+    prevBotExposureTileIdsSnapshotRef.current = now
+    return pending.size > 0 ? pending : null
+  }, [botExposureTileIdsNow, animationsEnabled, botExposureFlyInClearEpoch])
+
+  useEffect(() => {
+    if (!animationsEnabled || pendingBotExposureFlyInIdsRef.current.size === 0) return
+    const tid = window.setTimeout(() => {
+      pendingBotExposureFlyInIdsRef.current.clear()
+      setBotExposureFlyInClearEpoch((epoch) => epoch + 1)
+    }, 380)
+    return () => window.clearTimeout(tid)
+  }, [botExposureTileIdsNow, animationsEnabled, botExposureFlyInClearEpoch])
+
   /** Claimed discard + staged hand tiles — shared upward wave into the meld (opening-deal stagger). */
   const [eastCallStagedWaveFlyIn, setEastCallStagedWaveFlyIn] = useState<{
     staggerDelayMs: number
@@ -3585,30 +3624,6 @@ export default function App() {
   useEffect(() => {
     if (mainPhase !== 'call-staging') setEastCallStagedWaveFlyIn(null)
   }, [mainPhase])
-
-  const prevBotExposureTileIdsRef = useRef<Set<string>>(new Set())
-
-  useEffect(() => {
-    const current = new Set(botExposures.flatMap((e) => e.tiles.map((t) => t.id)))
-    const prev = prevBotExposureTileIdsRef.current
-
-    if (!animationsEnabled) {
-      prevBotExposureTileIdsRef.current = current
-      return
-    }
-
-    const added: string[] = []
-    for (const id of current) {
-      if (!prev.has(id)) added.push(id)
-    }
-    prevBotExposureTileIdsRef.current = current
-
-    if (added.length === 0) return
-
-    setBotExposureFlyInTileIds(new Set(added))
-    const tid = window.setTimeout(() => setBotExposureFlyInTileIds(null), 380)
-    return () => window.clearTimeout(tid)
-  }, [botExposures, animationsEnabled])
 
   useEffect(() => {
     if (mainPhase === 'east-discard') return

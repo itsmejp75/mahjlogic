@@ -173,6 +173,9 @@
   --app-h-pad-base: clamp(0.3rem, 1.65vw, 1.35rem);
   --app-h-pad: calc(var(--app-h-pad-base) + var(--app-safe-inline));
   --app-v-pad: var(--app-h-pad-base);
+  /* Bottom-only inset — keep at 0; symmetric top breathing room comes from `--app-v-pad` only. */
+  --app-v-pad-bottom: 0px;
+  --play-split-tray-panel-padding-bottom: 0px;
   --hand-rack-usable-w: calc(
     var(--app-play-fit-inline)
     - 2 * var(--app-h-pad)
@@ -266,7 +269,7 @@
      outer gray wrapper (`--window-surface`), so the recessed look reads symmetrically. */
   --dark-tray-rim-shadow-up-1: inset 0 1px 0 color-mix(in srgb, var(--window-inner-surface) 50%, var(--window-surface) 50%);
   --dark-tray-rim-shadow-up-2: inset 0 2px 0 color-mix(in srgb, var(--window-inner-surface) 50%, var(--window-surface) 50%);
-  --dark-tray-rim-shadow-down-1: inset 0 -1px 0 #4a5568;
+  --dark-tray-rim-shadow-down-1: inset 0 -1px 0 color-mix(in srgb, var(--felt-frame) 55%, var(--felt-tray-deep) 45%);
   --dark-tray-rim-shadow-down-2: inset 0 -2px 0 rgba(255, 255, 255, 0.06);
 }
 

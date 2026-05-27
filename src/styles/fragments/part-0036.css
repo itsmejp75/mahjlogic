@@ -106,16 +106,9 @@
   --play-split-discard-bot-separator: 0px;
   --lower-box-edge-trim: 4px;
   /*
-   * Single bottom padding for **both** lower tray panels (discard + bot). Together with
-   * `.app-main { padding-bottom: var(--app-v-pad) }`, distance from tray bottom to screen =
-   *   var(--hand-window-pad-inline) + var(--app-h-pad)
-   * which matches the horizontal inset to the tray edges:
-   *   var(--app-h-pad) + var(--hand-window-pad-inline)
-   * (same two tokens — tweak only here + `--app-h-pad` / `--app-v-pad` on `:root` / `.app-main`.)
+   * Lower trays sit flush on the bottom edge — no extra wrapper band under the discard column.
    */
-  --play-split-tray-panel-padding-bottom: calc(
-    var(--hand-window-pad-inline) + var(--app-h-pad) - var(--app-v-pad)
-  );
+  --play-split-tray-panel-padding-bottom: 0px;
   /*
    * Desktop side-by-side: shift only the toolbar + exposure stack left toward the discard column.
    * Tuned here — does not read `--discard-tray-right-pull` so discard width stays independent.
@@ -185,7 +178,7 @@
   position: relative;
   display: block;
   height: calc(
-    3 * ((100cqw - 28 * var(--player-rack-face-gap)) / 29) * 1.3333
+    3 * ((100cqw - 28 * var(--player-rack-face-gap)) / 29 * 4 / 3)
     + 2 * var(--discard-bot-row-gap-y)
   );
   min-height: 0;
@@ -202,7 +195,11 @@
   height: 100%;
   min-height: 0;
   width: 100%;
-  background: var(--window-inner-surface);
+  background-color: var(--felt-tray-bg);
+  background-image: var(--felt-grain-tile), var(--window-inner-surface-fill);
+  background-size: var(--felt-tray-paint-size);
+  background-repeat: var(--felt-tray-paint-repeat);
+  background-blend-mode: var(--felt-tray-paint-blend);
   border-radius: var(--discard-tray-tile-corner-r, var(--tile-face-border-radius));
   overflow: hidden;
 }
@@ -228,7 +225,7 @@
   align-self: stretch;
   box-sizing: border-box;
   padding-inline: var(--app-h-pad);
-  padding-bottom: calc(var(--hand-window-pad-inline) + var(--app-h-pad) - var(--app-v-pad));
+  padding-bottom: var(--play-split-tray-panel-padding-bottom);
   background: transparent;
   position: relative;
   z-index: 2;

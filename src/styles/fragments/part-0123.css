@@ -45,6 +45,8 @@
     /* Same rhythm as @media (max-width: 47.99rem); neutralize tight phone-landscape overrides. */
     --app-h-pad-base: clamp(0.35rem, 2.2vw, 0.75rem);
     --app-v-pad: var(--app-h-pad-base);
+    --app-v-pad-bottom: 0px;
+    --play-split-tray-panel-padding-bottom: 0px;
     --hand-window-pad-inline: clamp(0.2rem, 1.2vw, 0.35rem);
     --rack-tray-inset-inline: 0.3rem;
     --rack-tray-inset-block: 0.3rem;
@@ -81,6 +83,12 @@
   .app-play-split {
     flex: 1 1 0;
     max-height: none;
+  }
+
+  .app-dnd-frame:has(.app-discard-bottom-container) {
+    flex: 1 1 0;
+    min-height: 0;
+    justify-content: flex-start;
   }
 }
 
@@ -206,6 +214,10 @@
     flex: 0 0 calc(100% + var(--native-lower-edge-pull-down));
     height: calc(100% + var(--native-lower-edge-pull-down));
   }
+
+  html[data-native-app] .app-discard-bottom-container {
+    margin-bottom: calc(-1 * var(--native-lower-edge-pull-down));
+  }
 }
 
 /*
@@ -278,6 +290,10 @@
   html:not([data-native-app]) .app-play-split > .app-play-split__right .panel--bot-exposures {
     flex: 0 0 calc(100% + var(--mobile-web-lower-edge-pull-down));
     height: calc(100% + var(--mobile-web-lower-edge-pull-down));
+  }
+
+  html:not([data-native-app]) .app-discard-bottom-container {
+    margin-bottom: calc(-1 * var(--mobile-web-lower-edge-pull-down));
   }
 }
 
@@ -353,6 +369,7 @@ html .app-play-split.app-top-exposure-container
 html .app-dnd-frame > .app-discard-bottom-container {
   flex: 1 1 0;
   min-height: 0;
+  height: 100%;
   margin-top: 0;
   width: 100%;
   max-width: var(--app-play-fit-inline);
@@ -372,7 +389,8 @@ html[data-native-app] .app-discard-bottom-container {
 html .app-discard-bottom-container > .panel--discard-tracker {
   flex: 1 1 0;
   min-height: 0;
-  height: auto;
+  height: 100%;
+  align-self: stretch;
   overflow: visible;
 }
 
@@ -381,7 +399,8 @@ html .app-discard-bottom-container .discard-tracker__content,
 html .app-discard-bottom-container .discard-tracker__discard-container {
   flex: 1 1 0;
   min-height: 0;
-  height: auto;
+  height: 100%;
+  align-self: stretch;
   max-height: none;
 }
 
@@ -474,4 +493,180 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 .panel--hand .panel-hand-rack__charleston-actions-well {
   padding-block: 0;
   min-height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
+}
+
+/*
+ * Felt wrapper — one paint on `.app` (fixed grain, no gradient) so nested shells stay seam-free.
+ * Recessed trays restore the inner radial + grain for the felt-table look.
+ */
+.app {
+  background-color: var(--felt-wrapper-bg);
+  background-image: var(--felt-grain-tile);
+  background-size: 180px 180px;
+  background-repeat: repeat;
+  background-attachment: fixed;
+  background-blend-mode: soft-light;
+}
+
+:is(
+  .app-dnd-frame,
+  .app-play-split,
+  .app-play-split__left,
+  .app-play-split__right,
+  .app-rack-stage,
+  .app-discard-bottom-container,
+  .app .panel,
+  .app .app-opponents-rail,
+  .app .coach-panel,
+  .suggested-hands-filter-tray
+) {
+  background: transparent;
+  background-image: none;
+}
+
+/* Beat part-0068 panel shell fills (higher specificity than `.app .panel`). */
+.app .panel.panel--charleston,
+.app .panel.panel--main-game,
+.app .panel.panel--discard-tracker,
+.app .panel.panel--bot-exposures,
+.app .panel.panel--hand {
+  background: transparent;
+  background-image: none;
+}
+
+/* Recessed trays: darker felt with local grain + soft inner shading (single element — no join seams). */
+:is(
+  .panel--bot-exposures .app-opponents-rail__cell,
+  .app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well,
+  .app-top-exposure-container .discard-tracker__tile-groups-container,
+  .app-discard-bottom-container .discard-tracker__content,
+  .suggested-hands-popup .panel--hands
+) {
+  background-color: var(--felt-tray-bg);
+  background-image: var(--felt-grain-tile), var(--window-inner-surface-fill);
+  background-size: var(--felt-tray-paint-size);
+  background-repeat: var(--felt-tray-paint-repeat);
+  background-blend-mode: var(--felt-tray-paint-blend);
+}
+
+/* Sort / wall / pass row: tan wrapper felt (not the dark tray wells). */
+.panel--hand .panel-hand-rack__action-well,
+.panel--hand .panel-hand-rack__charleston-actions-well {
+  background-color: var(--felt-wrapper-bg);
+  background-image: var(--felt-grain-tile);
+  background-size: 180px 180px;
+  background-repeat: repeat;
+  background-attachment: fixed;
+  background-blend-mode: soft-light;
+}
+
+/*
+ * Main East exposure + hand: one continuous felt tray. Tile rows keep their gap; the join band
+ * is filled by this backdrop instead of two separate rounded wells.
+ */
+.panel--hand .rack-stage__rack-col {
+  position: relative;
+  isolation: isolate;
+}
+
+.panel--hand .rack-stage__rack-col::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+  border-radius: var(--tile-face-border-radius);
+  background-color: var(--felt-tray-bg);
+  background-image: var(--felt-grain-tile), var(--window-inner-surface-fill);
+  background-size: var(--felt-tray-paint-size);
+  background-repeat: var(--felt-tray-paint-repeat);
+  background-blend-mode: var(--felt-tray-paint-blend);
+}
+
+.panel--hand .rack-stage__rack-col:has(
+    :is(.panel-hand-rack__action-well, .panel-hand-rack__charleston-actions-well)
+  )::before {
+  bottom: calc(
+    var(--hand-button-row-h, var(--rack-action-touch-min-h)) + var(--play-tray-h-divider)
+  );
+}
+
+.panel--hand .rack-stage__rack-top,
+.panel--hand .panel-hand-rack__hand-tray .rack-stage__rack-bottom {
+  position: relative;
+  z-index: 1;
+}
+
+.panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass),
+.panel--hand .rack-stage__rack-top .exposure-rack.exposure-rack--charleston-pass,
+.panel--hand .panel-hand-rack__hand-tray .hand-bank {
+  background: transparent;
+  background-image: none;
+  border-radius: 0;
+}
+
+.panel--discard-tracker .discard-tracker__overlay-grid .exposure-rack__slot--empty::before {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.app-discard-bottom-container
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--empty::before {
+  background-color: var(--felt-tray-bg);
+  background-image: var(--felt-grain-tile), var(--window-inner-surface-fill);
+  background-size: var(--felt-tray-paint-size);
+  background-repeat: var(--felt-tray-paint-repeat);
+  background-blend-mode: var(--felt-tray-paint-blend);
+}
+
+.panel--discard-tracker .tile-face:not(.tile--joker)::after {
+  content: none;
+  display: none;
+}
+
+/*
+ * Tracker dim: filter only — no ::after overlay (semi-transparent overlay on light wind
+ * faces left a bright rim at the rounded edges).
+ */
+.panel--discard-tracker .discard-tracker__overlay-grid
+  :is(
+    .sorted-discard-tray__slot--awaiting-discard,
+    .sorted-discard-tray__slot--suggest-dim,
+    .sorted-discard-tray__slot--inactive,
+    .exposure-rack__slot--suggest-dim
+  )
+  .tile-face {
+  filter: brightness(var(--suggest-dim-joker-brightness, 0.38));
+}
+
+.panel--discard-tracker .discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-need .tile-face,
+.panel--discard-tracker .discard-tracker__content .discard-entry--suggest-need .tile-face {
+  filter: none;
+}
+
+.panel--discard-tracker .discard-tracker__content .discard-entry--suggest-dim .tile-face {
+  filter: brightness(var(--suggest-dim-joker-brightness, 0.38));
+}
+
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  :is(
+    .sorted-discard-tray__slot--awaiting-discard,
+    .sorted-discard-tray__slot--suggest-dim,
+    .sorted-discard-tray__slot--inactive,
+    .exposure-rack__slot--suggest-dim
+  )
+  .tile-face.tile--joker {
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+  box-shadow: none;
 }

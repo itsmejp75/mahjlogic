@@ -21,15 +21,11 @@
   max-height: 100%;
   width: 100%;
   box-sizing: border-box;
-  background:
-    linear-gradient(
-      to bottom,
-      #2d333b 0%,
-      color-mix(in srgb, #2d333b 55%, var(--window-surface) 45%) 52%,
-      var(--window-surface) 100%
-    )
-    top / 100% var(--panel-lower-header-fade-h) no-repeat,
-    var(--window-surface);
+  background-color: var(--felt-tray-bg);
+  background-image: var(--felt-grain-tile), var(--window-inner-surface-fill);
+  background-size: var(--felt-tray-paint-size);
+  background-repeat: var(--felt-tray-paint-repeat);
+  background-blend-mode: var(--felt-tray-paint-blend);
   border: none;
   border-radius: var(--suggested-popup-radius) var(--suggested-popup-radius) 0 0;
   color: var(--window-fg);

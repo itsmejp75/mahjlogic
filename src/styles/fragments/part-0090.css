@@ -15,7 +15,7 @@
 
 /* Match bot exposure tiles' cleaner edge without changing tile size. */
 .panel--hand .hand-row .tile-face,
-.panel--discard-tracker .discard-pile .tile-face {
+.panel--discard-tracker .tile-face {
   border: none;
 }
 

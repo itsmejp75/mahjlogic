@@ -99,11 +99,10 @@
   --joker-swap-hint-bounce-delay: 500ms;
 }
 
-/* Main rack + bot exposures: original suggest-dim (discard tracker sorted rows override locally). */
+/* Main rack + bot exposures: original suggest-dim (discard tracker overrides locally in part-0061). */
 .panel--hand,
 .panel--bot-exposures,
-.panel--bot-exposures--dnd-ghost,
-.discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row {
+.panel--bot-exposures--dnd-ghost {
   --suggest-dim-overlay: rgba(0, 0, 0, 0.38);
   --suggest-dim-inset-vignette: inset 0 0 0.5rem color-mix(in srgb, var(--color-black) 22%, transparent);
   --suggest-dim-inset-shadow: var(--suggest-dim-inset-vignette),
@@ -470,7 +469,7 @@
   flex: 1 1 0;
   min-height: 0;
   overflow: hidden;
-  /* Match bottom breathing room (`--app-v-pad`) so the rack isn’t glued to the top edge. */
+  /* Top breathing room only — bottom flush so the taupe wrapper matches the top inset. */
   padding-top: var(--app-v-pad);
-  padding-bottom: var(--app-v-pad);
+  padding-bottom: 0;
 }
