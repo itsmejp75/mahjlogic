@@ -427,7 +427,7 @@ html .app-play-split.app-top-exposure-container
  */
 html .app-top-exposure-container .discard-tracker__overlay-row {
   display: grid;
-  grid-template-columns: repeat(var(--discard-tracker-slots-across, 29), minmax(0, var(--rack-tile-w)));
+  grid-template-columns: repeat(29, minmax(0, 1fr));
   column-gap: var(--player-rack-face-gap);
   align-items: start;
 }
@@ -435,7 +435,7 @@ html .app-top-exposure-container .discard-tracker__overlay-row {
 html .app-top-exposure-container
   .discard-tracker__overlay-row
   > .exposure-rack--discard-tracker-sorted-row {
-  grid-column: 2 / span 13;
+  grid-column: 1 / span 13;
   width: 100%;
   margin-left: 0;
   transform: none;
@@ -465,6 +465,73 @@ html .app-top-exposure-container
   > .exposure-rack--discard-tracker-bot-row {
   width: 100%;
   max-width: none;
+}
+
+html .app-top-exposure-container .exposure-rack--discard-tracker-sorted-row,
+html .app-top-exposure-container .exposure-rack--discard-tracker-bot-row {
+  display: grid;
+  gap: var(--player-rack-face-gap);
+}
+
+html .app-top-exposure-container .exposure-rack--discard-tracker-sorted-row {
+  grid-template-columns: repeat(13, minmax(0, 1fr));
+}
+
+html .app-top-exposure-container .exposure-rack--discard-tracker-bot-row {
+  grid-template-columns: repeat(14, minmax(0, 1fr));
+}
+
+html .app-top-exposure-container .exposure-rack--discard-tracker-bot-seat-label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+html .app-top-exposure-container .discard-tracker__overlay-grid .exposure-rack__slot {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  aspect-ratio: 3 / 4;
+  container-type: inline-size;
+}
+
+html .app-top-exposure-container .discard-tracker__overlay-grid .exposure-rack__slot .tile-face,
+html
+  .app-top-exposure-container
+  .discard-tracker__overlay-grid
+  .exposure-rack__slot--empty::before {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  max-width: none;
+}
+
+html .app-top-exposure-container .discard-tracker__overlay-grid .exposure-rack__slot .tile-face {
+  --tile-face-glyph-fs: calc(100cqi * 0.58);
+  flex: 0 0 auto;
+}
+
+html
+  .app-top-exposure-container
+  .discard-tracker__overlay-grid
+  .tile-face.tile-face--sorted-discard-glyph {
+  --tile-face-glyph-fs: calc(100cqi * 0.78);
+}
+
+html
+  .app-top-exposure-container
+  .discard-tracker__overlay-grid
+  .tile-face.tile-face--sorted-discard-glyph
+  :is(.tile-face__glyph, .tile-face__glyph-num, .tile-face__glyph-letter) {
+  font-weight: 600;
+}
+
+html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__suit-label,
+html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__seat-label {
+  font-size: calc(100cqi * 1.2);
+  font-weight: 500;
 }
 
 html
