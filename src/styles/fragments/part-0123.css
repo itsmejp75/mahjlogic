@@ -534,6 +534,12 @@ html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-
   font-weight: 500;
 }
 
+html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__count {
+  bottom: 4%;
+  font-size: calc(100cqi * 0.48);
+  line-height: 0.82;
+}
+
 html
   .app-top-exposure-container
   .exposure-rack--discard-tracker-bot-row
