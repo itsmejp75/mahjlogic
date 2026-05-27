@@ -57,6 +57,7 @@
   display: grid;
   grid-template-rows: repeat(3, auto);
   align-content: start;
+  align-items: start;
   overflow: hidden;
   width: calc(100% + var(--play-split-lower-box-left-bleed));
   margin-left: calc(-1 * var(--play-split-lower-box-left-bleed));
@@ -340,6 +341,11 @@
   width: fit-content;
   flex: 0 0 auto;
   align-items: flex-start;
+  justify-content: flex-start;
+  padding: 0;
+  min-height: 0;
+  margin-left: auto;
+  margin-right: 0;
 }
 
 .discard-tracker__overlay-grid .exposure-rack--discard-tracker-opponent {
@@ -377,12 +383,11 @@
 }
 
 /*
- * Sorted discard bands (B→S, C→W, D→J) + S/W/N labels + bot exposures: inset from the tray’s
- * right edge by `--play-tray-h-divider`. Transform only — slot/tile sizes unchanged.
+ * Sorted discard bands + S/W/N labels: inset from the tray’s right edge by `--play-tray-h-divider`.
+ * Bot exposure racks stay flush to the overlay row’s right edge (see `.app-opponents-rail__cell`).
  */
 .discard-tracker__overlay-row > .exposure-rack--discard-tracker-sorted-row,
-.discard-tracker__overlay-row > .exposure-rack--discard-tracker-bot-seat-label,
-.discard-tracker__overlay-row > .app-opponents-rail__cell {
+.discard-tracker__overlay-row > .exposure-rack--discard-tracker-bot-seat-label {
   transform: translateX(calc(-1 * var(--play-tray-h-divider)));
 }
 
@@ -584,9 +589,75 @@
   color: var(--tg-ink, #080808);
 }
 
-/* Counts on dimmed slots: sit above the dim overlay (z-index), full ink. */
+/* Dimmed discard-tracker tiles: soften ink (counts sit above the overlay via z-index). */
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--awaiting-discard .sorted-discard-tray__count,
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-dim .sorted-discard-tray__count,
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--inactive .sorted-discard-tray__count {
-  color: var(--tg-ink, #080808);
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--inactive .sorted-discard-tray__count,
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--awaiting-discard .tile-face__glyph,
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--awaiting-discard .tile-face__glyph-num,
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--awaiting-discard .tile-face__glyph-letter,
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-dim .tile-face__glyph,
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-dim .tile-face__glyph-num,
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-dim .tile-face__glyph-letter,
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--inactive .tile-face__glyph,
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--inactive .tile-face__glyph-num,
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--inactive .tile-face__glyph-letter,
+.discard-tracker__overlay-grid .exposure-rack__slot--suggest-dim .tile-face__glyph,
+.discard-tracker__overlay-grid .exposure-rack__slot--suggest-dim .tile-face__glyph-num,
+.discard-tracker__overlay-grid .exposure-rack__slot--suggest-dim .tile-face__glyph-letter,
+.discard-tracker__content .discard-entry--suggest-dim .tile-face__glyph,
+.discard-tracker__content .discard-entry--suggest-dim .tile-face__glyph-num,
+.discard-tracker__content .discard-entry--suggest-dim .tile-face__glyph-letter {
+  opacity: 0.9;
+}
+
+/*
+ * TEMP-PREVIEW: discard tracker tiles without inner shadowing.
+ * Strips material inset, dim/highlight insets, and designer lustre — flat fills + outer drop only.
+ * Delete this block to restore the themed look.
+ */
+.panel--discard-tracker .tile-face {
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+}
+
+.app[data-tile-graphics='bakelite'] .panel--discard-tracker .tile-face {
+  --tile-face-base-shadow: 0 1px 3px color-mix(in srgb, #0f0804 25%, transparent);
+}
+
+.app[data-tile-graphics='designer'] .panel--discard-tracker .tile-face {
+  --tile-face-base-shadow:
+    0 1px 4px color-mix(in srgb, var(--color-black) 32%, transparent),
+    0 0 14px -2px color-mix(in srgb, #7a7e9a 10%, transparent);
+}
+
+.app[data-tile-graphics='designer'] .panel--discard-tracker .tile-face::before {
+  content: none;
+  display: none;
+}
+
+.discard-tracker__overlay-grid .exposure-rack--discard-tracker-sorted-row,
+.discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row,
+.discard-tracker__content .discard-pile {
+  --suggest-dim-inset-vignette: none;
+  --suggest-dim-inset-shadow: none;
+}
+
+.discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row .exposure-rack__slot--suggest-dim .tile-face:not(.tile--joker)::after {
+  box-shadow: none;
+}
+
+.discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row .exposure-rack__slot--suggest-dim .tile-face.tile--joker {
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+}
+
+.panel--discard-tracker .tile-face:not(.tile--joker)::after {
+  box-shadow: none;
+}
+
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-need .tile-face,
+.discard-tracker__content .discard-entry--suggest-need .tile-face,
+.discard-tracker__content .exposure-rack__slot--suggest-best .tile-face,
+.discard-tracker__content .exposure-rack__slot--called .tile-face {
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
 }
