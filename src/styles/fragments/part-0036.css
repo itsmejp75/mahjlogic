@@ -161,3 +161,125 @@
   padding-inline: var(--hand-window-pad-inline);
   margin-bottom: 0;
 }
+
+.app-top-exposure-container {
+  order: -1;
+  flex: 0 0 auto;
+  height: auto;
+  max-height: none;
+  padding-block: 0;
+}
+
+.app-play-split.app-top-exposure-container .panel {
+  padding-block: 0;
+}
+
+.app-top-exposure-container .panel--discard-tracker,
+.app-top-exposure-container .discard-tracker__shell,
+.app-top-exposure-container .discard-tracker__content,
+.app-top-exposure-container .discard-tracker__tile-groups-container {
+  flex: 0 0 auto;
+}
+
+.app-top-exposure-container .discard-tracker__content--tile-groups-only {
+  position: relative;
+  display: block;
+  height: calc(
+    3 * ((100cqw - 28 * var(--player-rack-face-gap)) / 29) * 1.3333
+    + 2 * var(--discard-bot-row-gap-y)
+  );
+  min-height: 0;
+  width: 100%;
+  background: transparent;
+  border-radius: 0;
+  overflow: visible;
+  container-type: inline-size;
+  container-name: discard-tray;
+}
+
+.app-top-exposure-container .discard-tracker__tile-groups-container {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  background: var(--window-inner-surface);
+  border-radius: var(--discard-tray-tile-corner-r, var(--tile-face-border-radius));
+  overflow: hidden;
+}
+
+.app-dnd-frame:has(.app-discard-bottom-container) {
+  justify-content: flex-start;
+  min-height: 0;
+}
+
+.app-dnd-frame .app-play-split.app-top-exposure-container {
+  flex: 0 0 auto;
+  max-height: none;
+  height: auto;
+}
+
+.app-discard-bottom-container {
+  flex: 1 1 0;
+  min-height: 0;
+  margin-top: 0;
+  width: 100%;
+  max-width: var(--app-play-fit-inline);
+  margin-inline: auto;
+  align-self: stretch;
+  box-sizing: border-box;
+  padding-inline: var(--app-h-pad);
+  padding-bottom: calc(var(--hand-window-pad-inline) + var(--app-h-pad) - var(--app-v-pad));
+  background: transparent;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-discard-bottom-container .panel--discard-tracker {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding-block: 0;
+  padding-inline: var(--hand-window-pad-inline);
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  overflow: visible;
+}
+
+.app-discard-bottom-container .discard-tracker__shell {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.app-discard-bottom-container .discard-tracker__content {
+  position: relative;
+  flex: 1 1 0;
+  min-height: calc(var(--rack-action-touch-min-h) + 2 * var(--bot-exposure-inner-pad));
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  border: none;
+  box-shadow: none;
+  outline: none;
+  background: var(--window-inner-surface);
+  border-radius: var(--discard-tray-tile-corner-r, var(--tile-face-border-radius));
+  container-type: inline-size;
+  container-name: discard-tray;
+}
+
+.app-discard-bottom-container .discard-tracker__discard-container {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+}

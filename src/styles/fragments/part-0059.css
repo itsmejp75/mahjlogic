@@ -12,6 +12,8 @@
    inset box-shadow instead so the highlight shows only on the top edge. */
 .app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker::before,
 .app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker::after,
+.app-dnd-frame .app-discard-bottom-container > .panel--discard-tracker::before,
+.app-dnd-frame .app-discard-bottom-container > .panel--discard-tracker::after,
 .app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures::before,
 .app-dnd-frame .app-play-split > .app-play-split__right .panel--bot-exposures::after,
 .app-rack-stage .panel--hand::before,

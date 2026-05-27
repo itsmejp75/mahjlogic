@@ -247,7 +247,8 @@
 }
 
 /* Tray shell matches the rack column width; inner drop zone uses the same inset as the hand tray. */
-.app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker .discard-tracker__content {
+.app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker .discard-tracker__content,
+.app-dnd-frame .app-discard-bottom-container .discard-tracker__content {
   box-sizing: border-box;
   width: 100%;
   margin-inline: 0;
@@ -306,10 +307,21 @@
   z-index: 1;
 }
 
+.discard-tracker__content .discard-tracker__discard-container > .discard-pile-drop-zone {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  z-index: 1;
+}
+
 /*
  * Overlay grid: 3 rows × 29 tile widths (13 sorted + 1 prefix + 14 bot; sorted band inset 1 column).
  */
-.discard-tracker__content .discard-tracker__overlay-grid {
+.discard-tracker__content .discard-tracker__overlay-grid,
+.discard-tracker__tile-groups-container > .discard-tracker__overlay-grid {
   position: absolute;
   inset: 0;
   z-index: 2;

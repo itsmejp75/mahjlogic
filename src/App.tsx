@@ -7917,26 +7917,15 @@ export default function App() {
             </section>
             </div>
             {showPlaySplitRow ? (
-                <div className="app-play-split">
+                <div className="app-play-split app-top-exposure-container">
                 <div className="app-play-split__left">
                   <section
-                    ref={discardTrackerPanelRef}
-                    className="panel panel--discard-tracker"
+                    className="panel panel--discard-tracker panel--discard-tracker--top"
                     aria-label="Discard tracker"
-                    data-joker-swap-dnd={jokerSwapUiActive ? 'on' : 'off'}
-                    data-suggested-hands-open={suggestedPanelHandsOn ? 'on' : 'off'}
                   >
                     <div className="discard-tracker__shell">
-                      <div className="discard-tracker__content">
-                        <div className="discard-tracker__strip-stack">
-                        <DiscardPileDropZone
-                          swapDropActive={false}
-                          onContainerNode={(node) => {
-                            discardPileScrollElRef.current = node
-                          }}
-                        >
-                          <div className="discard-pile" role="list" aria-label="Committed discards" />
-                        </DiscardPileDropZone>
+                      <div className="discard-tracker__content discard-tracker__content--tile-groups-only">
+                        <div className="discard-tracker__tile-groups-container">
                         <DiscardTrackerSlotGrid
                           discardPile={displayedDiscardPile}
                           botExposures={botExposures}
@@ -7954,41 +7943,67 @@ export default function App() {
                           suggestedDiscardTrackerNeedDefs={suggestedDiscardTrackerNeedDefs}
                         />
                         </div>
-                        {renderSuggestedHandsPopup()}
-                        <div
-                          ref={menuContainerRef}
-                          className="app-menu-anchor-stack app-menu-anchor-stack--discard-tracker"
-                          role="group"
-                          aria-label="Discard tray controls"
-                        >
-                          <div className="app-menu-anchor app-menu-anchor--discard-tracker">
-                            <button
-                              type="button"
-                              className={[
-                                'btn btn--rack-neutral rack-bottom-tile-cell',
-                                menuOpen ? 'rack-bottom-tile-cell--menu-open' : '',
-                              ]
-                                .filter(Boolean)
-                                .join(' ')}
-                              aria-label="Menu"
-                              aria-haspopup="dialog"
-                              aria-expanded={menuOpen}
-                              aria-controls={menuOpen ? 'app-menu-modal' : undefined}
-                              onClick={() => setMenuOpen((v) => !v)}
-                            >
-                              <span className="hand-rack-menu-hamburger" aria-hidden>
-                                <span className="hand-rack-menu-hamburger__bar" />
-                                <span className="hand-rack-menu-hamburger__bar" />
-                                <span className="hand-rack-menu-hamburger__bar" />
-                              </span>
-                            </button>
-                          </div>
-                        </div>
                       </div>
                     </div>
                   </section>
                 </div>
                 </div>
+            ) : null}
+            {showPlaySplitRow ? (
+              <div className="app-discard-bottom-container">
+                <section
+                  ref={discardTrackerPanelRef}
+                  className="panel panel--discard-tracker panel--discard-tracker--bottom"
+                  aria-label="Discard tray"
+                  data-joker-swap-dnd={jokerSwapUiActive ? 'on' : 'off'}
+                  data-suggested-hands-open={suggestedPanelHandsOn ? 'on' : 'off'}
+                >
+                  <div className="discard-tracker__shell">
+                    <div className="discard-tracker__content">
+                      <div className="discard-tracker__discard-container">
+                        <DiscardPileDropZone
+                          swapDropActive={false}
+                          onContainerNode={(node) => {
+                            discardPileScrollElRef.current = node
+                          }}
+                        >
+                          <div className="discard-pile" role="list" aria-label="Committed discards" />
+                        </DiscardPileDropZone>
+                      </div>
+                      {renderSuggestedHandsPopup()}
+                      <div
+                        ref={menuContainerRef}
+                        className="app-menu-anchor-stack app-menu-anchor-stack--discard-tracker"
+                        role="group"
+                        aria-label="Discard tray controls"
+                      >
+                        <div className="app-menu-anchor app-menu-anchor--discard-tracker">
+                          <button
+                            type="button"
+                            className={[
+                              'btn btn--rack-neutral rack-bottom-tile-cell',
+                              menuOpen ? 'rack-bottom-tile-cell--menu-open' : '',
+                            ]
+                              .filter(Boolean)
+                              .join(' ')}
+                            aria-label="Menu"
+                            aria-haspopup="dialog"
+                            aria-expanded={menuOpen}
+                            aria-controls={menuOpen ? 'app-menu-modal' : undefined}
+                            onClick={() => setMenuOpen((v) => !v)}
+                          >
+                            <span className="hand-rack-menu-hamburger" aria-hidden>
+                              <span className="hand-rack-menu-hamburger__bar" />
+                              <span className="hand-rack-menu-hamburger__bar" />
+                              <span className="hand-rack-menu-hamburger__bar" />
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
             ) : null}
               <DragOverlay dropAnimation={null}>
                 {dragOverlayMeldTiles ? (

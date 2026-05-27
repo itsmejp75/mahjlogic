@@ -156,15 +156,20 @@
 }
 
 .app-dnd-frame--suggested-hands-open .app-play-split,
-.app-dnd-frame:has(.panel--discard-tracker[data-suggested-hands-open='on']) .app-play-split {
+.app-dnd-frame--suggested-hands-open .app-discard-bottom-container,
+.app-dnd-frame:has(.panel--discard-tracker[data-suggested-hands-open='on']) .app-play-split,
+.app-dnd-frame:has(.panel--discard-tracker[data-suggested-hands-open='on']) .app-discard-bottom-container {
   position: relative;
   z-index: 100;
   overflow: visible;
 }
 
 .app-dnd-frame--suggested-hands-peek-above .app-play-split,
+.app-dnd-frame--suggested-hands-peek-above .app-discard-bottom-container,
 .app-dnd-frame:has(.suggested-hands-popup--peek-dragging) .app-play-split,
-.app-dnd-frame:has(.suggested-hands-popup--peek-above) .app-play-split {
+.app-dnd-frame:has(.suggested-hands-popup--peek-dragging) .app-discard-bottom-container,
+.app-dnd-frame:has(.suggested-hands-popup--peek-above) .app-play-split,
+.app-dnd-frame:has(.suggested-hands-popup--peek-above) .app-discard-bottom-container {
   z-index: 1000;
 }
 

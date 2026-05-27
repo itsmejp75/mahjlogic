@@ -8,7 +8,8 @@
 
 
 
-.app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker {
+.app-dnd-frame .app-play-split > .app-play-split__left > .panel--discard-tracker,
+.app-dnd-frame .app-discard-bottom-container > .panel--discard-tracker {
   box-shadow: none;
 }
 

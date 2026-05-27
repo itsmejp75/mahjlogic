@@ -166,17 +166,24 @@
    * full-bleed look is dialed in.
    */
   html[data-native-app] .app-rack-stage,
-  html[data-native-app] .app-play-split {
+  html[data-native-app] .app-play-split,
+  html[data-native-app] .app-discard-bottom-container {
     padding-inline-start: var(--app-h-pad-base);
     padding-inline-end: var(--app-h-pad-base);
   }
 
-  html[data-native-app] .app-play-split {
+  html[data-native-app] .app-play-split:not(.app-top-exposure-container) {
     flex: 1 1 0;
     max-height: none;
     min-height: 0;
     align-self: stretch;
     height: auto;
+  }
+
+  html[data-native-app] .app-play-split.app-top-exposure-container {
+    flex: 0 0 auto;
+    height: auto;
+    max-height: none;
   }
 
   html[data-native-app] .app-play-split__left,
@@ -238,17 +245,24 @@
   }
 
   html:not([data-native-app]) .app-rack-stage,
-  html:not([data-native-app]) .app-play-split {
+  html:not([data-native-app]) .app-play-split,
+  html:not([data-native-app]) .app-discard-bottom-container {
     padding-inline-start: var(--app-h-pad-base);
     padding-inline-end: var(--app-h-pad-base);
   }
 
-  html:not([data-native-app]) .app-play-split {
+  html:not([data-native-app]) .app-play-split:not(.app-top-exposure-container) {
     flex: 1 1 0;
     max-height: none;
     min-height: 0;
     align-self: stretch;
     height: auto;
+  }
+
+  html:not([data-native-app]) .app-play-split.app-top-exposure-container {
+    flex: 0 0 auto;
+    height: auto;
+    max-height: none;
   }
 
   html:not([data-native-app]) .app-play-split__left,
@@ -285,7 +299,8 @@
   }
 
   html:not([data-native-app]) .app-rack-stage,
-  html:not([data-native-app]) .app-play-split {
+  html:not([data-native-app]) .app-play-split,
+  html:not([data-native-app]) .app-discard-bottom-container {
     padding-inline-start: var(--pwa-landscape-inline-start);
     padding-inline-end: var(--pwa-landscape-inline-end);
   }
@@ -304,6 +319,60 @@
   html:not([data-native-app]) .suggested-hands-popup:not(.suggested-hands-popup--discard-overlay) {
     right: calc(var(--pwa-landscape-inline-end) + var(--bot-panel-outer-w));
   }
+}
+
+/*
+ * The promoted discard tracker + bot exposure tray is a separate top container.
+ * It must not inherit the lower `.app-play-split` fill-to-bottom rules above.
+ */
+html .app-dnd-frame > .app-play-split.app-top-exposure-container {
+  flex: 0 0 auto;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  align-self: stretch;
+  padding-block: 0;
+}
+
+html .app-play-split.app-top-exposure-container > .app-play-split__left,
+html .app-play-split.app-top-exposure-container
+  > .app-play-split__left
+  > .panel--discard-tracker {
+  flex: 0 0 auto;
+  height: auto;
+  min-height: 0;
+}
+
+html .app-play-split.app-top-exposure-container
+  > .app-play-split__left
+  > .panel--discard-tracker {
+  overflow: visible;
+  padding-block: 0;
+}
+
+html .app-dnd-frame > .app-discard-bottom-container {
+  flex: 1 1 0;
+  min-height: 0;
+  margin-top: 0;
+  width: 100%;
+  max-width: var(--app-play-fit-inline);
+  box-sizing: border-box;
+}
+
+html .app-discard-bottom-container > .panel--discard-tracker {
+  flex: 1 1 0;
+  min-height: 0;
+  height: auto;
+  overflow: visible;
+}
+
+html .app-discard-bottom-container .discard-tracker__shell,
+html .app-discard-bottom-container .discard-tracker__content,
+html .app-discard-bottom-container .discard-tracker__discard-container {
+  flex: 1 1 0;
+  min-height: 0;
+  height: auto;
+  max-height: none;
 }
 
 /*
