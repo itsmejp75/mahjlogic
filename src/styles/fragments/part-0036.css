@@ -240,6 +240,13 @@
   bottom: auto;
   left: auto;
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: max(var(--discard-bot-row-gap-y), var(--player-rack-face-gap));
+  padding: 0;
+  box-sizing: border-box;
+  pointer-events: none;
   --top-discard-tray-tile-w-hand-rack: max(
     1px,
     calc(

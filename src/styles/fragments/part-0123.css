@@ -388,11 +388,13 @@ html .app-play-split.app-top-exposure-container
 }
 
 /*
- * Installed PWA / narrow portrait: `play-split-rack-lock` can report 0 inline size on first
- * paint. Floor tile width from the viewport column (same inset math as `--hand-rack-usable-w`).
+ * Installed PWA / mobile Safari: `play-split-rack-lock` can report 0 inline size on first
+ * paint. Large iPhone landscape viewports can exceed 932 CSS px, so include coarse-pointer
+ * landscape explicitly. Floor tile width from the visible play column (same inset math as
+ * `--hand-rack-usable-w`) so the top B/C/D + S/W/N band does not collapse into a left strip.
  */
 @supports (width: 100dvi) {
-  @media (max-width: 932px) {
+  @media (max-width: 932px), (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) {
     html .app-dnd-frame
       .app-play-split.app-top-exposure-container
       .discard-tracker__overlay-grid {
@@ -400,7 +402,7 @@ html .app-play-split.app-top-exposure-container
         var(--top-discard-tray-tile-w-hand-rack),
         calc(
           (
-            100dvi
+            var(--app-play-fit-inline)
             - 2 * var(--app-h-pad)
             - 2 * var(--hand-window-pad-inline)
             - (var(--discard-tracker-slots-across, 29) - 1) * var(--player-rack-face-gap)
