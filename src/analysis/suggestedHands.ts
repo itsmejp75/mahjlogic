@@ -3431,10 +3431,35 @@ function stripRowsStillWantJoker(rows: SuggestedStripSlot[][]): boolean {
   return false
 }
 
+/** Jokers in hand or staged for discard (same pool as joker-swap / pattern match). */
+function playerHeldJokerTileIds(
+  hand: TileInstance[],
+  pendingEastDiscard: TileInstance | null,
+): Set<string> {
+  const ids = new Set<string>()
+  for (const t of hand) {
+    if (t.def.cat === 'joker') ids.add(t.id)
+  }
+  if (pendingEastDiscard?.def.cat === 'joker') ids.add(pendingEastDiscard.id)
+  return ids
+}
+
+function addBotExposureJokerIds(
+  botExposures: readonly BotExposure[],
+  out: Set<string>,
+): void {
+  for (const exp of botExposures) {
+    for (const t of exp.tiles) {
+      if (t.def.cat === 'joker') out.add(t.id)
+    }
+  }
+}
+
 /**
  * Bot exposure tile ids for the focused suggested line: naturals that match strip “need” defs
- * (same basis as discard dead-tile highlights), plus exposed jokers you may redeem with your hand
- * only while the strip still shows a joker hole.
+ * (same basis as discard dead-tile highlights), plus exposed jokers you may redeem with a natural
+ * in hand, and — while the strip still needs a joker — every bot meld joker when you hold a joker
+ * for the line (same “can use a joker in my hand” gate as the main rack).
  */
 export function computeBotExposureSuggestedBestIds(
   focusKey: string | null,
@@ -3486,10 +3511,9 @@ export function computeBotExposureSuggestedBestIds(
         botExposures,
         eastExposures,
       )
-      for (const exp of botExposures) {
-        for (const t of exp.tiles) {
-          if (t.def.cat === 'joker' && swappable.has(t.id)) out.add(t.id)
-        }
+      for (const id of swappable) out.add(id)
+      if (playerHeldJokerTileIds(hand, pendingEastDiscard).size > 0) {
+        addBotExposureJokerIds(botExposures, out)
       }
     }
     return out

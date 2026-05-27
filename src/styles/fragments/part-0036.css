@@ -167,34 +167,56 @@
   padding-block: 0;
 }
 
-.app-top-exposure-container .panel--discard-tracker,
-.app-top-exposure-container .discard-tracker__shell,
-.app-top-exposure-container .discard-tracker__content,
-.app-top-exposure-container .discard-tracker__tile-groups-container {
+.app-dnd-frame .app-play-split.app-top-exposure-container
+  > .app-play-split__left
+  > .panel--discard-tracker {
   flex: 0 0 auto;
+  height: auto;
+  min-height: 0;
+  padding-bottom: 0;
+  overflow: visible;
 }
 
-.app-top-exposure-container .discard-tracker__content--tile-groups-only {
+.app-dnd-frame .app-play-split.app-top-exposure-container > .app-play-split__left,
+.app-dnd-frame .app-play-split.app-top-exposure-container .discard-tracker__shell {
+  flex: 0 0 auto;
+  height: auto;
+  min-height: 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  align-self: stretch;
+}
+
+/*
+ * Top B/C/D + S/W/N band: normal document flow (not absolute overlay). The lower discard well
+ * keeps the absolute overlay so discards scroll underneath bot rows; here, flow height must
+ * match tile rows exactly — a precomputed height from a wider query container left a large
+ * empty felt gap under the rows (browser + PWA).
+ */
+.app-dnd-frame .app-play-split.app-top-exposure-container .discard-tracker__content--tile-groups-only {
+  flex: 0 0 auto;
   position: relative;
   display: block;
-  height: calc(
-    3 * ((100cqw - 28 * var(--player-rack-face-gap)) / 29 * 4 / 3)
-    + 2 * var(--discard-bot-row-gap-y)
-  );
-  min-height: 0;
   width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  container-type: normal;
+  container-name: unset;
   background: transparent;
+  background-image: none;
   border-radius: 0;
   overflow: visible;
-  container-type: inline-size;
-  container-name: discard-tray;
 }
 
-.app-top-exposure-container .discard-tracker__tile-groups-container {
+.app-dnd-frame .app-play-split.app-top-exposure-container .discard-tracker__tile-groups-container {
+  flex: 0 0 auto;
   position: relative;
-  height: 100%;
-  min-height: 0;
+  height: auto;
   width: 100%;
+  container-type: inline-size;
+  container-name: discard-tray-top;
   background-color: var(--felt-tray-bg);
   background-image: var(--felt-grain-tile), var(--window-inner-surface-fill);
   background-size: var(--felt-tray-paint-size);
@@ -202,6 +224,60 @@
   background-blend-mode: var(--felt-tray-paint-blend);
   border-radius: var(--discard-tray-tile-corner-r, var(--tile-face-border-radius));
   overflow: hidden;
+}
+
+.app-dnd-frame
+  .app-play-split.app-top-exposure-container
+  .discard-tracker__tile-groups-container
+  > .discard-tracker__overlay-grid {
+  position: relative;
+  inset: auto;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  width: 100%;
+  /*
+   * Fallback tile width before the top-tray container query resolves.
+   * (Same 29-column math as the lower overlay, scaled from hand-rack tile width.)
+   */
+  --rack-tile-w: max(
+    1px,
+    calc(
+      (
+        14 * var(--hand-rack-tile-w)
+        + 13 * var(--player-rack-face-gap)
+        - (var(--discard-tracker-slots-across, 29) - 1) * var(--player-rack-face-gap)
+      ) / var(--discard-tracker-slots-across, 29)
+    )
+  );
+  --rack-tile-h: calc(var(--rack-tile-w) * 4 / 3);
+  --exposure-slot-h: var(--rack-tile-h);
+  --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
+  --discard-tray-rack-tile-w: var(--rack-tile-w);
+  --discard-tray-tile-corner-r: var(--tile-face-border-radius);
+}
+
+@container discard-tray-top (min-width: 1px) {
+  .app-dnd-frame
+    .app-play-split.app-top-exposure-container
+    .discard-tracker__tile-groups-container
+    > .discard-tracker__overlay-grid {
+    --rack-tile-w: max(
+      1px,
+      calc(
+        (
+          100cqi
+          - (var(--discard-tracker-slots-across, 29) - 1) * var(--player-rack-face-gap)
+        ) / var(--discard-tracker-slots-across, 29)
+      )
+    );
+    --rack-tile-h: calc(var(--rack-tile-w) * 4 / 3);
+    --exposure-slot-h: var(--rack-tile-h);
+    --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
+    --discard-tray-rack-tile-w: var(--rack-tile-w);
+    --discard-tray-tile-corner-r: var(--tile-face-border-radius);
+  }
 }
 
 .app-dnd-frame:has(.app-discard-bottom-container) {

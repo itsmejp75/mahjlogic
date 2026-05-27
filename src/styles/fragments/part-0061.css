@@ -65,13 +65,13 @@
   box-sizing: border-box;
 }
 
-/* Discard tray: menu stack lower-right. */
+/* Discard tray: menu stack upper-right, flush to tray corner. */
 .discard-tracker__content > .app-menu-anchor-stack--discard-tracker {
   position: absolute;
-  right: var(--bot-exposure-inner-pad);
-  bottom: var(--bot-exposure-inner-pad);
+  top: 0;
+  right: 0;
+  bottom: auto;
   left: auto;
-  top: auto;
   transform: none;
   z-index: 120;
   display: flex;
@@ -99,7 +99,8 @@
   min-height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
   margin: 0;
   padding: 0;
-  border-radius: var(--rack-tile-btn-border-radius);
+  border-radius: 0;
+  border-top-right-radius: var(--discard-tray-tile-corner-r, var(--tile-face-border-radius));
   overflow: hidden;
   pointer-events: auto;
 }
@@ -649,7 +650,7 @@
   z-index: 2;
   pointer-events: none;
   font-family: 'Noto Sans Arabic', var(--sans);
-  font-weight: 500;
+  font-weight: 600;
   /* Match `.tile-face` corner glyph (`--tile-face-glyph-fs`). */
   font-size: calc(var(--rack-tile-w) * 1.03 / 2.65 * 1.5);
   line-height: 0.82;
