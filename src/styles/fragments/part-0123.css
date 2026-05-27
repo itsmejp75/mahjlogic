@@ -481,6 +481,27 @@ html .app-top-exposure-container .exposure-rack--discard-tracker-bot-row {
   grid-template-columns: repeat(14, minmax(0, 1fr));
 }
 
+/*
+ * Joker-swap droppable melds wrap tiles in `.exposure-rack__meld-drop` (one grid item).
+ * Without an explicit span, a 4-tile kong occupies one column and the row shifts left.
+ * `--bot-meld-slot-span` is set on the wrapper in `ExposureRack.tsx`.
+ */
+html .app-top-exposure-container .exposure-rack--discard-tracker-bot-row .exposure-rack__meld-drop {
+  grid-column: span var(--bot-meld-slot-span, 1);
+  display: flex;
+  min-width: 0;
+}
+
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__meld-drop
+  > .exposure-rack__slot {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+}
+
 html .app-top-exposure-container .exposure-rack--discard-tracker-bot-seat-label {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

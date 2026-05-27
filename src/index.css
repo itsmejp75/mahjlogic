@@ -288,6 +288,8 @@ html {
   padding: 0 !important;
   overflow: hidden;
   box-sizing: border-box;
+  /* Disable double-tap zoom on mobile browsers / installed PWA. */
+  touch-action: manipulation;
   /* iOS WKWebView fallback when dvh is quirky */
   min-height: -webkit-fill-available;
   /* First WebView paint before React mounts; match the app shell surface. */
@@ -343,6 +345,7 @@ body {
   overflow: hidden;
   min-height: -webkit-fill-available;
   overscroll-behavior: none;
+  touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   /* Let the app-shell surface bleed behind status/home bars; safe-area insets live on #root only. */
   background-color: transparent;
