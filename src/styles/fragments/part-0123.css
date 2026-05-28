@@ -366,7 +366,56 @@ html .app-dnd-frame > .app-play-split.app-top-exposure-container {
   min-height: 0;
   max-height: none;
   align-self: stretch;
-  padding-block: 0;
+  overflow: visible;
+}
+
+/*
+ * Top band: mirror East hand rack inset — symmetric panel padding, no __left join gutter,
+ * tray painted on `.discard-tracker__shell::before` (same role as `.panel-hand-rack::before`).
+ */
+html .app-dnd-frame > .app-play-split.app-top-exposure-container > .app-play-split__left {
+  padding-inline: 0;
+}
+
+html .app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard-tracker {
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+  padding-bottom: 0;
+  padding-inline: var(--hand-window-pad-inline);
+}
+
+html .app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard-tracker::before,
+html .app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard-tracker::after {
+  content: none;
+  display: none;
+}
+
+html .app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard-tracker > .discard-tracker__shell {
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+  box-sizing: border-box;
+  padding-top: var(--hand-rack-tray-bleed-inline);
+}
+
+html .app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard-tracker > .discard-tracker__shell::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  bottom: 0;
+  left: calc(-1 * var(--hand-rack-tray-bleed-inline));
+  right: calc(-1 * var(--hand-rack-tray-bleed-inline));
+  pointer-events: none;
+  border-radius: 0;
+  background-color: var(--hand-rack-tray-surface);
+  background-image: none;
+}
+
+html .app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard-tracker > .discard-tracker__shell::after {
+  content: none;
+  display: none;
 }
 
 html .app-dnd-frame > .app-play-split.app-top-exposure-container > .app-play-split__left,
@@ -381,17 +430,12 @@ html .app-dnd-frame
 html .app-dnd-frame
   > .app-play-split.app-top-exposure-container
   .discard-tracker__tile-groups-container {
+  position: relative;
+  z-index: 1;
   flex: 0 0 auto;
   height: auto;
   min-height: 0;
   max-height: none;
-}
-
-html .app-play-split.app-top-exposure-container
-  > .app-play-split__left
-  > .panel--discard-tracker {
-  overflow: visible;
-  padding-block: 0;
 }
 
 /*
@@ -421,6 +465,14 @@ html .app-play-split.app-top-exposure-container
       --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
       --discard-tray-rack-tile-w: var(--rack-tile-w);
       --discard-tray-tile-corner-r: var(--tile-face-border-radius);
+    }
+
+    html .app-dnd-frame
+      .app-play-split.app-top-exposure-container
+      .discard-tracker__overlay-grid
+      .exposure-rack--discard-tracker-sorted-row {
+      --tile-face-border-radius: 0;
+      --discard-tray-tile-corner-r: 0;
     }
   }
 }
@@ -572,7 +624,7 @@ html
   .app-top-exposure-container
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot--empty::before {
-  background: color-mix(in srgb, var(--color-black) 18%, var(--felt-tray-deep));
+  background: color-mix(in srgb, #c8c8c8 28%, var(--hand-rack-tray-surface));
 }
 
 html .app-dnd-frame > .app-discard-bottom-container {
@@ -648,7 +700,9 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 .panel--hand .rack-stage__rack-top .exposure-rack.exposure-rack--charleston-pass,
 .panel--hand .panel-hand-rack__hand-tray .hand-bank,
 .panel--hand .panel-hand-rack__action-well,
-.panel--hand .panel-hand-rack__charleston-actions-well {
+.panel--hand .panel-hand-rack__charleston-actions-well,
+.panel--bot-exposures .app-opponents-rail__cell,
+.panel--bot-exposures__toolbar-well {
   border: none;
   box-shadow: none;
 }
@@ -705,16 +759,23 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 }
 
 /*
- * Felt wrapper — one paint on `.app` (fixed grain, no gradient) so nested shells stay seam-free.
- * Recessed trays restore the inner radial + grain for the felt-table look.
+ * Page shell: transparent wrapper so cross-bar gaps between containers are invisible
+ * (spacing from `--play-tray-h-divider` unchanged). Tray interiors stay `--app-container-surface`.
  */
 .app {
-  background-color: var(--felt-wrapper-bg);
-  background-image: var(--felt-grain-tile);
-  background-size: 180px 180px;
+  --hand-rack-tray-surface: #7a8288;
+  --hand-rack-tray-bleed-inline: var(--hand-window-pad-inline, 0px);
+  --app-container-surface: #efeeee;
+  --app-wrapper-surface: transparent;
+  --dark-tray-rim-border-top: transparent;
+  --dark-tray-rim-border-inline: transparent;
+  --dark-tray-rim-border-bottom: transparent;
+  background-color: transparent;
+  background-image: none;
+  background-size: auto;
   background-repeat: repeat;
-  background-attachment: fixed;
-  background-blend-mode: soft-light;
+  background-attachment: scroll;
+  background-blend-mode: normal;
 }
 
 :is(
@@ -737,70 +798,93 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 .app .panel.panel--charleston,
 .app .panel.panel--main-game,
 .app .panel.panel--discard-tracker,
-.app .panel.panel--bot-exposures,
-.app .panel.panel--hand {
+.app .panel.panel--bot-exposures {
   background: transparent;
   background-image: none;
 }
 
-/* Recessed trays: darker felt with local grain + soft inner shading (single element — no join seams). */
-:is(
-  .panel--bot-exposures .app-opponents-rail__cell,
-  .app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well,
-  .app-top-exposure-container .discard-tracker__tile-groups-container,
-  .app-discard-bottom-container .discard-tracker__content,
-  .suggested-hands-popup .panel--hands
-) {
-  background-color: var(--felt-tray-bg);
-  background-image: var(--felt-grain-tile), var(--window-inner-surface-fill);
-  background-size: var(--felt-tray-paint-size);
-  background-repeat: var(--felt-tray-paint-repeat);
-  background-blend-mode: var(--felt-tray-paint-blend);
-}
-
-/* Sort / wall / pass row: tan wrapper felt (not the dark tray wells). */
-.panel--hand .panel-hand-rack__action-well,
-.panel--hand .panel-hand-rack__charleston-actions-well {
-  background-color: var(--felt-wrapper-bg);
-  background-image: var(--felt-grain-tile);
-  background-size: 180px 180px;
-  background-repeat: repeat;
-  background-attachment: fixed;
-  background-blend-mode: soft-light;
-}
-
 /*
- * Main East exposure + hand: one continuous felt tray. Tile rows keep their gap; the join band
- * is filled by this backdrop instead of two separate rounded wells.
+ * Rack tray chrome (East hand + top discard/bot-exposure band):
+ * change --hand-rack-tray-surface on `.app` once; each region uses one ::before backdrop.
  */
-.panel--hand .rack-stage__rack-col {
+
+.app .panel.panel--hand {
+  background-color: transparent;
+  background-image: none;
+}
+
+/* Pull rack into top/bottom divider bands; unified ::before paints the tray surface. */
+.app .panel.panel--hand > .panel-hand-rack {
   position: relative;
   isolation: isolate;
+  margin-top: calc(-1 * var(--play-tray-h-divider));
+  padding-top: var(--play-tray-h-divider);
+  margin-bottom: calc(-1 * var(--play-tray-h-divider));
+  padding-bottom: var(--play-tray-h-divider);
+  overflow: visible;
 }
 
-.panel--hand .rack-stage__rack-col::before {
+.app .panel.panel--hand > .panel-hand-rack::before {
   content: '';
   position: absolute;
   z-index: 0;
-  left: 0;
-  right: 0;
   top: 0;
   bottom: 0;
+  left: calc(-1 * var(--hand-rack-tray-bleed-inline));
+  right: calc(-1 * var(--hand-rack-tray-bleed-inline));
   pointer-events: none;
-  border-radius: var(--tile-face-border-radius);
-  background-color: var(--felt-tray-bg);
-  background-image: var(--felt-grain-tile), var(--window-inner-surface-fill);
-  background-size: var(--felt-tray-paint-size);
-  background-repeat: var(--felt-tray-paint-repeat);
-  background-blend-mode: var(--felt-tray-paint-blend);
+  border-radius: 0;
+  background-color: var(--hand-rack-tray-surface);
+  background-image: none;
 }
 
-.panel--hand .rack-stage__rack-col:has(
-    :is(.panel-hand-rack__action-well, .panel-hand-rack__charleston-actions-well)
-  )::before {
-  bottom: calc(
-    var(--hand-button-row-h, var(--rack-action-touch-min-h)) + var(--play-tray-h-divider)
-  );
+/* Tray/container interiors (not the outer page wrapper). Top band uses --hand-rack-tray-surface. */
+:is(
+  .panel--bot-exposures .app-opponents-rail__cell,
+  .app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well,
+  .app-discard-bottom-container .discard-tracker__content,
+  .suggested-hands-popup .panel--hands
+) {
+  background-color: var(--app-container-surface, #efeeee);
+  background-image: none;
+  background-size: auto;
+  background-repeat: repeat;
+  background-blend-mode: normal;
+}
+
+.app-dnd-frame .app-play-split.app-top-exposure-container :is(
+    .discard-tracker__shell,
+    .discard-tracker__content--tile-groups-only,
+    .discard-tracker__tile-groups-container,
+    .discard-tracker__overlay-grid,
+    .discard-tracker__overlay-row > .app-opponents-rail__cell,
+    .exposure-rack--discard-tracker-sorted-row,
+    .exposure-rack--discard-tracker-bot-row
+  ) {
+  background-color: transparent;
+  background-image: none;
+}
+
+.app-dnd-frame .app-play-split.app-top-exposure-container .discard-tracker__tile-groups-container {
+  border-radius: 0;
+  overflow: visible;
+}
+
+/* Action row container: tray surface comes from .panel-hand-rack::before. */
+.panel--hand .panel-hand-rack__action-well,
+.panel--hand .panel-hand-rack__charleston-actions-well {
+  position: relative;
+  z-index: 1;
+  overflow: visible;
+  border-radius: 0;
+  background-color: transparent;
+  background-image: none;
+}
+
+/* Tile rows sit above the unified tray backdrop; keep interiors transparent. */
+.panel--hand .rack-stage__rack-col {
+  position: relative;
+  overflow: visible;
 }
 
 .panel--hand .rack-stage__rack-top,
@@ -814,7 +898,10 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 .panel--hand .panel-hand-rack__hand-tray .hand-bank {
   background: transparent;
   background-image: none;
+  border: none;
+  box-shadow: none;
   border-radius: 0;
+  padding-block: 0;
 }
 
 .panel--discard-tracker .discard-tracker__overlay-grid .exposure-rack__slot--empty::before {
@@ -831,11 +918,49 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot--empty::before {
-  background-color: var(--felt-tray-bg);
-  background-image: var(--felt-grain-tile), var(--window-inner-surface-fill);
-  background-size: var(--felt-tray-paint-size);
-  background-repeat: var(--felt-tray-paint-repeat);
-  background-blend-mode: var(--felt-tray-paint-blend);
+  background: color-mix(in srgb, #c8c8c8 28%, var(--app-container-surface, #efeeee));
+  background-image: none;
+}
+
+/*
+ * Solid tray shells only — beats fragment rules that still set felt grain / radial fills.
+ */
+:is(
+  .panel--discard-tracker .discard-tracker__content,
+  .panel--discard-tracker .discard-tracker__shell,
+  .panel--discard-tracker .discard-tracker__tile-groups-container,
+  .app-dnd-frame .panel--discard-tracker .discard-tracker__content,
+  .panel--bot-exposures .app-opponents-rail__cell,
+  .panel--bot-exposures__toolbar-well,
+  .suggested-hands-popup .panel--hands,
+  .suggested-hands-popup__user-shift,
+  .suggested-hands-filter-tray
+) {
+  background-color: var(--app-container-surface, #efeeee);
+  background-image: none;
+  background-blend-mode: normal;
+}
+
+/* Beat the solid-tray rule above for the top band (tray color comes from ::before). */
+.app-dnd-frame .app-play-split.app-top-exposure-container :is(
+    .discard-tracker__shell,
+    .discard-tracker__content--tile-groups-only,
+    .discard-tracker__tile-groups-container
+  ) {
+  background-color: transparent;
+  background-image: none;
+}
+
+html,
+body,
+#root {
+  background-color: var(--app-container-surface, #efeeee);
+  background-image: none;
+}
+
+.discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row .exposure-rack__slot--empty::before {
+  background: color-mix(in srgb, #c8c8c8 28%, var(--app-container-surface, #efeeee));
+  background-image: none;
 }
 
 .panel--discard-tracker .tile-face:not(.tile--joker)::after {
@@ -854,6 +979,23 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 html .app-dnd-frame .app-play-split.app-top-exposure-container .discard-tracker__overlay-grid {
   --discard-tray-tile-corner-r: 0;
   --tile-face-border-radius: 0;
+}
+
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-sorted-row {
+  --tile-face-border-radius: 0;
+  --discard-tray-tile-corner-r: 0;
+}
+
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  :is(
+    .sorted-discard-tray__slot,
+    .sorted-discard-tray__slot .tile-face,
+    .sorted-discard-tray__slot--suit-label
+  ) {
+  border-radius: 0;
 }
 
 .panel--discard-tracker :is(.tile-face, .exposure-rack__slot--empty::before) {
@@ -948,4 +1090,352 @@ html[data-home-screen-app]:not([data-native-app]) .panel.panel--hand {
     0
     var(--hand-window-pad-inline)
     0;
+}
+
+html[data-home-screen-app]:not([data-native-app])
+  .app
+  .panel.panel--hand
+  > .panel-hand-rack {
+  margin-top: 0;
+  padding-top: 0;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+/*
+ * Hand action row: flat on #EFEEEE (same as the horizontal tray divider above).
+ * Inset depth only while pressed (:active) or toggled active (Menu / Hands open / MAHJ held).
+ * No outer shadows on resting, hover, or disabled controls.
+ */
+.panel--hand :is(
+    .panel-hand-rack__action-well,
+    .panel-hand-rack__charleston-actions-well,
+    .hand-bank__mj-review-actions
+  ) {
+  --rack-action-label-color: #6d6d73;
+  --rack-action-well-surface: var(--hand-rack-tray-surface);
+  --rack-action-flat-surface: #afb5ba;
+  --rack-action-border-color: #d4d9dd;
+  --rack-action-press-shadow-dark: color-mix(
+    in srgb,
+    #000 28%,
+    var(--rack-action-flat-surface, #afb5ba)
+  );
+  --rack-action-press-shadow-light: color-mix(
+    in srgb,
+    var(--rack-action-border-color, #d4d9dd) 72%,
+    var(--rack-action-flat-surface, #afb5ba)
+  );
+  --rack-action-pressed:
+    inset 4px 4px 8px var(--rack-action-press-shadow-dark),
+    inset -4px -4px 8px var(--rack-action-press-shadow-light);
+}
+
+.panel--hand .hand-bank__mj-review-actions {
+  background-color: var(--rack-action-well-surface);
+  background-image: none;
+}
+
+.app .panel--hand :is(.rack-bottom-bar--tile-grid, .hand-bank__mj-review-actions) :is(
+    .btn.rack-bottom-tile-cell,
+    .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn
+  ) {
+  background: var(--rack-action-flat-surface);
+  border: 1px solid var(--rack-action-border-color, #d4d9dd);
+  opacity: 1;
+  filter: none;
+  text-shadow: none;
+  box-shadow: none;
+  transition: box-shadow 0.12s ease;
+}
+
+/* Wall count: heat gradient only — flat chrome like the divider band. */
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell {
+  box-shadow: none;
+}
+
+.app .panel--hand :is(.rack-bottom-bar--tile-grid, .hand-bank__mj-review-actions) :is(
+    .btn.rack-bottom-tile-cell,
+    .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn
+  ):not(:disabled) {
+  color: var(--rack-action-label-color, #6d6d73);
+}
+
+.app .panel--hand :is(.rack-bottom-bar--tile-grid, .hand-bank__mj-review-actions) :is(
+    .btn.rack-bottom-tile-cell,
+    .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn
+  ):disabled {
+  color: var(--rack-action-label-color, #6d6d73);
+  cursor: not-allowed;
+  box-shadow: none;
+  opacity: 1;
+  filter: none;
+}
+
+.app .panel--hand :is(.rack-bottom-bar--tile-grid, .hand-bank__mj-review-actions) :is(
+    .btn.rack-bottom-tile-cell,
+    .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn
+  ):hover:not(:disabled):not(:active):not(.suggested-hands-tab--open):not(
+    .app-bottom-center-controls__menu-btn--open
+  ) {
+  box-shadow: none;
+  transform: none;
+}
+
+/* Pointer down */
+.app .panel--hand :is(.rack-bottom-bar--tile-grid, .hand-bank__mj-review-actions) :is(
+    .btn.rack-bottom-tile-cell,
+    .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn
+  ):active:not(:disabled) {
+  box-shadow: var(--rack-action-pressed);
+  transition: none;
+  transform: none;
+}
+
+/* Toggled active (not resting hover) */
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .app-menu-anchor--hand-rack
+  .app-bottom-center-controls__menu-btn--open:is(:disabled, :not(:disabled)),
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .app-menu-anchor--hand-rack
+  .app-bottom-center-controls__menu-btn--open:hover:not(:disabled),
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open.rack-bottom-tile-cell:is(
+    :disabled,
+    :not(:disabled)
+  ),
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open.rack-bottom-tile-cell:hover:not(
+    :disabled
+  ),
+.app .panel--hand .rack-bottom-bar--tile-grid .btn.suggested-hands-tab--open:is(:disabled, :not(:disabled)),
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.suggested-hands-tab--open:hover:not(:disabled),
+.app
+  .panel--hand
+  .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.btn--mahjong-rack-pressed-in.rack-bottom-tile-cell--c5-6:is(:disabled, :not(:disabled)),
+.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong-rack-pressed-in.rack-bottom-tile-cell--c5-6:is(
+    :disabled,
+    :not(:disabled)
+  ) {
+  background: var(--rack-action-flat-surface);
+  color: var(--rack-action-label-color, #6d6d73);
+  box-shadow: var(--rack-action-pressed);
+}
+
+/* Legal Mah Jongg hint: flat face + ring only */
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.btn--mahjong-hint.rack-bottom-tile-cell--c5-6:not(:disabled):not(:active),
+.app-layout[data-animations='off']
+  .app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.btn--mahjong-hint.rack-bottom-tile-cell--c5-6:not(:disabled):not(:active) {
+  box-shadow: 0 0 0 1px color-mix(in srgb, #9a5fab 32%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app
+    .panel--hand
+    .rack-bottom-bar--tile-grid
+    .btn.btn--mahjong.btn--mahjong-hint.rack-bottom-tile-cell--c5-6:not(:disabled):not(:active) {
+    box-shadow: 0 0 0 1px color-mix(in srgb, #9a5fab 32%, transparent);
+  }
+}
+
+/* Beat part-0067 / part-0103 resting inset on menu + semantic disabled buttons. */
+.app .panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:not(
+    :disabled
+  ):not(:active):not(.app-bottom-center-controls__menu-btn--open),
+.app .panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:hover:not(
+    :disabled
+  ):not(:active):not(.app-bottom-center-controls__menu-btn--open),
+.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong.rack-bottom-tile-cell--c5-6:disabled:not(
+    .btn--mahjong-rack-pressed-in
+  ),
+.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled,
+.app
+  .panel--hand
+  .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
+  .btn.btn--primary.charleston-pass-btn.rack-bottom-tile-cell--c12-14:disabled:not(.suggested-hands-tab),
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:disabled,
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:hover:not(:disabled):not(:active) {
+  box-shadow: none;
+  transform: none;
+}
+
+/* Flatten semantic fills — white face for all states (Call / Pass / Swap / Discard / MAHJ / Sort). */
+.app[data-color-buttons='on']
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.rack-bottom-tile-cell--c5-6:is(:disabled, :not(:disabled)):not(.btn--mahjong-rack-pressed-in),
+.app[data-color-buttons='off']
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.rack-bottom-tile-cell--c5-6:is(:disabled, :not(:disabled)):not(.btn--mahjong-rack-pressed-in),
+.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn:is(
+    :disabled,
+    :not(:disabled)
+  ):not(.suggested-hands-tab--open),
+.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:is(
+    :disabled,
+    :not(:disabled)
+  ),
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:is(
+    :disabled,
+    :not(:disabled)
+  ),
+.app[data-color-buttons='on']
+  .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.rack-bottom-tile-cell--c12-14:disabled:is(.btn--discard, :not(.btn--discard)),
+.app[data-color-buttons='off']
+  .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.rack-bottom-tile-cell--c12-14:disabled:is(.btn--discard, :not(.btn--discard)),
+.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--rack-neutral.rack-bottom-tile-cell--c1:is(
+    :disabled,
+    :not(:disabled)
+  ),
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--rack-neutral.rack-bottom-tile-cell--c2-4:is(
+    :disabled,
+    :not(:disabled)
+  ),
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
+  .btn.btn--primary.charleston-pass-btn.rack-bottom-tile-cell--c12-14:is(:disabled, :not(:disabled)),
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
+  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:is(:disabled, :not(:disabled)),
+.btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):is(:disabled, :not(:disabled)),
+.app[data-color-buttons='on'] .btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):is(:disabled, :not(:disabled)),
+.app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):is(:disabled, :not(:disabled)),
+.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:disabled,
+.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:is(:disabled, :not(:disabled)) {
+  background: var(--rack-action-flat-surface);
+  color: var(--rack-action-label-color, #6d6d73);
+  opacity: 1;
+  filter: none;
+}
+
+/* Beat part-0103 muted label color on Call / Pass / Swap / Sort. */
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--rack-neutral.rack-bottom-tile-cell--c1:is(
+    :disabled,
+    :not(:disabled)
+  ),
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--rack-neutral.rack-bottom-tile-cell--c2-4:is(
+    :disabled,
+    :not(:disabled)
+  ),
+.app
+  .panel--hand
+  .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c4-5:is(:disabled, :not(:disabled)),
+.app
+  .panel--hand
+  .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
+  .btn.btn--rack-neutral.rack-bottom-tile-cell--c1:is(:disabled, :not(:disabled)),
+.app
+  .panel--hand
+  .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
+  .btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c4-5:is(:disabled, :not(:disabled)),
+.app
+  .panel--hand
+  .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
+  .btn.btn--primary.charleston-pass-btn.rack-bottom-tile-cell--c12-14:is(:disabled, :not(:disabled)) {
+  color: var(--rack-action-label-color, #6d6d73);
+  background: var(--rack-action-flat-surface);
+  opacity: 1;
+  filter: none;
+}
+
+/*
+ * Logic (c7–8) + Call / Swap (c9–10): white face when enabled — beats purple / slate
+ * from part-0063 / part-0064 / part-0067 on :not(:disabled).
+ */
+.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--rack-neutral.rack-bottom-tile-cell--c7-8:is(
+    :disabled,
+    :not(:disabled)
+  ),
+.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--rack-neutral.btn--logic.rack-bottom-tile-cell--c7-8:is(
+    :disabled,
+    :not(:disabled)
+  ),
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--rack-neutral.btn--logic.rack-bottom-tile-cell--c7-8:is(
+    :disabled,
+    :not(:disabled)
+  ),
+.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
+.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
+.rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
+.app[data-color-buttons='on'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
+.app[data-color-buttons='on'] .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
+.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c7-8:not(:disabled),
+.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
+.app[data-color-buttons='off'] .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled) {
+  background: var(--rack-action-flat-surface);
+  color: var(--rack-action-label-color, #6d6d73);
+  opacity: 1;
+  filter: none;
+}
+
+.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--logic.rack-bottom-tile-cell--c7-8:active:not(:disabled),
+.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:active:not(:disabled) {
+  background: var(--rack-action-flat-surface);
+  color: var(--rack-action-label-color, #6d6d73);
+}
+
+/* Call when enabled (bot-turn): white — beats any leftover purple/slate from part-0064/0067. */
+html body .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  button.btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
+html body .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  button.btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled):hover,
+html body .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  button.btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled):active {
+  background-color: var(--rack-action-flat-surface, #afb5ba);
+  color: var(--rack-action-label-color, #6d6d73);
+  opacity: 1;
+  filter: none;
+}
+
+/* Undo arrow: same label color as rack actions (SVG uses currentColor). */
+.app .panel--hand .rack-bottom-bar--tile-grid .btn__undo-inset,
+.app .panel--hand .rack-bottom-bar--tile-grid .btn__undo-inset:hover,
+.app .panel--hand .rack-bottom-bar--tile-grid .btn__undo-inset:focus-visible,
+.app .panel--hand .rack-bottom-bar--tile-grid .btn__undo-inset:active,
+.app .panel--hand .rack-bottom-bar--tile-grid
+  .btn.rack-bottom-tile-cell--c12-14:active:not(:disabled) + .btn__undo-inset:not(:active) {
+  color: var(--rack-action-label-color, #6d6d73);
+  opacity: 1;
+}
+
+/*
+ * Top band: push rows down inside the tray shell so #7A8288 shows above the B/C/D row.
+ * Declared last to beat panel padding-block resets.
+ */
+html body .app .app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard-tracker {
+  padding-top: 0;
+}
+
+html body .app
+  .app-dnd-frame
+  > .app-play-split.app-top-exposure-container
+  .panel--discard-tracker
+  > .discard-tracker__shell {
+  box-sizing: border-box;
+  padding-top: var(--hand-rack-tray-bleed-inline);
 }

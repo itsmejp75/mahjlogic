@@ -36,24 +36,7 @@
   opacity: 0.5;
 }
 
-/* LOGIC (c7–8) + joker swap when gray mode */
-.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c7-8:not(:disabled),
-.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c7-8:disabled,
-.app[data-color-buttons='off']
-  .rack-bottom-bar--main.rack-bottom-bar--tile-grid
-  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
-.app[data-color-buttons='off']
-  .rack-bottom-bar--main.rack-bottom-bar--tile-grid
-  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled,
-.app[data-color-buttons='off']
-  .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
-  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
-.app[data-color-buttons='off']
-  .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
-  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled {
-  background: var(--color-slate-mid);
-  color: var(--color-white);
-}
+/* LOGIC (c7–8) + Call/Swap (c9–10) gray mode: flat white faces in part-0123. */
 
 /* Charleston: Pass (teal / HANDS purple) + Stop. */
 .app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):not(:disabled) {

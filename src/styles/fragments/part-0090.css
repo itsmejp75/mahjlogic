@@ -27,7 +27,7 @@
   gap: var(--player-rack-face-gap);
 }
 
-/* Pass-tail tiles keep their bordered look so Charleston still reads as a distinct strip. */
-.panel--hand .exposure-rack--charleston-pass .exposure-rack__slot--pass-tail .tile-face {
-  border: 1px solid color-mix(in srgb, var(--color-black) 22%, transparent);
+/* Charleston pass box: same borderless faces as hand + exposure rows. */
+.panel--hand .exposure-rack--charleston-pass :is(.exposure-rack__slot--pass-tail, .pass-strip__tile-wrap) .tile-face {
+  border: none;
 }

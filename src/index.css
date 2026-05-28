@@ -185,35 +185,32 @@
   --card-tile-skin-neutral-bg: #c4bdb2;
   --card-tile-skin-neutral-fg: var(--text-h);
 
-  /* Panel / rail “windows” in MahjLogic (tile faces keep their own fills). */
-  /* Warm taupe felt — outer wrapper shell. */
-  --felt-base: #877970;
-  --felt-light: #988880;
-  --felt-dark: #6d625c;
-  --felt-frame: #362620;
-  /* Dark gray-black felt — recessed tray / container wells. */
-  --felt-tray: #1c1c20;
-  --felt-tray-light: #28282d;
-  --felt-tray-deep: #0f0f12;
-  --felt-grain-tile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.48'/%3E%3C/svg%3E");
-  /* Wrapper: one flat color + fixed grain on `.app` (no per-panel gradients). */
-  --felt-wrapper-bg: var(--felt-dark);
-  --felt-tray-bg: var(--felt-tray-deep);
+  /* Page shell (gaps between trays) vs tray/container interiors. */
+  --app-wrapper-surface: #ffffff;
+  --app-container-surface: #efeeee;
+  --app-tray-slot-well: #e0e0e0;
+  /* Legacy aliases — older rules still reference these names. */
+  --felt-base: var(--app-wrapper-surface);
+  --felt-light: var(--app-wrapper-surface);
+  --felt-dark: var(--app-wrapper-surface);
+  --felt-frame: #c8c8c8;
+  --felt-tray: var(--app-container-surface);
+  --felt-tray-light: var(--app-container-surface);
+  --felt-tray-deep: var(--app-tray-slot-well);
+  --felt-grain-tile: none;
+  --felt-wrapper-bg: var(--app-wrapper-surface);
+  --felt-tray-bg: var(--app-container-surface);
   --window-surface-fill: none;
-  --window-inner-surface-fill: radial-gradient(
-    ellipse 115% 88% at 50% 32%,
-    color-mix(in srgb, var(--felt-tray) 88%, var(--felt-tray-light) 12%) 0%,
-    var(--felt-tray-deep) 100%
-  );
-  --felt-tray-paint-size: 160px 160px, 100% 100%;
-  --felt-tray-paint-repeat: repeat, no-repeat;
-  --felt-tray-paint-blend: soft-light, normal;
+  --window-inner-surface-fill: none;
+  --felt-tray-paint-size: auto;
+  --felt-tray-paint-repeat: repeat;
+  --felt-tray-paint-blend: normal;
 
-  --window-surface: var(--felt-wrapper-bg);
-  --window-border: color-mix(in srgb, var(--felt-tray-light) 38%, var(--color-black) 62%);
-  --window-inner-surface: var(--felt-tray-deep);
-  --window-fg: #f0ebe6;
-  --window-fg-muted: #c8beb6;
+  --window-surface: var(--app-wrapper-surface);
+  --window-border: color-mix(in srgb, #c8c8c8 55%, var(--app-container-surface));
+  --window-inner-surface: var(--app-container-surface);
+  --window-fg: #4a433c;
+  --window-fg-muted: #8a8580;
   /* Wind tiles: dimmed white face so inset/white highlight rings read clearly on the rack. */
   --wind-tile-bg: #d0cfca;
 
@@ -221,8 +218,8 @@
   letter-spacing: 0.01em;
   color-scheme: light;
   color: var(--text);
-  /* Match app chrome (felt wrapper) so safe-area / scrollbar gutters aren’t creamy. */
-  background-color: var(--felt-wrapper-bg);
+  /* Match app shell so safe-area / scrollbar gutters align with the page surface. */
+  background-color: var(--app-wrapper-surface);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -271,11 +268,16 @@
     --card-tile-skin-neutral-bg: #4a524e;
     --card-tile-skin-neutral-fg: var(--text-h);
 
-    --window-surface: var(--felt-base);
-    --window-border: color-mix(in srgb, var(--felt-tray-light) 38%, var(--color-black) 62%);
-    --window-inner-surface: var(--felt-tray-deep);
-    --window-fg: #f0ebe6;
-    --window-fg-muted: #c8beb6;
+    --app-wrapper-surface: #ffffff;
+    --app-container-surface: #efeeee;
+    --felt-wrapper-bg: var(--app-wrapper-surface);
+    --felt-tray-bg: var(--app-container-surface);
+    --window-surface: var(--app-wrapper-surface);
+    --window-border: color-mix(in srgb, #c8c8c8 55%, var(--app-container-surface));
+    --window-inner-surface: var(--app-container-surface);
+    --window-inner-surface-fill: none;
+    --window-fg: #e0e0e0;
+    --window-fg-muted: #a8a8a8;
     --wind-tile-bg: #b9b7b1;
   }
 }
@@ -293,7 +295,7 @@ html {
   /* iOS WKWebView fallback when dvh is quirky */
   min-height: -webkit-fill-available;
   /* First WebView paint before React mounts; match the app shell surface. */
-  background-color: var(--felt-wrapper-bg);
+  background-color: var(--app-wrapper-surface);
   /*
    * Single source for layout math in src/styles (see thematic/base.css): dynamic viewport inlines/blocks
    * track the *visible* area (avoids 100vw vs scrollbar + matches notched / resized windows).
@@ -323,7 +325,7 @@ html {
   flex-direction: column;
   box-sizing: border-box;
   max-width: none;
-  background: var(--felt-wrapper-bg);
+  background: var(--app-wrapper-surface);
 }
 
 /*

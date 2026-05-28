@@ -195,11 +195,8 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background-color: var(--felt-tray-bg);
-  background-image: var(--felt-grain-tile), var(--window-inner-surface-fill);
-  background-size: var(--felt-tray-paint-size);
-  background-repeat: var(--felt-tray-paint-repeat);
-  background-blend-mode: var(--felt-tray-paint-blend);
+  background-color: var(--app-wrapper-surface, var(--felt-tray-bg));
+  background-image: none;
   /* Tray shell + tile faces: corner radius = 0.116 × local tile width. */
   border-radius: var(--discard-tray-tile-corner-r, var(--tile-face-border-radius));
   container-type: inline-size;
@@ -405,6 +402,12 @@
   box-sizing: border-box;
 }
 
+/* B/C/D sorted band: square suit chips + rank tiles (bot S/W/N rows keep scaled radius). */
+.discard-tracker__overlay-grid .exposure-rack--discard-tracker-sorted-row {
+  --tile-face-border-radius: 0;
+  --discard-tray-tile-corner-r: 0;
+}
+
 .panel--discard-tracker .discard-tracker__overlay-grid .exposure-rack__slot {
   width: var(--rack-tile-w);
   min-width: var(--rack-tile-w);
@@ -486,7 +489,7 @@
 .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row .exposure-rack__slot--empty::before {
   border: none;
   border-radius: var(--tile-face-border-radius);
-  background: color-mix(in srgb, var(--color-black) 24%, var(--felt-tray-deep));
+  background: color-mix(in srgb, #c8c8c8 28%, var(--app-wrapper-surface, #efeeee));
   box-shadow: none;
 }
 
@@ -496,7 +499,7 @@
 .discard-tracker__content .exposure-rack__slot--staged-returnable:hover .tile-face,
 .discard-tracker__content .exposure-rack__slot--call-amendable:hover .tile-face,
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-need .tile-face {
-  border-radius: var(--tile-face-border-radius);
+  border-radius: 0;
 }
 
 /* Focused suggested hand: inner ring on tracker slots you still need (same as discard strip). */
@@ -509,6 +512,7 @@
 /* Sorted discard tray: match discard-pile tile chrome. */
 .discard-tracker__overlay-grid .sorted-discard-tray__slot .tile-face {
   border: none;
+  border-radius: 0;
 }
 
 .discard-tracker__overlay-grid .tile-face.tile-face--sorted-discard-dot {
@@ -588,7 +592,7 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  border-radius: var(--tile-face-border-radius, 0);
+  border-radius: 0;
   overflow: hidden;
 }
 

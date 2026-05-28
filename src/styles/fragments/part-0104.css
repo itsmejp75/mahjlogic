@@ -21,11 +21,8 @@
   max-height: 100%;
   width: 100%;
   box-sizing: border-box;
-  background-color: var(--felt-tray-bg);
-  background-image: var(--felt-grain-tile), var(--window-inner-surface-fill);
-  background-size: var(--felt-tray-paint-size);
-  background-repeat: var(--felt-tray-paint-repeat);
-  background-blend-mode: var(--felt-tray-paint-blend);
+  background-color: var(--app-wrapper-surface, var(--felt-tray-bg));
+  background-image: none;
   border: none;
   border-radius: var(--suggested-popup-radius) var(--suggested-popup-radius) 0 0;
   color: var(--window-fg);

@@ -216,11 +216,8 @@
   height: auto;
   width: 100%;
   box-sizing: border-box;
-  background-color: var(--felt-tray-bg);
-  background-image: var(--felt-grain-tile), var(--window-inner-surface-fill);
-  background-size: var(--felt-tray-paint-size);
-  background-repeat: var(--felt-tray-paint-repeat);
-  background-blend-mode: var(--felt-tray-paint-blend);
+  background-color: var(--app-wrapper-surface, var(--felt-tray-bg));
+  background-image: none;
   border-radius: var(--discard-tray-tile-corner-r, var(--tile-face-border-radius));
   overflow: hidden;
 }

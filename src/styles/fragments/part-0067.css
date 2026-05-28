@@ -169,14 +169,16 @@
   padding: 0;
   border-radius: var(--rack-tile-btn-border-radius, 0.7rem) 0 0 var(--rack-tile-btn-border-radius, 0.7rem);
   cursor: pointer;
-  opacity: 0.72;
+  color: var(--rack-action-label-color, #6d6d73);
+  opacity: 1;
   background: transparent;
   box-shadow: none;
   transition: opacity 0.12s ease, background 0.12s ease, box-shadow 0.14s ease, transform 0.12s ease;
 }
 
 .btn__undo-inset:hover {
-  opacity: 0.72;
+  color: var(--rack-action-label-color, #6d6d73);
+  opacity: 1;
   background: transparent;
   box-shadow: none;
   transform: none;
@@ -187,11 +189,13 @@
 }
 
 .btn__undo-inset:focus-visible {
+  color: var(--rack-action-label-color, #6d6d73);
   opacity: 1;
   background: rgba(255, 255, 255, 0.18);
 }
 
 .btn__undo-inset:active {
+  color: var(--rack-action-label-color, #6d6d73);
   opacity: 1;
   background: transparent;
   outline: none;
@@ -204,7 +208,8 @@
 }
 
 .btn.rack-bottom-tile-cell--c12-14:active:not(:disabled) + .btn__undo-inset:not(:active) {
-  opacity: 0.72;
+  color: var(--rack-action-label-color, #6d6d73);
+  opacity: 1;
   background: transparent;
   box-shadow: none;
   outline: none;
@@ -332,32 +337,7 @@
   top: 0.15em;
 }
 
-/* Main + Charleston rack: Call and joker Swap share c9–10 — enabled #6A0DAD; inactive matches rack Mah Jongg. */
-.rack-bottom-bar--main.rack-bottom-bar--tile-grid
-  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
-.rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
-  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled) {
-  background: #6a0dad;
-  color: var(--color-white);
-}
-
-.app[data-color-buttons='on'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid
-  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled,
-.app[data-color-buttons='on'] .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
-  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled {
-  background: #9a5fab;
-  color: var(--color-white);
-  opacity: 0.5;
-}
-
-.app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid
-  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled,
-.app[data-color-buttons='off'] .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
-  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled {
-  background: var(--color-slate-mid);
-  color: var(--color-white);
-  opacity: 0.5;
-}
+/* Call / Swap (c9–10): enabled + disabled chrome — flat white faces in part-0123. */
 
 .panel {
   border: 1px solid var(--border);
