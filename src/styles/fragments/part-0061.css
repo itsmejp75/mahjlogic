@@ -725,6 +725,52 @@
 }
 
 /*
+ * Discard tracker tiles always use Prism (`solid-color`) palette — independent of
+ * Menu → Tile graphics. Scope --tg-* on the panel so counts / suit labels inherit too.
+ */
+.panel--discard-tracker {
+  --tg-bam: var(--card-ink-green);
+  --tg-crak: var(--card-ink-red);
+  --tg-dot: var(--card-ink-navy);
+  --tg-wind: #d1d5db;
+  --tg-dragon-red: var(--card-ink-red);
+  --tg-dragon-green: var(--card-ink-green);
+  --tg-dragon-soap: var(--card-ink-navy);
+  --tg-dragon-any: #5c6470;
+  --tg-flower: #ab47bc;
+  --tg-joker: #ffc107;
+  --tg-blank: #d1d5db;
+  --tg-ink: #080808;
+  --tg-suit-band-ink: #080808;
+  --tg-joker-ring: #333333;
+  --tg-cs-navy-bg: var(--card-tile-skin-blue-bg);
+  --tg-cs-navy-fg: #080808;
+  --tg-cs-black-bg: var(--card-tile-skin-black-bg);
+  --tg-cs-black-fg: #080808;
+  --tg-cs-red-bg: var(--card-tile-skin-red-bg);
+  --tg-cs-red-fg: #080808;
+  --tg-cs-green-bg: var(--card-tile-skin-green-bg);
+  --tg-cs-green-fg: #080808;
+  --tg-cs-neutral-bg: var(--card-tile-skin-neutral-bg);
+  --tg-cs-neutral-fg: #080808;
+  --tg-cs-rack-wind-bg: #d1d5db;
+  --tg-cs-rack-wind-fg: #080808;
+  --tg-cs-rack-flower-bg: #ab47bc;
+  --tg-cs-rack-flower-fg: #080808;
+}
+
+/* Beat Menu preset glyph / band color rules (Ivory spot colors, Obsidian #B0B0B0, etc.). */
+.app[data-tile-graphics] .panel--discard-tracker
+  .tile-face
+  :is(.tile-face__glyph, .tile-face__glyph-num, .tile-face__glyph-letter, .tile-face__rank, .tile-face__suit-text) {
+  color: var(--tg-ink, var(--color-black));
+}
+
+.app[data-tile-graphics] .panel--discard-tracker .tile-face.tile--joker .tile-face__glyph {
+  color: var(--tg-ink, var(--color-black));
+}
+
+/*
  * TEMP-PREVIEW: discard tracker tiles without inner shadowing.
  * Strips material inset, dim/highlight insets, and designer lustre — flat fills + outer drop only.
  * Delete this block to restore the themed look.
@@ -745,7 +791,7 @@
   --tile-face-base-shadow: 0 0 0 0 transparent;
 }
 
-.app[data-tile-graphics='designer'] .panel--discard-tracker .tile-face::before {
+.panel--discard-tracker .tile-face::before {
   content: none;
   display: none;
 }

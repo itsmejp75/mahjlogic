@@ -320,13 +320,22 @@
     --pwa-landscape-inline-start: calc(
       0.8 * var(--app-v-pad) + 0.9 * env(safe-area-inset-left, 0px)
     );
-    --pwa-landscape-inline-end: calc(0.8 * var(--app-v-pad));
+    --pwa-landscape-inline-end: calc(
+      var(--app-v-pad) + clamp(0.12rem, 1dvi, 0.36rem)
+    );
     --app-h-pad: calc((var(--pwa-landscape-inline-start) + var(--pwa-landscape-inline-end)) * 0.5);
   }
 
   html:not([data-native-app]) .app-rack-stage,
   html:not([data-native-app]) .app-play-split,
   html:not([data-native-app]) .app-discard-bottom-container {
+    padding-inline-start: var(--pwa-landscape-inline-start);
+    padding-inline-end: var(--pwa-landscape-inline-end);
+  }
+
+  html[data-home-screen-app]:not([data-native-app]) .app-rack-stage,
+  html[data-home-screen-app]:not([data-native-app]) .app-play-split,
+  html[data-home-screen-app]:not([data-native-app]) .app-discard-bottom-container {
     padding-inline-start: var(--pwa-landscape-inline-start);
     padding-inline-end: var(--pwa-landscape-inline-end);
   }
@@ -852,38 +861,71 @@ html .app-dnd-frame .app-play-split.app-top-exposure-container .discard-tracker_
 }
 
 /*
- * Installed PWA (`data-home-screen-app`): trim horizontal inset ~20% so the rack +
- * lower play-split fill a bit more of the standalone shell (portrait and landscape).
+ * Installed PWA (`data-home-screen-app`): left stays tight; a little inset on the right,
+ * top, and bottom so the shell breathes without re-centering the whole board.
  */
 html[data-home-screen-app]:not([data-native-app]) {
-  --app-h-pad-base: clamp(0.24rem, 1.35vw, 1.08rem);
-  --app-h-pad: calc(var(--app-h-pad-base) + var(--app-safe-inline));
-  --hand-window-pad-inline: clamp(0.22rem, 0.75vw, 0.44rem);
+  --pwa-pad-inline-start: clamp(0.22rem, 1.2vw, 0.5rem);
+  --pwa-pad-inline-end: clamp(0.3rem, 1.85vw, 0.85rem);
+  --pwa-pad-top-extra: clamp(0.1rem, 0.65vw, 0.26rem);
+  --pwa-pad-bottom-extra: clamp(0.1rem, 0.65vw, 0.26rem);
+  --app-h-pad-base: var(--pwa-pad-inline-start);
+  --app-h-pad: calc(
+    (var(--pwa-pad-inline-start) + var(--pwa-pad-inline-end)) / 2 + var(--app-safe-inline)
+  );
+  --hand-window-pad-inline: clamp(0.16rem, 0.95vw, 0.3rem);
 }
 
 @media (max-width: 47.99rem) {
   html[data-home-screen-app]:not([data-native-app]) {
-    --app-h-pad-base: clamp(0.28rem, 1.75vw, 0.6rem);
+    --pwa-pad-inline-start: clamp(0.24rem, 1.45vw, 0.52rem);
+    --pwa-pad-inline-end: clamp(0.32rem, 2.1vw, 0.68rem);
     --hand-window-pad-inline: clamp(0.16rem, 0.95vw, 0.28rem);
   }
 }
 
 @media (max-width: 26rem) {
   html[data-home-screen-app]:not([data-native-app]) {
-    --app-h-pad-base: clamp(0.19rem, 1.45vw, 0.4rem);
+    --pwa-pad-inline-start: clamp(0.18rem, 1.25vw, 0.38rem);
+    --pwa-pad-inline-end: clamp(0.26rem, 1.75vw, 0.48rem);
   }
 }
 
 @media (max-width: 932px) {
   html[data-home-screen-app]:not([data-native-app]) {
-    --app-h-pad-base: clamp(0.28rem, 1.75vw, 0.6rem);
+    --pwa-pad-inline-start: clamp(0.24rem, 1.45vw, 0.52rem);
+    --pwa-pad-inline-end: clamp(0.32rem, 2.1vw, 0.68rem);
     --hand-window-pad-inline: clamp(0.16rem, 0.95vw, 0.28rem);
   }
 }
 
 @media (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) {
   html[data-home-screen-app]:not([data-native-app]) {
-    --app-h-pad-base: clamp(0.04rem, 0.35vw, 0.13rem);
+    --pwa-pad-inline-start: clamp(0.04rem, 0.3vw, 0.12rem);
+    --pwa-pad-inline-end: clamp(0.14rem, 0.95vw, 0.28rem);
+    --pwa-pad-top-extra: clamp(0.08rem, 0.55dvb, 0.2rem);
+    --pwa-pad-bottom-extra: clamp(0.08rem, 0.55dvb, 0.2rem);
     --hand-window-pad-inline: clamp(0.06rem, 0.4vw, 0.14rem);
+  }
+
+  html[data-home-screen-app]:not([data-native-app]) .app-main {
+    padding-top: calc(var(--app-v-pad) + var(--pwa-pad-top-extra, 0px));
+  }
+}
+
+html[data-home-screen-app]:not([data-native-app]) .app-rack-stage,
+html[data-home-screen-app]:not([data-native-app]) .app-play-split,
+html[data-home-screen-app]:not([data-native-app]) .app-discard-bottom-container {
+  padding-inline-start: var(--pwa-pad-inline-start, var(--app-h-pad-base));
+  padding-inline-end: var(--pwa-pad-inline-end, var(--app-h-pad));
+}
+
+/* Standalone landscape: notch side + extra end inset (rule above is portrait / general). */
+@media (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) and (display-mode: standalone) {
+  html[data-home-screen-app]:not([data-native-app]) .app-rack-stage,
+  html[data-home-screen-app]:not([data-native-app]) .app-play-split,
+  html[data-home-screen-app]:not([data-native-app]) .app-discard-bottom-container {
+    padding-inline-start: var(--pwa-landscape-inline-start);
+    padding-inline-end: var(--pwa-landscape-inline-end);
   }
 }
