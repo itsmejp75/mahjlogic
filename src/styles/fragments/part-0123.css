@@ -317,8 +317,10 @@
 @media (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) and (display-mode: standalone) {
   html:not([data-native-app]) {
     --app-play-fit-inline-from-block: 100dvi;
-    --pwa-landscape-inline-start: calc(var(--app-v-pad) + env(safe-area-inset-left, 0px));
-    --pwa-landscape-inline-end: var(--app-v-pad);
+    --pwa-landscape-inline-start: calc(
+      0.8 * var(--app-v-pad) + 0.9 * env(safe-area-inset-left, 0px)
+    );
+    --pwa-landscape-inline-end: calc(0.8 * var(--app-v-pad));
     --app-h-pad: calc((var(--pwa-landscape-inline-start) + var(--pwa-landscape-inline-end)) * 0.5);
   }
 
@@ -847,4 +849,41 @@ html .app-dnd-frame .app-play-split.app-top-exposure-container .discard-tracker_
 
 .panel--discard-tracker :is(.tile-face, .exposure-rack__slot--empty::before) {
   border-radius: 0;
+}
+
+/*
+ * Installed PWA (`data-home-screen-app`): trim horizontal inset ~20% so the rack +
+ * lower play-split fill a bit more of the standalone shell (portrait and landscape).
+ */
+html[data-home-screen-app]:not([data-native-app]) {
+  --app-h-pad-base: clamp(0.24rem, 1.35vw, 1.08rem);
+  --app-h-pad: calc(var(--app-h-pad-base) + var(--app-safe-inline));
+  --hand-window-pad-inline: clamp(0.22rem, 0.75vw, 0.44rem);
+}
+
+@media (max-width: 47.99rem) {
+  html[data-home-screen-app]:not([data-native-app]) {
+    --app-h-pad-base: clamp(0.28rem, 1.75vw, 0.6rem);
+    --hand-window-pad-inline: clamp(0.16rem, 0.95vw, 0.28rem);
+  }
+}
+
+@media (max-width: 26rem) {
+  html[data-home-screen-app]:not([data-native-app]) {
+    --app-h-pad-base: clamp(0.19rem, 1.45vw, 0.4rem);
+  }
+}
+
+@media (max-width: 932px) {
+  html[data-home-screen-app]:not([data-native-app]) {
+    --app-h-pad-base: clamp(0.28rem, 1.75vw, 0.6rem);
+    --hand-window-pad-inline: clamp(0.16rem, 0.95vw, 0.28rem);
+  }
+}
+
+@media (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) {
+  html[data-home-screen-app]:not([data-native-app]) {
+    --app-h-pad-base: clamp(0.04rem, 0.35vw, 0.13rem);
+    --hand-window-pad-inline: clamp(0.06rem, 0.4vw, 0.14rem);
+  }
 }
