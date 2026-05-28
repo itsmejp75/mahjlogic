@@ -431,10 +431,8 @@ html .app-top-exposure-container .discard-tracker__overlay-row {
 html .app-top-exposure-container
   .discard-tracker__overlay-row
   > .exposure-rack--discard-tracker-sorted-row {
-  grid-column: 1 / span 14;
-  width: var(--discard-tracker-sorted-band-w);
-  max-width: 100%;
-  justify-self: start;
+  grid-column: 1 / span 13;
+  width: 100%;
   margin-left: 0;
   transform: none;
 }
@@ -559,103 +557,11 @@ html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-
   line-height: 0.82;
 }
 
-/*
- * Top B/C/D + S/W/N bands: tan wrapper felt behind grid columns 1–14 and 15–29.
- * Scrollable discard pile keeps recessed tray fill (see :is tray list). Tile faces,
- * seat labels, and sorted-discard counts are unchanged.
- */
-html .app-top-exposure-container .discard-tracker__tile-groups-container {
-  isolation: isolate;
-}
-
-html .app-top-exposure-container .discard-tracker__tile-groups-container::before,
-html .app-top-exposure-container .discard-tracker__tile-groups-container::after {
-  content: '';
-  position: absolute;
-  z-index: 0;
-  top: 0;
-  bottom: 0;
-  pointer-events: none;
-  background-color: var(--felt-wrapper-bg);
-  background-image: var(--felt-grain-tile);
-  background-size: 180px 180px;
-  background-repeat: repeat;
-  background-attachment: fixed;
-  background-blend-mode: soft-light;
-}
-
-html .app-top-exposure-container .discard-tracker__tile-groups-container::before {
-  left: 0;
-  /* Full columns 1–14 (incl. SWJ↔SWN gutter); sorted tiles stay narrower via --discard-tracker-sorted-band-w. */
-  width: calc(
-    (100% - 28 * var(--player-rack-face-gap)) * 14 / 29 + 13 * var(--player-rack-face-gap)
-  );
-  border-radius: inherit;
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-}
-
-html .app-top-exposure-container .discard-tracker__tile-groups-container::after {
-  left: calc(
-    (100% - 28 * var(--player-rack-face-gap)) * 14 / 29 + 13 * var(--player-rack-face-gap)
-  );
-  width: calc(
-    (100% - 28 * var(--player-rack-face-gap)) * 15 / 29 + 15 * var(--player-rack-face-gap)
-  );
-  border-radius: inherit;
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-}
-
-html
-  .app-top-exposure-container
-  .discard-tracker__tile-groups-container
-  > .discard-tracker__overlay-grid {
-  position: relative;
-  z-index: 1;
-}
-
-/*
- * Sorted B–S / C–W / D–J|B band: mostly fill column 14; `--discard-tracker-swj-gutter-extra`
- * leaves a little space before S/W/N. Type tied to `--rack-tile-w`, not widened `cqi`.
- */
-html .app-top-exposure-container .exposure-rack--discard-tracker-sorted-row .exposure-rack__slot {
-  aspect-ratio: auto;
-  height: var(--rack-tile-h);
-}
-
-html .app-top-exposure-container
-  .exposure-rack--discard-tracker-sorted-row
-  .exposure-rack__slot
-  .tile-face {
-  --tile-face-glyph-fs: calc(var(--rack-tile-w) * 0.58);
-}
-
-html .app-top-exposure-container
-  .exposure-rack--discard-tracker-sorted-row
-  .tile-face.tile-face--sorted-discard-glyph {
-  --tile-face-glyph-fs: calc(var(--rack-tile-w) * 0.78);
-}
-
-html .app-top-exposure-container
-  .exposure-rack--discard-tracker-sorted-row
-  .sorted-discard-tray__suit-label {
-  font-size: calc(var(--rack-tile-w) * 1.2);
-}
-
-html .app-top-exposure-container
-  .exposure-rack--discard-tracker-sorted-row
-  .sorted-discard-tray__count {
-  font-size: calc(var(--rack-tile-w) * 0.48);
-}
-
 html
   .app-top-exposure-container
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot--empty::before {
-  border: none;
-  background: transparent;
-  box-shadow: none;
+  background: color-mix(in srgb, var(--color-black) 18%, var(--felt-tray-deep));
 }
 
 html .app-dnd-frame > .app-discard-bottom-container {
