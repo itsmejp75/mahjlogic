@@ -7,6 +7,7 @@ import {
   useState,
   type CSSProperties,
   type ReactNode,
+  type RefObject,
 } from 'react'
 import {
   DndContext,
@@ -566,6 +567,45 @@ function OpponentExposureDropZone({
   )
 }
 
+/** Hand / Charleston action bar: column 2 menu (hamburger). */
+function HandRackMenuAnchor({
+  menuOpen,
+  onToggle,
+  menuContainerRef,
+}: {
+  menuOpen: boolean
+  onToggle: () => void
+  menuContainerRef: RefObject<HTMLDivElement | null>
+}) {
+  return (
+    <div
+      ref={menuContainerRef}
+      className="app-menu-anchor app-menu-anchor--hand-rack rack-bottom-tile-cell rack-bottom-tile-cell--c2"
+    >
+      <button
+        type="button"
+        className={[
+          'btn btn--rack-neutral app-bottom-center-controls__menu-btn',
+          menuOpen ? 'app-bottom-center-controls__menu-btn--open' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+        aria-label="Menu"
+        aria-haspopup="dialog"
+        aria-expanded={menuOpen}
+        aria-controls={menuOpen ? 'app-menu-modal' : undefined}
+        onClick={onToggle}
+      >
+        <span className="hand-rack-menu-hamburger" aria-hidden>
+          <span className="hand-rack-menu-hamburger__bar" />
+          <span className="hand-rack-menu-hamburger__bar" />
+          <span className="hand-rack-menu-hamburger__bar" />
+        </span>
+      </button>
+    </div>
+  )
+}
+
 /** First column of the discard-tracker bot band: compass initial (S / W / N). */
 function DiscardTrackerBotSeatLabel({ seat }: { seat: BotSeat }) {
   const label = seat[0]
@@ -913,7 +953,6 @@ function DiscardTrackerSlotGrid({
                 suggestedNeedDefs={suggestedDiscardTrackerNeedDefs}
               />
             )}
-            <DiscardTrackerBotSeatLabel seat={seat} />
             <OpponentExposureDropZone
               seat={seat}
               active={jokerSwapUiActive}
@@ -933,6 +972,7 @@ function DiscardTrackerSlotGrid({
                 jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
               />
             </OpponentExposureDropZone>
+            <DiscardTrackerBotSeatLabel seat={seat} />
           </div>
         )
       })}
@@ -7427,9 +7467,14 @@ export default function App() {
                               >
                                 Sort
                               </button>
+                              <HandRackMenuAnchor
+                                menuOpen={menuOpen}
+                                onToggle={() => setMenuOpen((v) => !v)}
+                                menuContainerRef={menuContainerRef}
+                              />
                               <WallTilesRemainCell
                                 count={wall.length}
-                                className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell rack-bottom-tile-cell--c2${
+                                className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell rack-bottom-tile-cell--c3${
                                   wall.length >= OPENING_WALL_TILES ? ' rack-bottom-wall--full' : ''
                                 }${wall.length === 0 ? ' rack-bottom-wall--empty' : ''}`}
                                 style={wallRemainHeatStyle(wall.length)}
@@ -7443,7 +7488,7 @@ export default function App() {
                                     'charleston-pass-btn',
                                     'suggested-hands-tab',
                                     'rack-bottom-tile-cell',
-                                    'rack-bottom-tile-cell--c3-4',
+                                    'rack-bottom-tile-cell--c4-5',
                                     suggestedPanelHandsOn && mainPhase !== 'mahjong-declared'
                                       ? 'suggested-hands-tab--open'
                                       : '',
@@ -7787,9 +7832,14 @@ export default function App() {
                                 >
                                   Sort
                                 </button>
+                                <HandRackMenuAnchor
+                                  menuOpen={menuOpen}
+                                  onToggle={() => setMenuOpen((v) => !v)}
+                                  menuContainerRef={menuContainerRef}
+                                />
                                 <WallTilesRemainCell
                                   count={wall.length}
-                                  className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell rack-bottom-tile-cell--c2${
+                                  className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell rack-bottom-tile-cell--c3${
                                     wall.length >= OPENING_WALL_TILES ? ' rack-bottom-wall--full' : ''
                                   }${wall.length === 0 ? ' rack-bottom-wall--empty' : ''}`}
                                   style={wallRemainHeatStyle(wall.length)}
@@ -7803,7 +7853,7 @@ export default function App() {
                                       'charleston-pass-btn',
                                       'suggested-hands-tab',
                                       'rack-bottom-tile-cell',
-                                      'rack-bottom-tile-cell--c3-4',
+                                      'rack-bottom-tile-cell--c4-5',
                                       suggestedPanelHandsOn && mainPhase !== 'mahjong-declared'
                                         ? 'suggested-hands-tab--open'
                                         : '',
@@ -7986,35 +8036,6 @@ export default function App() {
                         </DiscardPileDropZone>
                       </div>
                       {renderSuggestedHandsPopup()}
-                      <div
-                        ref={menuContainerRef}
-                        className="app-menu-anchor-stack app-menu-anchor-stack--discard-tracker"
-                        role="group"
-                        aria-label="Discard tray controls"
-                      >
-                        <div className="app-menu-anchor app-menu-anchor--discard-tracker">
-                          <button
-                            type="button"
-                            className={[
-                              'btn btn--rack-neutral rack-bottom-tile-cell',
-                              menuOpen ? 'rack-bottom-tile-cell--menu-open' : '',
-                            ]
-                              .filter(Boolean)
-                              .join(' ')}
-                            aria-label="Menu"
-                            aria-haspopup="dialog"
-                            aria-expanded={menuOpen}
-                            aria-controls={menuOpen ? 'app-menu-modal' : undefined}
-                            onClick={() => setMenuOpen((v) => !v)}
-                          >
-                            <span className="hand-rack-menu-hamburger" aria-hidden>
-                              <span className="hand-rack-menu-hamburger__bar" />
-                              <span className="hand-rack-menu-hamburger__bar" />
-                              <span className="hand-rack-menu-hamburger__bar" />
-                            </span>
-                          </button>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </section>

@@ -79,6 +79,7 @@
  */
 .panel--hand .rack-bottom-bar--tile-grid > .rack-bottom-tile-cell,
 .panel--hand .rack-bottom-bar--tile-grid > .btn.rack-bottom-tile-cell,
+.panel--hand .rack-bottom-bar--tile-grid > .app-menu-anchor--hand-rack,
 .panel--hand .hand-bank__mj-review-actions > .hand-bank__mj-review-actions-spacer {
   box-sizing: border-box;
   min-width: 0;
@@ -86,6 +87,8 @@
   margin-inline-start: 0;
   justify-self: stretch;
   width: 100%;
+  height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
+  min-height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
 }
 
 .panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn {

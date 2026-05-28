@@ -173,7 +173,7 @@
   --app-h-pad-base: clamp(0.3rem, 1.65vw, 1.35rem);
   --app-h-pad: calc(var(--app-h-pad-base) + var(--app-safe-inline));
   --app-v-pad: var(--app-h-pad-base);
-  /* Bottom-only inset — keep at 0; symmetric top breathing room comes from `--app-v-pad` only. */
+  /* Bottom inset on `.app-main` — 0 for browser/native flush; PWA sets via `[data-home-screen-app]`. */
   --app-v-pad-bottom: 0px;
   --play-split-tray-panel-padding-bottom: 0px;
   --hand-rack-usable-w: calc(

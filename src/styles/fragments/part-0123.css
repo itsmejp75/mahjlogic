@@ -243,6 +243,11 @@
     --mobile-web-lower-edge-pull-down: clamp(1.2rem, 6dvb, 2rem);
   }
 
+  html[data-home-screen-app]:not([data-native-app]) {
+    /* Installed PWA uses `.app-main` bottom padding instead of panel pull-down. */
+    --mobile-web-lower-edge-pull-down: 0px;
+  }
+
   html:not([data-native-app]) .app,
   html:not([data-native-app]) .app-main {
     height: 100dvb;
@@ -311,19 +316,17 @@
 
 /*
  * Installed iOS PWA only (standalone): keep notch clearance on the camera side,
- * trim the opposite side to roughly the same spacing as the top inset, and add
- * a small bottom inset so the play area sits a touch higher.
+ * trim the opposite side to roughly the same spacing as the top inset.
  */
 @media (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) and (display-mode: standalone) {
   html:not([data-native-app]) {
     --app-play-fit-inline-from-block: 100dvi;
     --pwa-landscape-inline-start: calc(var(--app-v-pad) + env(safe-area-inset-left, 0px));
     --pwa-landscape-inline-end: var(--app-v-pad);
+    --pwa-landscape-block-end: calc(
+      var(--pwa-landscape-inline-end) + env(safe-area-inset-bottom, 0px)
+    );
     --app-h-pad: calc((var(--pwa-landscape-inline-start) + var(--pwa-landscape-inline-end)) * 0.5);
-  }
-
-  html:not([data-native-app]) .app-main {
-    padding-bottom: 0;
   }
 
   html:not([data-native-app]) .app-rack-stage,
@@ -335,12 +338,12 @@
 
   html:not([data-native-app]) .app-menu-anchor {
     right: var(--pwa-landscape-inline-end);
-    bottom: var(--pwa-landscape-inline-end);
+    bottom: var(--pwa-landscape-block-end);
   }
 
   html:not([data-native-app]) .app-bottom-center-controls {
     right: calc(var(--pwa-landscape-inline-end) + var(--menu-btn-w) + 0.5rem);
-    bottom: var(--pwa-landscape-inline-end);
+    bottom: var(--pwa-landscape-block-end);
   }
 
   /* Fixed suggested-hands slot removed — overlay lives in discard tray (`.suggested-hands-popup--discard-overlay`). */
@@ -435,8 +438,10 @@ html .app-top-exposure-container .discard-tracker__overlay-row {
 html .app-top-exposure-container
   .discard-tracker__overlay-row
   > .exposure-rack--discard-tracker-sorted-row {
-  grid-column: 1 / span 13;
-  width: 100%;
+  grid-column: 1 / span 14;
+  width: var(--discard-tracker-sorted-band-w);
+  max-width: 100%;
+  justify-self: start;
   margin-left: 0;
   transform: none;
 }
@@ -444,7 +449,7 @@ html .app-top-exposure-container
 html .app-top-exposure-container
   .discard-tracker__overlay-row
   > .exposure-rack--discard-tracker-bot-seat-label {
-  grid-column: 15 / span 1;
+  grid-column: 29 / span 1;
   width: 100%;
   max-width: none;
   margin-left: 0;
@@ -452,7 +457,7 @@ html .app-top-exposure-container
 }
 
 html .app-top-exposure-container .discard-tracker__overlay-row > .app-opponents-rail__cell {
-  grid-column: 16 / span 14;
+  grid-column: 15 / span 14;
   width: 100%;
   max-width: none;
   margin-left: 0;
@@ -561,11 +566,103 @@ html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-
   line-height: 0.82;
 }
 
+/*
+ * Top B/C/D + S/W/N bands: tan wrapper felt behind grid columns 1–14 and 15–29.
+ * Scrollable discard pile keeps recessed tray fill (see :is tray list). Tile faces,
+ * seat labels, and sorted-discard counts are unchanged.
+ */
+html .app-top-exposure-container .discard-tracker__tile-groups-container {
+  isolation: isolate;
+}
+
+html .app-top-exposure-container .discard-tracker__tile-groups-container::before,
+html .app-top-exposure-container .discard-tracker__tile-groups-container::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+  background-color: var(--felt-wrapper-bg);
+  background-image: var(--felt-grain-tile);
+  background-size: 180px 180px;
+  background-repeat: repeat;
+  background-attachment: fixed;
+  background-blend-mode: soft-light;
+}
+
+html .app-top-exposure-container .discard-tracker__tile-groups-container::before {
+  left: 0;
+  /* Full columns 1–14 (incl. SWJ↔SWN gutter); sorted tiles stay narrower via --discard-tracker-sorted-band-w. */
+  width: calc(
+    (100% - 28 * var(--player-rack-face-gap)) * 14 / 29 + 13 * var(--player-rack-face-gap)
+  );
+  border-radius: inherit;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+html .app-top-exposure-container .discard-tracker__tile-groups-container::after {
+  left: calc(
+    (100% - 28 * var(--player-rack-face-gap)) * 14 / 29 + 13 * var(--player-rack-face-gap)
+  );
+  width: calc(
+    (100% - 28 * var(--player-rack-face-gap)) * 15 / 29 + 15 * var(--player-rack-face-gap)
+  );
+  border-radius: inherit;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+html
+  .app-top-exposure-container
+  .discard-tracker__tile-groups-container
+  > .discard-tracker__overlay-grid {
+  position: relative;
+  z-index: 1;
+}
+
+/*
+ * Sorted B–S / C–W / D–J|B band: mostly fill column 14; `--discard-tracker-swj-gutter-extra`
+ * leaves a little space before S/W/N. Type tied to `--rack-tile-w`, not widened `cqi`.
+ */
+html .app-top-exposure-container .exposure-rack--discard-tracker-sorted-row .exposure-rack__slot {
+  aspect-ratio: auto;
+  height: var(--rack-tile-h);
+}
+
+html .app-top-exposure-container
+  .exposure-rack--discard-tracker-sorted-row
+  .exposure-rack__slot
+  .tile-face {
+  --tile-face-glyph-fs: calc(var(--rack-tile-w) * 0.58);
+}
+
+html .app-top-exposure-container
+  .exposure-rack--discard-tracker-sorted-row
+  .tile-face.tile-face--sorted-discard-glyph {
+  --tile-face-glyph-fs: calc(var(--rack-tile-w) * 0.78);
+}
+
+html .app-top-exposure-container
+  .exposure-rack--discard-tracker-sorted-row
+  .sorted-discard-tray__suit-label {
+  font-size: calc(var(--rack-tile-w) * 1.2);
+}
+
+html .app-top-exposure-container
+  .exposure-rack--discard-tracker-sorted-row
+  .sorted-discard-tray__count {
+  font-size: calc(var(--rack-tile-w) * 0.48);
+}
+
 html
   .app-top-exposure-container
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot--empty::before {
-  background: color-mix(in srgb, var(--color-black) 18%, var(--felt-tray-deep));
+  border: none;
+  background: transparent;
+  box-shadow: none;
 }
 
 html .app-dnd-frame > .app-discard-bottom-container {
@@ -836,39 +933,19 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   display: none;
 }
 
-/*
- * Tracker dim: filter only — no ::after overlay (semi-transparent overlay on light wind
- * faces left a bright rim at the rounded edges).
- */
-.panel--discard-tracker .discard-tracker__overlay-grid
-  :is(
-    .sorted-discard-tray__slot--awaiting-discard,
-    .sorted-discard-tray__slot--suggest-dim,
-    .sorted-discard-tray__slot--inactive,
-    .exposure-rack__slot--suggest-dim
-  )
-  .tile-face {
-  filter: brightness(var(--suggest-dim-joker-brightness, 0.38));
+/* Tracker dim: suit chips + bot/pile tiles hidden (opacity 0); counts + glyph letters unchanged — part-0061. */
+
+/* Discard tracker: square tile faces only (tray shell / menu chrome keep their radius). */
+.panel--discard-tracker :is(.discard-tracker__content, .discard-tracker__overlay-grid, .discard-pile) {
+  --discard-tray-tile-corner-r: 0;
+  --tile-face-border-radius: 0;
 }
 
-.panel--discard-tracker .discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-need .tile-face,
-.panel--discard-tracker .discard-tracker__content .discard-entry--suggest-need .tile-face {
-  filter: none;
+html .app-dnd-frame .app-play-split.app-top-exposure-container .discard-tracker__overlay-grid {
+  --discard-tray-tile-corner-r: 0;
+  --tile-face-border-radius: 0;
 }
 
-.panel--discard-tracker .discard-tracker__content .discard-entry--suggest-dim .tile-face {
-  filter: brightness(var(--suggest-dim-joker-brightness, 0.38));
-}
-
-.panel--discard-tracker
-  .discard-tracker__overlay-grid
-  :is(
-    .sorted-discard-tray__slot--awaiting-discard,
-    .sorted-discard-tray__slot--suggest-dim,
-    .sorted-discard-tray__slot--inactive,
-    .exposure-rack__slot--suggest-dim
-  )
-  .tile-face.tile--joker {
-  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
-  box-shadow: none;
+.panel--discard-tracker :is(.tile-face, .exposure-rack__slot--empty::before) {
+  border-radius: 0;
 }

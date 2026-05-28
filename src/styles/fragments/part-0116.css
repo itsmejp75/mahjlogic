@@ -25,3 +25,12 @@ html[data-native-app] .app-play-split {
   padding-inline-start: calc(var(--app-h-pad-base) + env(safe-area-inset-left, 0px));
   padding-inline-end: calc(var(--app-h-pad-base) + env(safe-area-inset-right, 0px));
 }
+
+/*
+ * Installed PWA (`data-home-screen-app` from `main.tsx`): mirror the top inset on
+ * the bottom — minimum `--app-v-pad` plus `safe-area-inset-bottom` (home indicator).
+ * Native Capacitor keeps flush-bottom above.
+ */
+html[data-home-screen-app]:not([data-native-app]) .app-main {
+  padding-bottom: calc(var(--app-v-pad) + env(safe-area-inset-bottom, 0px));
+}

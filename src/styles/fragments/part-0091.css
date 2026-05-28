@@ -674,6 +674,42 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* Wall game + Mah Jongg end screens: flat tile faces (no 1px edge border or material inset). */
+.wall-game-overlay {
+  --suggest-dim-inset-vignette: none;
+  --suggest-dim-inset-shadow: none;
+}
+
+.wall-game-overlay .tile-face {
+  --rack-tile-face-bw: 0px;
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+  border: none;
+  --tile-face-base-shadow: 0 0 0 0 transparent;
+  overflow: hidden;
+}
+
+.wall-game-overlay .mahjong-win__bots-review-tile--dim .tile-face:not(.tile--joker)::after {
+  box-shadow: none;
+}
+
+.wall-game-overlay .mahjong-win__bots-review-tile--dim .tile-face.tile--joker {
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+}
+
+.app[data-tile-graphics='bakelite'] .wall-game-overlay .tile-face {
+  --tile-face-base-shadow: 0 0 0 0 transparent;
+}
+
+.app[data-tile-graphics='designer'] .wall-game-overlay .tile-face {
+  --tile-face-base-shadow: 0 0 0 0 transparent;
+}
+
+.app[data-tile-graphics='designer'] .wall-game-overlay .tile-face::before {
+  content: none;
+  display: none;
+}
+
 .wall-game-dialog {
   width: 100%;
   max-width: min(44rem, calc(100vw - 1.25rem));

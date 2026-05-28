@@ -324,7 +324,7 @@
 }
 
 /*
- * Overlay grid: 3 rows × 29 tile widths (13 sorted + 1 prefix + 14 bot; sorted band inset 1 column).
+ * Overlay grid: 3 rows × 29 tile widths (14 sorted band incl. former gutter + 1 prefix + 14 bot).
  * Top B/C/D + S/W/N band (`.app-top-exposure-container`) uses part-0036 — flow layout + `play-split-rack-lock`.
  */
 .discard-tracker__content:not(.discard-tracker__content--tile-groups-only) .discard-tracker__overlay-grid {
@@ -356,6 +356,14 @@
   --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
   --discard-tray-rack-tile-w: var(--rack-tile-w);
   --discard-tray-tile-corner-r: var(--tile-face-border-radius);
+  /* Breathing room between sorted B/C/D band and S/W/N (was full 14th column absorb). */
+  --discard-tracker-swj-gutter-extra: calc(0.4 * (var(--rack-tile-w) + var(--player-rack-face-gap)));
+  --discard-tracker-sorted-band-w: calc(
+    14 * var(--rack-tile-w) + 13 * var(--player-rack-face-gap) - var(--discard-tracker-swj-gutter-extra)
+  );
+  --discard-tracker-sorted-slot-w: calc(
+    (var(--discard-tracker-sorted-band-w) - 12 * var(--player-rack-face-gap)) / 13
+  );
 }
 
 .discard-tracker__overlay-row {
@@ -424,8 +432,7 @@
   position: relative;
   width: var(--rack-tile-w);
   max-width: var(--rack-tile-w);
-  /* Keep S/W/N + bot rows at the original 29-column grid offset (13 sorted + half inset). */
-  margin-left: calc((var(--rack-tile-w) + var(--player-rack-face-gap)) * 0.5);
+  margin-left: 0;
 }
 
 .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row {
@@ -437,15 +444,23 @@
  * Sorted discard bands + S/W/N labels: inset from the tray’s right edge by `--play-tray-h-divider`.
  * Bot exposure racks stay flush to the overlay row’s right edge (see `.app-opponents-rail__cell`).
  */
-.discard-tracker__overlay-row > .exposure-rack--discard-tracker-sorted-row,
-.discard-tracker__overlay-row > .exposure-rack--discard-tracker-bot-seat-label {
+.discard-tracker__overlay-row > .exposure-rack--discard-tracker-sorted-row {
   transform: translateX(calc(-1 * var(--play-tray-h-divider)));
 }
 
 .discard-tracker__overlay-grid .exposure-rack--discard-tracker-sorted-row {
-  width: calc(13 * var(--rack-tile-w) + 12 * var(--player-rack-face-gap));
+  width: var(--discard-tracker-sorted-band-w);
   max-width: 100%;
-  margin-left: calc((var(--rack-tile-w) + var(--player-rack-face-gap)) * 0.5);
+  margin-left: 0;
+}
+
+.discard-tracker__overlay-grid .exposure-rack--discard-tracker-sorted-row .exposure-rack__slot {
+  width: var(--discard-tracker-sorted-slot-w);
+  min-width: var(--discard-tracker-sorted-slot-w);
+  max-width: var(--discard-tracker-sorted-slot-w);
+  height: var(--exposure-slot-h);
+  min-height: var(--exposure-slot-h);
+  max-height: var(--exposure-slot-h);
 }
 
 .discard-tracker__overlay-grid .exposure-rack__meld-drop {
@@ -573,6 +588,20 @@
   align-items: center;
   justify-content: center;
   position: relative;
+  border-radius: var(--tile-face-border-radius, 0);
+  overflow: hidden;
+}
+
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--suit-label-dot {
+  background: var(--tg-dot, var(--card-ink-navy));
+}
+
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--suit-label-bam {
+  background: var(--tg-bam, var(--card-ink-green));
+}
+
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--suit-label-crak {
+  background: var(--tg-crak, var(--card-ink-red));
 }
 
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--suit-label .sorted-discard-tray__suit-label {
@@ -614,16 +643,14 @@
   pointer-events: none;
 }
 
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--suit-label-dot .sorted-discard-tray__suit-label {
-  color: var(--tg-dot, var(--card-ink-navy));
-}
-
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--suit-label-bam .sorted-discard-tray__suit-label {
-  color: var(--tg-bam, var(--card-ink-green));
-}
-
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--suit-label-crak .sorted-discard-tray__suit-label {
-  color: var(--tg-crak, var(--card-ink-red));
+.discard-tracker__overlay-grid
+  :is(
+    .sorted-discard-tray__slot--suit-label-dot,
+    .sorted-discard-tray__slot--suit-label-bam,
+    .sorted-discard-tray__slot--suit-label-crak
+  )
+  .sorted-discard-tray__suit-label {
+  color: var(--tg-ink, #080808);
 }
 
 .discard-tracker__overlay-grid .sorted-discard-tray__seat-label {
@@ -657,26 +684,44 @@
   color: var(--tg-ink, #080808);
 }
 
-/* Dimmed discard-tracker tiles: soften ink (counts sit above the overlay via z-index). */
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--awaiting-discard .sorted-discard-tray__count,
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-dim .sorted-discard-tray__count,
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--inactive .sorted-discard-tray__count,
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--awaiting-discard .tile-face__glyph,
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--awaiting-discard .tile-face__glyph-num,
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--awaiting-discard .tile-face__glyph-letter,
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-dim .tile-face__glyph,
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-dim .tile-face__glyph-num,
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-dim .tile-face__glyph-letter,
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--inactive .tile-face__glyph,
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--inactive .tile-face__glyph-num,
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--inactive .tile-face__glyph-letter,
-.discard-tracker__overlay-grid .exposure-rack__slot--suggest-dim .tile-face__glyph,
-.discard-tracker__overlay-grid .exposure-rack__slot--suggest-dim .tile-face__glyph-num,
-.discard-tracker__overlay-grid .exposure-rack__slot--suggest-dim .tile-face__glyph-letter,
-.discard-tracker__content .discard-entry--suggest-dim .tile-face__glyph,
-.discard-tracker__content .discard-entry--suggest-dim .tile-face__glyph-num,
-.discard-tracker__content .discard-entry--suggest-dim .tile-face__glyph-letter {
-  opacity: 0.9;
+/*
+ * Dimmed sorted rows: hide tile fill only (not `opacity: 0` on `.tile-face` — rank digits
+ * live inside the face). Discard counts are siblings and stay visible; wind/dragon glyphs too.
+ */
+.panel--discard-tracker .discard-tracker__overlay-grid
+  :is(
+    .sorted-discard-tray__slot--awaiting-discard,
+    .sorted-discard-tray__slot--suggest-dim,
+    .sorted-discard-tray__slot--inactive
+  )
+  .tile-face {
+  filter: none;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.panel--discard-tracker .discard-tracker__overlay-grid
+  :is(
+    .sorted-discard-tray__slot--awaiting-discard,
+    .sorted-discard-tray__slot--suggest-dim,
+    .sorted-discard-tray__slot--inactive
+  )
+  .sorted-discard-tray__count {
+  opacity: 1;
+  visibility: visible;
+  z-index: 3;
+}
+
+.panel--discard-tracker .discard-tracker__overlay-grid
+  :is(
+    .sorted-discard-tray__slot--awaiting-discard,
+    .sorted-discard-tray__slot--suggest-dim,
+    .sorted-discard-tray__slot--inactive
+  )
+  .tile-face
+  :is(.tile-face__glyph, .tile-face__glyph-num, .tile-face__glyph-letter) {
+  opacity: 1;
 }
 
 /*
@@ -725,29 +770,20 @@
   display: none;
 }
 
-.panel--discard-tracker .discard-tracker__overlay-grid
-  :is(
-    .sorted-discard-tray__slot--awaiting-discard,
-    .sorted-discard-tray__slot--suggest-dim,
-    .sorted-discard-tray__slot--inactive,
-    .exposure-rack__slot--suggest-dim
-  )
-  .tile-face {
-  filter: brightness(var(--suggest-dim-joker-brightness, 0.38));
-}
-
-.panel--discard-tracker .discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-need .tile-face {
+.panel--discard-tracker .discard-tracker__overlay-grid .exposure-rack__slot--suggest-dim .tile-face,
+.panel--discard-tracker .discard-tracker__content .discard-entry--suggest-dim .tile-face {
+  opacity: 0;
   filter: none;
 }
 
-.discard-tracker__overlay-grid
-  :is(
-    .sorted-discard-tray__slot--awaiting-discard,
-    .sorted-discard-tray__slot--suggest-dim,
-    .sorted-discard-tray__slot--inactive,
-    .exposure-rack__slot--suggest-dim
-  )
-  .tile-face.tile--joker {
+.panel--discard-tracker .discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-need .tile-face,
+.panel--discard-tracker .discard-tracker__content .discard-entry--suggest-need .tile-face {
+  opacity: 1;
+  filter: none;
+}
+
+.panel--discard-tracker .discard-tracker__overlay-grid .exposure-rack__slot--suggest-dim .tile-face.tile--joker,
+.panel--discard-tracker .discard-tracker__content .discard-entry--suggest-dim .tile-face.tile--joker {
   --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
   box-shadow: none;
 }

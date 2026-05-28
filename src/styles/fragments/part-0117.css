@@ -74,7 +74,7 @@
   --hand-top-rack-height-delta: calc(
     (var(--hand-top-rack-tile-w) - var(--hand-rack-tile-w)) * 1.3333
   );
-  --hand-button-row-h: max(36px, calc(var(--rack-action-touch-min-h) - var(--hand-top-rack-height-delta)));
+  --hand-button-row-h: max(27px, calc((var(--rack-action-touch-min-h) - var(--hand-top-rack-height-delta)) * 0.75));
   --hand-button-row-pad-block: max(
     0px,
     calc(var(--bot-exposure-inner-pad) - var(--hand-top-rack-height-delta) / 2)

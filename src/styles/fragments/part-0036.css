@@ -229,6 +229,12 @@
  * Tile width: never below the hand-rack–scaled 29-column estimate (fixes iOS PWA / mobile
  * when a nested inline-size container reports 0 and `100cqi`/`100cqw` collapse to ~1px).
  */
+.app-dnd-frame .app-play-split.app-top-exposure-container .discard-tracker__tile-groups-container {
+  --discard-tracker-swj-gutter-extra: calc(
+    0.4 * (var(--hand-rack-tile-w) + var(--player-rack-face-gap))
+  );
+}
+
 .app-dnd-frame
   .app-play-split.app-top-exposure-container
   .discard-tracker__tile-groups-container
@@ -263,6 +269,10 @@
   --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
   --discard-tray-rack-tile-w: var(--rack-tile-w);
   --discard-tray-tile-corner-r: var(--tile-face-border-radius);
+  --discard-tracker-swj-gutter-extra: calc(0.4 * (var(--rack-tile-w) + var(--player-rack-face-gap)));
+  --discard-tracker-sorted-band-w: calc(
+    14 * var(--rack-tile-w) + 13 * var(--player-rack-face-gap) - var(--discard-tracker-swj-gutter-extra)
+  );
 }
 
 @container play-split-rack-lock (min-width: 0px) {
