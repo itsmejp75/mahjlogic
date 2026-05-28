@@ -307,6 +307,14 @@
   html:not([data-native-app]) .app-discard-bottom-container {
     margin-bottom: calc(-1 * var(--mobile-web-lower-edge-pull-down));
   }
+
+  /*
+   * Installed PWA: keep the full tray divider above the lower discard/bot block.
+   * The pull-down margin is for mobile-browser landscape flush-bottom only.
+   */
+  html[data-home-screen-app]:not([data-native-app]) .app-discard-bottom-container {
+    margin-bottom: 0;
+  }
 }
 
 /*
@@ -928,4 +936,22 @@ html[data-home-screen-app]:not([data-native-app]) .app-discard-bottom-container 
     padding-inline-start: var(--pwa-landscape-inline-start);
     padding-inline-end: var(--pwa-landscape-inline-end);
   }
+}
+
+/*
+ * Installed PWA section separators: use `--play-tray-h-divider` between the top
+ * exposure band, main rack, and lower discard/bot — same rhythm as inside the East
+ * rack (exposure↔hand↔actions). Tight `--hand-window-pad-inline` is for horizontal
+ * inset only; it must not shrink those vertical wrapper strips (browser looked fine
+ * because its hand-window pad stayed closer to divider thickness).
+ */
+html[data-home-screen-app]:not([data-native-app]) .app-dnd-frame {
+  gap: var(--play-tray-h-divider);
+}
+
+html[data-home-screen-app]:not([data-native-app]) .panel.panel--hand {
+  padding:
+    0
+    var(--hand-window-pad-inline)
+    0;
 }
