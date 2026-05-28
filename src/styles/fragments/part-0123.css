@@ -860,6 +860,11 @@ html .app-dnd-frame .app-play-split.app-top-exposure-container .discard-tracker_
   border-radius: 0;
 }
 
+/* Browser tabs only: pull the hand/action stack up a hair to tighten the strip below the discard tracker. */
+html:not([data-home-screen-app]):not([data-native-app]) .app-rack-stage {
+  margin-top: -2px;
+}
+
 /*
  * Installed PWA (`data-home-screen-app`): left stays tight; a little more inset on the right,
  * top, and bottom so the shell breathes without re-centering the whole board.
