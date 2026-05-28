@@ -474,7 +474,3 @@
   padding-bottom: 0;
 }
 
-/* Browser tab only: page-bottom inset. Installed PWA/native keep their own spacing rules. */
-html:not([data-home-screen-app]):not([data-native-app]) .app-main {
-  padding-bottom: var(--play-tray-h-divider);
-}

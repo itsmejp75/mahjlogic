@@ -8,10 +8,10 @@
 
 
 
-/* Sides/top use window inset; bottom strip matches other tray dividers (`--play-tray-h-divider`). */
+/* Top/bottom strips match other tray dividers (`--play-tray-h-divider`); sides use window inset. */
 .panel.panel--hand {
   padding:
-    var(--hand-window-pad-inline)
+    var(--play-tray-h-divider)
     var(--hand-window-pad-inline)
     var(--play-tray-h-divider);
 }
