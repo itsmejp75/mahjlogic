@@ -929,3 +929,23 @@ html[data-home-screen-app]:not([data-native-app]) .app-discard-bottom-container 
     padding-inline-end: var(--pwa-landscape-inline-end);
   }
 }
+
+/*
+ * Installed PWA section separators: full `--play-tray-h-divider` strips between the top
+ * exposure band, main rack, and lower discard (same as East rack internal dividers).
+ * Tight `--hand-window-pad-inline` is horizontal inset only — not for these vertical strips.
+ *
+ * Intentionally does NOT touch `.app-main` padding-bottom or landscape pull-down
+ * (see `part-0116.css` + `margin-bottom` on `.app-discard-bottom-container` in the
+ * mobile-web landscape block above).
+ */
+html[data-home-screen-app]:not([data-native-app]) .app-dnd-frame {
+  gap: var(--play-tray-h-divider);
+}
+
+html[data-home-screen-app]:not([data-native-app]) .panel.panel--hand {
+  padding:
+    0
+    var(--hand-window-pad-inline)
+    0;
+}
