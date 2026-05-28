@@ -867,7 +867,9 @@ html .app-dnd-frame .app-play-split.app-top-exposure-container .discard-tracker_
 html[data-home-screen-app]:not([data-native-app]) {
   --pwa-pad-inline-start: clamp(0.22rem, 1.2vw, 0.5rem);
   --pwa-pad-inline-end: clamp(0.3rem, 1.85vw, 0.85rem);
-  --pwa-pad-top-extra: clamp(0.1rem, 0.65vw, 0.26rem);
+  --pwa-pad-block-extra: clamp(0.1rem, 0.65vw, 0.26rem);
+  /* Alias kept for any older references */
+  --pwa-pad-top-extra: var(--pwa-pad-block-extra);
   --app-h-pad-base: var(--pwa-pad-inline-start);
   --app-h-pad: calc(
     (var(--pwa-pad-inline-start) + var(--pwa-pad-inline-end)) / 2 + var(--app-safe-inline)
@@ -902,12 +904,19 @@ html[data-home-screen-app]:not([data-native-app]) {
   html[data-home-screen-app]:not([data-native-app]) {
     --pwa-pad-inline-start: clamp(0.04rem, 0.3vw, 0.12rem);
     --pwa-pad-inline-end: clamp(0.14rem, 0.95vw, 0.28rem);
-    --pwa-pad-top-extra: clamp(0.08rem, 0.55dvb, 0.2rem);
+    --pwa-pad-block-extra: clamp(0.08rem, 0.55dvb, 0.2rem);
+    --pwa-pad-top-extra: var(--pwa-pad-block-extra);
     --hand-window-pad-inline: clamp(0.06rem, 0.4vw, 0.14rem);
   }
 
   html[data-home-screen-app]:not([data-native-app]) .app-main {
-    padding-top: calc(var(--app-v-pad) + var(--pwa-pad-top-extra, 0px));
+    padding-top: calc(var(--app-v-pad) + var(--pwa-pad-block-extra, 0px));
+    padding-bottom: calc(var(--app-v-pad) + var(--pwa-pad-block-extra, 0px));
+  }
+
+  /* Respect `.app-main` bottom inset — no landscape pull-down on installed PWA. */
+  html[data-home-screen-app]:not([data-native-app]) .app-discard-bottom-container {
+    margin-bottom: 0;
   }
 }
 
