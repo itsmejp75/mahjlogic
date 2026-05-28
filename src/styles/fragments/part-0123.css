@@ -431,8 +431,10 @@ html .app-top-exposure-container .discard-tracker__overlay-row {
 html .app-top-exposure-container
   .discard-tracker__overlay-row
   > .exposure-rack--discard-tracker-sorted-row {
-  grid-column: 1 / span 13;
-  width: 100%;
+  grid-column: 1 / span 14;
+  width: var(--discard-tracker-sorted-band-w);
+  max-width: 100%;
+  justify-self: start;
   margin-left: 0;
   transform: none;
 }
