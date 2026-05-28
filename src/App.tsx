@@ -953,6 +953,7 @@ function DiscardTrackerSlotGrid({
                 suggestedNeedDefs={suggestedDiscardTrackerNeedDefs}
               />
             )}
+            <DiscardTrackerBotSeatLabel seat={seat} />
             <OpponentExposureDropZone
               seat={seat}
               active={jokerSwapUiActive}
@@ -972,7 +973,6 @@ function DiscardTrackerSlotGrid({
                 jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
               />
             </OpponentExposureDropZone>
-            <DiscardTrackerBotSeatLabel seat={seat} />
           </div>
         )
       })}

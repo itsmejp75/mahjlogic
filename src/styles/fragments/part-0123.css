@@ -243,11 +243,6 @@
     --mobile-web-lower-edge-pull-down: clamp(1.2rem, 6dvb, 2rem);
   }
 
-  html[data-home-screen-app]:not([data-native-app]) {
-    /* Installed PWA uses `.app-main` bottom padding instead of panel pull-down. */
-    --mobile-web-lower-edge-pull-down: 0px;
-  }
-
   html:not([data-native-app]) .app,
   html:not([data-native-app]) .app-main {
     height: 100dvb;
@@ -316,16 +311,14 @@
 
 /*
  * Installed iOS PWA only (standalone): keep notch clearance on the camera side,
- * trim the opposite side to roughly the same spacing as the top inset.
+ * trim the opposite side to roughly the same spacing as the top inset, and keep
+ * bottom controls on that same minimum rhythm.
  */
 @media (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) and (display-mode: standalone) {
   html:not([data-native-app]) {
     --app-play-fit-inline-from-block: 100dvi;
     --pwa-landscape-inline-start: calc(var(--app-v-pad) + env(safe-area-inset-left, 0px));
     --pwa-landscape-inline-end: var(--app-v-pad);
-    --pwa-landscape-block-end: calc(
-      var(--pwa-landscape-inline-end) + env(safe-area-inset-bottom, 0px)
-    );
     --app-h-pad: calc((var(--pwa-landscape-inline-start) + var(--pwa-landscape-inline-end)) * 0.5);
   }
 
@@ -338,12 +331,12 @@
 
   html:not([data-native-app]) .app-menu-anchor {
     right: var(--pwa-landscape-inline-end);
-    bottom: var(--pwa-landscape-block-end);
+    bottom: var(--pwa-landscape-inline-end);
   }
 
   html:not([data-native-app]) .app-bottom-center-controls {
     right: calc(var(--pwa-landscape-inline-end) + var(--menu-btn-w) + 0.5rem);
-    bottom: var(--pwa-landscape-block-end);
+    bottom: var(--pwa-landscape-inline-end);
   }
 
   /* Fixed suggested-hands slot removed — overlay lives in discard tray (`.suggested-hands-popup--discard-overlay`). */
@@ -438,10 +431,8 @@ html .app-top-exposure-container .discard-tracker__overlay-row {
 html .app-top-exposure-container
   .discard-tracker__overlay-row
   > .exposure-rack--discard-tracker-sorted-row {
-  grid-column: 1 / span 14;
-  width: var(--discard-tracker-sorted-band-w);
-  max-width: 100%;
-  justify-self: start;
+  grid-column: 1 / span 13;
+  width: 100%;
   margin-left: 0;
   transform: none;
 }
@@ -449,7 +440,7 @@ html .app-top-exposure-container
 html .app-top-exposure-container
   .discard-tracker__overlay-row
   > .exposure-rack--discard-tracker-bot-seat-label {
-  grid-column: 29 / span 1;
+  grid-column: 15 / span 1;
   width: 100%;
   max-width: none;
   margin-left: 0;
@@ -457,7 +448,7 @@ html .app-top-exposure-container
 }
 
 html .app-top-exposure-container .discard-tracker__overlay-row > .app-opponents-rail__cell {
-  grid-column: 15 / span 14;
+  grid-column: 16 / span 14;
   width: 100%;
   max-width: none;
   margin-left: 0;
