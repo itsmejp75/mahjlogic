@@ -27,10 +27,12 @@ html[data-native-app] .app-play-split {
 }
 
 /*
- * Installed PWA (`data-home-screen-app` from `main.tsx`): use the same minimal
- * breathing room as the top. Do not add the full home-indicator safe area here;
- * the landscape lower-tray pull-down still owns edge coverage.
+ * Installed PWA (`data-home-screen-app` from `main.tsx`): a little more than the top
+ * `--app-v-pad` alone. Cap `safe-area-inset-bottom` so portrait home-indicator
+ * clearance stays modest (full inset was too tall); landscape pull-down unchanged.
  */
 html[data-home-screen-app]:not([data-native-app]) .app-main {
-  padding-bottom: var(--app-v-pad);
+  padding-bottom: calc(
+    var(--app-v-pad) + max(0.35rem, min(0.7rem, env(safe-area-inset-bottom, 0px)))
+  );
 }
