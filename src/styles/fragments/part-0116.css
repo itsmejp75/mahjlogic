@@ -27,17 +27,12 @@ html[data-native-app] .app-play-split {
 }
 
 /*
- * Installed PWA (`data-home-screen-app` from `main.tsx`): a little more than the top
- * `--app-v-pad` alone. Cap `safe-area-inset-bottom` so portrait home-indicator
- * clearance stays modest (full inset was too tall); landscape pull-down unchanged.
+ * Installed PWA (`data-home-screen-app` from `main.tsx`): top inset only — bottom stays
+ * flush like mobile web / native (see `.app-main` padding-bottom: 0 and landscape pull-down).
  */
 html[data-home-screen-app]:not([data-native-app]) .app-main {
   padding-top: calc(
     var(--app-v-pad) + var(--pwa-pad-top-extra, 0px) + env(safe-area-inset-top, 0px)
   );
-  padding-bottom: calc(
-    var(--app-v-pad)
-    + max(0.35rem, min(0.7rem, env(safe-area-inset-bottom, 0px)))
-    + var(--pwa-pad-bottom-extra, 0px)
-  );
+  padding-bottom: 0;
 }
