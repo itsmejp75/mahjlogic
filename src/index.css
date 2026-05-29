@@ -187,7 +187,7 @@
 
   /* Page shell (gaps between trays) vs tray/container interiors. */
   --app-wrapper-surface: #ffffff;
-  --app-container-surface: #efeeee;
+  --app-container-surface: #5c6066;
   --app-tray-slot-well: #e0e0e0;
   /* Legacy aliases — older rules still reference these names. */
   --felt-base: var(--app-wrapper-surface);
@@ -269,7 +269,7 @@
     --card-tile-skin-neutral-fg: var(--text-h);
 
     --app-wrapper-surface: #ffffff;
-    --app-container-surface: #efeeee;
+    --app-container-surface: #5c6066;
     --felt-wrapper-bg: var(--app-wrapper-surface);
     --felt-tray-bg: var(--app-container-surface);
     --window-surface: var(--app-wrapper-surface);

@@ -763,9 +763,9 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
  * (spacing from `--play-tray-h-divider` unchanged). Tray interiors stay `--app-container-surface`.
  */
 .app {
-  --hand-rack-tray-surface: #7a8288;
+  --hand-rack-tray-surface: var(--app-container-surface);
   --hand-rack-tray-bleed-inline: var(--hand-window-pad-inline, 0px);
-  --app-container-surface: #efeeee;
+  --app-container-surface: #5c6066;
   --app-wrapper-surface: transparent;
   --dark-tray-rim-border-top: transparent;
   --dark-tray-rim-border-inline: transparent;
@@ -845,7 +845,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .app-discard-bottom-container .discard-tracker__content,
   .suggested-hands-popup .panel--hands
 ) {
-  background-color: var(--app-container-surface, #efeeee);
+  background-color: var(--app-container-surface, #5c6066);
   background-image: none;
   background-size: auto;
   background-repeat: repeat;
@@ -918,7 +918,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot--empty::before {
-  background: color-mix(in srgb, #c8c8c8 28%, var(--app-container-surface, #efeeee));
+  background: color-mix(in srgb, #c8c8c8 28%, var(--app-container-surface, #5c6066));
   background-image: none;
 }
 
@@ -936,7 +936,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .suggested-hands-popup__user-shift,
   .suggested-hands-filter-tray
 ) {
-  background-color: var(--app-container-surface, #efeeee);
+  background-color: var(--app-container-surface, #5c6066);
   background-image: none;
   background-blend-mode: normal;
 }
@@ -954,12 +954,12 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 html,
 body,
 #root {
-  background-color: var(--app-container-surface, #efeeee);
+  background-color: var(--app-container-surface, #5c6066);
   background-image: none;
 }
 
 .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row .exposure-rack__slot--empty::before {
-  background: color-mix(in srgb, #c8c8c8 28%, var(--app-container-surface, #efeeee));
+  background: color-mix(in srgb, #c8c8c8 28%, var(--app-container-surface, #5c6066));
   background-image: none;
 }
 
@@ -1103,7 +1103,7 @@ html[data-home-screen-app]:not([data-native-app])
 }
 
 /*
- * Hand action row: flat on #EFEEEE (same as the horizontal tray divider above).
+ * Hand action row: dark inset faces on the tray surface (#5c6066).
  * Inset depth only while pressed (:active) or toggled active (Menu / Hands open / MAHJ held).
  * No outer shadows on resting, hover, or disabled controls.
  */
@@ -1112,19 +1112,19 @@ html[data-home-screen-app]:not([data-native-app])
     .panel-hand-rack__charleston-actions-well,
     .hand-bank__mj-review-actions
   ) {
-  --rack-action-label-color: #6d6d73;
+  --rack-action-label-color: #e2e4e8;
   --rack-action-well-surface: var(--hand-rack-tray-surface);
-  --rack-action-flat-surface: #afb5ba;
-  --rack-action-border-color: #d4d9dd;
+  --rack-action-flat-surface: #484c52;
+  --rack-action-border-color: #636870;
   --rack-action-press-shadow-dark: color-mix(
     in srgb,
     #000 28%,
-    var(--rack-action-flat-surface, #afb5ba)
+    var(--rack-action-flat-surface, #484c52)
   );
   --rack-action-press-shadow-light: color-mix(
     in srgb,
-    var(--rack-action-border-color, #d4d9dd) 72%,
-    var(--rack-action-flat-surface, #afb5ba)
+    var(--rack-action-border-color, #636870) 72%,
+    var(--rack-action-flat-surface, #484c52)
   );
   --rack-action-pressed:
     inset 4px 4px 8px var(--rack-action-press-shadow-dark),
@@ -1141,7 +1141,7 @@ html[data-home-screen-app]:not([data-native-app])
     .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn
   ) {
   background: var(--rack-action-flat-surface);
-  border: 1px solid var(--rack-action-border-color, #d4d9dd);
+  border: 1px solid var(--rack-action-border-color, #636870);
   opacity: 1;
   filter: none;
   text-shadow: none;
@@ -1161,14 +1161,14 @@ html[data-home-screen-app]:not([data-native-app])
     .btn.rack-bottom-tile-cell,
     .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn
   ):not(:disabled) {
-  color: var(--rack-action-label-color, #6d6d73);
+  color: var(--rack-action-label-color, #e2e4e8);
 }
 
 .app .panel--hand :is(.rack-bottom-bar--tile-grid, .hand-bank__mj-review-actions) :is(
     .btn.rack-bottom-tile-cell,
     .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn
   ):disabled {
-  color: var(--rack-action-label-color, #6d6d73);
+  color: var(--rack-action-label-color, #e2e4e8);
   cursor: not-allowed;
   box-shadow: none;
   opacity: 1;
@@ -1233,7 +1233,7 @@ html[data-home-screen-app]:not([data-native-app])
     :not(:disabled)
   ) {
   background: var(--rack-action-flat-surface);
-  color: var(--rack-action-label-color, #6d6d73);
+  color: var(--rack-action-label-color, #e2e4e8);
   box-shadow: var(--rack-action-pressed);
 }
 
@@ -1325,7 +1325,7 @@ html[data-home-screen-app]:not([data-native-app])
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:disabled,
 .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:is(:disabled, :not(:disabled)) {
   background: var(--rack-action-flat-surface);
-  color: var(--rack-action-label-color, #6d6d73);
+  color: var(--rack-action-label-color, #e2e4e8);
   opacity: 1;
   filter: none;
 }
@@ -1355,7 +1355,7 @@ html[data-home-screen-app]:not([data-native-app])
   .panel--hand
   .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
   .btn.btn--primary.charleston-pass-btn.rack-bottom-tile-cell--c12-14:is(:disabled, :not(:disabled)) {
-  color: var(--rack-action-label-color, #6d6d73);
+  color: var(--rack-action-label-color, #e2e4e8);
   background: var(--rack-action-flat-surface);
   opacity: 1;
   filter: none;
@@ -1388,7 +1388,7 @@ html[data-home-screen-app]:not([data-native-app])
 .app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
 .app[data-color-buttons='off'] .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled) {
   background: var(--rack-action-flat-surface);
-  color: var(--rack-action-label-color, #6d6d73);
+  color: var(--rack-action-label-color, #e2e4e8);
   opacity: 1;
   filter: none;
 }
@@ -1396,7 +1396,7 @@ html[data-home-screen-app]:not([data-native-app])
 .app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--logic.rack-bottom-tile-cell--c7-8:active:not(:disabled),
 .app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:active:not(:disabled) {
   background: var(--rack-action-flat-surface);
-  color: var(--rack-action-label-color, #6d6d73);
+  color: var(--rack-action-label-color, #e2e4e8);
 }
 
 /* Call when enabled (bot-turn): white — beats any leftover purple/slate from part-0064/0067. */
@@ -1406,8 +1406,8 @@ html body .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid
   button.btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled):hover,
 html body .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid
   button.btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled):active {
-  background-color: var(--rack-action-flat-surface, #afb5ba);
-  color: var(--rack-action-label-color, #6d6d73);
+  background-color: var(--rack-action-flat-surface, #484c52);
+  color: var(--rack-action-label-color, #e2e4e8);
   opacity: 1;
   filter: none;
 }
@@ -1419,7 +1419,7 @@ html body .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid
 .app .panel--hand .rack-bottom-bar--tile-grid .btn__undo-inset:active,
 .app .panel--hand .rack-bottom-bar--tile-grid
   .btn.rack-bottom-tile-cell--c12-14:active:not(:disabled) + .btn__undo-inset:not(:active) {
-  color: var(--rack-action-label-color, #6d6d73);
+  color: var(--rack-action-label-color, #e2e4e8);
   opacity: 1;
 }
 
