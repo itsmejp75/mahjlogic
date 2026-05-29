@@ -596,18 +596,6 @@
   overflow: hidden;
 }
 
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--suit-label-dot {
-  background: var(--tg-dot, var(--card-ink-navy));
-}
-
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--suit-label-bam {
-  background: var(--tg-bam, var(--card-ink-green));
-}
-
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--suit-label-crak {
-  background: var(--tg-crak, var(--card-ink-red));
-}
-
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--suit-label .sorted-discard-tray__suit-label {
   position: absolute;
   /* Centered in the label column — not between the tray edge and the first rank tile. */
@@ -648,13 +636,21 @@
 }
 
 .discard-tracker__overlay-grid
-  :is(
-    .sorted-discard-tray__slot--suit-label-dot,
-    .sorted-discard-tray__slot--suit-label-bam,
-    .sorted-discard-tray__slot--suit-label-crak
-  )
+  .sorted-discard-tray__slot--suit-label-dot
   .sorted-discard-tray__suit-label {
-  color: var(--tg-ink, #080808);
+  color: var(--tg-dot, var(--card-ink-navy));
+}
+
+.discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suit-label-bam
+  .sorted-discard-tray__suit-label {
+  color: var(--tg-bam, var(--card-ink-green));
+}
+
+.discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suit-label-crak
+  .sorted-discard-tray__suit-label {
+  color: var(--tg-crak, var(--card-ink-red));
 }
 
 .discard-tracker__overlay-grid .sorted-discard-tray__seat-label {

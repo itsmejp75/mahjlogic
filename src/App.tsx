@@ -174,6 +174,18 @@ import {
 } from './analysis/eastExposurePatternFit'
 import logicLogoSrc from './assets/logic-logo.svg?url'
 import mahjLogoSrc from './assets/mahj-logo.svg?url'
+import {
+  defaultMinimalistTileGraphics,
+  DEFAULT_TILE_GRAPHICS,
+  ILLUSTRATIVE_TILE_GRAPHICS,
+  isMinimalistTileGraphics,
+  isTileGraphics,
+  MINIMALIST_TILE_GRAPHICS,
+  TILE_GRAPHICS_LABEL,
+  type MinimalistTileGraphics,
+  type TileGraphics,
+} from './tiles/tileGraphics'
+import { TileGraphicsProvider } from './tiles/TileGraphicsContext'
 import './styles/style.css'
 
 /** Tiles in wall after opening deal (`dealOpeningFour`); meter stays flat green until below this. */
@@ -202,12 +214,14 @@ const LS_KEY_COLOR_BUTTONS = 'mahjlogic.colorButtonsEnabled'
 const COLOR_BUTTONS_LABEL = 'Color buttons'
 const LS_KEY_BOT_DIFFICULTY = 'mahjlogic.botDifficulty'
 /**
- * Tile face style (`TILE_GRAPHICS` / `data-tile-graphics`). Product default is Prism (`solid-color`).
+ * Tile face style (`TILE_GRAPHICS` / `data-tile-graphics`). Product default is Illustrative Classic.
  * Today: persisted in localStorage only. When accounts exist, the player’s choice should live in
  * their server-side settings (and can sync down to replace or seed this key on login).
  */
 const LS_KEY_TILE_GRAPHICS = 'mahjlogic.tileGraphics'
-/** One-time migration: users who had Classic as the old default are moved to Prism. */
+/** Illustrative Classic: red/green dragon `_alternate` SVG variants. */
+const LS_KEY_ALTERNATE_DRAGONS = 'mahjlogic.alternateDragons'
+/** One-time migration: legacy Ivory (`classic`) / Obsidian (`dark`) defaults → Illustrative Classic. */
 const LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED = 'mahjlogic.tileGraphicsDefaultMigrated'
 /** Training / practice: confirm before dead hand from bad call, bad Mah Jongg, or hopeless discard. */
 const LS_KEY_UNDO = 'mahjlogic.undoEnabled'
@@ -233,22 +247,7 @@ const JOKER_SWAP_HINT_BOUNCE_ITERATIONS_SINGLE = 1
 const JOKER_SWAP_HINT_BOUNCE_VISIBLE_MS = JOKER_SWAP_HINT_BOUNCE_DURATION_MS * 0.52
 
 /** Menu order: Prism first; Ivory (classic) last in the minimalist row. */
-const TILE_GRAPHICS = ['solid-color', 'light', 'designer', 'bakelite', 'classic'] as const
-type TileGraphics = (typeof TILE_GRAPHICS)[number]
-
-const TILE_GRAPHICS_LABEL: Record<TileGraphics, string> = {
-  classic: 'Ivory',
-  'solid-color': 'Prism',
-  light: 'Sorbet',
-  designer: 'Jewel',
-  bakelite: 'Autumn',
-}
-
-const TILE_GRAPHICS_CATEGORY_MINIMALIST_ID = 'tile-graphics-category-minimalist'
-const TILE_GRAPHICS_CATEGORY_ILLUSTRATIVE_ID = 'tile-graphics-category-illustrative'
-
-/** Invisible 10-up grid cells so the Illustrative strip matches the Minimalist preview height before real tiles exist. */
-const ILLUSTRATIVE_PREVIEW_PLACEHOLDERS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as const
+const ALTERNATE_DRAGONS_LABEL = 'Alternate Dragons'
 
 /** Menu Tile graphics sample row: same `TileFace` layout as the main hand rack (stacked suit tiles). */
 const MENU_TILE_GRAPHICS_PREVIEW: readonly { label: string; def: TileDef }[] = [
@@ -264,32 +263,40 @@ const MENU_TILE_GRAPHICS_PREVIEW: readonly { label: string; def: TileDef }[] = [
   { label: 'J', def: { cat: 'joker' } },
 ]
 
-function isTileGraphics(s: string): s is TileGraphics {
-  return (TILE_GRAPHICS as readonly string[]).includes(s)
+const TILE_GRAPHICS_CATEGORY_MINIMALIST_ID = 'tile-graphics-category-minimalist'
+const TILE_GRAPHICS_CATEGORY_ILLUSTRATIVE_ID = 'tile-graphics-category-illustrative'
+const TILE_GRAPHICS_ALTERNATE_DRAGONS_LABEL_ID = 'tile-graphics-alternate-dragons-label'
+
+function readAlternateDragonsFromStorage(): boolean {
+  try {
+    const v = localStorage.getItem(LS_KEY_ALTERNATE_DRAGONS)
+    return v === 'true' || v === '1'
+  } catch {
+    return false
+  }
 }
 
 function readTileGraphicsFromStorage(): TileGraphics {
   try {
     const v = localStorage.getItem(LS_KEY_TILE_GRAPHICS)
-    // Default for new players / missing key is Prism (`solid-color`). Older sessions may still
-    // have Classic saved from when this menu first landed (see migration below). With login,
-    // prefer the value from the user’s account settings when available.
+    // Default for new players / missing key is Illustrative Classic. Older sessions may still
+    // have Ivory (`classic`) or Obsidian (`dark`) from earlier defaults (see migration below).
     if (v === 'classic' && localStorage.getItem(LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED) !== 'true') {
-      localStorage.setItem(LS_KEY_TILE_GRAPHICS, 'solid-color')
+      localStorage.setItem(LS_KEY_TILE_GRAPHICS, DEFAULT_TILE_GRAPHICS)
       localStorage.setItem(LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED, 'true')
-      return 'solid-color'
+      return DEFAULT_TILE_GRAPHICS
     }
-    /** Obsidian (`dark`) removed from the menu; migrate persisted choice to Prism. */
+    /** Obsidian (`dark`) removed from the menu; migrate persisted choice to Illustrative Classic. */
     if (v === 'dark') {
-      localStorage.setItem(LS_KEY_TILE_GRAPHICS, 'solid-color')
+      localStorage.setItem(LS_KEY_TILE_GRAPHICS, DEFAULT_TILE_GRAPHICS)
       localStorage.setItem(LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED, 'true')
-      return 'solid-color'
+      return DEFAULT_TILE_GRAPHICS
     }
     if (v != null && isTileGraphics(v)) return v
   } catch {
     /* ignore */
   }
-  return 'solid-color'
+  return DEFAULT_TILE_GRAPHICS
 }
 
 function readBotWinsEnabledFromStorage(): boolean {
@@ -3085,6 +3092,10 @@ export default function App() {
   }, [cardPatterns])
 
   const [tileGraphics, setTileGraphics] = useState<TileGraphics>(() => readTileGraphicsFromStorage())
+  const [lastMinimalistTileGraphics, setLastMinimalistTileGraphics] = useState<MinimalistTileGraphics>(
+    () => defaultMinimalistTileGraphics(readTileGraphicsFromStorage()),
+  )
+  const [alternateDragons, setAlternateDragons] = useState<boolean>(() => readAlternateDragonsFromStorage())
   const [deadHandWarningsEnabled, setDeadHandWarningsEnabled] = useState<boolean>(() =>
     readDeadHandWarningsFromStorage(),
   )
@@ -3097,12 +3108,27 @@ export default function App() {
   const [undoEnabled, setUndoEnabled] = useState<boolean>(() => readUndoFromStorage())
   const setTileGraphicsMode = useCallback((g: TileGraphics) => {
     setTileGraphics(g)
+    if (isMinimalistTileGraphics(g)) {
+      setLastMinimalistTileGraphics(g)
+    }
     try {
       localStorage.setItem(LS_KEY_TILE_GRAPHICS, g)
       localStorage.setItem(LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED, 'true')
     } catch {
       /* ignore */
     }
+  }, [])
+
+  const toggleAlternateDragons = useCallback(() => {
+    setAlternateDragons((v) => {
+      const next = !v
+      try {
+        localStorage.setItem(LS_KEY_ALTERNATE_DRAGONS, next ? 'true' : 'false')
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
   }, [])
 
   const setBotDifficultyLevel = useCallback((d: BotDifficulty) => {
@@ -3347,7 +3373,12 @@ export default function App() {
         if (isBotDifficulty(e.newValue)) setBotDifficulty(e.newValue)
       } else if (e.key === LS_KEY_TILE_GRAPHICS) {
         if (e.newValue == null) return
-        setTileGraphics(readTileGraphicsFromStorage())
+        const g = readTileGraphicsFromStorage()
+        setTileGraphics(g)
+        if (isMinimalistTileGraphics(g)) setLastMinimalistTileGraphics(g)
+      } else if (e.key === LS_KEY_ALTERNATE_DRAGONS) {
+        if (e.newValue == null) return
+        setAlternateDragons(e.newValue === 'true' || e.newValue === '1')
       } else if (e.key === LS_KEY_DEAD_HAND_WARNINGS) {
         if (e.newValue == null) return
         const on = e.newValue === 'true' || e.newValue === '1'
@@ -6415,6 +6446,7 @@ export default function App() {
   }
 
   return (
+    <TileGraphicsProvider tileGraphics={tileGraphics} alternateDragons={alternateDragons}>
     <div
       className="app"
       data-tile-graphics={tileGraphics}
@@ -6531,7 +6563,7 @@ export default function App() {
                   role="radiogroup"
                   aria-labelledby={['tile-graphics-menu-label', TILE_GRAPHICS_CATEGORY_MINIMALIST_ID].join(' ')}
                 >
-                  {TILE_GRAPHICS.map((g) => (
+                  {MINIMALIST_TILE_GRAPHICS.map((g) => (
                     <button
                       key={g}
                       type="button"
@@ -6550,19 +6582,24 @@ export default function App() {
                     </button>
                   ))}
                 </div>
-                <div
-                  className="app-menu-modal__tile-graphics-preview"
-                  role="group"
-                  aria-label="Sample Minimalist-style tiles for the current selection"
+                <TileGraphicsProvider
+                  tileGraphics={lastMinimalistTileGraphics}
+                  alternateDragons={false}
                 >
-                  {MENU_TILE_GRAPHICS_PREVIEW.map((spec) => (
-                    <TileFace
-                      key={spec.label}
-                      def={spec.def}
-                      rackSuitStacked
-                    />
-                  ))}
-                </div>
+                  <div
+                    className="app-menu-modal__tile-graphics-preview"
+                    role="group"
+                    aria-label="Sample Minimalist-style tiles for the current selection"
+                  >
+                    {MENU_TILE_GRAPHICS_PREVIEW.map((spec) => (
+                      <TileFace
+                        key={spec.label}
+                        def={spec.def}
+                        rackSuitStacked
+                      />
+                    ))}
+                  </div>
+                </TileGraphicsProvider>
                 <div
                   className="app-menu-modal__tile-graphics-category app-menu-modal__tile-graphics-category--illustrative"
                 >
@@ -6576,18 +6613,57 @@ export default function App() {
                   <hr className="app-menu-modal__tile-graphics-category__line" aria-hidden="true" />
                 </div>
                 <div
-                  className="app-menu-modal__tile-graphics-preview app-menu-modal__tile-graphics-preview--illustrative"
-                  role="group"
-                  aria-label="Illustrative tile styles (no samples yet)"
+                  className="app-menu-modal__tile-graphics-modes app-menu-tray__diff-row app-menu-modal__diff-row app-menu-modal__tile-graphics-illustrative-options"
+                  role="radiogroup"
+                  aria-labelledby={['tile-graphics-menu-label', TILE_GRAPHICS_CATEGORY_ILLUSTRATIVE_ID].join(' ')}
                 >
-                  {ILLUSTRATIVE_PREVIEW_PLACEHOLDERS.map((i) => (
-                    <div
-                      key={i}
-                      className="app-menu-modal__tile-graphics-preview__sizer"
-                      aria-hidden="true"
-                    />
+                  {ILLUSTRATIVE_TILE_GRAPHICS.map((g) => (
+                    <button
+                      key={g}
+                      type="button"
+                      className={[
+                        'btn',
+                        'app-menu-tray__diff-btn',
+                        tileGraphics === g ? 'app-menu-tray__diff-btn--on' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      role="radio"
+                      aria-checked={tileGraphics === g}
+                      onClick={() => setTileGraphicsMode(g)}
+                    >
+                      {TILE_GRAPHICS_LABEL[g]}
+                    </button>
                   ))}
+                  <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                    <span
+                      className="app-menu-modal__row-label"
+                      id={TILE_GRAPHICS_ALTERNATE_DRAGONS_LABEL_ID}
+                    >
+                      {ALTERNATE_DRAGONS_LABEL}
+                    </span>
+                    <AppMenuSettingSwitch
+                      labelId={TILE_GRAPHICS_ALTERNATE_DRAGONS_LABEL_ID}
+                      pressed={alternateDragons}
+                      onToggle={toggleAlternateDragons}
+                    />
+                  </div>
                 </div>
+                <TileGraphicsProvider tileGraphics="illustrative-classic" alternateDragons={alternateDragons}>
+                  <div
+                    className="app-menu-modal__tile-graphics-preview app-menu-modal__tile-graphics-preview--illustrative"
+                    role="group"
+                    aria-label="Sample Illustrative Classic tiles"
+                  >
+                    {MENU_TILE_GRAPHICS_PREVIEW.map((spec) => (
+                      <TileFace
+                        key={`illustrative-${spec.label}`}
+                        def={spec.def}
+                        rackSuitStacked
+                      />
+                    ))}
+                  </div>
+                </TileGraphicsProvider>
               </div>
               <div className="app-menu-modal__diff-block">
                 <div className="app-menu-modal__subhead" id="app-menu-sh-settings-heading">
@@ -8088,5 +8164,6 @@ export default function App() {
       </div>
     </DndContext>
     </div>
+    </TileGraphicsProvider>
   )
 }

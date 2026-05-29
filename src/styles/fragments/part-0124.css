@@ -1,0 +1,52 @@
+/* Illustrative Classic (`data-tile-graphics='illustrative-classic'`): full-face SVG art replaces CSS fills + glyphs. */
+
+.app[data-tile-graphics='illustrative-classic'] .tile-face.tile-face--illustrative-art {
+  background-color: #fff;
+  border-radius: var(--tile-face-border-radius);
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.app[data-tile-graphics='illustrative-classic'] .tile-face.tile-face--illustrative-art::before,
+.app[data-tile-graphics='illustrative-classic'] .tile-face.tile-face--illustrative-art::after {
+  content: none;
+  display: none;
+}
+
+.app[data-tile-graphics='illustrative-classic'] .tile-face__art {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Sorted discard tracker: suit tint classes are glyph-only — keep white face when art is shown. */
+.app[data-tile-graphics='illustrative-classic']
+  .tile-face.tile-face--illustrative-art.tile-face--sorted-discard-dot,
+.app[data-tile-graphics='illustrative-classic']
+  .tile-face.tile-face--illustrative-art.tile-face--sorted-discard-bam,
+.app[data-tile-graphics='illustrative-classic']
+  .tile-face.tile-face--illustrative-art.tile-face--sorted-discard-crak {
+  background-color: #fff;
+}
+
+.app-menu-modal__tile-graphics-illustrative-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.55rem;
+  margin-top: 0.28rem;
+}
+
+.app-menu-modal__tile-graphics-illustrative-options .app-menu-modal__row--toggle {
+  flex: 1 1 auto;
+  min-width: min(100%, 12rem);
+  margin: 0;
+}

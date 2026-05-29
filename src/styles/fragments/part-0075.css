@@ -781,41 +781,16 @@
 .tile-face__rack-new-dot {
   /* ≈ “1” stroke width — a bit under the old 2× size, above the tiniest pin */
   --tile-rack-new-dot-size: min(0.3rem, calc(var(--rack-tile-w) * 0.08));
-  --tile-rack-new-dot-r: calc(var(--tile-rack-new-dot-size) * 0.5);
+  --tile-rack-new-dot-inset-inline: calc(var(--rack-tile-w) * 0.06);
+  --tile-rack-new-dot-inset-block: calc(var(--rack-tile-h) * 0.06);
   position: absolute;
   z-index: 2;
-  left: 50%;
-  /*
-   * Honor / flower / joker (compact glyph): a bit above the lower edge, under the main glyph.
-   */
-  bottom: calc(17% - var(--tile-rack-new-dot-r));
+  right: var(--tile-rack-new-dot-inset-inline);
+  bottom: var(--tile-rack-new-dot-inset-block);
   width: var(--tile-rack-new-dot-size);
   height: var(--tile-rack-new-dot-size);
   border-radius: 50%;
-  transform: translateX(-50%);
   background: var(--tg-ink, var(--color-black));
   box-sizing: content-box;
   pointer-events: none;
-}
-
-/*
- * Stacked suit: in the band below the rank, sit the dot in the space under CRAK/BAM/DOT
- * (a bit below the label, roughly halfway to the bevel) — not up toward the band’s midline.
- * Band height = 50% − 0.3×rank; ~13% of that is the gap between text and tile bottom, centered.
- */
-.tile-face.tile-face--rack-suit-stack.tile-face--rack-new-mark .tile-face__rack-new-dot {
-  bottom: calc(
-    (50% - var(--tile-face-rank-fs) * 0.3) * 0.155 - var(--tile-rack-new-dot-r)
-  );
-}
-
-/*
- * Winds / dragons: same vertical slot as suit new-dot (band gap under primary ink). Stacked suit
- * uses --tile-face-rank-fs == --tile-face-glyph-fs; honors use the glyph size for the same calc.
- */
-.tile-face.tile--wind.tile-face--rack-new-mark .tile-face__rack-new-dot,
-.tile-face.tile--dragon.tile-face--rack-new-mark .tile-face__rack-new-dot {
-  bottom: calc(
-    (50% - var(--tile-face-glyph-fs) * 0.3) * 0.155 - var(--tile-rack-new-dot-r)
-  );
 }

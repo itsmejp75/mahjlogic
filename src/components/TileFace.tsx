@@ -3,6 +3,9 @@ import type { TileDef } from '../mahjong/types'
 import type { CardInk } from '../card/cardText'
 import { CARD_INK_TO_TILE_SKIN_CLASS } from '../card/cardInkTileSkin'
 import { tileAriaLabel, tileShortLabel, tileSuitRackWord } from '../mahjong/labels'
+import { classicTileArtUrl } from '../tiles/classicTileArt'
+import { isIllustrativeTileGraphics } from '../tiles/tileGraphics'
+import { useTileGraphics } from '../tiles/TileGraphicsContext'
 
 type Props = {
   def: TileDef
@@ -84,18 +87,25 @@ export function TileFace({
   sortedDiscardBamGreen = false,
   sortedDiscardCrakRed = false,
 }: Props) {
+  const { tileGraphics, alternateDragons } = useTileGraphics()
+  const artUrl =
+    cardInk == null && isIllustrativeTileGraphics(tileGraphics)
+      ? classicTileArtUrl(def, alternateDragons)
+      : null
+
   const skinClass =
     cardInk != null
       ? ['tile-face--card-skin', CARD_INK_TO_TILE_SKIN_CLASS[cardInk]].filter(Boolean).join(' ')
       : categoryClass(def)
 
-  const stackedSuit = rackSuitStacked && def.cat === 'suit'
+  const stackedSuit = rackSuitStacked && def.cat === 'suit' && artUrl == null
 
   return (
     <div
       className={[
         'tile-face',
         skinClass,
+        artUrl != null ? 'tile-face--illustrative-art' : '',
         stackedSuit ? 'tile-face--rack-suit-stack' : '',
         elevated ? 'tile-face--elevated' : '',
         rackNewMark ? 'tile-face--rack-new-mark' : '',
@@ -109,7 +119,15 @@ export function TileFace({
         .join(' ')}
       aria-label={tileAriaLabel(def)}
     >
-      {stackedSuit ? (
+      {artUrl != null ? (
+        <img
+          className="tile-face__art"
+          src={artUrl}
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+        />
+      ) : stackedSuit ? (
         <>
           <span className="tile-face__rank">{def.rank}</span>
           <div className="tile-face__suit-band">
