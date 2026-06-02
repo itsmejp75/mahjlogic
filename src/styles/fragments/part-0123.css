@@ -439,11 +439,20 @@ html .app-dnd-frame
 }
 
 /*
- * Mobile / installed PWA: top discard + bot band must span the play column and size tiles from
- * the tray’s real width. Viewport-only floors used `max()` and could overshoot a narrow tray,
- * scrunching glyphs and counts; cap with `min(..., 100cqi / 29)` on a dedicated container.
+ * Top discard + bot band — mobile landscape / installed PWA only (primary play orientation).
+ *
+ * Portrait on a phone is narrow (~29 columns across ~390 CSS px), so each slot — including
+ * B/C/D suit labels — stays tall and tile-shaped. That is expected when the device is upright;
+ * we do not tune this band for portrait.
+ *
+ * In landscape the tray spans the play width: B/C/D + rank rows read as a horizontal strip
+ * aligned with the East rack, matching desktop.
+ *
+ * Tile width: cap with `min(..., 100cqi / 29)` on `top-discard-tray` so viewport floors cannot
+ * overshoot the real tray width.
  */
-@media (max-width: 932px), (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) {
+@media (max-width: 932px) and (orientation: landscape) and (pointer: coarse),
+  (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) {
   html .app-dnd-frame > .app-play-split.app-top-exposure-container,
   html .app-dnd-frame > .app-play-split.app-top-exposure-container > .app-play-split__left,
   html .app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard-tracker,
@@ -471,7 +480,8 @@ html .app-dnd-frame
 }
 
 @supports (width: 100cqi) {
-  @media (max-width: 932px), (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) {
+  @media (max-width: 932px) and (orientation: landscape) and (pointer: coarse),
+    (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) {
     @container top-discard-tray (min-width: 0px) {
       html .app-dnd-frame
         .app-play-split.app-top-exposure-container
@@ -672,34 +682,53 @@ html
 }
 
 /*
- * Mobile / PWA only: 13-column grid for the sorted band (B/C/D + ranks) so the suit label
- * column keeps its slot; discard counts sit in the bottom-right corner, not on the rank glyph.
+ * Landscape mobile / PWA: keep the same fixed 29-slot geometry as desktop/local host.
+ * The earlier `1fr` mobile grid let B/C/D and tracker slots stretch into landscape rectangles;
+ * these rules pin every tracker/exposure slot back to `--rack-tile-w` × `--rack-tile-h`.
  */
-@media (max-width: 932px), (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) {
+@media (max-width: 932px) and (orientation: landscape) and (pointer: coarse),
+  (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) {
   html .app-top-exposure-container .discard-tracker__overlay-row {
-    width: 100%;
+    grid-template-columns: repeat(29, var(--rack-tile-w));
+    width: calc(
+      29 * var(--rack-tile-w)
+      + 28 * var(--player-rack-face-gap)
+    );
+    max-width: 100%;
     min-width: 0;
   }
 
   html .app-top-exposure-container .exposure-rack--discard-tracker-sorted-row {
     display: grid;
-    grid-template-columns: repeat(13, minmax(0, 1fr));
-    width: 100%;
-    max-width: 100%;
+    grid-template-columns: repeat(13, var(--rack-tile-w));
+    width: calc(
+      13 * var(--rack-tile-w)
+      + 12 * var(--player-rack-face-gap)
+    );
+    max-width: none;
     min-width: 0;
-    align-items: stretch;
+    align-items: start;
   }
 
   html .app-top-exposure-container .exposure-rack--discard-tracker-sorted-row .exposure-rack__slot {
     flex: unset;
-    width: 100%;
-    min-width: 0;
-    max-width: none;
+    width: var(--rack-tile-w);
+    min-width: var(--rack-tile-w);
+    max-width: var(--rack-tile-w);
+    height: var(--rack-tile-h);
+    min-height: var(--rack-tile-h);
+    max-height: var(--rack-tile-h);
   }
 
   html .app-top-exposure-container .sorted-discard-tray__slot--suit-label {
-    overflow: visible;
-    min-width: 0;
+    width: var(--rack-tile-w);
+    min-width: var(--rack-tile-w);
+    max-width: var(--rack-tile-w);
+    height: var(--rack-tile-h);
+    min-height: var(--rack-tile-h);
+    max-height: var(--rack-tile-h);
+    aspect-ratio: auto;
+    overflow: hidden;
   }
 
   html .app-top-exposure-container .sorted-discard-tray__slot--suit-label .sorted-discard-tray__suit-label {
@@ -708,15 +737,41 @@ html
     font-size: calc(var(--rack-tile-w) * 1.2);
   }
 
+  html .app-top-exposure-container .discard-tracker__overlay-row > .app-opponents-rail__cell {
+    width: calc(
+      14 * var(--rack-tile-w)
+      + 13 * var(--player-rack-face-gap)
+    );
+    max-width: none;
+  }
+
+  html .app-top-exposure-container .exposure-rack--discard-tracker-bot-row {
+    grid-template-columns: repeat(14, var(--rack-tile-w));
+    width: calc(
+      14 * var(--rack-tile-w)
+      + 13 * var(--player-rack-face-gap)
+    );
+    max-width: none;
+  }
+
+  html .app-top-exposure-container .discard-tracker__overlay-grid .exposure-rack__slot {
+    width: var(--rack-tile-w);
+    min-width: var(--rack-tile-w);
+    max-width: var(--rack-tile-w);
+    height: var(--rack-tile-h);
+    min-height: var(--rack-tile-h);
+    max-height: var(--rack-tile-h);
+  }
+
   html .app-top-exposure-container .discard-tracker__overlay-grid .exposure-rack__slot .tile-face,
   html
     .app-top-exposure-container
     .discard-tracker__overlay-grid
     .exposure-rack__slot--empty::before {
-    width: 100%;
-    height: 100%;
-    max-width: none;
-    max-height: none;
+    width: var(--rack-tile-w);
+    height: var(--rack-tile-h);
+    max-width: var(--rack-tile-w);
+    max-height: var(--rack-tile-h);
     aspect-ratio: auto;
     box-sizing: border-box;
   }
@@ -756,10 +811,10 @@ html
     .exposure-rack__meld-drop
     > .exposure-rack__slot
     .tile-face {
-    width: 100%;
-    height: 100%;
-    max-width: none;
-    max-height: none;
+    width: var(--rack-tile-w);
+    height: var(--rack-tile-h);
+    max-width: var(--rack-tile-w);
+    max-height: var(--rack-tile-h);
   }
 }
 
