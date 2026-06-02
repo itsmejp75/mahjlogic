@@ -140,6 +140,7 @@ import {
 import {
   getCallInitiateBlockMessage,
   getCallCapacityFlags,
+  getCallInsufficientDetail,
   maxOpenClaimHandTiles,
   claimTypeForHandTilesFromDiscard,
   BLOCKING_TITLE_SWAP_ERROR,
@@ -436,7 +437,7 @@ type GameBlockingDialog =
   | { variant: 'card'; message: string }
   | { variant: 'table'; title: string; message: string }
   | { variant: 'mahjong-blocked'; rankInput: RankSuggestedHandsInput }
-  | { variant: 'dead-hand-warning' }
+  | { variant: 'dead-hand-warning'; detail?: string | null }
   | { variant: 'mahjong-dead-warning'; rankInput: RankSuggestedHandsInput }
   | { variant: 'call-exposure-dead-warning'; rankInput: RankSuggestedHandsInput }
   | {
@@ -5819,17 +5820,19 @@ export default function App() {
   }, [])
 
   const proceedWithCall = useCallback(() => {
-    // Compute the error synchronously from the current render's state values — reading it
-    // after setRound(updater) is unreliable in React 18 because updaters may be deferred.
-    const err = getCallInitiateBlockMessage({
-      mainPhase,
-      activeBotDiscard,
-      hand,
-      eastExposures,
-      botExposures,
-      wall,
-      discardPile,
-    })
+    // Always validate from the latest committed round (same as commitStagedCall). Render
+    // closures can lag on mobile/PWA taps right after a draw or pass animation.
+    const cur = roundRef.current
+    const callSlice: CallValidationRoundSlice = {
+      mainPhase: cur.mainPhase,
+      activeBotDiscard: cur.activeBotDiscard,
+      hand: cur.hand,
+      eastExposures: cur.eastExposures,
+      botExposures: cur.botExposures,
+      wall: cur.wall,
+      discardPile: cur.discardPile,
+    }
+    const err = getCallInitiateBlockMessage(callSlice)
     if (err === MSG_CALL_DEAD_JOKER) {
       setCallRuleError(null)
       setBlockingDialog({
@@ -5840,7 +5843,10 @@ export default function App() {
     } else if (err === MSG_CALL_INSUFFICIENT_TILES) {
       if (deadHandWarningsEnabledRef.current) {
         setCallRuleError(null)
-        setBlockingDialog({ variant: 'dead-hand-warning' })
+        setBlockingDialog({
+          variant: 'dead-hand-warning',
+          detail: getCallInsufficientDetail(cur.hand, cur.activeBotDiscard),
+        })
       } else {
         setBlockingDialog(null)
         setCallRuleError(MSG_CALL_INSUFFICIENT_TILES)
@@ -5851,19 +5857,14 @@ export default function App() {
     } else {
       setBlockingDialog(null)
       setCallRuleError(null)
-      const flags = getCallCapacityFlags(hand, activeBotDiscard)
+      const flags = getCallCapacityFlags(cur.hand, cur.activeBotDiscard)
       const maxClaimHand = maxOpenClaimHandTiles(flags)
       const stagingNeeded =
         flags.canPung
           ? 2
           : hasLegalMahjongOnBotDiscard({
+              ...callSlice,
               mainPhase: 'bot-turn',
-              activeBotDiscard,
-              hand,
-              eastExposures,
-              botExposures,
-              wall,
-              discardPile,
             })
             ? 0
             : 2
@@ -5872,7 +5873,7 @@ export default function App() {
       // Conversely, if the card needs a kong for that meld and you can only form a pung, every preview fails → warning.
       const rankInputWorstCase =
         gameModeRef.current === 'training' && flags.canPung
-          ? previewAutoSelectedCallRankInput(roundRef.current, maxClaimHand)
+          ? previewAutoSelectedCallRankInput(cur, maxClaimHand)
           : null
       if (gameModeRef.current === 'training' && flags.canPung) {
         const candidateSizes: Array<2 | 3 | 4 | 5> = []
@@ -5883,7 +5884,7 @@ export default function App() {
 
         let anyCallableLineFits = false
         for (const n of candidateSizes) {
-          const input = previewAutoSelectedCallRankInput(roundRef.current, n)
+          const input = previewAutoSelectedCallRankInput(cur, n)
           if (!input) continue
           if (summarizeRackTowardWin(input).closestLine) {
             anyCallableLineFits = true
@@ -5910,17 +5911,7 @@ export default function App() {
       )
       pushRound((r) => applyAutoSelectCallTiles(applyInitiateCall(r), stagingNeeded))
     }
-  }, [
-    mainPhase,
-    activeBotDiscard,
-    hand,
-    eastExposures,
-    botExposures,
-    wall,
-    discardPile,
-    animationsEnabled,
-    pushRound,
-  ])
+  }, [animationsEnabled, pushRound])
   proceedWithCallRef.current = proceedWithCall
 
   useLayoutEffect(() => {
@@ -7303,9 +7294,8 @@ export default function App() {
                   ⚠️ Calling this discard is not legal
                 </h2>
                 <p id="game-blocking-error-body" className="charleston-error-dialog__body">
-                  With this discard, you cannot form a valid Pung, Kong, Quint, or Sextent from your
-                  hand — you do not have the required matching tiles and jokers. If you proceed
-                  anyway, your hand will be officially dead — the game is over.
+                  {blockingDialog.detail ??
+                    'With this discard, you cannot form a valid Pung, Kong, Quint, or Sextent from your hand — you do not have the required matching tiles and jokers. If you proceed anyway, your hand will be officially dead — the game is over.'}
                 </p>
                 <div className="charleston-error-dialog__actions charleston-error-dialog__actions--spread">
                   <button

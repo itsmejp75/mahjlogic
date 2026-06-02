@@ -672,8 +672,8 @@ html
 }
 
 /*
- * Mobile / PWA only: let the 29-column rows and inner racks fill the tray; flex children share
- * the sorted band evenly so rank glyphs and counts do not stack when tile width overshoots.
+ * Mobile / PWA only: 13-column grid for the sorted band (B/C/D + ranks) so the suit label
+ * column keeps its slot; discard counts sit in the bottom-right corner, not on the rank glyph.
  */
 @media (max-width: 932px), (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) {
   html .app-top-exposure-container .discard-tracker__overlay-row {
@@ -682,23 +682,30 @@ html
   }
 
   html .app-top-exposure-container .exposure-rack--discard-tracker-sorted-row {
+    display: grid;
+    grid-template-columns: repeat(13, minmax(0, 1fr));
     width: 100%;
     max-width: 100%;
     min-width: 0;
+    align-items: stretch;
   }
 
   html .app-top-exposure-container .exposure-rack--discard-tracker-sorted-row .exposure-rack__slot {
-    flex: 1 1 0;
-    width: auto;
+    flex: unset;
+    width: 100%;
     min-width: 0;
     max-width: none;
   }
 
-  html .app-top-exposure-container .discard-tracker__overlay-grid .exposure-rack__slot {
-    width: 100%;
+  html .app-top-exposure-container .sorted-discard-tray__slot--suit-label {
+    overflow: visible;
     min-width: 0;
+  }
+
+  html .app-top-exposure-container .sorted-discard-tray__slot--suit-label .sorted-discard-tray__suit-label {
+    overflow: visible;
     max-width: none;
-    overflow: hidden;
+    font-size: calc(var(--rack-tile-w) * 1.2);
   }
 
   html .app-top-exposure-container .discard-tracker__overlay-grid .exposure-rack__slot .tile-face,
@@ -707,37 +714,36 @@ html
     .discard-tracker__overlay-grid
     .exposure-rack__slot--empty::before {
     width: 100%;
-    max-width: 100%;
-    height: auto;
-    aspect-ratio: 3 / 4;
-    max-height: var(--rack-tile-h);
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    aspect-ratio: auto;
+    box-sizing: border-box;
   }
 
   html
     .app-top-exposure-container
     .discard-tracker__overlay-grid
     .tile-face.tile-face--sorted-discard-glyph {
-    --tile-face-glyph-fs: min(
-      calc(var(--rack-tile-w) * 1.03 / 2.65 * 2),
-      calc(var(--rack-tile-w) * 0.92)
-    );
+    --tile-face-glyph-fs: calc(var(--rack-tile-w) * 1.03 / 2.65 * 2);
   }
 
-  html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__count {
-    font-size: min(
-      calc(var(--rack-tile-w) * 1.03 / 2.65 * 1.5),
-      calc(var(--rack-tile-w) * 0.58)
-    );
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: clip;
-  }
-
-  html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__suit-label,
-  html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__seat-label {
-    font-size: min(calc(var(--rack-tile-w) * 1.2), calc(var(--rack-tile-w) * 0.85));
-    max-width: 100%;
-    overflow: hidden;
+  html
+    .app-top-exposure-container
+    .discard-tracker__overlay-grid
+  :is(
+      .sorted-discard-tray__slot--discarded,
+      .sorted-discard-tray__slot--awaiting-discard,
+      .sorted-discard-tray__slot--suggest-dim,
+      .sorted-discard-tray__slot--suggest-need
+    )
+    .sorted-discard-tray__count {
+    left: auto;
+    right: calc(var(--rack-tile-w) * 0.07);
+    bottom: calc(var(--rack-tile-w) * 0.05);
+    transform: none;
+    font-size: calc(var(--rack-tile-w) * 0.4);
+    line-height: 1;
   }
 
   html .app-top-exposure-container .exposure-rack--discard-tracker-bot-row .exposure-rack__meld-drop {
@@ -751,7 +757,9 @@ html
     > .exposure-rack__slot
     .tile-face {
     width: 100%;
-    max-width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
   }
 }
 

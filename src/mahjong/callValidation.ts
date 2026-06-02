@@ -115,13 +115,56 @@ export function getCallCapacityFlags(
   }
   const callMatches = findExactMatches(hand, called.def)
   const handJokers = hand.filter((t) => t.def.cat === 'joker')
-  /* Matching naturals + jokers can fill the meld (flowers never match a suit/honor discard). */
+  /*
+   * Open claim sizes count tiles taken from the concealed hand (not the called discard).
+   * Pung = discard + 2 from hand; those two may be matching naturals, naturals + jokers, or
+   * (when you have enough) jokers only.
+   */
   const total = callMatches.length + handJokers.length
   const canPung = total >= 2
   const canKong = total >= 3
   const canQuint = total >= 4
   const canSextet = total >= 5
   return { canPung, canKong, canQuint, canSextet }
+}
+
+/**
+ * Extra copy for the dead-hand warning when a call is blocked for insufficient tiles.
+ * Explains joker + discard is not enough without a second hand tile.
+ */
+export function getCallInsufficientDetail(
+  hand: TileInstance[],
+  called: TileInstance | null,
+): string | null {
+  if (!called || called.def.cat === 'joker') return null
+  const flags = getCallCapacityFlags(hand, called)
+  if (flags.canPung || flags.canKong || flags.canQuint || flags.canSextet) return null
+
+  const matchingNaturals = findExactMatches(hand, called.def).length
+  const handJokers = hand.filter((t) => t.def.cat === 'joker').length
+
+  if (handJokers > 0 && matchingNaturals === 0) {
+    return (
+      'To claim a pung, kong, quint, or sextet you need two tiles from your concealed hand for ' +
+      'this discard — matching tiles and/or jokers. The discard itself does not count toward ' +
+      'those two. One joker plus the discard is not enough; add another matching tile or a ' +
+      'second joker from your hand.'
+    )
+  }
+  if (handJokers > 0 && matchingNaturals === 1) {
+    return (
+      'You have one matching tile and a joker in your hand, which is enough to claim a pung. ' +
+      'If you still see this message, try again after your rack finishes updating, or check ' +
+      'that the discard you are calling is the tile you mean to claim.'
+    )
+  }
+  if (matchingNaturals === 1 && handJokers === 0) {
+    return (
+      'You have only one matching tile in your hand for this discard. A pung needs the discard ' +
+      'plus two tiles from your hand (two matching tiles, or one matching tile and a joker).'
+    )
+  }
+  return null
 }
 
 function pickHandTilesForClaim(
