@@ -682,141 +682,14 @@ html
 }
 
 /*
- * Landscape mobile / PWA: keep the same fixed 29-slot geometry as desktop/local host.
- * The earlier `1fr` mobile grid let B/C/D and tracker slots stretch into landscape rectangles;
- * these rules pin every tracker/exposure slot back to `--rack-tile-w` × `--rack-tile-h`.
+ * Mobile landscape / PWA intentionally has NO sorted-tracker / bot-exposure structural overrides.
+ * The base `.app-top-exposure-container` rules above are the same ones localhost uses (overlay-row
+ * `grid repeat(29, 1fr)`, sorted-row flex with fixed `--rack-tile-w` slots, 14-col bot row). The
+ * only mobile-specific rules are the width-spanning + `top-discard-tray` tile-size blocks earlier
+ * in this file. A previous attempt re-declared the sorted row as `repeat(13, var(--rack-tile-w))`;
+ * when that token resolved invalid on mobile WebKit the grid collapsed to a single column (B/C/D
+ * gone, ranks stacked vertically), so those overrides were removed.
  */
-@media (max-width: 932px) and (orientation: landscape) and (pointer: coarse),
-  (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) {
-  html .app-top-exposure-container .discard-tracker__overlay-row {
-    grid-template-columns: repeat(29, var(--rack-tile-w));
-    width: calc(
-      29 * var(--rack-tile-w)
-      + 28 * var(--player-rack-face-gap)
-    );
-    max-width: 100%;
-    min-width: 0;
-  }
-
-  html .app-top-exposure-container .exposure-rack--discard-tracker-sorted-row {
-    display: grid;
-    grid-template-columns: repeat(13, var(--rack-tile-w));
-    width: calc(
-      13 * var(--rack-tile-w)
-      + 12 * var(--player-rack-face-gap)
-    );
-    max-width: none;
-    min-width: 0;
-    align-items: start;
-  }
-
-  html .app-top-exposure-container .exposure-rack--discard-tracker-sorted-row .exposure-rack__slot {
-    flex: unset;
-    width: var(--rack-tile-w);
-    min-width: var(--rack-tile-w);
-    max-width: var(--rack-tile-w);
-    height: var(--rack-tile-h);
-    min-height: var(--rack-tile-h);
-    max-height: var(--rack-tile-h);
-  }
-
-  html .app-top-exposure-container .sorted-discard-tray__slot--suit-label {
-    width: var(--rack-tile-w);
-    min-width: var(--rack-tile-w);
-    max-width: var(--rack-tile-w);
-    height: var(--rack-tile-h);
-    min-height: var(--rack-tile-h);
-    max-height: var(--rack-tile-h);
-    aspect-ratio: auto;
-    overflow: hidden;
-  }
-
-  html .app-top-exposure-container .sorted-discard-tray__slot--suit-label .sorted-discard-tray__suit-label {
-    overflow: visible;
-    max-width: none;
-    font-size: calc(var(--rack-tile-w) * 1.2);
-  }
-
-  html .app-top-exposure-container .discard-tracker__overlay-row > .app-opponents-rail__cell {
-    width: calc(
-      14 * var(--rack-tile-w)
-      + 13 * var(--player-rack-face-gap)
-    );
-    max-width: none;
-  }
-
-  html .app-top-exposure-container .exposure-rack--discard-tracker-bot-row {
-    grid-template-columns: repeat(14, var(--rack-tile-w));
-    width: calc(
-      14 * var(--rack-tile-w)
-      + 13 * var(--player-rack-face-gap)
-    );
-    max-width: none;
-  }
-
-  html .app-top-exposure-container .discard-tracker__overlay-grid .exposure-rack__slot {
-    width: var(--rack-tile-w);
-    min-width: var(--rack-tile-w);
-    max-width: var(--rack-tile-w);
-    height: var(--rack-tile-h);
-    min-height: var(--rack-tile-h);
-    max-height: var(--rack-tile-h);
-  }
-
-  html .app-top-exposure-container .discard-tracker__overlay-grid .exposure-rack__slot .tile-face,
-  html
-    .app-top-exposure-container
-    .discard-tracker__overlay-grid
-    .exposure-rack__slot--empty::before {
-    width: var(--rack-tile-w);
-    height: var(--rack-tile-h);
-    max-width: var(--rack-tile-w);
-    max-height: var(--rack-tile-h);
-    aspect-ratio: auto;
-    box-sizing: border-box;
-  }
-
-  html
-    .app-top-exposure-container
-    .discard-tracker__overlay-grid
-    .tile-face.tile-face--sorted-discard-glyph {
-    --tile-face-glyph-fs: calc(var(--rack-tile-w) * 1.03 / 2.65 * 2);
-  }
-
-  html
-    .app-top-exposure-container
-    .discard-tracker__overlay-grid
-  :is(
-      .sorted-discard-tray__slot--discarded,
-      .sorted-discard-tray__slot--awaiting-discard,
-      .sorted-discard-tray__slot--suggest-dim,
-      .sorted-discard-tray__slot--suggest-need
-    )
-    .sorted-discard-tray__count {
-    left: auto;
-    right: calc(var(--rack-tile-w) * 0.07);
-    bottom: calc(var(--rack-tile-w) * 0.05);
-    transform: none;
-    font-size: calc(var(--rack-tile-w) * 0.4);
-    line-height: 1;
-  }
-
-  html .app-top-exposure-container .exposure-rack--discard-tracker-bot-row .exposure-rack__meld-drop {
-    min-width: 0;
-  }
-
-  html
-    .app-top-exposure-container
-    .exposure-rack--discard-tracker-bot-row
-    .exposure-rack__meld-drop
-    > .exposure-rack__slot
-    .tile-face {
-    width: var(--rack-tile-w);
-    height: var(--rack-tile-h);
-    max-width: var(--rack-tile-w);
-    max-height: var(--rack-tile-h);
-  }
-}
 
 html .app-dnd-frame > .app-discard-bottom-container {
   flex: 1 1 0;
