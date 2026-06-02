@@ -485,6 +485,19 @@ function pointerOverCallInitiateTarget(pointer: { x: number; y: number }): boole
   )
 }
 
+function pointerOverPassBoxTarget(pointer: { x: number; y: number }): boolean {
+  const el = document.querySelector<HTMLElement>('.pass-strip-tail__inner, .pass-box')
+  if (!el) return false
+  const rect = el.getBoundingClientRect()
+  if (rect.width < 1 || rect.height < 1) return false
+  return (
+    pointer.x >= rect.left &&
+    pointer.x <= rect.left + rect.width &&
+    pointer.y >= rect.top &&
+    pointer.y <= rect.top + rect.height
+  )
+}
+
 function isActiveBotDiscardDrag(
   dragId: string,
   activeBotDiscard: TileInstance | null,
@@ -4912,7 +4925,7 @@ export default function App() {
       }
 
       if (fromHandTile || fromBotDiscardForCall || fromPassSlot || fromStagedDiscard) {
-        if (!charlestonDone && (fromHandTile || fromPassSlot)) {
+        if (!charlestonDone && fromHandTile) {
           const passBoxHits = collisionHitsForTileOverlappingZones(args, [PASS_BOX_ID])
           if (passBoxHits.length > 0) return passBoxHits
         }
@@ -4964,6 +4977,10 @@ export default function App() {
             String(passOccupant.id) !== aid
           ) {
             return [passOccupant]
+          }
+          const passBoxHit = hits.find((h) => String(h.id) === PASS_BOX_ID)
+          if (fromPassSlot && passBoxHit) {
+            return [passBoxHit]
           }
         }
         if (fromPassSlot || fromStagedDiscard) {
@@ -5216,6 +5233,24 @@ export default function App() {
     [hand.length, handVisualInsertIndexFromPointer],
   )
 
+  const passReturnInsertIndexFromOver = useCallback(
+    (over: { rect: { left: number; width: number } }, overHandIdx: number) => {
+      const pointerX = lastDragPointerRef.current.x
+      if (!Number.isFinite(pointerX)) return hand.length
+      const rect = over.rect
+      const gapEdgeSlop = Math.max(4, Math.min(12, rect.width * 0.16))
+
+      // Returning from the Charleston box should append by default. Only create a gap
+      // before a tile when the pointer is clearly in the space to that tile's left.
+      if (pointerX < rect.left + gapEdgeSlop) return overHandIdx
+      if (pointerX > rect.left + rect.width - gapEdgeSlop) {
+        return Math.min(overHandIdx + 1, hand.length)
+      }
+      return hand.length
+    },
+    [hand.length],
+  )
+
   const onDragOver = useCallback(
     (e: DragOverEvent) => {
       const aid = String(e.active.id)
@@ -5264,7 +5299,7 @@ export default function App() {
       }
       const oid = String(over.id)
       if (oid === HAND_BANK_ID) {
-        const handPreviewIndex = handVisualInsertIndexFromPointer() ?? hand.length
+        const handPreviewIndex = hand.length
         setCharlestonPassIntoHandPreview((prev) =>
           prev?.tileId === aid && prev.handPreviewIndex === handPreviewIndex
             ? prev
@@ -5274,7 +5309,7 @@ export default function App() {
       }
       const overHandIdx = hand.findIndex((t) => t.id === oid)
       if (overHandIdx >= 0) {
-        const handPreviewIndex = handInsertIndexFromOver(over, overHandIdx)
+        const handPreviewIndex = passReturnInsertIndexFromOver(over, overHandIdx)
         setCharlestonPassIntoHandPreview((prev) =>
           prev?.tileId === aid && prev.handPreviewIndex === handPreviewIndex
             ? prev
@@ -5292,6 +5327,7 @@ export default function App() {
       hand,
       handInsertIndexFromOver,
       handVisualInsertIndexFromPointer,
+      passReturnInsertIndexFromOver,
     ],
   )
 
@@ -6035,6 +6071,10 @@ export default function App() {
     (e: DragEndEvent) => {
       const { active, over } = e
       const aid = String(active.id)
+      const passTileStillOverPassBox =
+        !charlestonDone &&
+        passSlots.some((s) => s?.id === aid) &&
+        pointerOverPassBoxTarget(lastDragPointerRef.current)
       try {
         if (!over) {
           if (
@@ -6042,6 +6082,32 @@ export default function App() {
             pointerOverCallInitiateTarget(lastDragPointerRef.current)
           ) {
             initiateCall()
+            return
+          }
+          if (passTileStillOverPassBox) {
+            return
+          }
+          if (!charlestonDone && passSlots.some((s) => s?.id === aid)) {
+            pushRound((r) => {
+              if (r.charlestonPhase === 'done') return r
+              const passFromIdx = r.passSlots.findIndex((s) => s?.id === aid)
+              if (passFromIdx < 0) return r
+              const passSlotsNext: PassSlots = [...r.passSlots]
+              const passOriginsNext: [number | null, number | null, number | null] = [...r.passSlotOrigins]
+              const tile = passSlotsNext[passFromIdx]
+              passSlotsNext[passFromIdx] = null
+              passOriginsNext[passFromIdx] = null
+              const handNext = [...r.hand]
+              if (tile) handNext.push(tile)
+              const compacted = compactPassSlotsToRight(passSlotsNext, passOriginsNext)
+              return {
+                ...r,
+                hand: handNext,
+                passSlots: compacted.passSlots,
+                passSlotOrigins: compacted.passSlotOrigins,
+                selectedHandTileId: null,
+              }
+            })
             return
           }
           /* Charleston: release outside any droppable → park tile on the right end of the rack. */
@@ -6166,8 +6232,15 @@ export default function App() {
       const handIdx = handNext.findIndex((t) => t.id === aid)
       const passFromIdx = passSlotsNext.findIndex((s) => s?.id === aid)
       const overHandIdx = handNext.findIndex((t) => t.id === oid)
-      const passToIdx = passDropIndex(oid, passSlotsNext)
+      const passToIdx =
+        passFromIdx >= 0 && oid === PASS_BOX_ID
+          ? null
+          : passDropIndex(oid, passSlotsNext)
       const blockPass = r.charlestonPhase === 'done'
+
+      if (!blockPass && passFromIdx >= 0 && passTileStillOverPassBox && passToIdx === null) {
+        return r
+      }
 
       if (r.mainPhase === 'east-discard' && r.pendingEastDiscardTile?.id === aid && oid === HAND_BANK_ID) {
         const t = r.pendingEastDiscardTile
@@ -6263,10 +6336,7 @@ export default function App() {
         passSlotsNext[passFromIdx] = null
         const passOriginsNext: [number | null, number | null, number | null] = [...r.passSlotOrigins]
         passOriginsNext[passFromIdx] = null
-        if (t) {
-          const insertIdx = Math.min(handVisualInsertIndexFromPointer() ?? handNext.length, handNext.length)
-          handNext.splice(insertIdx, 0, t)
-        }
+        if (t) handNext.push(t)
         const compacted = compactPassSlotsToRight(passSlotsNext, passOriginsNext)
         return {
           ...r,
@@ -6281,7 +6351,7 @@ export default function App() {
         passSlotsNext[passFromIdx] = null
         const passOriginsNext: [number | null, number | null, number | null] = [...r.passSlotOrigins]
         passOriginsNext[passFromIdx] = null
-        const insertIdx = handInsertIndexFromOver(over, overHandIdx)
+        const insertIdx = passReturnInsertIndexFromOver(over, overHandIdx)
         if (t) handNext.splice(insertIdx, 0, t)
         const compacted = compactPassSlotsToRight(passSlotsNext, passOriginsNext)
         return {
@@ -6312,12 +6382,14 @@ export default function App() {
       charlestonDone,
       jokerSwapUiActive,
       mainPhase,
+      passSlots,
       stagedCallTileIds,
       pushRound,
       initiateCall,
       activeBotDiscard?.id,
       handInsertIndexFromOver,
       handVisualInsertIndexFromPointer,
+      passReturnInsertIndexFromOver,
     ],
   )
 
@@ -6360,15 +6432,12 @@ export default function App() {
       const t = r.passSlots[slotIndex]
       if (!t) return r
       lastPassReturnTileIdRef.current = t.id
-      const originIdx = r.passSlotOrigins[slotIndex]
       const passSlotsNext: PassSlots = [...r.passSlots]
       passSlotsNext[slotIndex] = null
       const passOriginsNext: [number | null, number | null, number | null] = [...r.passSlotOrigins]
       passOriginsNext[slotIndex] = null
       const handNext = [...r.hand]
-      const insertIdx =
-        originIdx != null ? Math.min(Math.max(0, originIdx), handNext.length) : handNext.length
-      handNext.splice(insertIdx, 0, t)
+      handNext.push(t)
       const compacted = compactPassSlotsToRight(passSlotsNext, passOriginsNext)
       return {
         ...r,

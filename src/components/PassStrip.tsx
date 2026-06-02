@@ -169,6 +169,15 @@ export function PassStrip({
       if (tile) prevIndexById.set(tile.id, index)
     })
 
+    // Only animate the right-compaction slide when a tile actually left the box
+    // (occupied count dropped). Pure reorders/swaps keep the same count — dnd-kit's
+    // own drop transition handles those, and adding our slide here causes a jerk.
+    const prevOccupied = prev.filter((t) => t != null).length
+    const nextOccupied = slots.filter((t) => t != null).length
+    if (nextOccupied >= prevOccupied) {
+      return
+    }
+
     const nextShifts = new Map<string, PassCompactShift>()
     slots.forEach((tile, newIndex) => {
       if (!tile) return

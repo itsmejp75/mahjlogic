@@ -377,14 +377,18 @@ type Props = {
   externalInsertPreviewIndex?: number | null
 }
 
-/** Shift neighbours right of a preview insertion; last tile shifts when inserting at end. */
+/**
+ * Shift neighbours right of a preview insertion. Appending at the end shifts nothing —
+ * the returning tile lands in the empty slot already shown to the right, so the last
+ * occupied tile must stay put (no phantom slide).
+ */
 function externalShiftForInsertPreview(
   tileIndex: number,
   previewIndex: number,
   occupiedTileCount: number,
 ): boolean {
   if (previewIndex >= occupiedTileCount) {
-    return occupiedTileCount > 0 && tileIndex === occupiedTileCount - 1
+    return false
   }
   return tileIndex >= previewIndex
 }

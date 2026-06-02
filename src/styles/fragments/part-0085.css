@@ -10,6 +10,14 @@
 
 .exposure-rack__incoming-discard-drag {
   touch-action: none;
+  pointer-events: auto;
+  cursor: grab;
+  width: var(--rack-tile-w);
+  height: var(--rack-tile-h);
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .exposure-rack__incoming-discard-drag:active {

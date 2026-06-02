@@ -1224,15 +1224,18 @@ export function ExposureRack({
             aria-label={lastSlotTile ? 'Current bot discard' : undefined}
           >
             {lastSlotTile ? (
-              <div className="east-discard-staging east-discard-staging--inline">
-                {lastSlotDraggableForCallInit ? (
+              lastSlotDraggableForCallInit ? (
+                <>
+                  <div className="east-discard-staging east-discard-staging--inline" aria-hidden />
                   <IncomingBotDiscardDraggable
                     key={lastSlotTile.id}
                     tile={lastSlotTile}
                     stackSuitTiles={stackSuitTiles}
                     incomingBotDiscardFlyFrom={incomingBotDiscardFlyFrom}
                   />
-                ) : (
+                </>
+              ) : (
+                <div className="east-discard-staging east-discard-staging--inline">
                   <div key={lastSlotTile.id} className="east-discard-staging__tile">
                     <div
                       className={[
@@ -1247,8 +1250,8 @@ export function ExposureRack({
                       <TileFace def={lastSlotTile.def} rackSuitStacked={stackSuitTiles} />
                     </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )
             ) : null}
           </div>
         )

@@ -439,32 +439,71 @@ html .app-dnd-frame
 }
 
 /*
- * Installed PWA / mobile Safari: `play-split-rack-lock` can report 0 inline size on first
- * paint. Large iPhone landscape viewports can exceed 932 CSS px, so include coarse-pointer
- * landscape explicitly. Floor tile width from the visible play column (same inset math as
- * `--hand-rack-usable-w`) so the top B/C/D + S/W/N band does not collapse into a left strip.
+ * Mobile / installed PWA: top discard + bot band must span the play column and size tiles from
+ * the tray’s real width. Viewport-only floors used `max()` and could overshoot a narrow tray,
+ * scrunching glyphs and counts; cap with `min(..., 100cqi / 29)` on a dedicated container.
  */
-@supports (width: 100dvi) {
+@media (max-width: 932px), (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) {
+  html .app-dnd-frame > .app-play-split.app-top-exposure-container,
+  html .app-dnd-frame > .app-play-split.app-top-exposure-container > .app-play-split__left,
+  html .app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard-tracker,
+  html .app-dnd-frame > .app-play-split.app-top-exposure-container .discard-tracker__shell,
+  html .app-dnd-frame
+    > .app-play-split.app-top-exposure-container
+    .discard-tracker__content--tile-groups-only,
+  html .app-dnd-frame
+    > .app-play-split.app-top-exposure-container
+    .discard-tracker__tile-groups-container,
+  html .app-dnd-frame > .app-play-split.app-top-exposure-container .discard-tracker__overlay-grid {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    align-self: stretch;
+    box-sizing: border-box;
+  }
+
+  html .app-dnd-frame
+    > .app-play-split.app-top-exposure-container
+    .discard-tracker__tile-groups-container {
+    container-type: inline-size;
+    container-name: top-discard-tray;
+  }
+}
+
+@supports (width: 100cqi) {
   @media (max-width: 932px), (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) {
-    html .app-dnd-frame
-      .app-play-split.app-top-exposure-container
-      .discard-tracker__overlay-grid {
-      --rack-tile-w: max(
-        var(--top-discard-tray-tile-w-hand-rack),
-        calc(
-          (
-            var(--app-play-fit-inline)
-            - 2 * var(--app-h-pad)
-            - 2 * var(--hand-window-pad-inline)
-            - (var(--discard-tracker-slots-across, 29) - 1) * var(--player-rack-face-gap)
-          ) / var(--discard-tracker-slots-across, 29)
-        )
-      );
-      --rack-tile-h: calc(var(--rack-tile-w) * 4 / 3);
-      --exposure-slot-h: var(--rack-tile-h);
-      --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
-      --discard-tray-rack-tile-w: var(--rack-tile-w);
-      --discard-tray-tile-corner-r: var(--tile-face-border-radius);
+    @container top-discard-tray (min-width: 0px) {
+      html .app-dnd-frame
+        .app-play-split.app-top-exposure-container
+        .discard-tracker__overlay-grid {
+        --rack-tile-w: max(
+          1px,
+          min(
+            max(
+              var(--top-discard-tray-tile-w-hand-rack),
+              calc(
+                (
+                  var(--app-play-fit-inline, 100vw)
+                  - 2 * var(--app-h-pad)
+                  - 2 * var(--hand-window-pad-inline)
+                  - (var(--discard-tracker-slots-across, 29) - 1) * var(--player-rack-face-gap)
+                ) / var(--discard-tracker-slots-across, 29)
+              )
+            ),
+            calc(
+              (
+                100cqi
+                - (var(--discard-tracker-slots-across, 29) - 1) * var(--player-rack-face-gap)
+              ) / var(--discard-tracker-slots-across, 29)
+            )
+          )
+        );
+        --rack-tile-h: calc(var(--rack-tile-w) * 4 / 3);
+        --exposure-slot-h: var(--rack-tile-h);
+        --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
+        --discard-tray-rack-tile-w: var(--rack-tile-w);
+        --discard-tray-tile-corner-r: var(--tile-face-border-radius);
+      }
     }
   }
 }
@@ -630,6 +669,90 @@ html
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot--empty::before {
   background: color-mix(in srgb, #c8c8c8 28%, var(--hand-rack-tray-surface));
+}
+
+/*
+ * Mobile / PWA only: let the 29-column rows and inner racks fill the tray; flex children share
+ * the sorted band evenly so rank glyphs and counts do not stack when tile width overshoots.
+ */
+@media (max-width: 932px), (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) {
+  html .app-top-exposure-container .discard-tracker__overlay-row {
+    width: 100%;
+    min-width: 0;
+  }
+
+  html .app-top-exposure-container .exposure-rack--discard-tracker-sorted-row {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  html .app-top-exposure-container .exposure-rack--discard-tracker-sorted-row .exposure-rack__slot {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+  }
+
+  html .app-top-exposure-container .discard-tracker__overlay-grid .exposure-rack__slot {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    overflow: hidden;
+  }
+
+  html .app-top-exposure-container .discard-tracker__overlay-grid .exposure-rack__slot .tile-face,
+  html
+    .app-top-exposure-container
+    .discard-tracker__overlay-grid
+    .exposure-rack__slot--empty::before {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 3 / 4;
+    max-height: var(--rack-tile-h);
+  }
+
+  html
+    .app-top-exposure-container
+    .discard-tracker__overlay-grid
+    .tile-face.tile-face--sorted-discard-glyph {
+    --tile-face-glyph-fs: min(
+      calc(var(--rack-tile-w) * 1.03 / 2.65 * 2),
+      calc(var(--rack-tile-w) * 0.92)
+    );
+  }
+
+  html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__count {
+    font-size: min(
+      calc(var(--rack-tile-w) * 1.03 / 2.65 * 1.5),
+      calc(var(--rack-tile-w) * 0.58)
+    );
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: clip;
+  }
+
+  html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__suit-label,
+  html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__seat-label {
+    font-size: min(calc(var(--rack-tile-w) * 1.2), calc(var(--rack-tile-w) * 0.85));
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  html .app-top-exposure-container .exposure-rack--discard-tracker-bot-row .exposure-rack__meld-drop {
+    min-width: 0;
+  }
+
+  html
+    .app-top-exposure-container
+    .exposure-rack--discard-tracker-bot-row
+    .exposure-rack__meld-drop
+    > .exposure-rack__slot
+    .tile-face {
+    width: 100%;
+    max-width: 100%;
+  }
 }
 
 html .app-dnd-frame > .app-discard-bottom-container {
@@ -1169,6 +1292,52 @@ html[data-home-screen-app]:not([data-native-app])
 .panel--hand .rack-stage__rack-top .exposure-rack :is(.exposure-rack__slot--east-discard-slot, .exposure-rack__slot--incoming-discard) {
   height: calc(var(--rack-tile-h) / 3);
   min-height: calc(var(--rack-tile-h) / 3);
+}
+
+/*
+ * Bot-turn call drag: tile is full height but the strip is only the bottom third — without this,
+ * the lower face sits over the hand row (same z-index) and only the top strip is grabbable.
+ */
+.panel--hand .rack-stage__rack-top:has(.exposure-rack__incoming-discard-drag) {
+  z-index: 3;
+}
+
+.panel--hand .rack-stage__rack-top .exposure-rack .exposure-rack__slot--incoming-discard:has(.exposure-rack__incoming-discard-drag) {
+  align-self: flex-end;
+  height: calc(var(--rack-tile-h) / 3);
+  min-height: calc(var(--rack-tile-h) / 3);
+  position: relative;
+  overflow: visible;
+  z-index: 4;
+}
+
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack
+  .exposure-rack__slot--incoming-discard:has(.exposure-rack__incoming-discard-drag)
+  .east-discard-staging--inline {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  height: calc(var(--rack-tile-h) / 3);
+  min-height: calc(var(--rack-tile-h) / 3);
+  max-height: calc(var(--rack-tile-h) / 3);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack
+  .exposure-rack__slot--incoming-discard:has(.exposure-rack__incoming-discard-drag)
+  .exposure-rack__incoming-discard-drag {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  margin-inline: auto;
+  z-index: 1;
 }
 
 .panel--hand .rack-stage__rack-top .exposure-rack .exposure-rack__slot--empty {
