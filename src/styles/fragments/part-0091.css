@@ -23,29 +23,46 @@
 }
 
 .east-discard-staging--inline {
+  --east-discard-strip-h: calc(var(--rack-tile-h) / 3);
   margin-bottom: 0;
-  min-height: var(--rack-tile-h);
-  height: var(--rack-tile-h);
-  max-height: var(--rack-tile-h);
+  min-height: var(--east-discard-strip-h);
+  height: var(--east-discard-strip-h);
+  max-height: var(--east-discard-strip-h);
   min-width: var(--rack-tile-w);
   width: var(--rack-tile-w);
   max-width: var(--rack-tile-w);
   padding: 0;
   box-sizing: border-box;
-  overflow: hidden;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
 }
 
-.east-discard-staging--inline .east-discard-staging__tile,
+.east-discard-staging--inline .east-discard-staging__tile {
+  width: var(--rack-tile-w);
+  height: var(--rack-tile-h);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  position: relative;
+  z-index: 4;
+}
+
 .east-discard-staging--inline .east-discard-staging__tile > div,
-.east-discard-staging--inline .tile-face {
-  width: 100%;
-  height: 100%;
+.east-discard-staging--inline .east-discard-staging__tile .tile-face {
+  width: var(--rack-tile-w);
+  height: var(--rack-tile-h);
+  flex: 0 0 auto;
 }
 
 .east-discard-staging--inline .east-discard-staging__placeholder {
   display: block;
   width: 100%;
-  min-height: 1.25rem;
+  height: 100%;
+  min-height: 0;
 }
 
 .east-discard-staging--over {

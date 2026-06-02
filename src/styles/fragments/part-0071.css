@@ -50,6 +50,7 @@
 /* Keeps column height when Stop is inactive so the pass strip does not jump */
 
 .pass-strip-tail {
+  position: relative;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -73,14 +74,18 @@
   flex: 0 1 auto;
   min-height: 0;
   /* Unified 3-tile box — same fill as `.pass-box` (#00B4D8 @ 30%). */
+  --charleston-pass-box-color: #00b4d8;
+  --charleston-pass-box-inset-border: inset 0 1px 0 0 var(--charleston-pass-box-color),
+    inset 1px 0 0 0 var(--charleston-pass-box-color),
+    inset -1px 0 0 0 var(--charleston-pass-box-color);
   background: rgba(0, 180, 216, 0.3);
   border: 0;
-  border-radius: var(--tile-face-border-radius);
-  box-shadow: none;
-  transition: background 0.15s ease;
+  border-radius: var(--tile-face-border-radius) var(--tile-face-border-radius) 0 0;
+  box-shadow: var(--charleston-pass-box-inset-border);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
 }
 
-/* Tile row + label stack: copy sits behind tiles; gaps / empty chrome show it; tiles paint on top. */
+/* Tile row only — round title + pass copy sit in `.pass-strip-tail__copy` left of the box. */
 .pass-strip-tail__stack {
   position: relative;
   width: 100%;
@@ -90,26 +95,29 @@
   flex-direction: column;
 }
 
-.pass-strip-tail__header--overlay {
+/* One nowrap line left of the pass box; does not widen the 3-slot rack footprint. */
+.pass-strip-tail__copy {
   position: absolute;
-  inset: 0;
-  z-index: 1;
+  right: 100%;
+  top: 50%;
+  z-index: 3;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  text-align: center;
-  pointer-events: none;
-  gap: 0;
-  padding: clamp(0.06rem, calc(var(--pass-strip-box-w) * 0.012), 0.12rem) clamp(0.08rem, calc(var(--pass-strip-box-w) * 0.018), 0.18rem);
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: clamp(0.28rem, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 0.14), 0.55rem);
+  /* Sit left of the box in empty exposure slots — no extra rack height or width. */
+  margin-right: var(--player-rack-face-gap, var(--rack-tile-gap));
+  padding: 0;
   box-sizing: border-box;
-  opacity: 1;
-  transition: opacity 0.28s ease;
-  /*
-   * Preferred size favors readability while still scaling down with the pass box. The old `clamp(..., 0.48rem)`
-   * floor kept type from shrinking when the window narrowed, so nowrap lines clipped.
-   * Floor scales with the box; `min(..., box / 9.95)` tightens only when a long line would overflow.
-   */
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(calc(-1 * var(--pass-strip-copy-outset, 0px)), -50%);
+  /* Center in the full tile-tall pass column (blue band in mock). */
+  --pass-strip-copy-outset: clamp(0.35rem, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 0.55), 1.1rem);
+  /* Same scale as in-box overlay (driven by 3-slot pass box width + tile height cap). */
+  --pass-strip-box-w: calc(3 * var(--rack-tile-w, var(--hand-top-rack-tile-w)) + 2 * var(--player-rack-face-gap, var(--rack-tile-gap)));
   --_pass-strip-fs-pref: clamp(
     calc(var(--pass-strip-box-w) * 0.04),
     calc(var(--pass-strip-box-w) * 0.109),
@@ -118,71 +126,19 @@
   --pass-strip-header-fs: min(
     var(--_pass-strip-fs-pref),
     calc(var(--pass-strip-box-w) / 9.95),
-    calc(var(--rack-tile-h) / 5.02)
+    calc(var(--rack-tile-h, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 1.3333)) / 5.02)
   );
-}
-
-/* Title + pass line stay centered as a block; direction glyph sits on its own row toward the bottom. */
-.pass-strip-tail__header--overlay.pass-strip-tail__header--with-footer {
-  justify-content: flex-start;
-  gap: 0;
-}
-
-.pass-strip-tail__header--with-footer .pass-strip-tail__header-spacer {
-  flex: 0 0 0;
-  min-height: 0;
-  width: 100%;
-  pointer-events: none;
-}
-
-/* Unwrap so title + instruction behave like direct flex children of the overlay (legacy layout). */
-.pass-strip-tail__header-centered--legacy {
-  display: contents;
-}
-
-.pass-strip-tail__header--with-footer .pass-strip-tail__header-centered {
-  flex: 1 1 0;
-  min-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  text-align: center;
-  gap: 0;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-}
-
-.pass-strip-tail__header--with-footer .pass-strip-tail__header-centered:has(.pass-strip-tail__instruction) {
-  gap: 0;
-  /* Let pass copy paint fully (stacked 2nd-left needs three tight lines + larger type). */
   overflow: visible;
 }
 
-.pass-strip-tail__header-footer {
+.panel--hand .pass-strip-tail__copy {
+  --pass-strip-copy-outset: clamp(0.5rem, calc(var(--rack-tile-w) * 0.85), 1.35rem);
+}
+
+.pass-strip-tail__copy-footer {
   flex: 0 0 auto;
-  min-height: calc(var(--pass-strip-header-fs) * 1.35);
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
+  display: inline-flex;
   align-items: center;
-  padding-bottom: clamp(0.02rem, calc(var(--pass-strip-box-w) * 0.012), 0.1rem);
-  box-sizing: border-box;
-  pointer-events: none;
-}
-
-.pass-strip-tail--pass-slots-filled .pass-strip-tail__header--overlay {
-  opacity: 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .pass-strip-tail__header--overlay {
-    transition-duration: 0.05s;
-  }
 }
 
 .pass-strip-tail__title {
@@ -190,16 +146,16 @@
   font-weight: 600;
   font-variation-settings: 'wght' 600;
   font-size: calc(var(--pass-strip-header-fs) * 0.82);
-  line-height: 1.15;
-  letter-spacing: clamp(0.035em, calc(var(--pass-strip-box-w) * 0.00058), 0.095em);
+  line-height: 1;
+  letter-spacing: clamp(0.035em, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 0.0058), 0.095em);
   color: #b0b0b0;
   margin: 0;
   padding: 0;
-  max-width: 100%;
   min-width: 0;
   white-space: nowrap;
-  overflow: hidden;
+  overflow: visible;
   text-shadow: none;
+  flex: 0 0 auto;
 }
 
 /* Charleston rack: reinforce Figtree semibold on the round title (beats any inherited panel body face). */
@@ -216,33 +172,26 @@
   font-variation-settings: 'wght' 600;
 }
 
-/* Separator under title: match the visible title text width. */
-.pass-strip-tail__header--overlay:has(.pass-strip-tail__instruction) .pass-strip-tail__title {
-  width: fit-content;
-  max-width: 100%;
-  box-sizing: border-box;
-  padding-top: clamp(0.08rem, calc(var(--pass-strip-box-w) * 0.018), 0.24rem);
-  padding-bottom: clamp(0.08rem, calc(var(--pass-strip-box-w) * 0.018), 0.24rem);
-  border-bottom: 1px solid
-    color-mix(
-      in srgb,
-      #334155 38%,
-      color-mix(in srgb, #f2f2e9 28%, var(--coach-teal-border) 72%) 62%
-    );
+.pass-strip-tail__copy:has(.pass-strip-tail__instruction) .pass-strip-tail__title {
+  padding: 0;
+  border-bottom: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(0.22rem, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 0.1), 0.42rem);
 }
 
-/* Stacked “Pass 3 Left / -OR- / 0 to STOP”: reclaim a little vertical space for larger type. */
-.pass-strip-tail__header--overlay:has(.pass-strip-tail__instruction--stacked) .pass-strip-tail__title {
-  padding-top: clamp(0.05rem, calc(var(--pass-strip-box-w) * 0.012), 0.16rem);
-  padding-bottom: clamp(0.05rem, calc(var(--pass-strip-box-w) * 0.012), 0.16rem);
-}
-
-.pass-strip-tail__header--overlay:has(.pass-strip-tail__instruction) {
-  gap: 0;
-}
-
-.pass-strip-tail__header--overlay.pass-strip-tail__header--with-footer:has(.pass-strip-tail__instruction) {
-  gap: 0;
+.pass-strip-tail__copy:has(.pass-strip-tail__instruction) .pass-strip-tail__title::after {
+  content: '';
+  display: block;
+  width: 1px;
+  height: calc(var(--pass-strip-header-fs) * 0.92);
+  flex: 0 0 auto;
+  margin: 0;
+  background: color-mix(
+    in srgb,
+    #334155 38%,
+    color-mix(in srgb, #f2f2e9 28%, var(--coach-teal-border) 72%) 62%
+  );
 }
 
 .pass-strip-tail__instruction {
@@ -250,21 +199,19 @@
   font-weight: 600;
   font-variation-settings: 'wght' 600;
   font-size: var(--pass-strip-header-fs);
-  line-height: 1.14;
-  letter-spacing: clamp(0.032em, calc(var(--pass-strip-box-w) * 0.00026), 0.072em);
+  line-height: 1;
+  letter-spacing: clamp(0.032em, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 0.0026), 0.072em);
   color: #c2c2c8;
   margin: 0;
   padding: 0;
-  max-width: 100%;
   min-width: 0;
   white-space: nowrap;
   overflow: visible;
   text-shadow: none;
-  flex: 1 1 auto;
-  min-height: min-content;
-  display: flex;
+  flex: 0 1 auto;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .pass-strip-tail__instruction-copy {
@@ -274,7 +221,7 @@
 
 .pass-strip-tail__instruction-right-chevron {
   position: absolute;
-  left: calc(100% + clamp(0.16rem, calc(var(--pass-strip-box-w) * 0.026), 0.34rem));
+  left: calc(100% + clamp(0.16rem, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 0.026), 0.34rem));
   top: 50%;
   width: calc(var(--pass-strip-header-fs) * 0.34);
   height: calc(var(--pass-strip-header-fs) * 0.34);
@@ -287,20 +234,20 @@
 
 .pass-strip-tail__instruction-up-chevron {
   position: absolute;
-  left: 50%;
-  bottom: calc(100% + clamp(0.08rem, calc(var(--pass-strip-box-w) * 0.012), 0.16rem));
+  left: calc(100% + clamp(0.16rem, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 0.026), 0.34rem));
+  top: 50%;
   width: calc(var(--pass-strip-header-fs) * 0.34);
   height: calc(var(--pass-strip-header-fs) * 0.34);
   border-top: max(1px, calc(var(--pass-strip-header-fs) * 0.095)) solid currentColor;
   border-right: max(1px, calc(var(--pass-strip-header-fs) * 0.095)) solid currentColor;
   opacity: 0.9;
-  transform: translateX(-50%) rotate(-45deg);
+  transform: translateY(-50%) rotate(-45deg);
   pointer-events: none;
 }
 
 .pass-strip-tail__instruction-left-chevron {
   position: absolute;
-  right: calc(100% + clamp(0.16rem, calc(var(--pass-strip-box-w) * 0.026), 0.34rem));
+  right: calc(100% + clamp(0.16rem, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 0.026), 0.34rem));
   top: 50%;
   width: calc(var(--pass-strip-header-fs) * 0.34);
   height: calc(var(--pass-strip-header-fs) * 0.34);
@@ -311,65 +258,34 @@
   pointer-events: none;
 }
 
-.pass-strip-tail__instruction--blind-right,
-.pass-strip-tail__instruction--blind-left {
-  flex-direction: column;
-  gap: clamp(0.01rem, calc(var(--pass-strip-box-w) * 0.003), 0.06rem);
-  line-height: 1.02;
-}
-
-.pass-strip-tail__instruction-blind-label {
-  display: block;
-  line-height: 1;
-  transform: translateY(calc(var(--pass-strip-header-fs) * -0.12));
-}
-
 .pass-strip-tail__instruction .pass-strip-tail__instruction-paren {
   color: #9a9aa3;
 }
 
 .pass-strip-tail__instruction-paren--close {
-  margin-inline-end: 0.42em;
+  margin-inline-end: 0.12em;
 }
 
-.pass-strip-tail__instruction--stacked {
-  display: flex;
-  flex-direction: column;
+/* Second left: one line — Pass 3 Left ‹ -OR- 0 to Stop */
+.pass-strip-tail__instruction--left2-inline {
+  display: inline-flex;
+  flex-wrap: nowrap;
   align-items: center;
-  justify-content: center;
-  text-align: center;
-  gap: 0;
-  line-height: 1.05;
-  min-width: 0;
-  max-width: 100%;
-  box-sizing: border-box;
-  flex: 1 1 auto;
-  min-height: min-content;
-  overflow: visible;
-}
-
-.pass-strip-tail__instruction--stacked .pass-strip-tail__instruction-line {
-  display: block;
-  max-width: 100%;
-  line-height: 1.05;
+  gap: clamp(0.18rem, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 0.08), 0.34rem);
 }
 
 .pass-strip-tail__instruction-or {
-  display: block;
+  display: inline;
   font-family: 'Figtree', var(--sans);
   font-weight: 500;
   font-variation-settings: 'wght' 500;
   font-style: italic;
-  font-size: calc(var(--pass-strip-header-fs) * 0.62);
-  letter-spacing: clamp(0.048em, calc(var(--pass-strip-box-w) * 0.00092), 0.14em);
-  line-height: 1.08;
+  font-size: calc(var(--pass-strip-header-fs) * 0.78);
+  letter-spacing: clamp(0.048em, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 0.0092), 0.14em);
+  line-height: 1;
   color: #b6b6bd;
   text-shadow: none;
-}
-
-/* Extra air above/below stacked `-OR-` only (not inline `TO`). */
-.pass-strip-tail__instruction-or:not(.pass-strip-tail__instruction-or--inline) {
-  margin-block: clamp(0.015rem, calc(var(--pass-strip-box-w) * 0.005), 0.12rem);
+  margin: 0;
 }
 
 /* Inlined in `0 TO STOP`: warm accent like stacked `-OR-` (parent line is `#c99458`). */
@@ -382,6 +298,7 @@
 }
 
 .pass-strip-tail__instruction-line--0-to-stop {
+  display: inline;
   white-space: nowrap;
   font-weight: 600;
   font-variation-settings: 'wght' 600;

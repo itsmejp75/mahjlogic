@@ -140,12 +140,18 @@
   z-index: 1;
   margin: 0;
   /*
-   * Bottom-anchored sheet: positive peek shrinks height (gap shows discards). Negative peek
-   * grows the overlay shell upward (part-0103), so 100% fills the larger shell without clipping.
+   * Sheet height is anchored to the discard content box, not the peek-extended fixed shell.
+   * Positive peek shrinks the sheet (gap shows discards); negative peek grows it upward so
+   * you can drag to full-page height while the shell gap above stays click-through.
    */
   min-height: 0;
-  height: calc(100% - max(0px, var(--suggested-overlay-top-peek, 0px)));
-  max-height: calc(100% - max(0px, var(--suggested-overlay-top-peek, 0px)));
+  --suggested-overlay-sheet-h: calc(
+    var(--suggested-overlay-content-h, 100%)
+    - max(0px, var(--suggested-overlay-top-peek, 0px))
+    - min(0px, var(--suggested-overlay-top-peek, 0px))
+  );
+  height: var(--suggested-overlay-sheet-h);
+  max-height: var(--suggested-overlay-sheet-h);
 }
 
 .suggested-hands-popup--discard-overlay .hands-panel__content {
@@ -153,6 +159,7 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+  pointer-events: none;
 }
 
 /* Internal grid lines in the discard overlay (part-0081 DEBUG salmon borders stay elsewhere). */
@@ -180,11 +187,22 @@
 
 .suggested-hands-popup--discard-overlay.suggested-hands-popup--open .panel--hands,
 .suggested-hands-popup--viewport-bottom.suggested-hands-popup--open .panel--hands {
+  pointer-events: none;
+}
+
+/* Only the scrollable sheet captures hits — shell / wrapper gaps pass through to the rack. */
+.suggested-hands-popup--discard-overlay.suggested-hands-popup--open .hands-list-scroll,
+.suggested-hands-popup--viewport-bottom.suggested-hands-popup--open .hands-list-scroll {
   pointer-events: auto;
 }
 
 .suggested-hands-popup--discard-overlay:not(.suggested-hands-popup--open) .panel--hands,
 .suggested-hands-popup--viewport-bottom:not(.suggested-hands-popup--open) .panel--hands {
+  pointer-events: none;
+}
+
+.suggested-hands-popup--discard-overlay:not(.suggested-hands-popup--open) .hands-list-scroll,
+.suggested-hands-popup--viewport-bottom:not(.suggested-hands-popup--open) .hands-list-scroll {
   pointer-events: none;
 }
 

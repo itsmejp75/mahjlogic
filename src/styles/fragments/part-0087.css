@@ -8,50 +8,74 @@
 
 
 
-/* Slot 14: East discard staging (same column as incoming bot discard when not staging). */
-.exposure-rack__slot--east-discard-slot {
-  justify-content: center;
+/* Slot 14: East discard staging + bot incoming discard share one strip + tile layout. */
+.exposure-rack__slot--east-discard-slot,
+.exposure-rack__slot--incoming-discard {
+  justify-content: flex-end;
   align-items: center;
+  overflow: visible;
+  z-index: 4;
 }
 
-.exposure-rack__slot--east-discard-slot .east-discard-staging--inline {
+.panel--hand .rack-stage__rack-top .exposure-rack:has(.exposure-rack__slot--east-discard-slot),
+.panel--hand .rack-stage__rack-top .exposure-rack:has(.exposure-rack__slot--incoming-discard) {
+  overflow: visible;
+}
+
+.exposure-rack__slot--east-discard-slot .east-discard-staging--inline,
+.exposure-rack__slot--incoming-discard .east-discard-staging--inline {
   margin-inline: auto;
-  margin-block: auto;
+  margin-block: 0;
+  align-self: flex-end;
 }
 
-/* Inline discard slot: same fill as Charleston `.pass-strip-tail__inner` / `.pass-box` */
-.exposure-rack__slot--east-discard-slot .east-discard-staging.east-discard-staging--inline {
+/* Inline strip: same fill + footprint as Charleston `.pass-strip-tail__inner`. */
+.exposure-rack__slot--east-discard-slot .east-discard-staging.east-discard-staging--inline,
+.exposure-rack__slot--incoming-discard .east-discard-staging.east-discard-staging--inline {
+  --discard-inline-box-color: #00b4d8;
+  --discard-inline-inset-border: inset 0 1px 0 0 var(--discard-inline-box-color),
+    inset 1px 0 0 0 var(--discard-inline-box-color),
+    inset -1px 0 0 0 var(--discard-inline-box-color);
   border: 0;
-  border-radius: var(--tile-face-border-radius);
+  border-radius: var(--tile-face-border-radius) var(--tile-face-border-radius) 0 0;
   background: rgba(0, 180, 216, 0.3);
-  box-shadow: none;
-  transition: background 0.15s ease;
-}
-
-.exposure-rack__slot--east-discard-slot .east-discard-staging.east-discard-staging--inline:has(.east-discard-staging__tile) {
-  outline: none;
-  background: rgba(0, 180, 216, 0.3);
-  box-shadow: none;
+  box-shadow: var(--discard-inline-inset-border);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+  overflow: visible;
 }
 
 .exposure-rack__slot--east-discard-slot
+  .east-discard-staging.east-discard-staging--inline:has(.east-discard-staging__tile),
+.exposure-rack__slot--incoming-discard
+  .east-discard-staging.east-discard-staging--inline:has(.east-discard-staging__tile) {
+  outline: none;
+  background: rgba(0, 180, 216, 0.3);
+  box-shadow: var(--discard-inline-inset-border);
+}
+
+.exposure-rack__slot--east-discard-slot
+  .east-discard-staging.east-discard-staging--inline.east-discard-staging--over:not(:has(.east-discard-staging__tile)),
+.exposure-rack__slot--incoming-discard
   .east-discard-staging.east-discard-staging--inline.east-discard-staging--over:not(:has(.east-discard-staging__tile)) {
   outline: none;
   background: rgba(0, 180, 216, 0.5);
-  box-shadow: none;
+  box-shadow: var(--discard-inline-inset-border);
 }
 
 .exposure-rack__slot--east-discard-slot
+  .east-discard-staging.east-discard-staging--inline.east-discard-staging--over:has(.east-discard-staging__tile),
+.exposure-rack__slot--incoming-discard
   .east-discard-staging.east-discard-staging--inline.east-discard-staging--over:has(.east-discard-staging__tile) {
-  box-shadow: none;
+  box-shadow: var(--discard-inline-inset-border);
   background: rgba(0, 180, 216, 0.5);
 }
 
-/* Hovering the staged tile should be visibly brighter than the base slot. */
 .exposure-rack__slot--east-discard-slot
+  .east-discard-staging.east-discard-staging--inline:has(.east-discard-staging__tile:hover),
+.exposure-rack__slot--incoming-discard
   .east-discard-staging.east-discard-staging--inline:has(.east-discard-staging__tile:hover) {
   background: rgba(0, 180, 216, 0.5);
-  box-shadow: none;
+  box-shadow: var(--discard-inline-inset-border);
 }
 
 /* Pass tail cells use the same geometry as the rest of the Charleston exposure row */

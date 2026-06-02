@@ -3457,9 +3457,9 @@ function addBotExposureJokerIds(
 
 /**
  * Bot exposure tile ids for the focused suggested line: naturals that match strip “need” defs
- * (same basis as discard dead-tile highlights), plus exposed jokers you may redeem with a natural
- * in hand, and — while the strip still needs a joker — every bot meld joker when you hold a joker
- * for the line (same “can use a joker in my hand” gate as the main rack).
+ * (same basis as discard dead-tile highlights), exposed jokers you may redeem with a natural in
+ * hand (joker swap — always when legally swappable on your rack), and — while the strip still
+ * needs a joker — every bot meld joker when you hold a joker for the line.
  */
 export function computeBotExposureSuggestedBestIds(
   focusKey: string | null,
@@ -3504,14 +3504,15 @@ export function computeBotExposureSuggestedBestIds(
     const rows = pickStripRowsForFocusKey(p.id, fk, isMulti, result)
     const needDefs = collectNeededNaturalDefsFromStripRows(rows)
     const out = botExposureTileIdsMatchingNeededDefs(botExposures, needDefs)
+    for (const id of collectSwappableJokerTileIds(
+      hand,
+      pendingEastDiscard,
+      botExposures,
+      eastExposures,
+    )) {
+      out.add(id)
+    }
     if (stripRowsStillWantJoker(rows)) {
-      const swappable = collectSwappableJokerTileIds(
-        hand,
-        pendingEastDiscard,
-        botExposures,
-        eastExposures,
-      )
-      for (const id of swappable) out.add(id)
       if (playerHeldJokerTileIds(hand, pendingEastDiscard).size > 0) {
         addBotExposureJokerIds(botExposures, out)
       }

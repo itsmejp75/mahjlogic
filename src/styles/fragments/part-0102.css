@@ -61,6 +61,14 @@
   color: var(--text-h, var(--fg));
 }
 
+.app-menu-modal__label--exposure-unavailable {
+  color: color-mix(in srgb, var(--text-h, var(--fg)) 36%, var(--border, #999));
+}
+
+.app-menu-modal__row--toggle:hover .app-menu-modal__label--exposure-unavailable {
+  color: color-mix(in srgb, var(--text-h, var(--fg)) 36%, var(--border, #999));
+}
+
 /* Blank tiles: switch, then label with 2 / 4 / 6 chips inline immediately after. */
 .app-menu-modal__row--blank-tiles {
   grid-template-columns: auto minmax(0, 1fr);

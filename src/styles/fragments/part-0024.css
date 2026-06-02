@@ -23,14 +23,14 @@
   /* Zero inline padding — see part-0008 .hand-bank and part-0117 tile-w formula. */
   padding-inline: 0;
   width: 100%;
-  height: var(--hand-rack-outer-h, calc(var(--rack-tile-h) + var(--hand-rack-rim-block, 2px)));
-  min-height: var(--hand-rack-outer-h, calc(var(--rack-tile-h) + var(--hand-rack-rim-block, 2px)));
+  height: auto;
+  min-height: 0;
   box-sizing: border-box;
 }
 
-.panel--hand .exposure-rack:not(.exposure-rack--charleston-pass) {
-  height: var(--hand-rack-outer-h, calc(var(--rack-tile-h) + var(--hand-rack-rim-block, 2px)));
-  min-height: var(--hand-rack-outer-h, calc(var(--rack-tile-h) + var(--hand-rack-rim-block, 2px)));
+.panel--hand .rack-stage__rack-top .exposure-rack {
+  padding-block: 0;
+  align-items: flex-end;
 }
 
 .panel--hand .hand-bank {

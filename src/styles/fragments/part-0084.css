@@ -8,35 +8,230 @@
 
 
 
-/* Training: when dragging a hand tile within range, first empty cell shows Call affordance (teal, like pass / discard) */
+/* Opponent discard drag: first empty cell shows Call affordance (teal, like pass / discard). */
 .app .panel--hand .exposure-rack__call-initiate-target--near.exposure-rack__slot--empty::before,
 .app .panel--hand .exposure-rack__call-initiate-target--over.exposure-rack__slot--empty::before {
   opacity: 0;
 }
 
 .app .panel--hand .exposure-rack__call-initiate-target--near {
-  border-radius: 0.35rem;
-  /* Match Charleston `.pass-box`: #00B4D8 @ 30%; `--over` at 50% (below). */
+  --call-initiate-strip-h: calc(var(--rack-tile-h) / 3);
+  --call-initiate-box-color: #00b4d8;
+  --call-initiate-inset-border: inset 0 1px 0 0 var(--call-initiate-box-color),
+    inset 1px 0 0 0 var(--call-initiate-box-color),
+    inset -1px 0 0 0 var(--call-initiate-box-color);
+  align-self: flex-end;
   width: calc(3 * var(--rack-tile-w) + 2 * var(--player-rack-face-gap));
-  min-height: var(--rack-tile-h);
+  height: var(--call-initiate-strip-h);
+  min-height: var(--call-initiate-strip-h);
+  max-height: var(--call-initiate-strip-h);
   border: 0;
   background: rgba(0, 180, 216, 0.3);
-  box-shadow: none;
-  transition: background 0.15s ease;
+  border-radius: var(--tile-face-border-radius) var(--tile-face-border-radius) 0 0;
+  box-shadow: var(--call-initiate-inset-border);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
   box-sizing: border-box;
 }
 
 .app .panel--hand .exposure-rack__call-initiate-target--near.exposure-rack__call-initiate-target--over {
   background: rgba(0, 180, 216, 0.5);
+  box-shadow: var(--call-initiate-inset-border);
+}
+
+/* Call melds: pinned at the exposure↔hand divider (Charleston-teal group ring); hand row shifts right. */
+.panel--hand .rack-stage__rack-top:has(.exposure-rack--has-call-melds) {
+  overflow: visible;
+  z-index: 2;
+}
+
+.panel--hand .rack-stage__rack-col--call-meld-inset {
+  --call-meld-inset-w: calc(
+    var(--call-meld-inset-cols) * var(--hand-top-rack-tile-w) +
+      var(--call-meld-inset-cols) * var(--player-rack-face-gap)
+  );
+}
+
+.panel--hand .rack-stage__rack-col--call-meld-inset .panel-hand-rack__hand-tray {
+  overflow: visible;
+}
+
+.panel--hand .rack-stage__rack-col--call-meld-inset .panel-hand-rack__hand-tray .hand-row {
+  margin-left: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  transform: translateX(var(--call-meld-inset-w));
+  transform-origin: left center;
+}
+
+.panel--hand .exposure-rack--has-call-melds {
+  align-items: flex-end;
+  overflow: visible;
+  position: relative;
+}
+
+.panel--hand .exposure-rack__call-meld-anchor {
+  --call-meld-strip-h: calc(var(--rack-tile-h) / 3);
+  --charleston-pass-box-color: #00b4d8;
+  --call-meld-group-border: var(--charleston-pass-box-color);
+  --call-meld-group-border-w: 2px;
+  /* In-flow flex item — sits on the exact same column grid as the main rack
+     (no absolute positioning / manual left math), so its horizontal position
+     and inter-tile gap always match the hand row. It is only raised. */
+  flex: 0 0 auto;
+  align-self: flex-end;
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: var(--player-rack-face-gap);
+  overflow: visible;
+  pointer-events: auto;
+  transform: translateY(calc(var(--play-tray-h-divider) / 2));
+}
+
+.panel--hand .exposure-rack__call-meld-strip {
+  flex: 0 0 auto;
+  overflow: visible;
+  position: relative;
+  box-sizing: border-box;
+  height: var(--call-meld-strip-h);
+  min-height: var(--call-meld-strip-h);
+  max-height: var(--call-meld-strip-h);
+}
+
+/* Meld boundaries rely on the anchor's `gap` (same as `.hand-row` / main rack) — no extra margin,
+   so meld↔meld spacing matches the rack and the hand-row inset math (N tiles + N gaps) stays exact. */
+.panel--hand .exposure-rack__call-meld-strip--meld-start {
+  margin-left: 0;
+}
+
+.panel--hand .exposure-rack__call-meld-strip__inner {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--player-rack-face-gap);
+  width: 100%;
+  height: var(--call-meld-strip-h);
+  min-height: var(--call-meld-strip-h);
+  max-height: var(--call-meld-strip-h);
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+.panel--hand .exposure-rack__call-meld-strip--staging,
+.panel--hand .exposure-rack__call-meld-strip--locked {
+  position: relative;
+}
+
+.panel--hand .exposure-rack__call-meld-strip--staging .exposure-rack__call-meld-strip__inner,
+.panel--hand .exposure-rack__call-meld-strip--locked .exposure-rack__call-meld-strip__inner {
+  position: relative;
+  height: var(--rack-tile-h);
+  min-height: var(--rack-tile-h);
+  max-height: var(--rack-tile-h);
+  background: transparent;
+  border: 0;
+  border-radius: var(--tile-face-border-radius);
   box-shadow: none;
 }
 
-/* Bot-turn incoming discard — same idle/highlight chrome as Charleston pass box + call-initiate */
-.panel--hand .exposure-rack__slot--incoming-discard {
-  justify-content: center;
-  box-sizing: border-box;
+/* Border overlay sits above tiles (z-index 4) so the Charleston teal ring stays visible. */
+.panel--hand .exposure-rack__call-meld-strip--staging .exposure-rack__call-meld-strip__inner::after,
+.panel--hand .exposure-rack__call-meld-strip--locked .exposure-rack__call-meld-strip__inner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 var(--call-meld-group-border-w) var(--call-meld-group-border);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.panel--hand .exposure-rack__call-meld-strip--locked {
+  padding: 0;
   border: 0;
-  background: rgba(0, 180, 216, 0.3);
-  border-radius: 0.38rem;
-  transition: background 0.15s ease;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  box-sizing: border-box;
+  height: var(--call-meld-strip-h);
+  min-height: var(--call-meld-strip-h);
+  max-height: var(--call-meld-strip-h);
+}
+
+.panel--hand .exposure-rack__call-meld-strip__tile {
+  width: var(--rack-tile-w);
+  height: var(--rack-tile-h);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  position: relative;
+  z-index: 4;
+  cursor: grab;
+  touch-action: none;
+}
+
+.panel--hand .exposure-rack__call-meld-strip__tile .tile-face,
+.panel--hand .exposure-rack__call-meld-strip__tile > .exposure-rack__tile-fly-wrap {
+  width: var(--rack-tile-w);
+  height: var(--rack-tile-h);
+  flex: 0 0 auto;
+}
+
+.panel--hand .exposure-rack__call-meld-strip__tile.exposure-rack__slot--call-amendable {
+  cursor: pointer;
+}
+
+.panel--hand .exposure-rack__call-meld-strip__tile.exposure-rack__slot--staged-returnable:active {
+  cursor: grabbing;
+}
+
+/* Done button sits on the same baseline as the call strip during staging. */
+.panel--hand .exposure-rack__slot--call-action {
+  align-self: flex-end;
+  width: calc(2 * var(--rack-tile-w) + var(--player-rack-face-gap));
+  min-width: calc(2 * var(--rack-tile-w) + var(--player-rack-face-gap));
+  max-width: calc(2 * var(--rack-tile-w) + var(--player-rack-face-gap));
+  height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
+  min-height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
+  max-height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  transform: translateY(
+    calc(
+      var(--hand-button-row-h, var(--rack-action-touch-min-h)) -
+        var(--call-meld-strip-h) +
+        var(--play-tray-h-divider)
+    )
+  );
+}
+
+.panel--hand .exposure-rack__slot--call-action .exposure-rack__call-action-btn {
+  width: var(--rack-tile-btn-inner-2);
+  max-width: var(--rack-tile-btn-inner-2);
+  height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
+  min-height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
+  margin-inline-start: var(--rack-tile-face-bw);
+  padding: var(--rack-control-pad-block) var(--rack-control-pad-inline);
+  border: none;
+  border-radius: var(--rack-tile-btn-border-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Figtree', var(--sans);
+  font-size: min(
+    var(--rack-hand-action-label-fs),
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.52),
+    calc(var(--rack-tile-btn-inner-2) / 5.9)
+  );
+  font-weight: 600;
+  letter-spacing: max(0.028em, calc(0.042em + 0.026rem));
+  line-height: 1;
+  text-transform: none;
+  white-space: nowrap;
+  box-sizing: border-box;
 }

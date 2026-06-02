@@ -466,14 +466,6 @@ html .app-dnd-frame
       --discard-tray-rack-tile-w: var(--rack-tile-w);
       --discard-tray-tile-corner-r: var(--tile-face-border-radius);
     }
-
-    html .app-dnd-frame
-      .app-play-split.app-top-exposure-container
-      .discard-tracker__overlay-grid
-      .exposure-rack--discard-tracker-sorted-row {
-      --tile-face-border-radius: 0;
-      --discard-tray-tile-corner-r: 0;
-    }
   }
 }
 
@@ -528,15 +520,19 @@ html .app-top-exposure-container
 
 html .app-top-exposure-container .exposure-rack--discard-tracker-sorted-row,
 html .app-top-exposure-container .exposure-rack--discard-tracker-bot-row {
-  display: grid;
   gap: var(--player-rack-face-gap);
 }
 
 html .app-top-exposure-container .exposure-rack--discard-tracker-sorted-row {
-  grid-template-columns: repeat(13, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  width: calc(13 * var(--rack-tile-w) + 12 * var(--player-rack-face-gap));
+  max-width: 100%;
 }
 
 html .app-top-exposure-container .exposure-rack--discard-tracker-bot-row {
+  display: grid;
   grid-template-columns: repeat(14, minmax(0, 1fr));
 }
 
@@ -559,6 +555,7 @@ html
   flex: 1 1 0;
   width: auto;
   min-width: 0;
+  max-width: none;
 }
 
 html .app-top-exposure-container .exposure-rack--discard-tracker-bot-seat-label {
@@ -567,14 +564,22 @@ html .app-top-exposure-container .exposure-rack--discard-tracker-bot-seat-label 
 }
 
 html .app-top-exposure-container .discard-tracker__overlay-grid .exposure-rack__slot {
-  width: 100%;
-  min-width: 0;
-  max-width: none;
-  height: auto;
-  min-height: 0;
-  max-height: none;
-  aspect-ratio: 3 / 4;
-  container-type: inline-size;
+  width: var(--rack-tile-w);
+  min-width: var(--rack-tile-w);
+  max-width: var(--rack-tile-w);
+  height: var(--rack-tile-h);
+  min-height: var(--rack-tile-h);
+  max-height: var(--rack-tile-h);
+  aspect-ratio: auto;
+  container-type: normal;
+  box-sizing: border-box;
+}
+
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-sorted-row
+  .exposure-rack__slot {
+  flex: 0 0 var(--rack-tile-w);
 }
 
 html .app-top-exposure-container .discard-tracker__overlay-grid .exposure-rack__slot .tile-face,
@@ -582,14 +587,14 @@ html
   .app-top-exposure-container
   .discard-tracker__overlay-grid
   .exposure-rack__slot--empty::before {
-  width: 100%;
-  height: 100%;
+  width: var(--rack-tile-w);
+  height: var(--rack-tile-h);
   min-width: 0;
   max-width: none;
+  box-sizing: border-box;
 }
 
 html .app-top-exposure-container .discard-tracker__overlay-grid .exposure-rack__slot .tile-face {
-  --tile-face-glyph-fs: calc(100cqi * 0.58);
   flex: 0 0 auto;
 }
 
@@ -597,7 +602,7 @@ html
   .app-top-exposure-container
   .discard-tracker__overlay-grid
   .tile-face.tile-face--sorted-discard-glyph {
-  --tile-face-glyph-fs: calc(100cqi * 0.78);
+  --tile-face-glyph-fs: calc(var(--rack-tile-w) * 1.03 / 2.65 * 2);
 }
 
 html
@@ -610,13 +615,13 @@ html
 
 html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__suit-label,
 html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__seat-label {
-  font-size: calc(100cqi * 1.2);
+  font-size: calc(var(--rack-tile-w) * 1.2);
   font-weight: 500;
 }
 
 html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__count {
-  bottom: 4%;
-  font-size: calc(100cqi * 0.48);
+  bottom: calc(var(--rack-tile-w) * 0.06);
+  font-size: calc(var(--rack-tile-w) * 1.03 / 2.65 * 1.5);
   line-height: 0.82;
 }
 
@@ -913,6 +918,36 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   box-sizing: border-box;
 }
 
+.panel--discard-tracker .tile-face:not(.tile--joker)::after {
+  content: none;
+  display: none;
+}
+
+/* Bot exposure row: keep shared suggest-dim overlay (part-0075) — do not hide tiles. */
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot
+  .tile-face:not(.tile--joker)::after {
+  content: '';
+  display: block;
+}
+
+/* Discard tracker: square tile faces only (tray shell / menu chrome keep their radius). */
+.panel--discard-tracker :is(.discard-tracker__content, .discard-tracker__overlay-grid, .discard-pile) {
+  --discard-tray-tile-corner-r: 0;
+  --tile-face-border-radius: 0;
+}
+
+html .app-dnd-frame .app-play-split.app-top-exposure-container .discard-tracker__overlay-grid {
+  --discard-tray-tile-corner-r: 0;
+  --tile-face-border-radius: 0;
+}
+
+.panel--discard-tracker :is(.tile-face, .exposure-rack__slot--empty::before) {
+  border-radius: 0;
+}
+
 .app-discard-bottom-container
   .panel--discard-tracker
   .discard-tracker__overlay-grid
@@ -961,45 +996,6 @@ body,
 .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row .exposure-rack__slot--empty::before {
   background: color-mix(in srgb, #c8c8c8 28%, var(--app-container-surface, #5c6066));
   background-image: none;
-}
-
-.panel--discard-tracker .tile-face:not(.tile--joker)::after {
-  content: none;
-  display: none;
-}
-
-/* Tracker dim: suit chips + bot/pile tiles hidden (opacity 0); counts + glyph letters unchanged — part-0061. */
-
-/* Discard tracker: square tile faces only (tray shell / menu chrome keep their radius). */
-.panel--discard-tracker :is(.discard-tracker__content, .discard-tracker__overlay-grid, .discard-pile) {
-  --discard-tray-tile-corner-r: 0;
-  --tile-face-border-radius: 0;
-}
-
-html .app-dnd-frame .app-play-split.app-top-exposure-container .discard-tracker__overlay-grid {
-  --discard-tray-tile-corner-r: 0;
-  --tile-face-border-radius: 0;
-}
-
-.panel--discard-tracker
-  .discard-tracker__overlay-grid
-  .exposure-rack--discard-tracker-sorted-row {
-  --tile-face-border-radius: 0;
-  --discard-tray-tile-corner-r: 0;
-}
-
-.panel--discard-tracker
-  .discard-tracker__overlay-grid
-  :is(
-    .sorted-discard-tray__slot,
-    .sorted-discard-tray__slot .tile-face,
-    .sorted-discard-tray__slot--suit-label
-  ) {
-  border-radius: 0;
-}
-
-.panel--discard-tracker :is(.tile-face, .exposure-rack__slot--empty::before) {
-  border-radius: 0;
 }
 
 /*
@@ -1073,15 +1069,10 @@ html[data-home-screen-app]:not([data-native-app]) .app-discard-bottom-container 
 }
 
 /*
- * Installed PWA section separators: full `--play-tray-h-divider` strips between the top
- * exposure band, main rack, and lower discard (same as East rack internal dividers).
- * Tight `--hand-window-pad-inline` is horizontal inset only — not for these vertical strips.
- *
- * Intentionally does NOT touch `.app-main` padding-bottom or landscape pull-down
- * (see `part-0116.css` + `margin-bottom` on `.app-discard-bottom-container` in the
- * mobile-web landscape block above).
+ * Installed PWA: section gaps are handled per layout. With the top exposure band, the play
+ * column is flush (gap 0) so the lower discard tray keeps maximum height for suggested hands.
  */
-html[data-home-screen-app]:not([data-native-app]) .app-dnd-frame {
+html[data-home-screen-app]:not([data-native-app]) .app-dnd-frame:not(:has(> .app-play-split.app-top-exposure-container)) {
   gap: var(--play-tray-h-divider);
 }
 
@@ -1100,6 +1091,111 @@ html[data-home-screen-app]:not([data-native-app])
   padding-top: 0;
   margin-bottom: 0;
   padding-bottom: 0;
+}
+
+/*
+ * Top B/C/D + bot band → East rack: no flex gap on the play column (discard tray keeps max height).
+ * One `--play-tray-h-divider` strip sits above the center group only — same rhythm as hand ↔ actions.
+ */
+.app-dnd-frame:has(> .app-play-split.app-top-exposure-container) {
+  justify-content: flex-start;
+  gap: 0;
+}
+
+html[data-home-screen-app]:not([data-native-app])
+  .app-dnd-frame:has(> .app-play-split.app-top-exposure-container) {
+  gap: 0;
+}
+
+.app-dnd-frame:has(> .app-play-split.app-top-exposure-container) > .app-rack-stage {
+  justify-content: flex-start;
+  margin-top: var(--play-tray-h-divider);
+  background: transparent;
+}
+
+.app-dnd-frame:has(> .app-play-split.app-top-exposure-container) .panel.panel--hand {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.app-dnd-frame:has(> .app-play-split.app-top-exposure-container)
+  .panel.panel--hand
+  > .panel-hand-rack {
+  justify-content: flex-start;
+  margin-top: 0;
+  padding-top: 0;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.app-dnd-frame:has(> .app-play-split.app-top-exposure-container) .panel-hand-rack__column {
+  gap: var(--play-tray-h-divider);
+}
+
+/*
+ * Exposure row (Charleston + main play): drop legacy `--hand-rack-outer-h` full-tile tray.
+ * Empty wells are transparent — a tall row reads as dead gray band between the top tracker
+ * and hand (see part-0118 / part-0119). Compact strips stay ~⅓ tile at the row bottom.
+ */
+.panel--hand .rack-stage__rack-top .exposure-rack {
+  height: auto;
+  min-height: 0;
+  align-items: flex-end;
+  padding-block: 0;
+}
+
+.panel--hand .rack-stage__rack-top .exposure-rack .exposure-rack__slot {
+  height: auto;
+  min-height: 0;
+  align-self: flex-end;
+  justify-content: flex-end;
+}
+
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack
+  .exposure-rack__slot:has(.tile-face):not(.exposure-rack__slot--east-discard-slot):not(
+    .exposure-rack__slot--incoming-discard
+  ),
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack
+  .exposure-rack__slot:has(.exposure-rack__incoming-discard-drag):not(.exposure-rack__slot--incoming-discard) {
+  height: var(--rack-tile-h);
+  min-height: var(--rack-tile-h);
+}
+
+/* Inline discard staging stays a compact strip (tile itself extends downward, like Charleston). */
+.panel--hand .rack-stage__rack-top .exposure-rack :is(.exposure-rack__slot--east-discard-slot, .exposure-rack__slot--incoming-discard) {
+  height: calc(var(--rack-tile-h) / 3);
+  min-height: calc(var(--rack-tile-h) / 3);
+}
+
+.panel--hand .rack-stage__rack-top .exposure-rack .exposure-rack__slot--empty {
+  height: calc(var(--rack-tile-h) / 3);
+  min-height: calc(var(--rack-tile-h) / 3);
+}
+
+.panel--hand .rack-stage__rack-top .exposure-rack .exposure-rack__slot--empty::before {
+  width: 100%;
+  height: 100%;
+}
+
+/* Charleston pass-tail: empty wells = strip height; filled tiles = full height like discard staging. */
+.panel--hand .pass-strip-tail .exposure-rack__slot--pass-tail.exposure-rack__slot--empty {
+  height: var(--charleston-pass-strip-h, calc(var(--rack-tile-h) / 3));
+  min-height: var(--charleston-pass-strip-h, calc(var(--rack-tile-h) / 3));
+}
+
+/* Pass-tail placed tile: anchor from strip top (not bottom) so only the top sits in the strip. */
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack
+  .pass-strip-tail
+  .pass-strip__tile-wrap.exposure-rack__slot--pass-tail {
+  align-self: flex-start;
+  justify-content: flex-start;
+  align-items: flex-start;
 }
 
 /*

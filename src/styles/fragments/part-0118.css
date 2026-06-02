@@ -10,9 +10,9 @@
   --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
   --exposure-slot-h: var(--rack-tile-h);
   padding-block: 0;
-  height: var(--hand-rack-outer-h, calc(var(--rack-tile-h) + var(--hand-rack-rim-block, 2px)));
-  min-height: var(--hand-rack-outer-h, calc(var(--rack-tile-h) + var(--hand-rack-rim-block, 2px)));
-  align-items: center;
+  height: auto;
+  min-height: 0;
+  align-items: flex-end;
 }
 
 .panel--hand .panel-hand-rack__hand-tray .hand-row {

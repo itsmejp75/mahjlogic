@@ -377,6 +377,18 @@ type Props = {
   externalInsertPreviewIndex?: number | null
 }
 
+/** Shift neighbours right of a preview insertion; last tile shifts when inserting at end. */
+function externalShiftForInsertPreview(
+  tileIndex: number,
+  previewIndex: number,
+  occupiedTileCount: number,
+): boolean {
+  if (previewIndex >= occupiedTileCount) {
+    return occupiedTileCount > 0 && tileIndex === occupiedTileCount - 1
+  }
+  return tileIndex >= previewIndex
+}
+
 /** Must sit inside `DndContext` + `SortableContext`. */
 export function SortableHand({
   tiles,
@@ -560,7 +572,11 @@ export function SortableHand({
               rackNewMark={!!rackNewMarkTileIds?.has(tile.id)}
               jokerSwapHintBounce={jokerSwapHintBounceTileIds?.has(tile.id) ?? false}
               jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
-              externalShift={externalPreviewActive && index >= externalInsertPreviewIndex}
+              externalShift={
+                externalPreviewActive &&
+                externalInsertPreviewIndex != null &&
+                externalShiftForInsertPreview(index, externalInsertPreviewIndex, tiles.length)
+              }
               externalPreviewActive={externalPreviewActive}
               shiftPhase={shiftPhase}
               onSelect={onTileActivate}

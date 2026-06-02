@@ -5,11 +5,9 @@ import {
   useMemo,
   useRef,
   type CSSProperties,
-  type Dispatch,
   type MouseEvent,
   type PointerEvent,
   type RefObject,
-  type SetStateAction,
 } from 'react'
 import {
   buildConsecRanksTierStripRow,
@@ -283,7 +281,6 @@ type Props = {
   exposureTileIdsForSuggestedStrip?: ReadonlySet<string>
   /** Section names turned off in the app menu (not listed here ⇒ all sections from the card may show). */
   uncheckedSections: Set<string>
-  onUncheckedSectionsChange: Dispatch<SetStateAction<Set<string>>>
   /** When true, omit hands marked concealed (C) from the suggested list. */
   hideConcealedHands: boolean
   /** Active card book — pattern lookup and section order for this deal. */
@@ -321,7 +318,6 @@ export function SuggestedHandsPanel({
   rackTilesForPatternMatch,
   exposureTileIdsForSuggestedStrip,
   uncheckedSections,
-  onUncheckedSectionsChange,
   hideConcealedHands,
   cardPatterns,
   cardSectionOrder,
@@ -369,14 +365,6 @@ export function SuggestedHandsPanel({
 
   const handsListScrollRef = useRef<HTMLDivElement>(null)
   const minSheetHeightPxRef = useRef(SUGGESTED_SHEET_MIN_FALLBACK_PX)
-
-  /** If every section that appears in the current ranking is turned off, revert to all on. */
-  useEffect(() => {
-    if (sections.length === 0) return
-    const anyVisible = sections.some((s) => !uncheckedSections.has(s))
-    if (anyVisible) return
-    onUncheckedSectionsChange(new Set())
-  }, [sections, uncheckedSections, onUncheckedSectionsChange])
 
   useEffect(
     () => () => {

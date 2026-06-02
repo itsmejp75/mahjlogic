@@ -22,8 +22,9 @@
   --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
   --exposure-slot-h: var(--rack-tile-h);
   padding: 0;
-  height: var(--hand-rack-outer-h, calc(var(--rack-tile-h) + 2px));
-  min-height: var(--hand-rack-outer-h, calc(var(--rack-tile-h) + 2px));
+  height: auto;
+  min-height: 0;
+  align-items: flex-end;
 }
 
 /*

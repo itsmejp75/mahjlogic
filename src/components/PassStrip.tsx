@@ -1,4 +1,4 @@
-import type { CSSProperties, MouseEvent, ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
 import { useDndContext, useDroppable } from '@dnd-kit/core'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -6,16 +6,34 @@ import type { TileInstance } from '../mahjong/types'
 import { PASS_BOX_ID } from '../mahjong/passTargets'
 import { TileFace } from './TileFace'
 
+const PASS_COMPACT_SHIFT_COL =
+  'calc(var(--rack-tile-w) + var(--player-rack-face-gap, var(--rack-tile-gap)))'
+const PASS_REORDER_EASING = 'cubic-bezier(0.2, 0, 0.2, 1)'
+const PASS_REORDER_DURATION = '0.16s'
+
+/** In the row-reverse pass strip, lower slot index = further right on screen. */
+function passCompactShiftTransform(cols: number): string {
+  return `translateX(calc(-${cols} * (${PASS_COMPACT_SHIFT_COL})))`
+}
+
+type PassCompactShift = {
+  cols: number
+  applied: boolean
+  version: number
+}
+
 function SortablePassTile({
   tile,
   onTileClick,
   inlineTail,
   suggestBest,
+  compactShift,
 }: {
   tile: TileInstance
   onTileClick: () => void
   inlineTail: boolean
   suggestBest: boolean
+  compactShift: PassCompactShift | null
 }) {
   const { active } = useDndContext()
   const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({
@@ -23,15 +41,32 @@ function SortablePassTile({
     animateLayoutChanges: () => false,
   })
 
+  const sortableTransform = CSS.Transform.toString(transform)
+  let resolvedTransform: string | undefined = sortableTransform ?? undefined
+  let resolvedTransition: string
+
+  if (compactShift && !isDragging && !active) {
+    if (!compactShift.applied) {
+      resolvedTransform = passCompactShiftTransform(compactShift.cols)
+      resolvedTransition = 'none'
+    } else {
+      resolvedTransform = 'translateX(0)'
+      resolvedTransition = `transform ${PASS_REORDER_DURATION} ${PASS_REORDER_EASING}`
+    }
+  } else if (isDragging) {
+    resolvedTransform = sortableTransform ?? undefined
+    resolvedTransition = 'none'
+  } else if (active) {
+    resolvedTransform = sortableTransform ?? undefined
+    resolvedTransition = `transform ${PASS_REORDER_DURATION} ${PASS_REORDER_EASING}`
+  } else {
+    resolvedTransition = 'none'
+  }
+
   // Match SortableHand: neighbors slide while a drag is active; DragOverlay shows the drag preview.
   const style: CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition:
-      isDragging
-        ? 'none'
-        : active
-          ? 'transform 0.14s cubic-bezier(0.2, 0, 0.2, 1)'
-          : 'none',
+    transform: resolvedTransform,
+    transition: resolvedTransition,
     opacity: isDragging ? 0 : undefined,
     zIndex: isDragging ? 2 : undefined,
   }
@@ -77,7 +112,7 @@ export type PassStripFlyOutFrom =
 type Props = {
   slots: [TileInstance | null, TileInstance | null, TileInstance | null]
   onPassTileClickReturn: (slotIndex: number) => void
-  /** Fills the first empty slot with the selected hand tile (if any). */
+  /** Fills the rightmost empty slot with the selected hand tile (if any). */
   onPassBoxClick: () => void
   /** `boxed` = separate gold pass box; `inlineTail` = last three exposure-style slots in the rack row. */
   variant?: 'boxed' | 'inlineTail'
@@ -121,6 +156,75 @@ export function PassStrip({
 }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: PASS_BOX_ID })
   const inlineTail = variant === 'inlineTail'
+  const prevSlotsRef = useRef(slots)
+  const compactShiftVersionRef = useRef(0)
+  const [compactShifts, setCompactShifts] = useState<Map<string, PassCompactShift>>(new Map())
+
+  useLayoutEffect(() => {
+    const prev = prevSlotsRef.current
+    prevSlotsRef.current = slots
+
+    const prevIndexById = new Map<string, number>()
+    prev.forEach((tile, index) => {
+      if (tile) prevIndexById.set(tile.id, index)
+    })
+
+    const nextShifts = new Map<string, PassCompactShift>()
+    slots.forEach((tile, newIndex) => {
+      if (!tile) return
+      const oldIndex = prevIndexById.get(tile.id)
+      if (oldIndex != null && newIndex < oldIndex) {
+        compactShiftVersionRef.current += 1
+        nextShifts.set(tile.id, {
+          cols: oldIndex - newIndex,
+          applied: false,
+          version: compactShiftVersionRef.current,
+        })
+      }
+    })
+
+    if (nextShifts.size > 0) {
+      setCompactShifts(nextShifts)
+    }
+  }, [slots])
+
+  useEffect(() => {
+    if (!Array.from(compactShifts.values()).some((s) => !s.applied)) return
+    let raf2 = 0
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        setCompactShifts((cur) => {
+          if (!Array.from(cur.values()).some((s) => !s.applied)) return cur
+          const next = new Map(cur)
+          for (const [id, shift] of next) {
+            if (!shift.applied) next.set(id, { ...shift, applied: true })
+          }
+          return next
+        })
+      })
+    })
+    return () => {
+      cancelAnimationFrame(raf1)
+      if (raf2) cancelAnimationFrame(raf2)
+    }
+  }, [compactShifts])
+
+  useEffect(() => {
+    if (compactShifts.size === 0) return
+    if (Array.from(compactShifts.values()).some((s) => !s.applied)) return
+    const versions = new Set(Array.from(compactShifts.values(), (s) => s.version))
+    const t = window.setTimeout(() => {
+      setCompactShifts((cur) => {
+        const next = new Map(cur)
+        for (const [id, shift] of cur) {
+          if (versions.has(shift.version) && shift.applied) next.delete(id)
+        }
+        return next.size === cur.size ? cur : next
+      })
+    }, 220)
+    return () => window.clearTimeout(t)
+  }, [compactShifts])
+
   const flyOutClass =
     flyOutFrom == null
       ? ''
@@ -142,7 +246,6 @@ export function PassStrip({
   const tileRow = (
     <div
       className={inlineTail ? 'pass-strip-tail__tiles' : 'pass-box__inner'}
-      onClick={tileRowClick}
     >
       {slots.map((tile, index) =>
         tile ? (
@@ -163,6 +266,7 @@ export function PassStrip({
               inlineTail={inlineTail}
               onTileClick={() => onPassTileClickReturn(index)}
               suggestBest={!!suggestedBestIds?.has(tile.id)}
+              compactShift={compactShifts.get(tile.id) ?? null}
             />
           )
         ) : (
@@ -215,43 +319,33 @@ export function PassStrip({
         role="group"
         aria-label={ariaParts.join('. ')}
       >
-        <div className="pass-strip-tail__inner">
-          <div className="pass-strip-tail__stack">
-            {tileRow}
-            {showHeader ? (
-              <div
-                className={[
-                  'pass-strip-tail__header',
-                  'pass-strip-tail__header--overlay',
-                  showFooterRow ? 'pass-strip-tail__header--with-footer' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                aria-hidden
-              >
-                {showFooterRow ? <div className="pass-strip-tail__header-spacer" /> : null}
-                <div
-                  className={
-                    showFooterRow ? 'pass-strip-tail__header-centered' : 'pass-strip-tail__header-centered--legacy'
-                  }
-                >
-                  {inlineHeaderTitle ? (
-                    <div className="pass-strip-tail__title">{inlineHeaderTitle}</div>
-                  ) : null}
-                  {hasInstruction ? (
-                    typeof inlineHeaderInstruction === 'string' ? (
-                      <p className="pass-strip-tail__instruction">{inlineHeaderInstruction}</p>
-                    ) : (
-                      inlineHeaderInstruction
-                    )
-                  ) : null}
-                </div>
-                {showFooterRow ? (
-                  <div className="pass-strip-tail__header-footer">{inlineHeaderFooter}</div>
-                ) : null}
-              </div>
+        {showHeader ? (
+          <div
+            className={[
+              'pass-strip-tail__copy',
+              showFooterRow ? 'pass-strip-tail__copy--with-footer' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            aria-hidden
+          >
+            {inlineHeaderTitle ? (
+              <div className="pass-strip-tail__title">{inlineHeaderTitle}</div>
+            ) : null}
+            {hasInstruction ? (
+              typeof inlineHeaderInstruction === 'string' ? (
+                <p className="pass-strip-tail__instruction">{inlineHeaderInstruction}</p>
+              ) : (
+                inlineHeaderInstruction
+              )
+            ) : null}
+            {showFooterRow ? (
+              <div className="pass-strip-tail__copy-footer">{inlineHeaderFooter}</div>
             ) : null}
           </div>
+        ) : null}
+        <div className="pass-strip-tail__inner" onClick={tileRowClick}>
+          <div className="pass-strip-tail__stack">{tileRow}</div>
         </div>
       </div>
     )
@@ -274,6 +368,7 @@ export function PassStrip({
       className={['pass-box', isOver ? 'pass-box--over' : '', boxedFlyClass].filter(Boolean).join(' ')}
       role="group"
       aria-label="Tiles to pass"
+      onClick={tileRowClick}
     >
       {tileRow}
     </div>

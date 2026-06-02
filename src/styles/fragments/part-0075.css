@@ -778,19 +778,16 @@
   position: relative;
 }
 
-.tile-face__rack-new-dot {
-  /* ≈ “1” stroke width — a bit under the old 2× size, above the tiniest pin */
-  --tile-rack-new-dot-size: min(0.3rem, calc(var(--rack-tile-w) * 0.08));
-  --tile-rack-new-dot-inset-inline: calc(var(--rack-tile-w) * 0.06);
-  --tile-rack-new-dot-inset-block: calc(var(--rack-tile-h) * 0.06);
+.tile-face__rack-new-corner {
+  --tile-rack-new-corner-size: min(0.65rem, calc(var(--rack-tile-w) * 0.32));
   position: absolute;
   z-index: 2;
-  right: var(--tile-rack-new-dot-inset-inline);
-  bottom: var(--tile-rack-new-dot-inset-block);
-  width: var(--tile-rack-new-dot-size);
-  height: var(--tile-rack-new-dot-size);
-  border-radius: 50%;
-  background: var(--tg-ink, var(--color-black));
-  box-sizing: content-box;
+  right: 0;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 0 var(--tile-rack-new-corner-size) var(--tile-rack-new-corner-size);
+  border-color: transparent transparent var(--charleston-pass-box-color, #00b4d8) transparent;
   pointer-events: none;
 }

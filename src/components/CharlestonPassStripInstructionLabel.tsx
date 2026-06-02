@@ -26,8 +26,8 @@ export function CharlestonPassStripInstructionMain({ phase }: { phase: Charlesto
   if (phase === 'left2') {
     const line = charlestonPassStripInstruction('left2')
     return (
-      <div className="pass-strip-tail__instruction pass-strip-tail__instruction--stacked">
-        <span className="pass-strip-tail__instruction-line pass-strip-tail__instruction-copy">
+      <p className="pass-strip-tail__instruction pass-strip-tail__instruction--left2-inline">
+        <span className="pass-strip-tail__instruction-copy">
           {line}
           <span className="pass-strip-tail__instruction-left-chevron" aria-hidden />
         </span>
@@ -44,7 +44,7 @@ export function CharlestonPassStripInstructionMain({ phase }: { phase: Charlesto
           </span>{' '}
           <span className="pass-strip-tail__instruction-line__stop">Stop</span>
         </span>
-      </div>
+      </p>
     )
   }
 
@@ -73,14 +73,9 @@ export function CharlestonPassStripInstructionMain({ phase }: { phase: Charlesto
 
   if (text === '(Blind) Pass 0-3 Right') {
     return (
-      <p className="pass-strip-tail__instruction pass-strip-tail__instruction--blind-right">
-        <span className="pass-strip-tail__instruction-blind-label">
-          <span className="pass-strip-tail__instruction-paren">(</span>
-          Blind
-          <span className="pass-strip-tail__instruction-paren pass-strip-tail__instruction-paren--close">)</span>
-        </span>
+      <p className="pass-strip-tail__instruction pass-strip-tail__instruction--with-right-chevron">
         <span className="pass-strip-tail__instruction-copy">
-          Pass 0-3 Right
+          {passInstructionWithDimParens(text)}
           <span className="pass-strip-tail__instruction-right-chevron" aria-hidden />
         </span>
       </p>
@@ -89,14 +84,9 @@ export function CharlestonPassStripInstructionMain({ phase }: { phase: Charlesto
 
   if (text === '(Blind) Pass 0-3 Left') {
     return (
-      <p className="pass-strip-tail__instruction pass-strip-tail__instruction--blind-left">
-        <span className="pass-strip-tail__instruction-blind-label">
-          <span className="pass-strip-tail__instruction-paren">(</span>
-          Blind
-          <span className="pass-strip-tail__instruction-paren pass-strip-tail__instruction-paren--close">)</span>
-        </span>
+      <p className="pass-strip-tail__instruction pass-strip-tail__instruction--with-left-chevron">
         <span className="pass-strip-tail__instruction-copy">
-          Pass 0-3 Left
+          {passInstructionWithDimParens(text)}
           <span className="pass-strip-tail__instruction-left-chevron" aria-hidden />
         </span>
       </p>

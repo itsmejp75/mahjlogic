@@ -1,4 +1,7 @@
 import { PRACTICE_CARD_SECTION_ORDER } from '../card/practicePatterns'
+import type { PracticePattern } from '../card/practicePatterns'
+import { claimMeldsFitPracticePattern } from '../analysis/eastExposurePatternFit'
+import type { TileInstance } from '../mahjong/types'
 
 /**
  * Canonical `PracticePattern.section` / CSV category keys → short labels for the suggested-hands
@@ -105,3 +108,22 @@ export function suggestedHandsFilterMenuColumns(
 
 /** Precomputed column-major layout for the app menu (practice card section order). */
 export const SUGGESTED_HANDS_FILTER_MENU_COLUMNS = suggestedHandsFilterMenuColumns()
+
+/**
+ * Card sections that still have at least one open (non-concealed) hand line compatible with
+ * this seat's committed claim melds — same filter as `rankSuggestedHands` when exposures exist.
+ */
+export function suggestedHandSectionsAvailableWithClaimMelds(
+  book: readonly PracticePattern[],
+  claimMelds: ReadonlyArray<{ tiles: TileInstance[] }>,
+  sectionOrder: readonly string[] = PRACTICE_CARD_SECTION_ORDER,
+): Set<string> {
+  if (claimMelds.length === 0) return new Set(sectionOrder)
+  const available = new Set<string>()
+  for (const p of book) {
+    if (p.closed) continue
+    if (!claimMeldsFitPracticePattern(p, claimMelds)) continue
+    available.add(p.section)
+  }
+  return available
+}

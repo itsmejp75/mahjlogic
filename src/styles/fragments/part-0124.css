@@ -4,16 +4,76 @@
   background-color: #fff;
   border-radius: var(--tile-face-border-radius);
   border: none;
-  box-shadow: none;
+  --tile-face-base-shadow: 0 0 0 0 transparent;
+  box-shadow: var(--tile-face-highlight-inset), var(--tile-face-highlight-shadow),
+    var(--tile-face-suggest-dim-inset);
   padding: 0;
   overflow: hidden;
   position: relative;
 }
 
-.app[data-tile-graphics='illustrative-classic'] .tile-face.tile-face--illustrative-art::before,
-.app[data-tile-graphics='illustrative-classic'] .tile-face.tile-face--illustrative-art::after {
+/* Designer lustre only — keep ::after for suggest-dim overlay. */
+.app[data-tile-graphics='illustrative-classic'] .tile-face.tile-face--illustrative-art::before {
   content: none;
   display: none;
+}
+
+/* SVG jokers include the inscribed ring — suppress the CSS `::after` ring. */
+.app[data-tile-graphics='illustrative-classic'] .tile-face.tile-face--illustrative-art.tile--joker::after {
+  content: none;
+  display: none;
+}
+
+/* White SVG faces: white suggest-best rings don't read — use call-meld green on hand/pass/discard only. */
+.app[data-tile-graphics='illustrative-classic'] {
+  --illustrative-suggest-best-ring: inset 0 0 0 2px #22c55e;
+}
+
+.app[data-tile-graphics='illustrative-classic'] .sortable-tile-wrap--suggest-best .tile-face.tile-face--illustrative-art,
+.app[data-tile-graphics='illustrative-classic'] .pass-strip__tile-wrap--suggest-best .tile-face.tile-face--illustrative-art,
+.app[data-tile-graphics='illustrative-classic'] .east-discard-staging__tile--suggest-best .tile-face.tile-face--illustrative-art,
+.app[data-tile-graphics='illustrative-classic'] .discard-entry--suggest-need .tile-face.tile-face--illustrative-art,
+.app[data-tile-graphics='illustrative-classic']
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suggest-need
+  .tile-face.tile-face--illustrative-art {
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: var(--illustrative-suggest-best-ring);
+}
+
+/* Player hand exposures: meld group border only — no per-tile rings on SVG faces. */
+.app[data-tile-graphics='illustrative-classic'] .panel--hand .exposure-rack__slot--suggest-best .tile-face.tile-face--illustrative-art,
+.app[data-tile-graphics='illustrative-classic'] .panel--hand .exposure-rack__slot--called .tile-face.tile-face--illustrative-art,
+.app[data-tile-graphics='illustrative-classic'] .panel--hand .exposure-rack__slot--call-amendable:hover .tile-face.tile-face--illustrative-art,
+.app[data-tile-graphics='illustrative-classic'] .panel--hand .exposure-rack__slot--staged-returnable:hover .tile-face.tile-face--illustrative-art {
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
+}
+
+/* Bot exposure tracker: usable tiles (incl. swappable jokers) get the same green ring as the hand. */
+.app[data-tile-graphics='illustrative-classic']
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-best
+  .tile-face.tile-face--illustrative-art,
+.app[data-tile-graphics='illustrative-classic']
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-best
+  .tile-face.tile--joker.tile-face--illustrative-art,
+.app[data-tile-graphics='illustrative-classic']
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-dim.exposure-rack__slot--suggest-best
+  .tile-face.tile--joker.tile-face--illustrative-art {
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: var(--illustrative-suggest-best-ring);
+  filter: none;
+  opacity: 1;
+  animation: none;
 }
 
 .app[data-tile-graphics='illustrative-classic'] .tile-face__art {
@@ -29,10 +89,16 @@
 
 /* Sorted discard tracker: suit tint classes are glyph-only — keep white face when art is shown. */
 .app[data-tile-graphics='illustrative-classic']
+  .panel--discard-tracker
+  .sorted-discard-tray__slot--discarded
   .tile-face.tile-face--illustrative-art.tile-face--sorted-discard-dot,
 .app[data-tile-graphics='illustrative-classic']
+  .panel--discard-tracker
+  .sorted-discard-tray__slot--discarded
   .tile-face.tile-face--illustrative-art.tile-face--sorted-discard-bam,
 .app[data-tile-graphics='illustrative-classic']
+  .panel--discard-tracker
+  .sorted-discard-tray__slot--discarded
   .tile-face.tile-face--illustrative-art.tile-face--sorted-discard-crak {
   background-color: #fff;
 }

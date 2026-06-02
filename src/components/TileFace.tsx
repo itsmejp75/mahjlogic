@@ -89,7 +89,7 @@ export function TileFace({
 }: Props) {
   const { tileGraphics, alternateDragons } = useTileGraphics()
   const artUrl =
-    cardInk == null && isIllustrativeTileGraphics(tileGraphics)
+    cardInk == null && isIllustrativeTileGraphics(tileGraphics) && !sortedDiscardGlyph
       ? classicTileArtUrl(def, alternateDragons)
       : null
 
@@ -149,7 +149,7 @@ export function TileFace({
       ) : (
         <span className="tile-face__glyph">{renderGlyphChars(tileShortLabel(def))}</span>
       )}
-      {rackNewMark ? <span className="tile-face__rack-new-dot" aria-hidden="true" /> : null}
+      {rackNewMark ? <span className="tile-face__rack-new-corner" aria-hidden="true" /> : null}
     </div>
   )
 }

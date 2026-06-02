@@ -8,15 +8,32 @@
 
 
 
-/* Same span + gaps as slots 11–13: exact 3 × tile face + 2 gaps; stretches to Charleston rack row height. */
+/* Same span + gaps as slots 11–13: exact 3 × tile face + 2 gaps; compact strip (1/3 tile height). */
+.panel--hand .rack-stage--charleston .rack-stage__rack-top {
+  overflow: visible;
+  z-index: 2;
+}
+
+.panel--hand .rack-stage__rack-top .exposure-rack.exposure-rack--charleston-pass {
+  overflow: visible;
+}
+
 .panel--hand .pass-strip-tail {
-  align-self: center;
+  --charleston-pass-strip-h: calc(var(--rack-tile-h) / 3);
+  align-self: flex-end;
   width: calc(3 * var(--rack-tile-w) + 2 * var(--player-rack-face-gap));
   flex: 0 0 calc(3 * var(--rack-tile-w) + 2 * var(--player-rack-face-gap));
   display: flex;
-  height: var(--rack-tile-h);
-  min-height: var(--rack-tile-h);
-  max-height: var(--rack-tile-h);
+  height: var(--charleston-pass-strip-h);
+  min-height: var(--charleston-pass-strip-h);
+  max-height: var(--charleston-pass-strip-h);
+  overflow: visible;
+  position: relative;
+}
+
+.panel--hand .pass-strip-tail__inner,
+.panel--hand .pass-strip-tail__stack {
+  overflow: visible;
 }
 
 .panel--hand .pass-strip-tail__inner {
@@ -28,4 +45,32 @@
 
 .panel--hand .pass-strip-tail__tiles {
   gap: var(--player-rack-face-gap);
+  align-items: flex-start;
+  overflow: visible;
+  /* Slot 0 = col 14 (right); fill order 0→1→2 enters the box right-to-left. */
+  flex-direction: row-reverse;
+}
+
+.panel--hand .pass-strip-tail .exposure-rack__slot--pass-tail.exposure-rack__slot--empty {
+  height: var(--charleston-pass-strip-h);
+}
+
+.panel--hand .pass-strip-tail .pass-strip__tile-wrap.exposure-rack__slot--pass-tail {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  height: var(--rack-tile-h);
+  position: relative;
+  z-index: 4;
+}
+
+.panel--hand .pass-strip-tail .pass-strip__tile-wrap.exposure-rack__slot--pass-tail > .pass-strip__tile-btn {
+  width: var(--rack-tile-w);
+  height: var(--rack-tile-h);
+  flex: 0 0 auto;
+}
+
+.panel--hand .pass-strip-tail .pass-strip__tile-wrap .tile-face {
+  height: var(--rack-tile-h);
+  width: var(--rack-tile-w);
 }

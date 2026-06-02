@@ -1,9 +1,10 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { useLayoutEffect, useRef } from 'react'
-import { useDndContext, useDraggable, useDroppable } from '@dnd-kit/core'
+import { useDndContext, useDroppable } from '@dnd-kit/core'
 import { SortableContext, rectSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { HandTileFlyInFrom } from '../mahjong/handTileFlyIn'
+import { incomingBotDiscardDragId } from '../mahjong/jokerSwapIds'
 import type { TileInstance } from '../mahjong/types'
 import { TileFace } from './TileFace'
 
@@ -148,13 +149,17 @@ function IncomingBotDiscardDraggable({
   stackSuitTiles: boolean
   incomingBotDiscardFlyFrom: HandTileFlyInFrom | null
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: tile.id,
+  const { active } = useDndContext()
+  const dragId = incomingBotDiscardDragId(tile.id)
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({
+    id: dragId,
+    animateLayoutChanges: () => false,
     /** Avoid `aria-roledescription="draggable"` (dnd-kit default); iOS can surface it as stray selectable text near the viewport edge. */
     attributes: { roleDescription: 'tile' },
   })
   const dragStyle: CSSProperties = {
     ...(transform ? { transform: CSS.Transform.toString(transform) } : {}),
+    transition: isDragging ? 'none' : active ? 'transform 0.14s cubic-bezier(0.2, 0, 0.2, 1)' : 'none',
     opacity: isDragging ? 0 : 1,
     touchAction: 'none',
   }
@@ -162,7 +167,7 @@ function IncomingBotDiscardDraggable({
     <div
       ref={setNodeRef}
       style={dragStyle}
-      className="exposure-rack__incoming-discard-drag"
+      className="east-discard-staging__tile exposure-rack__incoming-discard-drag"
       {...listeners}
       {...attributes}
     >
@@ -261,6 +266,116 @@ export type MeldGroup = {
   onAmendCallMeld?: () => void
 }
 
+function callMeldStripWidthStyle(tileCount: number): CSSProperties {
+  const n = Math.max(1, tileCount)
+  return {
+    width: `calc(${n} * var(--rack-tile-w) + ${n - 1} * var(--player-rack-face-gap))`,
+    minWidth: `calc(${n} * var(--rack-tile-w) + ${n - 1} * var(--player-rack-face-gap))`,
+    maxWidth: `calc(${n} * var(--rack-tile-w) + ${n - 1} * var(--player-rack-face-gap))`,
+  }
+}
+
+type CallMeldStripTileGuideProps = {
+  tile: TileInstance
+  stackSuitTiles: boolean
+  suggestBestIds: ReadonlySet<string> | null
+  suggestedDeadTileIds: ReadonlySet<string> | null
+  suggestedTileGuide: ExposureSuggestedTileGuide | null
+  botJokerBorderMenuOn: boolean | undefined
+  suppressDim: boolean
+  highlightCalled: boolean
+  jokerSwapHintBounceTileIds?: ReadonlySet<string> | null
+  amendable?: boolean
+  flyIn?: boolean
+  flyFromRight?: boolean
+  callStagingWave?: {
+    staggerDelayMs: number
+    baseDelayMs: number
+    waveIndex: number
+  } | null
+  elevated?: boolean
+}
+
+function callMeldStripTileClasses({
+  tile,
+  suggestBestIds,
+  suggestedDeadTileIds,
+  suggestedTileGuide,
+  botJokerBorderMenuOn,
+  suppressDim,
+  highlightCalled,
+  jokerSwapHintBounceTileIds,
+  amendable,
+  dragging,
+}: CallMeldStripTileGuideProps & { dragging?: boolean }): string {
+  const isJoker = tile.def.cat === 'joker'
+  const isBest = slotIsSuggestBest(
+    isJoker,
+    tile.id,
+    suggestBestIds,
+    suggestedTileGuide,
+    botJokerBorderMenuOn,
+  )
+  const isDeadSuggested = !!suggestedDeadTileIds?.has(tile.id) && !isBest
+  const suggestDim = isDeadSuggested || (!suppressDim && !!suggestBestIds && !isBest)
+  return [
+    'exposure-rack__call-meld-strip__tile',
+    highlightCalled ? 'exposure-rack__call-meld-strip__tile--called' : '',
+    highlightCalled ? 'exposure-rack__slot--called' : '',
+    amendable ? 'exposure-rack__slot--call-amendable' : '',
+    dragging ? 'exposure-rack__slot--dragging' : '',
+    isJoker ? 'exposure-rack__slot--joker' : '',
+    isBest ? 'exposure-rack__slot--suggest-best' : '',
+    isDeadSuggested ? 'exposure-rack__slot--suggest-dying' : '',
+    suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
+    jokerSwapHintBounceClass(jokerSwapHintBounceTileIds, tile.id),
+  ]
+    .filter(Boolean)
+    .join(' ')
+}
+
+function CallMeldStripTileFace({
+  tile,
+  stackSuitTiles,
+  flyIn,
+  flyFromRight,
+  callStagingWave,
+  elevated,
+}: Pick<
+  CallMeldStripTileGuideProps,
+  'tile' | 'stackSuitTiles' | 'flyIn' | 'flyFromRight' | 'callStagingWave' | 'elevated'
+>) {
+  let waveDelayMs: number | null = null
+  if (callStagingWave) {
+    waveDelayMs =
+      callStagingWave.baseDelayMs + callStagingWave.waveIndex * callStagingWave.staggerDelayMs
+  }
+  if (flyIn) {
+    return (
+      <ExposureRackFlyInTile
+        tileId={tile.id}
+        animate
+        flyOrigin={flyFromRight ? 'right' : 'above'}
+      >
+        <TileFace def={tile.def} elevated={elevated} rackSuitStacked={stackSuitTiles} />
+      </ExposureRackFlyInTile>
+    )
+  }
+  if (waveDelayMs != null) {
+    return (
+      <ExposureRackFlyInTile
+        tileId={tile.id}
+        animate
+        flyOrigin="below"
+        animationDelayMs={waveDelayMs}
+      >
+        <TileFace def={tile.def} elevated={elevated} rackSuitStacked={stackSuitTiles} />
+      </ExposureRackFlyInTile>
+    )
+  }
+  return <TileFace def={tile.def} elevated={elevated} rackSuitStacked={stackSuitTiles} />
+}
+
 /** A staged call tile that participates in the shared SortableContext so hand + exposure animate like Charleston/pass. */
 function SortableStagedSlot({
   tile,
@@ -275,6 +390,7 @@ function SortableStagedSlot({
   suppressDim,
   jokerSwapHintBounceTileIds = null,
   callStagingWave = null,
+  tileWrapClass = 'exposure-rack__slot',
 }: {
   tile: TileInstance
   gi: number
@@ -293,6 +409,7 @@ function SortableStagedSlot({
     baseDelayMs: number
     waveIndex: number
   } | null
+  tileWrapClass?: string
 }) {
   const { active } = useDndContext()
   const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({
@@ -311,6 +428,19 @@ function SortableStagedSlot({
     opacity: isDragging ? 0 : undefined,
     zIndex: isDragging ? 2 : undefined,
   }
+  const tileGuide: CallMeldStripTileGuideProps = {
+    tile,
+    stackSuitTiles,
+    suggestBestIds,
+    suggestedDeadTileIds,
+    suggestedTileGuide,
+    botJokerBorderMenuOn,
+    suppressDim,
+    highlightCalled: false,
+    jokerSwapHintBounceTileIds,
+    callStagingWave,
+    elevated: isDragging,
+  }
   const isJoker = tile.def.cat === 'joker'
   const isBest = slotIsSuggestBest(
     isJoker,
@@ -319,48 +449,211 @@ function SortableStagedSlot({
     suggestedTileGuide,
     botJokerBorderMenuOn,
   )
-  const isDeadSuggested = !!suggestedDeadTileIds?.has(tile.id)
+  const isDeadSuggested = !!suggestedDeadTileIds?.has(tile.id) && !isBest
   const suggestDim = isDeadSuggested || (!suppressDim && !!suggestBestIds && !isBest)
-  let waveDelayMs: number | null = null
-  if (callStagingWave) {
-    waveDelayMs =
-      callStagingWave.baseDelayMs + callStagingWave.waveIndex * callStagingWave.staggerDelayMs
-  }
-  const waveFace =
-    waveDelayMs != null ? (
-      <ExposureRackFlyInTile
-        tileId={tile.id}
-        animate
-        flyOrigin="below"
-        animationDelayMs={waveDelayMs}
-      >
-        <TileFace def={tile.def} elevated={isDragging} rackSuitStacked={stackSuitTiles} />
-      </ExposureRackFlyInTile>
-    ) : (
-      <TileFace def={tile.def} elevated={isDragging} rackSuitStacked={stackSuitTiles} />
-    )
+  const stripTile = tileWrapClass === 'exposure-rack__call-meld-strip__tile'
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={[
-        'exposure-rack__slot',
-        gi > 0 && isFirst ? 'exposure-rack__slot--meld-start' : '',
-        'exposure-rack__slot--staged-returnable',
-        isDragging ? 'exposure-rack__slot--dragging' : '',
-        isJoker ? 'exposure-rack__slot--joker' : '',
-        isBest ? 'exposure-rack__slot--suggest-best' : '',
-        isDeadSuggested ? 'exposure-rack__slot--suggest-dying' : '',
-        suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
-        jokerSwapHintBounceClass(jokerSwapHintBounceTileIds, tile.id),
-      ]
-        .filter(Boolean)
-        .join(' ')}
+      className={
+        stripTile
+          ? [
+              tileWrapClass,
+              'exposure-rack__slot--staged-returnable',
+              callMeldStripTileClasses({ ...tileGuide, dragging: isDragging }),
+            ]
+              .filter(Boolean)
+              .join(' ')
+          : [
+              tileWrapClass,
+              gi > 0 && isFirst ? 'exposure-rack__slot--meld-start' : '',
+              'exposure-rack__slot--staged-returnable',
+              isDragging ? 'exposure-rack__slot--dragging' : '',
+              isJoker ? 'exposure-rack__slot--joker' : '',
+              isBest ? 'exposure-rack__slot--suggest-best' : '',
+              isDeadSuggested ? 'exposure-rack__slot--suggest-dying' : '',
+              suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
+              jokerSwapHintBounceClass(jokerSwapHintBounceTileIds, tile.id),
+            ]
+              .filter(Boolean)
+              .join(' ')
+      }
       onClick={() => onTileClick(tile.id)}
       {...listeners}
       {...attributes}
     >
-      {waveFace}
+      {stripTile ? (
+        <CallMeldStripTileFace {...tileGuide} />
+      ) : callStagingWave ? (
+        <CallMeldStripTileFace {...tileGuide} />
+      ) : (
+        <TileFace def={tile.def} elevated={isDragging} rackSuitStacked={stackSuitTiles} />
+      )}
+    </div>
+  )
+}
+
+function CallMeldStrip({
+  meld,
+  gi,
+  locked,
+  staging,
+  suggestBestIds,
+  suggestedDeadTileIds,
+  suggestedTileGuide,
+  botJokerBorderMenuOn,
+  suppressDim,
+  highlightCalledTile,
+  stackSuitTiles,
+  flyInTileIds,
+  flyInFromRightTileIds = null,
+  jokerSwapHintBounceTileIds = null,
+  jokerSwapHintBounceEpoch = 0,
+  callStagingWaveFlyIn = null,
+  dropZoneId,
+}: {
+  meld: MeldGroup
+  gi: number
+  locked: boolean
+  staging: boolean
+  suggestBestIds: ReadonlySet<string> | null
+  suggestedDeadTileIds: ReadonlySet<string> | null
+  suggestedTileGuide: ExposureSuggestedTileGuide | null
+  botJokerBorderMenuOn: boolean | undefined
+  suppressDim: boolean
+  highlightCalledTile: boolean
+  stackSuitTiles: boolean
+  flyInTileIds: ReadonlySet<string> | null | undefined
+  flyInFromRightTileIds?: ReadonlySet<string> | null
+  jokerSwapHintBounceTileIds?: ReadonlySet<string> | null
+  jokerSwapHintBounceEpoch?: number
+  callStagingWaveFlyIn?: {
+    staggerDelayMs: number
+    baseDelayMs: number
+  } | null
+  dropZoneId?: string
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: dropZoneId ?? '', disabled: !dropZoneId })
+  const ordered = orderMeldForRack(meld)
+  const onAmend = meld.onAmendCallMeld
+  const onTileClick = meld.onTileClick
+  let stagedWaveSlotIndex = 0
+
+  const strip = (
+    <div
+      style={callMeldStripWidthStyle(ordered.length)}
+      className={[
+        'exposure-rack__call-meld-strip',
+        gi > 0 ? 'exposure-rack__call-meld-strip--meld-start' : '',
+        locked ? 'exposure-rack__call-meld-strip--locked' : '',
+        staging ? 'exposure-rack__call-meld-strip--staging' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <div className="exposure-rack__call-meld-strip__inner">
+        {ordered.map((tile) => {
+          const isCalled = meld.calledTileId === tile.id
+          const highlightCalled = highlightCalledTile && isCalled
+          const waveTiming =
+            staging && callStagingWaveFlyIn != null
+              ? {
+                  staggerDelayMs: callStagingWaveFlyIn.staggerDelayMs,
+                  baseDelayMs: callStagingWaveFlyIn.baseDelayMs,
+                  waveIndex: stagedWaveSlotIndex++,
+                }
+              : null
+          const tileGuide: CallMeldStripTileGuideProps = {
+            tile,
+            stackSuitTiles,
+            suggestBestIds,
+            suggestedDeadTileIds,
+            suggestedTileGuide,
+            botJokerBorderMenuOn,
+            suppressDim,
+            highlightCalled,
+            jokerSwapHintBounceTileIds,
+            amendable: !!onAmend,
+            flyIn: !!flyInTileIds?.has(tile.id),
+            flyFromRight: !!flyInFromRightTileIds?.has(tile.id),
+            callStagingWave: waveTiming,
+          }
+
+          if (onTileClick && isCalled) {
+            return (
+              <div
+                key={jokerSwapBounceSlotKey(tile.id, jokerSwapHintBounceTileIds, jokerSwapHintBounceEpoch)}
+                data-call-magnet-target=""
+                className={callMeldStripTileClasses(tileGuide)}
+              >
+                <CallMeldStripTileFace {...tileGuide} />
+              </div>
+            )
+          }
+
+          if (onTileClick) {
+            return (
+              <SortableStagedSlot
+                key={jokerSwapBounceSlotKey(tile.id, jokerSwapHintBounceTileIds, jokerSwapHintBounceEpoch)}
+                tile={tile}
+                gi={gi}
+                isFirst={false}
+                onTileClick={onTileClick}
+                stackSuitTiles={stackSuitTiles}
+                suggestBestIds={suggestBestIds}
+                suggestedDeadTileIds={suggestedDeadTileIds}
+                suggestedTileGuide={suggestedTileGuide}
+                botJokerBorderMenuOn={botJokerBorderMenuOn}
+                suppressDim={suppressDim}
+                jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
+                callStagingWave={waveTiming}
+                tileWrapClass="exposure-rack__call-meld-strip__tile"
+              />
+            )
+          }
+
+          return (
+            <div
+              key={jokerSwapBounceSlotKey(tile.id, jokerSwapHintBounceTileIds, jokerSwapHintBounceEpoch)}
+              data-tile-id={tile.id}
+              className={callMeldStripTileClasses(tileGuide)}
+              onClick={
+                onAmend
+                  ? (e) => {
+                      e.stopPropagation()
+                      onAmend()
+                    }
+                  : undefined
+              }
+            >
+              <CallMeldStripTileFace {...tileGuide} />
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+
+  if (!dropZoneId) return strip
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={
+        {
+          ['--bot-meld-slot-span' as string]: Math.max(1, ordered.length),
+        } as CSSProperties
+      }
+      className={[
+        'exposure-rack__meld-drop',
+        gi > 0 ? 'exposure-rack__slot--meld-start' : '',
+        isOver ? 'exposure-rack__meld-drop--over' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      {strip}
     </div>
   )
 }
@@ -394,6 +687,29 @@ function DroppableMeldSlots({
   jokerSwapHintBounceTileIds?: ReadonlySet<string> | null
   jokerSwapHintBounceEpoch?: number
 }) {
+  if (meld.calledTileId) {
+    return (
+      <CallMeldStrip
+        meld={meld}
+        gi={gi}
+        locked
+        staging={false}
+        suggestBestIds={suggestBestIds}
+        suggestedDeadTileIds={suggestedDeadTileIds}
+        suggestedTileGuide={suggestedTileGuide}
+        botJokerBorderMenuOn={botJokerBorderMenuOn}
+        suppressDim={suppressDim}
+        highlightCalledTile={highlightCalledTile}
+        stackSuitTiles={stackSuitTiles}
+        flyInTileIds={flyInTileIds}
+        flyInFromRightTileIds={flyInFromRightTileIds}
+        jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
+        jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
+        dropZoneId={meld.dropZoneId}
+      />
+    )
+  }
+
   const { setNodeRef, isOver } = useDroppable({ id: meld.dropZoneId! })
   const ordered = orderMeldForRack(meld)
   const onAmend = meld.onAmendCallMeld
@@ -423,7 +739,7 @@ function DroppableMeldSlots({
           suggestedTileGuide,
           botJokerBorderMenuOn,
         )
-        const isDeadSuggested = !!suggestedDeadTileIds?.has(tile.id)
+        const isDeadSuggested = !!suggestedDeadTileIds?.has(tile.id) && !isBest
         const suggestDim = isDeadSuggested || (!suppressDim && !!suggestBestIds && !isBest)
         const flyIn = !!flyInTileIds?.has(tile.id)
         const flyFromRight = !!flyInFromRightTileIds?.has(tile.id)
@@ -643,6 +959,8 @@ export function ExposureRack({
   const totalExposed = melds.reduce((n, m) => n + m.tiles.length, 0)
   const tailReserved = reserveTrailingSlots + (reserveLastSlotForDiscard ? 1 : 0)
   const emptyCount = Math.max(0, slotCount - totalExposed - suffixSlotCount - tailReserved)
+  const callInitiateShown = firstEmptyOverride != null
+  const emptySlotCount = callInitiateShown ? Math.max(0, emptyCount - 1) : emptyCount
 
   const gLast = suggestedTileGuide
   const lastSlotIsBest = lastSlotTile
@@ -662,12 +980,87 @@ export function ExposureRack({
     .map((meld) => meld.sortableMeldId)
     .filter((id): id is string => id != null)
 
+  const callMelds = melds.filter((meld) => meld.calledTileId)
+  const flowMelds = melds.filter((meld) => !meld.calledTileId)
+  const callMeldTileCount = callMelds.reduce((n, m) => n + m.tiles.length, 0)
+
   // Count every meld that actually shows tiles (including joker-swap droppables: they still cover the watermark).
   const filledMeldCount = melds.filter((m) => m.tiles.length > 0).length
 
+  const renderCallMeldEntry = (meld: MeldGroup, gi: number) => {
+    const ordered = orderMeldForRack(meld)
+    const wrapMeldContent = (content: ReactNode, slotSpan = 1) =>
+      meld.sortableMeldId ? (
+        <SortableMeldGroup key={meld.sortableMeldId} id={meld.sortableMeldId} slotSpan={slotSpan}>
+          {content}
+        </SortableMeldGroup>
+      ) : (
+        <div key={meld.calledTileId ?? `call-meld-${gi}`}>{content}</div>
+      )
+    const callStripCommon = {
+      meld,
+      gi,
+      suggestBestIds: suggestedTileGuide?.bestIds ?? null,
+      suggestedDeadTileIds,
+      suggestedTileGuide,
+      botJokerBorderMenuOn,
+      suppressDim,
+      highlightCalledTile,
+      stackSuitTiles,
+      flyInTileIds,
+      flyInFromRightTileIds,
+      jokerSwapHintBounceTileIds,
+      jokerSwapHintBounceEpoch,
+      callStagingWaveFlyIn,
+    }
+    if (meld.dropZoneId) {
+      return wrapMeldContent(
+        <DroppableMeldSlots
+          meld={meld}
+          gi={gi}
+          suggestBestIds={suggestedTileGuide?.bestIds ?? null}
+          suggestedDeadTileIds={suggestedDeadTileIds}
+          suggestedTileGuide={suggestedTileGuide}
+          botJokerBorderMenuOn={botJokerBorderMenuOn}
+          suppressDim={suppressDim}
+          highlightCalledTile={highlightCalledTile}
+          stackSuitTiles={stackSuitTiles}
+          flyInTileIds={flyInTileIds}
+          flyInFromRightTileIds={flyInFromRightTileIds}
+          jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
+          jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
+        />,
+        Math.max(1, ordered.length),
+      )
+    }
+    if (meld.onTileClick) {
+      return wrapMeldContent(
+        <CallMeldStrip {...callStripCommon} locked={false} staging />,
+        Math.max(1, ordered.length),
+      )
+    }
+    return wrapMeldContent(
+      <CallMeldStrip {...callStripCommon} locked staging={false} />,
+      Math.max(1, ordered.length),
+    )
+  }
+
   return (
     <div
-      className={['exposure-rack', className].filter(Boolean).join(' ')}
+      className={[
+        'exposure-rack',
+        callMeldTileCount > 0 ? 'exposure-rack--has-call-melds' : '',
+        className,
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      style={
+        callMeldTileCount > 0
+          ? ({
+              ['--call-meld-inset-cols' as string]: callMeldTileCount,
+            } as CSSProperties)
+          : undefined
+      }
       role="list"
       aria-label={ariaLabel}
     >
@@ -686,8 +1079,13 @@ export function ExposureRack({
           {watermark}
         </div>
       ) : null}
+      {callMeldTileCount > 0 ? (
+        <div className="exposure-rack__call-meld-anchor" role="group" aria-label="Called melds">
+          {callMelds.map((meld, gi) => renderCallMeldEntry(meld, gi))}
+        </div>
+      ) : null}
       <SortableContext items={sortableMeldIds} strategy={rectSortingStrategy}>
-      {melds.map((meld, gi) => {
+      {flowMelds.map((meld, gi) => {
         const wrapMeldContent = (content: ReactNode, slotSpan = 1) =>
           meld.sortableMeldId ? (
             <SortableMeldGroup key={meld.sortableMeldId} id={meld.sortableMeldId} slotSpan={slotSpan}>
@@ -720,147 +1118,29 @@ export function ExposureRack({
         const ordered = orderMeldForRack(meld)
         if (meld.onTileClick) {
           const handler = meld.onTileClick
-          let stagedWaveSlotIndex = 0
-          return ordered.map((tile, ti) => {
-            const isCalled = meld.calledTileId === tile.id
-            if (isCalled) {
-              const g = suggestedTileGuide
-              const isJoker = tile.def.cat === 'joker'
-              const isBest = slotIsSuggestBest(isJoker, tile.id, g?.bestIds, g, botJokerBorderMenuOn)
-              const isDeadSuggested = !!suggestedDeadTileIds?.has(tile.id)
-              const suggestDim = isDeadSuggested || (!suppressDim && !!g && !isBest)
-              const waveTimingCalled =
-                callStagingWaveFlyIn != null
-                  ? {
-                      staggerDelayMs: callStagingWaveFlyIn.staggerDelayMs,
-                      baseDelayMs: callStagingWaveFlyIn.baseDelayMs,
-                      waveIndex: stagedWaveSlotIndex++,
-                    }
-                  : null
-              let waveDelayMsCalled: number | null = null
-              if (waveTimingCalled) {
-                waveDelayMsCalled =
-                  waveTimingCalled.baseDelayMs +
-                  waveTimingCalled.waveIndex * waveTimingCalled.staggerDelayMs
-              }
-              const calledFace =
-                waveDelayMsCalled != null ? (
-                  <ExposureRackFlyInTile
-                    tileId={tile.id}
-                    animate
-                    flyOrigin="below"
-                    animationDelayMs={waveDelayMsCalled}
-                  >
-                    <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
-                  </ExposureRackFlyInTile>
-                ) : (
-                  <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
-                )
-              // Called tile is locked — render as a static (non-draggable) slot
-              return (
-                <div
-                  key={jokerSwapBounceSlotKey(tile.id, jokerSwapHintBounceTileIds, jokerSwapHintBounceEpoch)}
-                  data-call-magnet-target=""
-                  className={[
-                    'exposure-rack__slot',
-                    gi > 0 && ti === 0 ? 'exposure-rack__slot--meld-start' : '',
-                    'exposure-rack__slot--called',
-                    isJoker ? 'exposure-rack__slot--joker' : '',
-                    isBest ? 'exposure-rack__slot--suggest-best' : '',
-                    isDeadSuggested ? 'exposure-rack__slot--suggest-dying' : '',
-                    suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
-                    jokerSwapHintBounceClass(jokerSwapHintBounceTileIds, tile.id),
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                  role="listitem"
-                >
-                  {calledFace}
-                </div>
-              )
-            }
-            const waveTiming =
-              callStagingWaveFlyIn != null
-                ? {
-                    staggerDelayMs: callStagingWaveFlyIn.staggerDelayMs,
-                    baseDelayMs: callStagingWaveFlyIn.baseDelayMs,
-                    waveIndex: stagedWaveSlotIndex++,
-                  }
-                : null
-            return (
-              <SortableStagedSlot
-                key={jokerSwapBounceSlotKey(tile.id, jokerSwapHintBounceTileIds, jokerSwapHintBounceEpoch)}
-                tile={tile}
-                gi={gi}
-                isFirst={ti === 0}
-                onTileClick={handler}
-                stackSuitTiles={stackSuitTiles}
-                suggestBestIds={suggestedTileGuide?.bestIds ?? null}
-                suggestedDeadTileIds={suggestedDeadTileIds}
-                suggestedTileGuide={suggestedTileGuide}
-                botJokerBorderMenuOn={botJokerBorderMenuOn}
-                suppressDim={suppressDim}
-                jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
-                callStagingWave={waveTiming}
-              />
-            )
-          })
-        }
-        if (meld.onAmendCallMeld) {
-          const goAmend = meld.onAmendCallMeld
-          return wrapMeldContent(ordered.map((tile) => {
-            const isCalled = highlightCalledTile && meld.calledTileId === tile.id
-            const isJoker = tile.def.cat === 'joker'
-            const g = suggestedTileGuide
-            const isBest = slotIsSuggestBest(isJoker, tile.id, g?.bestIds, g, botJokerBorderMenuOn)
-            const isDeadSuggested = !!suggestedDeadTileIds?.has(tile.id)
-            const suggestDim = isDeadSuggested || (!suppressDim && !!g && !isBest)
-            const flyIn = !!flyInTileIds?.has(tile.id)
-            const flyFromRight = !!flyInFromRightTileIds?.has(tile.id)
-            return (
-              <div
-                key={jokerSwapBounceSlotKey(tile.id, jokerSwapHintBounceTileIds, jokerSwapHintBounceEpoch)}
-                data-tile-id={tile.id}
-                className={[
-                  'exposure-rack__slot',
-                  'exposure-rack__slot--call-amendable',
-                  gi > 0 && ordered[0]?.id === tile.id ? 'exposure-rack__slot--meld-start' : '',
-                  isCalled ? 'exposure-rack__slot--called' : '',
-                  isJoker ? 'exposure-rack__slot--joker' : '',
-                  isBest ? 'exposure-rack__slot--suggest-best' : '',
-                  isDeadSuggested ? 'exposure-rack__slot--suggest-dying' : '',
-                  suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
-                  jokerSwapHintBounceClass(jokerSwapHintBounceTileIds, tile.id),
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                role="listitem"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  goAmend()
-                }}
-              >
-                {flyIn ? (
-                  <ExposureRackFlyInTile
-                    tileId={tile.id}
-                    animate
-                    flyOrigin={flyFromRight ? 'right' : 'above'}
-                  >
-                    <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
-                  </ExposureRackFlyInTile>
-                ) : (
-                  <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
-                )}
-              </div>
-            )
-          }), Math.max(1, ordered.length))
+          return ordered.map((tile, ti) => (
+            <SortableStagedSlot
+              key={jokerSwapBounceSlotKey(tile.id, jokerSwapHintBounceTileIds, jokerSwapHintBounceEpoch)}
+              tile={tile}
+              gi={gi}
+              isFirst={ti === 0}
+              onTileClick={handler}
+              stackSuitTiles={stackSuitTiles}
+              suggestBestIds={suggestedTileGuide?.bestIds ?? null}
+              suggestedDeadTileIds={suggestedDeadTileIds}
+              suggestedTileGuide={suggestedTileGuide}
+              botJokerBorderMenuOn={botJokerBorderMenuOn}
+              suppressDim={suppressDim}
+              jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
+            />
+          ))
         }
         return wrapMeldContent(ordered.map((tile) => {
           const isCalled = highlightCalledTile && meld.calledTileId === tile.id
           const isJoker = tile.def.cat === 'joker'
           const g = suggestedTileGuide
           const isBest = slotIsSuggestBest(isJoker, tile.id, g?.bestIds, g, botJokerBorderMenuOn)
-          const isDeadSuggested = !!suggestedDeadTileIds?.has(tile.id)
+          const isDeadSuggested = !!suggestedDeadTileIds?.has(tile.id) && !isBest
           const suggestDim = isDeadSuggested || (!suppressDim && !!g && !isBest)
           const flyIn = !!flyInTileIds?.has(tile.id)
           const flyFromRight = !!flyInFromRightTileIds?.has(tile.id)
@@ -898,19 +1178,18 @@ export function ExposureRack({
         }), Math.max(1, ordered.length))
       })}
       </SortableContext>
-      {suffix}
-      {Array.from({ length: emptyCount }, (_, i) => (
-        i === 0 && firstEmptyOverride ? (
-          <div key="empty-0-override" role="presentation" className="exposure-rack__first-empty-override">
-            {firstEmptyOverride}
-          </div>
-        ) : (
+      {callMeldTileCount > 0 ? null : suffix}
+      {callInitiateShown ? (
+        <div key="call-initiate-override" role="presentation" className="exposure-rack__first-empty-override">
+          {firstEmptyOverride}
+        </div>
+      ) : null}
+      {Array.from({ length: emptySlotCount }, (_, i) => (
         <div
           key={`empty-${i}`}
           className="exposure-rack__slot exposure-rack__slot--empty"
           aria-hidden
         />
-        )
       ))}
       {trailingSuffix}
       {reserveLastSlotForDiscard ? (
@@ -945,28 +1224,31 @@ export function ExposureRack({
             aria-label={lastSlotTile ? 'Current bot discard' : undefined}
           >
             {lastSlotTile ? (
-              lastSlotDraggableForCallInit ? (
-                <IncomingBotDiscardDraggable
-                  key={lastSlotTile.id}
-                  tile={lastSlotTile}
-                  stackSuitTiles={stackSuitTiles}
-                  incomingBotDiscardFlyFrom={incomingBotDiscardFlyFrom}
-                />
-              ) : (
-                <div
-                  key={lastSlotTile.id}
-                  className={[
-                    'exposure-rack__incoming-discard-fly',
-                    incomingBotDiscardFlyFrom
-                      ? `exposure-rack__incoming-discard-fly--from-${incomingBotDiscardFlyFrom}`
-                      : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                >
-                  <TileFace def={lastSlotTile.def} rackSuitStacked={stackSuitTiles} />
-                </div>
-              )
+              <div className="east-discard-staging east-discard-staging--inline">
+                {lastSlotDraggableForCallInit ? (
+                  <IncomingBotDiscardDraggable
+                    key={lastSlotTile.id}
+                    tile={lastSlotTile}
+                    stackSuitTiles={stackSuitTiles}
+                    incomingBotDiscardFlyFrom={incomingBotDiscardFlyFrom}
+                  />
+                ) : (
+                  <div key={lastSlotTile.id} className="east-discard-staging__tile">
+                    <div
+                      className={[
+                        'exposure-rack__incoming-discard-fly',
+                        incomingBotDiscardFlyFrom
+                          ? `exposure-rack__incoming-discard-fly--from-${incomingBotDiscardFlyFrom}`
+                          : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                    >
+                      <TileFace def={lastSlotTile.def} rackSuitStacked={stackSuitTiles} />
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : null}
           </div>
         )

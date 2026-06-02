@@ -13,13 +13,13 @@
 /* Drop target: same drag-over glow as call / discard staging. */
 .pass-strip-tail--over .pass-strip-tail__inner {
   background: rgba(0, 180, 216, 0.5);
-  box-shadow: none;
+  box-shadow: var(--charleston-pass-box-inset-border);
 }
 
 /* Dragging FROM the box: keep it bright */
 .pass-strip-tail__inner:has(.pass-strip__tile-wrap--dragging) {
   background: rgba(0, 180, 216, 0.5);
-  box-shadow: none;
+  box-shadow: var(--charleston-pass-box-inset-border);
 }
 
 /* Charleston: tiles exit the pass box toward the pass direction before the exchange commits. */
@@ -27,7 +27,12 @@
   pointer-events: none;
 }
 
-.pass-strip-tail.pass-strip-tail--fly-out .pass-strip-tail__header--overlay {
+.panel--hand .pass-strip-tail.pass-strip-tail--fly-out .pass-strip-tail__inner,
+.panel--hand .pass-strip-tail.pass-strip-tail--fly-out .pass-strip-tail__stack {
+  overflow: visible;
+}
+
+.pass-strip-tail.pass-strip-tail--fly-out .pass-strip-tail__copy {
   opacity: 0;
   transition: opacity 0.18s ease;
 }
