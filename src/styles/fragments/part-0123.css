@@ -439,17 +439,18 @@ html .app-dnd-frame
 }
 
 /*
- * Top discard + bot band — mobile landscape / installed PWA only (primary play orientation).
+ * Top discard + bot band — mobile landscape / installed PWA: ensure every element in the
+ * chain has 100% width so it spans the play column and can participate in flex/grid layout.
  *
- * Portrait on a phone is narrow (~29 columns across ~390 CSS px), so each slot — including
- * B/C/D suit labels — stays tall and tile-shaped. That is expected when the device is upright;
- * we do not tune this band for portrait.
+ * --rack-tile-w comes from the `play-split-rack-lock` container query in part-0036.css,
+ * which uses max(hand-rack-estimate, 100cqi/29). Because it uses max() the formula is safe
+ * even when the container reports 0px on first paint: it falls back to the hand-rack estimate
+ * (~27 px) rather than collapsing to 1px.
  *
- * In landscape the tray spans the play width: B/C/D + rank rows read as a horizontal strip
- * aligned with the East rack, matching desktop.
- *
- * Tile width: cap with `min(..., 100cqi / 29)` on `top-discard-tray` so viewport floors cannot
- * overshoot the real tray width.
+ * A previous attempt added a `top-discard-tray` container with a min() cap; on mobile WebKit
+ * that new container reported 0px on first paint so min(27px, 0/29) resolved to ~-1px and
+ * max(1px, -1px) = 1px — every slot became 1×1px and B/C/D disappeared. Those blocks have
+ * been removed; the play-split-rack-lock path is identical to what localhost uses.
  */
 @media (max-width: 932px) and (orientation: landscape) and (pointer: coarse),
   (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) {
@@ -469,52 +470,6 @@ html .app-dnd-frame
     max-width: 100%;
     align-self: stretch;
     box-sizing: border-box;
-  }
-
-  html .app-dnd-frame
-    > .app-play-split.app-top-exposure-container
-    .discard-tracker__tile-groups-container {
-    container-type: inline-size;
-    container-name: top-discard-tray;
-  }
-}
-
-@supports (width: 100cqi) {
-  @media (max-width: 932px) and (orientation: landscape) and (pointer: coarse),
-    (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) {
-    @container top-discard-tray (min-width: 0px) {
-      html .app-dnd-frame
-        .app-play-split.app-top-exposure-container
-        .discard-tracker__overlay-grid {
-        --rack-tile-w: max(
-          1px,
-          min(
-            max(
-              var(--top-discard-tray-tile-w-hand-rack),
-              calc(
-                (
-                  var(--app-play-fit-inline, 100vw)
-                  - 2 * var(--app-h-pad)
-                  - 2 * var(--hand-window-pad-inline)
-                  - (var(--discard-tracker-slots-across, 29) - 1) * var(--player-rack-face-gap)
-                ) / var(--discard-tracker-slots-across, 29)
-              )
-            ),
-            calc(
-              (
-                100cqi
-                - (var(--discard-tracker-slots-across, 29) - 1) * var(--player-rack-face-gap)
-              ) / var(--discard-tracker-slots-across, 29)
-            )
-          )
-        );
-        --rack-tile-h: calc(var(--rack-tile-w) * 4 / 3);
-        --exposure-slot-h: var(--rack-tile-h);
-        --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
-        --discard-tray-rack-tile-w: var(--rack-tile-w);
-        --discard-tray-tile-corner-r: var(--tile-face-border-radius);
-      }
-    }
   }
 }
 
