@@ -383,7 +383,16 @@
 }
 
 .discard-tracker__overlay-grid .exposure-rack--discard-tracker-opponent {
-  --rack-tile-w: var(--discard-tray-rack-tile-w, var(--rack-tile-w));
+  /*
+   * No self-referential fallback here. `var(--discard-tray-rack-tile-w, var(--rack-tile-w))`
+   * makes WebKit (iOS Safari / installed PWA) treat `--rack-tile-w` as part of a dependency
+   * cycle and resolve it to the guaranteed-invalid (empty) value — so every sorted/bot tile
+   * + the B/C/D suit chips collapsed to ~0 width on device while Chrome rendered fine.
+   * If `--discard-tray-rack-tile-w` is ever undefined this still inherits the parent
+   * overlay-grid `--rack-tile-w` (custom props inherit on invalid-at-computed-value), which
+   * is the same value the old fallback was reaching for.
+   */
+  --rack-tile-w: var(--discard-tray-rack-tile-w);
   --rack-tile-h: calc(var(--rack-tile-w) * 4 / 3);
   --exposure-slot-h: var(--rack-tile-h);
   --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
