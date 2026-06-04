@@ -106,9 +106,9 @@ function measureMinSuggestedSheetPx(scrollRoot: HTMLElement): number {
   return SUGGESTED_SHEET_MIN_FALLBACK_PX
 }
 
-/** NMJL card value: concealed lines show C + points on the card; exposed lines show points only (no X). */
-function formatSuggestedHandValue(points: number, closed: boolean): string {
-  return closed ? `C${points}` : `${points}`
+/** Points column / aria value — number only (concealed C lives on the hand line). */
+function formatSuggestedHandValue(points: number): string {
+  return `${points}`
 }
 
 /** Parenthetical card note (hands-only sheet shows it under the main card line, like Hands & Tiles). */
@@ -131,27 +131,7 @@ function sheetRowLitEdge(lit: boolean, edge: 'start' | 'mid' | 'end'): string {
   return 'hands-sheet__cell--row-lit hands-sheet__cell--row-lit-mid'
 }
 
-function SuggestedHandValueDisplay({
-  points,
-  closed,
-  variant = 'sheet',
-}: {
-  points: number
-  closed: boolean
-  /** `list` = compact hands list; `sheet` = spreadsheet — boxed C matches the hand-line marker in that layout. */
-  variant?: 'list' | 'sheet'
-}) {
-  const cClass = variant === 'list' ? 'hands-list__card-c' : 'hands-sheet__card-c'
-  if (closed) {
-    return (
-      <>
-        <span className={cClass} aria-label="Concealed hand">
-          C
-        </span>
-        {points}
-      </>
-    )
-  }
+function SuggestedHandValueDisplay({ points }: { points: number }) {
   return <>{points}</>
 }
 
@@ -472,23 +452,40 @@ export function SuggestedHandsPanel({
     [detachPeekDragWindowListeners],
   )
 
-  const scheduleSingleClick = useCallback(
-    (patternId: string) => {
+  /** Last row tap/click while waiting to distinguish single vs double (touch has no `dblclick`). */
+  const pendingRowClickRef = useRef<{
+    patternId: string
+    focusKey: string
+    at: number
+  } | null>(null)
+
+  const schedulePatternRowClick = useCallback(
+    (patternId: string, focusKey: string) => {
+      const now = performance.now()
+      const pending = pendingRowClickRef.current
+      if (
+        pending != null &&
+        pending.focusKey === focusKey &&
+        now - pending.at < CLICK_DELAY_MS
+      ) {
+        if (clickTimerRef.current != null) {
+          clearTimeout(clickTimerRef.current)
+          clickTimerRef.current = null
+        }
+        pendingRowClickRef.current = null
+        onPatternDoubleClick(patternId, focusKey)
+        return
+      }
+      pendingRowClickRef.current = { patternId, focusKey, at: now }
       if (clickTimerRef.current != null) clearTimeout(clickTimerRef.current)
       clickTimerRef.current = setTimeout(() => {
         clickTimerRef.current = null
-        onPatternClick(patternId)
+        pendingRowClickRef.current = null
+        onPatternClick(focusKey)
       }, CLICK_DELAY_MS)
     },
-    [onPatternClick],
+    [onPatternClick, onPatternDoubleClick],
   )
-
-  const cancelScheduledClick = useCallback(() => {
-    if (clickTimerRef.current != null) {
-      clearTimeout(clickTimerRef.current)
-      clickTimerRef.current = null
-    }
-  }, [])
 
   const filtered = useMemo(
     () => hands.filter((h) => checkedSections.has(h.section)),
@@ -931,7 +928,7 @@ export function SuggestedHandsPanel({
                       const rowIsFocused = activePatternId === focusKey
                       const rowLit = tilesGuideOn && rowIsFocused
                       const cardRef = suggestedHandCardRefDisplay(h)
-                      const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points, h.closed)}`
+                      const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points)}`
                       return (
                         <li
                           key={rowKey}
@@ -954,12 +951,7 @@ export function SuggestedHandsPanel({
                           <button
                             type="button"
                             className="hands-sheet__row-btn"
-                            onClick={() => scheduleSingleClick(focusKey)}
-                            onDoubleClick={(e) => {
-                              e.preventDefault()
-                              cancelScheduledClick()
-                              onPatternDoubleClick(h.id, focusKey)
-                            }}
+                            onClick={() => schedulePatternRowClick(h.id, focusKey)}
                             aria-label={ariaLabel}
                             aria-pressed={rowIsFocused}
                           >
@@ -1040,7 +1032,7 @@ export function SuggestedHandsPanel({
                                 .join(' ')}
                               role="cell"
                             >
-                              <SuggestedHandValueDisplay points={h.points} closed={h.closed} />
+                              <SuggestedHandValueDisplay points={h.points} />
                             </div>
                           </button>
                         </li>
@@ -1164,19 +1156,14 @@ export function SuggestedHandsPanel({
                 const cardRef = suggestedHandCardRefDisplay(h)
                 const rowAriaLabel =
                   !handsListOn || !showHandCategoryLabels
-                    ? `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points, h.closed)}`
+                    ? `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points)}`
                     : undefined
                 const outerClass = [
                   'hands-list__row-hit',
                   'hands-list__row-hit--with-tiles',
                   showHandCategoryLabels ? 'hands-list__row-hit--with-category' : '',
                 ].filter(Boolean).join(' ')
-                const handleRowClick = () => { scheduleSingleClick(focusKey) }
-                const handleRowDblClick = (e: React.MouseEvent) => {
-                  e.preventDefault()
-                  cancelScheduledClick()
-                  onPatternDoubleClick(h.id, focusKey)
-                }
+                const handleRowClick = () => { schedulePatternRowClick(h.id, focusKey) }
                 const outerSharedProps = {
                   className: outerClass,
                   style: rowHitGridStyle,
@@ -1184,7 +1171,6 @@ export function SuggestedHandsPanel({
                   'aria-pressed': rowIsFocused,
                   'aria-current': rowIsFocused ? (true as const) : undefined,
                   onClick: handleRowClick,
-                  onDoubleClick: handleRowDblClick,
                 }
                 const liClassName = [
                   'hands-list__row',
@@ -1299,9 +1285,9 @@ export function SuggestedHandsPanel({
                         <div className="hands-list__cell hands-list__cell--values">
                           <span
                             className="hands-list__tiles-away hands-list__tiles-away--values-col"
-                            aria-label={`Hand value ${formatSuggestedHandValue(h.points, h.closed)}`}
+                            aria-label={`Hand value ${formatSuggestedHandValue(h.points)}`}
                           >
-                            <SuggestedHandValueDisplay points={h.points} closed={h.closed} variant="list" />
+                            <SuggestedHandValueDisplay points={h.points} />
                           </span>
                         </div>
                       </>

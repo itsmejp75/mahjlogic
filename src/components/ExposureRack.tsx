@@ -144,10 +144,12 @@ function IncomingBotDiscardDraggable({
   tile,
   stackSuitTiles,
   incomingBotDiscardFlyFrom,
+  suggestBest = false,
 }: {
   tile: TileInstance
   stackSuitTiles: boolean
   incomingBotDiscardFlyFrom: HandTileFlyInFrom | null
+  suggestBest?: boolean
 }) {
   const { active } = useDndContext()
   const dragId = incomingBotDiscardDragId(tile.id)
@@ -167,7 +169,13 @@ function IncomingBotDiscardDraggable({
     <div
       ref={setNodeRef}
       style={dragStyle}
-      className="east-discard-staging__tile exposure-rack__incoming-discard-drag"
+      className={[
+        'east-discard-staging__tile',
+        'exposure-rack__incoming-discard-drag',
+        suggestBest ? 'east-discard-staging__tile--suggest-best' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       {...listeners}
       {...attributes}
     >
@@ -1232,11 +1240,20 @@ export function ExposureRack({
                     tile={lastSlotTile}
                     stackSuitTiles={stackSuitTiles}
                     incomingBotDiscardFlyFrom={incomingBotDiscardFlyFrom}
+                    suggestBest={lastSlotIsBest}
                   />
                 </>
               ) : (
                 <div className="east-discard-staging east-discard-staging--inline">
-                  <div key={lastSlotTile.id} className="east-discard-staging__tile">
+                  <div
+                    key={lastSlotTile.id}
+                    className={[
+                      'east-discard-staging__tile',
+                      lastSlotIsBest ? 'east-discard-staging__tile--suggest-best' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
                     <div
                       className={[
                         'exposure-rack__incoming-discard-fly',

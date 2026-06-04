@@ -50,6 +50,20 @@
   --tile-face-highlight-shadow: 0 0 0 0 transparent;
 }
 
+/* Bot-turn incoming discard: green “need this for your line” ring (same as hand / pass staging). */
+.app[data-tile-graphics='illustrative-classic']
+  .panel--hand
+  .exposure-rack__slot--incoming-discard.exposure-rack__slot--suggest-best
+  .tile-face.tile-face--illustrative-art,
+.app[data-tile-graphics='illustrative-classic']
+  .panel--hand
+  .exposure-rack__slot--incoming-discard
+  .east-discard-staging__tile--suggest-best
+  .tile-face.tile-face--illustrative-art {
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: var(--illustrative-suggest-best-ring);
+}
+
 /* Bot exposure tracker: usable tiles (incl. swappable jokers) get the same green ring as the hand. */
 .app[data-tile-graphics='illustrative-classic']
   .panel--discard-tracker

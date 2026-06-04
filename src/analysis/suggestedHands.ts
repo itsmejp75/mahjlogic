@@ -3350,6 +3350,18 @@ function collectNeededNaturalDefsFromStripRows(rows: SuggestedStripSlot[][]): Ti
   return out
 }
 
+function collectMatchedNaturalDefsFromStripRows(rows: SuggestedStripSlot[][]): TileDef[] {
+  const out: TileDef[] = []
+  for (const row of rows) {
+    for (const s of row) {
+      if (!s.highlight) continue
+      if (s.displayDef.cat === 'joker') continue
+      out.push(s.displayDef)
+    }
+  }
+  return out
+}
+
 /**
  * Non-exposure rack tiles (concealed + staged pick + pass slots) that could still be played from
  * your hand — used only to decide whether discard-tracker “need” rings stay on.
@@ -3364,12 +3376,13 @@ function concealedRackTilesForDiscardCoach(
 
 /**
  * When the strip still shows open cells for def D but your concealed naturals of D already meet
- * or exceed that multiset count, you are not “short” that tile in the discard tracker anymore —
- * drop D from discard need highlights so the tray stops dimming (e.g. right after you draw the
- * copy you were hunting).
+ * the full pattern count (matched strip cells + open cells), you are not “short” that tile in the
+ * discard tracker anymore — drop D from discard need highlights so the tray stops dimming (e.g.
+ * right after you draw the copy you were hunting).
  */
 function stripNeedDefsRequiringMoreFromDiscards(
   needDefs: TileDef[],
+  matchedDefs: TileDef[],
   rack: TileInstance[],
   exposureTileIds?: ReadonlySet<string>,
 ): TileDef[] {
@@ -3380,6 +3393,11 @@ function stripNeedDefsRequiringMoreFromDiscards(
     const k = fullDefKey(d)
     needByKey.set(k, (needByKey.get(k) ?? 0) + 1)
   }
+  const matchedByKey = new Map<string, number>()
+  for (const d of matchedDefs) {
+    const k = fullDefKey(d)
+    matchedByKey.set(k, (matchedByKey.get(k) ?? 0) + 1)
+  }
   const haveByKey = new Map<string, number>()
   for (const t of concealed) {
     if (t.def.cat === 'joker') continue
@@ -3388,7 +3406,8 @@ function stripNeedDefsRequiringMoreFromDiscards(
   }
   const satisfiedKeys = new Set<string>()
   for (const [k, need] of needByKey) {
-    if ((haveByKey.get(k) ?? 0) >= need) satisfiedKeys.add(k)
+    const requiredTotal = (matchedByKey.get(k) ?? 0) + need
+    if ((haveByKey.get(k) ?? 0) >= requiredTotal) satisfiedKeys.add(k)
   }
   if (satisfiedKeys.size === 0) return needDefs
   return needDefs.filter((d) => !satisfiedKeys.has(fullDefKey(d)))
@@ -3580,7 +3599,8 @@ export function computeSuggestedDiscardTrackerNeedDefs(
     )
     const rows = pickStripRowsForFocusKey(p.id, fk, isMulti, result)
     const needDefsRaw = collectNeededNaturalDefsFromStripRows(rows)
-    return stripNeedDefsRequiringMoreFromDiscards(needDefsRaw, rack, exposureTileIds)
+    const matchedDefs = collectMatchedNaturalDefsFromStripRows(rows)
+    return stripNeedDefsRequiringMoreFromDiscards(needDefsRaw, matchedDefs, rack, exposureTileIds)
   }
 
   if (variantSep >= 0) {

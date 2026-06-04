@@ -237,6 +237,9 @@ const LS_KEY_UNDO = 'mahjlogic.undoEnabled'
 const UNDO_LABEL = 'Undo'
 const LS_KEY_DEAD_HAND_WARNINGS = 'mahjlogic.deadHandWarningsEnabled'
 const DEAD_HAND_WARNINGS_LABEL = 'Dead hand warnings'
+/** Highlight the Mah Jongg rack button when a declaration would succeed (self-draw or on a live discard). */
+const LS_KEY_MAHJONG_HINT = 'mahjlogic.mahjongHintEnabled'
+const MAHJONG_HINT_LABEL = 'Mah Jongg hint'
 const LS_KEY_DEAD_TILE_HINT = 'mahjlogic.deadTileHintEnabled'
 const DEAD_TILE_HINT_LABEL = 'Dead tile(s) hint'
 const LS_KEY_CONCEALED_HAND_REMINDER = 'mahjlogic.concealedHandReminderEnabled'
@@ -350,6 +353,16 @@ function readBotDifficultyFromStorage(): BotDifficulty {
 function readDeadHandWarningsFromStorage(): boolean {
   try {
     const v = localStorage.getItem(LS_KEY_DEAD_HAND_WARNINGS)
+    if (v === null) return true
+    return v === 'true' || v === '1'
+  } catch {
+    return true
+  }
+}
+
+function readMahjongHintFromStorage(): boolean {
+  try {
+    const v = localStorage.getItem(LS_KEY_MAHJONG_HINT)
     if (v === null) return true
     return v === 'true' || v === '1'
   } catch {
@@ -3184,6 +3197,7 @@ export default function App() {
   const [deadHandWarningsEnabled, setDeadHandWarningsEnabled] = useState<boolean>(() =>
     readDeadHandWarningsFromStorage(),
   )
+  const [mahjongHintEnabled, setMahjongHintEnabled] = useState<boolean>(() => readMahjongHintFromStorage())
   const [deadTileHintEnabled, setDeadTileHintEnabled] = useState<boolean>(() =>
     readDeadTileHintFromStorage(),
   )
@@ -3296,6 +3310,18 @@ export default function App() {
     })
   }, [])
 
+  const toggleMahjongHint = useCallback(() => {
+    setMahjongHintEnabled((v) => {
+      const next = !v
+      try {
+        localStorage.setItem(LS_KEY_MAHJONG_HINT, next ? 'true' : 'false')
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }, [])
+
   const toggleDeadTileHint = useCallback(() => {
     setDeadTileHintEnabled((v) => {
       const next = !v
@@ -3392,6 +3418,10 @@ export default function App() {
       const d = readDeadHandWarningsFromStorage()
       return prev === d ? prev : d
     })
+    setMahjongHintEnabled((prev) => {
+      const m = readMahjongHintFromStorage()
+      return prev === m ? prev : m
+    })
     setDeadTileHintEnabled((prev) => {
       const d = readDeadTileHintFromStorage()
       return prev === d ? prev : d
@@ -3452,6 +3482,9 @@ export default function App() {
         const on = e.newValue === 'true' || e.newValue === '1'
         setDeadHandWarningsEnabled(on)
         deadHandWarningsEnabledRef.current = on
+      } else if (e.key === LS_KEY_MAHJONG_HINT) {
+        if (e.newValue == null) return
+        setMahjongHintEnabled(e.newValue === 'true' || e.newValue === '1')
       } else if (e.key === LS_KEY_DEAD_TILE_HINT) {
         if (e.newValue == null) return
         setDeadTileHintEnabled(e.newValue === 'true' || e.newValue === '1')
@@ -4117,7 +4150,7 @@ export default function App() {
 
   /** Matches `declareMahjong` success preconditions for the main rack MAHJ control (self-draw vs live discard). */
   const mahjongWinLegallyAvailable = useMemo(() => {
-    if (!charlestonDone) return false
+    if (!charlestonDone || !mahjongHintEnabled) return false
     if (mainPhase === 'east-discard') {
       return summarizeRackTowardWin(suggestedRankInput).bestTilesAway === 0
     }
@@ -4138,6 +4171,7 @@ export default function App() {
     return false
   }, [
     charlestonDone,
+    mahjongHintEnabled,
     mainPhase,
     suggestedRankInput,
     activeBotDiscard,
@@ -7074,6 +7108,16 @@ export default function App() {
                     id="app-menu-label-dead-hand-warnings"
                   >
                     {DEAD_HAND_WARNINGS_LABEL}
+                  </span>
+                </div>
+                <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                  <AppMenuSettingSwitch
+                    labelId="app-menu-label-mahjong-hint"
+                    pressed={mahjongHintEnabled}
+                    onToggle={toggleMahjongHint}
+                  />
+                  <span className="app-menu-modal__label" id="app-menu-label-mahjong-hint">
+                    {MAHJONG_HINT_LABEL}
                   </span>
                 </div>
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
