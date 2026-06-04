@@ -130,3 +130,195 @@
   min-width: min(100%, 12rem);
   margin: 0;
 }
+
+/*
+ * Post-game overlays (Wall Game, Mah Jongg win, illegal Mah Jongg): match the gray tray
+ * shell from part-0123 (`--app-container-surface`) instead of white `--window-surface`.
+ */
+.wall-game-dialog {
+  --post-game-tray-fg: #e2e4e8;
+  --post-game-tray-fg-muted: color-mix(
+    in srgb,
+    var(--post-game-tray-fg) 68%,
+    var(--app-container-surface, #5c6066)
+  );
+  --post-game-tray-inset: #484c52;
+  --post-game-tray-border: #636870;
+  --post-game-tray-press-dark: color-mix(in srgb, #000 28%, var(--post-game-tray-inset));
+  --post-game-tray-press-light: color-mix(
+    in srgb,
+    var(--post-game-tray-border) 72%,
+    var(--post-game-tray-inset)
+  );
+
+  background-color: var(--app-container-surface, #5c6066);
+  background-image: none;
+  border: 1px solid var(--post-game-tray-border);
+  color: var(--post-game-tray-fg);
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--color-black) 55%, transparent);
+}
+
+.wall-game-dialog--bot-mahjong {
+  border-color: #dc2626;
+  box-shadow:
+    0 0 0 1px rgba(220, 38, 38, 0.25),
+    0 12px 40px color-mix(in srgb, var(--color-black) 55%, transparent);
+}
+
+.wall-game-dialog__title {
+  color: var(--post-game-tray-fg);
+}
+
+.wall-game-dialog--bot-mahjong .wall-game-dialog__title {
+  color: #f87171;
+}
+
+.wall-game-dialog__intro {
+  color: var(--post-game-tray-fg-muted);
+}
+
+.wall-game-dialog .mahjong-win__bots-review {
+  background-color: var(--post-game-tray-inset);
+}
+
+.wall-game-dialog__review .mahjong-win__bots-review-list {
+  background-color: color-mix(in srgb, var(--color-black) 14%, var(--post-game-tray-inset));
+}
+
+.wall-game-dialog .mahjong-win__bots-review-title,
+.wall-game-dialog .mahjong-win__bots-review-seat,
+.wall-game-dialog .mahjong-win__bots-review-header,
+.wall-game-dialog .mahjong-win__bots-review-pattern,
+.wall-game-dialog .mahjong-win__bots-review-ref {
+  color: var(--post-game-tray-fg);
+}
+
+.wall-game-dialog .mahjong-win__bots-review-away {
+  color: #f5b041;
+}
+
+.wall-game-dialog .post-game-tied__select {
+  background: color-mix(in srgb, var(--color-black) 16%, var(--post-game-tray-inset));
+  border-color: var(--post-game-tray-border);
+  color: var(--post-game-tray-fg);
+}
+
+/* Action row: same flat inset controls as the hand rack (part-0123). */
+.wall-game-overlay
+  .wall-game-dialog
+  .wall-game-dialog__actions
+  .btn.btn--primary.wall-game-dialog__action-btn:not(:disabled) {
+  background: var(--post-game-tray-inset);
+  border: 1px solid var(--post-game-tray-border);
+  color: var(--post-game-tray-fg);
+  box-shadow: none;
+  transition: box-shadow 0.12s ease;
+}
+
+.wall-game-overlay
+  .wall-game-dialog
+  .wall-game-dialog__actions
+  .btn.btn--primary.wall-game-dialog__action-btn:disabled {
+  background: var(--post-game-tray-inset);
+  border: 1px solid var(--post-game-tray-border);
+  color: var(--post-game-tray-fg);
+  opacity: 0.45;
+  box-shadow: none;
+}
+
+.wall-game-overlay
+  .wall-game-dialog
+  .wall-game-dialog__actions
+  .btn.btn--primary.wall-game-dialog__action-btn:active:not(:disabled) {
+  box-shadow:
+    inset 4px 4px 8px var(--post-game-tray-press-dark),
+    inset -4px -4px 8px var(--post-game-tray-press-light);
+  transition: none;
+  transform: none;
+}
+
+/* Illegal Mah Jongg coach — gray tray shell (not teal felt + white card). */
+.charleston-error-dialog.charleston-error-dialog--mahjong-blocked {
+  background-color: var(--app-container-surface, #5c6066);
+  background-image: none;
+  border: 1px solid #636870;
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--color-black) 55%, transparent);
+}
+
+.charleston-error-dialog--mahjong-blocked .charleston-error-dialog__title--mj {
+  color: #e2e4e8;
+}
+
+.charleston-error-dialog--mahjong-blocked .mahjong-blocked-modal__lead {
+  color: color-mix(in srgb, #e2e4e8 82%, var(--app-container-surface, #5c6066));
+}
+
+.charleston-error-dialog--mahjong-blocked .mahjong-blocked-modal__label {
+  color: #e2e4e8;
+}
+
+.charleston-error-dialog--mahjong-blocked .mahjong-blocked-modal__select {
+  background: color-mix(in srgb, var(--color-black) 16%, #484c52);
+  border: 1px solid #636870;
+  color: #e2e4e8;
+}
+
+.charleston-error-dialog--mahjong-blocked .mahjong-blocked-modal__select:focus {
+  outline-color: color-mix(in srgb, #e2e4e8 55%, transparent);
+}
+
+.charleston-error-dialog--mahjong-blocked .mahjong-blocked-modal__white-panel {
+  background: #484c52;
+  color: #e2e4e8;
+  border: 1px solid #636870;
+}
+
+.charleston-error-dialog--mahjong-blocked .mahjong-blocked-modal__line-summary,
+.charleston-error-dialog--mahjong-blocked .mahjong-blocked-modal__pattern-title {
+  color: #e2e4e8;
+}
+
+.charleston-error-dialog--mahjong-blocked .mahjong-blocked-modal__unused-label {
+  color: color-mix(in srgb, #e2e4e8 78%, #484c52);
+}
+
+.charleston-error-dialog--mahjong-blocked .mahjong-blocked-modal__unused-empty {
+  color: color-mix(in srgb, #e2e4e8 72%, #484c52);
+}
+
+.charleston-error-dialog--mahjong-blocked .mahjong-blocked-modal__league {
+  color: color-mix(in srgb, #e2e4e8 75%, var(--app-container-surface, #5c6066));
+}
+
+.charleston-error-dialog--mahjong-blocked .mahjong-blocked-modal__rules-heading {
+  color: #e2e4e8;
+}
+
+.charleston-error-dialog--mahjong-blocked .mahjong-blocked-modal__rules-list {
+  color: color-mix(in srgb, #e2e4e8 88%, var(--app-container-surface, #5c6066));
+}
+
+.charleston-error-dialog--mahjong-blocked .game-blocking-dialog__ok-btn {
+  background: #484c52;
+  border: 1px solid #636870;
+  color: #e2e4e8;
+}
+
+.charleston-error-dialog--mahjong-blocked .game-blocking-dialog__ok-btn:hover {
+  box-shadow:
+    inset 4px 4px 8px color-mix(in srgb, #000 28%, #484c52),
+    inset -4px -4px 8px color-mix(in srgb, #636870 72%, #484c52);
+}
+
+.charleston-error-dialog--mahjong-blocked .charleston-error-dialog__dismiss {
+  border-color: #636870;
+  background: color-mix(in srgb, var(--color-black) 22%, #484c52);
+  color: #e2e4e8;
+}
+
+.charleston-error-dialog--mahjong-blocked .charleston-error-dialog__dismiss:hover {
+  background: color-mix(in srgb, #e2e4e8 12%, #484c52);
+  border-color: #e2e4e8;
+  color: #e2e4e8;
+  box-shadow: none;
+}
