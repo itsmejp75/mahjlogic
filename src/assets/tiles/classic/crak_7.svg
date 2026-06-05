@@ -6,30 +6,8 @@
    version="1.1"
    width="310.84119"
    height="433.98557"
-   sodipodi:docname="crak_7.svg"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
-  <sodipodi:namedview
-     id="namedview1"
-     pagecolor="#ffffff"
-     bordercolor="#000000"
-     borderopacity="0.25"
-     inkscape:showpageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
-     showgrid="false">
-    <inkscape:page
-       x="0"
-       y="0"
-       width="310.84119"
-       height="433.98557"
-       id="page2"
-       margin="0"
-       bleed="0" />
-  </sodipodi:namedview>
   <defs
      id="defs1">
     <style
@@ -64,7 +42,7 @@
        points="152.72,46.82 119.42,46.82 119.42,53.91 145.25,53.91 145.25,54.11 122.34,110 129.73,110 152.72,52.45 "
        id="polygon2"
        transform="matrix(1.1570117,0,0,1.1570117,-18.750339,-7.3512884)"
-       style="fill:#a42e22;fill-opacity:1" />
+       style="fill:#a42e22;fill-opacity:1;stroke:#a42e22;stroke-opacity:1;stroke-width:1.72859099;stroke-dasharray:none" />
   </g>
   <g
      id="g5"

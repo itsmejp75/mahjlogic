@@ -4,45 +4,10 @@
    data-name="Layer 1"
    viewBox="0 0 308.49893 430.71158"
    version="1.1"
-   sodipodi:docname="dot_1.svg"
    width="308.49893"
    height="430.71158"
-   inkscape:export-filename="dot_1.svg"
-   inkscape:export-xdpi="96"
-   inkscape:export-ydpi="96"
-   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
-  <sodipodi:namedview
-     id="namedview7"
-     pagecolor="#ffffff"
-     bordercolor="#000000"
-     borderopacity="0.25"
-     inkscape:showpageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
-     inkscape:zoom="0.832"
-     inkscape:cx="156.25"
-     inkscape:cy="224.75962"
-     inkscape:window-width="1295"
-     inkscape:window-height="699"
-     inkscape:window-x="0"
-     inkscape:window-y="33"
-     inkscape:window-maximized="0"
-     inkscape:current-layer="Layer_1"
-     showgrid="false">
-    <inkscape:page
-       x="0"
-       y="0"
-       width="308.49893"
-       height="430.71158"
-       id="page2"
-       margin="0"
-       bleed="0" />
-  </sodipodi:namedview>
   <defs
      id="defs1">
     <style
@@ -85,5 +50,5 @@
      class="cls-3"
      d="m 30.5918,95.479727 v -62.13416 c -2.468574,1.528164 -4.61808,2.871605 -7.170618,4.450149 0,-3.056329 -0.03359,-5.67604 0.05038,-8.29575 0,-0.386239 0.554169,-0.839651 0.973995,-1.108339 2.720468,-1.746474 5.306593,-3.778429 8.278957,-5.037905 2.11592,-0.89003 4.786009,-0.671721 7.338548,-0.973995 v 73.1 h -9.454468 z"
      id="path7"
-     style="fill:#a42e22;fill-opacity:1;stroke-width:1.6793" />
+     style="fill:#a42e22;fill-opacity:1;stroke-width:2;stroke-dasharray:none;stroke:#a42e22;stroke-opacity:1" />
 </svg>

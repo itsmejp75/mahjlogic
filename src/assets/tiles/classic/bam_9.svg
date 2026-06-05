@@ -6,30 +6,8 @@
    version="1.1"
    width="310.84119"
    height="433.98557"
-   sodipodi:docname="bam_9.svg"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
-  <sodipodi:namedview
-     id="namedview1"
-     pagecolor="#ffffff"
-     bordercolor="#000000"
-     borderopacity="0.25"
-     inkscape:showpageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
-     showgrid="false">
-    <inkscape:page
-       x="0"
-       y="0"
-       width="310.84119"
-       height="433.98557"
-       id="page2"
-       margin="0"
-       bleed="0" />
-  </sodipodi:namedview>
   <defs
      id="defs1">
     <style
@@ -60,7 +38,7 @@
      class="cls-2"
      d="m 37.622401,17.123251 c -12.098427,0 -20.202198,11.755047 -20.202198,25.146871 0,12.086982 6.82182,21.667288 17.466602,21.667288 5.917585,0 10.644785,-2.827164 13.918342,-7.62304 h 0.274704 c -1.08737,8.378475 -3.914533,14.593656 -7.829067,18.840122 -3.365124,3.81152 -7.737499,6.100722 -12.37313,6.856158 -2.724149,0.331935 -4.727201,0.549408 -6.455548,0.331935 v 7.840512 c 1.911483,0.114472 4.452497,0 7.371228,-0.549404 6.363978,-0.869895 12.647834,-4.132012 17.1919,-9.477296 5.826015,-6.753142 10.186942,-17.638292 10.186942,-33.204859 0,-18.07324 -7.462795,-29.828287 -19.561221,-29.828287 z m 10.736352,32.117488 c -2.094618,4.246469 -6.27241,7.405565 -11.640586,7.405565 -6.913387,0 -11.377329,-6.203734 -11.377329,-15.028604 0,-10.015254 4.818768,-17.203343 11.640587,-17.203343 8.367029,0 12.098426,9.259817 12.098426,21.335351 0,1.522318 -0.274704,2.609688 -0.732543,3.479585 z"
      id="path3"
-     style="stroke-width:1.14458;fill:#a42e22;fill-opacity:1" />
+     style="stroke-width:2;fill:#a42e22;fill-opacity:1;stroke:#a42e22;stroke-opacity:1;stroke-dasharray:none" />
   <g
      id="g13"
      transform="translate(-93.869964,-24.929888)">

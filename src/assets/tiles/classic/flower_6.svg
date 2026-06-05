@@ -6,30 +6,8 @@
    version="1.1"
    width="310.84119"
    height="433.98557"
-   sodipodi:docname="flower_6.svg"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
-  <sodipodi:namedview
-     id="namedview1"
-     pagecolor="#ffffff"
-     bordercolor="#000000"
-     borderopacity="0.25"
-     inkscape:showpageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
-     showgrid="false">
-    <inkscape:page
-       x="0"
-       y="0"
-       width="310.84119"
-       height="433.98557"
-       id="page2"
-       margin="0"
-       bleed="0" />
-  </sodipodi:namedview>
   <defs
      id="defs1">
     <style
@@ -70,7 +48,7 @@
        class="cls-4"
        d="m 97.604374,117.41314 v -0.22682 l 4.806366,-5.3032 c 12.65857,-14.591918 20.69438,-25.327941 20.69438,-38.591357 0,-10.282388 -5.45441,-20.899601 -18.39381,-20.899601 -6.934126,0 -12.842176,3.099837 -17.000494,7.301359 l 2.592198,6.858526 c 2.775813,-2.765012 7.30136,-6.080866 12.755776,-6.080866 8.96468,0 11.92411,6.750517 11.92411,14.041076 -0.0972,10.833229 -7.02054,20.121941 -22.357708,37.597673 l -6.372488,7.40937 v 5.97286 h 38.353736 v -8.06822 H 97.625974 Z"
        id="path3"
-       style="stroke-width:1.08008" />
+       style="stroke-width:2;stroke:#1b2251;stroke-opacity:1;stroke-dasharray:none" />
   </g>
   <g
      id="g39"
