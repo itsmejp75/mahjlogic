@@ -205,6 +205,7 @@
 .hands-sheet__tile-cell .tile-face:not(.tile--joker)::after,
 .exposure-rack__slot .tile-face:not(.tile--joker)::after,
 .discard-entry .tile-face:not(.tile--joker)::after,
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded .tile-face:not(.tile--joker)::after,
 .mahjong-win__bots-review-tile .tile-face:not(.tile--joker)::after {
   content: '';
   position: absolute;
@@ -237,7 +238,8 @@
 .hands-sheet__tile-cell--suggest-dim .tile-face:not(.tile--joker)::after,
 .exposure-rack__slot--suggest-dim .tile-face:not(.tile--joker)::after,
 .discard-entry--suggest-dim .tile-face:not(.tile--joker)::after,
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-dim .tile-face:not(.tile--joker)::after,
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded.sorted-discard-tray__slot--suggest-dim
+  .tile-face:not(.tile--joker)::after,
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--awaiting-discard .tile-face:not(.tile--joker)::after,
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--inactive .tile-face:not(.tile--joker)::after,
 .mahjong-win__bots-review-tile--dim .tile-face:not(.tile--joker)::after {
@@ -250,7 +252,8 @@
 .hands-sheet__tile-cell--suggest-dim .tile-face.tile--joker,
 .exposure-rack__slot--suggest-dim .tile-face.tile--joker,
 .discard-entry--suggest-dim .tile-face.tile--joker,
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-dim .tile-face.tile--joker,
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded.sorted-discard-tray__slot--suggest-dim
+  .tile-face.tile--joker,
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--awaiting-discard .tile-face.tile--joker,
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--inactive .tile-face.tile--joker,
 .mahjong-win__bots-review-tile--dim .tile-face.tile--joker {
@@ -390,41 +393,53 @@
  */
 @keyframes mahjong-logo-hint-img-cycle {
   0% {
-    filter: brightness(1.38);
+    opacity: 1;
+    filter: brightness(1.55);
   }
   5.556% {
-    /* Trough: darker than neutral so the flash reads stronger; peak stays at 1.38 above. */
-    filter: brightness(0.46);
+    /* Trough: darker than neutral so the flash reads stronger; peak stays bright above. */
+    opacity: 0.42;
+    filter: brightness(0.35);
   }
   11.111% {
-    filter: brightness(1.38);
+    opacity: 1;
+    filter: brightness(1.55);
   }
   16.667% {
-    filter: brightness(0.46);
+    opacity: 0.42;
+    filter: brightness(0.35);
   }
   22.222% {
-    filter: brightness(1.38);
+    opacity: 1;
+    filter: brightness(1.55);
   }
   27.778% {
-    filter: brightness(0.46);
+    opacity: 0.42;
+    filter: brightness(0.35);
   }
   33.333% {
-    filter: brightness(1.38);
+    opacity: 1;
+    filter: brightness(1.55);
   }
   38.889% {
-    filter: brightness(0.46);
+    opacity: 0.42;
+    filter: brightness(0.35);
   }
   44.444% {
-    filter: brightness(1.38);
+    opacity: 1;
+    filter: brightness(1.55);
   }
   50% {
-    filter: brightness(0.46);
+    opacity: 0.42;
+    filter: brightness(0.35);
   }
   55.556% {
-    filter: brightness(1.38);
+    opacity: 1;
+    filter: brightness(1.55);
   }
   100% {
-    filter: brightness(1.38);
+    opacity: 1;
+    filter: brightness(1.55);
   }
 }
 

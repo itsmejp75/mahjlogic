@@ -1,4 +1,4 @@
-import { summarizeRackTowardWin } from '../analysis/suggestedHands'
+import { summarizeRackTowardWin, type RankSuggestedHandsInput } from '../analysis/suggestedHands'
 import { getActiveCardPatterns } from '../card/activeCardPatternsScope'
 import type { BotExposure } from '../analysis/types'
 import type { ClaimType, DiscardEntry, EastExposure, TileInstance } from './types'
@@ -268,6 +268,25 @@ export function hasLegalMahjongOnBotDiscard(r: CallValidationRoundSlice): boolea
   }
 
   return false
+}
+
+/** Self-draw Mah Jongg (east-discard): rack completes a practice-card line. */
+export function isSelfDrawMahjongWin(input: RankSuggestedHandsInput): boolean {
+  return summarizeRackTowardWin(input).bestTilesAway === 0
+}
+
+/**
+ * Mah Jongg on the live bot discard — same paths as `declareMahjong` / `hasLegalMahjongOnBotDiscard`.
+ * When call tiles are staged, pass `stagedCallBestTilesAway === 0` from `previewStagedCallBestTilesAway`.
+ */
+export function isMahjongWinOnLiveBotDiscard(
+  r: CallValidationRoundSlice,
+  stagedCallBestTilesAway: number | null = null,
+): boolean {
+  if (r.mainPhase !== 'bot-turn' && r.mainPhase !== 'call-staging') return false
+  if (!r.activeBotDiscard) return false
+  if (stagedCallBestTilesAway === 0) return true
+  return hasLegalMahjongOnBotDiscard(r)
 }
 
 /** Before opening the call-declare UI (from bot-turn). */

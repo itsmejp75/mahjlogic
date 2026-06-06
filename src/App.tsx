@@ -145,6 +145,8 @@ import {
   claimTypeForHandTilesFromDiscard,
   BLOCKING_TITLE_SWAP_ERROR,
   hasLegalMahjongOnBotDiscard,
+  isMahjongWinOnLiveBotDiscard,
+  isSelfDrawMahjongWin,
   MSG_CALL_DEAD_JOKER,
   MSG_CALL_INSUFFICIENT_TILES,
   MSG_MAHJONG_DURING_CHARLESTON,
@@ -1040,6 +1042,7 @@ function DiscardTrackerSlotGrid({
                 slotCount={DISCARD_TRACKER_BOT_ROW_SLOTS}
                 className="exposure-rack--discard-tracker-opponent exposure-rack--discard-tracker-bot-row"
                 ariaLabel={`${seat} exposures`}
+                stackSuitTiles
                 flyInTileIds={animationsEnabled ? botExposureFlyInTileIds : null}
                 suggestedTileGuide={botExposureSuggestedTileGuide}
                 suggestedDeadTileIds={botExposureDeadIds}
@@ -4148,25 +4151,55 @@ export default function App() {
     [hand, wall.length, discardTiles, botExposures, eastExposures, cardPatterns],
   )
 
+  /** Staged-call Mah Jongg distance — mirrors `declareMahjong` when call-staging tiles are selected. */
+  const stagedCallMahjongAway = useMemo((): number | null => {
+    if (mainPhase !== 'call-staging' || !activeBotDiscard || stagedCallTileIds.length === 0) {
+      return null
+    }
+    return previewStagedCallBestTilesAway({
+      mainPhase,
+      activeBotDiscard,
+      hand,
+      eastExposures,
+      botExposures,
+      wall,
+      discardPile,
+      stagedCallTileIds,
+    } as RoundState)
+  }, [
+    mainPhase,
+    activeBotDiscard,
+    hand,
+    eastExposures,
+    botExposures,
+    wall,
+    discardPile,
+    stagedCallTileIds,
+  ])
+
   /** Matches `declareMahjong` success preconditions for the main rack MAHJ control (self-draw vs live discard). */
   const mahjongWinLegallyAvailable = useMemo(() => {
     if (!charlestonDone || !mahjongHintEnabled) return false
     if (mainPhase === 'east-discard') {
-      return summarizeRackTowardWin(suggestedRankInput).bestTilesAway === 0
+      const handForWin = pendingEastDiscardTile ? [...hand, pendingEastDiscardTile] : hand
+      return isSelfDrawMahjongWin({ ...suggestedRankInput, hand: handForWin })
     }
     if (
       (mainPhase === 'bot-turn' || mainPhase === 'call-staging') &&
       activeBotDiscard
     ) {
-      return hasLegalMahjongOnBotDiscard({
-        mainPhase,
-        activeBotDiscard,
-        hand,
-        eastExposures,
-        botExposures,
-        wall,
-        discardPile,
-      })
+      return isMahjongWinOnLiveBotDiscard(
+        {
+          mainPhase,
+          activeBotDiscard,
+          hand,
+          eastExposures,
+          botExposures,
+          wall,
+          discardPile,
+        },
+        stagedCallMahjongAway,
+      )
     }
     return false
   }, [
@@ -4174,12 +4207,14 @@ export default function App() {
     mahjongHintEnabled,
     mainPhase,
     suggestedRankInput,
-    activeBotDiscard,
+    pendingEastDiscardTile,
     hand,
+    activeBotDiscard,
     eastExposures,
     botExposures,
     wall,
     discardPile,
+    stagedCallMahjongAway,
   ])
 
   const eastSuggestedHands = useMemo(() => {
@@ -5853,10 +5888,38 @@ export default function App() {
   }, [jokerSwapUiActive, pendingJokerSwapTileId, pendingEastDiscardTile, jokerSwapPick, pushRound])
 
   const sortHand = useCallback(() => {
+    const focusKey = suggestedFocusHandKeyRef.current
+    if (focusKey && focusKey !== suggestedSuppressedHandKey) {
+      const variantSep = ['::tier::', '::oc::', '::ocall::']
+        .map((s) => focusKey.indexOf(s))
+        .filter((i) => i >= 0)
+        .reduce((m, i) => (m < 0 ? i : Math.min(m, i)), -1)
+      const patternId =
+        variantSep >= 0 ? focusKey.slice(0, variantSep) : focusKey
+      sortModeRef.current = null
+      pushRound((r) => ({
+        ...r,
+        hand: sortHandForSuggestedPattern(
+          r.hand,
+          patternId,
+          {
+            hand: r.hand,
+            wallRemaining: r.wall.length,
+            discards: deadDiscardTilesForRanking(r),
+            exposures: r.botExposures,
+            playerClaimMelds: r.eastExposures,
+            eastTableClaimMelds: r.eastExposures,
+            patterns: getActiveCardPatterns(),
+          },
+          focusKey,
+        ),
+      }))
+      return
+    }
     const nextMode: SortMode = sortModeRef.current === 'suit' ? 'number' : 'suit'
     sortModeRef.current = nextMode
     pushRound((r) => ({ ...r, hand: sortTiles(r.hand, nextMode) }))
-  }, [pushRound])
+  }, [pushRound, suggestedSuppressedHandKey])
 
   const proceedWithCallRef = useRef<(() => void) | null>(null)
 

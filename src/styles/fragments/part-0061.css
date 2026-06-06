@@ -568,6 +568,27 @@
   background: var(--tg-wind, var(--wind-tile-bg));
 }
 
+/* Lit prism tile faces: stack context for theme lustre / rim layers (glyph + fill unchanged). */
+.discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--discarded
+  .tile-face.tile-face--sorted-discard-glyph {
+  isolation: isolate;
+  overflow: hidden;
+}
+
+/* Lit prism faces: glyph + count above the material rim layer. */
+.discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--discarded
+  .tile-face.tile-face--sorted-discard-glyph
+  :is(.tile-face__glyph, .tile-face__glyph-num, .tile-face__glyph-letter) {
+  position: relative;
+  z-index: 3;
+}
+
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded .sorted-discard-tray__count {
+  z-index: 3;
+}
+
 .discard-tracker__overlay-grid .tile-face.tile-face--sorted-discard-glyph {
   --tile-face-glyph-fs: calc(var(--rack-tile-w) * 1.03 / 2.65 * 2);
   display: flex;
@@ -651,6 +672,7 @@
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
+  z-index: 3;
 }
 
 .discard-tracker__overlay-grid .exposure-rack__slot.sorted-discard-tray__slot--seat-label {
@@ -755,28 +777,39 @@
   z-index: 2;
 }
 
-/* Prism sorted band: flat fills — no material inset, lustre, or dim hairlines. */
-.panel--discard-tracker .tile-face {
+/*
+ * Sorted discard band (unlit): glyph-only — transparent face, no shadow or lustre until discarded.
+ * Bot exposure row + lit sorted slots inherit the same tile-face material as `.panel--bot-exposures`.
+ */
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot:not(.sorted-discard-tray__slot--discarded):not(.sorted-discard-tray__slot--suit-label)
+  .tile-face {
   --tile-face-highlight-inset: 0 0 0 0 transparent;
   --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
-  border: none;
   --tile-face-base-shadow: 0 0 0 0 transparent;
+  border: none;
   overflow: hidden;
 }
 
-.app[data-tile-graphics='bakelite'] .panel--discard-tracker .tile-face,
-.app[data-tile-graphics='designer'] .panel--discard-tracker .tile-face {
+.app[data-tile-graphics='bakelite']
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot:not(.sorted-discard-tray__slot--discarded):not(.sorted-discard-tray__slot--suit-label)
+  .tile-face {
   --tile-face-base-shadow: 0 0 0 0 transparent;
 }
 
-.app[data-tile-graphics='designer'] .panel--discard-tracker .tile-face::before {
+.app[data-tile-graphics]
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot:not(.sorted-discard-tray__slot--discarded):not(.sorted-discard-tray__slot--suit-label)
+  .tile-face::before {
   content: none;
   display: none;
 }
 
-.discard-tracker__overlay-grid .exposure-rack--discard-tracker-sorted-row,
-.discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row,
-.discard-tracker__content .discard-pile {
+.panel--discard-tracker .discard-tracker__content .discard-pile {
   --suggest-dim-inset-vignette: none;
   --suggest-dim-inset-shadow: none;
 }
@@ -817,10 +850,11 @@
 }
 
 /*
- * Discard tracker tiles always use Prism (`solid-color`) palette — independent of
- * Menu → Tile graphics. Scope --tg-* on the panel so counts / suit labels inherit too.
+ * Sorted-discard prism band always uses Prism (`solid-color`) palette — independent of
+ * Menu → Tile graphics. Bot exposure row inherits the active theme from `.app` (same as main rack).
  */
-.panel--discard-tracker {
+.panel--discard-tracker .discard-tracker__overlay-grid .exposure-rack--discard-tracker-sorted-row,
+.panel--discard-tracker .discard-tracker__overlay-grid .exposure-rack--discard-tracker-prefix {
   --tg-bam: var(--card-ink-green);
   --tg-crak: var(--card-ink-red);
   --tg-dot: var(--card-ink-navy);
@@ -851,15 +885,29 @@
   --tg-cs-rack-flower-fg: #080808;
 }
 
-/* Beat Menu preset glyph / band color rules (Ivory spot colors, Obsidian #B0B0B0, etc.). */
+/* Beat Menu preset glyph rules on sorted prism glyphs only (bot row uses theme ink like main rack). */
 .app[data-tile-graphics] .panel--discard-tracker
-  .tile-face
+  .discard-tracker__overlay-grid
+  :is(.exposure-rack--discard-tracker-sorted-row, .exposure-rack--discard-tracker-prefix)
+  .tile-face.tile-face--sorted-discard-glyph
   :is(.tile-face__glyph, .tile-face__glyph-num, .tile-face__glyph-letter, .tile-face__rank, .tile-face__suit-text) {
   color: var(--tg-ink, var(--color-black));
 }
 
-.app[data-tile-graphics] .panel--discard-tracker .tile-face.tile--joker .tile-face__glyph {
+.app[data-tile-graphics] .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  :is(.exposure-rack--discard-tracker-sorted-row, .exposure-rack--discard-tracker-prefix)
+  .tile-face.tile--joker.tile-face--sorted-discard-glyph
+  .tile-face__glyph {
   color: var(--tg-ink, var(--color-black));
+}
+
+/* Bot exposure row: same corner radius + face material stack as main-rack tiles. */
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .tile-face {
+  border-radius: calc(0.116 * var(--rack-tile-w));
 }
 
 .panel--discard-tracker .discard-tracker__content .discard-entry--suggest-dim .tile-face {
@@ -877,7 +925,6 @@
   box-shadow: none;
 }
 
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-need .tile-face,
 .discard-tracker__content .discard-entry--suggest-need .tile-face,
 .discard-tracker__content .exposure-rack__slot--suggest-best .tile-face,
 .discard-tracker__content .exposure-rack__slot--called .tile-face {

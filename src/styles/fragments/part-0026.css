@@ -98,7 +98,7 @@
   /* Focused suggested-hand tiles: inner-edge ring — same blue as call-meld / Mahj logo (#00b4d8). */
   --charleston-pass-box-color: #00b4d8;
   --call-meld-group-border: var(--charleston-pass-box-color);
-  --suggest-best-ring: inset 0 0 0 1px var(--call-meld-group-border);
+  --suggest-best-ring: inset 0 0 0 2px var(--call-meld-group-border);
   /* Joker swap hint: wait from turn start (hint active) before dock bounce (see keyframes). */
   --joker-swap-hint-bounce-delay: 500ms;
 }
@@ -390,13 +390,29 @@
   --tg-cs-rack-flower-fg: #f5f5dc;
 }
 
-.app[data-tile-graphics='bakelite'] .tile-face {
+.app[data-tile-graphics='bakelite']
+  :is(
+    .tile-face:not(.tile-face--illustrative-art),
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .exposure-rack--discard-tracker-bot-row
+      .tile-face,
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .sorted-discard-tray__slot--discarded
+      .tile-face.tile-face--sorted-discard-glyph,
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .exposure-rack__slot.sorted-discard-tray__slot--suit-label
+  ) {
   /* Material shadow flows through `--tile-face-base-shadow` so the highlight ring (set via
      `--tile-face-highlight-shadow` from parent state classes) layers on top without losing
      the material look — same pattern future themes should follow. */
   --tile-face-base-shadow:
     0 1px 3px color-mix(in srgb, #0f0804 25%, transparent),
-    inset 0 1px 0 color-mix(in srgb, #d4a060 18%, transparent);
+    inset 0 1px 0 color-mix(in srgb, #d4a060 11%, transparent);
+  box-shadow: var(--tile-face-base-shadow), var(--tile-face-highlight-inset), var(--tile-face-highlight-shadow),
+    var(--tile-face-suggest-dim-inset);
 }
 
 .app-layout {

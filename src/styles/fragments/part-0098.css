@@ -21,7 +21,7 @@
   visibility: hidden; /* keep layout; strip’s aria-label covers the group */
 }
 
-.app .app-menu-modal__tile-graphics-preview .tile-face {
+.app .app-menu-modal__tile-graphics-preview .tile-face:not(.tile-face--illustrative-art) {
   box-sizing: border-box;
   place-self: center;
   flex: none;
@@ -38,7 +38,18 @@
   transition: box-shadow 0.12s ease;
 }
 
-.app[data-tile-graphics='designer'] .app-menu-modal__tile-graphics-preview .tile-face {
+.app .app-menu-modal__tile-graphics-preview .tile-face.tile-face--illustrative-art {
+  box-sizing: border-box;
+  place-self: center;
+  flex: none;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 4;
+  --rack-tile-w: calc((100cqw - 9 * var(--menu-tile-g)) / 10);
+  --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
+}
+
+.app[data-tile-graphics='designer'] .app-menu-modal__tile-graphics-preview .tile-face:not(.tile-face--illustrative-art) {
   box-shadow:
     0 1px 0 color-mix(in srgb, var(--color-black) 12%, transparent),
     0 2px 7px color-mix(in srgb, var(--color-black) 35%, transparent),

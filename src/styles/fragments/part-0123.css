@@ -932,35 +932,19 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   box-sizing: border-box;
 }
 
-.panel--discard-tracker .tile-face:not(.tile--joker)::after {
+/* Unlit sorted slots: no dim/highlight overlay on the face — glyph reads on the tray. */
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot:not(.sorted-discard-tray__slot--discarded):not(.sorted-discard-tray__slot--suit-label)
+  .tile-face:not(.tile--joker)::after {
   content: none;
   display: none;
 }
 
-/* Bot exposure row: keep shared suggest-dim overlay (part-0075) — do not hide tiles. */
-.panel--discard-tracker
-  .discard-tracker__overlay-grid
-  .exposure-rack--discard-tracker-bot-row
-  .exposure-rack__slot
-  .tile-face:not(.tile--joker)::after {
-  content: '';
-  display: block;
-}
-
-/* Discard tracker: square tile faces only (tray shell / menu chrome keep their radius). */
-.panel--discard-tracker :is(.discard-tracker__content, .discard-tracker__overlay-grid, .discard-pile) {
-  --discard-tray-tile-corner-r: 0;
-  --tile-face-border-radius: 0;
-}
-
-html .app-dnd-frame .app-play-split.app-top-exposure-container .discard-tracker__overlay-grid {
-  --discard-tray-tile-corner-r: 0;
-  --tile-face-border-radius: 0;
-}
-
-.panel--discard-tracker :is(.tile-face, .exposure-rack__slot--empty::before) {
-  border-radius: 0;
-}
+/*
+ * Discard tracker tile corners: scaled radius from part-0061 (`calc(0.116 * var(--rack-tile-w))`)
+ * on overlay-grid, sorted rows, discard pile, and bot exposure band — same proportion as main rack.
+ */
 
 .app-discard-bottom-container
   .panel--discard-tracker
@@ -1391,28 +1375,6 @@ html[data-home-screen-app]:not([data-native-app])
   background: var(--rack-action-flat-surface);
   color: var(--rack-action-label-color, #e2e4e8);
   box-shadow: var(--rack-action-pressed);
-}
-
-/* Legal Mah Jongg hint: flat face + ring only */
-.app
-  .panel--hand
-  .rack-bottom-bar--tile-grid
-  .btn.btn--mahjong.btn--mahjong-hint.rack-bottom-tile-cell--c5-6:not(:disabled):not(:active),
-.app-layout[data-animations='off']
-  .app
-  .panel--hand
-  .rack-bottom-bar--tile-grid
-  .btn.btn--mahjong.btn--mahjong-hint.rack-bottom-tile-cell--c5-6:not(:disabled):not(:active) {
-  box-shadow: 0 0 0 1px color-mix(in srgb, #9a5fab 32%, transparent);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .app
-    .panel--hand
-    .rack-bottom-bar--tile-grid
-    .btn.btn--mahjong.btn--mahjong-hint.rack-bottom-tile-cell--c5-6:not(:disabled):not(:active) {
-    box-shadow: 0 0 0 1px color-mix(in srgb, #9a5fab 32%, transparent);
-  }
 }
 
 /* Beat part-0067 / part-0103 resting inset on menu + semantic disabled buttons. */

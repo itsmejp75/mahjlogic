@@ -1,6 +1,14 @@
-/* Illustrative Classic (`data-tile-graphics='illustrative-classic'`): full-face SVG art replaces CSS fills + glyphs. */
+/* Illustrative Classic: full-face SVG art — keyed on `.tile-face--illustrative-art` so menu previews
+   (and any nested `TileGraphicsProvider`) render correctly while a minimalist theme is active on `.app`. */
 
-.app[data-tile-graphics='illustrative-classic'] .tile-face.tile-face--illustrative-art {
+/* Rim bevel top catch-light — shared across illustrative + minimalist `::before` layers. */
+:root {
+  --tile-rim-top-peak: rgba(255, 255, 255, 0.5);
+  --tile-rim-top-mid: rgba(255, 255, 255, 0.2);
+  --tile-rim-top-tail: rgba(255, 255, 255, 0.035);
+}
+
+.tile-face.tile-face--illustrative-art {
   /* Flat ivory face — `background` shorthand beats honor preset fills (e.g. `.tile--flower`). */
   background: #fdfbf7;
   border-radius: var(--tile-face-border-radius);
@@ -19,7 +27,7 @@
  * Rim bevel over full-bleed art: multi-stop edge fades + wide blurred inset shadows.
  * No rim mask or 1px edge lines — those read as a hard digital cutoff.
  */
-.app[data-tile-graphics='illustrative-classic'] .tile-face.tile-face--illustrative-art::before {
+.tile-face.tile-face--illustrative-art::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -29,12 +37,12 @@
   --tile-rim-fade: 9%;
   --tile-shadow-fade: 7.5%;
   background:
-    /* Top only — soft #ffffff highlight */
+    /* Top only — soft catch-light (see `--tile-rim-top-*` on `:root`). */
     linear-gradient(
       to bottom,
-      #ffffff 0%,
-      rgba(255, 255, 255, 0.38) calc(var(--tile-rim-fade) * 0.4),
-      rgba(255, 255, 255, 0.08) calc(var(--tile-rim-fade) * 0.75),
+      var(--tile-rim-top-peak) 0%,
+      var(--tile-rim-top-mid) calc(var(--tile-rim-fade) * 0.4),
+      var(--tile-rim-top-tail) calc(var(--tile-rim-fade) * 0.75),
       transparent var(--tile-rim-fade)
     ),
     linear-gradient(
@@ -67,7 +75,7 @@
 }
 
 /* SVG jokers include the inscribed ring — suppress the default circular CSS `::after` ring. */
-.app[data-tile-graphics='illustrative-classic'] .tile-face.tile-face--illustrative-art.tile--joker::after {
+.tile-face.tile-face--illustrative-art.tile--joker::after {
   content: none;
   display: none;
 }
@@ -77,13 +85,13 @@
  * so the top catch-light stayed bright while the art dimmed. Lift the overlay above the rim;
  * suggest-best border still wins at z-index 5.
  */
-.app[data-tile-graphics='illustrative-classic'] .tile-face.tile-face--illustrative-art:not(.tile--joker)::after {
+.tile-face.tile-face--illustrative-art:not(.tile--joker)::after {
   z-index: 4;
 }
 
-/* Illustrative suggest-best: 1px border on topmost `::after` layer (above rim `::before`). */
+/* Illustrative suggest-best: 2px border on topmost `::after` layer (above rim `::before`). */
 .app[data-tile-graphics='illustrative-classic'] {
-  --illustrative-suggest-best-border: 1px solid var(--call-meld-group-border);
+  --illustrative-suggest-best-border: 2px solid var(--call-meld-group-border);
 }
 
 .app[data-tile-graphics='illustrative-classic']
@@ -274,7 +282,7 @@
   animation: none;
 }
 
-.app[data-tile-graphics='illustrative-classic'] .tile-face__art {
+.tile-face.tile-face--illustrative-art .tile-face__art {
   position: absolute;
   inset: 0;
   z-index: 1;
@@ -286,39 +294,237 @@
   user-select: none;
 }
 
-/* Sorted discard tracker: suit tint classes are glyph-only — keep white face when art is shown. */
-.app[data-tile-graphics='illustrative-classic']
-  .panel--discard-tracker
-  .sorted-discard-tray__slot--discarded
-  .tile-face.tile-face--illustrative-art.tile-face--sorted-discard-dot,
-.app[data-tile-graphics='illustrative-classic']
-  .panel--discard-tracker
-  .sorted-discard-tray__slot--discarded
-  .tile-face.tile-face--illustrative-art.tile-face--sorted-discard-bam,
-.app[data-tile-graphics='illustrative-classic']
-  .panel--discard-tracker
-  .sorted-discard-tray__slot--discarded
-  .tile-face.tile-face--illustrative-art.tile-face--sorted-discard-crak {
-  background: #fdfbf7;
+/*
+ * Ivory / Prism / Sorbet / Obsidian — rack faces + discard tracker prism chips share rim
+ * bevel + drop shadow (Classic illustrative art uses the block above).
+ */
+.app[data-tile-graphics='classic']
+  :is(
+    .tile-face:not(.tile-face--illustrative-art),
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .sorted-discard-tray__slot--discarded
+      .tile-face.tile-face--sorted-discard-glyph,
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .exposure-rack__slot.sorted-discard-tray__slot--suit-label
+  ),
+.app[data-tile-graphics='solid-color']
+  :is(
+    .tile-face:not(.tile-face--illustrative-art),
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .sorted-discard-tray__slot--discarded
+      .tile-face.tile-face--sorted-discard-glyph,
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .exposure-rack__slot.sorted-discard-tray__slot--suit-label
+  ),
+.app[data-tile-graphics='light']
+  :is(
+    .tile-face:not(.tile-face--illustrative-art),
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .sorted-discard-tray__slot--discarded
+      .tile-face.tile-face--sorted-discard-glyph,
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .exposure-rack__slot.sorted-discard-tray__slot--suit-label
+  ),
+.app[data-tile-graphics='dark']
+  :is(
+    .tile-face:not(.tile-face--illustrative-art),
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .sorted-discard-tray__slot--discarded
+      .tile-face.tile-face--sorted-discard-glyph,
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .exposure-rack__slot.sorted-discard-tray__slot--suit-label
+  ) {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  --tile-face-base-shadow: 0 2px 5px rgba(0, 0, 0, 0.16);
+  box-shadow: var(--tile-face-base-shadow), var(--tile-face-highlight-inset), var(--tile-face-highlight-shadow),
+    var(--tile-face-suggest-dim-inset);
 }
 
-/* Sorted discard: honor category fills must not override illustrative ivory. */
+.app[data-tile-graphics='classic']
+  :is(
+    .tile-face:not(.tile-face--illustrative-art),
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .sorted-discard-tray__slot--discarded
+      .tile-face.tile-face--sorted-discard-glyph,
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .exposure-rack__slot.sorted-discard-tray__slot--suit-label
+  )::before,
+.app[data-tile-graphics='solid-color']
+  :is(
+    .tile-face:not(.tile-face--illustrative-art),
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .sorted-discard-tray__slot--discarded
+      .tile-face.tile-face--sorted-discard-glyph,
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .exposure-rack__slot.sorted-discard-tray__slot--suit-label
+  )::before,
+.app[data-tile-graphics='light']
+  :is(
+    .tile-face:not(.tile-face--illustrative-art),
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .sorted-discard-tray__slot--discarded
+      .tile-face.tile-face--sorted-discard-glyph,
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .exposure-rack__slot.sorted-discard-tray__slot--suit-label
+  )::before,
+.app[data-tile-graphics='dark']
+  :is(
+    .tile-face:not(.tile-face--illustrative-art),
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .sorted-discard-tray__slot--discarded
+      .tile-face.tile-face--sorted-discard-glyph,
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .exposure-rack__slot.sorted-discard-tray__slot--suit-label
+  )::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  pointer-events: none;
+  --tile-rim-fade: 9%;
+  --tile-shadow-fade: 7.5%;
+  background:
+    linear-gradient(
+      to bottom,
+      var(--tile-rim-top-peak) 0%,
+      var(--tile-rim-top-mid) calc(var(--tile-rim-fade) * 0.4),
+      var(--tile-rim-top-tail) calc(var(--tile-rim-fade) * 0.75),
+      transparent var(--tile-rim-fade)
+    ),
+    linear-gradient(
+      to top,
+      rgba(28, 25, 22, 0.55) 0%,
+      rgba(28, 25, 22, 0.2) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.05) calc(var(--tile-shadow-fade) * 0.75),
+      transparent var(--tile-shadow-fade)
+    ),
+    linear-gradient(
+      to right,
+      rgba(28, 25, 22, 0.45) 0%,
+      rgba(28, 25, 22, 0.14) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
+      transparent calc(var(--tile-shadow-fade) * 0.92)
+    ),
+    linear-gradient(
+      to left,
+      rgba(28, 25, 22, 0.45) 0%,
+      rgba(28, 25, 22, 0.14) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
+      transparent calc(var(--tile-shadow-fade) * 0.92)
+    );
+  box-shadow:
+    inset calc(var(--rack-tile-w) * 0.045) 0 calc(var(--rack-tile-w) * 0.1) calc(var(--rack-tile-w) * -0.3)
+      rgba(28, 25, 22, 0.38),
+    inset calc(var(--rack-tile-w) * -0.045) calc(var(--rack-tile-w) * -0.045) calc(var(--rack-tile-w) * 0.1)
+      calc(var(--rack-tile-w) * -0.3) rgba(28, 25, 22, 0.4);
+}
+
+/* Lift glyph above rim `::before`; stacked suit rank/band keep absolute layout from part-0075. */
+.app[data-tile-graphics='classic'] .tile-face > .tile-face__glyph,
+.app[data-tile-graphics='solid-color'] .tile-face > .tile-face__glyph,
+.app[data-tile-graphics='light'] .tile-face > .tile-face__glyph,
+.app[data-tile-graphics='dark'] .tile-face > .tile-face__glyph {
+  position: relative;
+  z-index: 3;
+}
+
+.app[data-tile-graphics='classic'] .tile-face.tile-face--rack-suit-stack .tile-face__rank,
+.app[data-tile-graphics='solid-color'] .tile-face.tile-face--rack-suit-stack .tile-face__rank,
+.app[data-tile-graphics='light'] .tile-face.tile-face--rack-suit-stack .tile-face__rank,
+.app[data-tile-graphics='dark'] .tile-face.tile-face--rack-suit-stack .tile-face__rank,
+.app[data-tile-graphics='classic'] .tile-face.tile-face--rack-suit-stack .tile-face__suit-band,
+.app[data-tile-graphics='solid-color'] .tile-face.tile-face--rack-suit-stack .tile-face__suit-band,
+.app[data-tile-graphics='light'] .tile-face.tile-face--rack-suit-stack .tile-face__suit-band,
+.app[data-tile-graphics='dark'] .tile-face.tile-face--rack-suit-stack .tile-face__suit-band {
+  z-index: 3;
+}
+
+/*
+ * Classic illustrative: discard tracker prism faces (B/C/D + lit sorted slots) — same rim as art tiles.
+ */
 .app[data-tile-graphics='illustrative-classic']
   .panel--discard-tracker
   .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot--discarded
-  .tile-face.tile-face--illustrative-art.tile--flower,
+  :is(
+    .exposure-rack__slot.sorted-discard-tray__slot--suit-label,
+    .sorted-discard-tray__slot--discarded .tile-face.tile-face--sorted-discard-glyph
+  ) {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  --tile-face-base-shadow: 0 2px 5px rgba(0, 0, 0, 0.16);
+  box-shadow: var(--tile-face-base-shadow), var(--tile-face-highlight-inset), var(--tile-face-highlight-shadow),
+    var(--tile-face-suggest-dim-inset);
+}
+
 .app[data-tile-graphics='illustrative-classic']
   .panel--discard-tracker
   .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot--discarded
-  .tile-face.tile-face--illustrative-art.tile--joker,
-.app[data-tile-graphics='illustrative-classic']
-  .panel--discard-tracker
-  .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot--discarded
-  .tile-face.tile-face--illustrative-art.tile--wind {
-  background: #fdfbf7;
+  :is(
+    .exposure-rack__slot.sorted-discard-tray__slot--suit-label,
+    .sorted-discard-tray__slot--discarded .tile-face.tile-face--sorted-discard-glyph
+  )::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  pointer-events: none;
+  --tile-rim-fade: 9%;
+  --tile-shadow-fade: 7.5%;
+  background:
+    linear-gradient(
+      to bottom,
+      var(--tile-rim-top-peak) 0%,
+      var(--tile-rim-top-mid) calc(var(--tile-rim-fade) * 0.4),
+      var(--tile-rim-top-tail) calc(var(--tile-rim-fade) * 0.75),
+      transparent var(--tile-rim-fade)
+    ),
+    linear-gradient(
+      to top,
+      rgba(28, 25, 22, 0.55) 0%,
+      rgba(28, 25, 22, 0.2) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.05) calc(var(--tile-shadow-fade) * 0.75),
+      transparent var(--tile-shadow-fade)
+    ),
+    linear-gradient(
+      to right,
+      rgba(28, 25, 22, 0.45) 0%,
+      rgba(28, 25, 22, 0.14) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
+      transparent calc(var(--tile-shadow-fade) * 0.92)
+    ),
+    linear-gradient(
+      to left,
+      rgba(28, 25, 22, 0.45) 0%,
+      rgba(28, 25, 22, 0.14) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
+      transparent calc(var(--tile-shadow-fade) * 0.92)
+    );
+  box-shadow:
+    inset calc(var(--rack-tile-w) * 0.045) 0 calc(var(--rack-tile-w) * 0.1) calc(var(--rack-tile-w) * -0.3)
+      rgba(28, 25, 22, 0.38),
+    inset calc(var(--rack-tile-w) * -0.045) calc(var(--rack-tile-w) * -0.045) calc(var(--rack-tile-w) * 0.1)
+      calc(var(--rack-tile-w) * -0.3) rgba(28, 25, 22, 0.4);
 }
 
 .app-menu-modal__tile-graphics-illustrative-options {

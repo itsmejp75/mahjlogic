@@ -8,21 +8,52 @@
 
 
 
-.app[data-tile-graphics='designer'] .tile-face {
+.app[data-tile-graphics='designer']
+  :is(
+    .tile-face:not(.tile-face--illustrative-art),
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .exposure-rack--discard-tracker-bot-row
+      .tile-face,
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .sorted-discard-tray__slot--discarded
+      .tile-face.tile-face--sorted-discard-glyph,
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .exposure-rack__slot.sorted-discard-tray__slot--suit-label
+  ) {
   position: relative;
   isolation: isolate;
+  overflow: hidden;
   /* Depth + cut edge; cool outer whisper so it reads “gem” not warm Obsidian.
      Pushed through `--tile-face-base-shadow` so the suggest-best / called highlight ring
      composes on top — see `.tile-face` for the variable contract. */
   --tile-face-base-shadow:
     0 1px 4px color-mix(in srgb, var(--color-black) 32%, transparent),
     0 0 14px -2px color-mix(in srgb, #7a7e9a 10%, transparent),
-    inset 0 1px 0 color-mix(in srgb, #f0f2fa 16%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #f0f2fa 10%, transparent),
     inset 0 -1px 0 color-mix(in srgb, var(--color-black) 26%, transparent);
+  box-shadow: var(--tile-face-base-shadow), var(--tile-face-highlight-inset), var(--tile-face-highlight-shadow),
+    var(--tile-face-suggest-dim-inset);
 }
 
 /* Translucent polish: cool silver highlights so white inlay still “floats” above the stone */
-.app[data-tile-graphics='designer'] .tile-face::before {
+.app[data-tile-graphics='designer']
+  :is(
+    .tile-face:not(.tile-face--illustrative-art),
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .exposure-rack--discard-tracker-bot-row
+      .tile-face,
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .sorted-discard-tray__slot--discarded
+      .tile-face.tile-face--sorted-discard-glyph,
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .exposure-rack__slot.sorted-discard-tray__slot--suit-label
+  )::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -31,11 +62,11 @@
   pointer-events: none;
   background: linear-gradient(
     158deg,
-    color-mix(in srgb, #eef0f8 20%, transparent) 0%,
+    color-mix(in srgb, #eef0f8 12%, transparent) 0%,
     color-mix(in srgb, #9898a8 4%, transparent) 38%,
     transparent 52%,
     color-mix(in srgb, #080820 30%, transparent) 100%
   );
   mix-blend-mode: soft-light;
-  opacity: 0.9;
+  opacity: 0.82;
 }
