@@ -1388,16 +1388,17 @@ function buildPreviewSlotKindsFromGroups(
       continue
     }
 
-    const usedSlots = new Set<number>()
-    for (const m of nat) {
-      const t = byId.get(m.id)
-      if (!t) continue
-      for (let si = a; si < b; si++) {
-        if (usedSlots.has(si)) continue
-        if (stripSlotAcceptsNatural(p, defs[si]!, t.def)) {
+    const usedNatIds = new Set<string>()
+    for (let si = a; si < b; si++) {
+      const target = defs[si]!
+      for (const m of nat) {
+        if (usedNatIds.has(m.id)) continue
+        const t = byId.get(m.id)
+        if (!t) continue
+        if (tileDefsEqual(t.def, target) || stripSlotAcceptsNatural(p, target, t.def)) {
           kinds[si] = bestIds.has(m.id) ? 'best' : null
           slotTileIdByStripIndex[si] = m.id
-          usedSlots.add(si)
+          usedNatIds.add(m.id)
           break
         }
       }
@@ -2160,10 +2161,16 @@ function resolveStripTargetDefsForGreedyMatch(
         let idx = a
         for (let ci = 0; ci < n; ci++) {
           const s = bestPerm[ci]!
+          const yearBlock =
+            isNmjl2026YearHandPattern(p) && isYear2026ColorGroup(g.colorGroups[ci]!)
+          const rankOcc = new Map<number, number>()
           for (const sg of g.colorGroups[ci]) {
             const rank = sg.rank - 1 + bestBase
             for (let k = 0; k < sg.need && idx < b; k++) {
-              out[idx++] = { cat: 'suit', suit: s, rank }
+              const occ = rankOcc.get(rank) ?? 0
+              rankOcc.set(rank, occ + 1)
+              const suit = yearBlock ? year2026SuitForGroupTile(s, rank, occ) : s
+              out[idx++] = { cat: 'suit', suit, rank }
             }
           }
           const dc = g.colorGroupDragonCounts?.[ci] ?? 0
@@ -2349,8 +2356,8 @@ export type SuggestedStripSlot = {
 function stripDefsMatchForTitleReorder(stripDef: TileDef, titleDef: TileDef, p: PracticePattern): boolean {
   if (stripDef.cat !== titleDef.cat) return false
   if (stripDef.cat === 'suit' && titleDef.cat === 'suit') {
-    if (stripDef.rank === titleDef.rank) return true
     if (stripDef.suit !== titleDef.suit) return false
+    if (stripDef.rank === titleDef.rank) return true
     const likeNumbersPlaceholder =
       p.section === 'ANY LIKE NUMBERS' || p.id.startsWith('like-')
     return likeNumbersPlaceholder && titleDef.rank === 1
@@ -2769,6 +2776,30 @@ function suitPermuteComboScoreBetter(
   return candidate.slotSquareFill > current.slotSquareFill
 }
 
+/** 2026 NMJL Year lines: soap is neutral — digits after `0` in a `2026` run may be dots. */
+const NMJL_YEAR_NEUTRAL_ZERO_SUIT: Suit = 'dot'
+
+function isNmjl2026YearHandPattern(p: PracticePattern): boolean {
+  // Neutral-zero applies only to the Year **section** (e.g. 2026-3), not every hand whose title
+  // contains “2026” (e.g. S&Ps-6, W&D-8).
+  return p.id.startsWith('nmjl2026:') && p.section === '2026'
+}
+
+function isYear2026ColorGroup(colorGroup: readonly { rank: number; need: number }[]): boolean {
+  const twos = colorGroup.find((sg) => sg.rank === 2)?.need ?? 0
+  const sixes = colorGroup.find((sg) => sg.rank === 6)?.need ?? 0
+  return twos >= 2 && sixes >= 1
+}
+
+function year2026SuitForGroupTile(groupSuit: Suit, rank: number, rankOccurrence: number): Suit {
+  if (rank === 2 && rankOccurrence === 0) return groupSuit
+  return NMJL_YEAR_NEUTRAL_ZERO_SUIT
+}
+
+function titleSegmentIsYear2026Run(seg: { t: string }): boolean {
+  return /\d0\d/.test(seg.t.replace(/\s/g, ''))
+}
+
 function cardTitleOrderDefsForSuitPermute(
   p: PracticePattern,
   g: Extract<PatternGroup, { kind: 'suit-permute' }>,
@@ -2784,9 +2815,13 @@ function cardTitleOrderDefsForSuitPermute(
   let currentColorGroup: number | null = null
   const dragonForSuit = { bam: 'green' as const, dot: 'soap' as const, crak: 'red' as const }
 
+  const yearHand = isNmjl2026YearHandPattern(p)
+
   for (const seg of p.titleSegments) {
     const parts = seg.t.match(/F+|N+|E+|W+|S+|D+|(\d)\1*/g) ?? []
     currentColorGroup = null
+    const yearSeg = yearHand && titleSegmentIsYear2026Run(seg)
+    let yearBeforeSoap = true
     for (const part of parts) {
       if (/^F+$/.test(part)) {
         for (let i = 0; i < part.length; i++) out.push({ cat: 'flower', flower: 1 })
@@ -2820,6 +2855,7 @@ function cardTitleOrderDefsForSuitPermute(
       }
       const runRank = Number(part[0])
       if (runRank === 0) {
+        yearBeforeSoap = false
         for (let i = 0; i < part.length; i++) out.push({ cat: 'dragon', dragon: 'soap' })
         continue
       }
@@ -2847,12 +2883,16 @@ function cardTitleOrderDefsForSuitPermute(
         }
       }
       if (ci == null) return null
-      const suit = perm[ci]
-      if (!suit) return null
+      const groupSuit = perm[ci]
+      if (!groupSuit) return null
       currentColorGroup = ci
       usedColorGroups.add(ci)
       colorGroupByInk.set(seg.ink, ci)
       const actualRank = g.consecRanks ? normalizedRank - 1 + base : normalizedRank
+      const suit =
+        yearSeg && !yearBeforeSoap && (actualRank === 2 || actualRank === 6)
+          ? NMJL_YEAR_NEUTRAL_ZERO_SUIT
+          : groupSuit
       for (let i = 0; i < part.length; i++) out.push({ cat: 'suit', suit, rank: actualRank })
     }
   }
