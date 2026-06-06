@@ -3946,37 +3946,50 @@ function reorderSlotAssignmentsToTitlePreviewSlots(
     .filter((id) => !assignedIds.has(id) && byId.get(id)?.def.cat === 'joker')
     .map((id, i) => ({ i, id }))
 
+  const naturalCountInMeldRange = (a: number, b: number): number => {
+    let naturalCount = 0
+    for (const id of outSlots.slice(a, b)) {
+      if (id == null) continue
+      const t = byId.get(id)
+      if (t != null && t.def.cat !== 'joker') naturalCount++
+    }
+    return naturalCount
+  }
+
   let jokerK = 0
-  const placeJokersInMelds = (requireNaturalAnchor: boolean) => {
-    for (const [a, b] of jokerMeldPreviewIndexRanges([...cardLineDefs], jokerEligible)) {
-      let naturalCount = 0
-      for (const id of outSlots.slice(a, b)) {
-        if (id == null) continue
-        const t = byId.get(id)
-        if (t != null && t.def.cat !== 'joker') naturalCount++
+  const meldRanges = jokerMeldPreviewIndexRanges([...cardLineDefs], jokerEligible)
+  // Walk card left-to-right: joker fills the first open joker-eligible meld (e.g. FFF before 1111).
+  // Skip an empty earlier meld only when a later meld already has 3+ naturals — keeps jokers with
+  // nearly-complete kongs (Runs #3: 3D 3D 3D + joker, not joker in the empty 2222 before them).
+  const STRONG_LATER_MELD_NATURALS = 3
+  let jokersDone = false
+  for (let ri = 0; ri < meldRanges.length && !jokersDone; ri++) {
+    const [a, b] = meldRanges[ri]!
+    const naturalCount = naturalCountInMeldRange(a, b)
+    const openSlots = outSlots.slice(a, b).filter((id) => id == null).length
+    if (openSlots === 0) continue
+    if (
+      naturalCount === 0 &&
+      meldRanges.slice(ri + 1).some(([la, lb]) => {
+        const laterOpen = outSlots.slice(la, lb).filter((id) => id == null).length
+        return laterOpen > 0 && naturalCountInMeldRange(la, lb) >= STRONG_LATER_MELD_NATURALS
+      })
+    ) {
+      continue
+    }
+    for (let j = a; j < b; j++) {
+      if (outSlots[j] != null) continue
+      const want = cardLineDefs[j]!
+      if (!previewSlotAllowsJoker(want, p, j, jokerEligible)) continue
+      const src = jokerSrc[jokerK++]
+      if (!src) {
+        jokersDone = true
+        break
       }
-      const openSlots = outSlots.slice(a, b).filter((id) => id == null).length
-      if (openSlots === 0) continue
-      // Prefer melds that are actually in progress. A complete pung with no open slot
-      // should never attract the joker ahead of a later incomplete kong.
-      if (requireNaturalAnchor && naturalCount === 0) continue
-      if (requireNaturalAnchor && naturalCount >= b - a) continue
-      for (let j = a; j < b; j++) {
-        if (outSlots[j] != null) continue
-        const want = cardLineDefs[j]!
-        if (!previewSlotAllowsJoker(want, p, j, jokerEligible)) continue
-        const src = jokerSrc[jokerK++]
-        if (!src) return
-        assignedIds.add(src.id)
-        outSlots[j] = src.id
-      }
+      assignedIds.add(src.id)
+      outSlots[j] = src.id
     }
   }
-  // For rack sorting, keep real jokers with a meld the player already owns part of.
-  // Otherwise a joker can jump into an earlier empty pung and split a natural group
-  // (e.g. Runs #3: 3D 3D 3D should stay together, joker belongs after 4C).
-  placeJokersInMelds(true)
-  placeJokersInMelds(false)
 
   for (let j = 0; j < cardLineDefs.length; j++) {
     if (outSlots[j] != null) continue

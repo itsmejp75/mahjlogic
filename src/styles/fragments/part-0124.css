@@ -1,44 +1,170 @@
 /* Illustrative Classic (`data-tile-graphics='illustrative-classic'`): full-face SVG art replaces CSS fills + glyphs. */
 
 .app[data-tile-graphics='illustrative-classic'] .tile-face.tile-face--illustrative-art {
-  background-color: #fff;
+  /* Flat ivory face — `background` shorthand beats honor preset fills (e.g. `.tile--flower`). */
+  background: #fdfbf7;
   border-radius: var(--tile-face-border-radius);
   border: none;
-  --tile-face-base-shadow: 0 0 0 0 transparent;
-  box-shadow: var(--tile-face-highlight-inset), var(--tile-face-highlight-shadow),
+  /* Drop shadow below the face only; top catch-light lives on `::before` (inset, never past ring borders). */
+  --tile-face-base-shadow: 0 2px 5px rgba(0, 0, 0, 0.16);
+  box-shadow: var(--tile-face-base-shadow), var(--tile-face-highlight-inset), var(--tile-face-highlight-shadow),
     var(--tile-face-suggest-dim-inset);
   padding: 0;
   overflow: hidden;
   position: relative;
+  isolation: isolate;
 }
 
-/* Designer lustre only — keep ::after for suggest-dim overlay. */
+/*
+ * Rim bevel over full-bleed art: multi-stop edge fades + wide blurred inset shadows.
+ * No rim mask or 1px edge lines — those read as a hard digital cutoff.
+ */
 .app[data-tile-graphics='illustrative-classic'] .tile-face.tile-face--illustrative-art::before {
-  content: none;
-  display: none;
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  pointer-events: none;
+  --tile-rim-fade: 9%;
+  --tile-shadow-fade: 7.5%;
+  background:
+    /* Top only — soft #ffffff highlight */
+    linear-gradient(
+      to bottom,
+      #ffffff 0%,
+      rgba(255, 255, 255, 0.38) calc(var(--tile-rim-fade) * 0.4),
+      rgba(255, 255, 255, 0.08) calc(var(--tile-rim-fade) * 0.75),
+      transparent var(--tile-rim-fade)
+    ),
+    linear-gradient(
+      to top,
+      rgba(28, 25, 22, 0.55) 0%,
+      rgba(28, 25, 22, 0.2) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.05) calc(var(--tile-shadow-fade) * 0.75),
+      transparent var(--tile-shadow-fade)
+    ),
+    /* Left edge shadow (preview) */
+    linear-gradient(
+      to right,
+      rgba(28, 25, 22, 0.45) 0%,
+      rgba(28, 25, 22, 0.14) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
+      transparent calc(var(--tile-shadow-fade) * 0.92)
+    ),
+    linear-gradient(
+      to left,
+      rgba(28, 25, 22, 0.45) 0%,
+      rgba(28, 25, 22, 0.14) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
+      transparent calc(var(--tile-shadow-fade) * 0.92)
+    );
+  box-shadow:
+    inset calc(var(--rack-tile-w) * 0.045) 0 calc(var(--rack-tile-w) * 0.1) calc(var(--rack-tile-w) * -0.3)
+      rgba(28, 25, 22, 0.38),
+    inset calc(var(--rack-tile-w) * -0.045) calc(var(--rack-tile-w) * -0.045) calc(var(--rack-tile-w) * 0.1)
+      calc(var(--rack-tile-w) * -0.3) rgba(28, 25, 22, 0.4);
 }
 
-/* SVG jokers include the inscribed ring — suppress the CSS `::after` ring. */
+/* SVG jokers include the inscribed ring — suppress the default circular CSS `::after` ring. */
 .app[data-tile-graphics='illustrative-classic'] .tile-face.tile-face--illustrative-art.tile--joker::after {
   content: none;
   display: none;
 }
 
-/* White SVG faces: white suggest-best rings don't read — use call-meld green on hand/pass/discard only. */
-.app[data-tile-graphics='illustrative-classic'] {
-  --illustrative-suggest-best-ring: inset 0 0 0 2px #22c55e;
+/*
+ * Suggest-dim `::after` (part-0075) defaults to z-index 1 — below rim bevel `::before` (z-index 2),
+ * so the top catch-light stayed bright while the art dimmed. Lift the overlay above the rim;
+ * suggest-best border still wins at z-index 5.
+ */
+.app[data-tile-graphics='illustrative-classic'] .tile-face.tile-face--illustrative-art:not(.tile--joker)::after {
+  z-index: 4;
 }
 
-.app[data-tile-graphics='illustrative-classic'] .sortable-tile-wrap--suggest-best .tile-face.tile-face--illustrative-art,
-.app[data-tile-graphics='illustrative-classic'] .pass-strip__tile-wrap--suggest-best .tile-face.tile-face--illustrative-art,
-.app[data-tile-graphics='illustrative-classic'] .east-discard-staging__tile--suggest-best .tile-face.tile-face--illustrative-art,
-.app[data-tile-graphics='illustrative-classic'] .discard-entry--suggest-need .tile-face.tile-face--illustrative-art,
+/* Illustrative suggest-best: 1px border on topmost `::after` layer (above rim `::before`). */
+.app[data-tile-graphics='illustrative-classic'] {
+  --illustrative-suggest-best-border: 1px solid var(--call-meld-group-border);
+}
+
 .app[data-tile-graphics='illustrative-classic']
-  .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot--suggest-need
+  :is(
+    .sortable-tile-wrap--suggest-best,
+    .pass-strip__tile-wrap--suggest-best,
+    .east-discard-staging__tile--suggest-best,
+    .discard-entry--suggest-need,
+    .discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-need
+  )
   .tile-face.tile-face--illustrative-art {
   --tile-face-highlight-inset: 0 0 0 0 transparent;
-  --tile-face-highlight-shadow: var(--illustrative-suggest-best-ring);
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
+}
+
+/* Border on topmost `::after` (z-index 5) — above rim bevel `::before` (z-index 2) and art (z-index 1). */
+.app[data-tile-graphics='illustrative-classic']
+  :is(
+    .sortable-tile-wrap--suggest-best,
+    .sortable-tile-wrap--suggest-dim.sortable-tile-wrap--suggest-best,
+    .pass-strip__tile-wrap--suggest-best,
+    .pass-strip__tile-wrap--suggest-dim.pass-strip__tile-wrap--suggest-best,
+    .east-discard-staging__tile--suggest-best,
+    .discard-entry--suggest-need,
+    .discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-need
+  )
+  .tile-face.tile-face--illustrative-art::after {
+  content: '';
+  display: block;
+  position: absolute;
+  inset: 0;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  transform: none;
+  width: auto;
+  height: auto;
+  padding-bottom: 0;
+  z-index: 5;
+  box-sizing: border-box;
+  border: var(--illustrative-suggest-best-border);
+  border-radius: inherit;
+  pointer-events: none;
+  background: transparent;
+  box-shadow: none;
+  opacity: 1;
+}
+
+/* Joker: beat circular-ring + SVG suppress rules — same full-tile inner border as naturals. */
+.app[data-tile-graphics='illustrative-classic']
+  :is(
+    .sortable-tile-wrap--suggest-best,
+    .sortable-tile-wrap--suggest-dim.sortable-tile-wrap--suggest-best,
+    .pass-strip__tile-wrap--suggest-best,
+    .pass-strip__tile-wrap--suggest-dim.pass-strip__tile-wrap--suggest-best,
+    .east-discard-staging__tile--suggest-best,
+    .discard-entry--suggest-need,
+    .discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-need
+  )
+  .tile-face.tile-face--illustrative-art.tile--joker::after {
+  content: '';
+  display: block;
+  position: absolute;
+  inset: 0;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  transform: none;
+  width: auto;
+  height: auto;
+  padding-bottom: 0;
+  z-index: 5;
+  box-sizing: border-box;
+  border: var(--illustrative-suggest-best-border);
+  border-radius: inherit;
+  pointer-events: none;
+  background: transparent;
+  box-shadow: none;
+  opacity: 1;
 }
 
 /* Player hand exposures: meld group border only — no per-tile rings on SVG faces. */
@@ -54,17 +180,75 @@
 .app[data-tile-graphics='illustrative-classic']
   .panel--hand
   .exposure-rack__slot--incoming-discard.exposure-rack__slot--suggest-best
-  .tile-face.tile-face--illustrative-art,
+  .tile-face.tile-face--illustrative-art::after,
 .app[data-tile-graphics='illustrative-classic']
   .panel--hand
   .exposure-rack__slot--incoming-discard
   .east-discard-staging__tile--suggest-best
-  .tile-face.tile-face--illustrative-art {
-  --tile-face-highlight-inset: 0 0 0 0 transparent;
-  --tile-face-highlight-shadow: var(--illustrative-suggest-best-ring);
+  .tile-face.tile-face--illustrative-art::after {
+  content: '';
+  display: block;
+  position: absolute;
+  inset: 0;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  transform: none;
+  width: auto;
+  height: auto;
+  padding-bottom: 0;
+  z-index: 5;
+  box-sizing: border-box;
+  border: var(--illustrative-suggest-best-border);
+  border-radius: inherit;
+  pointer-events: none;
+  background: transparent;
+  box-shadow: none;
+  opacity: 1;
 }
 
 /* Bot exposure tracker: usable tiles (incl. swappable jokers) get the same green ring as the hand. */
+.app[data-tile-graphics='illustrative-classic']
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-best
+  .tile-face.tile-face--illustrative-art::after,
+.app[data-tile-graphics='illustrative-classic']
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-best
+  .tile-face.tile--joker.tile-face--illustrative-art::after,
+.app[data-tile-graphics='illustrative-classic']
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-dim.exposure-rack__slot--suggest-best
+  .tile-face.tile--joker.tile-face--illustrative-art::after {
+  content: '';
+  display: block;
+  position: absolute;
+  inset: 0;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  transform: none;
+  width: auto;
+  height: auto;
+  padding-bottom: 0;
+  z-index: 5;
+  box-sizing: border-box;
+  border: var(--illustrative-suggest-best-border);
+  border-radius: inherit;
+  pointer-events: none;
+  background: transparent;
+  box-shadow: none;
+  opacity: 1;
+}
+
 .app[data-tile-graphics='illustrative-classic']
   .panel--discard-tracker
   .discard-tracker__overlay-grid
@@ -84,7 +268,7 @@
   .exposure-rack__slot--suggest-dim.exposure-rack__slot--suggest-best
   .tile-face.tile--joker.tile-face--illustrative-art {
   --tile-face-highlight-inset: 0 0 0 0 transparent;
-  --tile-face-highlight-shadow: var(--illustrative-suggest-best-ring);
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
   filter: none;
   opacity: 1;
   animation: none;
@@ -93,6 +277,7 @@
 .app[data-tile-graphics='illustrative-classic'] .tile-face__art {
   position: absolute;
   inset: 0;
+  z-index: 1;
   display: block;
   width: 100%;
   height: 100%;
@@ -114,7 +299,26 @@
   .panel--discard-tracker
   .sorted-discard-tray__slot--discarded
   .tile-face.tile-face--illustrative-art.tile-face--sorted-discard-crak {
-  background-color: #fff;
+  background: #fdfbf7;
+}
+
+/* Sorted discard: honor category fills must not override illustrative ivory. */
+.app[data-tile-graphics='illustrative-classic']
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--discarded
+  .tile-face.tile-face--illustrative-art.tile--flower,
+.app[data-tile-graphics='illustrative-classic']
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--discarded
+  .tile-face.tile-face--illustrative-art.tile--joker,
+.app[data-tile-graphics='illustrative-classic']
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--discarded
+  .tile-face.tile-face--illustrative-art.tile--wind {
+  background: #fdfbf7;
 }
 
 .app-menu-modal__tile-graphics-illustrative-options {

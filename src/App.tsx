@@ -4966,18 +4966,36 @@ export default function App() {
         }
         if (charlestonDone && mainPhase === 'east-discard' && (fromHandTile || fromStagedDiscard)) {
           const pointerX = args.pointerCoordinates?.x ?? lastDragPointerRef.current.x
+          const pointerY = args.pointerCoordinates?.y ?? lastDragPointerRef.current.y
           const handBankContainer = args.droppableContainers.find((c) => String(c.id) === HAND_BANK_ID)
           const handBankRect = handBankContainer ? args.droppableRects.get(handBankContainer.id) : null
-          const pointerOverHandBankHorizontally =
+          const pointerInHandBank =
             handBankRect != null &&
             Number.isFinite(pointerX) &&
+            Number.isFinite(pointerY) &&
             pointerX >= handBankRect.left &&
-            pointerX <= handBankRect.left + handBankRect.width
-          // Keep hand reorder / insert preview while the pointer is over the rack columns —
-          // staging wins only once the pointer leaves the hand row horizontally.
-          if (!pointerOverHandBankHorizontally) {
+            pointerX <= handBankRect.left + handBankRect.width &&
+            pointerY >= handBankRect.top &&
+            pointerY <= handBankRect.top + handBankRect.height
+          // Hand → staging: accept as soon as the dragged tile overlaps the slot (pointer can
+          // still be in the hand row while the tile has moved up into the exposure row).
+          if (fromHandTile) {
+            const stagingOverlap = collisionHitsForTileOverlappingZones(args, [EAST_DISCARD_STAGING_ID])
+            if (stagingOverlap.length > 0) return stagingOverlap
+          }
+          // Keep hand reorder / return-from-staging while the pointer is still in the hand row.
+          // Column 14 shares the rack width with the discard slot above — a horizontal-only test
+          // wrongly blocked staging until the pointer moved past the right edge of the rack.
+          if (!pointerInHandBank) {
             const stagingHits = collisionHitsForTileOverlappingZones(args, [EAST_DISCARD_STAGING_ID])
             if (stagingHits.length > 0) return stagingHits
+            const stagingContainers = args.droppableContainers.filter(
+              (c) => String(c.id) === EAST_DISCARD_STAGING_ID,
+            )
+            if (stagingContainers.length > 0) {
+              const pointerStaging = pointerWithin({ ...args, droppableContainers: stagingContainers })
+              if (pointerStaging.length > 0) return pointerStaging
+            }
           }
         }
         if (

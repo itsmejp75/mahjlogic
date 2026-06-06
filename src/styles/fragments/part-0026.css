@@ -95,6 +95,10 @@
   /* Paired with focus / suggest-best: soft inner light (dim counterpart, “up and out” vs sunken). */
   --suggest-highlight-inset-shadow: inset 0 0 0.5rem color-mix(in srgb, var(--color-white) 24%, transparent),
     inset 0 0 0 1px color-mix(in srgb, var(--color-white) 28%, transparent);
+  /* Focused suggested-hand tiles: inner-edge ring — same blue as call-meld / Mahj logo (#00b4d8). */
+  --charleston-pass-box-color: #00b4d8;
+  --call-meld-group-border: var(--charleston-pass-box-color);
+  --suggest-best-ring: inset 0 0 0 1px var(--call-meld-group-border);
   /* Joker swap hint: wait from turn start (hint active) before dock bounce (see keyframes). */
   --joker-swap-hint-bounce-delay: 500ms;
 }

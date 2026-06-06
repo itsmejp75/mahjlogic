@@ -788,13 +788,13 @@
   --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
 }
 
-/* Bot exposure row: green suggest-best ring on usable tiles (incl. swappable jokers). */
+/* Bot exposure row: suggest-best ring on usable tiles (incl. swappable jokers). */
 .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot--suggest-best
   .tile-face {
   --tile-face-highlight-inset: 0 0 0 0 transparent;
-  --tile-face-highlight-shadow: inset 0 0 0 2px #22c55e;
+  --tile-face-highlight-shadow: var(--suggest-best-ring);
 }
 
 .discard-tracker__overlay-grid
