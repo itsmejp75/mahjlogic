@@ -1041,6 +1041,7 @@ function DiscardTrackerSlotGrid({
                 melds={melds}
                 slotCount={DISCARD_TRACKER_BOT_ROW_SLOTS}
                 className="exposure-rack--discard-tracker-opponent exposure-rack--discard-tracker-bot-row"
+                gridMeldColumnSpans
                 ariaLabel={`${seat} exposures`}
                 stackSuitTiles
                 flyInTileIds={animationsEnabled ? botExposureFlyInTileIds : null}
@@ -3109,18 +3110,26 @@ export default function App() {
   const [suggestedFocusHandKey, setSuggestedFocusHandKey] = useState<string | null>(null)
   const suggestedFocusHandKeyRef = useRef<string | null>(null)
   suggestedFocusHandKeyRef.current = suggestedFocusHandKey
-  const [suggestedDeadTileGuide, setSuggestedDeadTileGuide] = useState<{
-    focusKey: string
-    phase: MainPhase
-    suppressAfterPhase: boolean
-    deadIds: ReadonlySet<string>
-    skullIds: ReadonlySet<string>
-  } | null>(null)
-  const [suggestedDeadTableGuide, setSuggestedDeadTableGuide] = useState<{
-    focusKey: string
-    botExposureDeadIds: ReadonlySet<string>
-    discardDeadIds: ReadonlySet<string>
-  } | null>(null)
+  const [suggestedDeadTileGuidesByKey, setSuggestedDeadTileGuidesByKey] = useState<
+    Record<
+      string,
+      {
+        phase: MainPhase
+        suppressAfterPhase: boolean
+        deadIds: ReadonlySet<string>
+        skullIds: ReadonlySet<string>
+      }
+    >
+  >({})
+  const [suggestedDeadTableGuidesByKey, setSuggestedDeadTableGuidesByKey] = useState<
+    Record<
+      string,
+      {
+        botExposureDeadIds: ReadonlySet<string>
+        discardDeadIds: ReadonlySet<string>
+      }
+    >
+  >({})
   const [suggestedPanelHandsOn, setSuggestedPanelHandsOn] = useState(false)
   /** Vertical peek (px): drag suggested-hands header down to reveal more of the discard strip above the sheet. */
   const [suggestedDiscardOverlayPeekPx, setSuggestedDiscardOverlayPeekPx] = useState(0)
@@ -4442,13 +4451,17 @@ export default function App() {
    */
   const suggestedTileGuideForRack = useMemo(() => {
     if (!suggestedTileGuide) return null
+    const activeDeadTableGuide = suggestedFocusHandKey
+      ? suggestedDeadTableGuidesByKey[suggestedFocusHandKey]
+      : undefined
+    const activeDeadTileGuide = suggestedFocusHandKey
+      ? suggestedDeadTileGuidesByKey[suggestedFocusHandKey]
+      : undefined
     const activeDiscardIsDead =
       !!activeBotDiscard &&
-      suggestedDeadTableGuide?.focusKey === suggestedFocusHandKey &&
-      suggestedDeadTableGuide.discardDeadIds.has(activeBotDiscard.id)
-    const selectedHandIsDying =
-      suggestedDeadTileGuide?.focusKey === suggestedFocusHandKey &&
-      suggestedDeadTileGuide.suppressAfterPhase
+      !!activeDeadTableGuide &&
+      activeDeadTableGuide.discardDeadIds.has(activeBotDiscard.id)
+    const selectedHandIsDying = !!activeDeadTileGuide?.suppressAfterPhase
     if (
       (mainPhase === 'bot-turn' || mainPhase === 'call-staging') &&
       activeBotDiscard &&
@@ -4466,8 +4479,8 @@ export default function App() {
     mainPhase,
     activeBotDiscard,
     suggestedDiscardNeedIds,
-    suggestedDeadTableGuide,
-    suggestedDeadTileGuide,
+    suggestedDeadTableGuidesByKey,
+    suggestedDeadTileGuidesByKey,
     suggestedFocusHandKey,
   ])
 
@@ -4490,7 +4503,8 @@ export default function App() {
     const discardSnapshot = lastDiscard ? `${discardPile.length}:${lastDiscard.id}` : '0:'
     const discardAdvanced = discardSnapshot !== prevDiscardSnapshot
     const focusChanged = prevFocus !== suggestedFocusHandKey
-    const shouldReset = !deadTileHintEnabled || !suggestedFocusHandKey || !currentBestIds || focusChanged
+    const shouldSkipDeadDetection =
+      !deadTileHintEnabled || !suggestedFocusHandKey || !currentBestIds || focusChanged
     const lastDiscardNeed =
       lastDiscard
         ? focusedPatternNeedForDeadHintDef(suggestedFocusHandKey, lastDiscard.def, cardPatterns)
@@ -4517,10 +4531,7 @@ export default function App() {
     const deadHintAppliesToDef = (def: TileDef) =>
       focusedPatternNeedForDeadHintDef(suggestedFocusHandKey, def, cardPatterns) != null
 
-    if (shouldReset) {
-      setSuggestedDeadTileGuide(null)
-      setSuggestedDeadTableGuide(null)
-    } else if (discardAdvanced && prevBestIds.size > 0) {
+    if (!shouldSkipDeadDetection && discardAdvanced && prevBestIds.size > 0) {
       const rackById = new Map(rackForSuggestedHandsUi.map((t) => [t.id, t] as const))
       const deadIds = new Set<string>()
       const stillHasUsablePivot =
@@ -4540,7 +4551,8 @@ export default function App() {
             exhaustedPrevIds.add(id)
           }
         }
-        for (const id of stillHasUsablePivot && exhaustedPrevIds.size > 0 ? exhaustedPrevIds : prevBestIds) {
+        const idsToMarkDead = stillHasUsablePivot ? exhaustedPrevIds : prevBestIds
+        for (const id of idsToMarkDead) {
           deadIds.add(id)
         }
       } else {
@@ -4558,26 +4570,31 @@ export default function App() {
             if (tile && tileDefsEqual(tile.def, lastDiscard.def)) skullIds.add(id)
           }
         }
-        setSuggestedDeadTileGuide((cur) => {
-          if (cur?.focusKey === suggestedFocusHandKey) {
+        setSuggestedDeadTileGuidesByKey((byKey) => {
+          const cur = byKey[suggestedFocusHandKey]
+          if (cur) {
             const nextDeadIds = new Set(cur.deadIds)
             for (const id of deadIds) nextDeadIds.add(id)
             const nextSkullIds = new Set(cur.skullIds)
             for (const id of skullIds) nextSkullIds.add(id)
             return {
-              focusKey: suggestedFocusHandKey,
-              phase: cur.phase,
-              suppressAfterPhase: cur.suppressAfterPhase || suppressAfterPhase,
-              deadIds: nextDeadIds,
-              skullIds: nextSkullIds,
+              ...byKey,
+              [suggestedFocusHandKey]: {
+                phase: cur.phase,
+                suppressAfterPhase: cur.suppressAfterPhase || suppressAfterPhase,
+                deadIds: nextDeadIds,
+                skullIds: nextSkullIds,
+              },
             }
           }
           return {
-            focusKey: suggestedFocusHandKey,
-            phase: mainPhase,
-            suppressAfterPhase,
-            deadIds,
-            skullIds,
+            ...byKey,
+            [suggestedFocusHandKey]: {
+              phase: mainPhase,
+              suppressAfterPhase,
+              deadIds,
+              skullIds,
+            },
           }
         })
       }
@@ -4627,22 +4644,27 @@ export default function App() {
         }
       }
       if (botExposureDeadIds.size > 0 || discardDeadIds.size > 0) {
-        setSuggestedDeadTableGuide((cur) => {
-          if (cur?.focusKey === suggestedFocusHandKey) {
+        setSuggestedDeadTableGuidesByKey((byKey) => {
+          const cur = byKey[suggestedFocusHandKey]
+          if (cur) {
             const nextBotExposureDeadIds = new Set(cur.botExposureDeadIds)
             for (const id of botExposureDeadIds) nextBotExposureDeadIds.add(id)
             const nextDiscardDeadIds = new Set(cur.discardDeadIds)
             for (const id of discardDeadIds) nextDiscardDeadIds.add(id)
             return {
-              focusKey: suggestedFocusHandKey,
-              botExposureDeadIds: nextBotExposureDeadIds,
-              discardDeadIds: nextDiscardDeadIds,
+              ...byKey,
+              [suggestedFocusHandKey]: {
+                botExposureDeadIds: nextBotExposureDeadIds,
+                discardDeadIds: nextDiscardDeadIds,
+              },
             }
           }
           return {
-            focusKey: suggestedFocusHandKey,
-            botExposureDeadIds,
-            discardDeadIds,
+            ...byKey,
+            [suggestedFocusHandKey]: {
+              botExposureDeadIds,
+              discardDeadIds,
+            },
           }
         })
       }
@@ -4671,44 +4693,62 @@ export default function App() {
   ])
 
   useEffect(() => {
-    if (!suggestedDeadTileGuide) return
-    if (suggestedDeadTileGuide.focusKey !== suggestedFocusHandKey) return
-    if (suggestedDeadTileGuide.phase === mainPhase) return
+    if (!suggestedFocusHandKey) return
+    const guide = suggestedDeadTileGuidesByKey[suggestedFocusHandKey]
+    if (!guide) return
+    if (guide.phase === mainPhase) return
 
-    setSuggestedDeadTileGuide(null)
-    setSuggestedDeadTableGuide(null)
-    if (suggestedDeadTileGuide.suppressAfterPhase) {
-      setSuggestedSuppressedHandKey(suggestedDeadTileGuide.focusKey)
+    if (guide.suppressAfterPhase) {
+      setSuggestedSuppressedHandKey(suggestedFocusHandKey)
     }
-  }, [mainPhase, suggestedDeadTileGuide, suggestedFocusHandKey])
+    setSuggestedDeadTileGuidesByKey((prev) => {
+      const cur = prev[suggestedFocusHandKey]
+      if (!cur) return prev
+      return {
+        ...prev,
+        [suggestedFocusHandKey]: { ...cur, phase: mainPhase },
+      }
+    })
+  }, [mainPhase, suggestedFocusHandKey, suggestedDeadTileGuidesByKey])
 
   const suggestedDeadTileGuideForRack = useMemo(() => {
     if (!deadTileHintEnabled) return null
-    if (!suggestedFocusHandKey || !suggestedDeadTileGuide) return null
-    if (suggestedDeadTileGuide.focusKey !== suggestedFocusHandKey) return null
+    if (!suggestedFocusHandKey) return null
+    const guide = suggestedDeadTileGuidesByKey[suggestedFocusHandKey]
+    if (!guide) return null
     return {
-      deadIds: suggestedDeadTileGuide.deadIds,
-      skullIds: suggestedDeadTileGuide.skullIds,
+      deadIds: guide.deadIds,
+      skullIds: guide.skullIds,
     }
-  }, [deadTileHintEnabled, suggestedFocusHandKey, suggestedDeadTileGuide])
+  }, [deadTileHintEnabled, suggestedFocusHandKey, suggestedDeadTileGuidesByKey])
 
   const suggestedDeadTableGuideForView = useMemo(() => {
     if (!deadTileHintEnabled) return null
-    if (!suggestedFocusHandKey || !suggestedDeadTableGuide) return null
-    if (suggestedDeadTableGuide.focusKey !== suggestedFocusHandKey) return null
+    if (!suggestedFocusHandKey) return null
+    const guide = suggestedDeadTableGuidesByKey[suggestedFocusHandKey]
+    if (!guide) return null
     return {
-      botExposureDeadIds: suggestedDeadTableGuide.botExposureDeadIds,
-      discardDeadIds: suggestedDeadTableGuide.discardDeadIds,
+      botExposureDeadIds: guide.botExposureDeadIds,
+      discardDeadIds: guide.discardDeadIds,
     }
-  }, [deadTileHintEnabled, suggestedFocusHandKey, suggestedDeadTableGuide])
+  }, [deadTileHintEnabled, suggestedFocusHandKey, suggestedDeadTableGuidesByKey])
+
+  const suggestedDeadCauseFocusKeys = useMemo(() => {
+    if (!deadTileHintEnabled) return new Set<string>()
+    const keys = new Set<string>()
+    for (const [key, guide] of Object.entries(suggestedDeadTileGuidesByKey)) {
+      if (guide.skullIds.size > 0) keys.add(key)
+    }
+    return keys
+  }, [deadTileHintEnabled, suggestedDeadTileGuidesByKey])
 
   useEffect(() => {
     if (mainPhase === 'mahjong-declared' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand' || mainPhase === 'wall-game') {
       setSuggestedFocusHandKey(null)
       setSuggestedPinnedHandKeys([])
       setSuggestedSuppressedHandKey(null)
-      setSuggestedDeadTileGuide(null)
-      setSuggestedDeadTableGuide(null)
+      setSuggestedDeadTileGuidesByKey({})
+      setSuggestedDeadTableGuidesByKey({})
       setSuggestedPanelHandsOn(false)
     }
   }, [mainPhase])
@@ -4724,8 +4764,8 @@ export default function App() {
       setSuggestedFocusHandKey(null)
       setSuggestedPinnedHandKeys([])
       setSuggestedSuppressedHandKey(null)
-      setSuggestedDeadTileGuide(null)
-      setSuggestedDeadTableGuide(null)
+      setSuggestedDeadTileGuidesByKey({})
+      setSuggestedDeadTableGuidesByKey({})
     }, 500)
   }, [mainPhase])
 
@@ -5460,6 +5500,8 @@ export default function App() {
     setSuggestedFocusHandKey(null)
     setSuggestedPinnedHandKeys([])
     setSuggestedSuppressedHandKey(null)
+    setSuggestedDeadTileGuidesByKey({})
+    setSuggestedDeadTableGuidesByKey({})
     setSuggestedHandsUncheckedSections(new Set())
     setSuggestedHandsHideConcealed(false)
     if (passStripFlyoutTimerRef.current) {
@@ -6831,6 +6873,7 @@ export default function App() {
           hideConcealedHands={suggestedHandsHideConcealed}
           cardPatterns={cardPatterns}
           cardSectionOrder={cardSectionOrder}
+          deadCauseFocusKeys={suggestedDeadCauseFocusKeys}
         />
       </div>
     )

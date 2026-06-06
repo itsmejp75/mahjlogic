@@ -24,6 +24,7 @@ import type { TileDef, TileInstance } from '../mahjong/types'
 import type { SuggestedHandLine } from '../training/types'
 import { suggestedHandSectionMenuLabel } from '../suggestedHands/filterSettings'
 import { CardColoredText } from './CardColoredText'
+import { DeadCauseWarning } from './DeadCauseWarning'
 import { TileFace } from './TileFace'
 
 const CLICK_DELAY_MS = 280
@@ -284,6 +285,8 @@ type Props = {
   discardOverlayMeasureRef?: RefObject<HTMLElement | null>
   /** Toggle whether `handKey` is pinned (add/remove from {@link pinnedHandKeys}). */
   onPinnedPatternChange?: (handKey: string) => void
+  /** Focus keys with a dead-cause tile warning (yellow !) for the current deal. */
+  deadCauseFocusKeys?: ReadonlySet<string>
 }
 
 export function SuggestedHandsPanel({
@@ -307,6 +310,7 @@ export function SuggestedHandsPanel({
   onDiscardOverlayPeekPxChange,
   discardOverlayMeasureRef,
   onPinnedPatternChange,
+  deadCauseFocusKeys = new Set(),
 }: Props) {
   const sections = useMemo(() => {
     const uniq = Array.from(new Set(hands.map((h) => h.section)))
@@ -967,6 +971,9 @@ export function SuggestedHandsPanel({
                               <span className="hands-sheet__category">
                                 {suggestedHandSectionMenuLabel(h.section)}
                                 <span className="hands-sheet__section-num"> - {cardRef}</span>
+                                {rowIsFocused && deadCauseFocusKeys.has(focusKey) ? (
+                                  <DeadCauseWarning className="hands-sheet__dead-cause-warn" />
+                                ) : null}
                               </span>
                               {(() => {
                                 const parenText = !tilesGuideOn ? suggestedHandParenText(h) : null
@@ -1189,6 +1196,9 @@ export function SuggestedHandsPanel({
                             <span className="hands-list__with-tiles-category">
                               {suggestedHandSectionMenuLabel(h.section)}
                               <span className="hands-list__section-num"> - {cardRef}</span>
+                              {rowIsFocused && deadCauseFocusKeys.has(focusKey) ? (
+                                <DeadCauseWarning className="hands-list__dead-cause-warn" />
+                              ) : null}
                             </span>
                             {handsListOn ? (
                               <span

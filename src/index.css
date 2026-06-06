@@ -211,8 +211,9 @@
   --window-inner-surface: var(--app-container-surface);
   --window-fg: #4a433c;
   --window-fg-muted: #8a8580;
-  /* Wind tiles: dimmed white face so inset/white highlight rings read clearly on the rack. */
-  --wind-tile-bg: #d0cfca;
+  /* Shared ivory for Classic illustrative art + wind/blank glyph faces. */
+  --tile-illustrative-face: #fdfbf7;
+  --wind-tile-bg: var(--tile-illustrative-face);
 
   font: 17px/145% var(--sans);
   letter-spacing: 0.01em;
@@ -278,7 +279,7 @@
     --window-inner-surface-fill: none;
     --window-fg: #e0e0e0;
     --window-fg-muted: #a8a8a8;
-    --wind-tile-bg: #b9b7b1;
+    --wind-tile-bg: #e8e6e0;
   }
 }
 

@@ -141,7 +141,7 @@
   --tg-cs-green-fg: var(--card-tile-skin-green-fg);
   --tg-cs-neutral-bg: var(--card-tile-skin-neutral-bg);
   --tg-cs-neutral-fg: var(--card-tile-skin-neutral-fg);
-  --tg-cs-rack-wind-bg: var(--wind-tile-bg);
+  --tg-cs-rack-wind-bg: var(--tg-ivory-face);
   --tg-cs-rack-wind-fg: var(--color-off-black);
   --tg-cs-rack-flower-bg: #ab47bc;
   --tg-cs-rack-flower-fg: var(--color-black);
@@ -218,7 +218,7 @@
   --tg-bam: var(--card-ink-green);
   --tg-crak: var(--card-ink-red);
   --tg-dot: var(--card-ink-navy);
-  --tg-wind: #d1d5db;
+  --tg-wind: var(--wind-tile-bg);
   --tg-dragon-red: var(--card-ink-red);
   --tg-dragon-green: var(--card-ink-green);
   --tg-dragon-soap: var(--card-ink-navy);
@@ -239,7 +239,7 @@
   --tg-cs-green-fg: #080808;
   --tg-cs-neutral-bg: var(--card-tile-skin-neutral-bg);
   --tg-cs-neutral-fg: #080808;
-  --tg-cs-rack-wind-bg: #d1d5db;
+  --tg-cs-rack-wind-bg: var(--wind-tile-bg);
   --tg-cs-rack-wind-fg: #080808;
   --tg-cs-rack-flower-bg: #ab47bc;
   --tg-cs-rack-flower-fg: #080808;
@@ -296,7 +296,7 @@
   --tg-bam: #5cb87c;
   --tg-crak: #f08080;
   --tg-dot: #5c9ce6;
-  --tg-wind: #d1d5db;
+  --tg-wind: var(--wind-tile-bg);
   --tg-dragon-red: var(--tg-crak);
   --tg-dragon-green: var(--tg-bam);
   --tg-dragon-soap: var(--tg-dot);
@@ -316,7 +316,7 @@
   --tg-cs-green-fg: #05180e;
   --tg-cs-neutral-bg: #b8a090;
   --tg-cs-neutral-fg: var(--color-off-black);
-  --tg-cs-rack-wind-bg: #d1d5db;
+  --tg-cs-rack-wind-bg: var(--wind-tile-bg);
   --tg-cs-rack-wind-fg: #111008;
   --tg-cs-rack-flower-bg: #b07cc6;
   --tg-cs-rack-flower-fg: #160a18;

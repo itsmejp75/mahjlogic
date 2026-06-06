@@ -735,7 +735,16 @@ function parseTitleSegmentToPreviewSlots(seg: CardTextSeg, ctx: PreviewLineConte
     return out
   }
 
-  if (seg.ink === 'joker' || seg.ink === 'neutral') {
+  if (seg.ink === 'joker') {
+    return out
+  }
+
+  if (seg.ink === 'neutral') {
+    for (const part of tokenParts(t)) {
+      if (/^D+$/i.test(part)) {
+        pushDragonSlots(out, seg, 'any', part.length, ctx)
+      }
+    }
     return out
   }
 

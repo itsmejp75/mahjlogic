@@ -10,7 +10,7 @@
 
 .tile-face.tile-face--illustrative-art {
   /* Flat ivory face — `background` shorthand beats honor preset fills (e.g. `.tile--flower`). */
-  background: #fdfbf7;
+  background: var(--tile-illustrative-face, #fdfbf7);
   border-radius: var(--tile-face-border-radius);
   border: none;
   /* Drop shadow below the face only; top catch-light lives on `::before` (inset, never past ring borders). */
@@ -21,6 +21,11 @@
   overflow: hidden;
   position: relative;
   isolation: isolate;
+}
+
+/* Winds had a higher-specificity `.app .tile-face.tile--wind` fill (part-0068) that bypassed this face. */
+.app .tile-face.tile--wind.tile-face--illustrative-art {
+  background: var(--tile-illustrative-face, #fdfbf7);
 }
 
 /*
@@ -82,10 +87,35 @@
 
 /*
  * Suggest-dim `::after` (part-0075) defaults to z-index 1 — below rim bevel `::before` (z-index 2),
- * so the top catch-light stayed bright while the art dimmed. Lift the overlay above the rim;
- * suggest-best border still wins at z-index 5.
+ * so the top catch-light stayed bright while the art dimmed. Lift the overlay above the rim only
+ * while dim is active; suggest-best border still wins at z-index 5.
  */
-.tile-face.tile-face--illustrative-art:not(.tile--joker)::after {
+:is(
+    .sortable-tile-wrap--suggest-dim,
+    .pass-strip__tile-wrap--suggest-dim,
+    .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim,
+    .hands-sheet__tile-cell--suggest-dim,
+    .exposure-rack__slot--suggest-dim,
+    .discard-entry--suggest-dim,
+    .discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded.sorted-discard-tray__slot--suggest-dim,
+    .discard-tracker__overlay-grid .sorted-discard-tray__slot--awaiting-discard,
+    .discard-tracker__overlay-grid .sorted-discard-tray__slot--inactive,
+    .mahjong-win__bots-review-tile--dim
+  )
+  .tile-face.tile-face--illustrative-art:not(.tile--joker)::after,
+:is(
+    .sortable-tile-wrap--suggest-dim,
+    .pass-strip__tile-wrap--suggest-dim,
+    .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim,
+    .hands-sheet__tile-cell--suggest-dim,
+    .exposure-rack__slot--suggest-dim,
+    .discard-entry--suggest-dim,
+    .discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded.sorted-discard-tray__slot--suggest-dim,
+    .discard-tracker__overlay-grid .sorted-discard-tray__slot--awaiting-discard,
+    .discard-tracker__overlay-grid .sorted-discard-tray__slot--inactive,
+    .mahjong-win__bots-review-tile--dim
+  )
+  .tile-face:not(.tile-face--illustrative-art):not(.tile--joker)::after {
   z-index: 4;
 }
 

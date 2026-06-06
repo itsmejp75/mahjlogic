@@ -2776,9 +2776,7 @@ function suitPermuteComboScoreBetter(
   return candidate.slotSquareFill > current.slotSquareFill
 }
 
-/** 2026 NMJL Year lines: soap is neutral — digits after `0` in a `2026` run may be dots. */
-const NMJL_YEAR_NEUTRAL_ZERO_SUIT: Suit = 'dot'
-
+/** 2026 NMJL Year lines: soap is neutral — adjoining 2s/6s may also be dots when matching. */
 function isNmjl2026YearHandPattern(p: PracticePattern): boolean {
   // Neutral-zero applies only to the Year **section** (e.g. 2026-3), not every hand whose title
   // contains “2026” (e.g. S&Ps-6, W&D-8).
@@ -2791,13 +2789,10 @@ function isYear2026ColorGroup(colorGroup: readonly { rank: number; need: number 
   return twos >= 2 && sixes >= 1
 }
 
-function year2026SuitForGroupTile(groupSuit: Suit, rank: number, rankOccurrence: number): Suit {
-  if (rank === 2 && rankOccurrence === 0) return groupSuit
-  return NMJL_YEAR_NEUTRAL_ZERO_SUIT
-}
-
-function titleSegmentIsYear2026Run(seg: { t: string }): boolean {
-  return /\d0\d/.test(seg.t.replace(/\s/g, ''))
+function year2026SuitForGroupTile(groupSuit: Suit, _rank: number, _rankOccurrence: number): Suit {
+  // Green “2026” column: one assigned suit for the run; soap is neutral but 2s/6s still
+  // sort in that suit (dots are legal alternates for matching, not the default rack order).
+  return groupSuit
 }
 
 function cardTitleOrderDefsForSuitPermute(
@@ -2815,13 +2810,9 @@ function cardTitleOrderDefsForSuitPermute(
   let currentColorGroup: number | null = null
   const dragonForSuit = { bam: 'green' as const, dot: 'soap' as const, crak: 'red' as const }
 
-  const yearHand = isNmjl2026YearHandPattern(p)
-
   for (const seg of p.titleSegments) {
     const parts = seg.t.match(/F+|N+|E+|W+|S+|D+|(\d)\1*/g) ?? []
     currentColorGroup = null
-    const yearSeg = yearHand && titleSegmentIsYear2026Run(seg)
-    let yearBeforeSoap = true
     for (const part of parts) {
       if (/^F+$/.test(part)) {
         for (let i = 0; i < part.length; i++) out.push({ cat: 'flower', flower: 1 })
@@ -2835,13 +2826,25 @@ function cardTitleOrderDefsForSuitPermute(
         if (currentColorGroup == null) {
           const mapped = colorGroupByInk.get(seg.ink)
           const candidates = Array.from({ length: g.colorGroups.length }, (_, i) => i)
-          const ci =
+          let ci =
             mapped != null && (g.colorGroupDragonCounts?.[mapped] ?? 0) >= part.length
               ? mapped
               : candidates.find((i) => !usedColorGroups.has(i) && (g.colorGroupDragonCounts?.[i] ?? 0) >= part.length) ??
                 candidates.find((i) => (g.colorGroupDragonCounts?.[i] ?? 0) >= part.length) ??
                 null
-          if (ci == null) return null
+          if (ci == null) {
+            const tdc = g.trailingDragonCount ?? 0
+            if (tdc >= part.length) {
+              const usedSuits = new Set(perm.slice(0, g.colorGroups.length))
+              const remaining =
+                (['bam', 'dot', 'crak'] as const).find((s) => !usedSuits.has(s)) ?? 'crak'
+              for (let i = 0; i < part.length; i++) {
+                out.push({ cat: 'dragon', dragon: dragonForSuit[remaining] })
+              }
+              continue
+            }
+            return null
+          }
           currentColorGroup = ci
           usedColorGroups.add(ci)
           colorGroupByInk.set(seg.ink, ci)
@@ -2855,7 +2858,6 @@ function cardTitleOrderDefsForSuitPermute(
       }
       const runRank = Number(part[0])
       if (runRank === 0) {
-        yearBeforeSoap = false
         for (let i = 0; i < part.length; i++) out.push({ cat: 'dragon', dragon: 'soap' })
         continue
       }
@@ -2889,10 +2891,7 @@ function cardTitleOrderDefsForSuitPermute(
       usedColorGroups.add(ci)
       colorGroupByInk.set(seg.ink, ci)
       const actualRank = g.consecRanks ? normalizedRank - 1 + base : normalizedRank
-      const suit =
-        yearSeg && !yearBeforeSoap && (actualRank === 2 || actualRank === 6)
-          ? NMJL_YEAR_NEUTRAL_ZERO_SUIT
-          : groupSuit
+      const suit = groupSuit
       for (let i = 0; i < part.length; i++) out.push({ cat: 'suit', suit, rank: actualRank })
     }
   }
@@ -2947,6 +2946,69 @@ function suitPermuteTitleOrderDefsFromResolvedStrip(
   }
   if (base == null) return null
   return cardTitleOrderDefsForSuitPermute(p, g, perm, base)
+}
+
+/**
+ * `shared-rank-suits` lines (e.g. Like #s #3): title digit columns follow card left-to-right order,
+ * but `patternLinePreviewDefs` uses ink stand-in suits (green→bam, red→crak, …) that may not match
+ * the greedy suit permutation. Rebuild the SRS span using resolved perm suits in title column order.
+ */
+function sharedRankSuitsTitleOrderDefsFromResolvedStrip(
+  p: PracticePattern,
+  stripDefs: readonly TileDef[],
+): TileDef[] | null {
+  const groups = p.groups
+  if (!groups?.length || !p.titleSegments?.length) return null
+  const srsGi = groups.findIndex((g) => g.kind === 'shared-rank-suits')
+  if (srsGi < 0) return null
+  const g = groups[srsGi]!
+  if (g.kind !== 'shared-rank-suits') return null
+  const span = groupPreviewIndexSpans(p)?.[srsGi]
+  if (!span) return null
+  const [srsA, srsB] = span
+  if (stripDefs.length < srsB || p.roughTarget !== stripDefs.length) return null
+
+  const titleRuns: number[] = []
+  for (const seg of p.titleSegments) {
+    for (const part of seg.t.match(/F+|N+|E+|W+|S+|D+|(\d)\1*/g) ?? []) {
+      if (/^\d/.test(part)) titleRuns.push(part.length)
+    }
+  }
+  if (titleRuns.length !== g.needs.length) return null
+  if (!titleRuns.every((len, i) => len === g.needs[i]!)) return null
+
+  const perm: Suit[] = []
+  let rank = 1
+  let src = srsA
+  for (let col = 0; col < g.needs.length; col++) {
+    const def = stripDefs[src]
+    if (def?.cat !== 'suit') return null
+    rank = def.rank
+    perm.push(def.suit)
+    src += g.needs[col]!
+  }
+
+  const out = [...stripDefs]
+  let dst = srsA
+  for (let col = 0; col < g.needs.length; col++) {
+    const suit = perm[col]!
+    const need = g.needs[col]!
+    for (let i = 0; i < need; i++) {
+      out[dst++] = { cat: 'suit', suit, rank }
+    }
+  }
+  if (dst !== srsB) return null
+  return out
+}
+
+function resolveTitleOrderDefsFromResolvedStrip(
+  p: PracticePattern,
+  stripDefs: readonly TileDef[],
+): TileDef[] | null {
+  return (
+    suitPermuteTitleOrderDefsFromResolvedStrip(p, stripDefs) ??
+    sharedRankSuitsTitleOrderDefsFromResolvedStrip(p, stripDefs)
+  )
 }
 
 /**
@@ -4092,7 +4154,8 @@ function stripOrderedHandIdsForPattern(
     displayDefs.length > 0 && displayDefs.length === slotTileIdByStripIndex.length
       ? displayDefs
       : stripDefs
-  const titleOrderDefs = suitPermuteTitleOrderDefsFromResolvedStrip(displayPattern, stripDefs)
+  const byId = new Map(rackForPattern.map((t) => [t.id, t] as const))
+  const titleOrderDefs = resolveTitleOrderDefsFromResolvedStrip(displayPattern, stripDefs)
   const jokerEli = patternPreviewJokerEligibleBySlot(pinnedP)
 
   const slots: (string | null)[] =
@@ -4141,7 +4204,6 @@ function stripOrderedHandIdsForPattern(
     orderedSlotDefs = titlePreviewReorder.defs
   }
   const n = Math.min(slots.length, orderedSlotDefs.length)
-  const byId = new Map(rackForPattern.map((t) => [t.id, t] as const))
   const inSlots = new Set<string>(slots.filter((x): x is string => x != null))
 
   // Fill any gaps left by `buildPreviewSlotKindsFromGroups` in **card index** order, using

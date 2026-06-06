@@ -930,6 +930,11 @@ type Props = {
    * Use after opening post-game review so a full winning-hand strip is not overlaid on the logo.
    */
   hideWatermark?: boolean
+  /**
+   * Discard-tracker bot rows: wrap each flow meld in a single grid cell spanning its tile count
+   * so layout stays stable when joker-swap droppables toggle on during the player’s turn.
+   */
+  gridMeldColumnSpans?: boolean
 }
 
 export function ExposureRack({
@@ -963,6 +968,7 @@ export function ExposureRack({
   jokerSwapHintBounceEpoch = 0,
   callStagingWaveFlyIn = null,
   hideWatermark = false,
+  gridMeldColumnSpans = false,
 }: Props) {
   const totalExposed = melds.reduce((n, m) => n + m.tiles.length, 0)
   const tailReserved = reserveTrailingSlots + (reserveLastSlotForDiscard ? 1 : 0)
@@ -1094,14 +1100,33 @@ export function ExposureRack({
       ) : null}
       <SortableContext items={sortableMeldIds} strategy={rectSortingStrategy}>
       {flowMelds.map((meld, gi) => {
-        const wrapMeldContent = (content: ReactNode, slotSpan = 1) =>
-          meld.sortableMeldId ? (
-            <SortableMeldGroup key={meld.sortableMeldId} id={meld.sortableMeldId} slotSpan={slotSpan}>
-              {content}
-            </SortableMeldGroup>
-          ) : (
-            content
-          )
+        const meldSpanKey = meld.sortableMeldId ?? `flow-meld-${gi}-${meld.tiles[0]?.id ?? gi}`
+        const wrapMeldContent = (content: ReactNode, slotSpan = 1) => {
+          if (meld.sortableMeldId) {
+            return (
+              <SortableMeldGroup key={meld.sortableMeldId} id={meld.sortableMeldId} slotSpan={slotSpan}>
+                {content}
+              </SortableMeldGroup>
+            )
+          }
+          if (gridMeldColumnSpans && slotSpan > 0) {
+            return (
+              <div
+                key={meldSpanKey}
+                className={[
+                  'exposure-rack__meld-grid-span',
+                  gi > 0 ? 'exposure-rack__slot--meld-start' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                style={{ ['--bot-meld-slot-span' as string]: slotSpan }}
+              >
+                {content}
+              </div>
+            )
+          }
+          return content
+        }
         if (meld.dropZoneId) {
           const dropSpan = Math.max(1, orderMeldForRack(meld).length)
           return wrapMeldContent(

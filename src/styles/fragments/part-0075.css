@@ -480,6 +480,17 @@
   filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6));
 }
 
+.hands-sheet__dead-cause-warn,
+.hands-list__dead-cause-warn {
+  display: inline-block;
+  vertical-align: middle;
+  width: 1.05em;
+  height: 1.05em;
+  margin-left: 0.2em;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.45));
+}
+
 /* Pass slot and discard staging tiles that belong to the focused suggested hand */
 .pass-strip__tile-wrap--suggest-best .tile-face,
 .east-discard-staging__tile--suggest-best .tile-face {
@@ -726,7 +737,7 @@
   background: var(--tg-dot, var(--card-ink-navy));
 }
 
-.tile-face.tile--wind {
+.tile-face.tile--wind:not(.tile-face--illustrative-art) {
   background: var(--tg-wind, var(--wind-tile-bg));
 }
 

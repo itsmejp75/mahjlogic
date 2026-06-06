@@ -473,7 +473,7 @@
   box-sizing: border-box;
 }
 
-.discard-tracker__overlay-grid .exposure-rack__meld-drop {
+.discard-tracker__overlay-grid :is(.exposure-rack__meld-drop, .exposure-rack__meld-grid-span) {
   gap: var(--player-rack-face-gap);
 }
 
@@ -858,14 +858,14 @@
   --tg-bam: var(--card-ink-green);
   --tg-crak: var(--card-ink-red);
   --tg-dot: var(--card-ink-navy);
-  --tg-wind: #d1d5db;
+  --tg-wind: var(--wind-tile-bg);
   --tg-dragon-red: var(--card-ink-red);
   --tg-dragon-green: var(--card-ink-green);
   --tg-dragon-soap: var(--card-ink-navy);
   --tg-dragon-any: #5c6470;
   --tg-flower: #ab47bc;
   --tg-joker: #ffc107;
-  --tg-blank: #d1d5db;
+  --tg-blank: var(--wind-tile-bg);
   --tg-ink: #080808;
   --tg-suit-band-ink: #080808;
   --tg-joker-ring: #333333;
@@ -879,7 +879,7 @@
   --tg-cs-green-fg: #080808;
   --tg-cs-neutral-bg: var(--card-tile-skin-neutral-bg);
   --tg-cs-neutral-fg: #080808;
-  --tg-cs-rack-wind-bg: #d1d5db;
+  --tg-cs-rack-wind-bg: var(--wind-tile-bg);
   --tg-cs-rack-wind-fg: #080808;
   --tg-cs-rack-flower-bg: #ab47bc;
   --tg-cs-rack-flower-fg: #080808;

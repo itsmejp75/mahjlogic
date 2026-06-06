@@ -5,6 +5,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { TileInstance } from '../mahjong/types'
 import type { HandTileFlyIn } from '../mahjong/handTileFlyIn'
+import { DeadCauseWarning } from './DeadCauseWarning'
 import { TileFace } from './TileFace'
 
 /**
@@ -16,19 +17,6 @@ const REMOVAL_SHIFT_TRANSFORM =
   'translateX(calc(var(--rack-tile-w) + var(--player-rack-face-gap, var(--rack-tile-gap))))'
 const RACK_REORDER_EASING = 'cubic-bezier(0.2, 0, 0.2, 1)'
 const RACK_REORDER_DURATION = '0.16s'
-
-function DeadCauseWarning() {
-  return (
-    <svg
-      className="sortable-tile-wrap__dead-warn"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-      <path d="M12 2L1 21h22L12 2z" fill="#facc15" stroke="#92400e" strokeWidth="1.5" strokeLinejoin="round" />
-      <text x="12" y="18.5" textAnchor="middle" fontSize="13" fontWeight="800" fill="#92400e" fontFamily="system-ui, sans-serif">!</text>
-    </svg>
-  )
-}
 
 function SortableTile({
   tile,
@@ -285,7 +273,7 @@ function SortableTile({
         style={flyStyle}
       >
         <TileFace def={tile.def} elevated={draggingThisTile} rackSuitStacked rackNewMark={rackNewMarkProp} />
-        {suggestDeadCause ? <DeadCauseWarning /> : null}
+        {suggestDeadCause ? <DeadCauseWarning className="sortable-tile-wrap__dead-warn" /> : null}
       </div>
     </div>
   )

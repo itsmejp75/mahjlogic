@@ -537,29 +537,37 @@ html .app-top-exposure-container .exposure-rack--discard-tracker-sorted-row {
 
 html .app-top-exposure-container .exposure-rack--discard-tracker-bot-row {
   display: grid;
-  grid-template-columns: repeat(14, minmax(0, 1fr));
+  grid-template-columns: repeat(14, var(--rack-tile-w));
+  gap: var(--player-rack-face-gap);
 }
 
 /*
- * Joker-swap droppable melds wrap tiles in `.exposure-rack__meld-drop` (one grid item).
- * Without an explicit span, a 4-tile kong occupies one column and the row shifts left.
- * `--bot-meld-slot-span` is set on the wrapper in `ExposureRack.tsx`.
+ * Multi-tile melds are one grid item spanning N columns (`ExposureRack.tsx` sets
+ * `--bot-meld-slot-span`). Keep tile slots at face width — flex-grow was stretching
+ * slots during joker-swap (player turn) and leaving a visible gap on the meld’s right.
  */
-html .app-top-exposure-container .exposure-rack--discard-tracker-bot-row .exposure-rack__meld-drop {
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row
+  :is(.exposure-rack__meld-drop, .exposure-rack__meld-grid-span) {
   grid-column: span var(--bot-meld-slot-span, 1);
   display: flex;
+  flex-wrap: nowrap;
+  gap: var(--player-rack-face-gap);
+  justify-content: flex-start;
+  align-items: flex-start;
   min-width: 0;
 }
 
 html
   .app-top-exposure-container
   .exposure-rack--discard-tracker-bot-row
-  .exposure-rack__meld-drop
+  :is(.exposure-rack__meld-drop, .exposure-rack__meld-grid-span)
   > .exposure-rack__slot {
-  flex: 1 1 0;
-  width: auto;
-  min-width: 0;
-  max-width: none;
+  flex: 0 0 var(--rack-tile-w);
+  width: var(--rack-tile-w);
+  min-width: var(--rack-tile-w);
+  max-width: var(--rack-tile-w);
 }
 
 html .app-top-exposure-container .exposure-rack--discard-tracker-bot-seat-label {

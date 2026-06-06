@@ -51,7 +51,7 @@
   background: var(--window-surface);
 }
 
-.app .tile-face.tile--wind {
+.app .tile-face.tile--wind:not(.tile-face--illustrative-art) {
   background: var(--tg-wind, var(--wind-tile-bg));
 }
 
