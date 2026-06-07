@@ -16,7 +16,7 @@ import type { CardTextSeg } from './cardText'
  *   picks the best (suit, start rank).
  */
 export type PatternGroup =
-  | { kind: 'fixed';        need: number;  test: (def: TileDef) => boolean }
+  | { kind: 'fixed';        need: number;  test: (def: TileDef) => boolean; canUseJoker?: boolean }
   | { kind: 'rank';         need: number;  test: (def: TileDef) => boolean }
   | { kind: 'consec'; need1: number; need2: number; test: (def: TileDef) => boolean; opposingSuits?: true }
   | { kind: 'shared-rank';  needs: number[]; test: (def: TileDef) => boolean }

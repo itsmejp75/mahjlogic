@@ -95,10 +95,13 @@
   /* Paired with focus / suggest-best: soft inner light (dim counterpart, “up and out” vs sunken). */
   --suggest-highlight-inset-shadow: inset 0 0 0.5rem color-mix(in srgb, var(--color-white) 24%, transparent),
     inset 0 0 0 1px color-mix(in srgb, var(--color-white) 28%, transparent);
-  /* Focused suggested-hand tiles: inner-edge ring — same blue as call-meld / Mahj logo (#00b4d8). */
+  /* Focused suggested-hand tiles: inner-edge ring — white default (green on ivory + classic illustrative). */
+  --tile-highlight-border: rgba(255, 255, 255, 0.68);
   --charleston-pass-box-color: #00b4d8;
-  --call-meld-group-border: var(--charleston-pass-box-color);
-  --suggest-best-ring: inset 0 0 0 2px var(--call-meld-group-border);
+  --call-meld-group-border: var(--tile-highlight-border);
+  --suggest-best-ring: inset 0 0 0 2px var(--tile-highlight-border);
+  --suggest-best-ring-narrow: inset 0 0 0 1.5px var(--tile-highlight-border);
+  --tile-highlight-lift-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
   /* Joker swap hint: wait from turn start (hint active) before dock bounce (see keyframes). */
   --joker-swap-hint-bounce-delay: 500ms;
 }
@@ -152,6 +155,12 @@
   --tg-classic-letter-wind: var(--color-off-black);
   --tg-classic-letter-dragon-gray: #455a64;
   --tg-classic-letter-flower: #3d0f4d;
+}
+
+/* Light tile faces (ivory minimalist + classic illustrative): Bam green coaching / meld rings. */
+.app[data-tile-graphics='classic'],
+.app[data-tile-graphics='illustrative-classic'] {
+  --tile-highlight-border: var(--card-ink-green, #66bb6a);
 }
 
 .app[data-tile-graphics='classic'] .tile--bam .tile-face__glyph-num,

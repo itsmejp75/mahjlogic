@@ -1,6 +1,15 @@
 import type { PracticePattern } from '../card/practicePatterns'
-import { buildPinnedPatternsFromFocusKey } from '../analysis/suggestedHands'
+import {
+  buildGreedyAlignedDeadHintNeeds,
+  buildPinnedPatternsFromFocusKey,
+} from '../analysis/suggestedHands'
 import type { SuggestedStripSlot } from '../analysis/suggestedHands'
+import type { TileInstance } from './types'
+import {
+  buildPatternNeedVariants,
+  firstShortfallInNeedMap,
+  patternNeedVariantIsSatisfiable,
+} from './deadHintVariants'
 import { tileAriaLabel, tileShortLabel } from './labels'
 import type { TileDef } from './types'
 import { tileDefsEqual } from './tileUtils'
@@ -20,14 +29,23 @@ export function availableCopiesForDeadHintDef(
   return totalCopiesForDef(def) - (unavailableByKey.get(deadHintDefKey(def)) ?? 0)
 }
 
-/** First pattern def that is short for the focused line given tiles already out of play. */
+export type FindFocusedPatternDeadCauseOpts = {
+  rack?: TileInstance[]
+  exposureTileIds?: ReadonlySet<string>
+}
+
+/**
+ * When every legal suit/color variant of the focused line is short on copies, return the first
+ * shortfall; otherwise null (hand still possible — e.g. 44 as craks even if 4 dots are scarce).
+ * Jokers count toward kong/pung slots marked `canUseJoker`. When a rack is provided, the warning
+ * text follows the same suit assignment the highlight matcher chose (not a different permutation).
+ */
 export function findFocusedPatternDeadCause(
   focusKey: string | null,
   unavailableByKey: ReadonlyMap<string, number>,
   patterns: PracticePattern[],
   totalCopiesForDef: (def: TileDef) => number,
-  deadHintDefKey: (def: TileDef) => string,
-  needForDef: (focusKey: string | null, def: TileDef, patterns: PracticePattern[]) => number | null,
+  opts?: FindFocusedPatternDeadCauseOpts,
 ): DeadCauseHint | null {
   if (!focusKey) return null
   const variantSep = ['::tier::', '::oc::', '::ocall::']
@@ -40,38 +58,40 @@ export function findFocusedPatternDeadCause(
 
   const pinnedPatterns = buildPinnedPatternsFromFocusKey(pattern, focusKey)
   const candidates = pinnedPatterns.length > 0 ? pinnedPatterns : [pattern]
-  const defsToProbe: TileDef[] = [
-    { cat: 'wind', wind: 'E' },
-    { cat: 'wind', wind: 'S' },
-    { cat: 'wind', wind: 'W' },
-    { cat: 'wind', wind: 'N' },
-    { cat: 'dragon', dragon: 'red' },
-    { cat: 'dragon', dragon: 'green' },
-    { cat: 'dragon', dragon: 'soap' },
-    { cat: 'flower', flower: 1 },
-  ]
-  for (const suit of ['bam', 'dot', 'crak'] as const) {
-    for (let rank = 1; rank <= 9; rank++) {
-      defsToProbe.push({ cat: 'suit', suit, rank })
-    }
-  }
+
+  const greedyUiOpts =
+    opts?.exposureTileIds && opts.exposureTileIds.size > 0
+      ? { exposureTileIds: opts.exposureTileIds }
+      : undefined
 
   for (const candidate of candidates) {
-    if (!candidate.groups?.length) continue
-    for (const def of defsToProbe) {
-      if (!candidate.matches(def)) continue
-      const need = needForDef(focusKey, def, patterns)
-      if (need == null) continue
-      const available = availableCopiesForDeadHintDef(
-        def,
-        unavailableByKey,
-        totalCopiesForDef,
-        deadHintDefKey,
-      )
-      if (available < need) {
-        return { defs: [def], need, available }
+    const variants = buildPatternNeedVariants(candidate)
+    let anyViable = false
+    let firstDead: DeadCauseHint | null = null
+
+    for (const needs of variants) {
+      if (needs.size === 0) continue
+      if (patternNeedVariantIsSatisfiable(needs, unavailableByKey, totalCopiesForDef)) {
+        anyViable = true
+        break
+      }
+      if (!firstDead) {
+        const shortfall = firstShortfallInNeedMap(needs, unavailableByKey, totalCopiesForDef)
+        if (shortfall) firstDead = shortfall
       }
     }
+
+    if (anyViable) continue
+
+    if (opts?.rack) {
+      const greedyNeeds = buildGreedyAlignedDeadHintNeeds(candidate, opts.rack, greedyUiOpts)
+      if (greedyNeeds.size > 0) {
+        const shortfall = firstShortfallInNeedMap(greedyNeeds, unavailableByKey, totalCopiesForDef)
+        if (shortfall) return shortfall
+      }
+    }
+
+    if (firstDead) return firstDead
   }
   return null
 }
@@ -90,13 +110,7 @@ export function formatDeadCauseMessage(cause: DeadCauseHint): string {
 
 export function stripSlotMatchesDeadCause(slot: SuggestedStripSlot, cause: DeadCauseHint | null): boolean {
   if (!cause) return false
-  return cause.defs.some(
-    (d) =>
-      tileDefsEqual(d, slot.displayDef) ||
-      (d.cat === 'suit' &&
-        slot.displayDef.cat === 'suit' &&
-        d.rank === slot.displayDef.rank),
-  )
+  return cause.defs.some((d) => tileDefsEqual(d, slot.displayDef))
 }
 
 export function titleTokenMatchesDeadCause(token: string, defs: readonly TileDef[]): boolean {

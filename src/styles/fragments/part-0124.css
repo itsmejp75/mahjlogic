@@ -121,7 +121,12 @@
 
 /* Illustrative suggest-best: 2px border on topmost `::after` layer (above rim `::before`). */
 .app[data-tile-graphics='illustrative-classic'] {
-  --illustrative-suggest-best-border: 2px solid var(--call-meld-group-border);
+  --illustrative-suggest-best-border: 2px solid var(--tile-highlight-border);
+}
+
+/* Discard tracker illustrative tiles keep the legacy white ring. */
+.app[data-tile-graphics='illustrative-classic'] .panel--discard-tracker {
+  --illustrative-suggest-best-border: 2px solid rgba(255, 255, 255, 0.68);
 }
 
 .app[data-tile-graphics='illustrative-classic']
@@ -246,7 +251,7 @@
   opacity: 1;
 }
 
-/* Bot exposure tracker: usable tiles (incl. swappable jokers) get the same green ring as the hand. */
+/* Bot exposure tracker: usable tiles (incl. swappable jokers) get the same ring as other tracker highlights. */
 .app[data-tile-graphics='illustrative-classic']
   .panel--discard-tracker
   .discard-tracker__overlay-grid

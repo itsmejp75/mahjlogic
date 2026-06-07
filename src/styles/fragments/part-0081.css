@@ -2753,7 +2753,7 @@
 .exposure-rack__slot--called .tile-face {
   border-radius: 0.35rem;
   --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
-  --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
+  --tile-face-highlight-shadow: var(--suggest-best-ring);
 }
 
 /* Staged call tiles that can be clicked/dragged back to the hand */

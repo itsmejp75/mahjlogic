@@ -25,6 +25,12 @@ import {
   claimMeldsFitPracticePattern,
   tileInstancesWithClaimMeldJokersResolved,
 } from './eastExposurePatternFit'
+import {
+  addDeadHintNeed,
+  deadHintStandardDefsToProbe,
+  meldDefIsJokerEligible,
+  type DeadHintNeedMap,
+} from '../mahjong/deadHintVariants'
 
 /** Discards + all bot melds + East’s face-up claim melds (table visibility for dead-tile math). */
 function tableVisibleTiles(
@@ -3869,6 +3875,12 @@ function focusKeyVariantSeparator(focusKey: string): number {
     .reduce((m, i) => (m < 0 ? i : Math.min(m, i)), -1)
 }
 
+/** Pattern id portion of a focus key (`year-4` from `year-4::tier::6:2-3-4`, etc.). */
+export function focusKeyPatternId(focusKey: string): string {
+  const variantSep = focusKeyVariantSeparator(focusKey)
+  return variantSep >= 0 ? focusKey.slice(0, variantSep) : focusKey
+}
+
 /**
  * Joker swap dock-bounce: when a suggested line is focused, if any swappable hand natural that is
  * also highlighted for that line sits on a strip slot where jokers may not substitute (printed
@@ -3974,7 +3986,7 @@ function buildPinnedPatternFromComboStr(
       const s = permSuits[ci]!
       return cgSlot.map((sg): PatternGroup => {
         const rank = spg.consecRanks ? sg.rank - 1 + base : sg.rank
-        return { kind: 'fixed', need: sg.need, test: (d) => d.cat === 'suit' && d.suit === s && d.rank === rank }
+        return { kind: 'fixed', need: sg.need, canUseJoker: sg.canUseJoker, test: (d) => d.cat === 'suit' && d.suit === s && d.rank === rank }
       })
     }),
     ...(spg.trailingDragonCount
@@ -4834,4 +4846,91 @@ export function summarizeRackTowardWin(input: RankSuggestedHandsInput): {
   const { bestTilesAway, linesAtMin } = suggestedHandsTiedAtBest(input)
   if (!linesAtMin.length) return { bestTilesAway: 14, closestLine: null }
   return { bestTilesAway, closestLine: linesAtMin[0]! }
+}
+
+/**
+ * Tile needs for the focused line using the same suit-permute assignment as rack highlights
+ * (greedy best fill), including `canUseJoker` on kong slots — for dead-cause messaging.
+ */
+export function buildGreedyAlignedDeadHintNeeds(
+  pattern: PracticePattern,
+  rack: TileInstance[],
+  opts?: GreedyPatternMatchOpts,
+): DeadHintNeedMap {
+  const needs: DeadHintNeedMap = new Map()
+  const groups = pattern.groups
+  if (!groups?.length) return needs
+
+  const detail = greedyPatternMatchDetail(rack, pattern, opts)
+  const drgForSuitPerm = { bam: 'green' as const, dot: 'soap' as const, crak: 'red' as const }
+
+  for (let gi = 0; gi < groups.length; gi++) {
+    const g = groups[gi]!
+    switch (g.kind) {
+      case 'fixed':
+      case 'rank':
+      case 'suit-locked-rank': {
+        for (const def of deadHintStandardDefsToProbe()) {
+          if (!g.test(def)) continue
+          addDeadHintNeed(needs, def, g.need, meldDefIsJokerEligible(def, g.need))
+        }
+        break
+      }
+      case 'suit-permute': {
+        const rem = rackAfterPriorGroups(rack, detail.usedMeta, gi)
+        const n = g.colorGroups.length
+        const tdc = g.trailingDragonCount ?? 0
+        const maxRankOff = g.consecRanks
+          ? Math.max(...g.colorGroups.flatMap((cg) => cg.map((sg) => sg.rank))) - 1
+          : 0
+        const searchBases = g.consecRanks
+          ? Array.from({ length: 9 - maxRankOff }, (_, i) => i + 1)
+          : [1]
+        let bestScore = { fill: -1, exposureFill: -1, maxSlotFill: -1, slotSquareFill: -1 }
+        let bestPerm: Suit[] = []
+        let bestBase = 1
+        for (const base of searchBases) {
+          for (const perm of suitPermutations(n)) {
+            const score = scoreSuitPermuteCombo(rem, g, perm, base, opts?.exposureTileIds)
+            if (suitPermuteComboScoreBetter(score, bestScore, !!opts?.exposureTileIds)) {
+              bestScore = score
+              bestPerm = [...perm]
+              bestBase = base
+            }
+          }
+        }
+        if (bestPerm.length !== n) break
+        for (let ci = 0; ci < n; ci++) {
+          const s = bestPerm[ci]!
+          for (const sg of g.colorGroups[ci]!) {
+            const rank = g.consecRanks ? sg.rank - 1 + bestBase : sg.rank
+            const def: TileDef = { cat: 'suit', suit: s, rank }
+            addDeadHintNeed(needs, def, sg.need, meldDefIsJokerEligible(def, sg.need))
+          }
+          const dragonCount = g.colorGroupDragonCounts?.[ci] ?? 0
+          if (dragonCount > 0) {
+            addDeadHintNeed(
+              needs,
+              { cat: 'dragon', dragon: drgForSuitPerm[s] },
+              dragonCount,
+            )
+          }
+        }
+        if (tdc > 0) {
+          const trailSuit = (['bam', 'dot', 'crak'] as Suit[]).find((s) => !bestPerm.includes(s))
+          if (trailSuit) {
+            addDeadHintNeed(
+              needs,
+              { cat: 'dragon', dragon: drgForSuitPerm[trailSuit] },
+              tdc,
+            )
+          }
+        }
+        break
+      }
+      default:
+        break
+    }
+  }
+  return needs
 }

@@ -1096,6 +1096,21 @@ export function ExposureRack({
           </div>
         )
       }
+      if (Array.isArray(content)) {
+        return (
+          <div
+            key={meldSpanKey}
+            className={[
+              'exposure-rack__meld-group',
+              gi > 0 ? 'exposure-rack__slot--meld-start' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            {content}
+          </div>
+        )
+      }
       return content
     }
     if (meld.dropZoneId) {

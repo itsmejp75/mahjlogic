@@ -38,7 +38,7 @@
   box-shadow: var(--call-initiate-inset-border);
 }
 
-/* Call melds: pinned at the exposure↔hand divider (Charleston-teal group ring); hand row shifts right. */
+/* Call melds: pinned at the exposure↔hand divider (group ring follows --tile-highlight-border); hand row shifts right. */
 .panel--hand .rack-stage__rack-top:has(.exposure-rack--has-call-melds) {
   overflow: visible;
   z-index: 2;
@@ -72,8 +72,7 @@
 
 .panel--hand .exposure-rack__call-meld-anchor {
   --call-meld-strip-h: calc(var(--rack-tile-h) / 3);
-  --charleston-pass-box-color: #00b4d8;
-  --call-meld-group-border: var(--charleston-pass-box-color);
+  --call-meld-group-border: var(--tile-highlight-border);
   --call-meld-group-border-w: 2px;
   /* In-flow flex item — sits on the exact same column grid as the main rack
      (no absolute positioning / manual left math), so its horizontal position
@@ -137,7 +136,7 @@
   box-shadow: none;
 }
 
-/* Border overlay sits above tiles (z-index 4) so the Charleston teal ring stays visible. */
+/* Border overlay sits above tiles (z-index 4) so the meld group ring stays visible. */
 .panel--hand .exposure-rack__call-meld-strip--staging .exposure-rack__call-meld-strip__inner::after,
 .panel--hand .exposure-rack__call-meld-strip--locked .exposure-rack__call-meld-strip__inner::after {
   content: '';
@@ -234,4 +233,45 @@
   text-transform: none;
   white-space: nowrap;
   box-sizing: border-box;
+}
+
+/* Main exposure row: meld group ring (green on ivory / classic illustrative; white on colored minimalist). */
+.panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass) {
+  --call-meld-group-border: var(--tile-highlight-border);
+  --call-meld-group-border-w: 2px;
+}
+
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack:not(.exposure-rack--charleston-pass)
+  :is(.exposure-rack__meld-group, .exposure-rack__meld-sortable, .exposure-rack__meld-drop) {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--player-rack-face-gap);
+  border-radius: var(--tile-face-border-radius);
+  overflow: visible;
+}
+
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack:not(.exposure-rack--charleston-pass)
+  :is(.exposure-rack__meld-group, .exposure-rack__meld-sortable, .exposure-rack__meld-drop)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 var(--call-meld-group-border-w) var(--call-meld-group-border);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack:not(.exposure-rack--charleston-pass)
+  :is(.exposure-rack__meld-group, .exposure-rack__meld-sortable, .exposure-rack__meld-drop)
+  > .exposure-rack__slot {
+  position: relative;
+  z-index: 4;
 }

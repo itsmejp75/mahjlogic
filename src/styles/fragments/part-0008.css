@@ -53,6 +53,8 @@
   max-width: 100%;
   min-width: 0;
   overflow-x: clip;
+  position: relative;
+  isolation: isolate;
 }
 
 /* Slot/wrap widths must come from the grid track, not the original explicit

@@ -934,11 +934,41 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 /*
  * Main hand row: no outer cast shadow on resting tiles. DragOverlay keeps
  * `.drag-overlay-tile { filter: drop-shadow(...) }` while a tile is dragged.
+ * Highlighted coaching tiles (--suggest-best) get the same lift shadow at rest on a
+ * dedicated layer (z-index 1) so it can fall over dimmed tiles but never over any tile face.
  */
 .app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap .tile-face {
   --tile-face-base-shadow: 0 0 0 0 transparent;
   box-shadow: var(--tile-face-base-shadow), var(--tile-face-highlight-inset), var(--tile-face-highlight-shadow),
     var(--tile-face-suggest-dim-inset);
+}
+
+.app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--suggest-best::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--tile-face-border-radius, 0.35rem);
+  box-shadow: var(--tile-highlight-lift-shadow);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--suggest-dim .sortable-tile-wrap__fly {
+  z-index: 0;
+}
+
+.app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap--suggest-dim.sortable-tile-wrap--suggest-best
+  .sortable-tile-wrap__fly {
+  z-index: 2;
+}
+
+.app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap .sortable-tile-wrap__fly {
+  position: relative;
+  z-index: 2;
 }
 
 /* Bakelite / designer: keep inset edge highlights; drop only the outer depth on the hand row. */

@@ -509,7 +509,7 @@
   border-radius: var(--tile-face-border-radius);
 }
 
-/* Focused suggested hand: inner ring on tracker slots you still need (same as discard strip). */
+/* Focused suggested hand: inner ring on tracker slots you still need (white — tracker keeps legacy ring). */
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-need .tile-face,
 .discard-tracker__content .discard-entry--suggest-need .tile-face {
   --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
@@ -867,7 +867,7 @@
   .exposure-rack__slot--suggest-best
   .tile-face {
   --tile-face-highlight-inset: 0 0 0 0 transparent;
-  --tile-face-highlight-shadow: var(--suggest-best-ring);
+  --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
 }
 
 .discard-tracker__overlay-grid
@@ -969,6 +969,12 @@
 .discard-tracker__content .exposure-rack__slot--suggest-best .tile-face,
 .discard-tracker__content .exposure-rack__slot--called .tile-face {
   --tile-face-highlight-inset: 0 0 0 0 transparent;
+}
+
+/* Discard tracker: white highlight rings (main rack uses prism green via --suggest-best-ring). */
+.panel--discard-tracker .discard-tracker__content .exposure-rack__slot--suggest-best .tile-face,
+.panel--discard-tracker .discard-tracker__content .exposure-rack__slot--called .tile-face {
+  --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
 }
 
 .panel--discard-tracker .discard-tracker__shell,

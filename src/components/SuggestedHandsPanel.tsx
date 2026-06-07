@@ -12,6 +12,7 @@ import {
 import {
   buildConsecRanksTierStripRow,
   buildSuggestedStripSlotRowsWithVariants,
+  focusKeyPatternId,
   greedyPatternMatchDetail,
   type GreedyPatternMatchOpts,
   type SuggestedStripSlot,
@@ -296,6 +297,8 @@ type Props = {
   pinnedHandKeys?: readonly string[]
   onPatternClick: (handKey: string) => void
   onPatternDoubleClick: (patternId: string, focusKey?: string) => void
+  /** Rerank changed variant keys — migrate selection instead of clearing it. */
+  onFocusKeyMigrate?: (nextKey: string | null) => void
   tilesGuideOn: boolean
   onTilesGuideToggle?: () => void
   rackTilesForSuggestedStrip: TileInstance[]
@@ -341,6 +344,7 @@ export function SuggestedHandsPanel({
   pinnedHandKeys = [],
   onPatternClick,
   onPatternDoubleClick,
+  onFocusKeyMigrate,
   tilesGuideOn,
   onTilesGuideToggle,
   rackTilesForSuggestedStrip,
@@ -694,13 +698,19 @@ export function SuggestedHandsPanel({
   )
 
   useEffect(() => {
-    if (activePatternId == null) return
-    // Active pattern key is still valid as long as ANY rendered row matches it (each expanded
-    // variant carries its own concrete focus key, so we just check the expanded list).
-    const matches = expandedHandsRows.some((r) => r.focusKey === activePatternId)
-    if (matches) return
-    onPatternClick(activePatternId)
-  }, [activePatternId, expandedHandsRows, onPatternClick])
+    if (activePatternId == null || !onFocusKeyMigrate) return
+    if (expandedHandsRows.some((r) => r.focusKey === activePatternId)) return
+
+    const patternId = focusKeyPatternId(activePatternId)
+    const replacement = expandedHandsRows.find((r) => r.line.id === patternId)
+    if (replacement) {
+      onFocusKeyMigrate(replacement.focusKey)
+      return
+    }
+    if (!listRowsForHandsPanel.some((h) => h.id === patternId)) {
+      onFocusKeyMigrate(null)
+    }
+  }, [activePatternId, expandedHandsRows, listRowsForHandsPanel, onFocusKeyMigrate])
 
   const handsListOn = true
   const showHandCategoryLabels = handsListOn

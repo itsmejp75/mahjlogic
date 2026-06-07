@@ -40,12 +40,20 @@ import {
   TEN_JOKERS_COUNT,
 } from './mahjong/deck'
 import type { BlankTileCount } from './mahjong/deck'
-import type { ClaimType, DiscardEntry, EastExposure, Seat, Suit, TileDef, TileInstance } from './mahjong/types'
+import type { ClaimType, DiscardEntry, EastExposure, Seat, TileDef, TileInstance } from './mahjong/types'
 import { tileAriaLabel } from './mahjong/labels'
 import {
   findFocusedPatternDeadCause,
   type DeadCauseHint,
 } from './mahjong/deadCauseHint'
+import {
+  addDeadHintNeed,
+  copyDeadHintNeeds,
+  deadHintDefKey,
+  deadHintGroupNeedVariants,
+  patternNeedVariantIsSatisfiable,
+  type DeadHintNeedMap,
+} from './mahjong/deadHintVariants'
 import {
   countDiscardEntriesMatchingDef,
   findExactMatches,
@@ -93,7 +101,6 @@ import {
   writePlayableCardToStorage,
 } from './card/cardCatalog'
 import type { PatternGroup, PracticePattern } from './card/practicePatterns'
-import { oddPairKongsTripleSixPackRanks } from './card/patternLinePreview'
 import { getActiveCardPatterns, setActiveCardPatterns } from './card/activeCardPatternsScope'
 import {
   buildPinnedPatternsFromFocusKey,
@@ -1306,172 +1313,6 @@ function totalCopiesForDeadHintDef(def: TileDef): number {
   return 4
 }
 
-const DEAD_HINT_SUITS: readonly Suit[] = ['bam', 'dot', 'crak']
-const DEAD_HINT_DRAGON_FOR_SUIT: Record<Suit, Extract<TileDef, { cat: 'dragon' }>['dragon']> = {
-  bam: 'green',
-  dot: 'soap',
-  crak: 'red',
-}
-
-function deadHintDefKey(def: TileDef): string {
-  switch (def.cat) {
-    case 'suit': return `s:${def.suit}:${def.rank}`
-    case 'wind': return `w:${def.wind}`
-    case 'dragon': return `d:${def.dragon}`
-    case 'flower': return 'f'
-    case 'joker': return 'j'
-    case 'blank': return 'b'
-  }
-}
-
-function addDeadHintNeed(
-  needs: Map<string, { def: TileDef; need: number }>,
-  def: TileDef,
-  count: number,
-) {
-  if (count <= 0) return
-  const key = deadHintDefKey(def)
-  const cur = needs.get(key)
-  needs.set(key, { def, need: (cur?.need ?? 0) + count })
-}
-
-function copyDeadHintNeeds(
-  needs: ReadonlyMap<string, { def: TileDef; need: number }>,
-): Map<string, { def: TileDef; need: number }> {
-  return new Map(Array.from(needs, ([key, value]) => [key, { ...value }]))
-}
-
-function deadHintSuitPermutations(slotCount: number): Suit[][] {
-  if (slotCount <= 0) return [[]]
-  const out: Suit[][] = []
-  const walk = (chosen: Suit[]) => {
-    if (chosen.length === slotCount) {
-      out.push([...chosen])
-      return
-    }
-    for (const suit of DEAD_HINT_SUITS) {
-      if (chosen.includes(suit)) continue
-      chosen.push(suit)
-      walk(chosen)
-      chosen.pop()
-    }
-  }
-  walk([])
-  return out
-}
-
-function deadHintGroupNeedVariants(
-  group: PatternGroup,
-  triggerDef: TileDef,
-): Array<Map<string, { def: TileDef; need: number }>> {
-  switch (group.kind) {
-    case 'fixed':
-    case 'rank':
-    case 'suit-locked-rank': {
-      const needs = new Map<string, { def: TileDef; need: number }>()
-      if (group.test(triggerDef)) addDeadHintNeed(needs, triggerDef, group.need)
-      return [needs]
-    }
-    case 'suit-locked': {
-      return DEAD_HINT_SUITS.map((suit) => {
-        const needs = new Map<string, { def: TileDef; need: number }>()
-        for (const rankNeed of group.rankNeeds) {
-          addDeadHintNeed(needs, { cat: 'suit', suit, rank: rankNeed.rank }, rankNeed.need)
-        }
-        if (group.dragonCount > 0) {
-          addDeadHintNeed(needs, { cat: 'dragon', dragon: DEAD_HINT_DRAGON_FOR_SUIT[suit] }, group.dragonCount)
-        }
-        return needs
-      })
-    }
-    case 'suit-locked-consec': {
-      const variants: Array<Map<string, { def: TileDef; need: number }>> = []
-      const maxStart = 10 - group.numGroups
-      for (const suit of DEAD_HINT_SUITS) {
-        for (let start = 1; start <= maxStart; start++) {
-          const needs = new Map<string, { def: TileDef; need: number }>()
-          for (let i = 0; i < group.numGroups; i++) {
-            addDeadHintNeed(needs, { cat: 'suit', suit, rank: start + i }, group.rankCount)
-          }
-          if (group.dragonCount > 0) {
-            addDeadHintNeed(needs, { cat: 'dragon', dragon: DEAD_HINT_DRAGON_FOR_SUIT[suit] }, group.dragonCount)
-          }
-          variants.push(needs)
-        }
-      }
-      return variants
-    }
-    case 'suit-locked-consec-multi': {
-      const variants: Array<Map<string, { def: TileDef; need: number }>> = []
-      const maxStart = 10 - group.needs.length
-      for (const suit of DEAD_HINT_SUITS) {
-        for (let start = 1; start <= maxStart; start++) {
-          const needs = new Map<string, { def: TileDef; need: number }>()
-          group.needs.forEach((need, i) => {
-            addDeadHintNeed(needs, { cat: 'suit', suit, rank: start + i }, need)
-          })
-          variants.push(needs)
-        }
-      }
-      return variants
-    }
-    case 'suit-permute': {
-      const variants: Array<Map<string, { def: TileDef; need: number }>> = []
-      const maxOffset = Math.max(0, ...group.colorGroups.flatMap((cg) => cg.map((slot) => slot.rank)))
-      const maxStart = group.consecRanks ? 10 - maxOffset : 1
-      for (const assignment of deadHintSuitPermutations(group.colorGroups.length)) {
-        for (let start = 1; start <= maxStart; start++) {
-          const needs = new Map<string, { def: TileDef; need: number }>()
-          group.colorGroups.forEach((colorGroup, colorIdx) => {
-            const suit = assignment[colorIdx]
-            if (!suit) return
-            for (const slot of colorGroup) {
-              addDeadHintNeed(needs, {
-                cat: 'suit',
-                suit,
-                rank: group.consecRanks ? start + slot.rank - 1 : slot.rank,
-              }, slot.need)
-            }
-            const dragonCount = group.colorGroupDragonCounts?.[colorIdx] ?? 0
-            if (dragonCount > 0) {
-              addDeadHintNeed(needs, { cat: 'dragon', dragon: DEAD_HINT_DRAGON_FOR_SUIT[suit] }, dragonCount)
-            }
-          })
-          if (group.trailingDragonCount && assignment.length < DEAD_HINT_SUITS.length) {
-            const remainingSuit = DEAD_HINT_SUITS.find((suit) => !assignment.includes(suit))
-            if (remainingSuit) {
-              addDeadHintNeed(needs, { cat: 'dragon', dragon: DEAD_HINT_DRAGON_FOR_SUIT[remainingSuit] }, group.trailingDragonCount)
-            }
-          }
-          variants.push(needs)
-        }
-      }
-      return variants
-    }
-    case 'odd-pair-kongs-triple': {
-      const variants: Array<Map<string, { def: TileDef; need: number }>> = []
-      for (const pairRank of group.odds) {
-        const sixRanks = oddPairKongsTripleSixPackRanks(group.odds, pairRank)
-        for (const assignment of deadHintSuitPermutations(3)) {
-          const needs = new Map<string, { def: TileDef; need: number }>()
-          const s0 = assignment[0]!
-          const s1 = assignment[1]!
-          const s2 = assignment[2]!
-          for (const r of sixRanks) {
-            addDeadHintNeed(needs, { cat: 'suit', suit: s0, rank: r }, 1)
-          }
-          addDeadHintNeed(needs, { cat: 'suit', suit: s1, rank: pairRank }, 4)
-          addDeadHintNeed(needs, { cat: 'suit', suit: s2, rank: pairRank }, 4)
-          variants.push(needs)
-        }
-      }
-      return variants
-    }
-    default:
-      return [new Map()]
-  }
-}
-
 function focusedPatternHasAvailableDeadHintVariant(
   focusKey: string | null,
   triggerDef: TileDef,
@@ -1496,14 +1337,16 @@ function focusedPatternHasAvailableDeadHintVariant(
   }
 
   for (const candidate of candidates) {
-    let variants: Array<Map<string, { def: TileDef; need: number }>> = [new Map()]
+    let variants: DeadHintNeedMap[] = [new Map()]
     for (const group of candidate.groups ?? []) {
       const groupVariants = deadHintGroupNeedVariants(group, triggerDef)
-      const next: Array<Map<string, { def: TileDef; need: number }>> = []
+      const next: DeadHintNeedMap[] = []
       for (const base of variants) {
         for (const groupVariant of groupVariants) {
           const merged = copyDeadHintNeeds(base)
-          for (const { def, need } of groupVariant.values()) addDeadHintNeed(merged, def, need)
+          for (const { def, need, canUseJoker } of groupVariant.values()) {
+            addDeadHintNeed(merged, def, need, canUseJoker)
+          }
           next.push(merged)
         }
       }
@@ -1511,15 +1354,9 @@ function focusedPatternHasAvailableDeadHintVariant(
     }
 
     for (const needs of variants) {
-      let ok = true
-      for (const { def, need } of needs.values()) {
-        const available = totalCopiesForDeadHintDef(def) - (unavailableByKey.get(deadHintDefKey(def)) ?? 0)
-        if (available < need) {
-          ok = false
-          break
-        }
+      if (patternNeedVariantIsSatisfiable(needs, unavailableByKey, totalCopiesForDeadHintDef)) {
+        return true
       }
-      if (ok) return true
     }
   }
 
@@ -4531,7 +4368,10 @@ export default function App() {
           }
         }
         const deadCause: DeadCauseHint | null =
-          discardExhaustedNeededDef && lastDiscard && lastDiscardNeed != null
+          discardExhaustedNeededDef &&
+          lastDiscard &&
+          lastDiscardNeed != null &&
+          !stillHasUsablePivot
             ? {
                 defs: [lastDiscard.def],
                 need: lastDiscardNeed,
@@ -4553,7 +4393,7 @@ export default function App() {
                 suppressAfterPhase: cur.suppressAfterPhase || suppressAfterPhase,
                 deadIds: nextDeadIds,
                 skullIds: nextSkullIds,
-                deadCause: deadCause ?? cur.deadCause,
+                deadCause: stillHasUsablePivot ? null : deadCause ?? cur.deadCause,
               },
             }
           }
@@ -4669,9 +4509,6 @@ export default function App() {
     if (!guide) return
     if (guide.phase === mainPhase) return
 
-    if (guide.suppressAfterPhase) {
-      setSuggestedSuppressedHandKey(suggestedFocusHandKey)
-    }
     setSuggestedDeadTileGuidesByKey((prev) => {
       const cur = prev[suggestedFocusHandKey]
       if (!cur) return prev
@@ -4715,22 +4552,20 @@ export default function App() {
       unavailableByKey.set(key, (unavailableByKey.get(key) ?? 0) + 1)
     }
     const out: Record<string, DeadCauseHint> = {}
-    for (const [key, guide] of Object.entries(suggestedDeadTileGuidesByKey)) {
-      if (guide.deadCause) out[key] = guide.deadCause
-    }
     const keysToProbe = new Set<string>([
       ...Object.keys(suggestedDeadTileGuidesByKey),
       ...(suggestedFocusHandKey ? [suggestedFocusHandKey] : []),
     ])
     for (const key of keysToProbe) {
-      if (out[key]) continue
       const live = findFocusedPatternDeadCause(
         key,
         unavailableByKey,
         cardPatterns,
         totalCopiesForDeadHintDef,
-        deadHintDefKey,
-        focusedPatternNeedForDeadHintDef,
+        {
+          rack: rackForSuggestedPatternMatch,
+          exposureTileIds: suggestedHandsExposureTileIds,
+        },
       )
       if (live) out[key] = live
     }
@@ -4742,6 +4577,8 @@ export default function App() {
     discardPile,
     botExposures,
     cardPatterns,
+    rackForSuggestedPatternMatch,
+    suggestedHandsExposureTileIds,
   ])
 
   useEffect(() => {
@@ -4790,6 +4627,31 @@ export default function App() {
   const onSuggestedPatternClick = useCallback((handKey: string) => {
     setSuggestedFocusHandKey((cur) => (cur === handKey ? null : handKey))
     setSuggestedSuppressedHandKey(null)
+  }, [])
+
+  const onSuggestedFocusKeyMigrate = useCallback((nextKey: string | null) => {
+    const prevKey = suggestedFocusHandKeyRef.current
+    if (nextKey === prevKey) return
+    if (nextKey == null) {
+      setSuggestedFocusHandKey(null)
+      return
+    }
+    setSuggestedFocusHandKey(nextKey)
+    setSuggestedSuppressedHandKey(null)
+    if (prevKey && prevKey !== nextKey) {
+      setSuggestedDeadTileGuidesByKey((byKey) => {
+        const guide = byKey[prevKey]
+        if (!guide) return byKey
+        const { [prevKey]: _removed, ...rest } = byKey
+        return { ...rest, [nextKey]: guide }
+      })
+      setSuggestedDeadTableGuidesByKey((byKey) => {
+        const guide = byKey[prevKey]
+        if (!guide) return byKey
+        const { [prevKey]: _removed, ...rest } = byKey
+        return { ...rest, [nextKey]: guide }
+      })
+    }
   }, [])
 
   const onSuggestedPatternDoubleClick = useCallback((patternId: string, focusKey?: string) => {
@@ -6912,6 +6774,7 @@ export default function App() {
           pinnedHandKeys={suggestedPinnedHandKeys}
           onPatternClick={onSuggestedPatternClick}
           onPatternDoubleClick={onSuggestedPatternDoubleClick}
+          onFocusKeyMigrate={onSuggestedFocusKeyMigrate}
           tilesGuideOn={suggestedPanelTilesOn}
           onTilesGuideToggle={() => setSuggestedPanelTilesOn((v) => !v)}
           rackTilesForSuggestedStrip={rackForSuggestedHandsUi}
