@@ -943,7 +943,9 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 /* Unlit sorted slots: no dim/highlight overlay on the face — glyph reads on the tray. */
 .panel--discard-tracker
   .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot:not(.sorted-discard-tray__slot--discarded):not(.sorted-discard-tray__slot--suit-label)
+  .sorted-discard-tray__slot:not(.sorted-discard-tray__slot--discarded):not(.sorted-discard-tray__slot--suit-label):not(
+    .sorted-discard-tray__slot--suggest-need
+  )
   .tile-face:not(.tile--joker)::after {
   content: none;
   display: none;

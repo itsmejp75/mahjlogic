@@ -14,7 +14,7 @@
 .app[data-tile-graphics='designer']
   .panel--discard-tracker
   .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot--discarded
+  .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
   .tile-face.tile-face--sorted-discard-glyph
   :is(.tile-face__glyph, .tile-face__glyph-num, .tile-face__glyph-letter) {
   position: relative;

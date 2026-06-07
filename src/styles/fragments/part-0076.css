@@ -17,7 +17,7 @@
       .tile-face,
     .panel--discard-tracker
       .discard-tracker__overlay-grid
-      .sorted-discard-tray__slot--discarded
+      .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
       .tile-face.tile-face--sorted-discard-glyph,
     .panel--discard-tracker
       .discard-tracker__overlay-grid
@@ -48,7 +48,7 @@
       .tile-face,
     .panel--discard-tracker
       .discard-tracker__overlay-grid
-      .sorted-discard-tray__slot--discarded
+      .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
       .tile-face.tile-face--sorted-discard-glyph,
     .panel--discard-tracker
       .discard-tracker__overlay-grid

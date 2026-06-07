@@ -899,7 +899,7 @@ function SortedDiscardTrayRow({
           >
             <TileFace
               def={trackerDef}
-              {...sortedDiscardTrayTileFaceProps(trackerDef, hasBeenDiscarded)}
+              {...sortedDiscardTrayTileFaceProps(trackerDef, hasBeenDiscarded || suggestNeed)}
             />
             <span className="sorted-discard-tray__count" aria-hidden>
               {discardCount > 0 ? discardCount : null}

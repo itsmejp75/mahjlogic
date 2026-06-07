@@ -525,7 +525,9 @@
 }
 
 .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot:not(.sorted-discard-tray__slot--discarded):not(.sorted-discard-tray__slot--suit-label)
+  .sorted-discard-tray__slot:not(.sorted-discard-tray__slot--discarded):not(.sorted-discard-tray__slot--suit-label):not(
+    .sorted-discard-tray__slot--suggest-need
+  )
   .tile-face {
   background: transparent !important;
   background-color: transparent !important;
@@ -533,44 +535,72 @@
   box-shadow: none !important;
 }
 
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded .tile-face.tile-face--sorted-discard-dot,
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded .tile-face.tile--dot,
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded .tile-face.tile--dragon-soap {
+.discard-tracker__overlay-grid
+  .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
+  .tile-face.tile-face--sorted-discard-dot,
+.discard-tracker__overlay-grid
+  .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
+  .tile-face.tile--dot,
+.discard-tracker__overlay-grid
+  .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
+  .tile-face.tile--dragon-soap {
   background: var(--tg-dot, var(--card-ink-navy));
 }
 
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded .tile-face.tile-face--sorted-discard-bam,
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded .tile-face.tile--bam,
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded .tile-face.tile--dragon-green {
+.discard-tracker__overlay-grid
+  .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
+  .tile-face.tile-face--sorted-discard-bam,
+.discard-tracker__overlay-grid
+  .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
+  .tile-face.tile--bam,
+.discard-tracker__overlay-grid
+  .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
+  .tile-face.tile--dragon-green {
   background: var(--tg-bam, var(--card-ink-green));
 }
 
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded .tile-face.tile-face--sorted-discard-crak,
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded .tile-face.tile--crak,
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded .tile-face.tile--dragon-red {
+.discard-tracker__overlay-grid
+  .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
+  .tile-face.tile-face--sorted-discard-crak,
+.discard-tracker__overlay-grid
+  .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
+  .tile-face.tile--crak,
+.discard-tracker__overlay-grid
+  .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
+  .tile-face.tile--dragon-red {
   background: var(--tg-crak, var(--card-ink-red));
 }
 
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded .tile-face.tile--wind {
+.discard-tracker__overlay-grid
+  .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
+  .tile-face.tile--wind {
   background: var(--tg-wind, var(--wind-tile-bg));
 }
 
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded .tile-face.tile--flower {
+.discard-tracker__overlay-grid
+  .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
+  .tile-face.tile--flower {
   background: var(--tg-flower, #ab47bc);
 }
 
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded .tile-face.tile--joker {
+.discard-tracker__overlay-grid
+  .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
+  .tile-face.tile--joker {
   background: var(--tg-joker, #ffc107);
 }
 
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded .tile-face.tile--blank,
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded.sorted-discard-tray__slot--blank .tile-face {
+.discard-tracker__overlay-grid
+  .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
+  .tile-face.tile--blank,
+.discard-tracker__overlay-grid
+  .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need).sorted-discard-tray__slot--blank
+  .tile-face {
   background: var(--tg-wind, var(--wind-tile-bg));
 }
 
 /* Lit prism tile faces: stack context for theme lustre / rim layers (glyph + fill unchanged). */
 .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot--discarded
+  .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
   .tile-face.tile-face--sorted-discard-glyph {
   isolation: isolate;
   overflow: hidden;
@@ -578,14 +608,16 @@
 
 /* Lit prism faces: glyph + count above the material rim layer. */
 .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot--discarded
+  .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
   .tile-face.tile-face--sorted-discard-glyph
   :is(.tile-face__glyph, .tile-face__glyph-num, .tile-face__glyph-letter) {
   position: relative;
   z-index: 3;
 }
 
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded .sorted-discard-tray__count {
+.discard-tracker__overlay-grid
+  .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
+  .sorted-discard-tray__count {
   z-index: 3;
 }
 
@@ -751,6 +783,7 @@
   :is(
     .sorted-discard-tray__slot--awaiting-discard,
     .sorted-discard-tray__slot--suggest-dim,
+    .sorted-discard-tray__slot--suggest-need,
     .sorted-discard-tray__slot--inactive
   )
   .tile-face
@@ -764,6 +797,7 @@
   :is(
     .sorted-discard-tray__slot--awaiting-discard,
     .sorted-discard-tray__slot--suggest-dim,
+    .sorted-discard-tray__slot--suggest-need,
     .sorted-discard-tray__slot--inactive
   )
   .sorted-discard-tray__count {
@@ -783,7 +817,9 @@
  */
 .panel--discard-tracker
   .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot:not(.sorted-discard-tray__slot--discarded):not(.sorted-discard-tray__slot--suit-label)
+  .sorted-discard-tray__slot:not(.sorted-discard-tray__slot--discarded):not(.sorted-discard-tray__slot--suit-label):not(
+    .sorted-discard-tray__slot--suggest-need
+  )
   .tile-face {
   --tile-face-highlight-inset: 0 0 0 0 transparent;
   --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
@@ -795,7 +831,9 @@
 .app[data-tile-graphics='bakelite']
   .panel--discard-tracker
   .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot:not(.sorted-discard-tray__slot--discarded):not(.sorted-discard-tray__slot--suit-label)
+  .sorted-discard-tray__slot:not(.sorted-discard-tray__slot--discarded):not(.sorted-discard-tray__slot--suit-label):not(
+    .sorted-discard-tray__slot--suggest-need
+  )
   .tile-face {
   --tile-face-base-shadow: 0 0 0 0 transparent;
 }
@@ -803,7 +841,9 @@
 .app[data-tile-graphics]
   .panel--discard-tracker
   .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot:not(.sorted-discard-tray__slot--discarded):not(.sorted-discard-tray__slot--suit-label)
+  .sorted-discard-tray__slot:not(.sorted-discard-tray__slot--discarded):not(.sorted-discard-tray__slot--suit-label):not(
+    .sorted-discard-tray__slot--suggest-need
+  )
   .tile-face::before {
   content: none;
   display: none;
