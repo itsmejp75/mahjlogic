@@ -21,9 +21,10 @@
   in hand) so it doesn't fight DnD `transform`s on the outer drag wrappers.
 
   Stacking: hand row sits inside `.rack-stage__rack-bottom` (z-index: 1) which is below
-  `.rack-stage__rack-top` (z-index: 2) — bouncing up would otherwise paint behind the
-  exposure rack. Bot exposure cells use `overflow: hidden` and would clip the upward
-  bounce. The `:has()` rules below escape both while a bounce is active.
+  `.rack-stage__rack-top` (z-index: 2 during Charleston) — fly-in / bounce would otherwise
+  paint behind the exposure rack, pass copy, and green strip slots. See part-0035.css.
+  Bot exposure cells use `overflow: hidden` and would clip the upward bounce; part-0035
+  opens them while a bounce is active.
 */
 
 @keyframes joker-swap-hint-dock-bounce {

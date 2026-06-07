@@ -172,6 +172,7 @@ function IncomingBotDiscardDraggable({
       className={[
         'east-discard-staging__tile',
         'exposure-rack__incoming-discard-drag',
+        isDragging ? 'exposure-rack__incoming-discard-drag--dragging' : '',
         suggestBest ? 'east-discard-staging__tile--suggest-best' : '',
       ]
         .filter(Boolean)

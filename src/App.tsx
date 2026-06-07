@@ -3625,52 +3625,6 @@ export default function App() {
     return new Set(charlestonNewTileIds)
   }, [charlestonDone, charlestonNewTileIds])
 
-  const [mainRackNewDotTileIds, setMainRackNewDotTileIds] = useState<Set<string>>(() => new Set())
-  const mainPhasePrevForRackNewDotRef = useRef<MainPhase>(mainPhase)
-  const rackNewMarkTileIds = useMemo((): ReadonlySet<string> | null => {
-    if (!charlestonDone) {
-      return charlestonNewTileIds.length > 0 ? new Set(charlestonNewTileIds) : null
-    }
-    return mainRackNewDotTileIds
-  }, [charlestonDone, charlestonNewTileIds, mainRackNewDotTileIds])
-
-  const charlestonDonePrevForDotsRef = useRef(charlestonDone)
-  useLayoutEffect(() => {
-    if (charlestonDone && !charlestonDonePrevForDotsRef.current) {
-      setMainRackNewDotTileIds(new Set())
-    }
-    charlestonDonePrevForDotsRef.current = charlestonDone
-  }, [charlestonDone])
-
-  useLayoutEffect(() => {
-    if (!charlestonDone) {
-      mainPhasePrevForRackNewDotRef.current = mainPhase
-      return
-    }
-    const prev = mainPhasePrevForRackNewDotRef.current
-    mainPhasePrevForRackNewDotRef.current = mainPhase
-    const endEastPlay =
-      mainPhase === 'bot-turn' ||
-      mainPhase === 'wall-game' ||
-      mainPhase === 'dead-hand' ||
-      mainPhase === 'bot-mahjong' ||
-      mainPhase === 'mahjong-declared'
-    const endCallMeld = prev === 'call-staging' && mainPhase === 'east-discard'
-    if (!endEastPlay && !endCallMeld) {
-      if (drawnTileId) {
-        setMainRackNewDotTileIds((s) => {
-          if (s.has(drawnTileId)) return s
-          const n = new Set(s)
-          n.add(drawnTileId)
-          return n
-        })
-      }
-      return
-    }
-    // Turn ended, or new east-discard after a claim — only keep a dot for a fresh draw this frame.
-    setMainRackNewDotTileIds(drawnTileId ? new Set([drawnTileId]) : new Set())
-  }, [charlestonDone, mainPhase, drawnTileId])
-
   /** Natural dragged into the joker swap slot (next to discards); tap Swap — not a discard. */
   const [pendingJokerSwapTileId, setPendingJokerSwapTileId] = useState<string | null>(null)
   const gameModeRef = useRef<'training' | 'competition'>('training')
@@ -5611,9 +5565,6 @@ export default function App() {
     historyRef.current = []
     sortModeRef.current = null
     setCanUndo(false)
-    setMainRackNewDotTileIds(new Set())
-    mainPhasePrevForRackNewDotRef.current = 'east-discard'
-    charlestonDonePrevForDotsRef.current = false
     // Most menu prefs persist across hands; suggested-hand category filters + Concealed (C) reset below.
     const w = readBotWinsEnabledFromStorage()
     setBotWinsEnabled((prev) => (prev === w ? prev : w))
@@ -8150,7 +8101,6 @@ export default function App() {
                                     suggestedDeadTileGuide={suggestedDeadTileGuideForRack}
                                     discardMode={false}
                                     animationsEnabled={animationsEnabled}
-                                    rackNewMarkTileIds={rackNewMarkTileIds}
                                     jokerSwapHintBounceTileIds={jokerSwapHintBounceIds?.hand ?? null}
                                     jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
                                   />
@@ -8505,7 +8455,6 @@ export default function App() {
                                     suggestedDeadTileGuide={suggestedDeadTileGuideForRack}
                                     discardMode={false}
                                     animationsEnabled={animationsEnabled}
-                                    rackNewMarkTileIds={rackNewMarkTileIds}
                                     jokerSwapHintBounceTileIds={jokerSwapHintBounceIds?.hand ?? null}
                                     jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
                                   />

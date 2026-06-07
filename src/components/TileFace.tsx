@@ -24,8 +24,6 @@ type Props = {
    * for that cell (`patternLinePreviewSlots` + `cardInkTileSkin`).
    */
   cardInk?: CardInk
-  /** Your rack: tiny bottom-center mark for tiles just received (Charleston, draw, joker swap) until the turn ends. */
-  rackNewMark?: boolean
   /** Compact glyph: suit tiles show rank only (e.g. `1` not `1D`); suit color classes unchanged. */
   compactRankOnly?: boolean
   /** Sorted discard tray: glyph band in the upper portion of the face (e.g. 1D, 2D). */
@@ -97,7 +95,6 @@ export function TileFace({
   elevated,
   rackSuitStacked,
   cardInk,
-  rackNewMark,
   compactRankOnly = false,
   sortedDiscardGlyph = false,
   sortedDiscardGlyphCenter = false,
@@ -127,7 +124,6 @@ export function TileFace({
         artUrl != null ? 'tile-face--illustrative-art' : '',
         stackedSuit ? 'tile-face--rack-suit-stack' : '',
         elevated ? 'tile-face--elevated' : '',
-        rackNewMark ? 'tile-face--rack-new-mark' : '',
         sortedDiscardGlyph ? 'tile-face--sorted-discard-glyph' : '',
         sortedDiscardGlyphCenter ? 'tile-face--sorted-discard-glyph-center' : '',
         sortedDiscardDotBlue ? 'tile-face--sorted-discard-dot' : '',
@@ -168,7 +164,6 @@ export function TileFace({
       ) : (
         <span className="tile-face__glyph">{renderGlyphChars(tileShortLabel(def))}</span>
       )}
-      {rackNewMark ? <span className="tile-face__rack-new-corner" aria-hidden="true" /> : null}
     </div>
   )
 }

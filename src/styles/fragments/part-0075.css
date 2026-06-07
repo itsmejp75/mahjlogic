@@ -837,30 +837,3 @@
   /* Match the inscribed ring (`::after` border) so J and circle are one “piece” of ink. */
   color: var(--tg-joker-ring, var(--tg-ink, var(--color-black)));
 }
-
-/* Your rack: new-tile hint (Charleston / draw / joker swap) — does not move rank / glyph layout. */
-.tile-face.tile-face--rack-new-mark {
-  position: relative;
-}
-
-.tile-face__rack-new-corner {
-  --tile-rack-new-corner-size: min(0.65rem, calc(var(--rack-tile-w) * 0.32));
-  --tile-rack-new-stripe-w: min(0.1rem, calc(var(--rack-tile-w) * 0.052));
-  --tile-rack-new-color: var(--charleston-pass-box-color, #00b4d8);
-  position: absolute;
-  z-index: 3;
-  right: 0;
-  bottom: 0;
-  width: var(--tile-rack-new-corner-size);
-  height: var(--tile-rack-new-corner-size);
-  background: linear-gradient(
-    to top left,
-    transparent 0,
-    transparent calc(50% - var(--tile-rack-new-stripe-w)),
-    var(--tile-rack-new-color) calc(50% - var(--tile-rack-new-stripe-w)),
-    var(--tile-rack-new-color) calc(50% + var(--tile-rack-new-stripe-w)),
-    transparent calc(50% + var(--tile-rack-new-stripe-w)),
-    transparent 100%
-  );
-  pointer-events: none;
-}

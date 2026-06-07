@@ -931,6 +931,41 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   padding-block: 0;
 }
 
+/*
+ * Main hand row: no outer cast shadow on resting tiles. DragOverlay keeps
+ * `.drag-overlay-tile { filter: drop-shadow(...) }` while a tile is dragged.
+ */
+.app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap .tile-face {
+  --tile-face-base-shadow: 0 0 0 0 transparent;
+  box-shadow: var(--tile-face-base-shadow), var(--tile-face-highlight-inset), var(--tile-face-highlight-shadow),
+    var(--tile-face-suggest-dim-inset);
+}
+
+/* Bakelite / designer: keep inset edge highlights; drop only the outer depth on the hand row. */
+.app[data-tile-graphics='bakelite']
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap
+  .tile-face:not(.tile-face--illustrative-art) {
+  --tile-face-base-shadow: inset 0 1px 0 color-mix(in srgb, #d4a060 11%, transparent);
+  box-shadow: var(--tile-face-base-shadow), var(--tile-face-highlight-inset), var(--tile-face-highlight-shadow),
+    var(--tile-face-suggest-dim-inset);
+}
+
+.app[data-tile-graphics='designer']
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap
+  .tile-face:not(.tile-face--illustrative-art) {
+  --tile-face-base-shadow:
+    inset 0 1px 0 color-mix(in srgb, #f0f2fa 10%, transparent),
+    inset 0 -1px 0 color-mix(in srgb, var(--color-black) 26%, transparent);
+  box-shadow: var(--tile-face-base-shadow), var(--tile-face-highlight-inset), var(--tile-face-highlight-shadow),
+    var(--tile-face-suggest-dim-inset);
+}
+
 .panel--discard-tracker .discard-tracker__overlay-grid .exposure-rack__slot--empty::before {
   border: none;
   box-shadow: none;
@@ -1173,10 +1208,36 @@ html[data-home-screen-app]:not([data-native-app])
   min-height: var(--rack-tile-h);
 }
 
-/* Inline discard staging stays a compact strip (tile itself extends downward, like Charleston). */
-.panel--hand .rack-stage__rack-top .exposure-rack :is(.exposure-rack__slot--east-discard-slot, .exposure-rack__slot--incoming-discard) {
+/* Inline discard staging: compact strip at rack bottom; tile face extends downward when filled. */
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack
+  :is(.exposure-rack__slot--east-discard-slot, .exposure-rack__slot--incoming-discard) {
   height: calc(var(--rack-tile-h) / 3);
   min-height: calc(var(--rack-tile-h) / 3);
+}
+
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack
+  :is(
+    .exposure-rack__slot--east-discard-slot:has(.east-discard-staging__tile),
+    .exposure-rack__slot--incoming-discard:has(
+      .east-discard-staging--inline:not([aria-hidden]) .east-discard-staging__tile
+    ),
+    .exposure-rack__slot--incoming-discard:has(
+      .exposure-rack__incoming-discard-drag:not(.exposure-rack__incoming-discard-drag--dragging)
+    )
+  ) {
+  align-self: flex-end;
+  justify-content: flex-start;
+  align-items: center;
+  overflow: visible;
+  isolation: auto;
+  background: none;
+  background-image: none;
+  border-radius: 0;
+  z-index: 5;
 }
 
 /*
@@ -1230,12 +1291,12 @@ html[data-home-screen-app]:not([data-native-app])
   min-height: calc(var(--rack-tile-h) / 3);
 }
 
-.panel--hand .rack-stage__rack-top .exposure-rack .exposure-rack__slot--empty::before {
+.panel--hand .rack-stage__rack-top .exposure-rack .exposure-rack__slot--empty:not(.exposure-rack__slot--pass-tail)::before {
   width: 100%;
   height: 100%;
 }
 
-/* Charleston pass-tail: empty wells = strip height; filled tiles = full height like discard staging. */
+/* Charleston pass-tail: empty wells = strip height; filled tile wrap = full height anchored from strip top. */
 .panel--hand .pass-strip-tail .exposure-rack__slot--pass-tail.exposure-rack__slot--empty {
   height: var(--charleston-pass-strip-h, calc(var(--rack-tile-h) / 3));
   min-height: var(--charleston-pass-strip-h, calc(var(--rack-tile-h) / 3));
@@ -1252,6 +1313,68 @@ html[data-home-screen-app]:not([data-native-app])
   align-items: flex-start;
 }
 
+/* Inline strip slots (pass / discard / call): shared Bam green fill + top rule. */
+.app .panel--hand .rack-stage__rack-top,
+.panel--hand .pass-strip-tail {
+  --rack-inline-slot-strip-h: calc(var(--rack-tile-h) / 3);
+}
+
+.app .panel--hand .rack-stage__rack-top {
+  --rack-action-border-color: #636870;
+}
+
+.app
+  .panel--hand
+  :is(
+    .exposure-rack--charleston-pass .pass-strip-tail .exposure-rack__slot--pass-tail,
+    .rack-stage__rack-top .exposure-rack__slot--east-discard-slot,
+    .rack-stage__rack-top .exposure-rack__slot--incoming-discard,
+    .rack-stage__rack-top
+      .exposure-rack:not(.exposure-rack--charleston-pass)
+      > .exposure-rack__slot--empty:last-child,
+    .rack-stage__rack-top .exposure-rack__call-initiate-target--near
+  ) {
+  --rack-inline-slot-accent: var(--card-ink-green, #66bb6a);
+  --rack-inline-slot-strip-h: calc(var(--rack-tile-h) / 3);
+  --rack-inline-slot-shadow-x: calc(var(--rack-tile-w) * 0.025);
+  --rack-inline-slot-shadow-y: calc(var(--rack-tile-w) * 0.035);
+  --rack-inline-slot-shadow-blur: calc(var(--rack-tile-w) * 0.01);
+  --rack-inline-slot-top-rule-shadow: drop-shadow(
+    var(--rack-inline-slot-shadow-x) var(--rack-inline-slot-shadow-y) var(--rack-inline-slot-shadow-blur)
+      rgba(0, 0, 0, 0.42)
+  );
+  --rack-inline-slot-top-rule-w: max(2px, 0.15rem);
+  --rack-inline-slot-top-rule-radius: calc(
+    var(--tile-face-border-radius, calc(0.116 * var(--rack-tile-w))) + var(--rack-inline-slot-top-rule-w)
+  );
+  --rack-inline-slot-top-rule-h: var(--rack-inline-slot-top-rule-radius);
+  --rack-inline-slot-plus-color: var(--app-container-surface, #5c6066);
+  --rack-inline-slot-plus-border-color: var(--rack-action-border-color, #484c52);
+  --rack-inline-slot-plus-size: min(
+    calc(var(--rack-tile-w) * 0.44),
+    calc(var(--rack-inline-slot-strip-h) * 0.86)
+  );
+  --rack-inline-slot-fill-fade-start: 52%;
+}
+
+.panel--hand .pass-strip-tail {
+  --charleston-pass-strip-h: var(--rack-inline-slot-strip-h);
+}
+
+.panel--hand .pass-strip-tail__inner,
+.panel--hand .pass-strip-tail--over .pass-strip-tail__inner,
+.panel--hand .pass-strip-tail__inner:has(.pass-strip__tile-wrap--dragging) {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.panel--hand .pass-strip-tail .pass-strip__tile-wrap.exposure-rack__slot--pass-tail > .pass-strip__tile-btn {
+  position: relative;
+  z-index: 2;
+}
+
 /*
  * Hand action row: dark inset faces on the tray surface (#5c6066).
  * Inset depth only while pressed (:active) or toggled active (Menu / Hands open / MAHJ held).
@@ -1260,7 +1383,8 @@ html[data-home-screen-app]:not([data-native-app])
 .panel--hand :is(
     .panel-hand-rack__action-well,
     .panel-hand-rack__charleston-actions-well,
-    .hand-bank__mj-review-actions
+    .hand-bank__mj-review-actions,
+    .pass-strip-tail
   ) {
   --rack-action-label-color: #e2e4e8;
   --rack-action-well-surface: var(--hand-rack-tray-surface);
@@ -1279,6 +1403,212 @@ html[data-home-screen-app]:not([data-native-app])
   --rack-action-pressed:
     inset 4px 4px 8px var(--rack-action-press-shadow-dark),
     inset -4px -4px 8px var(--rack-action-press-shadow-light);
+}
+
+/*
+ * Pass / discard / call inline strips: green fill (slot bg) + top rule (::after) + plus (::before).
+ * Fill is sized to strip height only so fade reads on filled tile-height slots too.
+ */
+.app
+  .panel--hand
+  :is(
+    .exposure-rack--charleston-pass .pass-strip-tail .exposure-rack__slot--pass-tail.exposure-rack__slot--empty,
+    .rack-stage__rack-top
+      .exposure-rack__slot--east-discard-slot:not(:has(.east-discard-staging__tile)),
+    .rack-stage__rack-top
+      .exposure-rack__slot--incoming-discard:not(
+        :has(.exposure-rack__incoming-discard-drag:not(.exposure-rack__incoming-discard-drag--dragging))
+      ):not(:has(.east-discard-staging--inline:not([aria-hidden]) .east-discard-staging__tile)),
+    .rack-stage__rack-top
+      .exposure-rack:not(.exposure-rack--charleston-pass)
+      > .exposure-rack__slot--empty:last-child,
+    .rack-stage__rack-top .exposure-rack__call-initiate-target--near
+  ) {
+  position: relative;
+  isolation: isolate;
+  background-color: transparent;
+  background-image: linear-gradient(
+    180deg,
+    var(--rack-inline-slot-accent, #66bb6a) 0%,
+    var(--rack-inline-slot-accent, #66bb6a) var(--rack-inline-slot-fill-fade-start),
+    transparent 100%
+  );
+  background-repeat: no-repeat;
+  background-size: 100% var(--rack-inline-slot-strip-h);
+  background-position: top center;
+  border: 0;
+  box-shadow: none;
+  border-radius: var(--rack-inline-slot-top-rule-radius) var(--rack-inline-slot-top-rule-radius) 0 0;
+  overflow: hidden;
+}
+
+/* Absolute plus pseudo no longer sizes the cell — pin single-tile strip width explicitly. */
+.app
+  .panel--hand
+  :is(
+    .exposure-rack--charleston-pass .pass-strip-tail .exposure-rack__slot--pass-tail,
+    .rack-stage__rack-top .exposure-rack__slot--east-discard-slot,
+    .rack-stage__rack-top .exposure-rack__slot--incoming-discard,
+    .rack-stage__rack-top
+      .exposure-rack:not(.exposure-rack--charleston-pass)
+      > .exposure-rack__slot--empty:last-child
+  ) {
+  width: var(--rack-tile-w);
+  flex: 0 0 var(--rack-tile-w);
+  min-width: var(--rack-tile-w);
+}
+
+.app
+  .panel--hand
+  :is(
+    .exposure-rack--charleston-pass .pass-strip-tail .exposure-rack__slot--pass-tail.exposure-rack__slot--empty,
+    .rack-stage__rack-top
+      .exposure-rack__slot--east-discard-slot:not(:has(.east-discard-staging__tile)),
+    .rack-stage__rack-top
+      .exposure-rack:not(.exposure-rack--charleston-pass)
+      > .exposure-rack__slot--empty:last-child,
+    .rack-stage__rack-top .exposure-rack__call-initiate-target--near.exposure-rack__slot--empty
+  )::before {
+  content: '+';
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: 50%;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  flex: none;
+  transform: translate(-50%, calc(-50% - 0.04em));
+  opacity: 1;
+  pointer-events: none;
+  border: 0;
+  box-shadow: none;
+  background: none;
+  font-family: var(--sans, system-ui, sans-serif);
+  font-size: max(0.95rem, var(--rack-inline-slot-plus-size));
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--rack-inline-slot-plus-color);
+  -webkit-text-stroke: 0.035em var(--rack-inline-slot-plus-border-color);
+  paint-order: stroke fill;
+}
+
+/* Beat part-0084 hiding the call-target empty-well plus. */
+.app
+  .panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__call-initiate-target--near.exposure-rack__slot--empty::before {
+  opacity: 1;
+}
+
+/* Beat legacy pass-tail ::before reset (part-0087) — plus chrome uses longhands above, not `background`. */
+.app
+  .panel--hand
+  .exposure-rack--charleston-pass
+  .pass-strip-tail
+  .exposure-rack__slot--pass-tail.exposure-rack__slot--empty::before {
+  border-color: transparent;
+  box-shadow: none;
+  background: none;
+}
+
+.app
+  .panel--hand
+  :is(
+    .exposure-rack--charleston-pass .pass-strip-tail .exposure-rack__slot--pass-tail.exposure-rack__slot--empty,
+    .rack-stage__rack-top
+      .exposure-rack__slot--east-discard-slot:not(:has(.east-discard-staging__tile)),
+    .rack-stage__rack-top
+      .exposure-rack__slot--incoming-discard:not(
+        :has(.exposure-rack__incoming-discard-drag:not(.exposure-rack__incoming-discard-drag--dragging))
+      ):not(:has(.east-discard-staging--inline:not([aria-hidden]) .east-discard-staging__tile)),
+    .rack-stage__rack-top
+      .exposure-rack:not(.exposure-rack--charleston-pass)
+      > .exposure-rack__slot--empty:last-child,
+    .rack-stage__rack-top .exposure-rack__call-initiate-target--near
+  )::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--rack-inline-slot-top-rule-h);
+  border: 0;
+  border-top: var(--rack-inline-slot-top-rule-w) solid var(--rack-inline-slot-accent);
+  border-radius: var(--rack-inline-slot-top-rule-radius) var(--rack-inline-slot-top-rule-radius) 0 0;
+  background: transparent;
+  filter: var(--rack-inline-slot-top-rule-shadow);
+  pointer-events: none;
+}
+
+/* Staged discard tile must paint above the hand row (both rows share z-index: 1 in this file). */
+.panel--hand .rack-stage__rack-top:has(.east-discard-staging__tile) {
+  z-index: 5;
+}
+
+.app
+  .panel--hand
+  .rack-stage__rack-top
+  :is(
+    .exposure-rack__slot--east-discard-slot:has(.east-discard-staging__tile),
+    .exposure-rack__slot--incoming-discard:has(
+      .east-discard-staging--inline:not([aria-hidden]) .east-discard-staging__tile
+    ),
+    .exposure-rack__slot--incoming-discard:has(
+      .exposure-rack__incoming-discard-drag:not(.exposure-rack__incoming-discard-drag--dragging)
+    )
+  )
+  .east-discard-staging.east-discard-staging--inline {
+  align-self: flex-start;
+  overflow: visible;
+  z-index: 2;
+}
+
+/* Retire legacy flat teal boxes on discard staging + call target (chrome lives on slot pseudos). */
+.app
+  .panel--hand
+  .rack-stage__rack-top
+  :is(.exposure-rack__slot--east-discard-slot, .exposure-rack__slot--incoming-discard)
+  .east-discard-staging.east-discard-staging--inline,
+.app
+  .panel--hand
+  .rack-stage__rack-top
+  :is(.exposure-rack__slot--east-discard-slot, .exposure-rack__slot--incoming-discard)
+  .east-discard-staging.east-discard-staging--inline:has(.east-discard-staging__tile),
+.app
+  .panel--hand
+  .rack-stage__rack-top
+  :is(.exposure-rack__slot--east-discard-slot, .exposure-rack__slot--incoming-discard)
+  .east-discard-staging.east-discard-staging--inline.east-discard-staging--over,
+.app
+  .panel--hand
+  .rack-stage__rack-top
+  :is(.exposure-rack__slot--east-discard-slot, .exposure-rack__slot--incoming-discard)
+  .east-discard-staging.east-discard-staging--inline:has(.east-discard-staging__tile:hover) {
+  position: relative;
+  background-color: transparent;
+  background-image: none;
+  border: 0;
+  box-shadow: none;
+}
+
+/* Call target: drop legacy teal box chrome only — slot fill gradient stays on the cell. */
+.app
+  .panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__call-initiate-target--near,
+.app
+  .panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__call-initiate-target--near.exposure-rack__call-initiate-target--over {
+  border: 0;
+  box-shadow: none;
 }
 
 .panel--hand .hand-bank__mj-review-actions {

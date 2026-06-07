@@ -33,7 +33,6 @@ function SortableTile({
   handTileFlyIn,
   handFlyInWaveDelayMs,
   drawInFromRackBottom,
-  rackNewMark: rackNewMarkProp,
   onSelect,
   jokerSwapHintBounce = false,
   jokerSwapHintBounceEpoch = 0,
@@ -63,7 +62,6 @@ function SortableTile({
    * call tiles into the exposure row), not from the wall or pass direction.
    */
   drawInFromRackBottom?: boolean
-  rackNewMark: boolean
   onSelect: (id: string) => void
   /** Joker swap hint: macOS-style dock bounce on naturals you can swap for an exposed joker. */
   jokerSwapHintBounce?: boolean
@@ -272,7 +270,7 @@ function SortableTile({
           .join(' ')}
         style={flyStyle}
       >
-        <TileFace def={tile.def} elevated={draggingThisTile} rackSuitStacked rackNewMark={rackNewMarkProp} />
+        <TileFace def={tile.def} elevated={draggingThisTile} rackSuitStacked />
         {suggestDeadCause ? <DeadCauseWarning className="sortable-tile-wrap__dead-warn" /> : null}
       </div>
     </div>
@@ -340,11 +338,6 @@ type Props = {
   slotCount?: number
   /** Ids of tiles currently staged to join a call meld — shown with an amber ring. */
   stagedForMeldIds?: ReadonlySet<string>
-  /**
-   * Bottom-center new-tile hint (Charleston / wall draw / joker swap) until the turn ends.
-   * Omitted = no extra mark.
-   */
-  rackNewMarkTileIds?: ReadonlySet<string> | null
   /** When false, skip draw / Charleston / Mah Jongg fly-in. Default true. */
   animationsEnabled?: boolean
   /** Joker swap hint: ids of hand tiles to dock-bounce because they can redeem an exposed joker. */
@@ -395,7 +388,6 @@ export function SortableHand({
   discardMode = false,
   slotCount = 14,
   stagedForMeldIds,
-  rackNewMarkTileIds = null,
   animationsEnabled = true,
   jokerSwapHintBounceTileIds = null,
   jokerSwapHintBounceEpoch = 0,
@@ -561,7 +553,6 @@ export function SortableHand({
               handFlyInWaveDelayMs={handFlyInWaveDelayMs}
               deferHandFlyMeasure={deferHandFlyMeasure}
               drawInFromRackBottom={handJokerSwapFlyInFromBelowId === tile.id}
-              rackNewMark={!!rackNewMarkTileIds?.has(tile.id)}
               jokerSwapHintBounce={jokerSwapHintBounceTileIds?.has(tile.id) ?? false}
               jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
               externalShift={
