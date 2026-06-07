@@ -4348,42 +4348,11 @@ export function sortHandForSuggestedPattern(
   }
 
   /*
-   * Remaining pattern tiles still follow the card line. This matters for partial matches where
-   * a tile can help the focused hand but was not consumed by the greedy "best" pass yet
-   * (e.g. 2026 W&D #3: S must stay after the numbered kongs, not before held 4s).
+   * Dim tiles keep their current rack order so repeated double-clicks on different hands
+   * slide the best tiles left without scrambling everything to the right.
    */
   const rest = hand.filter((t) => !seen.has(t.id))
-  const tailPattern = pinnedPatterns[0] ?? basePattern
-  const greedyOpts: GreedyPatternMatchOpts | undefined =
-    exposureTileIds?.size ? { exposureTileIds } : undefined
-  const tailDetail = greedyPatternMatchDetail(rackForPattern, tailPattern, greedyOpts)
-  const tailDefs = normalizeSuggestedStripTargetDefs(
-    reorderTileDefsByCardLineFromGroupMap(
-      resolveStripTargetDefsForGreedyMatch(
-        tailPattern,
-        rackForPattern,
-        tailDetail.usedMeta,
-        exposureTileIds,
-      ),
-      tailPattern.cardLineFromGroupSlotMap,
-    ),
-  )
-
-  const cardSlotRank = (t: TileInstance): number => {
-    if (!tailPattern.matches(t.def)) return 99_999
-    if (t.def.cat === 'joker') return 50_000
-    const i = tailDefs.findIndex(
-      (d) => tileDefsEqual(d, t.def) || stripSlotAcceptsNatural(tailPattern, d, t.def),
-    )
-    return i >= 0 ? i : 75_000
-  }
-
-  const restSorted = rest
-    .map((t, i) => ({ t, i, r: cardSlotRank(t) }))
-    .sort((a, b) => (a.r - b.r) || (a.i - b.i))
-    .map(({ t }) => t)
-
-  return [...orderedBest, ...restSorted]
+  return [...orderedBest, ...rest]
 }
 
 /**
