@@ -4,7 +4,10 @@ import type { CardInk } from '../card/cardText'
 import { CARD_INK_TO_TILE_SKIN_CLASS } from '../card/cardInkTileSkin'
 import { tileAriaLabel, tileShortLabel, tileSuitRackWord } from '../mahjong/labels'
 import { classicTileArtUrl } from '../tiles/classicTileArt'
-import { isIllustrativeTileGraphics } from '../tiles/tileGraphics'
+import {
+  isIllustrativeTileGraphics,
+  type TileGraphics,
+} from '../tiles/tileGraphics'
 import { useTileGraphics } from '../tiles/TileGraphicsContext'
 
 type Props = {
@@ -55,6 +58,21 @@ function renderGlyphChars(label: string): React.ReactNode {
   })
 }
 
+/**
+ * Suggested-strip `cardInk` paints prism card-print solids. Under illustrative Classic or Ivory,
+ * flowers and dragons should match the main rack (SVG art or ivory glyphs), not those solids.
+ */
+function cardInkForTileFace(
+  def: TileDef,
+  cardInk: CardInk | undefined,
+  tileGraphics: TileGraphics,
+): CardInk | undefined {
+  if (cardInk == null) return undefined
+  if (def.cat !== 'flower' && def.cat !== 'dragon') return cardInk
+  if (isIllustrativeTileGraphics(tileGraphics) || tileGraphics === 'classic') return undefined
+  return cardInk
+}
+
 function categoryClass(def: TileDef): string {
   switch (def.cat) {
     case 'suit':
@@ -88,14 +106,15 @@ export function TileFace({
   sortedDiscardCrakRed = false,
 }: Props) {
   const { tileGraphics, alternateDragons } = useTileGraphics()
+  const skinCardInk = cardInkForTileFace(def, cardInk, tileGraphics)
   const artUrl =
-    cardInk == null && isIllustrativeTileGraphics(tileGraphics) && !sortedDiscardGlyph
+    skinCardInk == null && isIllustrativeTileGraphics(tileGraphics) && !sortedDiscardGlyph
       ? classicTileArtUrl(def, alternateDragons)
       : null
 
   const skinClass =
-    cardInk != null
-      ? ['tile-face--card-skin', CARD_INK_TO_TILE_SKIN_CLASS[cardInk]].filter(Boolean).join(' ')
+    skinCardInk != null
+      ? ['tile-face--card-skin', CARD_INK_TO_TILE_SKIN_CLASS[skinCardInk]].filter(Boolean).join(' ')
       : categoryClass(def)
 
   const stackedSuit = rackSuitStacked && def.cat === 'suit' && artUrl == null

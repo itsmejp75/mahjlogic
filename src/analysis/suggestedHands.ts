@@ -3982,7 +3982,12 @@ function buildPinnedPatternFromComboStr(
       : []),
     ...basePattern.groups.slice(gi + 1),
   ]
-  return { ...basePattern, groups: pinnedGroups }
+  const {
+    cardLineFromGroupSlotMap: _cardLineFromGroupSlotMap,
+    jokerEligibleGroupToDisplaySlot: _jokerEligibleGroupToDisplaySlot,
+    ...pinnedBase
+  } = basePattern
+  return { ...pinnedBase, groups: pinnedGroups }
 }
 
 /**
