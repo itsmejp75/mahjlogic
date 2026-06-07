@@ -219,17 +219,20 @@ function SortableMeldGroup({
     id,
     animateLayoutChanges: () => false,
   })
-  const translate = transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined
+  const sortableTransform =
+    transform != null
+      ? CSS.Transform.toString({ ...transform, scaleX: 1, scaleY: 1 })
+      : undefined
   const style: CSSProperties = {
     ['--bot-meld-slot-span' as string]: Math.max(1, slotSpan),
     // Melds can have different widths; dnd-kit's full transform may include scale,
     // which makes the locked tiles blur/resize. Move the meld as one rigid block.
-    transform: translate,
+    transform: sortableTransform,
     transition:
       isDragging
         ? 'none'
         : active
-          ? 'transform 0.14s cubic-bezier(0.2, 0, 0.2, 1)'
+          ? 'transform 0.16s cubic-bezier(0.2, 0, 0.2, 1)'
           : 'none',
     // DragOverlay carries the visible meld while dragging; hide the source copy like main-rack tiles
     // so variable-width meld swaps never show overlapping ghosts.
@@ -990,12 +993,12 @@ export function ExposureRack({
   // Bot’s incoming discard always stays lit in this slot — player needs full visibility while
   // deciding to call or ignore (matches the “Ignore / Call” affordance on the action row).
   const lastSlotSuggestDim = false
-  const sortableMeldIds = melds
-    .map((meld) => meld.sortableMeldId)
-    .filter((id): id is string => id != null)
-
   const callMelds = melds.filter((meld) => meld.calledTileId)
   const flowMelds = melds.filter((meld) => !meld.calledTileId)
+  // DOM order is call anchor first, then flow melds — ids must match for dnd-kit reorder previews.
+  const sortableMeldIds = [...callMelds, ...flowMelds]
+    .map((meld) => meld.sortableMeldId)
+    .filter((id): id is string => id != null)
   const callMeldTileCount = callMelds.reduce((n, m) => n + m.tiles.length, 0)
 
   // Count every meld that actually shows tiles (including joker-swap droppables: they still cover the watermark).
@@ -1059,6 +1062,138 @@ export function ExposureRack({
     )
   }
 
+  const callMeldAnchor =
+    callMeldTileCount > 0 ? (
+      <div className="exposure-rack__call-meld-anchor" role="group" aria-label="Called melds">
+        {callMelds.map((meld, gi) => renderCallMeldEntry(meld, gi))}
+      </div>
+    ) : null
+
+  const flowMeldEntries = flowMelds.map((meld, gi) => {
+    const meldSpanKey = meld.sortableMeldId ?? `flow-meld-${gi}-${meld.tiles[0]?.id ?? gi}`
+    const wrapMeldContent = (content: ReactNode, slotSpan = 1) => {
+      if (meld.sortableMeldId) {
+        return (
+          <SortableMeldGroup key={meld.sortableMeldId} id={meld.sortableMeldId} slotSpan={slotSpan}>
+            {content}
+          </SortableMeldGroup>
+        )
+      }
+      if (gridMeldColumnSpans && slotSpan > 0) {
+        return (
+          <div
+            key={meldSpanKey}
+            className={[
+              'exposure-rack__meld-grid-span',
+              gi > 0 ? 'exposure-rack__slot--meld-start' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            style={{ ['--bot-meld-slot-span' as string]: slotSpan }}
+          >
+            {content}
+          </div>
+        )
+      }
+      return content
+    }
+    if (meld.dropZoneId) {
+      const dropSpan = Math.max(1, orderMeldForRack(meld).length)
+      return wrapMeldContent(
+        <DroppableMeldSlots
+          meld={meld}
+          gi={gi}
+          suggestBestIds={suggestedTileGuide?.bestIds ?? null}
+          suggestedDeadTileIds={suggestedDeadTileIds}
+          suggestedTileGuide={suggestedTileGuide}
+          botJokerBorderMenuOn={botJokerBorderMenuOn}
+          suppressDim={suppressDim}
+          highlightCalledTile={highlightCalledTile}
+          stackSuitTiles={stackSuitTiles}
+          flyInTileIds={flyInTileIds}
+          flyInFromRightTileIds={flyInFromRightTileIds}
+          jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
+          jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
+        />,
+        dropSpan,
+      )
+    }
+    const ordered = orderMeldForRack(meld)
+    if (meld.onTileClick) {
+      const handler = meld.onTileClick
+      return ordered.map((tile, ti) => (
+        <SortableStagedSlot
+          key={jokerSwapBounceSlotKey(tile.id, jokerSwapHintBounceTileIds, jokerSwapHintBounceEpoch)}
+          tile={tile}
+          gi={gi}
+          isFirst={ti === 0}
+          onTileClick={handler}
+          stackSuitTiles={stackSuitTiles}
+          suggestBestIds={suggestedTileGuide?.bestIds ?? null}
+          suggestedDeadTileIds={suggestedDeadTileIds}
+          suggestedTileGuide={suggestedTileGuide}
+          botJokerBorderMenuOn={botJokerBorderMenuOn}
+          suppressDim={suppressDim}
+          jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
+        />
+      ))
+    }
+    return wrapMeldContent(ordered.map((tile) => {
+      const isCalled = highlightCalledTile && meld.calledTileId === tile.id
+      const isJoker = tile.def.cat === 'joker'
+      const g = suggestedTileGuide
+      const isBest = slotIsSuggestBest(isJoker, tile.id, g?.bestIds, g, botJokerBorderMenuOn)
+      const isDeadSuggested = !!suggestedDeadTileIds?.has(tile.id) && !isBest
+      const suggestDim = isDeadSuggested || (!suppressDim && !!g && !isBest)
+      const flyIn = !!flyInTileIds?.has(tile.id)
+      const flyFromRight = !!flyInFromRightTileIds?.has(tile.id)
+      return (
+        <div
+          key={jokerSwapBounceSlotKey(tile.id, jokerSwapHintBounceTileIds, jokerSwapHintBounceEpoch)}
+          data-tile-id={tile.id}
+          className={[
+            'exposure-rack__slot',
+            gi > 0 && ordered[0]?.id === tile.id ? 'exposure-rack__slot--meld-start' : '',
+            isCalled ? 'exposure-rack__slot--called' : '',
+            isJoker ? 'exposure-rack__slot--joker' : '',
+            isBest ? 'exposure-rack__slot--suggest-best' : '',
+            isDeadSuggested ? 'exposure-rack__slot--suggest-dying' : '',
+            suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
+            jokerSwapHintBounceClass(jokerSwapHintBounceTileIds, tile.id),
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          role="listitem"
+        >
+          {flyIn ? (
+            <ExposureRackFlyInTile
+              tileId={tile.id}
+              animate
+              flyOrigin={flyFromRight ? 'right' : 'above'}
+            >
+              <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
+            </ExposureRackFlyInTile>
+          ) : (
+            <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
+          )}
+        </div>
+      )
+    }), Math.max(1, ordered.length))
+  })
+
+  const meldRow =
+    sortableMeldIds.length > 0 ? (
+      <SortableContext items={sortableMeldIds} strategy={rectSortingStrategy}>
+        {callMeldAnchor}
+        {flowMeldEntries}
+      </SortableContext>
+    ) : (
+      <>
+        {callMeldAnchor}
+        {flowMeldEntries}
+      </>
+    )
+
   return (
     <div
       className={[
@@ -1093,124 +1228,7 @@ export function ExposureRack({
           {watermark}
         </div>
       ) : null}
-      {callMeldTileCount > 0 ? (
-        <div className="exposure-rack__call-meld-anchor" role="group" aria-label="Called melds">
-          {callMelds.map((meld, gi) => renderCallMeldEntry(meld, gi))}
-        </div>
-      ) : null}
-      <SortableContext items={sortableMeldIds} strategy={rectSortingStrategy}>
-      {flowMelds.map((meld, gi) => {
-        const meldSpanKey = meld.sortableMeldId ?? `flow-meld-${gi}-${meld.tiles[0]?.id ?? gi}`
-        const wrapMeldContent = (content: ReactNode, slotSpan = 1) => {
-          if (meld.sortableMeldId) {
-            return (
-              <SortableMeldGroup key={meld.sortableMeldId} id={meld.sortableMeldId} slotSpan={slotSpan}>
-                {content}
-              </SortableMeldGroup>
-            )
-          }
-          if (gridMeldColumnSpans && slotSpan > 0) {
-            return (
-              <div
-                key={meldSpanKey}
-                className={[
-                  'exposure-rack__meld-grid-span',
-                  gi > 0 ? 'exposure-rack__slot--meld-start' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                style={{ ['--bot-meld-slot-span' as string]: slotSpan }}
-              >
-                {content}
-              </div>
-            )
-          }
-          return content
-        }
-        if (meld.dropZoneId) {
-          const dropSpan = Math.max(1, orderMeldForRack(meld).length)
-          return wrapMeldContent(
-            <DroppableMeldSlots
-              meld={meld}
-              gi={gi}
-              suggestBestIds={suggestedTileGuide?.bestIds ?? null}
-              suggestedDeadTileIds={suggestedDeadTileIds}
-              suggestedTileGuide={suggestedTileGuide}
-              botJokerBorderMenuOn={botJokerBorderMenuOn}
-              suppressDim={suppressDim}
-              highlightCalledTile={highlightCalledTile}
-              stackSuitTiles={stackSuitTiles}
-              flyInTileIds={flyInTileIds}
-              flyInFromRightTileIds={flyInFromRightTileIds}
-              jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
-              jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
-            />,
-            dropSpan,
-          )
-        }
-        const ordered = orderMeldForRack(meld)
-        if (meld.onTileClick) {
-          const handler = meld.onTileClick
-          return ordered.map((tile, ti) => (
-            <SortableStagedSlot
-              key={jokerSwapBounceSlotKey(tile.id, jokerSwapHintBounceTileIds, jokerSwapHintBounceEpoch)}
-              tile={tile}
-              gi={gi}
-              isFirst={ti === 0}
-              onTileClick={handler}
-              stackSuitTiles={stackSuitTiles}
-              suggestBestIds={suggestedTileGuide?.bestIds ?? null}
-              suggestedDeadTileIds={suggestedDeadTileIds}
-              suggestedTileGuide={suggestedTileGuide}
-              botJokerBorderMenuOn={botJokerBorderMenuOn}
-              suppressDim={suppressDim}
-              jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
-            />
-          ))
-        }
-        return wrapMeldContent(ordered.map((tile) => {
-          const isCalled = highlightCalledTile && meld.calledTileId === tile.id
-          const isJoker = tile.def.cat === 'joker'
-          const g = suggestedTileGuide
-          const isBest = slotIsSuggestBest(isJoker, tile.id, g?.bestIds, g, botJokerBorderMenuOn)
-          const isDeadSuggested = !!suggestedDeadTileIds?.has(tile.id) && !isBest
-          const suggestDim = isDeadSuggested || (!suppressDim && !!g && !isBest)
-          const flyIn = !!flyInTileIds?.has(tile.id)
-          const flyFromRight = !!flyInFromRightTileIds?.has(tile.id)
-          return (
-            <div
-              key={jokerSwapBounceSlotKey(tile.id, jokerSwapHintBounceTileIds, jokerSwapHintBounceEpoch)}
-              data-tile-id={tile.id}
-              className={[
-                'exposure-rack__slot',
-                gi > 0 && ordered[0]?.id === tile.id ? 'exposure-rack__slot--meld-start' : '',
-                isCalled ? 'exposure-rack__slot--called' : '',
-                isJoker ? 'exposure-rack__slot--joker' : '',
-                isBest ? 'exposure-rack__slot--suggest-best' : '',
-                isDeadSuggested ? 'exposure-rack__slot--suggest-dying' : '',
-                suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
-                jokerSwapHintBounceClass(jokerSwapHintBounceTileIds, tile.id),
-              ]
-                .filter(Boolean)
-                .join(' ')}
-              role="listitem"
-            >
-              {flyIn ? (
-                <ExposureRackFlyInTile
-                  tileId={tile.id}
-                  animate
-                  flyOrigin={flyFromRight ? 'right' : 'above'}
-                >
-                  <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
-                </ExposureRackFlyInTile>
-              ) : (
-                <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
-              )}
-            </div>
-          )
-        }), Math.max(1, ordered.length))
-      })}
-      </SortableContext>
+      {meldRow}
       {callMeldTileCount > 0 ? null : suffix}
       {callInitiateShown ? (
         <div key="call-initiate-override" role="presentation" className="exposure-rack__first-empty-override">

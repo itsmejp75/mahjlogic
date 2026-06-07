@@ -5012,9 +5012,58 @@ export default function App() {
         const meldContainers = args.droppableContainers.filter(
           (c) => parseEastExposureMeldSortId(String(c.id)) != null,
         )
-        return meldContainers.length > 0
-          ? closestCenter({ ...args, droppableContainers: meldContainers })
-          : []
+        if (meldContainers.length === 0) return []
+        const pointerX = args.pointerCoordinates?.x ?? lastDragPointerRef.current.x
+        const activeMeldContainer = meldContainers.find((c) => String(c.id) === aid)
+        const activeMeldRect = activeMeldContainer ? args.droppableRects.get(activeMeldContainer.id) : null
+        if (
+          activeMeldContainer &&
+          activeMeldRect &&
+          Number.isFinite(pointerX) &&
+          pointerX >= activeMeldRect.left &&
+          pointerX <= activeMeldRect.left + activeMeldRect.width
+        ) {
+          // Keep the lifted meld's original slot reachable so neighbours can reopen around it.
+          return [
+            {
+              id: activeMeldContainer.id,
+              data: {
+                droppableContainer: activeMeldContainer,
+                value: 0,
+              },
+            },
+          ]
+        }
+        const otherMeldContainers = meldContainers.filter((c) => String(c.id) !== aid)
+        if (otherMeldContainers.length > 0 && Number.isFinite(pointerX)) {
+          const byCenterX = otherMeldContainers
+            .map((container) => {
+              const rect = args.droppableRects.get(container.id)
+              if (!rect) return null
+              return {
+                container,
+                centerX: rect.left + rect.width / 2,
+              }
+            })
+            .filter((x): x is { container: (typeof otherMeldContainers)[number]; centerX: number } => x != null)
+            .sort((a, b) => a.centerX - b.centerX)
+          const target = byCenterX.find((x) => pointerX < x.centerX) ?? byCenterX[byCenterX.length - 1]
+          if (target) {
+            return [
+              {
+                id: target.container.id,
+                data: {
+                  droppableContainer: target.container,
+                  value: Math.abs(pointerX - target.centerX),
+                },
+              },
+            ]
+          }
+        }
+        return closestCenter({
+          ...args,
+          droppableContainers: otherMeldContainers.length > 0 ? otherMeldContainers : meldContainers,
+        })
       }
       const fromPassSlot = passSlots.some((s) => s?.id === aid)
       const fromStagedDiscard = pendingEastDiscardTile?.id === aid

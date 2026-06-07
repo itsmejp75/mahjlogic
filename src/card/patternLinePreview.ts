@@ -923,7 +923,9 @@ export function patternLinePreviewGroupOrderDefs(p: PracticePattern): TileDef[] 
 /** True when a title-line preview cell and a group-append cell are the same meld slot. */
 function previewDefMatchesGroupCell(line: TileDef, grp: TileDef): boolean {
   if (tileDefsEqual(line, grp)) return true
-  if (line.cat === 'dragon' && grp.cat === 'dragon') return line.dragon === grp.dragon
+  if (line.cat === 'dragon' && grp.cat === 'dragon') {
+    return line.dragon === grp.dragon || line.dragon === 'any' || grp.dragon === 'any'
+  }
   if (line.cat === 'wind' && grp.cat === 'wind') return line.wind === grp.wind
   if (line.cat === 'flower' && grp.cat === 'flower') return line.flower === grp.flower
   if (line.cat === 'suit' && grp.cat === 'suit') return line.rank === grp.rank

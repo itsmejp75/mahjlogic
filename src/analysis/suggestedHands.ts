@@ -11,6 +11,7 @@ import {
   patternLinePreviewGroupOrderDefs,
   patternLinePreviewSlots,
   patternPreviewJokerEligibleBySlot,
+  inferCardLineFromGroupSlotMap,
   reorderTileDefsByCardLineFromGroupMap,
   srsDragonCoupledColumn,
 } from '../card/patternLinePreview'
@@ -2353,10 +2354,25 @@ export type SuggestedStripSlot = {
  * match; rank may differ because NMJL “any like numbers” lines print `1` as a placeholder while
  * the strip shows the resolved rank from the rack.
  */
+/** Suit-locked lines with one real suit: title digits use stand-in suits (see `previewStandInSuitForDigitInk`). */
+function suitLockedSingleSuitPattern(p: PracticePattern): boolean {
+  return (
+    p.groups?.some(
+      (g) =>
+        g.kind === 'suit-locked' &&
+        !g.opposingDragons &&
+        g.rankNeeds.length > 0,
+    ) ?? false
+  )
+}
+
 function stripDefsMatchForTitleReorder(stripDef: TileDef, titleDef: TileDef, p: PracticePattern): boolean {
   if (stripDef.cat !== titleDef.cat) return false
   if (stripDef.cat === 'suit' && titleDef.cat === 'suit') {
-    if (stripDef.suit !== titleDef.suit) return false
+    if (stripDef.suit !== titleDef.suit) {
+      if (suitLockedSingleSuitPattern(p) && stripDef.rank === titleDef.rank) return true
+      return false
+    }
     if (stripDef.rank === titleDef.rank) return true
     const likeNumbersPlaceholder =
       p.section === 'ANY LIKE NUMBERS' || p.id.startsWith('like-')
@@ -4114,6 +4130,40 @@ function reorderSlotAssignmentsToTitlePreviewSlots(
   return { slots: outSlots, defs: [...cardLineDefs] }
 }
 
+/**
+ * Card-line slot targets for rack sort gap-fill: same left-to-right meld layout as the printed
+ * hand, but suits/dragons resolved from greedy match (`stripDefs`), not title stand-in pixels.
+ */
+function buildResolvedCardLineDefsForFill(
+  p: PracticePattern,
+  stripDefs: readonly TileDef[],
+  displayDefs: readonly TileDef[],
+  titleOrderDefs: TileDef[] | null,
+): TileDef[] {
+  if (stripDefs.length === 0) return [...stripDefs]
+  const cardLine =
+    titleOrderDefs && titleOrderDefs.length === stripDefs.length ? titleOrderDefs : displayDefs
+  if (cardLine.length !== stripDefs.length) return [...stripDefs]
+
+  const map =
+    p.cardLineFromGroupSlotMap ??
+    inferCardLineFromGroupSlotMap({ ...p, roughTarget: stripDefs.length })
+  if (map?.length === stripDefs.length) {
+    return reorderTileDefsByCardLineFromGroupMap(stripDefs, map)
+  }
+
+  return cardLine.map((disp, i) => {
+    const resolved = stripDefs[i]
+    if (!resolved) return disp
+    if (tileDefsEqual(disp, resolved)) return resolved
+    if (disp.cat === 'suit' && resolved.cat === 'suit' && disp.rank === resolved.rank) return resolved
+    if (disp.cat === 'dragon' && resolved.cat === 'dragon') return resolved
+    if (disp.cat === 'flower' && resolved.cat === 'flower') return resolved
+    if (disp.cat === 'wind' && resolved.cat === 'wind' && disp.wind === resolved.wind) return resolved
+    return disp
+  })
+}
+
 /** Compute the strip-ordered, deduplicated list of hand-tile IDs that the pinned pattern uses. */
 function stripOrderedHandIdsForPattern(
   pinnedP: PracticePattern,
@@ -4167,25 +4217,20 @@ function stripOrderedHandIdsForPattern(
     return reorderTileDefsByCardLineFromGroupMap(stripDefs, pinnedP.cardLineFromGroupSlotMap)
   })()
 
-  let orderedSlotDefs = slotDefsInAssignmentOrder
   if (titleOrderDefs && titleOrderDefs.length === slots.length && slotDefsInAssignmentOrder.length === slots.length) {
     const used = new Set<number>()
     const reorderedSlots: (string | null)[] = []
-    const reorderedDefs: TileDef[] = []
     for (const d of titleOrderDefs) {
       const idx = slotDefsInAssignmentOrder.findIndex((candidate, i) => !used.has(i) && tileDefsEqual(candidate, d))
       if (idx < 0) {
         reorderedSlots.length = 0
-        reorderedDefs.length = 0
         break
       }
       used.add(idx)
       reorderedSlots.push(slots[idx] ?? null)
-      reorderedDefs.push(slotDefsInAssignmentOrder[idx]!)
     }
     if (reorderedSlots.length === slots.length) {
       slots.splice(0, slots.length, ...reorderedSlots)
-      orderedSlotDefs = reorderedDefs
     }
   }
   /* Resolved perm suits in title order — not stand-in preview suits (green→bam, etc.). */
@@ -4201,9 +4246,14 @@ function stripOrderedHandIdsForPattern(
   )
   if (titlePreviewReorder) {
     slots.splice(0, slots.length, ...titlePreviewReorder.slots)
-    orderedSlotDefs = titlePreviewReorder.defs
   }
-  const n = Math.min(slots.length, orderedSlotDefs.length)
+  const fillDefs = buildResolvedCardLineDefsForFill(
+    pinnedP,
+    stripDefs,
+    displayDefs,
+    titleOrderDefs,
+  )
+  const n = Math.min(slots.length, fillDefs.length)
   const inSlots = new Set<string>(slots.filter((x): x is string => x != null))
 
   // Fill any gaps left by `buildPreviewSlotKindsFromGroups` in **card index** order, using
@@ -4211,7 +4261,7 @@ function stripOrderedHandIdsForPattern(
   // (the old `usedOrder` tail put greedy match order first and scrambled FF before consec, etc.).
   for (let i = 0; i < n; i++) {
     if (slots[i] != null) continue
-    const d = orderedSlotDefs[i]!
+    const d = fillDefs[i]!
     for (const id of detail.usedOrder) {
       if (inSlots.has(id) || !handIds.has(id) || !bestIds.has(id)) continue
       const t = byId.get(id)
@@ -4225,7 +4275,7 @@ function stripOrderedHandIdsForPattern(
   }
   for (let i = 0; i < n; i++) {
     if (slots[i] != null) continue
-    const d = orderedSlotDefs[i]!
+    const d = fillDefs[i]!
     if (!previewSlotAllowsJoker(d, pinnedP, i, jokerEli)) continue
     for (const id of detail.usedOrder) {
       if (inSlots.has(id) || !handIds.has(id) || !bestIds.has(id)) continue
@@ -4243,12 +4293,6 @@ function stripOrderedHandIdsForPattern(
   for (let i = 0; i < n; i++) {
     const id = slots[i]
     if (id == null || !handIds.has(id) || seen.has(id)) continue
-    orderedIds.push(id)
-    seen.add(id)
-  }
-  for (const id of detail.usedOrder) {
-    if (!handIds.has(id) || seen.has(id)) continue
-    if (!bestIds.has(id)) continue
     orderedIds.push(id)
     seen.add(id)
   }
