@@ -491,6 +491,45 @@
   filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.45));
 }
 
+.hands-list__dead-cause-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28em;
+  margin-left: 0.28em;
+  vertical-align: middle;
+  max-width: min(100%, 14rem);
+}
+
+.hands-list__dead-cause-badge .hands-list__dead-cause-warn {
+  margin-left: 0;
+  flex-shrink: 0;
+}
+
+.hands-list__dead-cause-reason {
+  font-size: 0.72em;
+  font-weight: 600;
+  line-height: 1.15;
+  color: #92400e;
+  white-space: normal;
+}
+
+.hands-list__title-dead-cause-run {
+  box-shadow: 0 0 0 2px #facc15;
+  border-radius: 0.12em;
+  padding-inline: 0.04em;
+}
+
+.hands-list__pattern-tile-cell--dead-cause,
+.hands-sheet__tile-cell--dead-cause {
+  box-shadow: 0 0 0 2px #facc15;
+  border-radius: 0.2rem;
+}
+
+.hands-list__pattern-tile-cell--dead-cause.hands-list__pattern-tile-cell--suggest-dim,
+.hands-sheet__tile-cell--dead-cause.hands-sheet__tile-cell--suggest-dim {
+  box-shadow: 0 0 0 2px #facc15;
+}
+
 /* Pass slot and discard staging tiles that belong to the focused suggested hand */
 .pass-strip__tile-wrap--suggest-best .tile-face,
 .east-discard-staging__tile--suggest-best .tile-face {

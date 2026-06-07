@@ -21,9 +21,15 @@ import {
 import type { CardInk } from '../card/cardText'
 import type { PracticePattern } from '../card/practicePatterns'
 import type { TileDef, TileInstance } from '../mahjong/types'
+import {
+  formatDeadCauseMessage,
+  splitTitleTextForDeadCause,
+  stripSlotMatchesDeadCause,
+  type DeadCauseHint,
+} from '../mahjong/deadCauseHint'
+import type { CardTextSeg } from '../card/cardText'
 import type { SuggestedHandLine } from '../training/types'
 import { suggestedHandSectionMenuLabel } from '../suggestedHands/filterSettings'
-import { CardColoredText } from './CardColoredText'
 import { DeadCauseWarning } from './DeadCauseWarning'
 import { TileFace } from './TileFace'
 
@@ -155,10 +161,48 @@ function stripTileFaceCardInk(def: TileDef, ink: CardInk | undefined): CardInk |
   return ink
 }
 
+function CardColoredTextWithDeadCause({
+  segments,
+  deadCause,
+}: {
+  segments: CardTextSeg[]
+  deadCause: DeadCauseHint | null
+}) {
+  return (
+    <>
+      {segments.map((s, i) => (
+        <span key={i} className={`card-ink card-ink--${s.ink}`}>
+          {deadCause
+            ? splitTitleTextForDeadCause(s.t, deadCause.defs).map((part, j) =>
+                part.highlight ? (
+                  <span key={j} className="hands-list__title-dead-cause-run">
+                    {part.text}
+                  </span>
+                ) : (
+                  part.text
+                ),
+              )
+            : s.t}
+        </span>
+      ))}
+    </>
+  )
+}
+
+function SuggestedHandDeadCauseBadge({ cause }: { cause: DeadCauseHint }) {
+  return (
+    <span className="hands-list__dead-cause-badge" title={formatDeadCauseMessage(cause)}>
+      <DeadCauseWarning className="hands-list__dead-cause-warn" />
+      <span className="hands-list__dead-cause-reason">{formatDeadCauseMessage(cause)}</span>
+    </span>
+  )
+}
+
 function renderSheetTileRow(
   slots: SuggestedStripSlot[],
   isActiveRow: boolean,
   keyPrefix: string,
+  deadCause: DeadCauseHint | null = null,
 ) {
   return (
     <div className="hands-sheet__tiles-grid" role="presentation">
@@ -166,6 +210,7 @@ function renderSheetTileRow(
         const showJokerGuide = isActiveRow && slot.jokerSuggested
         const suggestBest = isActiveRow && slot.highlight
         const dim = isActiveRow && !slot.highlight && !slot.jokerSuggested
+        const deadCauseSlot = isActiveRow && stripSlotMatchesDeadCause(slot, deadCause)
         return (
           <div
             key={`${keyPrefix}-${i}`}
@@ -174,6 +219,7 @@ function renderSheetTileRow(
               showJokerGuide ? 'hands-sheet__tile-cell--suggest-joker' : '',
               suggestBest ? 'hands-sheet__tile-cell--suggest-best' : '',
               dim ? 'hands-sheet__tile-cell--suggest-dim' : '',
+              deadCauseSlot ? 'hands-sheet__tile-cell--dead-cause' : '',
             ]
               .filter(Boolean)
               .join(' ')}
@@ -285,8 +331,8 @@ type Props = {
   discardOverlayMeasureRef?: RefObject<HTMLElement | null>
   /** Toggle whether `handKey` is pinned (add/remove from {@link pinnedHandKeys}). */
   onPinnedPatternChange?: (handKey: string) => void
-  /** Focus keys with a dead-cause tile warning (yellow !) for the current deal. */
-  deadCauseFocusKeys?: ReadonlySet<string>
+  /** Per focus key: why the line is no longer completable (dead tile hint). */
+  deadCauseByFocusKey?: Readonly<Record<string, DeadCauseHint>>
 }
 
 export function SuggestedHandsPanel({
@@ -310,7 +356,7 @@ export function SuggestedHandsPanel({
   onDiscardOverlayPeekPxChange,
   discardOverlayMeasureRef,
   onPinnedPatternChange,
-  deadCauseFocusKeys = new Set(),
+  deadCauseByFocusKey = {},
 }: Props) {
   const sections = useMemo(() => {
     const uniq = Array.from(new Set(hands.map((h) => h.section)))
@@ -930,6 +976,7 @@ export function SuggestedHandsPanel({
                       const focusKey = row.focusKey
                       const rowStripSlots = row.stripSlots ?? []
                       const rowIsFocused = activePatternId === focusKey
+                      const rowDeadCause = rowIsFocused ? deadCauseByFocusKey[focusKey] ?? null : null
                       const rowLit = tilesGuideOn && rowIsFocused
                       const cardRef = suggestedHandCardRefDisplay(h)
                       const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points)}`
@@ -971,8 +1018,8 @@ export function SuggestedHandsPanel({
                               <span className="hands-sheet__category">
                                 {suggestedHandSectionMenuLabel(h.section)}
                                 <span className="hands-sheet__section-num"> - {cardRef}</span>
-                                {rowIsFocused && deadCauseFocusKeys.has(focusKey) ? (
-                                  <DeadCauseWarning className="hands-sheet__dead-cause-warn" />
+                                {rowDeadCause ? (
+                                  <SuggestedHandDeadCauseBadge cause={rowDeadCause} />
                                 ) : null}
                               </span>
                               {(() => {
@@ -987,7 +1034,10 @@ export function SuggestedHandsPanel({
                                       <span className="hands-sheet__hand-title-line">
                                         {h.titleSegments?.length ? (
                                           <>
-                                            <CardColoredText segments={h.titleSegments} />
+                                            <CardColoredTextWithDeadCause
+                                              segments={h.titleSegments}
+                                              deadCause={rowDeadCause}
+                                            />
                                             {h.closed ? (
                                               <span className="hands-sheet__card-c" aria-label="Concealed hand">
                                                 C
@@ -1008,7 +1058,7 @@ export function SuggestedHandsPanel({
                                     </div>
                                     {showTileDetail ? (
                                       <div className="hands-sheet__hand-stack-detail">
-                                        {renderSheetTileRow(rowStripSlots, rowLit, rowKey)}
+                                        {renderSheetTileRow(rowStripSlots, rowLit, rowKey, rowDeadCause)}
                                       </div>
                                     ) : parenText ? (
                                       <div className="hands-sheet__hand-stack-detail">
@@ -1160,6 +1210,7 @@ export function SuggestedHandsPanel({
                 const focusKey = row.focusKey
                 const rowStripSlots = row.stripSlots ?? []
                 const rowIsFocused = activePatternId === focusKey
+                const rowDeadCause = rowIsFocused ? deadCauseByFocusKey[focusKey] ?? null : null
                 const cardRef = suggestedHandCardRefDisplay(h)
                 const rowAriaLabel =
                   !handsListOn || !showHandCategoryLabels
@@ -1196,8 +1247,8 @@ export function SuggestedHandsPanel({
                             <span className="hands-list__with-tiles-category">
                               {suggestedHandSectionMenuLabel(h.section)}
                               <span className="hands-list__section-num"> - {cardRef}</span>
-                              {rowIsFocused && deadCauseFocusKeys.has(focusKey) ? (
-                                <DeadCauseWarning className="hands-list__dead-cause-warn" />
+                              {rowDeadCause ? (
+                                <SuggestedHandDeadCauseBadge cause={rowDeadCause} />
                               ) : null}
                             </span>
                             {handsListOn ? (
@@ -1207,7 +1258,10 @@ export function SuggestedHandsPanel({
                               >
                                 {h.titleSegments?.length ? (
                                   <>
-                                    <CardColoredText segments={h.titleSegments} />
+                                    <CardColoredTextWithDeadCause
+                                      segments={h.titleSegments}
+                                      deadCause={rowDeadCause}
+                                    />
                                     {h.closed ? (
                                       <span className="hands-list__card-c" aria-label="Concealed hand">
                                         C
@@ -1247,6 +1301,7 @@ export function SuggestedHandsPanel({
                                     const showJokerGuide = tilesGuideOn && rowIsFocused && slot.jokerSuggested
                                     const suggestBestRing = tilesGuideOn && rowIsFocused && slot.highlight
                                     const dimPatternSlot = tilesGuideOn && rowIsFocused && !slot.highlight && !slot.jokerSuggested
+                                    const deadCauseSlot = rowIsFocused && stripSlotMatchesDeadCause(slot, rowDeadCause)
                                     return (
                                       <div
                                         key={`${row.reactKey}-${i}`}
@@ -1255,6 +1310,7 @@ export function SuggestedHandsPanel({
                                           showJokerGuide ? 'hands-list__pattern-tile-cell--suggest-joker' : '',
                                           suggestBestRing ? 'hands-list__pattern-tile-cell--suggest-best' : '',
                                           dimPatternSlot ? 'hands-list__pattern-tile-cell--suggest-dim' : '',
+                                          deadCauseSlot ? 'hands-list__pattern-tile-cell--dead-cause' : '',
                                         ].filter(Boolean).join(' ')}
                                       >
                                         <TileFace

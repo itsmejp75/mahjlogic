@@ -43,6 +43,10 @@ import type { BlankTileCount } from './mahjong/deck'
 import type { ClaimType, DiscardEntry, EastExposure, Seat, Suit, TileDef, TileInstance } from './mahjong/types'
 import { tileAriaLabel } from './mahjong/labels'
 import {
+  findFocusedPatternDeadCause,
+  type DeadCauseHint,
+} from './mahjong/deadCauseHint'
+import {
   countDiscardEntriesMatchingDef,
   findExactMatches,
   sortTiles,
@@ -3118,6 +3122,7 @@ export default function App() {
         suppressAfterPhase: boolean
         deadIds: ReadonlySet<string>
         skullIds: ReadonlySet<string>
+        deadCause: DeadCauseHint | null
       }
     >
   >({})
@@ -4428,13 +4433,14 @@ export default function App() {
   /** Sorted discard tracker: highlight slot types still needed for the focused hand. */
   const suggestedDiscardTrackerNeedDefs = useMemo(() => {
     if (!suggestedDiscardGuideActive) return null
-    const defs = computeSuggestedDiscardTrackerNeedDefs(
+    // Keep `[]` (not `null`) while a hand stays focused so the tracker stays in suggest-dim
+    // mode. `null` turns the guide off and every discarded slot lights up at full brightness.
+    return computeSuggestedDiscardTrackerNeedDefs(
       suggestedFocusHandKey,
       rackForSuggestedPatternMatch,
       suggestedHandsExposureTileIds,
       cardPatterns,
     )
-    return defs.length > 0 ? defs : null
   }, [
     suggestedDiscardGuideActive,
     suggestedFocusHandKey,
@@ -4570,6 +4576,15 @@ export default function App() {
             if (tile && tileDefsEqual(tile.def, lastDiscard.def)) skullIds.add(id)
           }
         }
+        const deadCause: DeadCauseHint | null =
+          discardExhaustedNeededDef && lastDiscard && lastDiscardNeed != null
+            ? {
+                defs: [lastDiscard.def],
+                need: lastDiscardNeed,
+                available:
+                  totalCopiesForDeadHintDef(lastDiscard.def) - unavailableLastDiscardCopies,
+              }
+            : null
         setSuggestedDeadTileGuidesByKey((byKey) => {
           const cur = byKey[suggestedFocusHandKey]
           if (cur) {
@@ -4584,6 +4599,7 @@ export default function App() {
                 suppressAfterPhase: cur.suppressAfterPhase || suppressAfterPhase,
                 deadIds: nextDeadIds,
                 skullIds: nextSkullIds,
+                deadCause: deadCause ?? cur.deadCause,
               },
             }
           }
@@ -4594,6 +4610,7 @@ export default function App() {
               suppressAfterPhase,
               deadIds,
               skullIds,
+              deadCause,
             },
           }
         })
@@ -4733,14 +4750,45 @@ export default function App() {
     }
   }, [deadTileHintEnabled, suggestedFocusHandKey, suggestedDeadTableGuidesByKey])
 
-  const suggestedDeadCauseFocusKeys = useMemo(() => {
-    if (!deadTileHintEnabled) return new Set<string>()
-    const keys = new Set<string>()
-    for (const [key, guide] of Object.entries(suggestedDeadTileGuidesByKey)) {
-      if (guide.skullIds.size > 0) keys.add(key)
+  const suggestedDeadCauseByFocusKey = useMemo(() => {
+    if (!deadTileHintEnabled) return {} as Record<string, DeadCauseHint>
+    const unavailableByKey = new Map<string, number>()
+    for (const tile of [
+      ...discardPile.map((e) => e.tile),
+      ...botExposures.flatMap((e) => e.tiles),
+    ]) {
+      const key = deadHintDefKey(tile.def)
+      unavailableByKey.set(key, (unavailableByKey.get(key) ?? 0) + 1)
     }
-    return keys
-  }, [deadTileHintEnabled, suggestedDeadTileGuidesByKey])
+    const out: Record<string, DeadCauseHint> = {}
+    for (const [key, guide] of Object.entries(suggestedDeadTileGuidesByKey)) {
+      if (guide.deadCause) out[key] = guide.deadCause
+    }
+    const keysToProbe = new Set<string>([
+      ...Object.keys(suggestedDeadTileGuidesByKey),
+      ...(suggestedFocusHandKey ? [suggestedFocusHandKey] : []),
+    ])
+    for (const key of keysToProbe) {
+      if (out[key]) continue
+      const live = findFocusedPatternDeadCause(
+        key,
+        unavailableByKey,
+        cardPatterns,
+        totalCopiesForDeadHintDef,
+        deadHintDefKey,
+        focusedPatternNeedForDeadHintDef,
+      )
+      if (live) out[key] = live
+    }
+    return out
+  }, [
+    deadTileHintEnabled,
+    suggestedDeadTileGuidesByKey,
+    suggestedFocusHandKey,
+    discardPile,
+    botExposures,
+    cardPatterns,
+  ])
 
   useEffect(() => {
     if (mainPhase === 'mahjong-declared' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand' || mainPhase === 'wall-game') {
@@ -6922,7 +6970,7 @@ export default function App() {
           hideConcealedHands={suggestedHandsHideConcealed}
           cardPatterns={cardPatterns}
           cardSectionOrder={cardSectionOrder}
-          deadCauseFocusKeys={suggestedDeadCauseFocusKeys}
+          deadCauseByFocusKey={suggestedDeadCauseByFocusKey}
         />
       </div>
     )
