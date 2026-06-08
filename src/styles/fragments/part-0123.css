@@ -1974,3 +1974,15 @@ html body .app
   box-sizing: border-box;
   padding-top: var(--hand-rack-tray-bleed-inline);
 }
+
+/*
+ * Proportional tile corners: resolve radius from the local `--rack-tile-w` on each
+ * rack row instead of inheriting the root fallback. This keeps main hand tiles,
+ * Charleston/discard slots, and bot exposure wells at the same corner ratio as
+ * their tile width changes across desktop, narrow browser, and native layouts.
+ */
+html body .app :is(.exposure-rack, .hand-row, .discard-tracker__overlay-row) {
+  --tile-face-border-radius: calc(var(--rack-tile-w) * 0.062);
+  --tile-tray-shell-radius: calc(var(--tile-face-border-radius) + var(--bot-exposure-inner-pad));
+  --discard-tray-tile-corner-r: var(--tile-face-border-radius);
+}

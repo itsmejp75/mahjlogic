@@ -90,8 +90,12 @@
   --rack-tile-w: 2.65rem;
   --rack-tile-h: 3.53rem;
   --rack-tile-gap: 1px;
-  /* Used by `.tile-face` and dark tray shells that frame those faces (discard, bot rows). */
-  --tile-face-border-radius: 0.35rem;
+  /*
+   * Used by `.tile-face` and dark tray shells that frame those faces (discard, bot rows).
+   * Keep the corner ratio tied to the active tile width so small windows/mobile don't
+   * make slots and tile faces read as overly round.
+   */
+  --tile-face-border-radius: calc(var(--rack-tile-w) * 0.062);
   /* DnD subtree re-declares; concentric with tile faces where faces sit `inner-pad` inside the shell. */
   --bot-exposure-inner-pad: 4px;
   /* R_outer = R_tile + padding — same concentric look as the toolbar well around Menu / Suggested. */
@@ -130,8 +134,12 @@
   --play-tray-h-divider: calc((6 * var(--rack-stack-gap-y) + 8px) / 6);
   /* Lower discard overlay + bot exposure bands: tighter uniform row↔row gap (3 rows each). */
   --discard-bot-row-gap-y: max(2px, calc(var(--play-tray-h-divider) * 0.45));
-  /* Pass/Sort/Clear etc. — wells use `+ var(--bot-exposure-inner-pad)` so inner corners match the buttons. */
-  --rack-tile-btn-border-radius: 0.68rem;
+  /*
+   * Pass/Sort/Clear etc. — wells use `+ var(--bot-exposure-inner-pad)` so inner corners
+   * match the buttons. Scale with the main rack tile width for the same reason as tile
+   * faces: fixed radii look increasingly pill-shaped as the rack compresses.
+   */
+  --rack-tile-btn-border-radius: calc(var(--hand-rack-tile-w) * 0.128);
   --rack-tray-inset-inline: 0.44rem;
   /*
    * Locked top-rack geometry: hand tiles, East exposure tiles, and the action buttons
