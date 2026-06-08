@@ -125,10 +125,12 @@ export function deadHintGroupNeedVariantsAll(group: PatternGroup): DeadHintNeedM
       return DEAD_HINT_SUITS.map((suit) => {
         const needs = new Map<string, { def: TileDef; need: number }>()
         for (const rankNeed of group.rankNeeds) {
-          addDeadHintNeed(needs, { cat: 'suit', suit, rank: rankNeed.rank }, rankNeed.need)
+          const def: TileDef = { cat: 'suit', suit, rank: rankNeed.rank }
+          addDeadHintNeed(needs, def, rankNeed.need, meldDefIsJokerEligible(def, rankNeed.need))
         }
         if (group.dragonCount > 0) {
-          addDeadHintNeed(needs, { cat: 'dragon', dragon: DEAD_HINT_DRAGON_FOR_SUIT[suit] }, group.dragonCount)
+          const dragonDef: TileDef = { cat: 'dragon', dragon: DEAD_HINT_DRAGON_FOR_SUIT[suit] }
+          addDeadHintNeed(needs, dragonDef, group.dragonCount, meldDefIsJokerEligible(dragonDef, group.dragonCount))
         }
         return needs
       })
@@ -140,10 +142,12 @@ export function deadHintGroupNeedVariantsAll(group: PatternGroup): DeadHintNeedM
         for (let start = 1; start <= maxStart; start++) {
           const needs = new Map<string, { def: TileDef; need: number }>()
           for (let i = 0; i < group.numGroups; i++) {
-            addDeadHintNeed(needs, { cat: 'suit', suit, rank: start + i }, group.rankCount)
+            const def: TileDef = { cat: 'suit', suit, rank: start + i }
+            addDeadHintNeed(needs, def, group.rankCount, meldDefIsJokerEligible(def, group.rankCount))
           }
           if (group.dragonCount > 0) {
-            addDeadHintNeed(needs, { cat: 'dragon', dragon: DEAD_HINT_DRAGON_FOR_SUIT[suit] }, group.dragonCount)
+            const dragonDef: TileDef = { cat: 'dragon', dragon: DEAD_HINT_DRAGON_FOR_SUIT[suit] }
+            addDeadHintNeed(needs, dragonDef, group.dragonCount, meldDefIsJokerEligible(dragonDef, group.dragonCount))
           }
           variants.push(needs)
         }
@@ -157,7 +161,8 @@ export function deadHintGroupNeedVariantsAll(group: PatternGroup): DeadHintNeedM
         for (let start = 1; start <= maxStart; start++) {
           const needs = new Map<string, { def: TileDef; need: number }>()
           group.needs.forEach((need, i) => {
-            addDeadHintNeed(needs, { cat: 'suit', suit, rank: start + i }, need)
+            const def: TileDef = { cat: 'suit', suit, rank: start + i }
+            addDeadHintNeed(needs, def, need, meldDefIsJokerEligible(def, need))
           })
           variants.push(needs)
         }
@@ -184,16 +189,27 @@ export function deadHintGroupNeedVariantsAll(group: PatternGroup): DeadHintNeedM
             }
             const dragonCount = group.colorGroupDragonCounts?.[colorIdx] ?? 0
             if (dragonCount > 0) {
-              addDeadHintNeed(needs, { cat: 'dragon', dragon: DEAD_HINT_DRAGON_FOR_SUIT[suit] }, dragonCount)
+              const dragonDef: TileDef = { cat: 'dragon', dragon: DEAD_HINT_DRAGON_FOR_SUIT[suit] }
+              addDeadHintNeed(
+                needs,
+                dragonDef,
+                dragonCount,
+                meldDefIsJokerEligible(dragonDef, dragonCount),
+              )
             }
           })
           if (group.trailingDragonCount && assignment.length < DEAD_HINT_SUITS.length) {
             const remainingSuit = DEAD_HINT_SUITS.find((suit) => !assignment.includes(suit))
             if (remainingSuit) {
+              const dragonDef: TileDef = {
+                cat: 'dragon',
+                dragon: DEAD_HINT_DRAGON_FOR_SUIT[remainingSuit],
+              }
               addDeadHintNeed(
                 needs,
-                { cat: 'dragon', dragon: DEAD_HINT_DRAGON_FOR_SUIT[remainingSuit] },
+                dragonDef,
                 group.trailingDragonCount,
+                meldDefIsJokerEligible(dragonDef, group.trailingDragonCount),
               )
             }
           }

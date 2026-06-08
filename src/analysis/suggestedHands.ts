@@ -1201,13 +1201,14 @@ function groupNeedForDef(
         if (dragonCounts) return Math.max(...dragonCounts)
         return group.trailingDragonCount ?? null
       }
-      let maxNeed = 0
+      let need: number | null = null
       for (const cg of group.colorGroups) {
         for (const slot of cg) {
-          if (slot.rank === _def.rank && slot.need > maxNeed) maxNeed = slot.need
+          if (slot.rank !== _def.rank || slot.need <= 0) continue
+          need = need == null ? slot.need : Math.min(need, slot.need)
         }
       }
-      return maxNeed > 0 ? maxNeed : null
+      return need
     }
 
     case 'odd-pair-kongs-triple':
@@ -2169,14 +2170,14 @@ function resolveStripTargetDefsForGreedyMatch(
         for (let ci = 0; ci < n; ci++) {
           const s = bestPerm[ci]!
           const yearBlock =
-            isNmjl2026YearHandPattern(p) && isYear2026ColorGroup(g.colorGroups[ci]!)
+            isNmjl2026NeutralZeroPattern(p) && isNmjl2026ZeroColorGroup(g.colorGroups[ci]!)
           const rankOcc = new Map<number, number>()
           for (const sg of g.colorGroups[ci]) {
             const rank = sg.rank - 1 + bestBase
             for (let k = 0; k < sg.need && idx < b; k++) {
               const occ = rankOcc.get(rank) ?? 0
               rankOcc.set(rank, occ + 1)
-              const suit = yearBlock ? year2026SuitForGroupTile(s, rank, occ) : s
+              const suit = yearBlock ? nmjl2026ZeroSuitForGroupTile(s, rank, occ) : s
               out[idx++] = { cat: 'suit', suit, rank }
             }
           }
@@ -2798,21 +2799,21 @@ function suitPermuteComboScoreBetter(
   return candidate.slotSquareFill > current.slotSquareFill
 }
 
-/** 2026 NMJL Year lines: soap is neutral — adjoining 2s/6s may also be dots when matching. */
-function isNmjl2026YearHandPattern(p: PracticePattern): boolean {
-  // Neutral-zero applies only to the Year **section** (e.g. 2026-3), not every hand whose title
-  // contains “2026” (e.g. S&Ps-6, W&D-8).
-  return p.id.startsWith('nmjl2026:') && p.section === '2026'
+/** 2026 NMJL card: soap zero is neutral — adjoining 2s/6s may also be dots when matching. */
+function isNmjl2026NeutralZeroPattern(p: PracticePattern): boolean {
+  // This card-specific rule applies anywhere the 2026 NMJL card prints a zero, including
+  // Year, Winds-Dragons, and Singles & Pairs. Do not apply it to the mock card.
+  return p.id.startsWith('nmjl2026:') && p.title.includes('0')
 }
 
-function isYear2026ColorGroup(colorGroup: readonly { rank: number; need: number }[]): boolean {
+function isNmjl2026ZeroColorGroup(colorGroup: readonly { rank: number; need: number }[]): boolean {
   const twos = colorGroup.find((sg) => sg.rank === 2)?.need ?? 0
   const sixes = colorGroup.find((sg) => sg.rank === 6)?.need ?? 0
   return twos >= 2 && sixes >= 1
 }
 
-function year2026SuitForGroupTile(groupSuit: Suit, _rank: number, _rankOccurrence: number): Suit {
-  // Green “2026” column: one assigned suit for the run; soap is neutral but 2s/6s still
+function nmjl2026ZeroSuitForGroupTile(groupSuit: Suit, _rank: number, _rankOccurrence: number): Suit {
+  // “2026” column: one assigned suit for the run; soap is neutral but 2s/6s still
   // sort in that suit (dots are legal alternates for matching, not the default rack order).
   return groupSuit
 }
@@ -4909,20 +4910,24 @@ export function buildGreedyAlignedDeadHintNeeds(
           }
           const dragonCount = g.colorGroupDragonCounts?.[ci] ?? 0
           if (dragonCount > 0) {
+            const dragonDef: TileDef = { cat: 'dragon', dragon: drgForSuitPerm[s] }
             addDeadHintNeed(
               needs,
-              { cat: 'dragon', dragon: drgForSuitPerm[s] },
+              dragonDef,
               dragonCount,
+              meldDefIsJokerEligible(dragonDef, dragonCount),
             )
           }
         }
         if (tdc > 0) {
           const trailSuit = (['bam', 'dot', 'crak'] as Suit[]).find((s) => !bestPerm.includes(s))
           if (trailSuit) {
+            const dragonDef: TileDef = { cat: 'dragon', dragon: drgForSuitPerm[trailSuit] }
             addDeadHintNeed(
               needs,
-              { cat: 'dragon', dragon: drgForSuitPerm[trailSuit] },
+              dragonDef,
               tdc,
+              meldDefIsJokerEligible(dragonDef, tdc),
             )
           }
         }

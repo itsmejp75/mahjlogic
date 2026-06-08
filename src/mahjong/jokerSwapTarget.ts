@@ -146,6 +146,18 @@ export function findJokerSwapTargetAtSeat(
   return null
 }
 
+/** First legal bot joker swap in the visible rack order: South, then West, then North. */
+export function findNextBotJokerSwapTarget(
+  botExposures: BotExposure[],
+  naturalDef: TileDef,
+): JokerSwapTargetPick | null {
+  for (const seat of JOKER_SWAP_SEAT_ORDER) {
+    const pick = findJokerSwapTargetAtSeat(botExposures, seat, naturalDef)
+    if (pick) return pick
+  }
+  return null
+}
+
 /**
  * Picks one exposed joker East may reclaim with `naturalDef`, preferring earlier seats in turn order.
  */

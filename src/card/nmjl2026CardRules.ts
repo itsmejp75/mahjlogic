@@ -3,9 +3,9 @@
  * Source: league copy provided with `src/card/data/2026-nmjl-card.csv`.
  */
 
-/** 2026-only: in the Year (“2026”) section, 0 (soap) is neutral for color / opposing-suit placement vs #1 and #4. */
+/** 2026-only: when 0 appears on this card, soap is neutral for color / suit placement. */
 export const NMJL_2026_NEUTRAL_ZERO_YEAR_RULE =
-  'On the 2026 card only: in the Year section, “0” is neutral — adjoining 2s and 6s may use dots as one of the represented suit colors alongside the white dragons (soap), not only opposing craks and bams.'
+  'On the 2026 card only: “0” is neutral — adjoining suited numbers may use dots as one of the represented suit colors alongside the white dragons (soap), not only opposing craks and bams.'
 
 export const NMJL_2026_STANDARD_LEGEND = [
   'Standard: eight Flowers and eight Jokers.',

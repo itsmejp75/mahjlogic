@@ -179,9 +179,8 @@ import {
   eastExposureSwapDropId,
   EAST_SEAT_SWAP_ID,
   findJokerSwapTargetAtEastExposure,
-  findJokerSwapTargetAtExposure,
-  findJokerSwapTargetAtSeat,
   findJokerSwapTargetInEastRack,
+  findNextBotJokerSwapTarget,
   findNextJokerSwapTarget,
   collectHandTileIdsSwappableForJokers,
   collectSwappableJokerTileIds,
@@ -4318,11 +4317,22 @@ export default function App() {
       lastDiscard
         ? rackForSuggestedHandsUi.filter((tile) => tileDefsEqual(tile.def, lastDiscard.def)).length
         : 0
+    const lastDiscardJokerableVariantStillAvailable =
+      !!lastDiscard &&
+      lastDiscardNeed != null &&
+      lastDiscardNeed >= 3 &&
+      focusedPatternHasAvailableDeadHintVariant(
+        suggestedFocusHandKey,
+        lastDiscard.def,
+        unavailableDeadHintTiles,
+        cardPatterns,
+      )
     const discardExhaustedNeededDef =
       !!lastDiscard &&
       discardAdvanced &&
       !!currentDiscardNeedIds?.has(lastDiscard.id) &&
       lastDiscardNeed != null &&
+      !lastDiscardJokerableVariantStillAvailable &&
       ownedLastDiscardCopies < lastDiscardNeed &&
       totalCopiesForDeadHintDef(lastDiscard.def) - unavailableLastDiscardCopies < lastDiscardNeed
     const deadHintAppliesToDef = (def: TileDef) =>
@@ -4933,6 +4943,14 @@ export default function App() {
       const fromStagedDiscard = pendingEastDiscardTile?.id === aid
       const fromHandTile = hand.some((t) => t.id === aid)
       const fromBotDiscardForCall = isActiveBotDiscardDrag(aid, activeBotDiscard ?? null)
+      const botSeatOverlapHits = (): ReturnType<CollisionDetection> => {
+        if (!charlestonDone || !jokerSwapUiActive || (!fromHandTile && !fromStagedDiscard)) return []
+        const botSeatContainers = args.droppableContainers.filter(
+          (c) => parseBotSeatSwapDropId(String(c.id)) !== null,
+        )
+        if (botSeatContainers.length === 0) return []
+        return rectIntersection({ ...args, droppableContainers: botSeatContainers })
+      }
 
       if (fromBotDiscardForCall && charlestonDone && mainPhase === 'bot-turn') {
         const callContainers = args.droppableContainers.filter(
@@ -5084,6 +5102,8 @@ export default function App() {
           const seatHit = hits.find((h) => parseBotSeatSwapDropId(String(h.id)) !== null)
           if (seatHit) return [seatHit]
         }
+        const botSeatOverlap = botSeatOverlapHits()
+        if (botSeatOverlap.length > 0) return [botSeatOverlap[0]!]
         if (hand.some((t) => t.id === aid)) {
           const handTileIds = new Set(hand.map((t) => t.id))
           const overHandRack =
@@ -5158,6 +5178,8 @@ export default function App() {
           }
         }
       }
+      const botSeatOverlap = botSeatOverlapHits()
+      if (botSeatOverlap.length > 0) return [botSeatOverlap[0]!]
       return closestCenter(args)
     },
     [
@@ -6243,7 +6265,7 @@ export default function App() {
           }
         }
 
-        // Joker swap: your exposures, your row, or a bot’s meld / seat (same rules: natural for joker).
+        // Joker swap: your exposures, your row, or any bot exposure rack (same rules: natural for joker).
         const eastExposureSwapIdx = parseEastExposureSwapDropId(oid)
         const eastSeat = oid === EAST_SEAT_SWAP_ID
         const exposureSwapIdx = parseBotExposureSwapDropId(oid)
@@ -6267,14 +6289,9 @@ export default function App() {
             } else if (eastSeat) {
               pick = findJokerSwapTargetInEastRack(r.eastExposures, natural.def)
             } else if (exposureSwapIdx !== null) {
-              pick = findJokerSwapTargetAtExposure(r.botExposures, exposureSwapIdx, natural.def)
-            }
-            if (!pick && (seatSwap || exposureSwapIdx !== null)) {
-              const seat =
-                seatSwap ??
-                (exposureSwapIdx !== null ? r.botExposures[exposureSwapIdx]?.seat : null) ??
-                null
-              if (seat) pick = findJokerSwapTargetAtSeat(r.botExposures, seat, natural.def)
+              pick = findNextBotJokerSwapTarget(r.botExposures, natural.def)
+            } else if (seatSwap) {
+              pick = findNextBotJokerSwapTarget(r.botExposures, natural.def)
             }
             if (!pick) return r
             return applyEastNaturalForExposedJoker(r, { ...pick, eastTileId: aid })
@@ -7052,8 +7069,8 @@ export default function App() {
                         {col.map((section) => {
                           const labelId = `app-menu-sh-sec-${section.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '')}`
                           const shown = !suggestedHandsUncheckedSections.has(section)
-                          const exposureUnavailable =
-                            shown && !suggestedHandsExposureAvailableSections.has(section)
+                          const labelDimmed =
+                            !shown || !suggestedHandsExposureAvailableSections.has(section)
                           return (
                             <div key={section} className="app-menu-modal__row app-menu-modal__row--toggle">
                               <AppMenuSettingSwitch
@@ -7071,7 +7088,7 @@ export default function App() {
                               <span
                                 className={[
                                   'app-menu-modal__label',
-                                  exposureUnavailable ? 'app-menu-modal__label--exposure-unavailable' : '',
+                                  labelDimmed ? 'app-menu-modal__label--exposure-unavailable' : '',
                                 ]
                                   .filter(Boolean)
                                   .join(' ')}

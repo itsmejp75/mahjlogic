@@ -19,10 +19,6 @@
   align-items: flex-start;
 }
 
-.exposure-rack__meld-drop--over .exposure-rack__slot {
-  box-shadow: inset 0 0 0 2px rgba(245, 158, 11, 0.7);
-}
-
 /* ── Staging meld drop zone (exposure rack wrapper during call-staging) ── */
 
 .staging-meld-drop-zone {

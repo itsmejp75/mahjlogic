@@ -1362,7 +1362,8 @@ html[data-home-screen-app]:not([data-native-app])
     .rack-stage__rack-top
       .exposure-rack:not(.exposure-rack--charleston-pass)
       > .exposure-rack__slot--empty:last-child,
-    .rack-stage__rack-top .exposure-rack__call-initiate-target--near
+    .rack-stage__rack-top .exposure-rack__call-initiate-target--near,
+    .rack-stage__rack-top .exposure-rack__call-meld-add-slot
   ) {
   --rack-inline-slot-accent: var(--card-ink-green, #66bb6a);
   --rack-inline-slot-strip-h: calc(var(--rack-tile-h) / 3);
@@ -1452,7 +1453,8 @@ html[data-home-screen-app]:not([data-native-app])
     .rack-stage__rack-top
       .exposure-rack:not(.exposure-rack--charleston-pass)
       > .exposure-rack__slot--empty:last-child,
-    .rack-stage__rack-top .exposure-rack__call-initiate-target--near
+    .rack-stage__rack-top .exposure-rack__call-initiate-target--near,
+    .rack-stage__rack-top .exposure-rack__call-meld-add-slot
   ) {
   position: relative;
   isolation: isolate;
@@ -1497,7 +1499,8 @@ html[data-home-screen-app]:not([data-native-app])
     .rack-stage__rack-top
       .exposure-rack:not(.exposure-rack--charleston-pass)
       > .exposure-rack__slot--empty:last-child,
-    .rack-stage__rack-top .exposure-rack__call-initiate-target--near.exposure-rack__slot--empty
+    .rack-stage__rack-top .exposure-rack__call-initiate-target--near.exposure-rack__slot--empty,
+    .rack-stage__rack-top .exposure-rack__call-meld-add-slot
   )::before {
   content: '+';
   display: flex;
@@ -1560,7 +1563,8 @@ html[data-home-screen-app]:not([data-native-app])
     .rack-stage__rack-top
       .exposure-rack:not(.exposure-rack--charleston-pass)
       > .exposure-rack__slot--empty:last-child,
-    .rack-stage__rack-top .exposure-rack__call-initiate-target--near
+    .rack-stage__rack-top .exposure-rack__call-initiate-target--near,
+    .rack-stage__rack-top .exposure-rack__call-meld-add-slot
   )::after {
   content: '';
   position: absolute;

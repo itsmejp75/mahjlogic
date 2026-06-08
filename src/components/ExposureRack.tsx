@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
-import { useLayoutEffect, useRef } from 'react'
+import { Fragment, useLayoutEffect, useRef } from 'react'
 import { useDndContext, useDroppable } from '@dnd-kit/core'
 import { SortableContext, rectSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -285,6 +285,17 @@ function callMeldStripWidthStyle(tileCount: number): CSSProperties {
     minWidth: `calc(${n} * var(--rack-tile-w) + ${n - 1} * var(--player-rack-face-gap))`,
     maxWidth: `calc(${n} * var(--rack-tile-w) + ${n - 1} * var(--player-rack-face-gap))`,
   }
+}
+
+/** Call-staging only: green “+” well immediately after the staged meld (hidden after Done). */
+function CallMeldAddSlot() {
+  return (
+    <div
+      className="exposure-rack__slot exposure-rack__slot--empty exposure-rack__call-meld-add-slot"
+      role="presentation"
+      aria-hidden
+    />
+  )
 }
 
 type CallMeldStripTileGuideProps = {
@@ -1052,9 +1063,16 @@ export function ExposureRack({
       )
     }
     if (meld.onTileClick) {
-      return wrapMeldContent(
+      const strip = wrapMeldContent(
         <CallMeldStrip {...callStripCommon} locked={false} staging />,
         Math.max(1, ordered.length),
+      )
+      if (ordered.length >= 6) return strip
+      return (
+        <Fragment key={meld.calledTileId ?? `call-staging-${gi}`}>
+          {strip}
+          <CallMeldAddSlot />
+        </Fragment>
       )
     }
     return wrapMeldContent(
