@@ -487,6 +487,41 @@ html .app-top-exposure-container .discard-tracker__overlay-row {
   align-items: start;
 }
 
+/*
+ * Lock the discard tracker (B/C/D) + bot exposures (S/W/N) into one width-scaled band,
+ * mirroring how the main rack tiles scale: pure container-query sizing off the band's own
+ * width. The overlay grid is the size container; each row spans it 100%, so the 29 `1fr`
+ * columns AND the fixed `--rack-tile-w` tracks are both derived from the SAME width and stay
+ * equal at every viewport. The band simply shrinks to fit as the window narrows instead of
+ * being floored at a hand-rack-derived estimate — that floor stopped the tiles shrinking on
+ * narrow / native widths, so the fixed tracks grew wider than their grid cell and overflowed
+ * left over the S/W/N labels and exposure tiles. `max(1px, …)` keeps a non-zero size if the
+ * container ever reports 0 on first paint.
+ */
+html .app-top-exposure-container .discard-tracker__overlay-grid {
+  container-type: inline-size;
+  container-name: top-exposure-band;
+}
+
+@container top-exposure-band (min-width: 0px) {
+  html .app-top-exposure-container .discard-tracker__overlay-row {
+    --rack-tile-w: max(
+      1px,
+      calc(
+        (
+          100cqi
+          - (var(--discard-tracker-slots-across, 29) - 1) * var(--player-rack-face-gap)
+        ) / var(--discard-tracker-slots-across, 29)
+      )
+    );
+    --rack-tile-h: calc(var(--rack-tile-w) * 4 / 3);
+    --exposure-slot-h: var(--rack-tile-h);
+    --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
+    --discard-tray-rack-tile-w: var(--rack-tile-w);
+    --discard-tray-tile-corner-r: var(--tile-face-border-radius);
+  }
+}
+
 html .app-top-exposure-container
   .discard-tracker__overlay-row
   > .exposure-rack--discard-tracker-sorted-row {
