@@ -34,7 +34,7 @@ import { suggestedHandSectionMenuLabel } from '../suggestedHands/filterSettings'
 import { DeadCauseWarning } from './DeadCauseWarning'
 import { TileFace } from './TileFace'
 
-const CLICK_DELAY_MS = 280
+const CLICK_DELAY_MS = 450
 const PEEK_DRAG_THRESHOLD_PX = 10
 const PEEK_DRAG_CLICK_SUPPRESS_MS = 180
 /** Header tap-to-close only when press duration is below this (hold + release does not dismiss). */
@@ -379,7 +379,6 @@ export function SuggestedHandsPanel({
     () => new Set(sections.filter((s) => !uncheckedSections.has(s))),
     [sections, uncheckedSections],
   )
-  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const peekDragRef = useRef<{
     pointerId: number
     startY: number
@@ -399,13 +398,6 @@ export function SuggestedHandsPanel({
 
   const handsListScrollRef = useRef<HTMLDivElement>(null)
   const minSheetHeightPxRef = useRef(SUGGESTED_SHEET_MIN_FALLBACK_PX)
-
-  useEffect(
-    () => () => {
-      if (clickTimerRef.current != null) clearTimeout(clickTimerRef.current)
-    },
-    [],
-  )
 
   const syncPeekDragShellBlock = useCallback(
     (mode: 'active' | 'suppress' | 'off') => {
@@ -506,7 +498,7 @@ export function SuggestedHandsPanel({
     [detachPeekDragWindowListeners],
   )
 
-  /** Last row tap/click while waiting to distinguish single vs double (touch has no `dblclick`). */
+  /** Last row tap/click used to detect a second tap (touch has no reliable `dblclick`). */
   const pendingRowClickRef = useRef<{
     patternId: string
     focusKey: string
@@ -522,21 +514,12 @@ export function SuggestedHandsPanel({
         pending.focusKey === focusKey &&
         now - pending.at < CLICK_DELAY_MS
       ) {
-        if (clickTimerRef.current != null) {
-          clearTimeout(clickTimerRef.current)
-          clickTimerRef.current = null
-        }
         pendingRowClickRef.current = null
         onPatternDoubleClick(patternId, focusKey)
         return
       }
       pendingRowClickRef.current = { patternId, focusKey, at: now }
-      if (clickTimerRef.current != null) clearTimeout(clickTimerRef.current)
-      clickTimerRef.current = setTimeout(() => {
-        clickTimerRef.current = null
-        pendingRowClickRef.current = null
-        onPatternClick(focusKey)
-      }, CLICK_DELAY_MS)
+      onPatternClick(focusKey)
     },
     [onPatternClick, onPatternDoubleClick],
   )

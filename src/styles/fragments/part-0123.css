@@ -535,10 +535,18 @@ html .app-top-exposure-container .exposure-rack--discard-tracker-sorted-row {
   max-width: 100%;
 }
 
+/*
+ * The bot row is 14 fixed `--rack-tile-w` tracks inside a cell that spans 14 of the
+ * overlay grid's `1fr` columns. The two widths differ by a few px of sub-pixel
+ * rounding, and grid defaults to start-packing, parking that slack on the RIGHT —
+ * which left slot 14 short of the main rack's 14th-tile right edge. Right-pack the
+ * tracks so slot 14 sits flush with the rack edge (slack moves to the left instead).
+ */
 html .app-top-exposure-container .exposure-rack--discard-tracker-bot-row {
   display: grid;
   grid-template-columns: repeat(14, var(--rack-tile-w));
   gap: var(--player-rack-face-gap);
+  justify-content: end;
 }
 
 /*
