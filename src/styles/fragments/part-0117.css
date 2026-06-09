@@ -104,6 +104,20 @@
 }
 
 /*
+ * DragOverlay is a direct child of `.app-dnd-frame` (outside `.panel--hand`), so it does not
+ * inherit the panel container-query `--hand-top-rack-tile-w`. Mirror the hand-row formula
+ * (rack-stage horizontal pad + rim + 13 gaps) so dragged tiles keep the same width and
+ * corner radius as resting main-rack faces.
+ */
+.app-dnd-frame {
+  container-type: inline-size;
+  --hand-drag-overlay-tile-w: calc(
+    (100cqi - 2 * var(--app-h-pad) - var(--hand-rack-rim-inline, 2px) - 13 * var(--player-rack-face-gap)) / 14
+  );
+  --hand-drag-overlay-tile-h: calc(var(--hand-drag-overlay-tile-w) * 1.3333);
+}
+
+/*
  * Per-row exact-fit overrides (defense-in-depth + handles the two-different-gap case):
  *   - Non-charleston rack + .hand-row use gap = `--player-rack-face-gap` (= 2 px).
  *   - Charleston-pass rack uses gap = `--rack-tile-gap` (= 1 px) — `:not(...)` in

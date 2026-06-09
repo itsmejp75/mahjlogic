@@ -93,9 +93,10 @@
   /*
    * Used by `.tile-face` and dark tray shells that frame those faces (discard, bot rows).
    * Keep the corner ratio tied to the active tile width so small windows/mobile don't
-   * make slots and tile faces read as overly round.
+   * make slots and tile faces read as overly round. Ratio 0.132 == the original fixed
+   * 0.35rem at the 2.65rem default width (0.35 / 2.65), so default curvature is preserved.
    */
-  --tile-face-border-radius: calc(var(--rack-tile-w) * 0.062);
+  --tile-face-border-radius: calc(var(--rack-tile-w) * 0.132);
   /* DnD subtree re-declares; concentric with tile faces where faces sit `inner-pad` inside the shell. */
   --bot-exposure-inner-pad: 4px;
   /* R_outer = R_tile + padding — same concentric look as the toolbar well around Menu / Suggested. */

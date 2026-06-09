@@ -29,10 +29,11 @@
   animation: charleston-pass-fly-out-across 0.3s ease-in forwards;
 }
 
-/* DragOverlay sits outside `.panel--hand` — same tile size as the rack (see `--hand-rack-tile-*`). */
+/* DragOverlay sits outside `.panel--hand` — match hand-row face size (see `--hand-drag-overlay-tile-*`). */
 .drag-overlay-tile {
-  --rack-tile-w: var(--hand-rack-tile-w);
-  --rack-tile-h: var(--hand-rack-tile-h);
+  --rack-tile-w: var(--hand-drag-overlay-tile-w, var(--hand-top-rack-tile-w, var(--hand-rack-tile-w)));
+  --rack-tile-h: var(--hand-drag-overlay-tile-h, var(--hand-top-rack-tile-h, var(--hand-rack-tile-h)));
+  --tile-face-border-radius: calc(var(--rack-tile-w) * 0.132);
   width: var(--rack-tile-w);
   height: var(--rack-tile-h);
   flex-shrink: 0;
@@ -84,7 +85,7 @@
   border: none;
   background: none;
   cursor: pointer;
-  border-radius: 0.35rem;
+  border-radius: var(--tile-face-border-radius);
   width: 100%;
   height: 100%;
   line-height: 0;
@@ -306,7 +307,7 @@
 }
 
 .sortable-tile-wrap--suggest-best .tile-face {
-  border-radius: 0.35rem;
+  border-radius: var(--tile-face-border-radius);
   --tile-face-highlight-inset: 0 0 0 0 transparent;
   --tile-face-highlight-shadow: var(--suggest-best-ring);
 }
@@ -533,7 +534,7 @@
 /* Pass slot and discard staging tiles that belong to the focused suggested hand */
 .pass-strip__tile-wrap--suggest-best .tile-face,
 .east-discard-staging__tile--suggest-best .tile-face {
-  border-radius: 0.35rem;
+  border-radius: var(--tile-face-border-radius);
   --tile-face-highlight-inset: 0 0 0 0 transparent;
   --tile-face-highlight-shadow: var(--suggest-best-ring);
 }

@@ -503,6 +503,8 @@ export function SuggestedHandsPanel({
     patternId: string
     focusKey: string
     at: number
+    /** Deferred single-click timer (only set when the lone tap would unfocus the row). */
+    timer: ReturnType<typeof setTimeout> | null
   } | null>(null)
 
   const schedulePatternRowClick = useCallback(
@@ -514,14 +516,35 @@ export function SuggestedHandsPanel({
         pending.focusKey === focusKey &&
         now - pending.at < CLICK_DELAY_MS
       ) {
+        // Second tap on the same row → double-click (focus + sort to this line).
+        if (pending.timer != null) clearTimeout(pending.timer)
         pendingRowClickRef.current = null
         onPatternDoubleClick(patternId, focusKey)
         return
       }
-      pendingRowClickRef.current = { patternId, focusKey, at: now }
+      // New first tap: drop any deferred single-click left over from a previous tap.
+      if (pending?.timer != null) clearTimeout(pending.timer)
+
+      if (focusKey === activePatternId) {
+        // The row is already focused, so a lone tap unfocuses it. Defer that toggle-off past
+        // the double-click window: otherwise double-clicking to sort blinks the rack highlight
+        // off (first tap unfocuses) then back on (second tap re-focuses) before it sorts.
+        const timer = setTimeout(() => {
+          if (pendingRowClickRef.current?.at === now) {
+            pendingRowClickRef.current = null
+            onPatternClick(focusKey)
+          }
+        }, CLICK_DELAY_MS)
+        pendingRowClickRef.current = { patternId, focusKey, at: now, timer }
+        return
+      }
+
+      // Unfocused row: focus immediately for a responsive highlight, but remember the tap so a
+      // quick second tap upgrades to the sort (double-click) without re-toggling focus.
+      pendingRowClickRef.current = { patternId, focusKey, at: now, timer: null }
       onPatternClick(focusKey)
     },
-    [onPatternClick, onPatternDoubleClick],
+    [onPatternClick, onPatternDoubleClick, activePatternId],
   )
 
   const filtered = useMemo(

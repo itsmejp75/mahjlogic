@@ -2436,9 +2436,21 @@ function leftAnchorNaturalsByMeldRun(
     i++
     while (i < defs.length && tileDefsEqual(defs[i]!, d0)) i++
     const b = i
-    const nHighlighted = out.slice(a, b).reduce((acc, s) => acc + (s.highlight ? 1 : 0), 0)
-    if (nHighlighted <= 0) continue
-    for (let k = a; k < b; k++) out[k]!.highlight = k - a < nHighlighted
+    const run = out.slice(a, b)
+    if (!run.some((s) => s.highlight || s.jokerSuggested)) continue
+
+    const ordered = [
+      ...run.filter((s) => s.highlight),
+      ...run.filter((s) => !s.highlight && s.jokerSuggested),
+      ...run.filter((s) => !s.highlight && !s.jokerSuggested),
+    ]
+    for (let k = a; k < b; k++) {
+      out[k] = {
+        ...ordered[k - a]!,
+        // Preserve card-line ink by visual position; duplicate runs can be recolored by card column.
+        cardInk: out[k]!.cardInk,
+      }
+    }
   }
   return out
 }
@@ -3228,9 +3240,9 @@ export function buildConsecRanksTierStripRow(
   const trailSuit = (['bam', 'dot', 'crak'] as Suit[]).find((s) => !tierPerm.includes(s))!
   const pinnedGroups: PatternGroup[] = [
     ...(p.groups!.slice(0, gi) as PatternGroup[]),
-    ...spg.colorGroups.flatMap((cgSlot, ci) => {
+    ...spg.colorGroups.flatMap((cgSlot, ci): PatternGroup[] => {
       const s = tierPerm[ci]!
-      return cgSlot.map((sg): PatternGroup => {
+      const suitGroups = cgSlot.map((sg): PatternGroup => {
         const rank = sg.rank - 1 + tierBase
         return {
           kind: 'fixed',
@@ -3238,6 +3250,14 @@ export function buildConsecRanksTierStripRow(
           test: (d) => d.cat === 'suit' && d.suit === s && d.rank === rank,
         }
       })
+      // Per-color-group dragons sit right after that slot's suit tiles in `strip`; mirror them in
+      // the pinned groups so the matcher consumes the held dragons and strip geometry stays aligned.
+      const dc = spg.colorGroupDragonCounts?.[ci] ?? 0
+      const dragonGroups: PatternGroup[] =
+        dc > 0
+          ? [{ kind: 'fixed', need: dc, test: (d: TileDef) => d.cat === 'dragon' && d.dragon === drgForSuitPin[s] }]
+          : []
+      return [...suitGroups, ...dragonGroups]
     }),
     ...(spg.trailingDragonCount
       ? [{ kind: 'fixed' as const, need: spg.trailingDragonCount, test: (d: TileDef) => d.cat === 'dragon' && d.dragon === drgForSuitPin[trailSuit] }]
@@ -3983,12 +4003,21 @@ function buildPinnedPatternFromComboStr(
   const trailSuit = (['bam', 'dot', 'crak'] as Suit[]).find((s) => !permSuits.includes(s))!
   const pinnedGroups: PatternGroup[] = [
     ...basePattern.groups.slice(0, gi),
-    ...spg.colorGroups.flatMap((cgSlot, ci) => {
+    ...spg.colorGroups.flatMap((cgSlot, ci): PatternGroup[] => {
       const s = permSuits[ci]!
-      return cgSlot.map((sg): PatternGroup => {
+      const suitGroups = cgSlot.map((sg): PatternGroup => {
         const rank = spg.consecRanks ? sg.rank - 1 + base : sg.rank
         return { kind: 'fixed', need: sg.need, canUseJoker: sg.canUseJoker, test: (d) => d.cat === 'suit' && d.suit === s && d.rank === rank }
       })
+      // Per-color-group dragons (e.g. sp-7 "D 1 2 3 …") match the color slot's suit dragon and sit
+      // right after that slot's suit singles — keep them in the pinned pattern so the matcher
+      // consumes them and the strip/rack highlights cover the held dragons (and align geometry).
+      const dc = spg.colorGroupDragonCounts?.[ci] ?? 0
+      const dragonGroups: PatternGroup[] =
+        dc > 0
+          ? [{ kind: 'fixed', need: dc, test: (d: TileDef) => d.cat === 'dragon' && d.dragon === drgForSuitPin[s] }]
+          : []
+      return [...suitGroups, ...dragonGroups]
     }),
     ...(spg.trailingDragonCount
       ? [{ kind: 'fixed' as const, need: spg.trailingDragonCount, test: (d: TileDef) => d.cat === 'dragon' && d.dragon === drgForSuitPin[trailSuit] }]

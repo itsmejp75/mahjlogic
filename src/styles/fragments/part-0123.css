@@ -1390,6 +1390,8 @@ html[data-home-screen-app]:not([data-native-app])
 .app .panel--hand .rack-stage__rack-top,
 .panel--hand .pass-strip-tail {
   --rack-inline-slot-strip-h: calc(var(--rack-tile-h) / 3);
+  /* Same corner ratio as `.hand-row` / main rack tiles (0.132 × width). */
+  --tile-face-border-radius: calc(var(--rack-tile-w) * 0.132);
 }
 
 .app .panel--hand .rack-stage__rack-top {
@@ -1418,8 +1420,9 @@ html[data-home-screen-app]:not([data-native-app])
       rgba(0, 0, 0, 0.42)
   );
   --rack-inline-slot-top-rule-w: max(2px, 0.15rem);
+  --rack-inline-slot-corner-r: var(--tile-face-border-radius, calc(0.132 * var(--rack-tile-w)));
   --rack-inline-slot-top-rule-radius: calc(
-    var(--tile-face-border-radius, calc(0.116 * var(--rack-tile-w))) + var(--rack-inline-slot-top-rule-w)
+    var(--rack-inline-slot-corner-r) + var(--rack-inline-slot-top-rule-w)
   );
   --rack-inline-slot-top-rule-h: var(--rack-inline-slot-top-rule-radius);
   --rack-inline-slot-plus-color: var(--app-container-surface, #5c6066);
@@ -1513,7 +1516,7 @@ html[data-home-screen-app]:not([data-native-app])
   background-position: top center;
   border: 0;
   box-shadow: none;
-  border-radius: var(--rack-inline-slot-top-rule-radius) var(--rack-inline-slot-top-rule-radius) 0 0;
+  border-radius: var(--rack-inline-slot-corner-r) var(--rack-inline-slot-corner-r) 0 0;
   overflow: hidden;
 }
 
@@ -1977,12 +1980,26 @@ html body .app
 
 /*
  * Proportional tile corners: resolve radius from the local `--rack-tile-w` on each
- * rack row instead of inheriting the root fallback. This keeps main hand tiles,
- * Charleston/discard slots, and bot exposure wells at the same corner ratio as
- * their tile width changes across desktop, narrow browser, and native layouts.
+ * rack row instead of inheriting the root fallback. Scope to the main hand panel only —
+ * discard tracker and bot exposures use a rounder 0.116 ratio (see block below).
  */
-html body .app :is(.exposure-rack, .hand-row, .discard-tracker__overlay-row) {
-  --tile-face-border-radius: calc(var(--rack-tile-w) * 0.062);
+html body .app .panel--hand :is(.exposure-rack, .hand-row) {
+  --tile-face-border-radius: calc(var(--rack-tile-w) * 0.132);
   --tile-tray-shell-radius: calc(var(--tile-face-border-radius) + var(--bot-exposure-inner-pad));
+}
+
+/*
+ * Discard tracker tiles are much smaller than main-rack tiles; keep the legacy 0.116 × width
+ * ratio so corners stay visible (the hand-rack radius rule above was overriding this via
+ * `.exposure-rack` / `.discard-tracker__overlay-row` and made faces read as square).
+ */
+html body .app .panel--discard-tracker :is(
+    .discard-tracker__content,
+    .discard-tracker__overlay-grid,
+    .discard-tracker__overlay-row,
+    .discard-pile,
+    .exposure-rack
+  ) {
+  --tile-face-border-radius: calc(0.116 * var(--rack-tile-w, var(--discard-tray-rack-tile-w)));
   --discard-tray-tile-corner-r: var(--tile-face-border-radius);
 }
