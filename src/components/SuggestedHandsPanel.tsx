@@ -547,6 +547,53 @@ export function SuggestedHandsPanel({
     [onPatternClick, onPatternDoubleClick, activePatternId],
   )
 
+  /** Touch pointers: count taps on `pointerup` — iOS/PWA often coalesces fast double-taps into one `click`. */
+  const rowTouchPointerRef = useRef<{
+    pointerId: number
+    x: number
+    y: number
+    patternId: string
+    focusKey: string
+  } | null>(null)
+  const skipRowClickFromTouchRef = useRef(false)
+
+  const bindPatternRowInteraction = useCallback(
+    (patternId: string, focusKey: string) => ({
+      onPointerDown: (e: PointerEvent<HTMLButtonElement>) => {
+        if (e.pointerType !== 'touch' || e.button !== 0) return
+        rowTouchPointerRef.current = {
+          pointerId: e.pointerId,
+          x: e.clientX,
+          y: e.clientY,
+          patternId,
+          focusKey,
+        }
+      },
+      onPointerUp: (e: PointerEvent<HTMLButtonElement>) => {
+        if (e.pointerType !== 'touch' || e.button !== 0) return
+        const start = rowTouchPointerRef.current
+        if (!start || start.pointerId !== e.pointerId) return
+        rowTouchPointerRef.current = null
+        const dx = e.clientX - start.x
+        const dy = e.clientY - start.y
+        if (dx * dx + dy * dy > PEEK_DRAG_THRESHOLD_PX * PEEK_DRAG_THRESHOLD_PX) return
+        skipRowClickFromTouchRef.current = true
+        window.setTimeout(() => {
+          skipRowClickFromTouchRef.current = false
+        }, CLICK_DELAY_MS)
+        schedulePatternRowClick(start.patternId, start.focusKey)
+      },
+      onPointerCancel: () => {
+        rowTouchPointerRef.current = null
+      },
+      onClick: () => {
+        if (skipRowClickFromTouchRef.current) return
+        schedulePatternRowClick(patternId, focusKey)
+      },
+    }),
+    [schedulePatternRowClick],
+  )
+
   const filtered = useMemo(
     () => hands.filter((h) => checkedSections.has(h.section)),
     [hands, checkedSections],
@@ -1018,7 +1065,7 @@ export function SuggestedHandsPanel({
                           <button
                             type="button"
                             className="hands-sheet__row-btn"
-                            onClick={() => schedulePatternRowClick(h.id, focusKey)}
+                            {...bindPatternRowInteraction(h.id, focusKey)}
                             aria-label={ariaLabel}
                             aria-pressed={rowIsFocused}
                           >
@@ -1237,14 +1284,13 @@ export function SuggestedHandsPanel({
                   'hands-list__row-hit--with-tiles',
                   showHandCategoryLabels ? 'hands-list__row-hit--with-category' : '',
                 ].filter(Boolean).join(' ')
-                const handleRowClick = () => { schedulePatternRowClick(h.id, focusKey) }
                 const outerSharedProps = {
                   className: outerClass,
                   style: rowHitGridStyle,
                   'aria-label': rowAriaLabel,
                   'aria-pressed': rowIsFocused,
                   'aria-current': rowIsFocused ? (true as const) : undefined,
-                  onClick: handleRowClick,
+                  ...bindPatternRowInteraction(h.id, focusKey),
                 }
                 const liClassName = [
                   'hands-list__row',
