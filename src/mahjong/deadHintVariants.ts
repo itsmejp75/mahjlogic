@@ -1,4 +1,4 @@
-import { oddPairKongsTripleSixPackRanks } from '../card/patternLinePreview'
+import { pairKongsTripleBlockRanks } from '../card/patternLinePreview'
 import type { PatternGroup, PracticePattern } from '../card/practicePatterns'
 import type { Suit, TileDef } from './types'
 
@@ -218,10 +218,35 @@ export function deadHintGroupNeedVariantsAll(group: PatternGroup): DeadHintNeedM
       }
       return variants
     }
+    case 'dragon-meld-permute': {
+      const variants: Array<Map<string, { def: TileDef; need: number }>> = []
+      if (group.needs.length !== 3) return variants
+      const types: Array<Extract<TileDef, { cat: 'dragon' }>['dragon']> = ['green', 'red', 'soap']
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          if (j === i) continue
+          for (let k = 0; k < 3; k++) {
+            if (k === i || k === j) continue
+            const needs = new Map<string, { def: TileDef; need: number }>()
+            const pairs: Array<[Extract<TileDef, { cat: 'dragon' }>['dragon'], number]> = [
+              [types[i]!, group.needs[0]!],
+              [types[j]!, group.needs[1]!],
+              [types[k]!, group.needs[2]!],
+            ]
+            for (const [dr, need] of pairs) {
+              const def: TileDef = { cat: 'dragon', dragon: dr }
+              addDeadHintNeed(needs, def, need, meldDefIsJokerEligible(def, need))
+            }
+            variants.push(needs)
+          }
+        }
+      }
+      return variants
+    }
     case 'odd-pair-kongs-triple': {
       const variants: Array<Map<string, { def: TileDef; need: number }>> = []
       for (const pairRank of group.odds) {
-        const sixRanks = oddPairKongsTripleSixPackRanks(group.odds, pairRank)
+        const sixRanks = pairKongsTripleBlockRanks(group.odds, pairRank)
         for (const assignment of deadHintSuitPermutations(3)) {
           const needs = new Map<string, { def: TileDef; need: number }>()
           const s0 = assignment[0]!

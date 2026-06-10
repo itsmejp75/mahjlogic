@@ -56,9 +56,10 @@ export type PatternGroup =
    */
   | { kind: 'suit-locked-consec'; numGroups: number; rankCount: number; dragonCount: number }
   /**
-   * 2026 **13579 #4** style: three distinct suits. One suit holds six tiles — each rank in `odds`
-   * exactly once except **one** rank appears twice (the pair). The other two suits each hold a
-   * kong of **that same pair rank** (“kongs match pair”).
+   * 2026 **13579 #4** / **369 #5**: three distinct suits. One suit holds the “mixed” block
+   * (13579: six tiles with one paired odd; 369: four tiles `3369`/`3669`/`3699`). The other two
+   * suits each hold a kong of **that same pair rank** (“kongs match pair”). `odds` is the allowed
+   * pair ranks ([1,3,5,7,9] or [3,6,9]).
    */
   | {
       kind: 'odd-pair-kongs-triple'
@@ -89,6 +90,16 @@ export type PatternGroup =
        * Use for hands like "FFF 1111 2222 DDD" where 1111/2222 can be any consecutive rank pair.
        */
       consecRanks?: true
+    }
+  /**
+   * Parenthetical “Any 3 Dragons” (e.g. W&D #2): three dragon melds whose **types** are a permutation
+   * of green / red / soap (card prints one assignment; matcher tries every order). `cardDragons[i]` is
+   * the stand-in type for meld `i` in **card line / title preview** only — not a legality constraint.
+   */
+  | {
+      kind: 'dragon-meld-permute'
+      needs: number[]
+      cardDragons: Array<'green' | 'red' | 'soap'>
     }
 
 export type PracticePattern = {

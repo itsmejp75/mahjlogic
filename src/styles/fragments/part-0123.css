@@ -980,8 +980,9 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
  *
  * Mobile WKWebView (PWA): the global suggest-dim `::after` overlay (part-0075) reparents every
  * non-joker face when the guide toggles — the whole rack jogs. Jokers never jog because they use
- * `filter` only. Main rack naturals match jokers: filter dim + pre-reserved `outline` coaching ring
- * (no `::after` overlay, no inset box-shadow ring, no lift-shadow `::before`).
+ * `filter` only. Main rack naturals match jokers: filter dim + the same coaching ring as jokers
+ * (`--suggest-best-ring` on classic ivory; illustrative `::after` from part-0124 when highlighted).
+ * Suppress dim `::after` on naturals only while not suggest-best.
  */
 .app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap .tile-face {
   --tile-face-base-shadow: 0 0 0 0 transparent;
@@ -992,11 +993,14 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 .app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap .tile-face:not(.tile--joker) {
   --tile-face-highlight-shadow: 0 0 0 0 transparent;
   --tile-face-highlight-inset: 0 0 0 0 transparent;
-  outline: 2px solid transparent;
-  outline-offset: -2px;
 }
 
-.app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap .tile-face:not(.tile--joker)::after {
+.app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap:not(.sortable-tile-wrap--suggest-best)
+  .tile-face:not(.tile--joker)::after {
   content: none !important;
   display: none !important;
 }
@@ -1007,7 +1011,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 .app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--suggest-best .tile-face:not(.tile--joker) {
   filter: none;
-  outline-color: var(--tile-highlight-border);
+  --tile-face-highlight-shadow: var(--suggest-best-ring);
 }
 
 .app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap .sortable-tile-wrap__fly {
@@ -1015,16 +1019,17 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   z-index: 2;
 }
 
-/* East exposure row: same filter + outline pattern (no suggest-dim `::after` on mobile). */
+/* East exposure row: same filter + ring pattern (no suggest-dim `::after` on mobile). */
 .panel--hand .rack-stage__rack-top .exposure-rack__slot .tile-face:not(.tile--joker),
 .panel--hand .rack-stage__rack-top .exposure-rack__call-meld-strip__tile .tile-face:not(.tile--joker) {
   --tile-face-highlight-shadow: 0 0 0 0 transparent;
-  outline: 2px solid transparent;
-  outline-offset: -2px;
 }
 
-.panel--hand .rack-stage__rack-top .exposure-rack__slot .tile-face:not(.tile--joker)::after,
-.panel--hand .rack-stage__rack-top .exposure-rack__call-meld-strip__tile .tile-face:not(.tile--joker)::after {
+.panel--hand .rack-stage__rack-top .exposure-rack__slot:not(.exposure-rack__slot--suggest-best) .tile-face:not(.tile--joker)::after,
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__call-meld-strip__tile:not(.exposure-rack__slot--suggest-best)
+  .tile-face:not(.tile--joker)::after {
   content: none !important;
   display: none !important;
 }
@@ -1039,7 +1044,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 .panel--hand .rack-stage__rack-top .exposure-rack__call-meld-strip__tile.exposure-rack__slot--suggest-best
   .tile-face:not(.tile--joker) {
   filter: none;
-  outline-color: var(--tile-highlight-border);
+  --tile-face-highlight-shadow: var(--suggest-best-ring);
 }
 
 /* Bakelite / designer: keep inset edge highlights; drop only the outer depth on the hand row. */

@@ -8,8 +8,10 @@ import {
   dragon,
   eastW,
   flower,
+  grnDrg,
   northW,
   or,
+  redDrg,
   soapDrg,
   southW,
   suit,
@@ -70,6 +72,65 @@ function titleSegmentsForRow(row: Nmjl2026CsvHandRow): CardTextSeg[] {
 
 function pushFixedGroup(groups: PatternGroup[], need: number, test: Test): void {
   if (need > 0) groups.push({ kind: 'fixed', need, test })
+}
+
+/** Card ink on a standalone `DD` row → matcher + strip target (NMJL prints soap/0 in blue). */
+function dragonTestForInk(ink: CardInk): Test {
+  if (ink === 'green') return grnDrg
+  if (ink === 'red') return redDrg
+  if (ink === 'soap' || ink === 'navy') return soapDrg
+  return dragon
+}
+
+function isAnyThreeDragonsParenthetical(row: Nmjl2026CsvHandRow): boolean {
+  return /\bany 3 dragons\b/i.test(row.parenthesis)
+}
+
+function colorRunHasDigitRanks(run: ColorRun, row: Nmjl2026CsvHandRow): boolean {
+  return tokensForRun(run, row).some((tok) =>
+    tokenParts(tok).some((p) => /^[0-9]+$/.test(p)),
+  )
+}
+
+/** D-only color runs on “Any 3 Dragons” hands — card line order, stand-in types for strip preview. */
+function dragonMeldsFromAnyThreeDragonsRow(row: Nmjl2026CsvHandRow): {
+  needs: number[]
+  cardDragons: Array<'green' | 'red' | 'soap'>
+} {
+  const needs: number[] = []
+  const cardDragons: Array<'green' | 'red' | 'soap'> = []
+  for (const run of splitColorRuns(row.colors)) {
+    if (colorRunHasDigitRanks(run, row)) continue
+    let dCount = 0
+    for (const token of tokensForRun(run, row)) {
+      for (const part of tokenParts(token)) {
+        if (/^D+$/.test(part)) dCount += part.length
+      }
+    }
+    if (dCount > 0) {
+      needs.push(dCount)
+      cardDragons.push(run.ink === 'green' ? 'green' : run.ink === 'red' ? 'red' : 'soap')
+    }
+  }
+  return { needs, cardDragons }
+}
+
+function isDragonOnlyMeldGroup(g: PatternGroup): boolean {
+  if (g.kind === 'rank') {
+    return (
+      g.test({ cat: 'dragon', dragon: 'red' }) ||
+      g.test({ cat: 'dragon', dragon: 'green' }) ||
+      g.test({ cat: 'dragon', dragon: 'soap' })
+    )
+  }
+  if (g.kind === 'fixed') {
+    return (
+      g.test({ cat: 'dragon', dragon: 'red' }) &&
+      g.test({ cat: 'dragon', dragon: 'green' }) &&
+      g.test({ cat: 'dragon', dragon: 'soap' })
+    )
+  }
+  return false
 }
 
 function windTest(w: 'N' | 'E' | 'W' | 'S'): Test {
@@ -170,7 +231,7 @@ function dragonOrphanRankGroups(row: Nmjl2026CsvHandRow, rankSlots: RankSlot[]):
   if (isOpposingDragonParenthetical(row)) return []
   return rankSlots
     .filter((s) => s.ranks.size === 0 && s.dragonCount > 0)
-    .map((s) => ({ kind: 'rank' as const, need: s.dragonCount, test: dragon }))
+    .map((s) => ({ kind: 'rank' as const, need: s.dragonCount, test: dragonTestForInk(s.ink) }))
 }
 
 function buildRankGroups(row: Nmjl2026CsvHandRow, rankSlots: RankSlot[]): PatternGroup[] {
@@ -269,11 +330,27 @@ function isOddPairKongsTripleRow(row: Nmjl2026CsvHandRow): boolean {
   return p.includes('pair any odd') && p.includes('kongs match pair')
 }
 
+/** 369 #5: `FF 3369 3333 3333` — pair rank ∈ {3,6,9}, two kongs match that pair (card prints 3s). */
+function is369PairKongsTripleRow(row: Nmjl2026CsvHandRow): boolean {
+  if (row.category !== '369') return false
+  const p = row.parenthesis.toLowerCase()
+  return p.includes('kongs match pair') && p.includes('pair 3') && p.includes('6')
+}
+
 function buildGroupsAndMatches(row: Nmjl2026CsvHandRow): { groups: PatternGroup[]; matches: Test } {
   if (isOddPairKongsTripleRow(row)) {
     return {
       groups: [{ kind: 'odd-pair-kongs-triple', odds: [1, 3, 5, 7, 9] }],
       matches: suit(1, 3, 5, 7, 9),
+    }
+  }
+  if (is369PairKongsTripleRow(row)) {
+    return {
+      groups: [
+        { kind: 'fixed', need: 2, test: flower },
+        { kind: 'odd-pair-kongs-triple', odds: [3, 6, 9] },
+      ],
+      matches: or(flower, suit(3, 6, 9)),
     }
   }
   const groups: PatternGroup[] = []
@@ -301,7 +378,15 @@ function buildGroupsAndMatches(row: Nmjl2026CsvHandRow): { groups: PatternGroup[
             matchTests.push(windTest(w))
           }
         } else if (/^D+$/.test(part)) {
-          slot.dragonCount += part.length
+          const runHasDigitRanks = colorRunHasDigitRanks(run, row)
+          if (isAnyThreeDragonsParenthetical(row) && !runHasDigitRanks) {
+            // W&D #2: three D-only ink rows → consolidated `dragon-meld-permute` at end.
+          } else if (slot.ranks.size > 0 && !runHasDigitRanks) {
+            // Same ink twice (e.g. W&D #2 `blue:1234` then `blue:DDDD`) — not matching dragons on the run.
+            pushFixedGroup(groups, part.length, dragonTestForInk(run.ink))
+          } else {
+            slot.dragonCount += part.length
+          }
           matchTests.push(dragon)
         } else if (/^[0-9]+$/.test(part)) {
           if (rankGroupInsertPos < 0) rankGroupInsertPos = groups.length
@@ -333,7 +418,9 @@ function buildGroupsAndMatches(row: Nmjl2026CsvHandRow): { groups: PatternGroup[
     // which breaks **pair** semantics in the strip. Emit one `fixed` group per ink row instead.
     if (dragonOnlySlots.length > 1) {
       for (const slot of dragonOnlySlots) {
-        if (slot.dragonCount > 0) pushFixedGroup(groups, slot.dragonCount, dragon)
+        if (slot.dragonCount > 0) {
+          pushFixedGroup(groups, slot.dragonCount, dragonTestForInk(slot.ink))
+        }
       }
     } else {
       const dragonNeed = rankSlots.reduce((sum, slot) => sum + slot.dragonCount, 0)
@@ -348,6 +435,16 @@ function buildGroupsAndMatches(row: Nmjl2026CsvHandRow): { groups: PatternGroup[
       : exactRanks.length
         ? suit(...exactRanks)
         : anySuit
+  if (isAnyThreeDragonsParenthetical(row)) {
+    const { needs, cardDragons } = dragonMeldsFromAnyThreeDragonsRow(row)
+    if (needs.length >= 2 && needs.reduce((a, b) => a + b, 0) > 0) {
+      const withoutDragonMelds = groups.filter((g) => !isDragonOnlyMeldGroup(g))
+      withoutDragonMelds.push({ kind: 'dragon-meld-permute', needs, cardDragons })
+      groups.length = 0
+      groups.push(...withoutDragonMelds)
+    }
+  }
+
   const usefulTests = [
     ...matchTests.filter((test) => test !== anySuit),
     exactRanks.length ? suitMatch : undefined,

@@ -5,7 +5,8 @@ import type { CardInk } from '../card/cardText'
 import {
   firstOpposingConsecutiveStandInPairFromTitle,
   jokerEligibleGroupToDisplayFromPattern,
-  oddPairKongsTripleSixPackRanks,
+  pairKongsTripleBlockRanks,
+  oddPairKongsTripleGroupTileCount,
   patternLinePreviewCardInks,
   patternLinePreviewDefs,
   patternLinePreviewGroupOrderDefs,
@@ -95,6 +96,20 @@ function isGenericAllDragonsFixedGroup(g: PatternGroup): boolean {
     g.test({ cat: 'dragon', dragon: 'green' }) &&
     g.test({ cat: 'dragon', dragon: 'soap' })
   )
+}
+
+/** Identical-tile meld (pair / pung / kong): pick the dragon type with the most copies in `rem`. */
+function pickBestDragonTypeFromRem(rem: readonly TileInstance[]): Dragon | null {
+  let best: Dragon | null = null
+  let bestCount = 0
+  for (const dr of DRAGON_PAIR_ORDER) {
+    const c = rem.filter((t) => t.def.cat === 'dragon' && t.def.dragon === dr).length
+    if (c > bestCount) {
+      bestCount = c
+      best = dr
+    }
+  }
+  return bestCount > 0 ? best : null
 }
 
 /** One tile consumed by `computeGroupMatch` (natural or joker fill), for preview-strip alignment. */
@@ -199,8 +214,10 @@ function countGroupPreviewSlots(g: PatternGroup): number {
       return g.colorGroups.reduce((acc, cg, ci) =>
         acc + cg.reduce((sum, sg) => sum + sg.need, 0) + (g.colorGroupDragonCounts?.[ci] ?? 0), 0)
         + (g.trailingDragonCount ?? 0)
+    case 'dragon-meld-permute':
+      return g.needs.reduce((a, b) => a + b, 0)
     case 'odd-pair-kongs-triple':
-      return 14
+      return oddPairKongsTripleGroupTileCount(g)
     default:
       return 0
   }
@@ -235,6 +252,8 @@ function previewDefFitsGroupTileType(d: TileDef, g: PatternGroup): boolean {
         (g.colorGroupDragonCounts?.some((dc) => dc > 0) ?? false) ||
         (g.trailingDragonCount ?? 0) > 0
       ))
+    case 'dragon-meld-permute':
+      return d.cat === 'dragon'
     case 'odd-pair-kongs-triple':
       return d.cat === 'suit'
     default:
@@ -274,14 +293,14 @@ function oddPairKongsTripleScoreParts(
   noJokers: boolean,
 ): { exposureFill: number; naturalTotal: number; totalWithJokers: number } {
   const jokerCount = rack.filter((t) => t.def.cat === 'joker').length
-  const sixRanks = oddPairKongsTripleSixPackRanks(odds, pairRank)
+  const blockRanks = pairKongsTripleBlockRanks(odds, pairRank)
   const s0 = perm[0]!
   const s1 = perm[1]!
   const s2 = perm[2]!
   let sixNat = 0
   let exposureFill = 0
   const sixNeedByRank = new Map<number, number>()
-  for (const r of sixRanks) {
+  for (const r of blockRanks) {
     sixNeedByRank.set(r, (sixNeedByRank.get(r) ?? 0) + 1)
   }
   for (const [r, need] of sixNeedByRank) {
@@ -463,6 +482,17 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
             const dr = DRAGON_FOR_SUIT[couple.perm[1]!]!
             pred = d => d.cat === 'dragon' && d.dragon === dr
           }
+        } else if (isGenericAllDragonsFixedGroup(g) && g.need >= 2) {
+          // Any-dragon pair / pung / kong — must be identical tiles, not mixed types.
+          const dr = pickBestDragonTypeFromRem(remaining)
+          if (dr) {
+            const m = take((d) => d.cat === 'dragon' && d.dragon === dr, g.need)
+            total += m
+            noteJokerSlots(g.need, m)
+          } else {
+            noteJokerSlots(g.need, 0)
+          }
+          break
         }
         const m = take(pred, g.need)
         total += m
@@ -875,11 +905,11 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
           undefined,
           noJokers,
         )
-        const sixRanksTake = oddPairKongsTripleSixPackRanks(odds, bestPairRank)
+        const blockRanksTake = pairKongsTripleBlockRanks(odds, bestPairRank)
         const s0t = bestPerm[0]!
         const s1t = bestPerm[1]!
         const s2t = bestPerm[2]!
-        for (const r of sixRanksTake) {
+        for (const r of blockRanksTake) {
           const m = take((d) => d.cat === 'suit' && d.suit === s0t && d.rank === r, 1)
           total += m
           noteJokerSlots(1, m)
@@ -890,6 +920,25 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
         const m2 = take((d) => d.cat === 'suit' && d.suit === s2t && d.rank === bestPairRank, 4)
         total += m2
         noteJokerSlots(4, m2)
+        break
+      }
+
+      case 'dragon-meld-permute': {
+        if (g.needs.length !== 3 || g.cardDragons.length !== 3) {
+          for (const n of g.needs) noteJokerSlots(n, 0)
+          break
+        }
+        const bestTypes = pickBestDragonMeldPermuteTypes(remaining, g.needs)
+        if (bestTypes) {
+          for (let i = 0; i < 3; i++) {
+            const dr = bestTypes[i]!
+            const m = take((d) => d.cat === 'dragon' && d.dragon === dr, g.needs[i]!)
+            total += m
+            noteJokerSlots(g.needs[i]!, m)
+          }
+        } else {
+          for (const n of g.needs) noteJokerSlots(n, 0)
+        }
         break
       }
 
@@ -1214,6 +1263,15 @@ function groupNeedForDef(
     case 'odd-pair-kongs-triple':
       if (_def.cat !== 'suit' || !group.odds.includes(_def.rank)) return null
       return 4
+
+    case 'dragon-meld-permute':
+      if (_def.cat !== 'dragon') return null
+      for (let i = 0; i < group.needs.length; i++) {
+        if (group.cardDragons[i] === _def.dragon && group.needs[i]! >= 3) {
+          return group.needs[i]
+        }
+      }
+      return null
 
     default:
       return null
@@ -1794,6 +1852,45 @@ function fillSpanTileDefs(out: TileDef[], a: number, tiles: TileInstance[]) {
 
 const DRAGON_PAIR_ORDER: readonly Dragon[] = ['green', 'red', 'soap']
 
+/** All 6 assignments of three distinct dragon types to three meld slots. */
+function permuteThreeDragonTypes(): Array<['green' | 'red' | 'soap', 'green' | 'red' | 'soap', 'green' | 'red' | 'soap']> {
+  const t: Array<'green' | 'red' | 'soap'> = ['green', 'red', 'soap']
+  const out: Array<['green' | 'red' | 'soap', 'green' | 'red' | 'soap', 'green' | 'red' | 'soap']> = []
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      if (j === i) continue
+      for (let k = 0; k < 3; k++) {
+        if (k === i || k === j) continue
+        out.push([t[i]!, t[j]!, t[k]!])
+      }
+    }
+  }
+  return out
+}
+
+/** Best fill when each meld slot may take any permutation of green / red / soap (W&D #2). */
+function pickBestDragonMeldPermuteTypes(
+  rem: readonly TileInstance[],
+  needs: readonly number[],
+): Array<'green' | 'red' | 'soap'> | null {
+  if (needs.length !== 3) return null
+  let bestFill = -1
+  let bestTypes: Array<'green' | 'red' | 'soap'> | null = null
+  for (const typePerm of permuteThreeDragonTypes()) {
+    let fill = 0
+    for (let i = 0; i < 3; i++) {
+      const dr = typePerm[i]!
+      const have = rem.filter((t) => t.def.cat === 'dragon' && t.def.dragon === dr).length
+      fill += Math.min(have, needs[i]!)
+    }
+    if (fill > bestFill) {
+      bestFill = fill
+      bestTypes = [...typePerm]
+    }
+  }
+  return bestTypes
+}
+
 /**
  * Reorder matched naturals so each **pair** of strip cells shows two identical dragons when the
  * multiset supports it (e.g. RR+GG, RRRR). Greedy `usedMeta` order can interleave types when a
@@ -1821,18 +1918,12 @@ function orderDragonTilesForAdjacentPairs(tiles: TileInstance[]): TileInstance[]
   if (!top) return tiles
   const arr0 = top[1]
   if (arr0.length >= 4) return arr0.slice(0, 4)
-  if (arr0.length === 2 && ranked.length >= 2 && ranked[1]![1].length >= 2) {
+  if (arr0.length === 2 && ranked.length >= 2 && ranked[1]![1].length === 2) {
     const arr1 = ranked[1]![1]
     return [...arr0.slice(0, 2), ...arr1.slice(0, 2)]
   }
-  // e.g. 2+2+2 across three dragon types — show two pairs in deterministic ink order (variants can stack later).
-  const pairTypes = DRAGON_PAIR_ORDER.filter((d) => (byType.get(d)?.length ?? 0) >= 2)
-  if (pairTypes.length >= 2) {
-    const a = byType.get(pairTypes[0]!)!.slice(0, 2)
-    const b = byType.get(pairTypes[1]!)!.slice(0, 2)
-    return [...a, ...b]
-  }
-  return tiles
+  // Kong / pung: one dragon type per meld — never mix G+RRR in one four-tile span.
+  return arr0.slice(0, Math.min(4, arr0.length))
 }
 
 function isDragonKey(k: string): k is Dragon {
@@ -1842,6 +1933,14 @@ function isDragonKey(k: string): k is Dragon {
 function stripSlotAcceptsNatural(p: PracticePattern, targetDef: TileDef, naturalDef: TileDef): boolean {
   if (tileDefsEqual(targetDef, naturalDef)) return true
   if (targetDef.cat === 'dragon' && targetDef.dragon === 'any' && naturalDef.cat === 'dragon') {
+    return true
+  }
+  // W&D #2: meld slots are 3+3+4; dragon **type** permutes — any held dragon fits its assigned slot.
+  if (
+    targetDef.cat === 'dragon' &&
+    naturalDef.cat === 'dragon' &&
+    p.groups?.some((g) => g.kind === 'dragon-meld-permute')
+  ) {
     return true
   }
   if (firstOpposingConsecutiveStandInPairFromTitle(p) == null) return false
@@ -1895,6 +1994,12 @@ function resolveStripTargetDefsForGreedyMatch(
         break
       }
       case 'fixed': {
+        if (isGenericAllDragonsFixedGroup(g) && g.need >= 2) {
+          // Show the full pair/pung/kong target (e.g. 4× green) — closest meld from what you hold.
+          const dr = pickBestDragonTypeFromRem(rem)
+          if (dr) fillSpan(out, a, b, { cat: 'dragon', dragon: dr })
+          break
+        }
         const taken = metaNatTilesForGroup(rack, usedMeta, gi)
         if (taken.length > 0) {
           const ordered =
@@ -2119,6 +2224,23 @@ function resolveStripTargetDefsForGreedyMatch(
         }
         break
       }
+      case 'dragon-meld-permute': {
+        const taken = metaNatTilesForGroup(rack, usedMeta, gi)
+        if (taken.length > 0) {
+          fillSpanTileDefs(out, a, taken)
+          break
+        }
+        const bestTypes = pickBestDragonMeldPermuteTypes(rem, g.needs)
+        if (!bestTypes) break
+        let idx = a
+        for (let i = 0; i < g.needs.length; i++) {
+          const dr = bestTypes[i]!
+          for (let k = 0; k < g.needs[i]! && idx < b; k++) {
+            out[idx++] = { cat: 'dragon', dragon: dr }
+          }
+        }
+        break
+      }
       case 'odd-pair-kongs-triple': {
         const odds = g.odds
         const { pairRank: bestPairRank, perm: bestPerm } = pickBestOddPairKongsTriple(
@@ -2129,11 +2251,11 @@ function resolveStripTargetDefsForGreedyMatch(
           p.section === 'SINGLES AND PAIRS',
         )
         let idx = a
-        const sixOut = oddPairKongsTripleSixPackRanks(odds, bestPairRank)
+        const blockOut = pairKongsTripleBlockRanks(odds, bestPairRank)
         const s0o = bestPerm[0]!
         const s1o = bestPerm[1]!
         const s2o = bestPerm[2]!
-        for (const r of sixOut) {
+        for (const r of blockOut) {
           for (let k = 0; k < 1 && idx < b; k++) out[idx++] = { cat: 'suit', suit: s0o, rank: r }
         }
         for (let k = 0; k < 4 && idx < b; k++) out[idx++] = { cat: 'suit', suit: s1o, rank: bestPairRank }
@@ -2476,6 +2598,21 @@ function normalizeSuggestedStripTargetDefs(defs: TileDef[]): TileDef[] {
   })
 }
 
+function resolveCardLineFromGroupSlotMap(
+  p: PracticePattern,
+  override?: readonly number[],
+): readonly number[] | undefined {
+  return override ?? p.cardLineFromGroupSlotMap ?? inferCardLineFromGroupSlotMap(p)
+}
+
+function patternForCardLineStrip(
+  p: PracticePattern,
+  cardLineMap: readonly number[] | undefined,
+): PracticePattern {
+  if (!cardLineMap || p.cardLineFromGroupSlotMap === cardLineMap) return p
+  return { ...p, cardLineFromGroupSlotMap: cardLineMap }
+}
+
 /**
  * Builds strip cells for a **full** winning hand (`roughTarget` tiles, usually 14): rack naturals
  * where assigned, otherwise the completed-hand target tile (joker placeholders → that meld’s natural).
@@ -2493,13 +2630,17 @@ function buildSuggestedStripSlotsFromStripDefs(
   strictSuitMatching = false,
   /** Skip internal title-order reorder (caller will do its own reordering). */
   skipTitleReorder = false,
+  /** Base-pattern card line map when `p` is a pinned variant without `cardLineFromGroupSlotMap`. */
+  cardLineFromGroupSlotMapOverride?: readonly number[],
 ): SuggestedStripSlot[] {
-  const rawDefs = reorderTileDefsByCardLineFromGroupMap(stripDefsGroup, p.cardLineFromGroupSlotMap)
+  const cardLineMap = resolveCardLineFromGroupSlotMap(p, cardLineFromGroupSlotMapOverride)
+  const pForStrip = patternForCardLineStrip(p, cardLineMap)
+  const rawDefs = reorderTileDefsByCardLineFromGroupMap(stripDefsGroup, cardLineMap)
   const defs = normalizeSuggestedStripTargetDefs(rawDefs).slice(0, p.roughTarget)
   const cardInks = patternLinePreviewCardInks(p)
   if (defs.length === 0) return []
   const assign = computePreviewStripAssignment(
-    p,
+    pForStrip,
     rack,
     usedOrder,
     bestIdsForAssignment,
@@ -2938,14 +3079,21 @@ function reorderStripSlotsToCardTitleOrder(
   slots: SuggestedStripSlot[],
   stripDefs: readonly TileDef[],
   desiredDefs: readonly TileDef[] | null,
+  /** When group-append strip order differs from card line (e.g. consec-2b kongs before run). */
+  cardLineFromGroupSlotMap?: readonly number[],
 ): SuggestedStripSlot[] {
   if (!desiredDefs || desiredDefs.length !== slots.length || stripDefs.length !== slots.length) {
     return slots
   }
+  // `slots` follow card/display order (post `maybePermuteAssignmentToCardLine`); `stripDefs` are
+  // usually still in group-append order. Match against card-ordered defs so indices align with `slots`.
+  const stripForMatch = reorderTileDefsByCardLineFromGroupMap(stripDefs, cardLineFromGroupSlotMap)
   const used = new Set<number>()
   const order: number[] = []
   for (const d of desiredDefs) {
-    const idx = stripDefs.findIndex((candidate, i) => !used.has(i) && tileDefsEqual(candidate, d))
+    const idx = stripForMatch.findIndex(
+      (candidate, i) => !used.has(i) && tileDefsEqual(candidate, d),
+    )
     if (idx < 0) return slots
     used.add(idx)
     order.push(idx)
@@ -3181,6 +3329,7 @@ function buildSuitPermuteStripVariantRows(
     }
     const comboKey = suitPermuteComboKey(base, perm)
     const pinnedP = buildPinnedPatternFromComboStr(p, comboKey) ?? p
+    const cardLineMap = resolveCardLineFromGroupSlotMap(p)
     const variantDetail = greedyPatternMatchDetail(
       rack,
       pinnedP,
@@ -3202,11 +3351,13 @@ function buildSuitPermuteStripVariantRows(
       strip,
       true,
       true,
+      cardLineMap,
     )
     return reorderStripSlotsToCardTitleOrder(
       slots,
       strip,
       cardTitleOrderDefsForSuitPermute(p, g, perm, base),
+      cardLineMap,
     )
   })
   return rows.length > 0
@@ -3265,6 +3416,7 @@ export function buildConsecRanksTierStripRow(
     ...(p.groups!.slice(gi + 1) as PatternGroup[]),
   ]
   const pinnedP: PracticePattern = { ...p, groups: pinnedGroups }
+  const cardLineMap = resolveCardLineFromGroupSlotMap(p)
   const tierDetail = greedyPatternMatchDetail(rackForMatch, pinnedP)
   const rackIdSet = new Set(rackForMatch.map((t) => t.id))
   const tierBestIds = new Set(tierDetail.usedOrder.filter((id) => rackIdSet.has(id)))
@@ -3313,11 +3465,13 @@ export function buildConsecRanksTierStripRow(
     strip,
     true,
     true,
+    cardLineMap,
   )
   return reorderStripSlotsToCardTitleOrder(
     slots,
     strip,
     cardTitleOrderDefsForSuitPermute(p, spg, tierPerm, tierBase),
+    cardLineMap,
   )
 }
 
@@ -4959,6 +5113,18 @@ export function buildGreedyAlignedDeadHintNeeds(
               meldDefIsJokerEligible(dragonDef, tdc),
             )
           }
+        }
+        break
+      }
+      case 'dragon-meld-permute': {
+        if (g.needs.length !== 3) break
+        const rem = rackAfterPriorGroups(rack, detail.usedMeta, gi)
+        const bestTypes = pickBestDragonMeldPermuteTypes(rem, g.needs)
+        if (!bestTypes) break
+        for (let i = 0; i < 3; i++) {
+          const dr = bestTypes[i]!
+          const def: TileDef = { cat: 'dragon', dragon: dr }
+          addDeadHintNeed(needs, def, g.needs[i]!, meldDefIsJokerEligible(def, g.needs[i]!))
         }
         break
       }

@@ -1,5 +1,5 @@
 import type { TileDef, TileInstance } from '../mahjong/types'
-import { oddPairKongsTripleSixPackRanks } from '../card/patternLinePreview'
+import { pairKongsTripleBlockRanks } from '../card/patternLinePreview'
 import { suitPermutations } from '../card/nmjlSuitSlots'
 import { getActiveCardPatterns } from '../card/activeCardPatternsScope'
 import type { PatternGroup, PracticePattern } from '../card/practicePatterns'
@@ -184,6 +184,28 @@ function branchesForRank(g: Extract<PatternGroup, { kind: 'rank' }>): Map<string
   const ds = dragonsPassing(g.test)
   if (ds.length) return ds.map((d) => new Map([[`d:${d}`, g.need]]))
   return []
+}
+
+function branchesDragonMeldPermute(
+  g: Extract<PatternGroup, { kind: 'dragon-meld-permute' }>,
+): Map<string, number>[] {
+  if (g.needs.length !== 3) return []
+  const types: Array<(typeof DRAGONS)[number]> = ['green', 'red', 'soap']
+  const out: Map<string, number>[] = []
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      if (j === i) continue
+      for (let k = 0; k < 3; k++) {
+        if (k === i || k === j) continue
+        const m = new Map<string, number>()
+        inc(m, `d:${types[i]!}`, g.needs[0]!)
+        inc(m, `d:${types[j]!}`, g.needs[1]!)
+        inc(m, `d:${types[k]!}`, g.needs[2]!)
+        out.push(m)
+      }
+    }
+  }
+  return out
 }
 
 function branchesSharedRankSuits(
@@ -396,7 +418,7 @@ function branchesOddPairKongsTriple(
 ): Map<string, number>[] {
   const out: Map<string, number>[] = []
   for (const pairRank of g.odds) {
-    const sixRanks = oddPairKongsTripleSixPackRanks(g.odds, pairRank)
+    const sixRanks = pairKongsTripleBlockRanks(g.odds, pairRank)
     for (const perm of suitPermutations(3)) {
       const s0 = perm[0]!
       const s1 = perm[1]!
@@ -433,6 +455,8 @@ function branchesForGroup(g: PatternGroup): Map<string, number>[] {
       return branchesSuitLockedConsecMulti(g)
     case 'suit-permute':
       return branchesSuitPermute(g)
+    case 'dragon-meld-permute':
+      return branchesDragonMeldPermute(g)
     case 'odd-pair-kongs-triple':
       return branchesOddPairKongsTriple(g)
     default:

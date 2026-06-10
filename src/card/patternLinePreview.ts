@@ -18,6 +18,34 @@ export function oddPairKongsTripleSixPackRanks(odds: readonly number[], pairRank
   return [...below, pairRank, pairRank, ...above]
 }
 
+const PAIR_KONGS_369_ODDS: readonly number[] = [3, 6, 9]
+
+function isPairKongs369Odds(odds: readonly number[]): boolean {
+  return odds.length === 3 && odds.every((r, i) => PAIR_KONGS_369_ODDS[i] === r)
+}
+
+/**
+ * Suit-slot-0 block for “kongs match pair” hands: 13579 #4 → six tiles; 369 #5 → four (`3369` / `3669` / `3699`).
+ */
+export function pairKongsTripleBlockRanks(odds: readonly number[], pairRank: number): number[] {
+  if (isPairKongs369Odds(odds)) {
+    const out: number[] = []
+    for (const r of odds) {
+      out.push(r)
+      if (r === pairRank) out.push(r)
+    }
+    return out
+  }
+  return oddPairKongsTripleSixPackRanks(odds, pairRank)
+}
+
+/** Tiles consumed by one `odd-pair-kongs-triple` group (369 #5 has separate flower `fixed` → 12, not 14). */
+export function oddPairKongsTripleGroupTileCount(
+  g: Extract<PatternGroup, { kind: 'odd-pair-kongs-triple' }>,
+): number {
+  return isPairKongs369Odds(g.odds) ? 12 : 14
+}
+
 /** Suits that pass `test` as suit tiles at a reference rank (for SRS preview column order). */
 function suitsAllowedAtRank(test: (d: TileDef) => boolean, rank: number): Suit[] {
   return SUITS.filter((s) => test({ cat: 'suit', suit: s, rank }))
@@ -125,6 +153,15 @@ function probeDragon(test: (d: TileDef) => boolean): Dragon | null {
   return null
 }
 
+/** Generic `dragon` matcher accepts every color; preview as `any`, not probeDragon's first hit (red). */
+function isGenericDragonTest(test: (d: TileDef) => boolean): boolean {
+  return (
+    test({ cat: 'dragon', dragon: 'red' }) &&
+    test({ cat: 'dragon', dragon: 'green' }) &&
+    test({ cat: 'dragon', dragon: 'soap' })
+  )
+}
+
 function probeSuitRank(test: (d: TileDef) => boolean): { suit: Suit; rank: number } | null {
   for (const suit of SUITS) {
     for (let rank = 1; rank <= 9; rank++) {
@@ -142,6 +179,10 @@ function appendFixed(out: TileDef[], need: number, test: (d: TileDef) => boolean
   const w = probeWind(test)
   if (w != null) {
     pushWind(out, w, need)
+    return
+  }
+  if (isGenericDragonTest(test)) {
+    pushDragon(out, 'any', need)
     return
   }
   const d = probeDragon(test)
@@ -209,7 +250,7 @@ function appendOddPairKongsTriple(
   const s0 = SUITS[0]!
   const s1 = SUITS[1]!
   const s2 = SUITS[2]!
-  for (const r of oddPairKongsTripleSixPackRanks(odds, pairRank)) {
+  for (const r of pairKongsTripleBlockRanks(odds, pairRank)) {
     pushSuit(out, s0, r, 1)
     if (flags) pushJokerFlagRun(flags, 1, false)
   }
@@ -653,6 +694,12 @@ function appendGroup(out: TileDef[], p: PracticePattern, g: PatternGroup) {
       }
       break
     }
+    case 'dragon-meld-permute': {
+      for (let i = 0; i < g.needs.length; i++) {
+        pushDragon(out, g.cardDragons[i] ?? 'green', g.needs[i]!)
+      }
+      break
+    }
     default:
       break
   }
@@ -662,12 +709,14 @@ function appendGroup(out: TileDef[], p: PracticePattern, g: PatternGroup) {
  * `D` runs in title segments → preview dragon type:
  * - red/green ink: that dragon color (matches NMJL column ink).
  * - soap ink: soap (white) dragons.
- * - navy / honor: generic “any dragon” (display **D** on tile; not soap unless digit `0`).
+ * - navy ink on a **D-only** segment: soap (League prints white dragon / 0 in blue).
+ * - navy / honor (mixed segments): generic “any dragon”.
  */
-function dragonFromTitleSegmentInk(ink: CardInk): Dragon {
+function dragonFromTitleSegmentInk(ink: CardInk, segText?: string): Dragon {
   if (ink === 'red') return 'red'
   if (ink === 'green') return 'green'
   if (ink === 'soap') return 'soap'
+  if (ink === 'navy' && segText != null && /^D+$/i.test(segText.trim())) return 'soap'
   return 'any'
 }
 
@@ -778,7 +827,7 @@ function parseTitleSegmentToPreviewSlots(seg: CardTextSeg, ctx: PreviewLineConte
             else pushSuitSlots(out, seg, suit, rank, count, ctx)
           }
         } else if (/^D+$/i.test(part)) {
-          pushDragonSlots(out, seg, dragonFromTitleSegmentInk(seg.ink), part.length, ctx)
+          pushDragonSlots(out, seg, dragonFromTitleSegmentInk(seg.ink, t), part.length, ctx)
         } else {
           for (const w of extractWindsFromText(part)) pushWindSlots(out, seg, w, 1, ctx)
         }
@@ -893,8 +942,10 @@ function groupPreviewSlotCountForPatternLine(g: PatternGroup): number {
       return g.colorGroups.reduce((acc, cg, ci) =>
         acc + cg.reduce((sum, sg) => sum + sg.need, 0) + (g.colorGroupDragonCounts?.[ci] ?? 0), 0)
         + (g.trailingDragonCount ?? 0)
+    case 'dragon-meld-permute':
+      return g.needs.reduce((a, b) => a + b, 0)
     case 'odd-pair-kongs-triple':
-      return 14
+      return oddPairKongsTripleGroupTileCount(g)
     default:
       return 0
   }
@@ -932,6 +983,17 @@ function previewDefMatchesGroupCell(line: TileDef, grp: TileDef): boolean {
   return false
 }
 
+/** Nth flower cell in strip order (0-based) — for hands like `FFF 2468 FFF 2222`. */
+function nthGroupFlowerStripIndex(grpDefs: readonly TileDef[], n: number): number {
+  let seen = 0
+  for (let g = 0; g < grpDefs.length; g++) {
+    if (grpDefs[g]?.cat !== 'flower') continue
+    if (seen === n) return g
+    seen++
+  }
+  return -1
+}
+
 /**
  * When the printed hand order (title segments) differs from `appendAllGroups` order — e.g. 2026
  * Year #4 `22 00 222` with soap inserted after suit-permute in groups — build
@@ -947,13 +1009,21 @@ export function inferCardLineFromGroupSlotMap(p: PracticePattern): number[] | un
 
   const used = new Set<number>()
   const map: number[] = []
+  let titleFlowerOrdinal = 0
   for (const want of lineDefs) {
     let gIdx = -1
-    for (let g = 0; g < grpDefs.length; g++) {
-      if (used.has(g)) continue
-      if (previewDefMatchesGroupCell(want, grpDefs[g]!)) {
-        gIdx = g
-        break
+    if (want.cat === 'flower') {
+      gIdx = nthGroupFlowerStripIndex(grpDefs, titleFlowerOrdinal)
+      if (gIdx >= 0 && used.has(gIdx)) gIdx = -1
+      if (gIdx >= 0) titleFlowerOrdinal++
+    }
+    if (gIdx < 0) {
+      for (let g = 0; g < grpDefs.length; g++) {
+        if (used.has(g)) continue
+        if (previewDefMatchesGroupCell(want, grpDefs[g]!)) {
+          gIdx = g
+          break
+        }
       }
     }
     if (gIdx < 0) return undefined

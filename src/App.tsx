@@ -1411,6 +1411,12 @@ function groupNeedForDeadHintDef(group: PatternGroup, def: TileDef): number | nu
         return minPositiveNeed(...(group.colorGroupDragonCounts ?? []), group.trailingDragonCount ?? null)
       }
       return null
+    case 'dragon-meld-permute':
+      if (def.cat !== 'dragon') return null
+      for (let i = 0; i < group.needs.length; i++) {
+        if (group.cardDragons[i] === def.dragon) return group.needs[i]
+      }
+      return null
     case 'odd-pair-kongs-triple':
       if (def.cat !== 'suit' || !group.odds.includes(def.rank)) return null
       return 4
@@ -4297,8 +4303,27 @@ export default function App() {
   const prevDiscardNeedIdsForDeadGuideRef = useRef<ReadonlySet<string>>(new Set())
   const prevDiscardSnapshotForDeadGuideRef = useRef('0:')
 
+  const clearSuggestedDeadGuidesForHandKey = useCallback((handKey: string) => {
+    setSuggestedDeadTileGuidesByKey((byKey) => {
+      if (!(handKey in byKey)) return byKey
+      const { [handKey]: _removed, ...rest } = byKey
+      return rest
+    })
+    setSuggestedDeadTableGuidesByKey((byKey) => {
+      if (!(handKey in byKey)) return byKey
+      const { [handKey]: _removed, ...rest } = byKey
+      return rest
+    })
+  }, [])
+
   useEffect(() => {
     const prevFocus = prevSuggestedFocusForDeadGuideRef.current
+    if (prevFocus && prevFocus !== suggestedFocusHandKey) {
+      // Drop persisted dead-tile flash state when leaving a line so reselecting (or switching
+      // back) replays rack highlights from the current rack — e.g. exposed 4s — without re-flashing
+      // tiles that were marked dead for an old variant (9s before the exposure pivot).
+      clearSuggestedDeadGuidesForHandKey(prevFocus)
+    }
     const prevBestIds = prevSuggestedBestIdsForDeadGuideRef.current
     const prevBotBestIds = prevBotExposureBestIdsForDeadGuideRef.current
     const prevDiscardNeedIds = prevDiscardNeedIdsForDeadGuideRef.current
@@ -4522,6 +4547,7 @@ export default function App() {
     rackForSuggestedHandsUi,
     cardPatterns,
     mainPhase,
+    clearSuggestedDeadGuidesForHandKey,
   ])
 
   useEffect(() => {
@@ -4646,9 +4672,11 @@ export default function App() {
   }, [mainPhase])
 
   const onSuggestedPatternClick = useCallback((handKey: string) => {
-    setSuggestedFocusHandKey((cur) => (cur === handKey ? null : handKey))
+    const isDeselect = suggestedFocusHandKeyRef.current === handKey
+    setSuggestedFocusHandKey(isDeselect ? null : handKey)
     setSuggestedSuppressedHandKey(null)
-  }, [])
+    if (isDeselect) clearSuggestedDeadGuidesForHandKey(handKey)
+  }, [clearSuggestedDeadGuidesForHandKey])
 
   const onSuggestedFocusKeyMigrate = useCallback((nextKey: string | null) => {
     const prevKey = suggestedFocusHandKeyRef.current
