@@ -977,8 +977,11 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 /*
  * Main hand row: no outer cast shadow on resting tiles. DragOverlay keeps
  * `.drag-overlay-tile { filter: drop-shadow(...) }` while a tile is dragged.
- * Coaching rings stay on `.tile-face` (inset `--suggest-best-ring`) — no outer lift shadow
- * on the wrap; that shadow read as tiles jumping vertically when suggest-guide toggles.
+ *
+ * Mobile WKWebView (PWA): the global suggest-dim `::after` overlay (part-0075) reparents every
+ * non-joker face when the guide toggles — the whole rack jogs. Jokers never jog because they use
+ * `filter` only. Main rack naturals match jokers: filter dim + pre-reserved `outline` coaching ring
+ * (no `::after` overlay, no inset box-shadow ring, no lift-shadow `::before`).
  */
 .app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap .tile-face {
   --tile-face-base-shadow: 0 0 0 0 transparent;
@@ -986,25 +989,57 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
     var(--tile-face-suggest-dim-inset);
 }
 
+.app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap .tile-face:not(.tile--joker) {
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+}
+
+.app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap .tile-face:not(.tile--joker)::after {
+  content: none !important;
+  display: none !important;
+}
+
+.app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--suggest-dim .tile-face:not(.tile--joker) {
+  filter: brightness(var(--suggest-dim-joker-brightness));
+}
+
+.app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--suggest-best .tile-face:not(.tile--joker) {
+  filter: none;
+  outline-color: var(--tile-highlight-border);
+}
+
 .app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap .sortable-tile-wrap__fly {
   position: relative;
   z-index: 2;
 }
 
-/* Suggest-guide on/off: skip dim cross-fade on the main rack — opacity/filter transitions on
-   mobile WKWebView can read as a vertical jog when layers reparent. */
-.app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--suggest-dim .tile-face:not(.tile--joker)::after,
-.panel--hand .rack-stage__rack-top .exposure-rack__slot--suggest-dim .tile-face:not(.tile--joker)::after,
-.panel--hand .rack-stage__rack-top .exposure-rack__call-meld-strip__tile.exposure-rack__slot--suggest-dim
-  .tile-face:not(.tile--joker)::after {
-  transition: none;
+/* East exposure row: same filter + outline pattern (no suggest-dim `::after` on mobile). */
+.panel--hand .rack-stage__rack-top .exposure-rack__slot .tile-face:not(.tile--joker),
+.panel--hand .rack-stage__rack-top .exposure-rack__call-meld-strip__tile .tile-face:not(.tile--joker) {
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
+  outline: 2px solid transparent;
+  outline-offset: -2px;
 }
 
-.app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--suggest-dim .tile-face.tile--joker,
-.panel--hand .rack-stage__rack-top .exposure-rack__slot--suggest-dim .tile-face.tile--joker,
+.panel--hand .rack-stage__rack-top .exposure-rack__slot .tile-face:not(.tile--joker)::after,
+.panel--hand .rack-stage__rack-top .exposure-rack__call-meld-strip__tile .tile-face:not(.tile--joker)::after {
+  content: none !important;
+  display: none !important;
+}
+
+.panel--hand .rack-stage__rack-top .exposure-rack__slot--suggest-dim .tile-face:not(.tile--joker),
 .panel--hand .rack-stage__rack-top .exposure-rack__call-meld-strip__tile.exposure-rack__slot--suggest-dim
-  .tile-face.tile--joker {
-  transition: none;
+  .tile-face:not(.tile--joker) {
+  filter: brightness(var(--suggest-dim-joker-brightness));
+}
+
+.panel--hand .rack-stage__rack-top .exposure-rack__slot--suggest-best .tile-face:not(.tile--joker),
+.panel--hand .rack-stage__rack-top .exposure-rack__call-meld-strip__tile.exposure-rack__slot--suggest-best
+  .tile-face:not(.tile--joker) {
+  filter: none;
+  outline-color: var(--tile-highlight-border);
 }
 
 /* Bakelite / designer: keep inset edge highlights; drop only the outer depth on the hand row. */
@@ -1272,8 +1307,6 @@ html[data-home-screen-app]:not([data-native-app])
   .exposure-rack__slot:has(.exposure-rack__incoming-discard-drag):not(.exposure-rack__slot--incoming-discard) {
   height: var(--rack-tile-h);
   min-height: var(--rack-tile-h);
-  /* Hand sort / suggest-guide updates repaint the tray below — isolate exposure tile paint. */
-  contain: paint;
 }
 
 /* Inline discard staging: compact strip at rack bottom; tile face extends downward when filled. */
