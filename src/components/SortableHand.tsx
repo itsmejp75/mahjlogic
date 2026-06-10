@@ -121,7 +121,9 @@ function SortableTile({
     resolvedTransform = sortableTransform ?? undefined
     resolvedTransition = `transform ${RACK_REORDER_DURATION} ${RACK_REORDER_EASING}`
   } else {
-    resolvedTransform = sortableTransform ?? undefined
+    // Programmatic reorder (suggested-hand sort) must not apply dnd-kit FLIP deltas — they can
+    // include a vertical component on mobile and read as the whole rack jogging up/down.
+    resolvedTransform = undefined
     resolvedTransition = 'none'
   }
 

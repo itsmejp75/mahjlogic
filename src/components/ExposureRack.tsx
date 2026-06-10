@@ -439,9 +439,10 @@ function SortableStagedSlot({
     id: tile.id,
     animateLayoutChanges: () => false,
   })
-  // Match SortableHand / PassStrip: neighbors slide while any sortable item is being dragged.
+  // Match SortableHand / PassStrip: neighbours slide while any sortable item is being dragged.
   const style: CSSProperties = {
-    transform: CSS.Transform.toString(transform),
+    transform:
+      isDragging || active ? CSS.Transform.toString(transform) ?? undefined : undefined,
     transition:
       isDragging
         ? 'none'
