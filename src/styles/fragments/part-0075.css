@@ -191,6 +191,7 @@
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face,
 .hands-sheet__tile-cell .tile-face,
 .exposure-rack__slot .tile-face,
+.exposure-rack__call-meld-strip__tile .tile-face,
 .discard-entry .tile-face,
 .mahjong-win__bots-review-tile .tile-face {
   position: relative;
@@ -205,6 +206,7 @@
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face:not(.tile--joker)::after,
 .hands-sheet__tile-cell .tile-face:not(.tile--joker)::after,
 .exposure-rack__slot .tile-face:not(.tile--joker)::after,
+.exposure-rack__call-meld-strip__tile .tile-face:not(.tile--joker)::after,
 .discard-entry .tile-face:not(.tile--joker)::after,
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded .tile-face:not(.tile--joker)::after,
 .mahjong-win__bots-review-tile .tile-face:not(.tile--joker)::after {
@@ -229,6 +231,7 @@
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face.tile--joker,
 .hands-sheet__tile-cell .tile-face.tile--joker,
 .exposure-rack__slot .tile-face.tile--joker,
+.exposure-rack__call-meld-strip__tile .tile-face.tile--joker,
 .discard-entry .tile-face.tile--joker,
 .mahjong-win__bots-review-tile .tile-face.tile--joker {
   --tile-face-suggest-dim-inset: 0 0 0 0 transparent;

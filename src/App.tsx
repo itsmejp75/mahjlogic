@@ -3617,6 +3617,17 @@ export default function App() {
     if (mainPhase !== 'call-staging') setEastCallStagedWaveFlyIn(null)
   }, [mainPhase])
 
+  /** Opening-deal wave only on entry — drop fly-in wrappers after the stagger finishes so staging
+     meld tiles aren’t clipped under `overflow: hidden` for the whole call (WKWebView repaints them
+     in halves when suggest-guide classes change). */
+  useEffect(() => {
+    if (!eastCallStagedWaveFlyIn || !animationsEnabled) return
+    const { staggerDelayMs, baseDelayMs } = eastCallStagedWaveFlyIn
+    const clearMs = baseDelayMs + 4 * staggerDelayMs + 400
+    const tid = window.setTimeout(() => setEastCallStagedWaveFlyIn(null), clearMs)
+    return () => window.clearTimeout(tid)
+  }, [eastCallStagedWaveFlyIn, animationsEnabled])
+
   useEffect(() => {
     if (mainPhase === 'east-discard') return
     setRound((r) => {

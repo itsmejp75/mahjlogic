@@ -188,6 +188,7 @@
   z-index: 4;
   cursor: grab;
   touch-action: none;
+  contain: paint;
 }
 
 .panel--hand .exposure-rack__call-meld-strip__tile .tile-face,
