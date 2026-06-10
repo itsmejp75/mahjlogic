@@ -1279,6 +1279,8 @@ html[data-home-screen-app]:not([data-native-app])
   .exposure-rack__slot:has(.exposure-rack__incoming-discard-drag):not(.exposure-rack__slot--incoming-discard) {
   height: var(--rack-tile-h);
   min-height: var(--rack-tile-h);
+  /* Hand sort / suggest-guide updates repaint the tray below — isolate exposure tile paint. */
+  contain: paint;
 }
 
 /* Inline discard staging: compact strip at rack bottom; tile face extends downward when filled. */

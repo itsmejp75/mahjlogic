@@ -85,40 +85,6 @@
   display: none;
 }
 
-/*
- * Suggest-dim `::after` (part-0075) defaults to z-index 1 — below rim bevel `::before` (z-index 2),
- * so the top catch-light stayed bright while the art dimmed. Lift the overlay above the rim only
- * while dim is active; suggest-best border still wins at z-index 5.
- */
-:is(
-    .sortable-tile-wrap--suggest-dim,
-    .pass-strip__tile-wrap--suggest-dim,
-    .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim,
-    .hands-sheet__tile-cell--suggest-dim,
-    .exposure-rack__slot--suggest-dim,
-    .discard-entry--suggest-dim,
-    .discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded.sorted-discard-tray__slot--suggest-dim,
-    .discard-tracker__overlay-grid .sorted-discard-tray__slot--awaiting-discard,
-    .discard-tracker__overlay-grid .sorted-discard-tray__slot--inactive,
-    .mahjong-win__bots-review-tile--dim
-  )
-  .tile-face.tile-face--illustrative-art:not(.tile--joker)::after,
-:is(
-    .sortable-tile-wrap--suggest-dim,
-    .pass-strip__tile-wrap--suggest-dim,
-    .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim,
-    .hands-sheet__tile-cell--suggest-dim,
-    .exposure-rack__slot--suggest-dim,
-    .discard-entry--suggest-dim,
-    .discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded.sorted-discard-tray__slot--suggest-dim,
-    .discard-tracker__overlay-grid .sorted-discard-tray__slot--awaiting-discard,
-    .discard-tracker__overlay-grid .sorted-discard-tray__slot--inactive,
-    .mahjong-win__bots-review-tile--dim
-  )
-  .tile-face:not(.tile-face--illustrative-art):not(.tile--joker)::after {
-  z-index: 4;
-}
-
 /* Ivory + illustrative classic: green coaching ring (not the default white rack ring). */
 .app[data-tile-graphics='classic'],
 .app[data-tile-graphics='illustrative-classic'] {

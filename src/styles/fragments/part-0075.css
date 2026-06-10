@@ -214,7 +214,10 @@
   inset: calc(-1 * var(--rack-tile-face-bw));
   border-radius: var(--tile-face-border-radius);
   pointer-events: none;
-  z-index: 1;
+  /* Stay above illustrative rim `::before` (z-index 2) even at opacity 0 — if z-index drops when
+     `.exposure-rack__slot--suggest-dim` is removed, iOS WKWebView repaints the rim catch-light and
+     tile art in separate passes during the opacity fade (reads as top-half / bottom-half reload). */
+  z-index: 4;
   background: var(--suggest-dim-overlay);
   box-shadow: var(--suggest-dim-inset-shadow);
   opacity: 0;
