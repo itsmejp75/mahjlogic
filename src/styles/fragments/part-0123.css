@@ -722,6 +722,45 @@ html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-
   letter-spacing: 0;
 }
 
+/*
+ * Top-band suit chips: flat fill (no tile rim/shadow). Prevents a 1px whitish fringe under
+ * Bam on iOS PWA after load when tile-graphics `::before` + box-shadow composite in the row gap.
+ */
+html
+  .app[data-tile-graphics]
+  .app-top-exposure-container
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack__slot.sorted-discard-tray__slot--suit-label {
+  --tile-face-base-shadow: none;
+  --tile-face-highlight-inset: none;
+  --tile-face-highlight-shadow: none;
+  --tile-face-suggest-dim-inset: none;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+html
+  .app[data-tile-graphics]
+  .app-top-exposure-container
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack__slot.sorted-discard-tray__slot--suit-label::before,
+html
+  .app[data-tile-graphics]
+  .app-top-exposure-container
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack__slot.sorted-discard-tray__slot--suit-label::after {
+  content: none;
+  display: none;
+  box-shadow: none;
+  background: none;
+}
+
 html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__seat-label {
   font-size: calc(var(--rack-tile-w) * 1.2);
 }
