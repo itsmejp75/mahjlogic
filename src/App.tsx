@@ -89,7 +89,6 @@ import { PassStrip, type PassStripFlyOutFrom } from './components/PassStrip'
 import { HandBank, HAND_BANK_ID } from './components/HandBank'
 import { TileFace } from './components/TileFace'
 import { ExposureRack } from './components/ExposureRack'
-import { RackLogoWatermark } from './components/RackLogoWatermark'
 import {
   PLAYABLE_CARD_IDS,
   PLAYABLE_CARD_LABEL,
@@ -826,7 +825,7 @@ function SortedDiscardTrayRow({
   tiles: readonly TileInstance[]
   slotCount: number
   leadingEmptySlots?: number
-  /** One leading slot with a large suit letter (e.g. dot “D”, bam “B”). */
+  /** One leading slot with the suit name (Bam, Crak, Dot). */
   leadingSuitLabel?: string
   leadingSuitLabelTone?: 'dot' | 'bam' | 'crak'
   /** Glyph-only slots after `tiles` (no matching discard count). */
@@ -857,7 +856,13 @@ function SortedDiscardTrayRow({
           role="presentation"
           aria-label={`${leadingSuitLabel} suit`}
         >
-          <span className="sorted-discard-tray__suit-label" aria-hidden>
+          <span
+            className={[
+              'sorted-discard-tray__suit-label',
+              `sorted-discard-tray__suit-label--${leadingSuitLabelTone}`,
+            ].join(' ')}
+            aria-hidden
+          >
             {leadingSuitLabel}
           </span>
         </div>
@@ -1012,7 +1017,7 @@ function DiscardTrackerSlotGrid({
               <SortedDiscardTrayRow
                 tiles={SORTED_DISCARD_ROW1_TILES}
                 slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
-                leadingSuitLabel="B"
+                leadingSuitLabel="Bam"
                 leadingSuitLabelTone="bam"
                 ariaLabel="Sorted discard row 1"
                 discardPile={discardPile}
@@ -1022,7 +1027,7 @@ function DiscardTrackerSlotGrid({
               <SortedDiscardTrayRow
                 tiles={SORTED_DISCARD_ROW2_TILES}
                 slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
-                leadingSuitLabel="C"
+                leadingSuitLabel="Crak"
                 leadingSuitLabelTone="crak"
                 ariaLabel="Sorted discard row 2"
                 discardPile={discardPile}
@@ -1032,7 +1037,7 @@ function DiscardTrackerSlotGrid({
               <SortedDiscardTrayRow
                 tiles={SORTED_DISCARD_ROW3_TILES}
                 slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
-                leadingSuitLabel="D"
+                leadingSuitLabel="Dot"
                 leadingSuitLabelTone="dot"
                 ariaLabel="Sorted discard row 3"
                 discardPile={discardPile}
@@ -4763,7 +4768,7 @@ export default function App() {
 
   /**
    * On win: full 14 (concealed + exposures) left-to-right in the order of the winning
-   * practice line — same rack model as in-play suggestions (`hand` + claim melds).
+   * practice line — shown on the main hand row (not the exposure/call strip above it).
    */
   const winHandSortedTiles = useMemo(() => {
     if (mainPhase !== 'mahjong-declared') return null
@@ -8194,8 +8199,8 @@ export default function App() {
                               jokerSwapHintBounceTileIds={jokerSwapHintBounceIds?.jokers ?? null}
                               jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
                               melds={
-                                mainPhase === 'mahjong-declared' && winHandSortedTiles
-                                  ? [{ tiles: winHandSortedTiles }]
+                                mainPhase === 'mahjong-declared'
+                                  ? []
                                   : mainPhase === 'bot-mahjong'
                                     ? [{ tiles: hand }]
                                   : [
@@ -8349,15 +8354,16 @@ export default function App() {
                                             New Game
                                           </button>
                                         </div>
-                                        <div className="hand-bank__mj-review-logo-float" aria-hidden>
-                                          <RackLogoWatermark />
-                                        </div>
                                       </>
                                     ) : undefined
                                   }
                                 >
                                   <SortableHand
-                                    tiles={mainPhase === 'mahjong-declared' ? [] : visibleHandTiles}
+                                    tiles={
+                                      mainPhase === 'mahjong-declared'
+                                        ? (winHandSortedTiles ?? [])
+                                        : visibleHandTiles
+                                    }
                                     sortableOrder={undefined}
                                     externalInsertPreviewIndex={eastDiscardIntoHandPreview?.handPreviewIndex ?? null}
                                     selectedTileId={

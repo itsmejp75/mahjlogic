@@ -519,13 +519,16 @@ html .app-top-exposure-container .discard-tracker__overlay-grid {
     --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
     --discard-tray-rack-tile-w: var(--rack-tile-w);
     --discard-tray-tile-corner-r: var(--tile-face-border-radius);
+    --sorted-discard-suit-label-w: calc(var(--rack-tile-w) * 1.45);
+    --sorted-discard-suit-label-h: var(--rack-tile-h);
+    --discard-tracker-sorted-band-w: calc(14 * var(--rack-tile-w) + 13 * var(--player-rack-face-gap));
   }
 }
 
 html .app-top-exposure-container
   .discard-tracker__overlay-row
   > .exposure-rack--discard-tracker-sorted-row {
-  grid-column: 1 / span 13;
+  grid-column: 1 / span 14;
   width: 100%;
   margin-left: 0;
   transform: none;
@@ -566,8 +569,10 @@ html .app-top-exposure-container .exposure-rack--discard-tracker-sorted-row {
   display: flex;
   flex-wrap: nowrap;
   align-items: flex-start;
-  width: calc(13 * var(--rack-tile-w) + 12 * var(--player-rack-face-gap));
+  width: 100%;
   max-width: 100%;
+  box-sizing: border-box;
+  overflow: visible;
 }
 
 /*
@@ -637,6 +642,36 @@ html
   flex: 0 0 var(--rack-tile-w);
 }
 
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-sorted-row
+  .exposure-rack__slot.sorted-discard-tray__slot--suit-label {
+  flex: 0 0 var(--sorted-discard-suit-label-w);
+  width: var(--sorted-discard-suit-label-w);
+  min-width: var(--sorted-discard-suit-label-w);
+  max-width: var(--sorted-discard-suit-label-w);
+  height: var(--sorted-discard-suit-label-h);
+  min-height: var(--sorted-discard-suit-label-h);
+  max-height: var(--sorted-discard-suit-label-h);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html
+  .app-top-exposure-container
+  .sorted-discard-tray__slot--suit-label
+  .sorted-discard-tray__suit-label {
+  width: auto;
+  max-width: 100%;
+  padding: 0 0.18em;
+  margin: 0;
+  text-align: center;
+}
+
 html .app-top-exposure-container .discard-tracker__overlay-grid .exposure-rack__slot .tile-face,
 html
   .app-top-exposure-container
@@ -668,10 +703,27 @@ html
   font-weight: 600;
 }
 
-html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__suit-label,
+html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__suit-label {
+  font-size: calc(var(--rack-tile-w) * 0.48);
+  font-weight: 700;
+}
+
+html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__seat-label {
+  font-size: calc(var(--rack-tile-w) * 0.48);
+  font-weight: 600;
+}
+
+html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__suit-label--bam,
+html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__suit-label--dot {
+  letter-spacing: 0.06em;
+}
+
+html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__suit-label--crak {
+  letter-spacing: 0;
+}
+
 html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__seat-label {
   font-size: calc(var(--rack-tile-w) * 1.2);
-  font-weight: 500;
 }
 
 html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__count {

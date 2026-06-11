@@ -2525,6 +2525,31 @@ function reorderStripToTitleOrder(
 ): { defs: TileDef[]; slots: SuggestedStripSlot[] } | null {
   const titlePreview = patternLinePreviewSlots(p)
   if (titlePreview.length !== provisional.length) return null
+
+  const resolvedTitleDefs = suitLockedConsecTitleOrderDefsFromResolvedStrip(p, groupDefs)
+  if (resolvedTitleDefs) {
+    const used = new Set<number>()
+    const reorderedDefs: TileDef[] = []
+    const reorderedSlots: SuggestedStripSlot[] = []
+    for (let ti = 0; ti < titlePreview.length; ti++) {
+      const tp = titlePreview[ti]!
+      const want = resolvedTitleDefs[ti]!
+      let found = -1
+      for (let gi = 0; gi < groupDefs.length; gi++) {
+        if (used.has(gi)) continue
+        if (tileDefsEqual(groupDefs[gi]!, want)) {
+          found = gi
+          break
+        }
+      }
+      if (found < 0) return null
+      used.add(found)
+      reorderedDefs.push(groupDefs[found]!)
+      reorderedSlots.push({ ...provisional[found]!, cardInk: tp.cardInk })
+    }
+    return { defs: reorderedDefs, slots: reorderedSlots }
+  }
+
   const used = new Set<number>()
   const reorderedDefs: TileDef[] = []
   const reorderedSlots: SuggestedStripSlot[] = []
@@ -3184,13 +3209,80 @@ function sharedRankSuitsTitleOrderDefsFromResolvedStrip(
   return out
 }
 
+/**
+ * `suit-locked-consec` / `suit-locked-consec-multi`: card title digits are stand-ins (11…66 in bam);
+ * greedy match picks any consecutive run in one suit. Rebuild the group span with resolved suit +
+ * start rank so rack sort / card-line fill target the tiles you actually hold (e.g. d5 d5 d7 d7 d8 d8).
+ */
+function suitLockedConsecTitleOrderDefsFromResolvedStrip(
+  p: PracticePattern,
+  stripDefs: readonly TileDef[],
+): TileDef[] | null {
+  const groups = p.groups
+  if (!groups?.length || !p.titleSegments?.length) return null
+
+  const gi = groups.findIndex((g) => g.kind === 'suit-locked-consec' || g.kind === 'suit-locked-consec-multi')
+  if (gi < 0) return null
+  const g = groups[gi]!
+  if (g.kind !== 'suit-locked-consec' && g.kind !== 'suit-locked-consec-multi') return null
+
+  const span = groupPreviewIndexSpans(p)?.[gi]
+  if (!span) return null
+  const [srsA, srsB] = span
+  if (stripDefs.length < srsB) return null
+
+  const first = stripDefs[srsA]
+  if (first?.cat !== 'suit') return null
+  const suit = first.suit
+  const startRank = first.rank
+
+  const titleDigitRuns: number[] = []
+  for (const seg of p.titleSegments) {
+    for (const part of seg.t.match(/F+|N+|E+|W+|S+|D+|(\d)\1*/g) ?? []) {
+      if (/^\d/.test(part)) titleDigitRuns.push(part.length)
+    }
+  }
+
+  const out = [...stripDefs]
+  let dst = srsA
+
+  if (g.kind === 'suit-locked-consec') {
+    if (titleDigitRuns.length !== g.numGroups) return null
+    for (let i = 0; i < g.numGroups; i++) {
+      const rank = startRank + i
+      for (let k = 0; k < g.rankCount; k++) {
+        out[dst++] = { cat: 'suit', suit, rank }
+      }
+    }
+    if (g.dragonCount > 0) {
+      const dragonForSuit = { bam: 'green' as const, dot: 'soap' as const, crak: 'red' as const }
+      const drg = dragonForSuit[suit]
+      for (let k = 0; k < g.dragonCount; k++) {
+        out[dst++] = { cat: 'dragon', dragon: drg }
+      }
+    }
+  } else {
+    if (titleDigitRuns.length !== g.needs.length) return null
+    for (let i = 0; i < g.needs.length; i++) {
+      const rank = startRank + i
+      const need = g.needs[i]!
+      for (let k = 0; k < need; k++) {
+        out[dst++] = { cat: 'suit', suit, rank }
+      }
+    }
+  }
+
+  return dst === srsB ? out : null
+}
+
 function resolveTitleOrderDefsFromResolvedStrip(
   p: PracticePattern,
   stripDefs: readonly TileDef[],
 ): TileDef[] | null {
   return (
     suitPermuteTitleOrderDefsFromResolvedStrip(p, stripDefs) ??
-    sharedRankSuitsTitleOrderDefsFromResolvedStrip(p, stripDefs)
+    sharedRankSuitsTitleOrderDefsFromResolvedStrip(p, stripDefs) ??
+    suitLockedConsecTitleOrderDefsFromResolvedStrip(p, stripDefs)
   )
 }
 
