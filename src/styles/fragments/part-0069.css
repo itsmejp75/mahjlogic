@@ -121,6 +121,11 @@
   transition: box-shadow 0.14s ease, transform 0.12s ease;
 }
 
+/* Hand rack: PokerStars chrome lives in part-0123 — skip legacy neumorphic inset. */
+.app .panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:not(:disabled) {
+  box-shadow: none;
+}
+
 .btn.charleston-pass-btn:active:not(:disabled),
 .rack-bottom-bar .btn.rack-bottom-tile-cell:active:not(:disabled) {
   transition: none;

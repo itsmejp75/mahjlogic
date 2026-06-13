@@ -168,7 +168,7 @@
    * use `--wind-tile-bg` via `rack-wind` (see `cardInkTileSkin.ts`).
    */
   --card-ink-navy: #42a5f5;
-  --card-ink-green: #66bb6a;
+  --card-ink-green: #52B147;
   --card-ink-red: #ff5252;
   --card-ink-neutral: var(--text-h);
 
@@ -256,7 +256,7 @@
       rgba(0, 0, 0, 0.45) 0 12px 28px -8px, rgba(0, 0, 0, 0.28) 0 6px 12px -6px;
 
     --card-ink-navy: #42a5f5;
-    --card-ink-green: #66bb6a;
+    --card-ink-green: #52B147;
     --card-ink-red: #ff5252;
     --card-ink-neutral: var(--text-h);
 

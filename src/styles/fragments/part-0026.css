@@ -106,7 +106,7 @@
   --joker-swap-hint-bounce-delay: 500ms;
 }
 
-/* Main rack + bot exposures: original suggest-dim (discard tracker overrides locally in part-0061). */
+/* Main rack + bot exposures: suggest-dim tokens (also used by discard tracker). */
 .panel--hand,
 .panel--bot-exposures,
 .panel--bot-exposures--dnd-ghost {
@@ -160,7 +160,7 @@
 /* Light tile faces (ivory minimalist + classic illustrative): Bam green coaching / meld rings. */
 .app[data-tile-graphics='classic'],
 .app[data-tile-graphics='illustrative-classic'] {
-  --tile-highlight-border: var(--card-ink-green, #66bb6a);
+  --tile-highlight-border: var(--card-ink-green, #52B147);
 }
 
 .app[data-tile-graphics='classic'] .tile--bam .tile-face__glyph-num,
@@ -410,9 +410,6 @@
       .discard-tracker__overlay-grid
       .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
       .tile-face.tile-face--sorted-discard-glyph,
-    .panel--discard-tracker
-      .discard-tracker__overlay-grid
-      .exposure-rack__slot.sorted-discard-tray__slot--suit-label
   ) {
   /* Material shadow flows through `--tile-face-base-shadow` so the highlight ring (set via
      `--tile-face-highlight-shadow` from parent state classes) layers on top without losing

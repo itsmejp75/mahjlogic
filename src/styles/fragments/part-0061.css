@@ -203,17 +203,6 @@
   container-name: discard-tray;
 }
 
-/* Sorted discard rows, bot exposure rows + scrollable discard pile: darker suggest-dim than main rack. */
-.discard-tracker__overlay-grid .exposure-rack--discard-tracker-sorted-row,
-.discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row,
-.discard-tracker__content .discard-pile {
-  --suggest-dim-overlay: rgba(0, 0, 0, 0.56);
-  --suggest-dim-inset-vignette: inset 0 0 0.5rem color-mix(in srgb, var(--color-black) 36%, transparent);
-  --suggest-dim-inset-shadow: var(--suggest-dim-inset-vignette),
-    inset 0 0 0 1px color-mix(in srgb, var(--color-black) 24%, transparent);
-  --suggest-dim-joker-brightness: 0.38;
-}
-
 /* Tile corner radius at this tray width — used by the container + hands overlay only (tiles unchanged). */
 @container discard-tray (min-width: 0px) {
   .discard-tracker__content {
@@ -353,9 +342,14 @@
   --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
   --discard-tray-rack-tile-w: var(--rack-tile-w);
   --discard-tray-tile-corner-r: var(--tile-face-border-radius);
-  --sorted-discard-suit-label-w: calc(var(--rack-tile-w) * 1.45);
+  --sorted-discard-suit-label-w-mult: 1.75;
+  --sorted-discard-suit-label-w: calc(var(--rack-tile-w) * var(--sorted-discard-suit-label-w-mult));
   --sorted-discard-suit-label-h: var(--rack-tile-h);
-  /* Sorted band spans grid cols 1–14; label extra draws from former col-14 gutter, not tile slots. */
+  --sorted-discard-suit-label-fs: min(
+    calc(var(--sorted-discard-suit-label-h) * 0.48),
+    calc(var(--sorted-discard-suit-label-w) * 0.38)
+  );
+  /* Sorted band spans grid cols 1–14; label extra width extends right (rank tiles shift, S/W/N col fixed). */
   --discard-tracker-sorted-band-w: calc(14 * var(--rack-tile-w) + 13 * var(--player-rack-face-gap));
 }
 
@@ -707,13 +701,25 @@
 .discard-tracker__overlay-grid .exposure-rack__slot.sorted-discard-tray__slot--suit-label {
   display: flex;
   flex-direction: row;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: stretch;
   position: relative;
   padding: 0;
-  border-radius: var(--tile-face-border-radius);
-  overflow: hidden;
   box-sizing: border-box;
+}
+
+/* Suit label chips: same lit `.tile-face` material stack as discarded rank tiles. */
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--suit-label .tile-face.tile-face--sorted-discard-glyph {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  max-width: none;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: calc(0.116 * var(--rack-tile-w));
+  overflow: hidden;
 }
 
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--suit-label .sorted-discard-tray__suit-label {
@@ -722,7 +728,7 @@
   display: block;
   width: auto;
   max-width: 100%;
-  padding: 0 0.18em;
+  padding: 0 0.1em;
   margin: 0;
   text-align: center;
 }
@@ -744,43 +750,20 @@
 }
 
 .discard-tracker__overlay-grid .sorted-discard-tray__suit-label {
+  /* Sort-matched type (Figtree 600 + action label color); size scales to the chip box. */
   font-family: 'Figtree', var(--sans);
   font-weight: 600;
-  font-size: min(
-    calc(var(--rack-bottom-action-fs) * 1.05),
-    calc(var(--rack-tile-w) * 0.48)
-  );
+  font-size: var(--sorted-discard-suit-label-fs);
   line-height: 1.08;
+  text-transform: none;
   width: auto;
   max-width: 100%;
   text-align: center;
-  letter-spacing: max(0.01em, calc(0.02em + 0.02rem));
+  letter-spacing: max(0.016em, calc(0.026em + 0.016rem));
   box-sizing: border-box;
   opacity: 1;
   white-space: nowrap;
   pointer-events: none;
-}
-
-/* Optical balance: 3-letter suits breathe; 4-letter Crak stays slightly tighter. */
-.discard-tracker__overlay-grid .sorted-discard-tray__suit-label--bam,
-.discard-tracker__overlay-grid .sorted-discard-tray__suit-label--dot {
-  letter-spacing: 0.05em;
-}
-
-.discard-tracker__overlay-grid .sorted-discard-tray__suit-label--crak {
-  letter-spacing: 0.015em;
-}
-
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--suit-label-dot {
-  background: var(--tg-dot, var(--card-ink-navy));
-}
-
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--suit-label-bam {
-  background: var(--tg-bam, var(--card-ink-green));
-}
-
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--suit-label-crak {
-  background: var(--tg-crak, var(--card-ink-red));
 }
 
 .discard-tracker__overlay-grid
@@ -794,35 +777,34 @@
 }
 
 /*
- * Suit name chips (Bam/Crak/Dot): flat prism fill only — skip tile-face rim `::before` and
- * outer/inset box-shadow. On iOS PWA those composites can bleed a 1px whitish line under the
- * first chip after load (WebKit overflow + border-radius + shadow).
+ * Wide suit-label chip: rim inset shadows scale to chip width (rank tiles use `--rack-tile-w`).
  */
-.app[data-tile-graphics]
+.app[data-tile-graphics='classic']
   .panel--discard-tracker
   .discard-tracker__overlay-grid
-  .exposure-rack__slot.sorted-discard-tray__slot--suit-label {
-  --tile-face-base-shadow: none;
-  --tile-face-highlight-inset: none;
-  --tile-face-highlight-shadow: none;
-  --tile-face-suggest-dim-inset: none;
-  border: none;
-  outline: none;
-  box-shadow: none;
-}
-
-.app[data-tile-graphics]
+  .sorted-discard-tray__slot--suit-label
+  .tile-face.tile-face--sorted-discard-glyph::before,
+.app[data-tile-graphics='solid-color']
   .panel--discard-tracker
   .discard-tracker__overlay-grid
-  .exposure-rack__slot.sorted-discard-tray__slot--suit-label::before,
-.app[data-tile-graphics]
+  .sorted-discard-tray__slot--suit-label
+  .tile-face.tile-face--sorted-discard-glyph::before,
+.app[data-tile-graphics='light']
   .panel--discard-tracker
   .discard-tracker__overlay-grid
-  .exposure-rack__slot.sorted-discard-tray__slot--suit-label::after {
-  content: none;
-  display: none;
-  box-shadow: none;
-  background: none;
+  .sorted-discard-tray__slot--suit-label
+  .tile-face.tile-face--sorted-discard-glyph::before,
+.app[data-tile-graphics='dark']
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suit-label
+  .tile-face.tile-face--sorted-discard-glyph::before {
+  box-shadow:
+    inset calc(var(--sorted-discard-suit-label-w) * 0.045) 0 calc(var(--sorted-discard-suit-label-w) * 0.1)
+      calc(var(--sorted-discard-suit-label-w) * -0.3) rgba(28, 25, 22, 0.38),
+    inset calc(var(--sorted-discard-suit-label-w) * -0.045) calc(var(--sorted-discard-suit-label-w) * -0.045)
+      calc(var(--sorted-discard-suit-label-w) * 0.1) calc(var(--sorted-discard-suit-label-w) * -0.3)
+      rgba(28, 25, 22, 0.4);
 }
 
 .discard-tracker__overlay-grid .sorted-discard-tray__seat-label {

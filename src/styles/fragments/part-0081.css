@@ -839,9 +839,9 @@
   display: inline-block;
   box-sizing: border-box;
   padding: 0 0.08em 0.02em;
-  border: 1px solid #dc2626;
+  border: 1px solid var(--card-ink-red);
   border-radius: 0.18em;
-  color: #dc2626;
+  color: var(--card-ink-red);
   line-height: 1;
 }
 
@@ -850,14 +850,14 @@
   box-sizing: border-box;
   margin-left: 0;
   padding: 0.02em 0.14em 0.04em;
-  border: 1px solid #dc2626;
+  border: 1px solid var(--card-ink-red);
   border-radius: 1px;
   line-height: 1;
   font-family: var(--font-concealed-c);
   font-size: 0.68em;
   font-weight: 700;
   letter-spacing: 0;
-  color: #dc2626;
+  color: var(--card-ink-red);
   flex-shrink: 0;
   white-space: nowrap;
 }
@@ -1720,7 +1720,7 @@
   padding: 0;
   border: 1px solid currentColor;
   border-radius: 0.18em;
-  color: var(--card-c-color, #e34a4a);
+  color: var(--card-ink-red);
 }
 
 /* Points column: boxed C precedes the number — drop hand-line leading margin; tight gap before digits. */
@@ -2043,11 +2043,18 @@
   overflow: visible;
 }
 
+.hands-list__cell--pin:not(.hands-list__header-cell),
+.hands-sheet__cell--pin:not(.hands-sheet__cell--header) {
+  justify-content: center;
+  text-align: center;
+  padding-inline: 0;
+}
+
 .hands-suggested-pin {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
+  width: auto;
   max-width: 1.65rem;
   min-width: 1.25rem;
   min-height: 1.25rem;
@@ -2055,7 +2062,7 @@
   padding: 0;
   border: none;
   background: transparent;
-  color: #334155;
+  color: #161d26;
   cursor: pointer;
   line-height: 0;
   appearance: none;
@@ -2063,17 +2070,17 @@
 }
 
 .hands-suggested-pin:hover {
-  color: #334155;
+  color: #161d26;
   background: transparent;
 }
 
 .hands-suggested-pin--pressed {
-  color: var(--card-ink-green);
+  color: color-mix(in srgb, var(--card-ink-green) 72%, #000000 28%);
   background: transparent;
 }
 
 .hands-suggested-pin--pressed:hover {
-  color: var(--card-ink-green);
+  color: color-mix(in srgb, var(--card-ink-green) 72%, #000000 28%);
   background: transparent;
 }
 

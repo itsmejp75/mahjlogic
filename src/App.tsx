@@ -850,21 +850,35 @@ function SortedDiscardTrayRow({
           className={[
             'exposure-rack__slot',
             'sorted-discard-tray__slot',
+            'sorted-discard-tray__slot--discarded',
             'sorted-discard-tray__slot--suit-label',
             `sorted-discard-tray__slot--suit-label-${leadingSuitLabelTone}`,
           ].join(' ')}
           role="presentation"
           aria-label={`${leadingSuitLabel} suit`}
         >
-          <span
+          <div
             className={[
-              'sorted-discard-tray__suit-label',
-              `sorted-discard-tray__suit-label--${leadingSuitLabelTone}`,
+              'tile-face',
+              'tile-face--sorted-discard-glyph',
+              'tile-face--sorted-discard-glyph-center',
+              leadingSuitLabelTone === 'dot'
+                ? 'tile-face--sorted-discard-dot'
+                : leadingSuitLabelTone === 'bam'
+                  ? 'tile-face--sorted-discard-bam'
+                  : 'tile-face--sorted-discard-crak',
             ].join(' ')}
             aria-hidden
           >
-            {leadingSuitLabel}
-          </span>
+            <span
+              className={[
+                'sorted-discard-tray__suit-label',
+                `sorted-discard-tray__suit-label--${leadingSuitLabelTone}`,
+              ].join(' ')}
+            >
+              {leadingSuitLabel}
+            </span>
+          </div>
         </div>
       ) : null}
       {Array.from({ length: leadingEmptySlots }, (_, i) => (

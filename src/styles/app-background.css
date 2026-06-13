@@ -6,9 +6,8 @@
  * Everything on the main play screen that is NOT a button, tile, label text, or
  * empty slot well uses this recipe (shell, tray chrome, gaps between panels).
  *
- * Where it is applied: part-0123.css block “Main app background surfaces”.
- * Excluded on purpose: suggested-hands tray (`--app-bg-flat`), slot wells
- * (`--app-bg-slot-well`).
+ * Where it is applied: part-0123.css blocks “Main app background surfaces”,
+ * “Suggested-hands tray shell”, and “Suggested-hands sticky header row”. Excluded on purpose: slot wells (`--app-bg-slot-well`).
  *
  * Quick tweaks:
  *   --app-bg-base       overall charcoal tone (also sync index.html first-paint color)
@@ -65,6 +64,31 @@
   --app-carpet-bg-repeat: var(--app-bg-paint-repeat);
   --app-carpet-bg-blend: var(--app-bg-paint-blend);
   --app-carpet-bg-attachment: var(--app-bg-paint-attachment);
+
+  /*
+   * --- Action buttons (PokerStars “Fold” gray pill) ---
+   * Rack row in part-0123 reads these via --rack-action-* aliases.
+   */
+  --app-action-btn-top: #59646e;
+  --app-action-btn-bottom: #434b53;
+  --app-action-btn-top-pressed: #4a525a;
+  --app-action-btn-bottom-pressed: #363d44;
+  --app-action-btn-border: #6c757e;
+  --app-action-btn-highlight: rgba(255, 255, 255, 0.16);
+  --app-action-btn-label: #ffffff;
+  --app-action-btn-face: linear-gradient(
+    180deg,
+    var(--app-action-btn-top) 0%,
+    color-mix(in srgb, var(--app-action-btn-top) 38%, var(--app-action-btn-bottom) 62%) 48%,
+    var(--app-action-btn-bottom) 100%
+  );
+  --app-action-btn-face-pressed: linear-gradient(
+    180deg,
+    var(--app-action-btn-top-pressed) 0%,
+    var(--app-action-btn-bottom-pressed) 100%
+  );
+  /* Top light comes from the gradient face — no inset line at rest (matches disabled MAHJ/Call/Pass). */
+  --app-action-btn-shadow-rest: none;
 }
 
 /*

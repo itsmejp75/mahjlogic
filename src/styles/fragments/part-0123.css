@@ -518,8 +518,13 @@ html .app-top-exposure-container .discard-tracker__overlay-grid {
     --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
     --discard-tray-rack-tile-w: var(--rack-tile-w);
     --discard-tray-tile-corner-r: var(--tile-face-border-radius);
-    --sorted-discard-suit-label-w: calc(var(--rack-tile-w) * 1.45);
+    --sorted-discard-suit-label-w-mult: 1.75;
+    --sorted-discard-suit-label-w: calc(var(--rack-tile-w) * var(--sorted-discard-suit-label-w-mult));
     --sorted-discard-suit-label-h: var(--rack-tile-h);
+    --sorted-discard-suit-label-fs: min(
+      calc(var(--sorted-discard-suit-label-h) * 0.48),
+      calc(var(--sorted-discard-suit-label-w) * 0.38)
+    );
     --discard-tracker-sorted-band-w: calc(14 * var(--rack-tile-w) + 13 * var(--player-rack-face-gap));
   }
 }
@@ -666,7 +671,7 @@ html
   .sorted-discard-tray__suit-label {
   width: auto;
   max-width: 100%;
-  padding: 0 0.18em;
+  padding: 0 0.1em;
   margin: 0;
   text-align: center;
 }
@@ -703,14 +708,14 @@ html
 }
 
 html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__suit-label {
+  /* Sort-matched type (Figtree 600); ink matches sorted-discard counts (`--tg-ink`). */
   font-family: 'Figtree', var(--sans);
-  font-size: min(
-    calc(var(--rack-bottom-action-fs) * 1.05),
-    calc(var(--rack-tile-w) * 0.48)
-  );
+  font-size: var(--sorted-discard-suit-label-fs);
   font-weight: 600;
   line-height: 1.08;
-  letter-spacing: max(0.01em, calc(0.02em + 0.02rem));
+  text-transform: none;
+  letter-spacing: max(0.016em, calc(0.026em + 0.016rem));
+  color: var(--tg-ink, #080808);
 }
 
 html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__seat-label {
@@ -718,52 +723,18 @@ html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-
   font-weight: 600;
 }
 
-html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__suit-label--bam,
-html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__suit-label--dot {
-  letter-spacing: 0.05em;
-}
-
-html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__suit-label--crak {
-  letter-spacing: 0.015em;
-}
-
-/*
- * Top-band suit chips: flat fill (no tile rim/shadow). Prevents a 1px whitish fringe under
- * Bam on iOS PWA after load when tile-graphics `::before` + box-shadow composite in the row gap.
- */
 html
-  .app[data-tile-graphics]
   .app-top-exposure-container
-  .panel--discard-tracker
   .discard-tracker__overlay-grid
-  .exposure-rack__slot.sorted-discard-tray__slot--suit-label {
-  --tile-face-base-shadow: none;
-  --tile-face-highlight-inset: none;
-  --tile-face-highlight-shadow: none;
-  --tile-face-suggest-dim-inset: none;
-  border: none;
-  outline: none;
-  box-shadow: none;
+  .sorted-discard-tray__slot--suit-label
+  .tile-face.tile-face--sorted-discard-glyph {
+  width: 100%;
+  height: 100%;
+  flex: 1 1 auto;
+  border-radius: var(--discard-tray-tile-corner-r, calc(0.116 * var(--rack-tile-w)));
+  overflow: hidden;
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
-}
-
-html
-  .app[data-tile-graphics]
-  .app-top-exposure-container
-  .panel--discard-tracker
-  .discard-tracker__overlay-grid
-  .exposure-rack__slot.sorted-discard-tray__slot--suit-label::before,
-html
-  .app[data-tile-graphics]
-  .app-top-exposure-container
-  .panel--discard-tracker
-  .discard-tracker__overlay-grid
-  .exposure-rack__slot.sorted-discard-tray__slot--suit-label::after {
-  content: none;
-  display: none;
-  box-shadow: none;
-  background: none;
 }
 
 html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__seat-label {
@@ -953,8 +924,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .app-discard-bottom-container,
   .app .panel,
   .app .app-opponents-rail,
-  .app .coach-panel,
-  .suggested-hands-filter-tray
+  .app .coach-panel
 ) {
   background: transparent;
   background-image: none;
@@ -1187,7 +1157,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 }
 
 /*
- * Flat tray shell (suggested-hands only — not the main app background).
+ * Suggested-hands tray shell — same paint as main app background (app-background.css).
  */
 .app :is(
   .suggested-hands-popup,
@@ -1196,15 +1166,53 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .suggested-hands-popup__user-shift,
   .suggested-hands-filter-tray
 ) {
-  background-color: var(--app-bg-flat);
-  background-image: none;
-  background-blend-mode: normal;
+  background-color: var(--app-bg-paint-color);
+  background-image: var(--app-bg-paint-image);
+  background-size: var(--app-bg-paint-size);
+  background-repeat: var(--app-bg-paint-repeat);
+  background-blend-mode: var(--app-bg-paint-blend);
+  background-attachment: var(--app-bg-paint-attachment);
+}
+
+/*
+ * Suggested-hands sticky header row — same paint as main app background.
+ */
+.app .suggested-hands-popup :is(
+  .hands-list__freeze-header.hands-list__row-hit,
+  .hands-list__freeze-header.hands-list__row-hit:focus,
+  .hands-list__freeze-header.hands-list__row-hit:focus-visible,
+  .hands-list__freeze-header .hands-list__header-cell,
+  .hands-panel__content .hands-list-scroll > .hands-sheet .hands-sheet__cell--header,
+  .hands-panel__content .hands-list-scroll > .hands-sheet .hands-sheet__cell--header.hands-sheet__cell--pin
+) {
+  background-color: var(--app-bg-paint-color);
+  background-image: var(--app-bg-paint-image);
+  background-size: var(--app-bg-paint-size);
+  background-repeat: var(--app-bg-paint-repeat);
+  background-blend-mode: var(--app-bg-paint-blend);
+  background-attachment: var(--app-bg-paint-attachment);
+}
+
+.app .suggested-hands-popup .hands-sheet.hands-sheet--tilesHands::before {
+  background-color: var(--app-bg-paint-color);
+  background-image: var(--app-bg-paint-image);
+  background-size: var(--app-bg-paint-size);
+  background-repeat: var(--app-bg-paint-repeat);
+  background-blend-mode: var(--app-bg-paint-blend);
+  background-attachment: var(--app-bg-paint-attachment);
+}
+
+/*
+ * Suggested-hands selected row — midpoint between app shell and unpinned pin ink.
+ */
+.app .suggested-hands-popup .hands-panel__content {
+  --hands-row-active-fill: color-mix(in srgb, var(--app-bg-base) 50%, #161d26 50%);
 }
 
 /*
  * Main app background surfaces — paint recipe lives in src/styles/app-background.css.
  * Edit --app-bg-* there; this block only lists WHERE the background is applied.
- * Excludes buttons, tiles, text, slot wells, and suggested-hands (flat rule above).
+ * Excludes buttons, tiles, text, and slot wells (suggested-hands tray uses the rule above).
  */
 :is(
   html,
@@ -1515,7 +1523,7 @@ html[data-home-screen-app]:not([data-native-app])
   align-items: flex-start;
 }
 
-/* Inline strip slots (pass / discard / call): shared Bam green fill + top rule. */
+/* Inline strip slots: accent tokens for gradient + top rule (Charleston / discard / call). */
 .app .panel--hand .rack-stage__rack-top,
 .panel--hand .pass-strip-tail {
   --rack-inline-slot-strip-h: calc(var(--rack-tile-h) / 3);
@@ -1539,7 +1547,7 @@ html[data-home-screen-app]:not([data-native-app])
     .rack-stage__rack-top .exposure-rack__call-initiate-target--near,
     .rack-stage__rack-top .exposure-rack__call-meld-add-slot
   ) {
-  --rack-inline-slot-accent: var(--card-ink-green, #66bb6a);
+  --rack-inline-slot-accent: var(--card-ink-green, #52B147);
   --rack-inline-slot-strip-h: calc(var(--rack-tile-h) / 3);
   --rack-inline-slot-shadow-x: calc(var(--rack-tile-w) * 0.025);
   --rack-inline-slot-shadow-y: calc(var(--rack-tile-w) * 0.035);
@@ -1582,9 +1590,10 @@ html[data-home-screen-app]:not([data-native-app])
 }
 
 /*
- * Hand action row: dark inset button faces on the main app background (buttons unchanged).
+ * Hand action row: PokerStars-style gray pill (gradient face + border).
+ * Recipe tokens: --app-action-btn-* in src/styles/app-background.css.
  * Inset depth only while pressed (:active) or toggled active (Menu / Hands open / MAHJ held).
- * No outer shadows on resting, hover, or disabled controls.
+ * Resting + hover: flat (no inset highlight — gradient supplies the top light).
  */
 .panel--hand :is(
     .panel-hand-rack__action-well,
@@ -1592,10 +1601,13 @@ html[data-home-screen-app]:not([data-native-app])
     .hand-bank__mj-review-actions,
     .pass-strip-tail
   ) {
-  --rack-action-label-color: #e2e4e8;
+  --rack-action-label-color: var(--app-action-btn-label);
+  --rack-action-face: var(--app-action-btn-face);
+  --rack-action-face-pressed: var(--app-action-btn-face-pressed);
+  --rack-action-shadow-rest: var(--app-action-btn-shadow-rest);
   --rack-action-well-surface: var(--hand-rack-tray-surface);
-  --rack-action-flat-surface: #484c52;
-  --rack-action-border-color: #636870;
+  --rack-action-flat-surface: var(--app-action-btn-bottom);
+  --rack-action-border-color: var(--app-action-btn-border);
   --rack-action-press-shadow-dark: color-mix(
     in srgb,
     #000 28%,
@@ -1612,8 +1624,8 @@ html[data-home-screen-app]:not([data-native-app])
 }
 
 /*
- * Pass / discard / call inline strips: green fill (slot bg) + top rule (::after) + plus (::before).
- * Fill is sized to strip height only so fade reads on filled tile-height slots too.
+ * Charleston / discard / call inline strips: Bam green gradient + top rule (::after) + plus (::before).
+ * Outer drop shadow from part-0124; fill uses strip height + top-only corner radius.
  */
 .app
   .panel--hand
@@ -1636,17 +1648,30 @@ html[data-home-screen-app]:not([data-native-app])
   background-color: transparent;
   background-image: linear-gradient(
     180deg,
-    var(--rack-inline-slot-accent, #66bb6a) 0%,
-    var(--rack-inline-slot-accent, #66bb6a) var(--rack-inline-slot-fill-fade-start),
+    var(--rack-inline-slot-accent, var(--card-ink-green, #52B147)) 0%,
+    var(--rack-inline-slot-accent, var(--card-ink-green, #52B147)) var(--rack-inline-slot-fill-fade-start),
     transparent 100%
   );
   background-repeat: no-repeat;
   background-size: 100% var(--rack-inline-slot-strip-h);
   background-position: top center;
   border: 0;
-  box-shadow: none;
   border-radius: var(--rack-inline-slot-corner-r) var(--rack-inline-slot-corner-r) 0 0;
   overflow: hidden;
+}
+
+.app
+  .panel--hand
+  :is(
+    .exposure-rack--charleston-pass .pass-strip-tail .exposure-rack__slot--pass-tail.exposure-rack__slot--empty,
+    .rack-stage__rack-top
+      .exposure-rack__slot--east-discard-slot:not(:has(.east-discard-staging__tile)),
+    .rack-stage__rack-top
+      .exposure-rack__slot--incoming-discard:not(
+        :has(.exposure-rack__incoming-discard-drag:not(.exposure-rack__incoming-discard-drag--dragging))
+      ):not(:has(.east-discard-staging--inline:not([aria-hidden]) .east-discard-staging__tile))
+  )::before {
+  z-index: 3;
 }
 
 /* Absolute plus pseudo no longer sizes the cell — pin single-tile strip width explicitly. */
@@ -1829,13 +1854,13 @@ html[data-home-screen-app]:not([data-native-app])
     .btn.rack-bottom-tile-cell,
     .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn
   ) {
-  background: var(--rack-action-flat-surface);
+  background: var(--rack-action-face);
   border: 1px solid var(--rack-action-border-color, #636870);
   opacity: 1;
   filter: none;
   text-shadow: none;
-  box-shadow: none;
-  transition: box-shadow 0.12s ease;
+  box-shadow: var(--rack-action-shadow-rest);
+  transition: box-shadow 0.12s ease, background 0.12s ease;
 }
 
 /* Wall count: heat gradient only — flat chrome like the divider band. */
@@ -1870,7 +1895,8 @@ html[data-home-screen-app]:not([data-native-app])
   ):hover:not(:disabled):not(:active):not(.suggested-hands-tab--open):not(
     .app-bottom-center-controls__menu-btn--open
   ) {
-  box-shadow: none;
+  background: var(--rack-action-face);
+  box-shadow: var(--rack-action-shadow-rest);
   transform: none;
 }
 
@@ -1879,6 +1905,7 @@ html[data-home-screen-app]:not([data-native-app])
     .btn.rack-bottom-tile-cell,
     .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn
   ):active:not(:disabled) {
+  background: var(--rack-action-face-pressed);
   box-shadow: var(--rack-action-pressed);
   transition: none;
   transform: none;
@@ -1921,18 +1948,12 @@ html[data-home-screen-app]:not([data-native-app])
     :disabled,
     :not(:disabled)
   ) {
-  background: var(--rack-action-flat-surface);
+  background: var(--rack-action-face-pressed);
   color: var(--rack-action-label-color, #e2e4e8);
   box-shadow: var(--rack-action-pressed);
 }
 
-/* Beat part-0067 / part-0103 resting inset on menu + semantic disabled buttons. */
-.app .panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:not(
-    :disabled
-  ):not(:active):not(.app-bottom-center-controls__menu-btn--open),
-.app .panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:hover:not(
-    :disabled
-  ):not(:active):not(.app-bottom-center-controls__menu-btn--open),
+/* Beat part-0103 resting inset on semantic disabled buttons. */
 .app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong.rack-bottom-tile-cell--c5-6:disabled:not(
     .btn--mahjong-rack-pressed-in
   ),
@@ -1941,8 +1962,7 @@ html[data-home-screen-app]:not([data-native-app])
   .panel--hand
   .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
   .btn.btn--primary.charleston-pass-btn.rack-bottom-tile-cell--c12-14:disabled:not(.suggested-hands-tab),
-.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:disabled,
-.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:hover:not(:disabled):not(:active) {
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:disabled {
   box-shadow: none;
   transform: none;
 }
@@ -1991,7 +2011,7 @@ html[data-home-screen-app]:not([data-native-app])
 .app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):is(:disabled, :not(:disabled)),
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:disabled,
 .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:is(:disabled, :not(:disabled)) {
-  background: var(--rack-action-flat-surface);
+  background: var(--rack-action-face);
   color: var(--rack-action-label-color, #e2e4e8);
   opacity: 1;
   filter: none;
@@ -2023,7 +2043,7 @@ html[data-home-screen-app]:not([data-native-app])
   .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
   .btn.btn--primary.charleston-pass-btn.rack-bottom-tile-cell--c12-14:is(:disabled, :not(:disabled)) {
   color: var(--rack-action-label-color, #e2e4e8);
-  background: var(--rack-action-flat-surface);
+  background: var(--rack-action-face);
   opacity: 1;
   filter: none;
 }
@@ -2054,7 +2074,7 @@ html[data-home-screen-app]:not([data-native-app])
 .app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c7-8:not(:disabled),
 .app[data-color-buttons='off'] .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
 .app[data-color-buttons='off'] .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled) {
-  background: var(--rack-action-flat-surface);
+  background: var(--rack-action-face);
   color: var(--rack-action-label-color, #e2e4e8);
   opacity: 1;
   filter: none;
@@ -2062,7 +2082,7 @@ html[data-home-screen-app]:not([data-native-app])
 
 .app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--logic.rack-bottom-tile-cell--c7-8:active:not(:disabled),
 .app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:active:not(:disabled) {
-  background: var(--rack-action-flat-surface);
+  background: var(--rack-action-face-pressed);
   color: var(--rack-action-label-color, #e2e4e8);
 }
 
@@ -2070,10 +2090,54 @@ html[data-home-screen-app]:not([data-native-app])
 html body .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid
   button.btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
 html body .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid
-  button.btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled):hover,
+  button.btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled):hover {
+  background: var(--rack-action-face);
+  border: 1px solid var(--rack-action-border-color, #636870);
+  box-shadow: none;
+  color: var(--rack-action-label-color, #e2e4e8);
+  opacity: 1;
+  filter: none;
+}
+
+/*
+ * Sort / HANDS / Logic / Menu: flat resting face — beat legacy neumorphic inset
+ * (part-0067 / part-0069) that only hit btn--rack-neutral + suggested-hands-tab.
+ */
+html body .app .panel--hand .rack-bottom-bar--tile-grid :is(
+  button.btn.btn--rack-neutral.rack-bottom-tile-cell--c1:not(:disabled),
+  button.btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c4-5:not(:disabled):not(
+      .suggested-hands-tab--open
+    ),
+  button.btn.btn--rack-neutral.btn--logic.rack-bottom-tile-cell--c7-8:not(:disabled),
+  .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:not(:disabled):not(
+      .app-bottom-center-controls__menu-btn--open
+    )
+):not(:active) {
+  background: var(--rack-action-face);
+  border: 1px solid var(--rack-action-border-color, #636870);
+  box-shadow: none;
+  color: var(--rack-action-label-color, #e2e4e8);
+  opacity: 1;
+  filter: none;
+}
+
+html body .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid :is(
+  button.btn.btn--rack-neutral.rack-bottom-tile-cell--c1:not(:disabled),
+  button.btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c4-5:not(:disabled):not(
+      .suggested-hands-tab--open
+    )
+):not(:active) {
+  background: var(--rack-action-face);
+  border: 1px solid var(--rack-action-border-color, #636870);
+  box-shadow: none;
+  color: var(--rack-action-label-color, #e2e4e8);
+  opacity: 1;
+  filter: none;
+}
+
 html body .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid
   button.btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled):active {
-  background-color: var(--rack-action-flat-surface, #484c52);
+  background: var(--rack-action-face-pressed);
   color: var(--rack-action-label-color, #e2e4e8);
   opacity: 1;
   filter: none;

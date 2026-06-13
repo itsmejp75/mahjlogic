@@ -15,6 +15,12 @@
   transform: none;
 }
 
+/* Hand rack: flat resting/hover — part-0123 PokerStars tokens. */
+.app .panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:hover:not(:disabled):not(:active) {
+  box-shadow: none;
+  transform: none;
+}
+
 .panel--hand .rack-bottom-bar--tile-grid .rack-bottom-tile-cell,
 .panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell,
 .panel--hand .rack-bottom-bar--tile-grid .rack-bottom-tile-cell:disabled,
@@ -26,42 +32,7 @@
   box-shadow: none;
 }
 
-.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:not(:disabled),
-.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:hover:not(:disabled),
-.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn--open:not(:disabled),
-.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn--open:hover:not(:disabled) {
-  box-shadow:
-    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
-    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
-  transform: none;
-}
-
-.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:active:not(:disabled) {
-  transition: none;
-  transform: none;
-  box-shadow:
-    inset 4px 4px 11px rgba(0, 0, 0, 0.48),
-    inset -3px -3px 8px rgba(255, 255, 255, 0.1),
-    inset 0 0 0 2px rgba(255, 255, 255, 0.24);
-}
-
-/* Mah Jongg legal-win hint: same inset highlight/shading as hand-rack Menu; inactive stays flat (panel reset above). */
-.panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong.btn--mahjong-hint.rack-bottom-tile-cell--c5-6:not(:disabled),
-.panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong.btn--mahjong-hint.rack-bottom-tile-cell--c5-6:not(:disabled):hover {
-  box-shadow:
-    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
-    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
-  transform: none;
-}
-
-.panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong.btn--mahjong-hint.rack-bottom-tile-cell--c5-6:not(:disabled):active {
-  transition: none;
-  transform: none;
-  box-shadow:
-    inset 4px 4px 11px rgba(0, 0, 0, 0.48),
-    inset -3px -3px 8px rgba(255, 255, 255, 0.1),
-    inset 0 0 0 2px rgba(255, 255, 255, 0.24);
-}
+/* Hand-rack Menu + MAHJ hint: resting/pressed chrome is part-0123 (PokerStars tokens). */
 
 /*
  * Hand action row cells: size from the grid track, NOT from a `--hand-action-face-w` token
