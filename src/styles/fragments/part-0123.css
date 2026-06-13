@@ -404,13 +404,12 @@ html .app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard
   position: absolute;
   z-index: 0;
   top: 0;
-  bottom: 0;
+  /* 1px overlap into the hand rack padding band — avoids a hairline at the tray join. */
+  bottom: -1px;
   left: calc(-1 * var(--hand-rack-tray-bleed-inline));
   right: calc(-1 * var(--hand-rack-tray-bleed-inline));
   pointer-events: none;
   border-radius: 0;
-  background-color: var(--hand-rack-tray-surface);
-  background-image: none;
 }
 
 html .app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard-tracker > .discard-tracker__shell::after {
@@ -781,7 +780,7 @@ html
   .app-top-exposure-container
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot--empty::before {
-  background: color-mix(in srgb, #c8c8c8 28%, var(--hand-rack-tray-surface));
+  background: color-mix(in srgb, #c8c8c8 28%, var(--app-bg-slot-well));
 }
 
 /*
@@ -926,13 +925,13 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 }
 
 /*
- * Page shell: transparent wrapper so cross-bar gaps between containers are invisible
- * (spacing from `--play-tray-h-divider` unchanged). Tray interiors stay `--app-container-surface`.
+ * Page shell: transparent wrapper so gaps use the main app background (app-background.css).
+ * Surface list + layout seams: “Main app background surfaces” block below.
  */
 .app {
-  --hand-rack-tray-surface: var(--app-container-surface);
+  --hand-rack-tray-surface: var(--app-bg-base);
   --hand-rack-tray-bleed-inline: var(--hand-window-pad-inline, 0px);
-  --app-container-surface: #5c6066;
+  --app-container-surface: var(--app-bg-base);
   --app-wrapper-surface: transparent;
   --dark-tray-rim-border-top: transparent;
   --dark-tray-rim-border-inline: transparent;
@@ -1001,22 +1000,6 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   right: calc(-1 * var(--hand-rack-tray-bleed-inline));
   pointer-events: none;
   border-radius: 0;
-  background-color: var(--hand-rack-tray-surface);
-  background-image: none;
-}
-
-/* Tray/container interiors (not the outer page wrapper). Top band uses --hand-rack-tray-surface. */
-:is(
-  .panel--bot-exposures .app-opponents-rail__cell,
-  .app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well,
-  .app-discard-bottom-container .discard-tracker__content,
-  .suggested-hands-popup .panel--hands
-) {
-  background-color: var(--app-container-surface, #5c6066);
-  background-image: none;
-  background-size: auto;
-  background-repeat: repeat;
-  background-blend-mode: normal;
 }
 
 .app-dnd-frame .app-play-split.app-top-exposure-container :is(
@@ -1199,48 +1182,55 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot--empty::before {
-  background: color-mix(in srgb, #c8c8c8 28%, var(--app-container-surface, #5c6066));
+  background: color-mix(in srgb, #c8c8c8 28%, var(--app-bg-slot-well));
   background-image: none;
 }
 
 /*
- * Solid tray shells only — beats fragment rules that still set felt grain / radial fills.
+ * Flat tray shell (suggested-hands only — not the main app background).
  */
-:is(
-  .panel--discard-tracker .discard-tracker__content,
-  .panel--discard-tracker .discard-tracker__shell,
-  .panel--discard-tracker .discard-tracker__tile-groups-container,
-  .app-dnd-frame .panel--discard-tracker .discard-tracker__content,
-  .panel--bot-exposures .app-opponents-rail__cell,
-  .panel--bot-exposures__toolbar-well,
+.app :is(
+  .suggested-hands-popup,
   .suggested-hands-popup .panel--hands,
+  .panel--hands.suggested-hands-popup__user-shift,
   .suggested-hands-popup__user-shift,
   .suggested-hands-filter-tray
 ) {
-  background-color: var(--app-container-surface, #5c6066);
+  background-color: var(--app-bg-flat);
   background-image: none;
   background-blend-mode: normal;
 }
 
-/* Beat the solid-tray rule above for the top band (tray color comes from ::before). */
-.app-dnd-frame .app-play-split.app-top-exposure-container :is(
-    .discard-tracker__shell,
-    .discard-tracker__content--tile-groups-only,
-    .discard-tracker__tile-groups-container
-  ) {
-  background-color: transparent;
-  background-image: none;
-}
-
-html,
-body,
-#root {
-  background-color: var(--app-container-surface, #5c6066);
-  background-image: none;
+/*
+ * Main app background surfaces — paint recipe lives in src/styles/app-background.css.
+ * Edit --app-bg-* there; this block only lists WHERE the background is applied.
+ * Excludes buttons, tiles, text, slot wells, and suggested-hands (flat rule above).
+ */
+:is(
+  html,
+  body,
+  #root,
+  .app .panel.panel--hand > .panel-hand-rack::before,
+  html .app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard-tracker > .discard-tracker__shell::before,
+  .panel--bot-exposures .app-opponents-rail__cell,
+  .panel--bot-exposures__toolbar-well,
+  .app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well,
+  .app-discard-bottom-container .discard-tracker__content,
+  .panel--discard-tracker .discard-tracker__content,
+  .panel--discard-tracker .discard-tracker__shell,
+  .panel--discard-tracker .discard-tracker__tile-groups-container,
+  .app-dnd-frame .panel--discard-tracker .discard-tracker__content
+) {
+  background-color: var(--app-bg-paint-color);
+  background-image: var(--app-bg-paint-image);
+  background-size: var(--app-bg-paint-size);
+  background-repeat: var(--app-bg-paint-repeat);
+  background-blend-mode: var(--app-bg-paint-blend);
+  background-attachment: var(--app-bg-paint-attachment);
 }
 
 .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row .exposure-rack__slot--empty::before {
-  background: color-mix(in srgb, #c8c8c8 28%, var(--app-container-surface, #5c6066));
+  background: color-mix(in srgb, #c8c8c8 28%, var(--app-bg-slot-well));
   background-image: none;
 }
 
@@ -1339,6 +1329,14 @@ html[data-home-screen-app]:not([data-native-app])
   padding-bottom: 0;
 }
 
+/* Beat PWA flush-rack rule when the top exposure band owns the divider strip. */
+html[data-home-screen-app]:not([data-native-app])
+  .app-dnd-frame:has(> .app-play-split.app-top-exposure-container)
+  .panel.panel--hand
+  > .panel-hand-rack {
+  padding-top: var(--play-tray-h-divider);
+}
+
 /*
  * Top B/C/D + bot band → East rack: no flex gap on the play column (discard tray keeps max height).
  * One `--play-tray-h-divider` strip sits above the center group only — same rhythm as hand ↔ actions.
@@ -1355,7 +1353,7 @@ html[data-home-screen-app]:not([data-native-app])
 
 .app-dnd-frame:has(> .app-play-split.app-top-exposure-container) > .app-rack-stage {
   justify-content: flex-start;
-  margin-top: var(--play-tray-h-divider);
+  margin-top: 0;
   background: transparent;
 }
 
@@ -1369,7 +1367,8 @@ html[data-home-screen-app]:not([data-native-app])
   > .panel-hand-rack {
   justify-content: flex-start;
   margin-top: 0;
-  padding-top: 0;
+  /* Divider strip inside the rack so one ::before backdrop covers it (no flex margin seam). */
+  padding-top: var(--play-tray-h-divider);
   margin-bottom: 0;
   padding-bottom: 0;
 }
@@ -1583,7 +1582,7 @@ html[data-home-screen-app]:not([data-native-app])
 }
 
 /*
- * Hand action row: dark inset faces on the tray surface (#5c6066).
+ * Hand action row: dark inset button faces on the main app background (buttons unchanged).
  * Inset depth only while pressed (:active) or toggled active (Menu / Hands open / MAHJ held).
  * No outer shadows on resting, hover, or disabled controls.
  */

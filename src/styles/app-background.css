@@ -1,0 +1,81 @@
+/*
+ * ============================================================================
+ * Main app background — single edit point
+ * ============================================================================
+ *
+ * Everything on the main play screen that is NOT a button, tile, label text, or
+ * empty slot well uses this recipe (shell, tray chrome, gaps between panels).
+ *
+ * Where it is applied: part-0123.css block “Main app background surfaces”.
+ * Excluded on purpose: suggested-hands tray (`--app-bg-flat`), slot wells
+ * (`--app-bg-slot-well`).
+ *
+ * Quick tweaks:
+ *   --app-bg-base       overall charcoal tone (also sync index.html first-paint color)
+ *   --app-bg-highlight  center of vignette (lighter)
+ *   --app-bg-shadow     edge of vignette (darker)
+ *   --app-bg-noise-*    grain strength / fineness (see composed --app-bg-noise URL)
+ *
+ * Legacy names (--app-carpet-*, --app-tray-flat) alias these tokens for older rules.
+ */
+
+:root {
+  /* --- Color --- */
+  --app-bg-base: #3a444d;
+  --app-bg-highlight: #3f4952;
+  --app-bg-shadow: #343d45;
+
+  /* Surfaces that intentionally stay flat (not the textured main background). */
+  --app-bg-flat: #5c6066;
+  --app-bg-slot-well: #5c6066;
+
+  /* --- Vignette (subtle depth; flatten by setting highlight/shadow equal to base) --- */
+  --app-bg-vignette-shape: ellipse 140% 115% at 50% 42%;
+  --app-bg-vignette: radial-gradient(
+    var(--app-bg-vignette-shape),
+    var(--app-bg-highlight) 0%,
+    var(--app-bg-base) 58%,
+    var(--app-bg-shadow) 100%
+  );
+
+  /*
+   * --- Grain (SVG noise tile) ---
+   * opacity in the rect: strength; baseFrequency: fineness (higher = finer).
+   */
+  --app-bg-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128'%3E%3Cfilter id='a'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.05' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='128' height='128' filter='url(%23a)' opacity='0.26'/%3E%3C/svg%3E");
+
+  /* --- Composed paint (used by part-0123; normally do not edit) --- */
+  --app-bg-paint-color: var(--app-bg-base);
+  --app-bg-paint-image: var(--app-bg-vignette), var(--app-bg-noise);
+  --app-bg-paint-size: auto, 128px 128px;
+  --app-bg-paint-repeat: no-repeat, repeat;
+  --app-bg-paint-blend: normal, soft-light;
+  /* fixed = one shared grain phase across tray bands (avoids seams between sections) */
+  --app-bg-paint-attachment: fixed;
+
+  /* Legacy / semantic aliases */
+  --app-tray-flat: var(--app-bg-flat);
+  --app-carpet-base: var(--app-bg-base);
+  --app-carpet-highlight: var(--app-bg-highlight);
+  --app-carpet-shadow: var(--app-bg-shadow);
+  --app-carpet-vignette: var(--app-bg-vignette);
+  --app-carpet-noise: var(--app-bg-noise);
+  --app-carpet-bg-image: var(--app-bg-paint-image);
+  --app-carpet-bg-size: var(--app-bg-paint-size);
+  --app-carpet-bg-repeat: var(--app-bg-paint-repeat);
+  --app-carpet-bg-blend: var(--app-bg-paint-blend);
+  --app-carpet-bg-attachment: var(--app-bg-paint-attachment);
+}
+
+/*
+ * Utility class — same paint as the main selector block in part-0123.css.
+ * Prefer the centralized tokens above; use this only if a new surface needs the background.
+ */
+.app-bg-paint {
+  background-color: var(--app-bg-paint-color);
+  background-image: var(--app-bg-paint-image);
+  background-size: var(--app-bg-paint-size);
+  background-repeat: var(--app-bg-paint-repeat);
+  background-blend-mode: var(--app-bg-paint-blend);
+  background-attachment: var(--app-bg-paint-attachment);
+}

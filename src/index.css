@@ -1,4 +1,6 @@
 /* Local Noto Serif (assets/fonts/Noto_Serif): Black (900) upright for rack watermark "Mahj". */
+@import './styles/app-background.css';
+
 @font-face {
   font-family: 'Noto Serif';
   font-style: normal;
