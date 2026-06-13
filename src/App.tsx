@@ -1567,8 +1567,8 @@ type BotTurnResult = {
 }
 
 /**
- * Before discarding, a bot greedily claims any joker it can redeem by placing a
- * matching natural into an exposed meld (East's or any other bot's).
+ * On this bot’s own turn only (before discard): redeem any joker it can by placing a matching
+ * natural into an exposed meld (East’s or any other bot’s). Sole bot joker-swap path (NMJL).
  * Returns the updated hand and exposures; up to 5 swaps per call.
  * Difficulty softens or sharpens how often the bot “sees” a redeem in the first pass.
  */
@@ -1985,82 +1985,13 @@ function applyEastNaturalForExposedJoker(
   })
 }
 
-const MAX_BOT_JOKER_SWAP_PASSES = 24
-
 /**
- * Other seats (bots) may redeem a joker in East’s or a bot’s exposure only on **a bot’s turn** —
- * not on East’s turn (`east-discard`, including immediately after a call is committed) and
- * not during `call-staging` while East is building a claim. East’s own joker redemptions use
- * {@link applyEastNaturalForExposedJoker} and do not run this pass.
- * Repeated until no more swaps, then the returned state is unchanged.
+ * Bot joker redemptions run only in {@link performBotPreDiscardSwaps} on that seat’s own turn
+ * (E → S → W → N), before they discard — not during `bot-turn` while another seat’s discard is
+ * claimable. East uses {@link applyEastNaturalForExposedJoker} on `east-discard` / `call-staging`.
  */
 function applyBotsJokerSwapsFromEast(r: RoundState): RoundState {
-  if (r.mainPhase !== 'bot-turn') return r
-  let cur = r
-  for (let pass = 0; pass < MAX_BOT_JOKER_SWAP_PASSES; pass++) {
-    let swapped = false
-    // Bots swapping naturals into East's exposures
-    outer: for (let ei = 0; ei < cur.eastExposures.length; ei++) {
-      const meld = cur.eastExposures[ei]!
-      const rep = meld.tiles.find((t) => t.def.cat !== 'joker')
-      if (!rep) continue
-      for (const jo of meld.tiles) {
-        if (jo.def.cat !== 'joker') continue
-        for (let bi = 0; bi < 3; bi++) {
-          const bh = cur.bots[bi]!
-          const ti = bh.findIndex((t) => t.def.cat !== 'joker' && tileDefsEqual(t.def, rep.def))
-          if (ti < 0) continue
-          const natural = bh[ti]!
-          const newBotHand = [...bh.slice(0, ti), jo, ...bh.slice(ti + 1)]
-          const newEastExposures = cur.eastExposures.map((exp, idx) =>
-            idx !== ei
-              ? exp
-              : { ...exp, tiles: exp.tiles.map((t) => (t.id === jo.id ? natural : t)) },
-          )
-          const botsNext: [TileInstance[], TileInstance[], TileInstance[]] = [
-            bi === 0 ? newBotHand : [...cur.bots[0]],
-            bi === 1 ? newBotHand : [...cur.bots[1]],
-            bi === 2 ? newBotHand : [...cur.bots[2]],
-          ]
-          cur = { ...cur, bots: botsNext, eastExposures: newEastExposures }
-          swapped = true
-          break outer
-        }
-      }
-    }
-    if (swapped) continue
-    // Bots swapping naturals into other bots' exposures
-    outer2: for (let ei = 0; ei < cur.botExposures.length; ei++) {
-      const meld = cur.botExposures[ei]!
-      const rep = meld.tiles.find((t) => t.def.cat !== 'joker')
-      if (!rep) continue
-      for (const jo of meld.tiles) {
-        if (jo.def.cat !== 'joker') continue
-        for (let bi = 0; bi < 3; bi++) {
-          const bh = cur.bots[bi]!
-          const ti = bh.findIndex((t) => t.def.cat !== 'joker' && tileDefsEqual(t.def, rep.def))
-          if (ti < 0) continue
-          const natural = bh[ti]!
-          const newBotHand = [...bh.slice(0, ti), jo, ...bh.slice(ti + 1)]
-          const newBotExposures = cur.botExposures.map((exp, idx) =>
-            idx !== ei
-              ? exp
-              : { ...exp, tiles: exp.tiles.map((t) => (t.id === jo.id ? natural : t)) },
-          )
-          const botsNext: [TileInstance[], TileInstance[], TileInstance[]] = [
-            bi === 0 ? newBotHand : [...cur.bots[0]],
-            bi === 1 ? newBotHand : [...cur.bots[1]],
-            bi === 2 ? newBotHand : [...cur.bots[2]],
-          ]
-          cur = { ...cur, bots: botsNext, botExposures: newBotExposures }
-          swapped = true
-          break outer2
-        }
-      }
-    }
-    if (!swapped) break
-  }
-  return cur
+  return r
 }
 
 /**
