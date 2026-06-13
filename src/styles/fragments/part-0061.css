@@ -972,6 +972,48 @@
   --tg-cs-rack-flower-fg: #080808;
 }
 
+/*
+ * Sorted B/C/D band — discarded-only lit tiles (a matching discard was made): flat suit fill.
+ * No rim ::before or dim ::after; on mobile WebKit the bottom material inset / opacity-0 overlay
+ * reads as a dark hairline under green bam faces. Coach highlight (--suggest-need) and dim
+ * (--suggest-dim) keep their own layers unchanged.
+ */
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  :is(.exposure-rack--discard-tracker-sorted-row, .exposure-rack--discard-tracker-prefix)
+  .sorted-discard-tray__slot--discarded:not(.sorted-discard-tray__slot--suggest-need):not(
+    .sorted-discard-tray__slot--suggest-dim
+  )
+  .tile-face.tile-face--sorted-discard-glyph {
+  --tile-face-base-shadow: 0 0 0 0 transparent;
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+  box-shadow: none;
+}
+
+.app[data-tile-graphics]
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  :is(.exposure-rack--discard-tracker-sorted-row, .exposure-rack--discard-tracker-prefix)
+  .sorted-discard-tray__slot--discarded:not(.sorted-discard-tray__slot--suggest-need):not(
+    .sorted-discard-tray__slot--suggest-dim
+  )
+  .tile-face.tile-face--sorted-discard-glyph::before {
+  content: none;
+  display: none;
+}
+
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--discarded:not(.sorted-discard-tray__slot--suggest-need):not(
+    .sorted-discard-tray__slot--suggest-dim
+  )
+  .tile-face:not(.tile--joker)::after {
+  content: none;
+  display: none;
+}
+
 /* Beat Menu preset glyph rules on sorted prism glyphs only (bot row uses theme ink like main rack). */
 .app[data-tile-graphics] .panel--discard-tracker
   .discard-tracker__overlay-grid
