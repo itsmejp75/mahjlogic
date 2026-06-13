@@ -704,8 +704,14 @@ html
 }
 
 html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__suit-label {
-  font-size: calc(var(--rack-tile-w) * 0.48);
-  font-weight: 700;
+  font-family: 'Figtree', var(--sans);
+  font-size: min(
+    calc(var(--rack-bottom-action-fs) * 1.05),
+    calc(var(--rack-tile-w) * 0.48)
+  );
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: max(0.01em, calc(0.02em + 0.02rem));
 }
 
 html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__seat-label {
@@ -715,11 +721,11 @@ html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-
 
 html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__suit-label--bam,
 html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__suit-label--dot {
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
 }
 
 html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__suit-label--crak {
-  letter-spacing: 0;
+  letter-spacing: 0.015em;
 }
 
 /*

@@ -744,28 +744,31 @@
 }
 
 .discard-tracker__overlay-grid .sorted-discard-tray__suit-label {
-  font-family: var(--mono-sometype);
-  font-weight: 700;
-  font-size: calc(var(--rack-tile-w) * 0.48);
-  line-height: 1;
+  font-family: 'Figtree', var(--sans);
+  font-weight: 600;
+  font-size: min(
+    calc(var(--rack-bottom-action-fs) * 1.05),
+    calc(var(--rack-tile-w) * 0.48)
+  );
+  line-height: 1.08;
   width: auto;
   max-width: 100%;
   text-align: center;
-  letter-spacing: 0;
+  letter-spacing: max(0.01em, calc(0.02em + 0.02rem));
   box-sizing: border-box;
   opacity: 1;
   white-space: nowrap;
   pointer-events: none;
 }
 
-/* Optical balance: 3-letter suits breathe; 4-letter Crak compresses slightly. */
+/* Optical balance: 3-letter suits breathe; 4-letter Crak stays slightly tighter. */
 .discard-tracker__overlay-grid .sorted-discard-tray__suit-label--bam,
 .discard-tracker__overlay-grid .sorted-discard-tray__suit-label--dot {
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
 }
 
 .discard-tracker__overlay-grid .sorted-discard-tray__suit-label--crak {
-  letter-spacing: 0;
+  letter-spacing: 0.015em;
 }
 
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--suit-label-dot {
