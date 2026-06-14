@@ -636,7 +636,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: calc(var(--rack-tile-w) * 0.06);
+  padding-top: var(--sorted-discard-glyph-pad-top, calc(var(--rack-tile-w) * 0.02));
   padding-inline: calc(var(--rack-tile-w) * 0.04);
   box-sizing: border-box;
 }
@@ -676,12 +676,14 @@
 
 .discard-tracker__overlay-grid .sorted-discard-tray__slot {
   position: relative;
+  --sorted-discard-glyph-pad-top: calc(var(--rack-tile-w) * 0.02);
+  --sorted-discard-count-bottom: calc(var(--rack-tile-w) * 0.06);
 }
 
 .discard-tracker__overlay-grid .sorted-discard-tray__count {
   position: absolute;
   left: 50%;
-  bottom: calc(var(--rack-tile-w) * 0.06);
+  bottom: var(--sorted-discard-count-bottom, calc(var(--rack-tile-w) * 0.06));
   transform: translate(-50%, 0);
   z-index: 2;
   pointer-events: none;
@@ -693,6 +695,17 @@
 }
 
 /* Sorted-row dim uses the shared suggest-dim `::after` overlay (part-0075); counts stay above it via z-index. */
+.panel--discard-tracker .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--discarded.sorted-discard-tray__slot--suggest-dim
+  .tile-face:not(.tile--joker) {
+  opacity: 1;
+}
+
+.panel--discard-tracker .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--discarded.sorted-discard-tray__slot--suggest-dim
+  .tile-face:not(.tile--joker)::after {
+  z-index: 4;
+}
 
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--inactive {
   pointer-events: none;
@@ -824,15 +837,24 @@
 }
 
 /*
- * Undiscarded sorted slots: keep glyph + count visible above the transparent face.
+ * Undiscarded slots: glyph-only on the tray unless --suggest-need (coach lit fill).
+ * Undiscarded --suggest-dim keeps transparent face; glyph fades via opacity below.
  */
 .panel--discard-tracker .discard-tracker__overlay-grid
   :is(
     .sorted-discard-tray__slot--awaiting-discard,
-    .sorted-discard-tray__slot--suggest-dim,
-    .sorted-discard-tray__slot--suggest-need,
-    .sorted-discard-tray__slot--inactive
-  )
+    .sorted-discard-tray__slot--inactive,
+    .sorted-discard-tray__slot--suggest-dim
+  ):not(.sorted-discard-tray__slot--discarded)
+  .tile-face
+  :is(.tile-face__glyph, .tile-face__glyph-num, .tile-face__glyph-letter) {
+  opacity: 0.8;
+  position: relative;
+  z-index: 1;
+}
+
+.panel--discard-tracker .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suggest-need:not(.sorted-discard-tray__slot--discarded)
   .tile-face
   :is(.tile-face__glyph, .tile-face__glyph-num, .tile-face__glyph-letter) {
   opacity: 1;

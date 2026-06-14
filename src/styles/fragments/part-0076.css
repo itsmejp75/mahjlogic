@@ -14,11 +14,7 @@
     .panel--discard-tracker
       .discard-tracker__overlay-grid
       .exposure-rack--discard-tracker-bot-row
-      .tile-face,
-    .panel--discard-tracker
-      .discard-tracker__overlay-grid
-      .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
-      .tile-face.tile-face--sorted-discard-glyph,
+      .tile-face
   ) {
   position: relative;
   isolation: isolate;
@@ -42,11 +38,7 @@
     .panel--discard-tracker
       .discard-tracker__overlay-grid
       .exposure-rack--discard-tracker-bot-row
-      .tile-face,
-    .panel--discard-tracker
-      .discard-tracker__overlay-grid
-      .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
-      .tile-face.tile-face--sorted-discard-glyph,
+      .tile-face
   )::before {
   content: '';
   position: absolute;

@@ -405,11 +405,7 @@
     .panel--discard-tracker
       .discard-tracker__overlay-grid
       .exposure-rack--discard-tracker-bot-row
-      .tile-face,
-    .panel--discard-tracker
-      .discard-tracker__overlay-grid
-      .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
-      .tile-face.tile-face--sorted-discard-glyph,
+      .tile-face
   ) {
   /* Material shadow flows through `--tile-face-base-shadow` so the highlight ring (set via
      `--tile-face-highlight-shadow` from parent state classes) layers on top without losing

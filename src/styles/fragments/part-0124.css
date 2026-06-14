@@ -366,41 +366,17 @@
 }
 
 /*
- * Ivory / Prism / Sorbet / Obsidian — rack faces + discard tracker prism chips share rim
- * bevel + drop shadow (Classic illustrative art uses the block above).
+ * Ivory / Prism / Sorbet / Obsidian — rack faces: rim bevel + drop shadow.
+ * Discard tracker sorted prism chips stay flat (see flat-band block at end of this file).
  */
 .app[data-tile-graphics='classic']
-  :is(
-    .tile-face:not(.tile-face--illustrative-art),
-    .panel--discard-tracker
-      .discard-tracker__overlay-grid
-      .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
-      .tile-face.tile-face--sorted-discard-glyph,
-  ),
+  .tile-face:not(.tile-face--illustrative-art),
 .app[data-tile-graphics='solid-color']
-  :is(
-    .tile-face:not(.tile-face--illustrative-art),
-    .panel--discard-tracker
-      .discard-tracker__overlay-grid
-      .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
-      .tile-face.tile-face--sorted-discard-glyph,
-  ),
+  .tile-face:not(.tile-face--illustrative-art),
 .app[data-tile-graphics='light']
-  :is(
-    .tile-face:not(.tile-face--illustrative-art),
-    .panel--discard-tracker
-      .discard-tracker__overlay-grid
-      .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
-      .tile-face.tile-face--sorted-discard-glyph,
-  ),
+  .tile-face:not(.tile-face--illustrative-art),
 .app[data-tile-graphics='dark']
-  :is(
-    .tile-face:not(.tile-face--illustrative-art),
-    .panel--discard-tracker
-      .discard-tracker__overlay-grid
-      .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
-      .tile-face.tile-face--sorted-discard-glyph,
-  ) {
+  .tile-face:not(.tile-face--illustrative-art) {
   position: relative;
   isolation: isolate;
   overflow: hidden;
@@ -410,37 +386,13 @@
 }
 
 .app[data-tile-graphics='classic']
-  :is(
-    .tile-face:not(.tile-face--illustrative-art),
-    .panel--discard-tracker
-      .discard-tracker__overlay-grid
-      .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
-      .tile-face.tile-face--sorted-discard-glyph,
-  )::before,
+  .tile-face:not(.tile-face--illustrative-art)::before,
 .app[data-tile-graphics='solid-color']
-  :is(
-    .tile-face:not(.tile-face--illustrative-art),
-    .panel--discard-tracker
-      .discard-tracker__overlay-grid
-      .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
-      .tile-face.tile-face--sorted-discard-glyph,
-  )::before,
+  .tile-face:not(.tile-face--illustrative-art)::before,
 .app[data-tile-graphics='light']
-  :is(
-    .tile-face:not(.tile-face--illustrative-art),
-    .panel--discard-tracker
-      .discard-tracker__overlay-grid
-      .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
-      .tile-face.tile-face--sorted-discard-glyph,
-  )::before,
+  .tile-face:not(.tile-face--illustrative-art)::before,
 .app[data-tile-graphics='dark']
-  :is(
-    .tile-face:not(.tile-face--illustrative-art),
-    .panel--discard-tracker
-      .discard-tracker__overlay-grid
-      .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
-      .tile-face.tile-face--sorted-discard-glyph,
-  )::before {
+  .tile-face:not(.tile-face--illustrative-art)::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -503,75 +455,6 @@
 .app[data-tile-graphics='light'] .tile-face.tile-face--rack-suit-stack .tile-face__suit-band,
 .app[data-tile-graphics='dark'] .tile-face.tile-face--rack-suit-stack .tile-face__suit-band {
   z-index: 3;
-}
-
-/*
- * Classic illustrative: discard tracker prism faces (B/C/D + lit sorted slots) — same rim as art tiles.
- */
-.app[data-tile-graphics='illustrative-classic']
-  .panel--discard-tracker
-  .discard-tracker__overlay-grid
-  :is(
-    .sorted-discard-tray__slot--discarded .tile-face.tile-face--sorted-discard-glyph,
-    .sorted-discard-tray__slot--suggest-need .tile-face.tile-face--sorted-discard-glyph
-  ) {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
-  --tile-face-base-shadow: 0 2px 5px rgba(0, 0, 0, 0.16);
-  box-shadow: var(--tile-face-base-shadow), var(--tile-face-highlight-inset), var(--tile-face-highlight-shadow),
-    var(--tile-face-suggest-dim-inset);
-}
-
-.app[data-tile-graphics='illustrative-classic']
-  .panel--discard-tracker
-  .discard-tracker__overlay-grid
-  :is(
-    .sorted-discard-tray__slot--discarded .tile-face.tile-face--sorted-discard-glyph,
-    .sorted-discard-tray__slot--suggest-need .tile-face.tile-face--sorted-discard-glyph
-  )::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  border-radius: inherit;
-  pointer-events: none;
-  --tile-rim-fade: 9%;
-  --tile-shadow-fade: 7.5%;
-  background:
-    linear-gradient(
-      to bottom,
-      var(--tile-rim-top-peak) 0%,
-      var(--tile-rim-top-mid) calc(var(--tile-rim-fade) * 0.4),
-      var(--tile-rim-top-tail) calc(var(--tile-rim-fade) * 0.75),
-      transparent var(--tile-rim-fade)
-    ),
-    linear-gradient(
-      to top,
-      rgba(28, 25, 22, 0.55) 0%,
-      rgba(28, 25, 22, 0.2) calc(var(--tile-shadow-fade) * 0.4),
-      rgba(28, 25, 22, 0.05) calc(var(--tile-shadow-fade) * 0.75),
-      transparent var(--tile-shadow-fade)
-    ),
-    linear-gradient(
-      to right,
-      rgba(28, 25, 22, 0.45) 0%,
-      rgba(28, 25, 22, 0.14) calc(var(--tile-shadow-fade) * 0.4),
-      rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
-      transparent calc(var(--tile-shadow-fade) * 0.92)
-    ),
-    linear-gradient(
-      to left,
-      rgba(28, 25, 22, 0.45) 0%,
-      rgba(28, 25, 22, 0.14) calc(var(--tile-shadow-fade) * 0.4),
-      rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
-      transparent calc(var(--tile-shadow-fade) * 0.92)
-    );
-  box-shadow:
-    inset calc(var(--rack-tile-w) * 0.045) 0 calc(var(--rack-tile-w) * 0.1) calc(var(--rack-tile-w) * -0.3)
-      rgba(28, 25, 22, 0.38),
-    inset calc(var(--rack-tile-w) * -0.045) calc(var(--rack-tile-w) * -0.045) calc(var(--rack-tile-w) * 0.1)
-      calc(var(--rack-tile-w) * -0.3) rgba(28, 25, 22, 0.4);
 }
 
 .app-menu-modal__tile-graphics-illustrative-options {
@@ -851,4 +734,116 @@
       ):not(:has(.east-discard-staging--inline:not([aria-hidden]) .east-discard-staging__tile))
   ) {
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.16);
+}
+
+/*
+ * Discard tracker — flat dim / lit tiles (sorted prism band, discard pile, bot exposures).
+ * No drop shadow, rim lustre, or dim vignette overlays; coach focus keeps the white ring only
+ * (--suggest-need on sorted / pile slots, --suggest-best on bot row — part-0061 / above).
+ */
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--discarded:not(.sorted-discard-tray__slot--suggest-need)
+  .tile-face.tile-face--sorted-discard-glyph,
+.panel--discard-tracker
+  .discard-tracker__content
+  .discard-pile
+  .discard-entry--suggest-dim
+  .tile-face,
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-dim
+  .tile-face {
+  --tile-face-base-shadow: 0 0 0 0 transparent;
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+  box-shadow: none;
+}
+
+.app[data-tile-graphics]
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot:is(
+    .sorted-discard-tray__slot--discarded:not(.sorted-discard-tray__slot--suggest-need),
+    .sorted-discard-tray__slot--suggest-need
+  )
+  .tile-face.tile-face--sorted-discard-glyph::before,
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-dim
+  .tile-face::before {
+  content: none;
+  display: none;
+}
+
+/*
+ * Discarded coach-dim tiles use the shared `::after` overlay (part-0075) at full face opacity —
+ * not whole-face opacity (reads too faint on saturated prism fills). Undiscarded glyphs unchanged.
+ */
+
+/*
+ * Coach `--suggest-need`: inner border on top of dim overlay (z-index 4, part-0061) + flat prism faces.
+ */
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suggest-need
+  .tile-face.tile-face--sorted-discard-glyph {
+  --tile-face-base-shadow: 0 0 0 0 transparent;
+  --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
+  --tile-face-highlight-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.68);
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+  box-shadow: var(--tile-face-highlight-inset), var(--tile-face-highlight-shadow);
+}
+
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suggest-need
+  .tile-face.tile-face--sorted-discard-glyph::after,
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suggest-need
+  .tile-face.tile-face--sorted-discard-glyph.tile--joker::after {
+  content: '';
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  box-sizing: border-box;
+  border: 1.5px solid rgba(255, 255, 255, 0.68);
+  border-radius: inherit;
+  pointer-events: none;
+  background: transparent;
+  box-shadow: none;
+  opacity: 1;
+}
+
+.panel--discard-tracker .discard-tracker__content .discard-entry--suggest-need .tile-face {
+  --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
+  --tile-face-highlight-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.68);
+  box-shadow: var(--tile-face-highlight-inset), var(--tile-face-highlight-shadow);
+}
+
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-best
+  .tile-face {
+  --tile-face-base-shadow: 0 0 0 0 transparent;
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
+  box-shadow: var(--tile-face-highlight-shadow);
+}
+
+.app[data-tile-graphics]
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-best
+  .tile-face::before {
+  content: none;
+  display: none;
 }

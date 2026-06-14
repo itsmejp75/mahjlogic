@@ -742,7 +742,7 @@ html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-
 }
 
 html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__count {
-  bottom: calc(var(--rack-tile-w) * 0.06);
+  bottom: var(--sorted-discard-count-bottom, calc(var(--rack-tile-w) * 0.06));
   font-size: calc(var(--rack-tile-w) * 1.03 / 2.65 * 1.5);
   line-height: 0.82;
 }

@@ -1259,6 +1259,30 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/*
+ * Mobile / touch: `.hands-sheet__rows` spans all columns via subgrid, so iOS overlay
+ * scrollbars paint in the middle of a metric column (often Points) instead of the panel
+ * edge. Hide the thumb — touch scrolling is unchanged.
+ */
+@media (max-width: 932px), (pointer: coarse) {
+  .hands-panel__content
+    .hands-list-scroll
+    > .hands-sheet:not(.hands-sheet--tiles2)
+    > .hands-sheet__rows {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .hands-panel__content
+    .hands-list-scroll
+    > .hands-sheet:not(.hands-sheet--tiles2)
+    > .hands-sheet__rows::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}
+
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) > .hands-sheet__cell--header {
   position: relative;
   top: auto;
