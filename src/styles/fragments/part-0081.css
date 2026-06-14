@@ -1090,11 +1090,17 @@
 }
 
 /* Single crisp inset ring on the face edge (no soft vignette stack — avoids a second “rim” past the tile). */
-.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-best .tile-face,
-.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker .tile-face {
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-best .tile-face {
   border-radius: clamp(0.1rem, calc(0.12 * var(--hands-strip-em)), 0.35rem);
   --tile-face-highlight-inset: 0 0 0 0 transparent;
   --tile-face-highlight-shadow: var(--suggest-best-ring);
+  border: none;
+}
+
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker .tile-face {
+  border-radius: clamp(0.1rem, calc(0.12 * var(--hands-strip-em)), 0.35rem);
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
   border: none;
 }
 
@@ -1111,31 +1117,6 @@
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim .tile-face.tile--joker,
 .hands-sheet__tile-cell--suggest-dim .tile-face.tile--joker {
   --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
-}
-
-.hands-list__pattern-joker-mark {
-  position: absolute;
-  /* Sit slightly below the tile top so “JOKER” clears the inset highlight ring on .tile-face */
-  top: 0.38em;
-  left: 50%;
-  transform: translateX(-50%);
-  box-sizing: border-box;
-  height: 1.05em;
-  min-width: 0;
-  min-height: 0;
-  padding: 0 0.28em;
-  border: 0;
-  background: transparent;
-  color: var(--color-black);
-  font-size: calc(0.24 * var(--hands-preview-tile-w));
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  line-height: 1;
-  text-transform: uppercase;
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 2;
-  flex-shrink: 0;
 }
 
 .hands-list__section-num {
@@ -1910,11 +1891,36 @@
 }
 
 /* Same edge-aligned ring as the list strip (no soft vignette stack). */
-.hands-sheet__tile-cell--suggest-joker .tile-face,
 .hands-sheet__tile-cell--suggest-best .tile-face {
   --tile-face-highlight-inset: 0 0 0 0 transparent;
   --tile-face-highlight-shadow: var(--suggest-best-ring);
   border: none;
+}
+
+.hands-sheet__tile-cell--suggest-joker .tile-face {
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
+  border: none;
+}
+
+/*
+ * Joker-stand-in preview slots: 2px dotted green ring (same ink as suggest-best border).
+ * Square corners — no radius on the ring itself.
+ */
+:is(
+  .hands-sheet__tile-cell--suggest-joker,
+  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker
+)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  grid-area: 1 / 1;
+  z-index: 6;
+  box-sizing: border-box;
+  border-radius: 0;
+  pointer-events: none;
+  border: 2px dotted var(--tg-bam, var(--card-ink-green));
+  background: transparent;
 }
 
 .hands-sheet__tile-cell .tile-face:not(.tile--joker)::after {
@@ -2319,16 +2325,6 @@
 
 .hands-sheet__tiles-stack-row:focus-visible {
   outline: none;
-}
-
-.hands-sheet__tile-joker-mark {
-  position: absolute;
-  inset: auto 0 -0.05rem 0;
-  font-size: 0.5rem;
-  letter-spacing: 0.05em;
-  text-align: center;
-  color: var(--coach-teal, currentColor);
-  pointer-events: none;
 }
 
 /*

@@ -4529,14 +4529,17 @@ function stripOrderedHandIdsForPattern(
   /* Resolved perm suits in title order — not stand-in preview suits (green→bam, etc.). */
   const cardLineDefs =
     titleOrderDefs && titleOrderDefs.length === slots.length ? titleOrderDefs : displayDefs
-  const titlePreviewReorder = reorderSlotAssignmentsToTitlePreviewSlots(
-    slots,
-    cardLineDefs,
-    rackForPattern,
-    pinnedP,
-    jokerEli,
-    detail.usedOrder.filter((id) => bestIds.has(id)),
-  )
+  const titlePreviewReorder =
+    pinnedP.skipStripTitleReorder === true
+      ? null
+      : reorderSlotAssignmentsToTitlePreviewSlots(
+          slots,
+          cardLineDefs,
+          rackForPattern,
+          pinnedP,
+          jokerEli,
+          detail.usedOrder.filter((id) => bestIds.has(id)),
+        )
   if (titlePreviewReorder) {
     slots.splice(0, slots.length, ...titlePreviewReorder.slots)
   }

@@ -195,22 +195,32 @@
  * `--tile-face-border-radius` instead of the mini-tile size.
  */
 .app[data-tile-graphics='classic'] .hands-list__row-hit--with-tiles
-  :is(.hands-list__pattern-tile-cell--suggest-best, .hands-list__pattern-tile-cell--suggest-joker),
+  .hands-list__pattern-tile-cell--suggest-best,
 .app[data-tile-graphics='illustrative-classic']
   .hands-list__row-hit--with-tiles
-  :is(.hands-list__pattern-tile-cell--suggest-best, .hands-list__pattern-tile-cell--suggest-joker) {
+  .hands-list__pattern-tile-cell--suggest-best,
+.app[data-tile-graphics='classic'] .hands-sheet__tile-cell--suggest-best,
+.app[data-tile-graphics='illustrative-classic'] .hands-sheet__tile-cell--suggest-best {
   border-radius: clamp(0.1rem, calc(0.12 * var(--hands-strip-em)), 0.35rem);
 }
 
 .app[data-tile-graphics='classic'] .hands-list__row-hit--with-tiles
-  :is(.hands-list__pattern-tile-cell--suggest-best, .hands-list__pattern-tile-cell--suggest-joker)::after,
+  .hands-list__pattern-tile-cell--suggest-joker,
 .app[data-tile-graphics='illustrative-classic']
   .hands-list__row-hit--with-tiles
-  :is(.hands-list__pattern-tile-cell--suggest-best, .hands-list__pattern-tile-cell--suggest-joker)::after,
-.app[data-tile-graphics='classic']
-  :is(.hands-sheet__tile-cell--suggest-best, .hands-sheet__tile-cell--suggest-joker)::after,
+  .hands-list__pattern-tile-cell--suggest-joker,
+.app[data-tile-graphics='classic'] .hands-sheet__tile-cell--suggest-joker,
+.app[data-tile-graphics='illustrative-classic'] .hands-sheet__tile-cell--suggest-joker {
+  border-radius: clamp(0.1rem, calc(0.12 * var(--hands-strip-em)), 0.35rem);
+}
+
+.app[data-tile-graphics='classic'] .hands-list__row-hit--with-tiles
+  .hands-list__pattern-tile-cell--suggest-best::after,
 .app[data-tile-graphics='illustrative-classic']
-  :is(.hands-sheet__tile-cell--suggest-best, .hands-sheet__tile-cell--suggest-joker)::after {
+  .hands-list__row-hit--with-tiles
+  .hands-list__pattern-tile-cell--suggest-best::after,
+.app[data-tile-graphics='classic'] .hands-sheet__tile-cell--suggest-best::after,
+.app[data-tile-graphics='illustrative-classic'] .hands-sheet__tile-cell--suggest-best::after {
   content: '';
   display: block;
   position: absolute;
@@ -229,17 +239,23 @@
 }
 
 .app[data-tile-graphics='classic'] .hands-list__row-hit--with-tiles
-  :is(.hands-list__pattern-tile-cell--suggest-best, .hands-list__pattern-tile-cell--suggest-joker)
+  .hands-list__pattern-tile-cell--suggest-best
   .tile-face,
 .app[data-tile-graphics='illustrative-classic']
   .hands-list__row-hit--with-tiles
-  :is(.hands-list__pattern-tile-cell--suggest-best, .hands-list__pattern-tile-cell--suggest-joker)
+  .hands-list__pattern-tile-cell--suggest-best
   .tile-face,
+.app[data-tile-graphics='classic'] .hands-sheet__tile-cell--suggest-best .tile-face,
+.app[data-tile-graphics='illustrative-classic'] .hands-sheet__tile-cell--suggest-best .tile-face,
+.app[data-tile-graphics='classic'] .hands-sheet__tile-cell--suggest-joker .tile-face,
+.app[data-tile-graphics='illustrative-classic'] .hands-sheet__tile-cell--suggest-joker .tile-face,
 .app[data-tile-graphics='classic']
-  :is(.hands-sheet__tile-cell--suggest-best, .hands-sheet__tile-cell--suggest-joker)
+  .hands-list__row-hit--with-tiles
+  .hands-list__pattern-tile-cell--suggest-joker
   .tile-face,
 .app[data-tile-graphics='illustrative-classic']
-  :is(.hands-sheet__tile-cell--suggest-best, .hands-sheet__tile-cell--suggest-joker)
+  .hands-list__row-hit--with-tiles
+  .hands-list__pattern-tile-cell--suggest-joker
   .tile-face {
   border-radius: inherit;
   --tile-face-highlight-inset: 0 0 0 0 transparent;

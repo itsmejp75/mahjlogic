@@ -229,9 +229,6 @@ function renderSheetTileRow(
               def={slot.displayDef}
               cardInk={stripTileFaceCardInk(slot.displayDef, slot.cardInk)}
             />
-            {showJokerGuide ? (
-              <span className="hands-sheet__tile-joker-mark">JOKER</span>
-            ) : null}
           </div>
         )
       })}
@@ -1379,9 +1376,6 @@ export function SuggestedHandsPanel({
                                           def={slot.displayDef}
                                           cardInk={stripTileFaceCardInk(slot.displayDef, slot.cardInk)}
                                         />
-                                        {showJokerGuide ? (
-                                          <span className="hands-list__pattern-joker-mark">JOKER</span>
-                                        ) : null}
                                       </div>
                                     )
                                   })}

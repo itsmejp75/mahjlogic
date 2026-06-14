@@ -751,7 +751,7 @@ html
   .app-top-exposure-container
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot--empty::before {
-  background: color-mix(in srgb, #c8c8c8 28%, var(--app-bg-slot-well));
+  background: var(--app-action-btn-top);
 }
 
 /*
@@ -1152,7 +1152,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot--empty::before {
-  background: color-mix(in srgb, #c8c8c8 28%, var(--app-bg-slot-well));
+  background: var(--app-action-btn-top);
   background-image: none;
 }
 
@@ -1238,7 +1238,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 }
 
 .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row .exposure-rack__slot--empty::before {
-  background: color-mix(in srgb, #c8c8c8 28%, var(--app-bg-slot-well));
+  background: var(--app-action-btn-top);
   background-image: none;
 }
 
