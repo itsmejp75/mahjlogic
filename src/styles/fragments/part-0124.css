@@ -473,6 +473,135 @@
   z-index: 3;
 }
 
+/*
+ * Bot exposure jokers (prism): the inscribed ring owns ::after, so they cannot use the shared
+ * suggest-dim ::after vignette (part-0075). Resting rim inset rides on the face stack; rim
+ * bevel `::before` keeps edge highlights only (inset shadows moved to `--tile-face-suggest-dim-inset`
+ * so they are not lost when the tracker bot row flattens faces during coach dim).
+ */
+.app[data-tile-graphics='classic']
+  :is(
+    .panel--bot-exposures .exposure-rack__slot,
+    .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row .exposure-rack__slot
+  ):not(.exposure-rack__slot--suggest-dim):not(.exposure-rack__slot--suggest-best)
+  .tile-face.tile--joker:not(.tile-face--illustrative-art),
+.app[data-tile-graphics='solid-color']
+  :is(
+    .panel--bot-exposures .exposure-rack__slot,
+    .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row .exposure-rack__slot
+  ):not(.exposure-rack__slot--suggest-dim):not(.exposure-rack__slot--suggest-best)
+  .tile-face.tile--joker:not(.tile-face--illustrative-art),
+.app[data-tile-graphics='light']
+  :is(
+    .panel--bot-exposures .exposure-rack__slot,
+    .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row .exposure-rack__slot
+  ):not(.exposure-rack__slot--suggest-dim):not(.exposure-rack__slot--suggest-best)
+  .tile-face.tile--joker:not(.tile-face--illustrative-art),
+.app[data-tile-graphics='dark']
+  :is(
+    .panel--bot-exposures .exposure-rack__slot,
+    .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row .exposure-rack__slot
+  ):not(.exposure-rack__slot--suggest-dim):not(.exposure-rack__slot--suggest-best)
+  .tile-face.tile--joker:not(.tile-face--illustrative-art),
+.app[data-tile-graphics='bakelite']
+  :is(
+    .panel--bot-exposures .exposure-rack__slot,
+    .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row .exposure-rack__slot
+  ):not(.exposure-rack__slot--suggest-dim):not(.exposure-rack__slot--suggest-best)
+  .tile-face.tile--joker:not(.tile-face--illustrative-art) {
+  --tile-face-suggest-dim-inset:
+    inset calc(var(--rack-tile-w) * 0.045) 0 calc(var(--rack-tile-w) * 0.1) calc(var(--rack-tile-w) * -0.3)
+      rgba(28, 25, 22, 0.38),
+    inset calc(var(--rack-tile-w) * -0.045) calc(var(--rack-tile-w) * -0.045) calc(var(--rack-tile-w) * 0.1)
+      calc(var(--rack-tile-w) * -0.3) rgba(28, 25, 22, 0.4);
+}
+
+.app[data-tile-graphics='classic']
+  :is(
+    .panel--bot-exposures .exposure-rack__slot,
+    .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row .exposure-rack__slot
+  ):not(.exposure-rack__slot--suggest-dim):not(.exposure-rack__slot--suggest-best)
+  .tile-face.tile--joker:not(.tile-face--illustrative-art)::before,
+.app[data-tile-graphics='solid-color']
+  :is(
+    .panel--bot-exposures .exposure-rack__slot,
+    .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row .exposure-rack__slot
+  ):not(.exposure-rack__slot--suggest-dim):not(.exposure-rack__slot--suggest-best)
+  .tile-face.tile--joker:not(.tile-face--illustrative-art)::before,
+.app[data-tile-graphics='light']
+  :is(
+    .panel--bot-exposures .exposure-rack__slot,
+    .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row .exposure-rack__slot
+  ):not(.exposure-rack__slot--suggest-dim):not(.exposure-rack__slot--suggest-best)
+  .tile-face.tile--joker:not(.tile-face--illustrative-art)::before,
+.app[data-tile-graphics='dark']
+  :is(
+    .panel--bot-exposures .exposure-rack__slot,
+    .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row .exposure-rack__slot
+  ):not(.exposure-rack__slot--suggest-dim):not(.exposure-rack__slot--suggest-best)
+  .tile-face.tile--joker:not(.tile-face--illustrative-art)::before,
+.app[data-tile-graphics='bakelite']
+  :is(
+    .panel--bot-exposures .exposure-rack__slot,
+    .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row .exposure-rack__slot
+  ):not(.exposure-rack__slot--suggest-dim):not(.exposure-rack__slot--suggest-best)
+  .tile-face.tile--joker:not(.tile-face--illustrative-art)::before {
+  box-shadow: none;
+}
+
+/*
+ * Tracker bot exposure band — illustrative faces are much smaller than the main rack.
+ * Full rim bevel + cast shadow clips on `overflow: hidden` as a harsh 1px hairline along
+ * the bottom edge (most visible on light wind/flower art in the top S row on mobile).
+ * Tray-surface material: no drop shadow; depth via face inset; ::before keeps top/side
+ * catch-light only (no bottom gradient or inset — those read as a digital cutoff).
+ */
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot:not(.exposure-rack__slot--suggest-dim):not(.exposure-rack__slot--suggest-best)
+  .tile-face.tile-face--illustrative-art {
+  --tile-face-base-shadow: 0 0 0 0 transparent;
+  --tile-face-suggest-dim-inset:
+    inset calc(var(--rack-tile-w) * 0.045) 0 calc(var(--rack-tile-w) * 0.1) calc(var(--rack-tile-w) * -0.3)
+      rgba(28, 25, 22, 0.38),
+    inset calc(var(--rack-tile-w) * -0.045) calc(var(--rack-tile-w) * -0.045) calc(var(--rack-tile-w) * 0.1)
+      calc(var(--rack-tile-w) * -0.3) rgba(28, 25, 22, 0.4);
+  box-shadow: var(--tile-face-suggest-dim-inset);
+}
+
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot:not(.exposure-rack__slot--suggest-dim):not(.exposure-rack__slot--suggest-best)
+  .tile-face.tile-face--illustrative-art::before {
+  --tile-rim-fade: 9%;
+  --tile-shadow-fade: 7.5%;
+  box-shadow: none;
+  background:
+    linear-gradient(
+      to bottom,
+      var(--tile-rim-top-peak) 0%,
+      var(--tile-rim-top-mid) calc(var(--tile-rim-fade) * 0.4),
+      var(--tile-rim-top-tail) calc(var(--tile-rim-fade) * 0.75),
+      transparent var(--tile-rim-fade)
+    ),
+    linear-gradient(
+      to right,
+      rgba(28, 25, 22, 0.45) 0%,
+      rgba(28, 25, 22, 0.14) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
+      transparent calc(var(--tile-shadow-fade) * 0.92)
+    ),
+    linear-gradient(
+      to left,
+      rgba(28, 25, 22, 0.45) 0%,
+      rgba(28, 25, 22, 0.14) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
+      transparent calc(var(--tile-shadow-fade) * 0.92)
+    );
+}
+
 .app-menu-modal__tile-graphics-illustrative-options {
   display: flex;
   flex-wrap: wrap;
@@ -793,6 +922,16 @@
   .tile-face::before {
   content: none;
   display: none;
+}
+
+/* Coach dim on tracker bot row: naturals use the flat `::after` overlay; jokers use face inset + filter. */
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-dim
+  .tile-face.tile--joker:not(.tile-face--illustrative-art) {
+  --tile-face-suggest-dim-inset: var(--suggest-dim-inset-shadow);
+  box-shadow: var(--tile-face-suggest-dim-inset);
 }
 
 /*

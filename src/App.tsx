@@ -125,6 +125,7 @@ import { PostGameLoserRackRow } from './components/PostGameLoserRackRow'
 import { IllegalMahjongDialog } from './components/IllegalMahjongDialog'
 import { SuggestedHandsPanel } from './components/SuggestedHandsPanel'
 import { WallTilesRemainCell } from './components/WallTilesRemainCell'
+import { RackLogoWatermark } from './components/RackLogoWatermark'
 import {
   HIDE_CONCEALED_HANDS_STORAGE_KEY,
   readHideConcealedHandsFromStorage,
@@ -6713,26 +6714,10 @@ export default function App() {
     suggestedPanelHandsOn,
   ])
 
-  /** Same meld filter as East `ExposureRack` during `wall-game` (drops oversized practice dumps). */
-  const eastExposureWallGameDisplayedTileCount = useMemo(
-    () =>
-      eastExposures
-        .filter(
-          (exp) => mainPhase !== 'wall-game' || exp.tiles.length <= WALL_GAME_MAX_EXPOSURE_MELD_TILES,
-        )
-        .reduce((sum, exp) => sum + exp.tiles.length, 0),
-    [eastExposures, mainPhase],
-  )
-
-  /** >9 face tiles: no room for trailing New Game on the exposure row — use main-rack MJ review overlay instead. */
-  const wallGameReviewShiftNewGameToMainRack =
-    mainPhase === 'wall-game' &&
-    wallGameReviewing &&
-    eastExposureWallGameDisplayedTileCount > 9
-
-  const handBankMjStylePostGameOverlay =
-    (mainPhase === 'mahjong-declared' && mahjongWinReviewing) ||
-    wallGameReviewShiftNewGameToMainRack
+  /** Post-game rack review: New Game sits on a second row under Pass / Discard (cols 12–14). */
+  const showReviewNewGameBelowDiscard =
+    (mainPhase === 'wall-game' && wallGameReviewing) ||
+    (mainPhase === 'mahjong-declared' && mahjongWinReviewing)
 
   const renderSuggestedHandsPopup = () => {
     if (!showSuggestedHandsPanel) return null
@@ -8225,41 +8210,6 @@ export default function App() {
                                   <CallInitiateFirstEmptyTarget />
                                 ) : undefined
                               }
-                              reserveTrailingSlots={
-                                mainPhase === 'wall-game' &&
-                                wallGameReviewing &&
-                                !wallGameReviewShiftNewGameToMainRack
-                                  ? 3
-                                  : 0
-                              }
-                              trailingSuffix={
-                                mainPhase === 'wall-game' &&
-                                wallGameReviewing &&
-                                !wallGameReviewShiftNewGameToMainRack ? (
-                                  <div
-                                    className="exposure-rack__wall-game-new-game"
-                                    role="listitem"
-                                  >
-                                    <button
-                                      type="button"
-                                      className={[
-                                        'btn',
-                                        'btn--primary',
-                                        'charleston-pass-btn',
-                                        'suggested-hands-tab',
-                                        'rack-bottom-tile-cell',
-                                        'exposure-rack__wall-game-new-game__btn',
-                                      ].join(' ')}
-                                      aria-label="New game"
-                                      onClick={() => {
-                                        void newHand()
-                                      }}
-                                    >
-                                      New Game
-                                    </button>
-                                  </div>
-                                ) : null
-                              }
                             />
                             </EastOwnJokerSwapDropZone>
                             </StagingMeldDropZone>
@@ -8267,42 +8217,7 @@ export default function App() {
                           <div className="panel-hand-rack__hand-tray">
                             {mainPhase !== 'bot-mahjong' && (
                             <div className="rack-stage__rack-bottom">
-                                <HandBank
-                                  watermarkOverlayClassName={
-                                    handBankMjStylePostGameOverlay
-                                      ? 'hand-bank__main-rack-watermark--interactive'
-                                      : undefined
-                                  }
-                                  watermark={
-                                    handBankMjStylePostGameOverlay ? (
-                                      <>
-                                        <div
-                                          className="hand-bank__mj-review-actions rack-bottom-bar rack-bottom-bar--main rack-bottom-bar--tile-grid"
-                                          role="group"
-                                          aria-label={
-                                            wallGameReviewShiftNewGameToMainRack
-                                              ? 'Wall game review actions'
-                                              : 'Mah Jongg review actions'
-                                          }
-                                        >
-                                          <div
-                                            className="hand-bank__mj-review-actions-spacer"
-                                            aria-hidden
-                                          />
-                                          <button
-                                            type="button"
-                                            className="btn btn--rack-neutral rack-bottom-tile-cell rack-bottom-tile-cell--c11-13"
-                                            onClick={() => {
-                                              void newHand()
-                                            }}
-                                          >
-                                            New Game
-                                          </button>
-                                        </div>
-                                      </>
-                                    ) : undefined
-                                  }
-                                >
+                                <HandBank>
                                   <SortableHand
                                     tiles={
                                       mainPhase === 'mahjong-declared'
@@ -8490,6 +8405,31 @@ export default function App() {
                                   </span>
                                 ) : null}
                               </div>
+                              {showReviewNewGameBelowDiscard ? (
+                                <div
+                                  className="rack-bottom-bar rack-bottom-bar--main rack-bottom-bar--tile-grid panel-hand-rack__review-new-game-row"
+                                  role="group"
+                                  aria-label={
+                                    mainPhase === 'wall-game'
+                                      ? 'Wall game review actions'
+                                      : 'Mah Jongg review actions'
+                                  }
+                                >
+                                  <div
+                                    className="panel-hand-rack__review-new-game-spacer"
+                                    aria-hidden
+                                  />
+                                  <button
+                                    type="button"
+                                    className="btn btn--rack-neutral rack-bottom-tile-cell rack-bottom-tile-cell--c12-14"
+                                    onClick={() => {
+                                      void newHand()
+                                    }}
+                                  >
+                                    New Game
+                                  </button>
+                                </div>
+                              ) : null}
                               </div>
                             ) : null}
                           </div>
@@ -8513,6 +8453,9 @@ export default function App() {
                 >
                   <div className="discard-tracker__shell">
                     <div className="discard-tracker__content">
+                      <div className="discard-tracker__watermark" aria-hidden>
+                        <RackLogoWatermark />
+                      </div>
                       <div className="discard-tracker__discard-container">
                         <DiscardPileDropZone
                           swapDropActive={false}

@@ -16,3 +16,20 @@
 .app[data-tile-graphics='designer'] .tile-face.tile--joker .tile-face__glyph {
   z-index: 2;
 }
+
+.app[data-tile-graphics='classic'] .tile-face.tile--joker:not(.tile-face--illustrative-art)::after,
+.app[data-tile-graphics='solid-color'] .tile-face.tile--joker:not(.tile-face--illustrative-art)::after,
+.app[data-tile-graphics='light'] .tile-face.tile--joker:not(.tile-face--illustrative-art)::after,
+.app[data-tile-graphics='dark'] .tile-face.tile--joker:not(.tile-face--illustrative-art)::after,
+.app[data-tile-graphics='bakelite'] .tile-face.tile--joker:not(.tile-face--illustrative-art)::after {
+  z-index: 3;
+}
+
+.app[data-tile-graphics='classic'] .tile-face.tile--joker:not(.tile-face--illustrative-art) .tile-face__glyph,
+.app[data-tile-graphics='solid-color'] .tile-face.tile--joker:not(.tile-face--illustrative-art) .tile-face__glyph,
+.app[data-tile-graphics='light'] .tile-face.tile--joker:not(.tile-face--illustrative-art) .tile-face__glyph,
+.app[data-tile-graphics='dark'] .tile-face.tile--joker:not(.tile-face--illustrative-art) .tile-face__glyph,
+.app[data-tile-graphics='bakelite'] .tile-face.tile--joker:not(.tile-face--illustrative-art) .tile-face__glyph {
+  position: relative;
+  z-index: 4;
+}

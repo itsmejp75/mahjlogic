@@ -51,7 +51,8 @@
 .panel--hand .rack-bottom-bar--tile-grid > .rack-bottom-tile-cell,
 .panel--hand .rack-bottom-bar--tile-grid > .btn.rack-bottom-tile-cell,
 .panel--hand .rack-bottom-bar--tile-grid > .app-menu-anchor--hand-rack,
-.panel--hand .hand-bank__mj-review-actions > .hand-bank__mj-review-actions-spacer {
+.panel--hand .hand-bank__mj-review-actions > .hand-bank__mj-review-actions-spacer,
+.panel--hand .panel-hand-rack__review-new-game-row > .panel-hand-rack__review-new-game-spacer {
   box-sizing: border-box;
   min-width: 0;
   max-width: none;

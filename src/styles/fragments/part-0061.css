@@ -203,6 +203,54 @@
   container-name: discard-tray;
 }
 
+/*
+ * Mahj Logic table watermark — centered in the lower discard tray (PokerStars-style faint mark).
+ * Sits behind discard tiles and the suggested-hands overlay (z-index 0 vs popup 100).
+ */
+.discard-tracker__watermark {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+.discard-tracker__watermark .rack-logo-watermark {
+  flex: 0 1 auto;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  /*
+   * ~80% of the viewable lower tray height; width follows logo aspect ratio (1713×755).
+   * max-width caps first on narrow trays so height shrinks and stays centered.
+   */
+  --discard-watermark-pad-inline: clamp(0.5rem, 3%, 1rem);
+  height: 80%;
+  width: auto;
+  max-width: calc(100% - var(--discard-watermark-pad-inline));
+  max-height: 80%;
+  aspect-ratio: 1713 / 755;
+  opacity: 1;
+}
+
+.discard-tracker__watermark .rack-logo-watermark__img {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center center;
+  /* Monochrome faint tone on the tray carpet — reads like a single-color table watermark. */
+  filter: brightness(0) saturate(100%) invert(1);
+  opacity: 0.085;
+}
+
 /* Tile corner radius at this tray width — used by the container + hands overlay only (tiles unchanged). */
 @container discard-tray (min-width: 0px) {
   .discard-tracker__content {
@@ -921,13 +969,6 @@
 .panel--discard-tracker .discard-tracker__content .discard-pile {
   --suggest-dim-inset-vignette: none;
   --suggest-dim-inset-shadow: none;
-}
-
-.discard-tracker__overlay-grid
-  .exposure-rack--discard-tracker-bot-row
-  .exposure-rack__slot--suggest-dim
-  .tile-face.tile--joker {
-  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
 }
 
 /* Bot exposure row: suggest-best ring on usable tiles (incl. swappable jokers). */
