@@ -35,6 +35,7 @@ import { DeadCauseWarning } from './DeadCauseWarning'
 import { TileFace } from './TileFace'
 
 const CLICK_DELAY_MS = 450
+const TOUCH_CLICK_SUPPRESS_MS = 750
 const PEEK_DRAG_THRESHOLD_PX = 10
 const PEEK_DRAG_CLICK_SUPPRESS_MS = 180
 /** Header tap-to-close only when press duration is below this (hold + release does not dismiss). */
@@ -544,6 +545,16 @@ export function SuggestedHandsPanel({
     [onPatternClick, onPatternDoubleClick, activePatternId],
   )
 
+  useEffect(
+    () => () => {
+      if (pendingRowClickRef.current?.timer != null) {
+        clearTimeout(pendingRowClickRef.current.timer)
+      }
+      pendingRowClickRef.current = null
+    },
+    [],
+  )
+
   /** Touch pointers: count taps on `pointerup` — iOS/PWA often coalesces fast double-taps into one `click`. */
   const rowTouchPointerRef = useRef<{
     pointerId: number
@@ -552,12 +563,12 @@ export function SuggestedHandsPanel({
     patternId: string
     focusKey: string
   } | null>(null)
-  const skipRowClickFromTouchRef = useRef(false)
+  const skipRowClickFromTouchRef = useRef({ count: 0, until: 0 })
 
   const bindPatternRowInteraction = useCallback(
     (patternId: string, focusKey: string) => ({
       onPointerDown: (e: PointerEvent<HTMLButtonElement>) => {
-        if (e.pointerType !== 'touch' || e.button !== 0) return
+        if (e.pointerType !== 'touch') return
         rowTouchPointerRef.current = {
           pointerId: e.pointerId,
           x: e.clientX,
@@ -567,24 +578,31 @@ export function SuggestedHandsPanel({
         }
       },
       onPointerUp: (e: PointerEvent<HTMLButtonElement>) => {
-        if (e.pointerType !== 'touch' || e.button !== 0) return
+        if (e.pointerType !== 'touch') return
         const start = rowTouchPointerRef.current
         if (!start || start.pointerId !== e.pointerId) return
         rowTouchPointerRef.current = null
         const dx = e.clientX - start.x
         const dy = e.clientY - start.y
         if (dx * dx + dy * dy > PEEK_DRAG_THRESHOLD_PX * PEEK_DRAG_THRESHOLD_PX) return
-        skipRowClickFromTouchRef.current = true
-        window.setTimeout(() => {
-          skipRowClickFromTouchRef.current = false
-        }, CLICK_DELAY_MS)
+        const suppress = skipRowClickFromTouchRef.current
+        suppress.count += 1
+        suppress.until = performance.now() + TOUCH_CLICK_SUPPRESS_MS
+        e.preventDefault()
         schedulePatternRowClick(start.patternId, start.focusKey)
       },
       onPointerCancel: () => {
         rowTouchPointerRef.current = null
       },
-      onClick: () => {
-        if (skipRowClickFromTouchRef.current) return
+      onClick: (e: MouseEvent<HTMLButtonElement>) => {
+        const suppress = skipRowClickFromTouchRef.current
+        const now = performance.now()
+        if (now > suppress.until) suppress.count = 0
+        if (suppress.count > 0 || now <= suppress.until) {
+          suppress.count = Math.max(0, suppress.count - 1)
+          e.preventDefault()
+          return
+        }
         schedulePatternRowClick(patternId, focusKey)
       },
     }),

@@ -212,6 +212,8 @@ import './styles/style.css'
 
 /** Tiles in wall after opening deal (`dealOpeningFour`); meter stays flat green until below this. */
 const OPENING_WALL_TILES = 99
+/** Conservative floor used while the suggested-hands sheet is remeasured during orientation changes. */
+const SUGGESTED_DISCARD_OVERLAY_MIN_SHEET_PX = 112
 
 function wallRemainHeatStyle(wallLen: number): CSSProperties | undefined {
   if (wallLen >= OPENING_WALL_TILES || wallLen === 0) return undefined
@@ -6642,6 +6644,13 @@ export default function App() {
     const contentRect = content.getBoundingClientRect()
     const exposureRect = exposureTopEl.getBoundingClientRect()
     const discardRect = discardPanel.getBoundingClientRect()
+    if (
+      contentRect.width < 1 ||
+      contentRect.height < SUGGESTED_DISCARD_OVERLAY_MIN_SHEET_PX ||
+      discardRect.height < 1
+    ) {
+      return
+    }
     const viewportH = window.visualViewport?.height ?? window.innerHeight
     const next = {
       topExtendPx: Math.max(0, Math.ceil(contentRect.top - exposureRect.top)),
@@ -6667,6 +6676,15 @@ export default function App() {
       /* Peek 0 + CSS top-extend = flush to discard content top; drag adjusts peek only. */
       setSuggestedDiscardOverlayPeekPx(0)
       suggestedDiscardOverlayInitialPeekPendingRef.current = false
+    } else {
+      setSuggestedDiscardOverlayPeekPx((prev) => {
+        const maxPeek = Math.max(
+          0,
+          next.contentHeightPx - SUGGESTED_DISCARD_OVERLAY_MIN_SHEET_PX,
+        )
+        const clamped = Math.max(-next.topExtendPx, Math.min(maxPeek, prev))
+        return clamped === prev ? prev : clamped
+      })
     }
   }, [])
 
@@ -6696,9 +6714,16 @@ export default function App() {
 
     updateSuggestedDiscardOverlayBounds()
     let raf = 0
+    const settleTimers: number[] = []
     const scheduleUpdate = () => {
       window.cancelAnimationFrame(raf)
       raf = window.requestAnimationFrame(updateSuggestedDiscardOverlayBounds)
+    }
+    const scheduleSettledUpdate = () => {
+      scheduleUpdate()
+      for (const delay of [80, 180, 360]) {
+        settleTimers.push(window.setTimeout(scheduleUpdate, delay))
+      }
     }
 
     const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(scheduleUpdate)
@@ -6711,11 +6736,14 @@ export default function App() {
       if (node) ro?.observe(node)
     }
     window.addEventListener('resize', scheduleUpdate)
+    window.addEventListener('orientationchange', scheduleSettledUpdate)
     window.visualViewport?.addEventListener('resize', scheduleUpdate)
     return () => {
       window.cancelAnimationFrame(raf)
+      for (const t of settleTimers) window.clearTimeout(t)
       ro?.disconnect()
       window.removeEventListener('resize', scheduleUpdate)
+      window.removeEventListener('orientationchange', scheduleSettledUpdate)
       window.visualViewport?.removeEventListener('resize', scheduleUpdate)
     }
   }, [
