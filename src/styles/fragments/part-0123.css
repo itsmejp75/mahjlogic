@@ -751,7 +751,8 @@ html
   .app-top-exposure-container
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot--empty::before {
-  background: var(--app-action-btn-top);
+  background: var(--table-watermark-slot-fill);
+  background-image: none;
 }
 
 /*
@@ -895,8 +896,20 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   min-height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
 }
 
-.panel--hand .panel-hand-rack__action-well:has(.panel-hand-rack__review-new-game-row) {
-  min-height: calc(2 * var(--hand-button-row-h, var(--rack-action-touch-min-h)));
+/* Review New Game floats over the hand↔discard seam; rack stage stacks above the discard tray. */
+.app-dnd-frame:has(.panel-hand-rack__review-new-game-row) > .app-rack-stage {
+  position: relative;
+  z-index: 5;
+  overflow: visible;
+}
+
+.app-dnd-frame:has(.panel-hand-rack__review-new-game-row) > .app-discard-bottom-container {
+  position: relative;
+  z-index: 1;
+}
+
+.app-dnd-frame:has(.panel-hand-rack__review-new-game-row) :is(.panel--hand, .panel-hand-rack) {
+  overflow: visible;
 }
 
 /*
@@ -1156,7 +1169,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot--empty::before {
-  background: var(--app-action-btn-top);
+  background: var(--table-watermark-slot-fill);
   background-image: none;
 }
 
@@ -1242,7 +1255,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 }
 
 .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row .exposure-rack__slot--empty::before {
-  background: var(--app-action-btn-top);
+  background: var(--table-watermark-slot-fill);
   background-image: none;
 }
 

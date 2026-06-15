@@ -550,11 +550,12 @@
   box-shadow: none;
 }
 
-/* Bot exposure band: faint empty wells so open slots read on the tray. */
+/* Bot exposure band: empty wells match Mahj Logic watermark luminance (not action-button gray). */
 .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row .exposure-rack__slot--empty::before {
   border: none;
   border-radius: var(--tile-face-border-radius);
-  background: var(--app-action-btn-top);
+  background: var(--table-watermark-slot-fill);
+  background-image: none;
   box-shadow: none;
 }
 

@@ -1,8 +1,10 @@
-/* Shared faint table watermark tone (discard tray logo + bot exposure seat labels). */
+/* Shared faint table watermark tone (discard tray logo + bot exposure empty wells). */
 :root {
   --table-watermark-opacity: 0.085;
   --table-watermark-monochrome-filter: brightness(0) saturate(100%) invert(1);
   --table-watermark-text-color: #fff;
+  /* Empty bot exposure slots — same luminance as the Mahj Logic tray watermark. */
+  --table-watermark-slot-fill: rgb(255 255 255 / var(--table-watermark-opacity));
 }
 
 /* ---- part-0014.css (from base.css, layout.css, components.css, animations.css) ---- */

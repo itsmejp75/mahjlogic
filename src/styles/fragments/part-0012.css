@@ -165,8 +165,25 @@
   justify-content: center;
 }
 
-/* Post-game review: New Game on a second action-well row under Pass / Discard (cols 12–14). */
+/*
+ * Post-game review: New Game below Pass/Discard (cols 12–14), out of flow so the discard
+ * tray (and Mahj Logic watermark) keep their height and vertical position.
+ */
+.panel--hand .panel-hand-rack__action-well:has(.panel-hand-rack__review-new-game-row) {
+  position: relative;
+  overflow: visible;
+}
+
+.panel--hand .panel-hand-rack__hand-tray:has(.panel-hand-rack__review-new-game-row) {
+  overflow: visible;
+}
+
 .panel--hand .panel-hand-rack__review-new-game-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + var(--play-tray-h-divider));
+  z-index: 2;
   width: 100%;
   box-sizing: border-box;
   height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
