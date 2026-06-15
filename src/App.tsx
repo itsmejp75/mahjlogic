@@ -244,6 +244,8 @@ const LS_KEY_TILE_GRAPHICS = 'mahjlogic.tileGraphics'
 const LS_KEY_ALTERNATE_DRAGONS = 'mahjlogic.alternateDragons'
 /** One-time migration: legacy Ivory (`classic`) / Obsidian (`dark`) defaults → Illustrative Classic. */
 const LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED = 'mahjlogic.tileGraphicsDefaultMigrated'
+/** One-time migration: Prism (`solid-color`) was the prior product default → Illustrative Classic. */
+const LS_KEY_TILE_GRAPHICS_PRISM_LEGACY_MIGRATED = 'mahjlogic.tileGraphicsPrismLegacyMigrated'
 /** Training / practice: confirm before dead hand from bad call, bad Mah Jongg, or hopeless discard. */
 const LS_KEY_UNDO = 'mahjlogic.undoEnabled'
 const UNDO_LABEL = 'Undo'
@@ -314,6 +316,15 @@ function readTileGraphicsFromStorage(): TileGraphics {
     if (v === 'dark') {
       localStorage.setItem(LS_KEY_TILE_GRAPHICS, DEFAULT_TILE_GRAPHICS)
       localStorage.setItem(LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED, 'true')
+      return DEFAULT_TILE_GRAPHICS
+    }
+    /**
+     * Prism was the product default before Illustrative Classic; sessions that still have
+     * `solid-color` from that era (not an explicit menu pick since) move to Classic once.
+     */
+    if (v === 'solid-color' && localStorage.getItem(LS_KEY_TILE_GRAPHICS_PRISM_LEGACY_MIGRATED) !== 'true') {
+      localStorage.setItem(LS_KEY_TILE_GRAPHICS, DEFAULT_TILE_GRAPHICS)
+      localStorage.setItem(LS_KEY_TILE_GRAPHICS_PRISM_LEGACY_MIGRATED, 'true')
       return DEFAULT_TILE_GRAPHICS
     }
     if (v != null && isTileGraphics(v)) return v
@@ -3023,6 +3034,7 @@ export default function App() {
     try {
       localStorage.setItem(LS_KEY_TILE_GRAPHICS, g)
       localStorage.setItem(LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED, 'true')
+      localStorage.setItem(LS_KEY_TILE_GRAPHICS_PRISM_LEGACY_MIGRATED, 'true')
     } catch {
       /* ignore */
     }

@@ -247,8 +247,8 @@
   object-fit: contain;
   object-position: center center;
   /* Monochrome faint tone on the tray carpet — reads like a single-color table watermark. */
-  filter: brightness(0) saturate(100%) invert(1);
-  opacity: 0.085;
+  filter: var(--table-watermark-monochrome-filter, brightness(0) saturate(100%) invert(1));
+  opacity: var(--table-watermark-opacity, 0.085);
 }
 
 /* Tile corner radius at this tray width — used by the container + hands overlay only (tiles unchanged). */
