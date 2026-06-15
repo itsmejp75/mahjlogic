@@ -394,58 +394,45 @@
 
 /*
  * Mah Jongg rack logo hint: same timing as the former masked flash (2.5s bursts + 2s hold).
- * Animate the real <img> with brightness — CSS mask + `mahj-logo.svg` was inconsistent in
- * WKWebView (often only the lower “Logic” strokes pulsed, not the Mahj mark).
+ * Opacity-only pulse on the logo stack — no scale (glyph must not read as the button pressing in).
+ * Avoid animated `filter` on `<img>`; iOS / WKWebView ignores it.
  */
-@keyframes mahjong-logo-hint-img-cycle {
+@keyframes mahjong-logo-hint-stack-cycle {
   0% {
     opacity: 1;
-    filter: brightness(1.55);
   }
   5.556% {
-    /* Trough: darker than neutral so the flash reads stronger; peak stays bright above. */
     opacity: 0.42;
-    filter: brightness(0.35);
   }
   11.111% {
     opacity: 1;
-    filter: brightness(1.55);
   }
   16.667% {
     opacity: 0.42;
-    filter: brightness(0.35);
   }
   22.222% {
     opacity: 1;
-    filter: brightness(1.55);
   }
   27.778% {
     opacity: 0.42;
-    filter: brightness(0.35);
   }
   33.333% {
     opacity: 1;
-    filter: brightness(1.55);
   }
   38.889% {
     opacity: 0.42;
-    filter: brightness(0.35);
   }
   44.444% {
     opacity: 1;
-    filter: brightness(1.55);
   }
   50% {
     opacity: 0.42;
-    filter: brightness(0.35);
   }
   55.556% {
     opacity: 1;
-    filter: brightness(1.55);
   }
   100% {
     opacity: 1;
-    filter: brightness(1.55);
   }
 }
 

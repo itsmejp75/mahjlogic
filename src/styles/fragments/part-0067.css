@@ -220,12 +220,21 @@
   display: none;
 }
 
+.btn--mahjong-hint .btn--mahj__logo-stack {
+  transform-origin: center center;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  will-change: opacity;
+  animation: mahjong-logo-hint-stack-cycle 4.5s ease-in-out infinite;
+}
+
 .btn--mahjong-hint .btn--mahj__logo-stack .btn--mahj__img {
   position: relative;
   z-index: 0;
   opacity: 1;
-  will-change: filter, opacity;
-  animation: mahjong-logo-hint-img-cycle 4.5s ease-in-out infinite;
+  filter: none;
+  transform: none;
+  animation: none;
 }
 
 /*
@@ -270,16 +279,18 @@
   opacity: 1;
 }
 
-.app-layout[data-animations='off'] .btn--mahjong-hint .btn--mahj__logo-stack .btn--mahj__img {
+.app-layout[data-animations='off'] .btn--mahjong-hint .btn--mahj__logo-stack {
   animation: none;
   opacity: 1;
-  filter: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .btn--mahjong-hint .btn--mahj__logo-stack .btn--mahj__img {
+  .btn--mahjong-hint .btn--mahj__logo-stack {
     animation: none !important;
     opacity: 1 !important;
+  }
+
+  .btn--mahjong-hint .btn--mahj__logo-stack .btn--mahj__img {
     filter: none !important;
   }
 }

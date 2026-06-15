@@ -2200,3 +2200,48 @@ html body .app .panel--discard-tracker :is(
   --tile-face-border-radius: calc(0.116 * var(--rack-tile-w, var(--discard-tray-rack-tile-w)));
   --discard-tray-tile-corner-r: var(--tile-face-border-radius);
 }
+
+/*
+ * Mah Jongg legal-win hint: pulse the logo stack (opacity only), not the <img>.
+ * Beats flat action-row resets above; animates reliably in mobile WKWebView / PWA.
+ */
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.btn--mahjong-hint.rack-bottom-tile-cell--c5-6:not(:disabled):not(:active)
+  .btn--mahj__logo-stack {
+  animation: mahjong-logo-hint-stack-cycle 4.5s ease-in-out infinite;
+  transform-origin: center center;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.btn--mahjong-hint.rack-bottom-tile-cell--c5-6:not(:disabled)
+  .btn--mahj__logo-stack
+  .btn--mahj__img {
+  animation: none;
+  filter: none;
+  transform: none;
+}
+
+.app-layout[data-animations='off']
+  .app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.btn--mahjong-hint.rack-bottom-tile-cell--c5-6:not(:disabled)
+  .btn--mahj__logo-stack {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app
+    .panel--hand
+    .rack-bottom-bar--tile-grid
+    .btn.btn--mahjong.btn--mahjong-hint.rack-bottom-tile-cell--c5-6:not(:disabled)
+    .btn--mahj__logo-stack {
+    animation: none;
+  }
+}
