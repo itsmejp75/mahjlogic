@@ -25,6 +25,20 @@ function jokerSwapBounceSlotKey(
   return tileId
 }
 
+function exposureTileSlotKey({
+  tileId,
+  flyIn,
+  bounceIds,
+  epoch,
+}: {
+  tileId: string
+  flyIn: boolean
+  bounceIds: ReadonlySet<string> | null | undefined
+  epoch: number
+}): string {
+  return flyIn ? tileId : jokerSwapBounceSlotKey(tileId, bounceIds, epoch)
+}
+
 function findLastNonJokerIndex(tiles: TileInstance[]): number {
   for (let i = tiles.length - 1; i >= 0; i--) {
     if (tiles[i]!.def.cat !== 'joker') return i
@@ -622,7 +636,12 @@ function CallMeldStrip({
           if (onTileClick && isCalled) {
             return (
               <div
-                key={jokerSwapBounceSlotKey(tile.id, jokerSwapHintBounceTileIds, jokerSwapHintBounceEpoch)}
+                key={exposureTileSlotKey({
+                  tileId: tile.id,
+                  flyIn: !!tileGuide.flyIn,
+                  bounceIds: jokerSwapHintBounceTileIds,
+                  epoch: jokerSwapHintBounceEpoch,
+                })}
                 data-call-magnet-target=""
                 className={callMeldStripTileClasses(tileGuide)}
               >
@@ -634,7 +653,12 @@ function CallMeldStrip({
           if (onTileClick) {
             return (
               <SortableStagedSlot
-                key={jokerSwapBounceSlotKey(tile.id, jokerSwapHintBounceTileIds, jokerSwapHintBounceEpoch)}
+                key={exposureTileSlotKey({
+                  tileId: tile.id,
+                  flyIn: !!tileGuide.flyIn,
+                  bounceIds: jokerSwapHintBounceTileIds,
+                  epoch: jokerSwapHintBounceEpoch,
+                })}
                 tile={tile}
                 gi={gi}
                 isFirst={false}
@@ -654,7 +678,12 @@ function CallMeldStrip({
 
           return (
             <div
-              key={jokerSwapBounceSlotKey(tile.id, jokerSwapHintBounceTileIds, jokerSwapHintBounceEpoch)}
+              key={exposureTileSlotKey({
+                tileId: tile.id,
+                flyIn: !!tileGuide.flyIn,
+                bounceIds: jokerSwapHintBounceTileIds,
+                epoch: jokerSwapHintBounceEpoch,
+              })}
               data-tile-id={tile.id}
               className={callMeldStripTileClasses(tileGuide)}
               onClick={
@@ -752,7 +781,10 @@ function DroppableMeldSlots({
     )
   }
 
-  const { setNodeRef, isOver } = useDroppable({ id: meld.dropZoneId! })
+  const { setNodeRef, isOver } = useDroppable({
+    id: meld.dropZoneId ?? `disabled-meld-drop-${gi}`,
+    disabled: !meld.dropZoneId,
+  })
   const ordered = orderMeldForRack(meld)
   const onAmend = meld.onAmendCallMeld
   return (
@@ -787,7 +819,12 @@ function DroppableMeldSlots({
         const flyFromRight = !!flyInFromRightTileIds?.has(tile.id)
         return (
           <div
-            key={jokerSwapBounceSlotKey(tile.id, jokerSwapHintBounceTileIds, jokerSwapHintBounceEpoch)}
+            key={exposureTileSlotKey({
+              tileId: tile.id,
+              flyIn,
+              bounceIds: jokerSwapHintBounceTileIds,
+              epoch: jokerSwapHintBounceEpoch,
+            })}
             data-tile-id={tile.id}
             className={[
               'exposure-rack__slot',
@@ -1158,7 +1195,7 @@ export function ExposureRack({
       }
       return content
     }
-    if (meld.dropZoneId) {
+    if (meld.dropZoneId || gridMeldColumnSpans) {
       const dropSpan = Math.max(1, orderMeldForRack(meld).length)
       return wrapMeldContent(
         <DroppableMeldSlots
@@ -1211,7 +1248,12 @@ export function ExposureRack({
       const flyFromRight = !!flyInFromRightTileIds?.has(tile.id)
       return (
         <div
-          key={jokerSwapBounceSlotKey(tile.id, jokerSwapHintBounceTileIds, jokerSwapHintBounceEpoch)}
+          key={exposureTileSlotKey({
+            tileId: tile.id,
+            flyIn,
+            bounceIds: jokerSwapHintBounceTileIds,
+            epoch: jokerSwapHintBounceEpoch,
+          })}
           data-tile-id={tile.id}
           className={[
             'exposure-rack__slot',
