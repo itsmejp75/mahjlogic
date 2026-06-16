@@ -32,6 +32,16 @@ function findLastNonJokerIndex(tiles: TileInstance[]): number {
   return -1
 }
 
+function exposureFlyOriginForTile(
+  tileId: string,
+  flyFromRight: boolean,
+  flyInFromBelowTileIds?: ReadonlySet<string> | null,
+): 'above' | 'right' | 'below' {
+  if (flyFromRight) return 'right'
+  if (flyInFromBelowTileIds?.has(tileId)) return 'below'
+  return 'above'
+}
+
 /** Same drop-in as wall draw (`above`), slide from discard tray (`right`), or wave up from below (`below`). */
 function ExposureRackFlyInTile({
   tileId,
@@ -311,6 +321,7 @@ type CallMeldStripTileGuideProps = {
   amendable?: boolean
   flyIn?: boolean
   flyFromRight?: boolean
+  flyInFromBelowTileIds?: ReadonlySet<string> | null
   callStagingWave?: {
     staggerDelayMs: number
     baseDelayMs: number
@@ -362,11 +373,12 @@ function CallMeldStripTileFace({
   stackSuitTiles,
   flyIn,
   flyFromRight,
+  flyInFromBelowTileIds,
   callStagingWave,
   elevated,
 }: Pick<
   CallMeldStripTileGuideProps,
-  'tile' | 'stackSuitTiles' | 'flyIn' | 'flyFromRight' | 'callStagingWave' | 'elevated'
+  'tile' | 'stackSuitTiles' | 'flyIn' | 'flyFromRight' | 'flyInFromBelowTileIds' | 'callStagingWave' | 'elevated'
 >) {
   let waveDelayMs: number | null = null
   if (callStagingWave) {
@@ -378,7 +390,7 @@ function CallMeldStripTileFace({
       <ExposureRackFlyInTile
         tileId={tile.id}
         animate
-        flyOrigin={flyFromRight ? 'right' : 'above'}
+        flyOrigin={exposureFlyOriginForTile(tile.id, !!flyFromRight, flyInFromBelowTileIds)}
       >
         <TileFace def={tile.def} elevated={elevated} rackSuitStacked={stackSuitTiles} />
       </ExposureRackFlyInTile>
@@ -532,6 +544,7 @@ function CallMeldStrip({
   stackSuitTiles,
   flyInTileIds,
   flyInFromRightTileIds = null,
+  flyInFromBelowTileIds = null,
   jokerSwapHintBounceTileIds = null,
   jokerSwapHintBounceEpoch = 0,
   callStagingWaveFlyIn = null,
@@ -550,6 +563,7 @@ function CallMeldStrip({
   stackSuitTiles: boolean
   flyInTileIds: ReadonlySet<string> | null | undefined
   flyInFromRightTileIds?: ReadonlySet<string> | null
+  flyInFromBelowTileIds?: ReadonlySet<string> | null
   jokerSwapHintBounceTileIds?: ReadonlySet<string> | null
   jokerSwapHintBounceEpoch?: number
   callStagingWaveFlyIn?: {
@@ -601,6 +615,7 @@ function CallMeldStrip({
             amendable: !!onAmend,
             flyIn: !!flyInTileIds?.has(tile.id),
             flyFromRight: !!flyInFromRightTileIds?.has(tile.id),
+            flyInFromBelowTileIds,
             callStagingWave: waveTiming,
           }
 
@@ -694,6 +709,7 @@ function DroppableMeldSlots({
   stackSuitTiles,
   flyInTileIds,
   flyInFromRightTileIds = null,
+  flyInFromBelowTileIds = null,
   jokerSwapHintBounceTileIds = null,
   jokerSwapHintBounceEpoch = 0,
 }: {
@@ -708,6 +724,7 @@ function DroppableMeldSlots({
   stackSuitTiles: boolean
   flyInTileIds: ReadonlySet<string> | null | undefined
   flyInFromRightTileIds?: ReadonlySet<string> | null
+  flyInFromBelowTileIds?: ReadonlySet<string> | null
   jokerSwapHintBounceTileIds?: ReadonlySet<string> | null
   jokerSwapHintBounceEpoch?: number
 }) {
@@ -727,6 +744,7 @@ function DroppableMeldSlots({
         stackSuitTiles={stackSuitTiles}
         flyInTileIds={flyInTileIds}
         flyInFromRightTileIds={flyInFromRightTileIds}
+        flyInFromBelowTileIds={flyInFromBelowTileIds}
         jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
         jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
         dropZoneId={meld.dropZoneId}
@@ -797,7 +815,7 @@ function DroppableMeldSlots({
               <ExposureRackFlyInTile
                 tileId={tile.id}
                 animate
-                flyOrigin={flyFromRight ? 'right' : 'above'}
+                flyOrigin={exposureFlyOriginForTile(tile.id, flyFromRight, flyInFromBelowTileIds)}
               >
                 <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
               </ExposureRackFlyInTile>
@@ -901,6 +919,11 @@ type Props = {
    * exposure slot). Others use the default drop-in from above.
    */
   flyInFromRightTileIds?: ReadonlySet<string> | null
+  /**
+   * Subset of `flyInTileIds` that should rise in from **below** the rack (joker swap natural
+   * replacing an exposed joker). Takes precedence over the default from-above path.
+   */
+  flyInFromBelowTileIds?: ReadonlySet<string> | null
   /** Same semantics as `SortableHand` — highlights tiles that count toward the focused suggested line. */
   suggestedTileGuide?: ExposureSuggestedTileGuide | null
   /** Exposure tile ids that just died for the focused suggested line (flash then stay dim). */
@@ -979,6 +1002,7 @@ export function ExposureRack({
   stackSuitTiles = false,
   flyInTileIds = null,
   flyInFromRightTileIds = null,
+  flyInFromBelowTileIds = null,
   botJokerBorderMenuOn,
   jokerSwapHintBounceTileIds = null,
   jokerSwapHintBounceEpoch = 0,
@@ -1039,6 +1063,7 @@ export function ExposureRack({
       stackSuitTiles,
       flyInTileIds,
       flyInFromRightTileIds,
+      flyInFromBelowTileIds,
       jokerSwapHintBounceTileIds,
       jokerSwapHintBounceEpoch,
       callStagingWaveFlyIn,
@@ -1057,6 +1082,7 @@ export function ExposureRack({
           stackSuitTiles={stackSuitTiles}
           flyInTileIds={flyInTileIds}
           flyInFromRightTileIds={flyInFromRightTileIds}
+          flyInFromBelowTileIds={flyInFromBelowTileIds}
           jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
           jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
         />,
@@ -1147,6 +1173,7 @@ export function ExposureRack({
           stackSuitTiles={stackSuitTiles}
           flyInTileIds={flyInTileIds}
           flyInFromRightTileIds={flyInFromRightTileIds}
+          flyInFromBelowTileIds={flyInFromBelowTileIds}
           jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
           jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
         />,
@@ -1204,7 +1231,7 @@ export function ExposureRack({
             <ExposureRackFlyInTile
               tileId={tile.id}
               animate
-              flyOrigin={flyFromRight ? 'right' : 'above'}
+              flyOrigin={exposureFlyOriginForTile(tile.id, flyFromRight, flyInFromBelowTileIds)}
             >
               <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
             </ExposureRackFlyInTile>

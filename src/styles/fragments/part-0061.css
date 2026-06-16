@@ -885,6 +885,19 @@
   pointer-events: none;
 }
 
+/* Active opponent turn: green slot fill behind S / W / N. */
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--seat-label.sorted-discard-tray__slot--seat-turn {
+  background-color: var(--card-ink-green, #52b147);
+  border-radius: var(--discard-tray-tile-corner-r, var(--tile-face-border-radius));
+}
+
+.discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--seat-label.sorted-discard-tray__slot--seat-turn
+  .sorted-discard-tray__seat-label {
+  color: #ffffff;
+  opacity: 1;
+}
+
 /*
  * Undiscarded slots: glyph-only on the tray unless --suggest-need (coach lit fill).
  * Undiscarded --suggest-dim keeps transparent face; glyph fades via opacity below.

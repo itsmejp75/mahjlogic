@@ -247,7 +247,7 @@
 
 .pass-strip-tail__instruction-left-chevron {
   position: absolute;
-  right: calc(100% + clamp(0.16rem, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 0.026), 0.34rem));
+  right: calc(100% + var(--pass-strip-left-chevron-gap, clamp(0.16rem, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 0.026), 0.34rem)));
   top: 50%;
   width: calc(var(--pass-strip-header-fs) * 0.34);
   height: calc(var(--pass-strip-header-fs) * 0.34);
@@ -256,6 +256,18 @@
   opacity: 0.9;
   transform: translateY(-50%) rotate(-135deg);
   pointer-events: none;
+}
+
+/* Left chevron sits outside instruction-copy; reserve space so it clears the title divider
+   (1st-charleston blind left + 2nd-charleston pass-left / stop line). */
+.pass-strip-tail__instruction--with-left-chevron,
+.pass-strip-tail__instruction--left2-inline {
+  --pass-strip-left-chevron-gap: clamp(0.16rem, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 0.026), 0.34rem);
+  --pass-strip-left-chevron-reserve: calc(
+    var(--pass-strip-header-fs) * 0.34 + var(--pass-strip-left-chevron-gap) +
+      clamp(0.1rem, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 0.04), 0.22rem)
+  );
+  padding-inline-start: var(--pass-strip-left-chevron-reserve);
 }
 
 .pass-strip-tail__instruction .pass-strip-tail__instruction-paren {

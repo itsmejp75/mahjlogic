@@ -701,7 +701,13 @@ function HandRackMenuAnchor({
 }
 
 /** First column of the discard-tracker bot band: compass initial (S / W / N). */
-function DiscardTrackerBotSeatLabel({ seat }: { seat: BotSeat }) {
+function DiscardTrackerBotSeatLabel({
+  seat,
+  isActiveTurn = false,
+}: {
+  seat: BotSeat
+  isActiveTurn?: boolean
+}) {
   const label = seat[0]
   return (
     <div
@@ -710,7 +716,14 @@ function DiscardTrackerBotSeatLabel({ seat }: { seat: BotSeat }) {
       aria-label={`${seat} seat`}
     >
       <div
-        className="exposure-rack__slot sorted-discard-tray__slot sorted-discard-tray__slot--seat-label"
+        className={[
+          'exposure-rack__slot',
+          'sorted-discard-tray__slot',
+          'sorted-discard-tray__slot--seat-label',
+          isActiveTurn ? 'sorted-discard-tray__slot--seat-turn' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         role="presentation"
       >
         <span className="sorted-discard-tray__seat-label" aria-hidden>
@@ -1010,9 +1023,11 @@ function DiscardTrackerSlotGrid({
   discardPile,
   botExposures,
   mainPhase,
+  activeBotIndex,
   jokerSwapUiActive,
   animationsEnabled,
   botExposureFlyInTileIds,
+  exposureJokerSwapFlyInTileIds,
   botExposureSuggestedTileGuide,
   botExposureDeadIds,
   jokerSwapHintBounceTileIds,
@@ -1023,9 +1038,11 @@ function DiscardTrackerSlotGrid({
   discardPile: readonly DiscardEntry[]
   botExposures: BotExposure[]
   mainPhase: MainPhase
+  activeBotIndex: number | null
   jokerSwapUiActive: boolean
   animationsEnabled: boolean
   botExposureFlyInTileIds: ReadonlySet<string> | null
+  exposureJokerSwapFlyInTileIds: ReadonlySet<string> | null
   botExposureSuggestedTileGuide: { bestIds: ReadonlySet<string> } | null
   botExposureDeadIds: ReadonlySet<string> | null
   jokerSwapHintBounceTileIds: ReadonlySet<string> | null
@@ -1096,7 +1113,10 @@ function DiscardTrackerSlotGrid({
                 suggestedNeedDefs={suggestedDiscardTrackerNeedDefs}
               />
             )}
-            <DiscardTrackerBotSeatLabel seat={seat} />
+            <DiscardTrackerBotSeatLabel
+              seat={seat}
+              isActiveTurn={mainPhase === 'bot-turn' && activeBotIndex === rowIdx}
+            />
             <OpponentExposureDropZone
               seat={seat}
               active={jokerSwapUiActive}
@@ -1111,6 +1131,7 @@ function DiscardTrackerSlotGrid({
                 ariaLabel={`${seat} exposures`}
                 stackSuitTiles
                 flyInTileIds={animationsEnabled ? botExposureFlyInTileIds : null}
+                flyInFromBelowTileIds={animationsEnabled ? exposureJokerSwapFlyInTileIds : null}
                 suggestedTileGuide={botExposureSuggestedTileGuide}
                 suggestedDeadTileIds={botExposureDeadIds}
                 suppressDim
@@ -1318,6 +1339,11 @@ type RoundState = {
    * into exposure). Set when a joker is redeemed from the table into your hand; cleared after the fly.
    */
   handJokerSwapFlyInFromBelowId: string | null
+  /**
+   * One exposure tile id: play the drop-in from **below** that rack slot when a natural replaces an
+   * exposed joker during joker swap. Cleared after the fly.
+   */
+  exposureJokerSwapFlyInTileId: string | null
   /** Ids of hand tiles the player has selected to join the staged call meld (call-staging phase only). */
   stagedCallTileIds: string[]
   /**
@@ -1541,6 +1567,7 @@ function roundStateFromOpeningDeck(deck: TileInstance[]): RoundState {
       staggerWaveDelayMs: 44,
     },
     handJokerSwapFlyInFromBelowId: null,
+    exposureJokerSwapFlyInTileId: null,
     stagedCallTileIds: [],
     callAmendableAfterClaimTileId: null,
     callAmendFromBotIndex: null,
@@ -1996,6 +2023,7 @@ function applyEastNaturalForExposedJoker(
       drawnTileId: joker.id,
       handTileFlyIn: null,
       handJokerSwapFlyInFromBelowId: joker.id,
+      exposureJokerSwapFlyInTileId: eastTile.id,
       selectedHandTileId: null,
     })
   }
@@ -2018,6 +2046,7 @@ function applyEastNaturalForExposedJoker(
     drawnTileId: joker.id,
     handTileFlyIn: null,
     handJokerSwapFlyInFromBelowId: joker.id,
+    exposureJokerSwapFlyInTileId: eastTile.id,
     selectedHandTileId: null,
   })
 }
@@ -3435,6 +3464,7 @@ export default function App() {
     charlestonNewTileIds,
     handTileFlyIn,
     handJokerSwapFlyInFromBelowId,
+    exposureJokerSwapFlyInTileId,
     stagedCallTileIds,
     botWin,
   } = round
@@ -3575,6 +3605,20 @@ export default function App() {
     }, 400)
     return () => window.clearTimeout(t)
   }, [handJokerSwapFlyInFromBelowId])
+
+  useEffect(() => {
+    if (!exposureJokerSwapFlyInTileId) return
+    const id = exposureJokerSwapFlyInTileId
+    const t = window.setTimeout(() => {
+      setRound((r) => (r.exposureJokerSwapFlyInTileId === id ? { ...r, exposureJokerSwapFlyInTileId: null } : r))
+    }, 380)
+    return () => window.clearTimeout(t)
+  }, [exposureJokerSwapFlyInTileId])
+
+  const exposureJokerSwapFlyInTileIds = useMemo((): ReadonlySet<string> | null => {
+    if (!animationsEnabled || !exposureJokerSwapFlyInTileId) return null
+    return new Set([exposureJokerSwapFlyInTileId])
+  }, [animationsEnabled, exposureJokerSwapFlyInTileId])
 
   /**
    * Bot exposure drop-in: detect new tile ids during render so the first paint already
@@ -7962,9 +8006,11 @@ export default function App() {
                           discardPile={displayedDiscardPile}
                           botExposures={botExposures}
                           mainPhase={mainPhase}
+                          activeBotIndex={activeBotIndex}
                           jokerSwapUiActive={jokerSwapUiActive}
                           animationsEnabled={animationsEnabled}
                           botExposureFlyInTileIds={botExposureFlyInTileIds}
+                          exposureJokerSwapFlyInTileIds={exposureJokerSwapFlyInTileIds}
                           botExposureSuggestedTileGuide={botExposureSuggestedTileGuide}
                           botExposureDeadIds={
                             suggestedDeadTableGuideForView?.botExposureDeadIds ?? null
@@ -8216,6 +8262,8 @@ export default function App() {
                               callStagingWaveFlyIn={
                                 animationsEnabled ? eastCallStagedWaveFlyIn : null
                               }
+                              flyInTileIds={exposureJokerSwapFlyInTileIds}
+                              flyInFromBelowTileIds={exposureJokerSwapFlyInTileIds}
                               jokerSwapHintBounceTileIds={jokerSwapHintBounceIds?.jokers ?? null}
                               jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
                               melds={
