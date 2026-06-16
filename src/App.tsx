@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useDeferredValue,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -2920,6 +2921,17 @@ export default function App() {
   const [suggestedFocusHandKey, setSuggestedFocusHandKey] = useState<string | null>(null)
   const suggestedFocusHandKeyRef = useRef<string | null>(null)
   suggestedFocusHandKeyRef.current = suggestedFocusHandKey
+  /**
+   * Deferred copy of the focused suggested-hand key for the EXPENSIVE rack/discard coaching
+   * highlights only. On a tap, `suggestedFocusHandKey` updates urgently (the tapped row + panel
+   * highlight instantly), while the greedy pattern-match recomputation that paints rack/discard
+   * tiles runs at lower priority off this deferred value — so it can be interrupted by a rapid
+   * second tap instead of stalling input on slower mobile/PWA hardware. In steady state this
+   * equals `suggestedFocusHandKey`, so coaching behavior is unchanged; it only lags by one commit
+   * immediately after a focus change. Dead-tile detection stays on the urgent key because it only
+   * does heavy work when a discard advances (never on a focus-only change).
+   */
+  const deferredSuggestedFocusHandKey = useDeferredValue(suggestedFocusHandKey)
   const [suggestedDeadTileGuidesByKey, setSuggestedDeadTileGuidesByKey] = useState<
     Record<
       string,
@@ -4053,8 +4065,9 @@ export default function App() {
   const suggestedTileGuide = useMemo(() => {
     // Rack + exposure highlights follow the focused line whenever one is selected — independent of
     // the "Tiles" toggle (that toggle only adds pattern previews inside the suggested-hands list).
-    if (!suggestedFocusHandKey || mainPhase === 'mahjong-declared' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand' || mainPhase === 'wall-game') return null
-    if (suggestedSuppressedHandKey === suggestedFocusHandKey) return null
+    // Reads the DEFERRED focus key so this greedy recompute does not stall rapid taps (see decl).
+    if (!deferredSuggestedFocusHandKey || mainPhase === 'mahjong-declared' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand' || mainPhase === 'wall-game') return null
+    if (suggestedSuppressedHandKey === deferredSuggestedFocusHandKey) return null
     const greedyUiOpts =
       suggestedHandsExposureTileIds && suggestedHandsExposureTileIds.size > 0
         ? { exposureTileIds: suggestedHandsExposureTileIds }
@@ -4065,10 +4078,10 @@ export default function App() {
     //   `<patternId>::oc::<r>-<s1>-<s2>`               — opposing-consec single variant
     //   `<patternId>::ocall::<r1>-<s1a>-<s1b>|...`     — opposing-consec "all" / category
     const variantSep = ['::tier::', '::oc::', '::ocall::']
-      .map((s) => suggestedFocusHandKey.indexOf(s))
+      .map((s) => deferredSuggestedFocusHandKey.indexOf(s))
       .filter((i) => i >= 0)
       .reduce((m, i) => (m < 0 ? i : Math.min(m, i)), -1)
-    const patternId = variantSep >= 0 ? suggestedFocusHandKey.slice(0, variantSep) : suggestedFocusHandKey
+    const patternId = variantSep >= 0 ? deferredSuggestedFocusHandKey.slice(0, variantSep) : deferredSuggestedFocusHandKey
     const p = cardPatterns.find((x) => x.id === patternId)
     if (!p) return null
 
@@ -4115,7 +4128,7 @@ export default function App() {
     }
 
     if (variantSep >= 0) {
-      const pinnedPatterns = buildPinnedPatternsFromFocusKey(p, suggestedFocusHandKey)
+      const pinnedPatterns = buildPinnedPatternsFromFocusKey(p, deferredSuggestedFocusHandKey)
       if (pinnedPatterns.length > 0) {
         const unionIds = new Set<string>()
         for (const pinnedP of pinnedPatterns) {
@@ -4127,17 +4140,17 @@ export default function App() {
     }
 
     return { bestIds: computeAvailableRackHighlightIds(p) }
-  }, [suggestedFocusHandKey, suggestedSuppressedHandKey, mainPhase, rackForSuggestedPatternMatch, suggestedHandsExposureTileIds, cardPatterns, deadTileHintEnabled, discardTiles, botExposures])
+  }, [deferredSuggestedFocusHandKey, suggestedSuppressedHandKey, mainPhase, rackForSuggestedPatternMatch, suggestedHandsExposureTileIds, cardPatterns, deadTileHintEnabled, discardTiles, botExposures])
 
   /**
    * Bot exposure rings for the focused line: naturals that match strip “need” slots (dead tiles you
    * want), plus exposed jokers you can redeem with a matching natural in hand (joker swap).
    */
   const botExposureSuggestedTileGuide = useMemo(() => {
-    if (!suggestedFocusHandKey || mainPhase === 'mahjong-declared' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand' || mainPhase === 'wall-game') return null
-    if (suggestedSuppressedHandKey === suggestedFocusHandKey) return null
+    if (!deferredSuggestedFocusHandKey || mainPhase === 'mahjong-declared' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand' || mainPhase === 'wall-game') return null
+    if (suggestedSuppressedHandKey === deferredSuggestedFocusHandKey) return null
     const bestIds = computeBotExposureSuggestedBestIds(
-      suggestedFocusHandKey,
+      deferredSuggestedFocusHandKey,
       rackForSuggestedPatternMatch,
       botExposures,
       hand,
@@ -4157,7 +4170,7 @@ export default function App() {
     }
     return { bestIds }
   }, [
-    suggestedFocusHandKey,
+    deferredSuggestedFocusHandKey,
     suggestedSuppressedHandKey,
     mainPhase,
     rackForSuggestedPatternMatch,
@@ -4170,8 +4183,8 @@ export default function App() {
   ])
 
   const suggestedDiscardGuideActive = useMemo(() => {
-    if (!suggestedFocusHandKey) return false
-    if (suggestedSuppressedHandKey === suggestedFocusHandKey) return false
+    if (!deferredSuggestedFocusHandKey) return false
+    if (suggestedSuppressedHandKey === deferredSuggestedFocusHandKey) return false
     if (
       mainPhase === 'mahjong-declared' ||
       mainPhase === 'bot-mahjong' ||
@@ -4181,13 +4194,13 @@ export default function App() {
       return false
     }
     return true
-  }, [suggestedFocusHandKey, suggestedSuppressedHandKey, mainPhase])
+  }, [deferredSuggestedFocusHandKey, suggestedSuppressedHandKey, mainPhase])
 
   /** Discards that match naturals the focused line is still short (incoming slot + discard strip). */
   const suggestedDiscardNeedIds = useMemo(() => {
     if (!suggestedDiscardGuideActive) return null
     return computeSuggestedDiscardNeedHighlightIds(
-      suggestedFocusHandKey,
+      deferredSuggestedFocusHandKey,
       rackForSuggestedPatternMatch,
       discardPile.map((e) => e.tile),
       suggestedHandsExposureTileIds,
@@ -4195,7 +4208,7 @@ export default function App() {
     )
   }, [
     suggestedDiscardGuideActive,
-    suggestedFocusHandKey,
+    deferredSuggestedFocusHandKey,
     rackForSuggestedPatternMatch,
     discardPile,
     suggestedHandsExposureTileIds,
@@ -4208,14 +4221,14 @@ export default function App() {
     // Keep `[]` (not `null`) while a hand stays focused so the tracker stays in suggest-dim
     // mode. `null` turns the guide off and every discarded slot lights up at full brightness.
     return computeSuggestedDiscardTrackerNeedDefs(
-      suggestedFocusHandKey,
+      deferredSuggestedFocusHandKey,
       rackForSuggestedPatternMatch,
       suggestedHandsExposureTileIds,
       cardPatterns,
     )
   }, [
     suggestedDiscardGuideActive,
-    suggestedFocusHandKey,
+    deferredSuggestedFocusHandKey,
     rackForSuggestedPatternMatch,
     suggestedHandsExposureTileIds,
     cardPatterns,
@@ -4229,11 +4242,11 @@ export default function App() {
    */
   const suggestedTileGuideForRack = useMemo(() => {
     if (!suggestedTileGuide) return null
-    const activeDeadTableGuide = suggestedFocusHandKey
-      ? suggestedDeadTableGuidesByKey[suggestedFocusHandKey]
+    const activeDeadTableGuide = deferredSuggestedFocusHandKey
+      ? suggestedDeadTableGuidesByKey[deferredSuggestedFocusHandKey]
       : undefined
-    const activeDeadTileGuide = suggestedFocusHandKey
-      ? suggestedDeadTileGuidesByKey[suggestedFocusHandKey]
+    const activeDeadTileGuide = deferredSuggestedFocusHandKey
+      ? suggestedDeadTileGuidesByKey[deferredSuggestedFocusHandKey]
       : undefined
     const activeDiscardIsDead =
       !!activeBotDiscard &&
@@ -4259,7 +4272,7 @@ export default function App() {
     suggestedDiscardNeedIds,
     suggestedDeadTableGuidesByKey,
     suggestedDeadTileGuidesByKey,
-    suggestedFocusHandKey,
+    deferredSuggestedFocusHandKey,
   ])
 
   const prevSuggestedFocusForDeadGuideRef = useRef<string | null>(null)

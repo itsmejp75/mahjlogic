@@ -506,8 +506,15 @@ export function SuggestedHandsPanel({
   } | null>(null)
 
   const schedulePatternRowClick = useCallback(
-    (patternId: string, focusKey: string) => {
-      const now = performance.now()
+    /**
+     * `eventTime` MUST be the originating input's `event.timeStamp` (when the tap physically
+     * happened), not `performance.now()` read inside the handler. On slow devices the first tap's
+     * render can block the main thread, so the second tap's handler runs late; measuring from
+     * handler-run time inflates the gap past {@link CLICK_DELAY_MS} and the double-tap is missed.
+     * `event.timeStamp` shares the `performance.now()` time origin, so the deltas are comparable.
+     */
+    (patternId: string, focusKey: string, eventTime: number) => {
+      const now = eventTime
       const pending = pendingRowClickRef.current
       if (
         pending != null &&
@@ -587,23 +594,23 @@ export function SuggestedHandsPanel({
         if (dx * dx + dy * dy > PEEK_DRAG_THRESHOLD_PX * PEEK_DRAG_THRESHOLD_PX) return
         const suppress = skipRowClickFromTouchRef.current
         suppress.count += 1
-        suppress.until = performance.now() + TOUCH_CLICK_SUPPRESS_MS
+        suppress.until = e.timeStamp + TOUCH_CLICK_SUPPRESS_MS
         e.preventDefault()
-        schedulePatternRowClick(start.patternId, start.focusKey)
+        schedulePatternRowClick(start.patternId, start.focusKey, e.timeStamp)
       },
       onPointerCancel: () => {
         rowTouchPointerRef.current = null
       },
       onClick: (e: MouseEvent<HTMLButtonElement>) => {
         const suppress = skipRowClickFromTouchRef.current
-        const now = performance.now()
+        const now = e.timeStamp
         if (now > suppress.until) suppress.count = 0
         if (suppress.count > 0 || now <= suppress.until) {
           suppress.count = Math.max(0, suppress.count - 1)
           e.preventDefault()
           return
         }
-        schedulePatternRowClick(patternId, focusKey)
+        schedulePatternRowClick(patternId, focusKey, now)
       },
     }),
     [schedulePatternRowClick],
