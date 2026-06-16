@@ -6,8 +6,33 @@
    version="1.1"
    width="308.49893"
    height="430.71158"
+   sodipodi:docname="bam_1.svg"
+   inkscape:export-filename="bam_1.svg"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="0.96584355"
+     inkscape:cx="155.82234"
+     inkscape:cy="215.35579"
+     inkscape:window-width="1452"
+     inkscape:window-height="705"
+     inkscape:window-x="0"
+     inkscape:window-y="33"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="Layer_1" />
   <defs
      id="defs1">
     <style
@@ -49,9 +74,9 @@
   </g>
   <path
      class="cls-5"
-     d="M 25.761066,92.201085 V 30.083713 c -2.468573,1.528165 -4.61808,2.871606 -7.170618,4.45015 0,-3.056329 -0.03358,-5.676039 0.05038,-8.29575 0,-0.38624 0.554169,-0.839651 0.973995,-1.10834 2.720468,-1.746474 5.306592,-3.778428 8.278957,-5.037905 2.11592,-0.89003 4.78601,-0.671721 7.338549,-0.973995 v 73.1 h -9.454472 z"
+     d="M 29.902523,95.307178 V 33.189806 c -2.468573,1.528165 -4.61808,2.871606 -7.170618,4.45015 0,-3.056329 -0.03358,-5.676039 0.05038,-8.29575 0,-0.38624 0.554169,-0.839651 0.973995,-1.10834 2.720468,-1.746474 5.306592,-3.778428 8.278957,-5.037905 2.11592,-0.89003 4.78601,-0.671721 7.338549,-0.973995 v 73.1 h -9.454472 z"
      id="path3"
-     style="fill:#a42e22;fill-opacity:1;stroke:#a42e22;stroke-width:2;stroke-dasharray:none;stroke-opacity:1;paint-order:normal" />
+     style="fill:#a42e22;fill-opacity:1;stroke:#a42e22;stroke-width:4;stroke-dasharray:none;stroke-opacity:1;paint-order:normal" />
   <g
      id="g13"
      transform="matrix(0.93899064,0,0,0.93899064,-82.238238,-18.158852)">
@@ -99,4 +124,12 @@
        d="m 207.54,351.25 c -3.23,0.05 -4.99,-1.55 -5,-4.56 0,-3.16 2.08,-5.38 5.11,-5.43 3.49,-0.06 6.17,2.16 6.26,5.18 0.08,2.91 -2.36,4.75 -6.38,4.81 z"
        id="path13" />
   </g>
+  <text
+     xml:space="preserve"
+     style="font-size:85.3333px;font-family:Figtree;-inkscape-font-specification:Figtree;writing-mode:lr-tb;direction:ltr;fill:#58a422;fill-rule:evenodd;stroke-width:0"
+     x="61.086498"
+     y="55.909676"
+     id="text1"><tspan
+       id="tspan1"
+       sodipodi:role="line"></tspan></text>
 </svg>

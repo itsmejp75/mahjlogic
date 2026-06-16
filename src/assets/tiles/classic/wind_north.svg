@@ -6,8 +6,31 @@
    version="1.1"
    width="308.49893"
    height="430.71158"
+   sodipodi:docname="wind_north.svg"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="1.460374"
+     inkscape:cx="154.4125"
+     inkscape:cy="215.35579"
+     inkscape:window-width="1512"
+     inkscape:window-height="848"
+     inkscape:window-x="0"
+     inkscape:window-y="33"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g3" />
   <defs
      id="defs1">
     <style
@@ -43,9 +66,9 @@
     </g>
     <path
        class="cls-3"
-       d="M 117.84732,121.93 V 48.77 h 9.53639 l 21.69045,37.02 c 5.02256,8.58 8.93516,16.28 12.15404,23.77 l 0.2035,-0.11 c -0.80472,-9.77 -1.00822,-18.67 -1.00822,-30.07 V 48.77 h 8.2322 v 73.16 h -8.83342 L 138.33531,84.8 C 133.61798,76.66 129.0949,68.3 125.68178,60.38 l -0.30524,0.11 c 0.49948,9.23 0.70297,18.02 0.70297,30.18 v 31.26 z"
+       d="M 117.16256,122.61476 V 49.454756 h 9.53639 l 21.69045,37.02 c 5.02256,8.58 8.93516,16.280004 12.15404,23.770004 l 0.2035,-0.11 c -0.80472,-9.77 -1.00822,-18.670004 -1.00822,-30.070004 v -30.61 h 8.2322 V 122.61476 H 159.1375 L 137.65055,85.484756 c -4.71733,-8.14 -9.24041,-16.5 -12.65353,-24.42 l -0.30524,0.11 c 0.49948,9.23 0.70297,18.02 0.70297,30.18 v 31.260004 z"
        id="path3"
-       style="stroke-width:2;fill:#a42e22;fill-opacity:1;stroke:#a42e22;stroke-opacity:1;stroke-dasharray:none" />
+       style="fill:#a42e22;fill-opacity:1;stroke:#a42e22;stroke-width:4;stroke-dasharray:none;stroke-opacity:1" />
   </g>
   <path
      class="cls-2"

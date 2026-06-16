@@ -6,8 +6,31 @@
    version="1.1"
    width="310.84119"
    height="433.98557"
+   sodipodi:docname="dot_5.svg"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="1.449357"
+     inkscape:cx="155.58624"
+     inkscape:cy="216.99278"
+     inkscape:window-width="1512"
+     inkscape:window-height="848"
+     inkscape:window-x="0"
+     inkscape:window-y="33"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="Layer_1" />
   <defs
      id="defs1">
     <style
@@ -124,7 +147,7 @@
   </g>
   <path
      class="cls-4"
-     d="M 55.708409,26.314955 H 32.787222 l -2.307909,18.463276 c 1.384745,-0.218644 2.684463,-0.437288 4.895197,-0.437288 4.61582,0 9.243786,1.21469 12.936441,3.874859 4.712994,3.20678 8.6,9.401695 8.6,18.463277 0,14.041808 -9.328813,24.54887 -22.362429,24.54887 -6.559322,0 -12.110452,-2.210734 -14.964972,-4.421469 l 2.028531,-7.409604 c 2.490113,1.773446 7.397458,3.98418 12.839266,3.98418 7.664689,0 14.236158,-5.976271 14.236158,-15.59661 -0.09718,-9.292373 -5.271752,-15.924576 -17.285028,-15.924576 -3.413277,0 -6.097741,0.437288 -8.320622,0.777401 l 3.887006,-34.509322 h 28.739548 z"
+     d="M 55.018448,26.314955 H 32.097261 l -2.307909,18.463276 c 1.384745,-0.218644 2.684463,-0.437288 4.895197,-0.437288 4.61582,0 9.243786,1.21469 12.936441,3.874859 4.712994,3.20678 8.6,9.401695 8.6,18.463277 0,14.041808 -9.328813,24.54887 -22.362429,24.54887 -6.559322,0 -12.110452,-2.210734 -14.964972,-4.421469 l 2.028531,-7.409604 c 2.490113,1.773446 7.397458,3.98418 12.839266,3.98418 7.664689,0 14.236158,-5.976271 14.236158,-15.59661 -0.09718,-9.292373 -5.271752,-15.924576 -17.285028,-15.924576 -3.413277,0 -6.097741,0.437288 -8.320622,0.777401 L 26.2789,18.127949 h 28.739548 z"
      id="path18"
-     style="fill:#a42e22;fill-opacity:1;stroke:#a42e22;stroke-opacity:1;stroke-width:2;stroke-dasharray:none" />
+     style="fill:#a42e22;fill-opacity:1;stroke:#a42e22;stroke-width:4;stroke-dasharray:none;stroke-opacity:1" />
 </svg>

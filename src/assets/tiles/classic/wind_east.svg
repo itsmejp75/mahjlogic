@@ -6,8 +6,31 @@
    version="1.1"
    width="308.49893"
    height="430.71158"
+   sodipodi:docname="wind_east.svg"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="1.460374"
+     inkscape:cx="154.4125"
+     inkscape:cy="215.35579"
+     inkscape:window-width="1512"
+     inkscape:window-height="848"
+     inkscape:window-x="0"
+     inkscape:window-y="33"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g3" />
   <defs
      id="defs1">
     <style
@@ -43,10 +66,10 @@
     </g>
     <polygon
        class="cls-3"
-       points="102.29,69.72 102.29,52.48 124.71,52.48 124.71,46.56 95.24,46.56 95.24,101.14 125.93,101.14 125.93,95.23 102.29,95.23 102.29,75.55 123.5,75.55 123.5,69.72 "
+       points="102.29,52.48 124.71,52.48 124.71,46.56 95.24,46.56 95.24,101.14 125.93,101.14 125.93,95.23 102.29,95.23 102.29,75.55 123.5,75.55 123.5,69.72 102.29,69.72 "
        id="polygon2"
-       transform="matrix(1.3393184,0,0,1.3393184,-35.751389,-18.546427)"
-       style="stroke:#a42e22;stroke-opacity:1;fill:#a42e22;fill-opacity:1;stroke-width:1.49329689;stroke-dasharray:none" />
+       transform="matrix(1.3393184,0,0,1.3393184,-35.751389,-17.176915)"
+       style="fill:#a42e22;fill-opacity:1;stroke:#a42e22;stroke-width:2.98659;stroke-dasharray:none;stroke-opacity:1" />
   </g>
   <path
      class="cls-2"

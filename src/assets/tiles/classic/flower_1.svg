@@ -6,8 +6,31 @@
    version="1.1"
    width="308.49893"
    height="430.71158"
+   sodipodi:docname="flower_1.svg"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="1.460374"
+     inkscape:cx="154.4125"
+     inkscape:cy="215.35579"
+     inkscape:window-width="1512"
+     inkscape:window-height="848"
+     inkscape:window-x="0"
+     inkscape:window-y="33"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="Layer_1" />
   <defs
      id="defs1">
     <style
@@ -44,9 +67,9 @@
   </g>
   <path
      class="cls-4"
-     d="M 29.906704,92.904814 V 30.787345 c -2.477008,1.538233 -4.614699,2.861566 -7.17088,4.445041 0,-3.053845 -0.04524,-5.677889 0.04524,-8.301934 0.01131,-0.384558 0.554216,-0.84829 0.972706,-1.119743 2.714529,-1.741823 5.304642,-3.78903 8.268002,-5.033189 2.115071,-0.882222 4.784357,-0.678632 7.340539,-0.972706 v 73.1 z"
+     d="M 29.221948,94.274326 V 32.156857 c -2.477008,1.538233 -4.614699,2.861566 -7.17088,4.445041 0,-3.053845 -0.04524,-5.677889 0.04524,-8.301934 0.01131,-0.384558 0.554216,-0.84829 0.972706,-1.119743 2.714529,-1.741823 5.304642,-3.78903 8.268002,-5.033189 2.115071,-0.882222 4.784357,-0.678632 7.340539,-0.972706 v 73.1 z"
      id="path3"
-     style="stroke-width:2;stroke-dasharray:none;stroke:#1b2251;stroke-opacity:1" />
+     style="fill:#a42e22;fill-opacity:1;stroke:#a42e22;stroke-width:4;stroke-dasharray:none;stroke-opacity:1" />
   <g
      id="g11"
      transform="translate(-97.149964,-38.639888)">

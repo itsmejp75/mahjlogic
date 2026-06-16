@@ -6,8 +6,31 @@
    version="1.1"
    width="308.49893"
    height="430.71158"
+   sodipodi:docname="flower_5.svg"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="1.460374"
+     inkscape:cx="114.69664"
+     inkscape:cy="216.04055"
+     inkscape:window-width="1512"
+     inkscape:window-height="848"
+     inkscape:window-x="0"
+     inkscape:window-y="33"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g3" />
   <defs
      id="defs1">
     <style
@@ -54,9 +77,10 @@
     </g>
     <path
        class="cls-6"
-       d="M 116.42143,108.67 V 46.55574 c -2.47547,1.538807 -4.61642,2.863519 -7.17217,4.442468 0,-3.050851 -0.0402,-5.686894 0.0401,-8.309555 0,-0.388047 0.562,-0.842999 0.97681,-1.110617 2.71632,-1.739521 5.29884,-3.786802 8.26941,-5.031228 2.11418,-0.883142 4.77699,-0.682428 7.33275,-0.976808 v 73.1 h -9.46032 z"
+       d="M 115.73667,110.72427 V 48.610008 c -2.47547,1.538807 -4.61642,2.863519 -7.17217,4.442468 0,-3.050851 -0.0402,-5.686894 0.0401,-8.309555 0,-0.388047 0.562,-0.842999 0.97681,-1.110617 2.71632,-1.739521 5.29884,-3.786802 8.26941,-5.031228 2.11418,-0.883142 4.77699,-0.682428 7.33275,-0.976808 v 68.858332 4.24167 h -4.73941 z"
        id="path3"
-       style="fill:#a42e22;fill-opacity:1;stroke-width:2;stroke:#a42e22;stroke-opacity:1;stroke-dasharray:none" />
+       style="fill:#a42e22;fill-opacity:1;stroke:#a42e22;stroke-width:4;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+       sodipodi:nodetypes="ccccccccccc" />
   </g>
   <g
      id="g33"

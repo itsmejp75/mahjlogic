@@ -6,8 +6,31 @@
    version="1.1"
    width="310.84119"
    height="433.98557"
+   sodipodi:docname="flower_8.svg"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="1.449357"
+     inkscape:cx="155.58624"
+     inkscape:cy="216.99278"
+     inkscape:window-width="1512"
+     inkscape:window-height="848"
+     inkscape:window-x="0"
+     inkscape:window-y="33"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g3" />
   <defs
      id="defs1">
     <style
@@ -42,9 +65,9 @@
        id="path2" />
     <path
        class="cls-2"
-       d="M 142.56041,94.708582 V 49.277838 h -8.93017 l -27.25186,46.671961 v 6.524631 h 28.38323 v 19.90341 h 7.7988 v -19.90341 h 8.55671 v -7.754864 h -8.55671 z M 134.76161,70.30164 V 94.708582 H 114.74836 V 94.488897 L 129.6869,69.631602 c 1.69157,-3.372156 3.19641,-6.524628 5.07471,-10.797491 h 0.28559 c -0.18673,3.82251 -0.28559,7.645019 -0.28559,11.467529 z"
+       d="M 143.25037,96.088504 V 50.65776 h -8.93017 l -27.25186,46.671961 v 6.524629 h 28.38323 v 19.90341 h 7.7988 v -19.90341 h 8.55671 v -7.754862 h -8.55671 z m -7.7988,-24.406942 v 24.406942 h -20.01325 v -0.219685 l 14.93854,-24.857295 c 1.69157,-3.372156 3.19641,-6.524628 5.07471,-10.797491 h 0.28559 c -0.18673,3.82251 -0.28559,7.645019 -0.28559,11.467529 z"
        id="path3"
-       style="stroke-width:2;stroke:#a42e22;stroke-opacity:1;stroke-dasharray:none;fill:#a42e22;fill-opacity:1" />
+       style="fill:#a42e22;fill-opacity:1;stroke:#a42e22;stroke-width:4;stroke-dasharray:none;stroke-opacity:1" />
   </g>
   <g
      id="g23"
