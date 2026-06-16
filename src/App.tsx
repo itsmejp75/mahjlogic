@@ -2987,6 +2987,12 @@ export default function App() {
   const [mahjongWinReviewing, setMahjongWinReviewing] = useState(false)
   const [botMahjongWinReviewing, setBotMahjongWinReviewing] = useState(false)
   const [suggestedPanelTilesOn, setSuggestedPanelTilesOn] = useState(false)
+  const toggleSuggestedPanelTilesOn = useCallback(() => {
+    setSuggestedPanelTilesOn((v) => !v)
+  }, [])
+  const closeSuggestedPanelHandsOn = useCallback(() => {
+    setSuggestedPanelHandsOn(false)
+  }, [])
   const [suggestedHandsUncheckedSections, setSuggestedHandsUncheckedSections] = useState<Set<string>>(
     () => readUncheckedSectionsFromStorage(),
   )
@@ -6811,7 +6817,7 @@ export default function App() {
           discardOverlayPeekPx={suggestedDiscardOverlayPeekPx}
           onDiscardOverlayPeekPxChange={setSuggestedDiscardOverlayPeekPx}
           discardOverlayMeasureRef={suggestedHandsPopupRef}
-          onTrayHeaderClick={() => setSuggestedPanelHandsOn(false)}
+          onTrayHeaderClick={closeSuggestedPanelHandsOn}
           onPinnedPatternChange={toggleSuggestedPinnedHandKey}
           hands={eastSuggestedHands}
           activePatternId={suggestedFocusHandKey}
@@ -6820,7 +6826,7 @@ export default function App() {
           onPatternDoubleClick={onSuggestedPatternDoubleClick}
           onFocusKeyMigrate={onSuggestedFocusKeyMigrate}
           tilesGuideOn={suggestedPanelTilesOn}
-          onTilesGuideToggle={() => setSuggestedPanelTilesOn((v) => !v)}
+          onTilesGuideToggle={toggleSuggestedPanelTilesOn}
           rackTilesForSuggestedStrip={rackForSuggestedHandsUi}
           rackTilesForPatternMatch={rackForSuggestedPatternMatch}
           exposureTileIdsForSuggestedStrip={suggestedHandsExposureTileIds}
@@ -7068,7 +7074,7 @@ export default function App() {
                     className={['hands-panel__display-toggle', suggestedPanelTilesOn ? 'hands-panel__display-toggle--on' : ''].filter(Boolean).join(' ')}
                     aria-pressed={suggestedPanelTilesOn}
                     aria-label="Show tile patterns"
-                    onClick={() => setSuggestedPanelTilesOn((v) => !v)}
+                    onClick={toggleSuggestedPanelTilesOn}
                   >
                     Tiles
                   </button>

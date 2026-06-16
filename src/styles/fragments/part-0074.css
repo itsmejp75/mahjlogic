@@ -6,7 +6,12 @@
     opacity: 1;
   }
   to {
-    transform: translateY(-220%);
+    /*
+     * % is of the tile wrap's own HEIGHT, but left/right move 220% of WIDTH.
+     * Tiles are 4:3 (h = w * 1.333), so -165% of height ≈ 220% of width — matches
+     * the left/right travel distance so the across pass disappears at the same point.
+     */
+    transform: translateY(-165%);
     opacity: 0;
   }
 }

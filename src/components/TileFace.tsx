@@ -1,4 +1,4 @@
-import type React from 'react'
+import { memo, type ReactNode } from 'react'
 import type { TileDef } from '../mahjong/types'
 import type { CardInk } from '../card/cardText'
 import { CARD_INK_TO_TILE_SKIN_CLASS } from '../card/cardInkTileSkin'
@@ -42,7 +42,7 @@ type Props = {
  * Split a tile glyph (e.g. `3B`, `5D`, `0` soap) into per-character spans so digits render in
  * `Noto Sans Arabic` while letters stay in `Figtree`. See `.tile-face__glyph-num` / `-letter`.
  */
-function renderGlyphChars(label: string): React.ReactNode {
+function renderGlyphChars(label: string): ReactNode {
   return Array.from(label).map((ch, i) => {
     const isDigit = ch >= '0' && ch <= '9'
     return (
@@ -90,7 +90,7 @@ function categoryClass(def: TileDef): string {
   }
 }
 
-export function TileFace({
+export const TileFace = memo(function TileFace({
   def,
   elevated,
   rackSuitStacked,
@@ -166,4 +166,4 @@ export function TileFace({
       )}
     </div>
   )
-}
+})

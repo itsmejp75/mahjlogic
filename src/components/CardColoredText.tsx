@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { CardTextSeg } from '../card/cardText'
 
 type Props = {
@@ -5,7 +6,7 @@ type Props = {
 }
 
 /** Renders NMJL-style color runs (no HTML injection — only plain segments). */
-export function CardColoredText({ segments }: Props) {
+export const CardColoredText = memo(function CardColoredText({ segments }: Props) {
   return (
     <>
       {segments.map((s, i) => (
@@ -15,4 +16,4 @@ export function CardColoredText({ segments }: Props) {
       ))}
     </>
   )
-}
+})

@@ -1,4 +1,5 @@
 import {
+  memo,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -140,9 +141,13 @@ function sheetRowLitEdge(lit: boolean, edge: 'start' | 'mid' | 'end'): string {
   return 'hands-sheet__cell--row-lit hands-sheet__cell--row-lit-mid'
 }
 
-function SuggestedHandValueDisplay({ points }: { points: number }) {
+const SuggestedHandValueDisplay = memo(function SuggestedHandValueDisplay({
+  points,
+}: {
+  points: number
+}) {
   return <>{points}</>
-}
+})
 
 /**
  * Suits use real rack tile colors (bamboo/dot/crak face).
@@ -163,7 +168,7 @@ function stripTileFaceCardInk(def: TileDef, ink: CardInk | undefined): CardInk |
   return ink
 }
 
-function CardColoredTextWithDeadCause({
+const CardColoredTextWithDeadCause = memo(function CardColoredTextWithDeadCause({
   segments,
   deadCause,
 }: {
@@ -189,53 +194,72 @@ function CardColoredTextWithDeadCause({
       ))}
     </>
   )
-}
+})
 
-function SuggestedHandDeadCauseBadge({ cause }: { cause: DeadCauseHint }) {
+const SuggestedHandDeadCauseBadge = memo(function SuggestedHandDeadCauseBadge({
+  cause,
+}: {
+  cause: DeadCauseHint
+}) {
   return (
     <span className="hands-list__dead-cause-badge" title={formatDeadCauseMessage(cause)}>
       <DeadCauseWarning className="hands-list__dead-cause-warn" />
       <span className="hands-list__dead-cause-reason">{formatDeadCauseMessage(cause)}</span>
     </span>
   )
-}
+})
 
-function renderSheetTileRow(
-  slots: SuggestedStripSlot[],
-  isActiveRow: boolean,
-  keyPrefix: string,
-  deadCause: DeadCauseHint | null = null,
-) {
+const SuggestedHandStripTileCell = memo(function SuggestedHandStripTileCell({
+  slot,
+  showJokerGuide,
+  suggestBest,
+  dim,
+  deadCauseSlot,
+  classPrefix,
+}: {
+  slot: SuggestedStripSlot
+  showJokerGuide: boolean
+  suggestBest: boolean
+  dim: boolean
+  deadCauseSlot: boolean
+  classPrefix: 'hands-sheet__tile-cell' | 'hands-list__pattern-tile-cell'
+}) {
+  const jokerClass =
+    classPrefix === 'hands-sheet__tile-cell'
+      ? 'hands-sheet__tile-cell--suggest-joker'
+      : 'hands-list__pattern-tile-cell--suggest-joker'
+  const bestClass =
+    classPrefix === 'hands-sheet__tile-cell'
+      ? 'hands-sheet__tile-cell--suggest-best'
+      : 'hands-list__pattern-tile-cell--suggest-best'
+  const dimClass =
+    classPrefix === 'hands-sheet__tile-cell'
+      ? 'hands-sheet__tile-cell--suggest-dim'
+      : 'hands-list__pattern-tile-cell--suggest-dim'
+  const deadClass =
+    classPrefix === 'hands-sheet__tile-cell'
+      ? 'hands-sheet__tile-cell--dead-cause'
+      : 'hands-list__pattern-tile-cell--dead-cause'
+
   return (
-    <div className="hands-sheet__tiles-grid" role="presentation">
-      {slots.map((slot, i) => {
-        const showJokerGuide = isActiveRow && slot.jokerSuggested
-        const suggestBest = isActiveRow && slot.highlight
-        const dim = isActiveRow && !slot.highlight && !slot.jokerSuggested
-        const deadCauseSlot = isActiveRow && stripSlotMatchesDeadCause(slot, deadCause)
-        return (
-          <div
-            key={`${keyPrefix}-${i}`}
-            className={[
-              'hands-sheet__tile-cell',
-              showJokerGuide ? 'hands-sheet__tile-cell--suggest-joker' : '',
-              suggestBest ? 'hands-sheet__tile-cell--suggest-best' : '',
-              dim ? 'hands-sheet__tile-cell--suggest-dim' : '',
-              deadCauseSlot ? 'hands-sheet__tile-cell--dead-cause' : '',
-            ]
-              .filter(Boolean)
-              .join(' ')}
-          >
-            <TileFace
-              def={slot.displayDef}
-              cardInk={stripTileFaceCardInk(slot.displayDef, slot.cardInk)}
-            />
-          </div>
-        )
-      })}
+    <div
+      className={[
+        classPrefix,
+        showJokerGuide ? jokerClass : '',
+        suggestBest ? bestClass : '',
+        dim ? dimClass : '',
+        deadCauseSlot ? deadClass : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <TileFace
+        def={slot.displayDef}
+        cardInk={stripTileFaceCardInk(slot.displayDef, slot.cardInk)}
+      />
     </div>
   )
-}
+})
 
 /**
  * Compact-mode (2-col) inline grid-template-areas.
@@ -251,12 +275,14 @@ function handsRowGridTemplateAreas(cat: boolean, tiles: boolean): string {
   return "'pin tiles tiles away values'"
 }
 
-function SuggestedHandPinCell({
+const SuggestedHandPinCell = memo(function SuggestedHandPinCell({
   pressed,
-  onToggle,
+  pinKey,
+  onPinToggle,
 }: {
   pressed: boolean
-  onToggle: () => void
+  pinKey: string
+  onPinToggle: (pinKey: string) => void
 }) {
   return (
     <button
@@ -269,7 +295,7 @@ function SuggestedHandPinCell({
       onClick={(e) => {
         e.stopPropagation()
         e.preventDefault()
-        onToggle()
+        onPinToggle(pinKey)
       }}
     >
       <svg
@@ -286,7 +312,368 @@ function SuggestedHandPinCell({
       </svg>
     </button>
   )
+})
+
+type PatternRowInteractionProps = {
+  onPointerDown: (e: PointerEvent<HTMLButtonElement>) => void
+  onPointerUp: (e: PointerEvent<HTMLButtonElement>) => void
+  onPointerCancel: () => void
+  onClick: (e: MouseEvent<HTMLButtonElement>) => void
 }
+
+const SuggestedHandSheetTileGrid = memo(function SuggestedHandSheetTileGrid({
+  slots,
+  isActiveRow,
+  keyPrefix,
+  deadCause,
+}: {
+  slots: SuggestedStripSlot[]
+  isActiveRow: boolean
+  keyPrefix: string
+  deadCause: DeadCauseHint | null
+}) {
+  return (
+    <div className="hands-sheet__tiles-grid" role="presentation">
+      {slots.map((slot, i) => {
+        const showJokerGuide = isActiveRow && slot.jokerSuggested
+        const suggestBest = isActiveRow && slot.highlight
+        const dim = isActiveRow && !slot.highlight && !slot.jokerSuggested
+        const deadCauseSlot = isActiveRow && stripSlotMatchesDeadCause(slot, deadCause)
+        return (
+          <SuggestedHandStripTileCell
+            key={`${keyPrefix}-${i}`}
+            slot={slot}
+            showJokerGuide={showJokerGuide}
+            suggestBest={suggestBest}
+            dim={dim}
+            deadCauseSlot={deadCauseSlot}
+            classPrefix="hands-sheet__tile-cell"
+          />
+        )
+      })}
+    </div>
+  )
+})
+
+const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
+  row,
+  rowIsFocused,
+  rowDeadCause,
+  tilesGuideOn,
+  isPinned,
+  showPinColumn,
+  bindPatternRowInteraction,
+  onPinToggle,
+}: {
+  row: ExpandedHandsRow
+  rowIsFocused: boolean
+  rowDeadCause: DeadCauseHint | null
+  tilesGuideOn: boolean
+  isPinned: boolean
+  showPinColumn: boolean
+  bindPatternRowInteraction: (
+    patternId: string,
+    focusKey: string,
+  ) => PatternRowInteractionProps
+  onPinToggle: (pinKey: string) => void
+}) {
+  const h = row.line
+  const rowKey = row.reactKey
+  const focusKey = row.focusKey
+  const rowStripSlots = row.stripSlots ?? []
+  const rowLit = tilesGuideOn && rowIsFocused
+  const cardRef = suggestedHandCardRefDisplay(h)
+  const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points)}`
+  const parenText = !tilesGuideOn ? suggestedHandParenText(h) : null
+  const showTileDetail = tilesGuideOn && rowStripSlots.length > 0
+
+  return (
+    <li
+      className={['hands-sheet__row', rowIsFocused ? 'hands-sheet__row--active' : '']
+        .filter(Boolean)
+        .join(' ')}
+      role="row"
+    >
+      {showPinColumn ? (
+        <div className="hands-sheet__cell hands-sheet__cell--pin" role="cell">
+          <SuggestedHandPinCell
+            pressed={isPinned}
+            pinKey={row.pinKey}
+            onPinToggle={onPinToggle}
+          />
+        </div>
+      ) : null}
+      <button
+        type="button"
+        className="hands-sheet__row-btn"
+        {...bindPatternRowInteraction(h.id, focusKey)}
+        aria-label={ariaLabel}
+        aria-pressed={rowIsFocused}
+      >
+        <div
+          className={[
+            'hands-sheet__cell hands-sheet__cell--combined hands-sheet__cell--combined-hands',
+            sheetRowLitEdge(rowLit, 'start'),
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          role="cell"
+        >
+          <span className="hands-sheet__category">
+            {suggestedHandSectionMenuLabel(h.section)}
+            <span className="hands-sheet__section-num"> - {cardRef}</span>
+            {rowDeadCause ? <SuggestedHandDeadCauseBadge cause={rowDeadCause} /> : null}
+          </span>
+          <div className="hands-sheet__hand-stack" aria-label={h.title}>
+            <div className="hands-sheet__hand-stack-main">
+              <span className="hands-sheet__hand-title-line">
+                {h.titleSegments?.length ? (
+                  <>
+                    <CardColoredTextWithDeadCause
+                      segments={h.titleSegments}
+                      deadCause={rowDeadCause}
+                    />
+                    {h.closed ? (
+                      <span className="hands-sheet__card-c" aria-label="Concealed hand">
+                        C
+                      </span>
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    {parenText ? suggestedHandPlainTitleWithoutParen(h) : h.title}
+                    {h.closed ? (
+                      <span className="hands-sheet__card-c" aria-label="Concealed hand">
+                        C
+                      </span>
+                    ) : null}
+                  </>
+                )}
+              </span>
+            </div>
+            {showTileDetail ? (
+              <div className="hands-sheet__hand-stack-detail">
+                <SuggestedHandSheetTileGrid
+                  slots={rowStripSlots}
+                  isActiveRow={rowLit}
+                  keyPrefix={rowKey}
+                  deadCause={rowDeadCause}
+                />
+              </div>
+            ) : parenText ? (
+              <div className="hands-sheet__hand-stack-detail">
+                <span className="hands-sheet__paren">{parenText}</span>
+              </div>
+            ) : null}
+          </div>
+        </div>
+        <div
+          className={[
+            'hands-sheet__cell hands-sheet__cell--away',
+            sheetRowLitEdge(rowLit, 'mid'),
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          role="cell"
+        >
+          {h.tilesNeededRough}
+        </div>
+        <div
+          className={[
+            'hands-sheet__cell hands-sheet__cell--values',
+            sheetRowLitEdge(rowLit, 'end'),
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          role="cell"
+        >
+          <SuggestedHandValueDisplay points={h.points} />
+        </div>
+      </button>
+    </li>
+  )
+})
+
+const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow({
+  row,
+  rowIsFocused,
+  rowDeadCause,
+  tilesGuideOn,
+  handsListOn,
+  showHandCategoryLabels,
+  rowHitGridStyle,
+  isPinned,
+  showPinColumn,
+  bindPatternRowInteraction,
+  onPinToggle,
+}: {
+  row: ExpandedHandsRow
+  rowIsFocused: boolean
+  rowDeadCause: DeadCauseHint | null
+  tilesGuideOn: boolean
+  handsListOn: boolean
+  showHandCategoryLabels: boolean
+  rowHitGridStyle: CSSProperties
+  isPinned: boolean
+  showPinColumn: boolean
+  bindPatternRowInteraction: (
+    patternId: string,
+    focusKey: string,
+  ) => PatternRowInteractionProps
+  onPinToggle: (pinKey: string) => void
+}) {
+  const h = row.line
+  const focusKey = row.focusKey
+  const rowStripSlots = row.stripSlots ?? []
+  const cardRef = suggestedHandCardRefDisplay(h)
+  const rowAriaLabel =
+    !handsListOn || !showHandCategoryLabels
+      ? `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points)}`
+      : undefined
+  const outerClass = [
+    'hands-list__row-hit',
+    'hands-list__row-hit--with-tiles',
+    showHandCategoryLabels ? 'hands-list__row-hit--with-category' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+  const liClassName = [
+    'hands-list__row',
+    rowIsFocused ? 'hands-list__row--active' : '',
+    tilesGuideOn && rowIsFocused ? 'hands-list__row--rack-guide' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  return (
+    <li className={liClassName}>
+      {showPinColumn ? (
+        <div
+          className="hands-list__cell hands-list__cell--pin"
+          style={{ gridArea: 'pin' }}
+        >
+          <SuggestedHandPinCell
+            pressed={isPinned}
+            pinKey={row.pinKey}
+            onPinToggle={onPinToggle}
+          />
+        </div>
+      ) : null}
+      <button
+        type="button"
+        className={outerClass}
+        style={rowHitGridStyle}
+        aria-label={rowAriaLabel}
+        aria-pressed={rowIsFocused}
+        aria-current={rowIsFocused ? true : undefined}
+        {...bindPatternRowInteraction(h.id, focusKey)}
+      >
+        {showHandCategoryLabels ? (
+          <div
+            className={['hands-list__cell', 'hands-list__cell--category'].filter(Boolean).join(' ')}
+          >
+            <span className="hands-list__with-tiles-category">
+              {suggestedHandSectionMenuLabel(h.section)}
+              <span className="hands-list__section-num"> - {cardRef}</span>
+              {rowDeadCause ? <SuggestedHandDeadCauseBadge cause={rowDeadCause} /> : null}
+            </span>
+            {handsListOn ? (
+              <span className="hands-list__category-inline-hand" aria-label={h.title}>
+                {h.titleSegments?.length ? (
+                  <>
+                    <CardColoredTextWithDeadCause
+                      segments={h.titleSegments}
+                      deadCause={rowDeadCause}
+                    />
+                    {h.closed ? (
+                      <span className="hands-list__card-c" aria-label="Concealed hand">
+                        C
+                      </span>
+                    ) : null}
+                    {(() => {
+                      const paren = h.cardParenthesis?.trim()
+                      if (paren) {
+                        return <span className="hands-list__paren">{paren}</span>
+                      }
+                      const m = h.title.match(/(\([^)]+\))/)
+                      return m ? <span className="hands-list__paren">{m[1]}</span> : null
+                    })()}
+                  </>
+                ) : (
+                  <>
+                    {h.title}
+                    {h.closed ? (
+                      <span className="hands-list__card-c" aria-label="Concealed hand">
+                        C
+                      </span>
+                    ) : null}
+                  </>
+                )}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+        {tilesGuideOn ? (
+          <div className="hands-list__cell hands-list__cell--tiles">
+            <div className="hands-list__pattern-tiles">
+              {rowStripSlots.length > 0 ? (
+                <div className="hands-list__pattern-tiles-grid" role="presentation">
+                  {rowStripSlots.map((slot, i) => {
+                    const showJokerGuide = rowIsFocused && slot.jokerSuggested
+                    const suggestBestRing = rowIsFocused && slot.highlight
+                    const dimPatternSlot =
+                      rowIsFocused && !slot.highlight && !slot.jokerSuggested
+                    const deadCauseSlot =
+                      rowIsFocused && stripSlotMatchesDeadCause(slot, rowDeadCause)
+                    return (
+                      <SuggestedHandStripTileCell
+                        key={`${row.reactKey}-${i}`}
+                        slot={slot}
+                        showJokerGuide={showJokerGuide}
+                        suggestBest={suggestBestRing}
+                        dim={dimPatternSlot}
+                        deadCauseSlot={deadCauseSlot}
+                        classPrefix="hands-list__pattern-tile-cell"
+                      />
+                    )
+                  })}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+        {showHandCategoryLabels && tilesGuideOn ? (
+          <>
+            <div
+              className="hands-list__cell hands-list__cell--tiles-away-pad"
+              aria-hidden="true"
+            />
+            <div
+              className="hands-list__cell hands-list__cell--tiles-values-pad"
+              aria-hidden="true"
+            />
+          </>
+        ) : null}
+        <div className="hands-list__cell hands-list__cell--away">
+          <span
+            className="hands-list__tiles-away hands-list__tiles-away--with-tiles-col"
+            aria-label={`${h.tilesNeededRough} tiles away`}
+          >
+            {h.tilesNeededRough}
+          </span>
+        </div>
+        <div className="hands-list__cell hands-list__cell--values">
+          <span
+            className="hands-list__tiles-away hands-list__tiles-away--values-col"
+            aria-label={`Hand value ${formatSuggestedHandValue(h.points)}`}
+          >
+            <SuggestedHandValueDisplay points={h.points} />
+          </span>
+        </div>
+      </button>
+    </li>
+  )
+})
 
 type Props = {
   hands: SuggestedHandLine[]
@@ -336,7 +723,7 @@ type Props = {
   deadCauseByFocusKey?: Readonly<Record<string, DeadCauseHint>>
 }
 
-export function SuggestedHandsPanel({
+export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   hands,
   activePatternId,
   pinnedHandKeys = [],
@@ -360,6 +747,9 @@ export function SuggestedHandsPanel({
   onPinnedPatternChange,
   deadCauseByFocusKey = {},
 }: Props) {
+  const activePatternIdRef = useRef(activePatternId)
+  activePatternIdRef.current = activePatternId
+  const pinnedKeySet = useMemo(() => new Set(pinnedHandKeys), [pinnedHandKeys])
   const sections = useMemo(() => {
     const uniq = Array.from(new Set(hands.map((h) => h.section)))
     const rank = new Map(cardSectionOrder.map((s, i) => [s, i]))
@@ -530,7 +920,7 @@ export function SuggestedHandsPanel({
       // New first tap: drop any deferred single-click left over from a previous tap.
       if (pending?.timer != null) clearTimeout(pending.timer)
 
-      if (focusKey === activePatternId) {
+      if (focusKey === activePatternIdRef.current) {
         // The row is already focused, so a lone tap unfocuses it. Defer that toggle-off past
         // the double-click window: otherwise double-clicking to sort blinks the rack highlight
         // off (first tap unfocuses) then back on (second tap re-focuses) before it sorts.
@@ -549,7 +939,7 @@ export function SuggestedHandsPanel({
       pendingRowClickRef.current = { patternId, focusKey, at: now, timer: null }
       onPatternClick(focusKey)
     },
-    [onPatternClick, onPatternDoubleClick, activePatternId],
+    [onPatternClick, onPatternDoubleClick],
   )
 
   useEffect(
@@ -771,6 +1161,7 @@ export function SuggestedHandsPanel({
     },
     [onPinnedPatternChange],
   )
+  const showPinColumn = !!onPinnedPatternChange
 
   useEffect(() => {
     if (activePatternId == null || !onFocusKeyMigrate) return
@@ -1056,128 +1447,22 @@ export function SuggestedHandsPanel({
                   </div>
                   <ol className="hands-sheet__rows" aria-label="Suggested hand lines">
                     {expandedHandsRows.map((row) => {
-                      const h = row.line
-                      const rowKey = row.reactKey
                       const focusKey = row.focusKey
-                      const rowStripSlots = row.stripSlots ?? []
                       const rowIsFocused = activePatternId === focusKey
-                      const rowDeadCause = rowIsFocused ? deadCauseByFocusKey[focusKey] ?? null : null
-                      const rowLit = tilesGuideOn && rowIsFocused
-                      const cardRef = suggestedHandCardRefDisplay(h)
-                      const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points)}`
                       return (
-                        <li
-                          key={rowKey}
-                          className={[
-                            'hands-sheet__row',
-                            rowIsFocused ? 'hands-sheet__row--active' : '',
-                          ]
-                            .filter(Boolean)
-                            .join(' ')}
-                          role="row"
-                        >
-                          {onPinnedPatternChange ? (
-                            <div className="hands-sheet__cell hands-sheet__cell--pin" role="cell">
-                              <SuggestedHandPinCell
-                                pressed={pinnedHandKeys.includes(row.pinKey)}
-                                onToggle={() => emitRowPinToggle(row.pinKey)}
-                              />
-                            </div>
-                          ) : null}
-                          <button
-                            type="button"
-                            className="hands-sheet__row-btn"
-                            {...bindPatternRowInteraction(h.id, focusKey)}
-                            aria-label={ariaLabel}
-                            aria-pressed={rowIsFocused}
-                          >
-                            <div
-                              className={[
-                                'hands-sheet__cell hands-sheet__cell--combined hands-sheet__cell--combined-hands',
-                                sheetRowLitEdge(rowLit, 'start'),
-                              ]
-                                .filter(Boolean)
-                                .join(' ')}
-                              role="cell"
-                            >
-                              <span className="hands-sheet__category">
-                                {suggestedHandSectionMenuLabel(h.section)}
-                                <span className="hands-sheet__section-num"> - {cardRef}</span>
-                                {rowDeadCause ? (
-                                  <SuggestedHandDeadCauseBadge cause={rowDeadCause} />
-                                ) : null}
-                              </span>
-                              {(() => {
-                                const parenText = !tilesGuideOn ? suggestedHandParenText(h) : null
-                                const showTileDetail = tilesGuideOn && rowStripSlots.length > 0
-                                return (
-                                  <div
-                                    className="hands-sheet__hand-stack"
-                                    aria-label={h.title}
-                                  >
-                                    <div className="hands-sheet__hand-stack-main">
-                                      <span className="hands-sheet__hand-title-line">
-                                        {h.titleSegments?.length ? (
-                                          <>
-                                            <CardColoredTextWithDeadCause
-                                              segments={h.titleSegments}
-                                              deadCause={rowDeadCause}
-                                            />
-                                            {h.closed ? (
-                                              <span className="hands-sheet__card-c" aria-label="Concealed hand">
-                                                C
-                                              </span>
-                                            ) : null}
-                                          </>
-                                        ) : (
-                                          <>
-                                            {parenText ? suggestedHandPlainTitleWithoutParen(h) : h.title}
-                                            {h.closed ? (
-                                              <span className="hands-sheet__card-c" aria-label="Concealed hand">
-                                                C
-                                              </span>
-                                            ) : null}
-                                          </>
-                                        )}
-                                      </span>
-                                    </div>
-                                    {showTileDetail ? (
-                                      <div className="hands-sheet__hand-stack-detail">
-                                        {renderSheetTileRow(rowStripSlots, rowLit, rowKey, rowDeadCause)}
-                                      </div>
-                                    ) : parenText ? (
-                                      <div className="hands-sheet__hand-stack-detail">
-                                        <span className="hands-sheet__paren">{parenText}</span>
-                                      </div>
-                                    ) : null}
-                                  </div>
-                                )
-                              })()}
-                            </div>
-                            <div
-                              className={[
-                                'hands-sheet__cell hands-sheet__cell--away',
-                                sheetRowLitEdge(rowLit, 'mid'),
-                              ]
-                                .filter(Boolean)
-                                .join(' ')}
-                              role="cell"
-                            >
-                              {h.tilesNeededRough}
-                            </div>
-                            <div
-                              className={[
-                                'hands-sheet__cell hands-sheet__cell--values',
-                                sheetRowLitEdge(rowLit, 'end'),
-                              ]
-                                .filter(Boolean)
-                                .join(' ')}
-                              role="cell"
-                            >
-                              <SuggestedHandValueDisplay points={h.points} />
-                            </div>
-                          </button>
-                        </li>
+                        <SuggestedHandsSheetRow
+                          key={row.reactKey}
+                          row={row}
+                          rowIsFocused={rowIsFocused}
+                          rowDeadCause={
+                            rowIsFocused ? deadCauseByFocusKey[focusKey] ?? null : null
+                          }
+                          tilesGuideOn={tilesGuideOn}
+                          isPinned={pinnedKeySet.has(row.pinKey)}
+                          showPinColumn={showPinColumn}
+                          bindPatternRowInteraction={bindPatternRowInteraction}
+                          onPinToggle={emitRowPinToggle}
+                        />
                       )
                     })}
                   </ol>
@@ -1291,171 +1576,25 @@ export function SuggestedHandsPanel({
               id="hands-list"
             >
               {expandedHandsRows.map((row) => {
-                const h = row.line
                 const focusKey = row.focusKey
-                const rowStripSlots = row.stripSlots ?? []
                 const rowIsFocused = activePatternId === focusKey
-                const rowDeadCause = rowIsFocused ? deadCauseByFocusKey[focusKey] ?? null : null
-                const cardRef = suggestedHandCardRefDisplay(h)
-                const rowAriaLabel =
-                  !handsListOn || !showHandCategoryLabels
-                    ? `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points)}`
-                    : undefined
-                const outerClass = [
-                  'hands-list__row-hit',
-                  'hands-list__row-hit--with-tiles',
-                  showHandCategoryLabels ? 'hands-list__row-hit--with-category' : '',
-                ].filter(Boolean).join(' ')
-                const outerSharedProps = {
-                  className: outerClass,
-                  style: rowHitGridStyle,
-                  'aria-label': rowAriaLabel,
-                  'aria-pressed': rowIsFocused,
-                  'aria-current': rowIsFocused ? (true as const) : undefined,
-                  ...bindPatternRowInteraction(h.id, focusKey),
-                }
-                const liClassName = [
-                  'hands-list__row',
-                  rowIsFocused ? 'hands-list__row--active' : '',
-                  tilesGuideOn && rowIsFocused ? 'hands-list__row--rack-guide' : '',
-                ].filter(Boolean).join(' ')
-                const innerCells = (
-                      <>
-                        {showHandCategoryLabels ? (
-                          <div
-                            className={[
-                              'hands-list__cell',
-                              'hands-list__cell--category',
-                            ].filter(Boolean).join(' ')}
-                          >
-                            <span className="hands-list__with-tiles-category">
-                              {suggestedHandSectionMenuLabel(h.section)}
-                              <span className="hands-list__section-num"> - {cardRef}</span>
-                              {rowDeadCause ? (
-                                <SuggestedHandDeadCauseBadge cause={rowDeadCause} />
-                              ) : null}
-                            </span>
-                            {handsListOn ? (
-                              <span
-                                className="hands-list__category-inline-hand"
-                                aria-label={h.title}
-                              >
-                                {h.titleSegments?.length ? (
-                                  <>
-                                    <CardColoredTextWithDeadCause
-                                      segments={h.titleSegments}
-                                      deadCause={rowDeadCause}
-                                    />
-                                    {h.closed ? (
-                                      <span className="hands-list__card-c" aria-label="Concealed hand">
-                                        C
-                                      </span>
-                                    ) : null}
-                                    {(() => {
-                                      const paren = h.cardParenthesis?.trim()
-                                      if (paren) {
-                                        return <span className="hands-list__paren">{paren}</span>
-                                      }
-                                      const m = h.title.match(/(\([^)]+\))/)
-                                      return m ? (
-                                        <span className="hands-list__paren">{m[1]}</span>
-                                      ) : null
-                                    })()}
-                                  </>
-                                ) : (
-                                  <>
-                                    {h.title}
-                                    {h.closed ? (
-                                      <span className="hands-list__card-c" aria-label="Concealed hand">
-                                        C
-                                      </span>
-                                    ) : null}
-                                  </>
-                                )}
-                              </span>
-                            ) : null}
-                          </div>
-                        ) : null}
-                        {tilesGuideOn ? (
-                          <div className="hands-list__cell hands-list__cell--tiles">
-                            <div className="hands-list__pattern-tiles">
-                              {rowStripSlots.length > 0 ? (
-                                <div className="hands-list__pattern-tiles-grid" role="presentation">
-                                  {rowStripSlots.map((slot, i) => {
-                                    const showJokerGuide = tilesGuideOn && rowIsFocused && slot.jokerSuggested
-                                    const suggestBestRing = tilesGuideOn && rowIsFocused && slot.highlight
-                                    const dimPatternSlot = tilesGuideOn && rowIsFocused && !slot.highlight && !slot.jokerSuggested
-                                    const deadCauseSlot = rowIsFocused && stripSlotMatchesDeadCause(slot, rowDeadCause)
-                                    return (
-                                      <div
-                                        key={`${row.reactKey}-${i}`}
-                                        className={[
-                                          'hands-list__pattern-tile-cell',
-                                          showJokerGuide ? 'hands-list__pattern-tile-cell--suggest-joker' : '',
-                                          suggestBestRing ? 'hands-list__pattern-tile-cell--suggest-best' : '',
-                                          dimPatternSlot ? 'hands-list__pattern-tile-cell--suggest-dim' : '',
-                                          deadCauseSlot ? 'hands-list__pattern-tile-cell--dead-cause' : '',
-                                        ].filter(Boolean).join(' ')}
-                                      >
-                                        <TileFace
-                                          def={slot.displayDef}
-                                          cardInk={stripTileFaceCardInk(slot.displayDef, slot.cardInk)}
-                                        />
-                                      </div>
-                                    )
-                                  })}
-                                </div>
-                              ) : null}
-                            </div>
-                          </div>
-                        ) : null}
-                        {showHandCategoryLabels && tilesGuideOn ? (
-                          <>
-                            <div
-                              className="hands-list__cell hands-list__cell--tiles-away-pad"
-                              aria-hidden="true"
-                            />
-                            <div
-                              className="hands-list__cell hands-list__cell--tiles-values-pad"
-                              aria-hidden="true"
-                            />
-                          </>
-                        ) : null}
-                        <div className="hands-list__cell hands-list__cell--away">
-                          <span
-                            className="hands-list__tiles-away hands-list__tiles-away--with-tiles-col"
-                            aria-label={`${h.tilesNeededRough} tiles away`}
-                          >
-                            {h.tilesNeededRough}
-                          </span>
-                        </div>
-                        <div className="hands-list__cell hands-list__cell--values">
-                          <span
-                            className="hands-list__tiles-away hands-list__tiles-away--values-col"
-                            aria-label={`Hand value ${formatSuggestedHandValue(h.points)}`}
-                          >
-                            <SuggestedHandValueDisplay points={h.points} />
-                          </span>
-                        </div>
-                      </>
-                )
                 return (
-                  <li key={row.reactKey} className={liClassName}>
-                    {onPinnedPatternChange ? (
-                      <div
-                        className="hands-list__cell hands-list__cell--pin"
-                        style={{ gridArea: 'pin' }}
-                      >
-                        <SuggestedHandPinCell
-                          pressed={pinnedHandKeys.includes(row.pinKey)}
-                          onToggle={() => emitRowPinToggle(row.pinKey)}
-                        />
-                      </div>
-                    ) : null}
-                    <button type="button" {...outerSharedProps}>
-                      {innerCells}
-                    </button>
-                  </li>
+                  <SuggestedHandsCompactListRow
+                    key={row.reactKey}
+                    row={row}
+                    rowIsFocused={rowIsFocused}
+                    rowDeadCause={
+                      rowIsFocused ? deadCauseByFocusKey[focusKey] ?? null : null
+                    }
+                    tilesGuideOn={tilesGuideOn}
+                    handsListOn={handsListOn}
+                    showHandCategoryLabels={showHandCategoryLabels}
+                    rowHitGridStyle={rowHitGridStyle}
+                    isPinned={pinnedKeySet.has(row.pinKey)}
+                    showPinColumn={showPinColumn}
+                    bindPatternRowInteraction={bindPatternRowInteraction}
+                    onPinToggle={emitRowPinToggle}
+                  />
                 )
               })}
             </ol>
@@ -1466,4 +1605,4 @@ export function SuggestedHandsPanel({
       </div>
     </section>
   )
-}
+})
