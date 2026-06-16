@@ -825,6 +825,28 @@ function sortedDiscardTrackerSlotNeedsHighlight(
   return needDefs.some((d) => tileDefsEqual(d, def))
 }
 
+/** Pass-box / discard-staging copies: keep the ring when they match a lit tile on the rack (same def). */
+function extendSuggestedBestIdsForStaging(
+  bestIds: ReadonlySet<string>,
+  rack: TileInstance[],
+  stagingTiles: TileInstance[],
+): Set<string> {
+  const extended = new Set(bestIds)
+  if (stagingTiles.length === 0 || bestIds.size === 0) return extended
+  const rackById = new Map(rack.map((t) => [t.id, t] as const))
+  for (const st of stagingTiles) {
+    if (extended.has(st.id)) continue
+    for (const id of bestIds) {
+      const onRack = rackById.get(id)
+      if (onRack && tileDefsEqual(onRack.def, st.def)) {
+        extended.add(st.id)
+        break
+      }
+    }
+  }
+  return extended
+}
+
 function SortedDiscardTrayRow({
   tiles,
   slotCount,
@@ -1146,14 +1168,13 @@ function EastDiscardStagingSortableFace({
     animateLayoutChanges: () => false,
   })
   const dragStyle: CSSProperties = {
-    transform: CSS.Transform.toString(transform),
+    transform: isDragging ? undefined : CSS.Transform.toString(transform),
     transition:
       isDragging
         ? 'none'
         : active
           ? 'transform 0.14s cubic-bezier(0.2, 0, 0.2, 1)'
           : 'none',
-    opacity: isDragging ? 0 : undefined,
     touchAction: 'none',
   }
   return (
@@ -1162,6 +1183,7 @@ function EastDiscardStagingSortableFace({
       style={dragStyle}
       className={[
         'east-discard-staging__tile',
+        isDragging ? 'east-discard-staging__tile--dragging' : '',
         suggestBest ? 'east-discard-staging__tile--suggest-best' : '',
         jokerSwapHintBounce ? 'east-discard-staging__tile--joker-swap-hint-bounce' : '',
       ]
@@ -4248,6 +4270,12 @@ export default function App() {
    */
   const suggestedTileGuideForRack = useMemo(() => {
     if (!suggestedTileGuide) return null
+    const stagingTiles = [
+      ...(pendingEastDiscardTile ? [pendingEastDiscardTile] : []),
+      ...(passSlots.filter(Boolean) as TileInstance[]),
+    ]
+    const withStaging = (ids: ReadonlySet<string>) =>
+      extendSuggestedBestIdsForStaging(ids, rackForSuggestedPatternMatch, stagingTiles)
     const activeDeadTableGuide = deferredSuggestedFocusHandKey
       ? suggestedDeadTableGuidesByKey[deferredSuggestedFocusHandKey]
       : undefined
@@ -4268,9 +4296,9 @@ export default function App() {
     ) {
       const merged = new Set(suggestedTileGuide.bestIds)
       merged.add(activeBotDiscard.id)
-      return { bestIds: merged }
+      return { bestIds: withStaging(merged) }
     }
-    return suggestedTileGuide
+    return { bestIds: withStaging(suggestedTileGuide.bestIds) }
   }, [
     suggestedTileGuide,
     mainPhase,
@@ -4279,6 +4307,9 @@ export default function App() {
     suggestedDeadTableGuidesByKey,
     suggestedDeadTileGuidesByKey,
     deferredSuggestedFocusHandKey,
+    pendingEastDiscardTile,
+    passSlots,
+    rackForSuggestedPatternMatch,
   ])
 
   const prevSuggestedFocusForDeadGuideRef = useRef<string | null>(null)
@@ -8241,6 +8272,12 @@ export default function App() {
                               }
                               lastSlotDraggableForCallInit={
                                 mainPhase === 'bot-turn' && activeBotDiscard != null
+                              }
+                              lastSlotClassName={
+                                pendingEastDiscardTile &&
+                                suggestedTileGuideForRack?.bestIds.has(pendingEastDiscardTile.id)
+                                  ? 'exposure-rack__slot--suggest-best'
+                                  : undefined
                               }
                               lastSlotReplace={
                                 mainPhase === 'east-discard' ? (

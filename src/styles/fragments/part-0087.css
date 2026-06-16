@@ -97,7 +97,7 @@
 }
 
 .exposure-rack--charleston-pass .exposure-rack__slot--pass-tail.pass-strip__tile-wrap--dragging {
-  background: transparent;
+  /* Green slot chrome (part-0123) paints on this wrap while dragging. */
 }
 
 .exposure-rack__slot.pass-strip__tile-wrap {

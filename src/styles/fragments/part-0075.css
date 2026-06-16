@@ -49,6 +49,14 @@
   height: 100%;
 }
 
+/* Drag preview: keep focused suggested-hand ring while dragging to pass / discard / rack. */
+.drag-overlay-tile.sortable-tile-wrap--suggest-best .tile-face:not(.tile--joker) {
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: var(--suggest-best-ring);
+  box-shadow: var(--tile-face-base-shadow, 0 0 0 0 transparent), var(--tile-face-highlight-inset),
+    var(--tile-face-highlight-shadow), var(--tile-face-suggest-dim-inset, 0 0 0 0 transparent);
+}
+
 .drag-overlay-meld {
   display: flex;
   align-items: flex-start;

@@ -55,7 +55,7 @@
   height: var(--charleston-pass-strip-h);
 }
 
-.panel--hand .pass-strip-tail .pass-strip__tile-wrap.exposure-rack__slot--pass-tail {
+.panel--hand .pass-strip-tail .pass-strip__tile-wrap.exposure-rack__slot--pass-tail:not(.pass-strip__tile-wrap--dragging) {
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -64,10 +64,37 @@
   z-index: 4;
 }
 
+.panel--hand .pass-strip-tail .pass-strip__tile-wrap--dragging {
+  position: relative;
+  width: var(--rack-tile-w);
+  flex: 0 0 var(--rack-tile-w);
+  height: var(--charleston-pass-strip-h);
+  min-height: var(--charleston-pass-strip-h);
+  max-height: var(--charleston-pass-strip-h);
+  z-index: 4;
+}
+
 .panel--hand .pass-strip-tail .pass-strip__tile-wrap.exposure-rack__slot--pass-tail > .pass-strip__tile-btn {
   width: var(--rack-tile-w);
   height: var(--rack-tile-h);
   flex: 0 0 auto;
+}
+
+.panel--hand
+  .pass-strip-tail
+  .pass-strip__tile-wrap.exposure-rack__slot--pass-tail
+  > .pass-strip__tile-btn--dragging,
+.panel--hand .pass-strip-tail .pass-strip__tile-wrap--dragging > .pass-strip__tile-btn--dragging {
+  position: absolute;
+  inset: 0;
+  width: var(--rack-tile-w);
+  height: 0;
+  min-height: 0;
+  opacity: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 .panel--hand .pass-strip-tail .pass-strip__tile-wrap .tile-face {

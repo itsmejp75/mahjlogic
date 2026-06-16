@@ -105,6 +105,7 @@
 .app[data-tile-graphics='illustrative-classic']
   :is(
     .sortable-tile-wrap--suggest-best,
+    .drag-overlay-tile.sortable-tile-wrap--suggest-best,
     .pass-strip__tile-wrap--suggest-best,
     .east-discard-staging__tile--suggest-best,
     .discard-entry--suggest-need,
@@ -120,6 +121,7 @@
   :is(
     .sortable-tile-wrap--suggest-best,
     .sortable-tile-wrap--suggest-dim.sortable-tile-wrap--suggest-best,
+    .drag-overlay-tile.sortable-tile-wrap--suggest-best,
     .pass-strip__tile-wrap--suggest-best,
     .pass-strip__tile-wrap--suggest-dim.pass-strip__tile-wrap--suggest-best,
     .east-discard-staging__tile--suggest-best,
@@ -154,6 +156,7 @@
   :is(
     .sortable-tile-wrap--suggest-best,
     .sortable-tile-wrap--suggest-dim.sortable-tile-wrap--suggest-best,
+    .drag-overlay-tile.sortable-tile-wrap--suggest-best,
     .pass-strip__tile-wrap--suggest-best,
     .pass-strip__tile-wrap--suggest-dim.pass-strip__tile-wrap--suggest-best,
     .east-discard-staging__tile--suggest-best,
@@ -817,66 +820,66 @@
   :is(
     .exposure-rack--charleston-pass .pass-strip-tail .exposure-rack__slot--pass-tail.exposure-rack__slot--empty,
     .rack-stage__rack-top
-      .exposure-rack__slot--east-discard-slot:not(:has(.east-discard-staging__tile)),
+      .exposure-rack__slot--east-discard-slot:not(:has(.east-discard-staging__tile:not(.east-discard-staging__tile--dragging))),
     .rack-stage__rack-top
       .exposure-rack__slot--incoming-discard:not(
         :has(.exposure-rack__incoming-discard-drag:not(.exposure-rack__incoming-discard-drag--dragging))
-      ):not(:has(.east-discard-staging--inline:not([aria-hidden]) .east-discard-staging__tile))
+      ):not(:has(.east-discard-staging--inline:not([aria-hidden]) .east-discard-staging__tile:not(.east-discard-staging__tile--dragging)))
   ),
 .app[data-tile-graphics='solid-color']
   .panel--hand
   :is(
     .exposure-rack--charleston-pass .pass-strip-tail .exposure-rack__slot--pass-tail.exposure-rack__slot--empty,
     .rack-stage__rack-top
-      .exposure-rack__slot--east-discard-slot:not(:has(.east-discard-staging__tile)),
+      .exposure-rack__slot--east-discard-slot:not(:has(.east-discard-staging__tile:not(.east-discard-staging__tile--dragging))),
     .rack-stage__rack-top
       .exposure-rack__slot--incoming-discard:not(
         :has(.exposure-rack__incoming-discard-drag:not(.exposure-rack__incoming-discard-drag--dragging))
-      ):not(:has(.east-discard-staging--inline:not([aria-hidden]) .east-discard-staging__tile))
+      ):not(:has(.east-discard-staging--inline:not([aria-hidden]) .east-discard-staging__tile:not(.east-discard-staging__tile--dragging)))
   ),
 .app[data-tile-graphics='light']
   .panel--hand
   :is(
     .exposure-rack--charleston-pass .pass-strip-tail .exposure-rack__slot--pass-tail.exposure-rack__slot--empty,
     .rack-stage__rack-top
-      .exposure-rack__slot--east-discard-slot:not(:has(.east-discard-staging__tile)),
+      .exposure-rack__slot--east-discard-slot:not(:has(.east-discard-staging__tile:not(.east-discard-staging__tile--dragging))),
     .rack-stage__rack-top
       .exposure-rack__slot--incoming-discard:not(
         :has(.exposure-rack__incoming-discard-drag:not(.exposure-rack__incoming-discard-drag--dragging))
-      ):not(:has(.east-discard-staging--inline:not([aria-hidden]) .east-discard-staging__tile))
+      ):not(:has(.east-discard-staging--inline:not([aria-hidden]) .east-discard-staging__tile:not(.east-discard-staging__tile--dragging)))
   ),
 .app[data-tile-graphics='dark']
   .panel--hand
   :is(
     .exposure-rack--charleston-pass .pass-strip-tail .exposure-rack__slot--pass-tail.exposure-rack__slot--empty,
     .rack-stage__rack-top
-      .exposure-rack__slot--east-discard-slot:not(:has(.east-discard-staging__tile)),
+      .exposure-rack__slot--east-discard-slot:not(:has(.east-discard-staging__tile:not(.east-discard-staging__tile--dragging))),
     .rack-stage__rack-top
       .exposure-rack__slot--incoming-discard:not(
         :has(.exposure-rack__incoming-discard-drag:not(.exposure-rack__incoming-discard-drag--dragging))
-      ):not(:has(.east-discard-staging--inline:not([aria-hidden]) .east-discard-staging__tile))
+      ):not(:has(.east-discard-staging--inline:not([aria-hidden]) .east-discard-staging__tile:not(.east-discard-staging__tile--dragging)))
   ),
 .app[data-tile-graphics='designer']
   .panel--hand
   :is(
     .exposure-rack--charleston-pass .pass-strip-tail .exposure-rack__slot--pass-tail.exposure-rack__slot--empty,
     .rack-stage__rack-top
-      .exposure-rack__slot--east-discard-slot:not(:has(.east-discard-staging__tile)),
+      .exposure-rack__slot--east-discard-slot:not(:has(.east-discard-staging__tile:not(.east-discard-staging__tile--dragging))),
     .rack-stage__rack-top
       .exposure-rack__slot--incoming-discard:not(
         :has(.exposure-rack__incoming-discard-drag:not(.exposure-rack__incoming-discard-drag--dragging))
-      ):not(:has(.east-discard-staging--inline:not([aria-hidden]) .east-discard-staging__tile))
+      ):not(:has(.east-discard-staging--inline:not([aria-hidden]) .east-discard-staging__tile:not(.east-discard-staging__tile--dragging)))
   ),
 .app[data-tile-graphics='bakelite']
   .panel--hand
   :is(
     .exposure-rack--charleston-pass .pass-strip-tail .exposure-rack__slot--pass-tail.exposure-rack__slot--empty,
     .rack-stage__rack-top
-      .exposure-rack__slot--east-discard-slot:not(:has(.east-discard-staging__tile)),
+      .exposure-rack__slot--east-discard-slot:not(:has(.east-discard-staging__tile:not(.east-discard-staging__tile--dragging))),
     .rack-stage__rack-top
       .exposure-rack__slot--incoming-discard:not(
         :has(.exposure-rack__incoming-discard-drag:not(.exposure-rack__incoming-discard-drag--dragging))
-      ):not(:has(.east-discard-staging--inline:not([aria-hidden]) .east-discard-staging__tile))
+      ):not(:has(.east-discard-staging--inline:not([aria-hidden]) .east-discard-staging__tile:not(.east-discard-staging__tile--dragging)))
   ) {
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.16);
 }

@@ -54,7 +54,7 @@ function SortablePassTile({
       resolvedTransition = `transform ${PASS_REORDER_DURATION} ${PASS_REORDER_EASING}`
     }
   } else if (isDragging) {
-    resolvedTransform = sortableTransform ?? undefined
+    resolvedTransform = undefined
     resolvedTransition = 'none'
   } else if (active) {
     resolvedTransform = sortableTransform ?? undefined
@@ -67,7 +67,6 @@ function SortablePassTile({
   const style: CSSProperties = {
     transform: resolvedTransform,
     transition: resolvedTransition,
-    opacity: isDragging ? 0 : undefined,
     zIndex: isDragging ? 2 : undefined,
   }
 
@@ -76,19 +75,32 @@ function SortablePassTile({
       ref={setNodeRef}
       style={style}
       className={[
-        inlineTail ? 'exposure-rack__slot exposure-rack__slot--pass-tail' : '',
+        inlineTail && !isDragging ? 'exposure-rack__slot exposure-rack__slot--pass-tail' : '',
         'pass-strip__tile-wrap',
         isDragging ? 'pass-strip__tile-wrap--dragging' : '',
-        suggestBest ? 'pass-strip__tile-wrap--suggest-best' : '',
+        suggestBest && !isDragging
+          ? 'pass-strip__tile-wrap--suggest-best exposure-rack__slot--suggest-best'
+          : '',
       ]
         .filter(Boolean)
         .join(' ')}
       {...listeners}
       {...attributes}
     >
+      {inlineTail && isDragging ? (
+        <div
+          className="exposure-rack__slot exposure-rack__slot--pass-tail exposure-rack__slot--empty pass-strip__slot-chrome"
+          aria-hidden
+        />
+      ) : null}
       <button
         type="button"
-        className="pass-strip__tile-btn"
+        className={[
+          'pass-strip__tile-btn',
+          isDragging ? 'pass-strip__tile-btn--dragging' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         onClick={(e) => {
           e.stopPropagation()
           onTileClick()
