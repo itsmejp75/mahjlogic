@@ -4,6 +4,7 @@ import { StrictMode, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { preloadClassicTileArt } from './tiles/classicTileArt'
 
 type NavigatorWithStandalone = Navigator & { standalone?: boolean }
 
@@ -43,6 +44,9 @@ function hidePwaSplashAfterFirstPaint() {
 export function AppWithNativeSplashHandoff() {
   useEffect(() => {
     hidePwaSplashAfterFirstPaint()
+    // Warm the tile-art cache while the splash is still covering the screen so tiles never
+    // flash blank on their first appearance (Charleston / discard / draw).
+    preloadClassicTileArt()
 
     if (!Capacitor.isNativePlatform()) {
       return

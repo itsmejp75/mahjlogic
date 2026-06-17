@@ -4762,28 +4762,6 @@ export default function App() {
     }
   }, [])
 
-  const onSuggestedPatternDoubleClick = useCallback((patternId: string, focusKey?: string) => {
-    setSuggestedFocusHandKey(focusKey ?? patternId)
-    setSuggestedSuppressedHandKey(null)
-    pushRound((r) => ({
-      ...r,
-      hand: sortHandForSuggestedPattern(
-        r.hand,
-        patternId,
-        {
-          hand: r.hand,
-          wallRemaining: r.wall.length,
-          discards: deadDiscardTilesForRanking(r),
-          exposures: r.botExposures,
-          playerClaimMelds: r.eastExposures,
-          eastTableClaimMelds: r.eastExposures,
-          patterns: getActiveCardPatterns(),
-        },
-        focusKey,
-      ),
-    }))
-  }, [pushRound])
-
   const postGameBotReview = useMemo(() => {
     if (mainPhase !== 'mahjong-declared') return null
     const eastRankInput: RankSuggestedHandsInput = {
@@ -6898,7 +6876,6 @@ export default function App() {
           activePatternId={suggestedFocusHandKey}
           pinnedHandKeys={suggestedPinnedHandKeys}
           onPatternClick={onSuggestedPatternClick}
-          onPatternDoubleClick={onSuggestedPatternDoubleClick}
           onFocusKeyMigrate={onSuggestedFocusKeyMigrate}
           tilesGuideOn={suggestedPanelTilesOn}
           onTilesGuideToggle={toggleSuggestedPanelTilesOn}

@@ -23,6 +23,29 @@ const WIND_STEM: Record<'E' | 'S' | 'W' | 'N', string> = {
   N: 'wind_north',
 }
 
+/** Every distinct Illustrative Classic tile-art URL (deduped across stems). */
+export const ALL_CLASSIC_TILE_ART_URLS: readonly string[] = Array.from(
+  new Set(classicTileUrlByStem.values()),
+)
+
+let tileArtPreloadStarted = false
+
+/**
+ * Fetch + decode every Illustrative Classic tile SVG up front (called during the launch splash) so
+ * the first time a tile appears it paints synchronously from the WebView cache instead of flashing a
+ * blank face while the file is fetched/decoded — the main cause of tile "pop-in" inside Capacitor.
+ */
+export function preloadClassicTileArt(): void {
+  if (tileArtPreloadStarted || typeof Image === 'undefined') return
+  tileArtPreloadStarted = true
+  for (const url of ALL_CLASSIC_TILE_ART_URLS) {
+    const img = new Image()
+    img.src = url
+    // decode() moves the decode off the first render path so later paints are instant.
+    img.decode?.().catch(() => undefined)
+  }
+}
+
 /** SVG URL for the Illustrative Classic tile set, or null when no art exists (e.g. blank). */
 export function classicTileArtUrl(def: TileDef, alternateDragons: boolean): string | null {
   switch (def.cat) {

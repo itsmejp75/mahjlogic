@@ -35,7 +35,6 @@ import { suggestedHandSectionMenuLabel } from '../suggestedHands/filterSettings'
 import { DeadCauseWarning } from './DeadCauseWarning'
 import { TileFace } from './TileFace'
 
-const CLICK_DELAY_MS = 450
 const TOUCH_CLICK_SUPPRESS_MS = 750
 const PEEK_DRAG_THRESHOLD_PX = 10
 const PEEK_DRAG_CLICK_SUPPRESS_MS = 180
@@ -371,10 +370,7 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
   tilesGuideOn: boolean
   isPinned: boolean
   showPinColumn: boolean
-  bindPatternRowInteraction: (
-    patternId: string,
-    focusKey: string,
-  ) => PatternRowInteractionProps
+  bindPatternRowInteraction: (focusKey: string) => PatternRowInteractionProps
   onPinToggle: (pinKey: string) => void
 }) {
   const h = row.line
@@ -406,7 +402,7 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
       <button
         type="button"
         className="hands-sheet__row-btn"
-        {...bindPatternRowInteraction(h.id, focusKey)}
+        {...bindPatternRowInteraction(focusKey)}
         aria-label={ariaLabel}
         aria-pressed={rowIsFocused}
       >
@@ -516,10 +512,7 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
   rowHitGridStyle: CSSProperties
   isPinned: boolean
   showPinColumn: boolean
-  bindPatternRowInteraction: (
-    patternId: string,
-    focusKey: string,
-  ) => PatternRowInteractionProps
+  bindPatternRowInteraction: (focusKey: string) => PatternRowInteractionProps
   onPinToggle: (pinKey: string) => void
 }) {
   const h = row.line
@@ -566,7 +559,7 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
         aria-label={rowAriaLabel}
         aria-pressed={rowIsFocused}
         aria-current={rowIsFocused ? true : undefined}
-        {...bindPatternRowInteraction(h.id, focusKey)}
+        {...bindPatternRowInteraction(focusKey)}
       >
         {showHandCategoryLabels ? (
           <div
@@ -681,7 +674,6 @@ type Props = {
   /** Pinned suggested row keys (see {@link suggestedRowPinKey}). Toggle via {@link onPinnedPatternChange}. */
   pinnedHandKeys?: readonly string[]
   onPatternClick: (handKey: string) => void
-  onPatternDoubleClick: (patternId: string, focusKey?: string) => void
   /** Rerank changed variant keys — migrate selection instead of clearing it. */
   onFocusKeyMigrate?: (nextKey: string | null) => void
   tilesGuideOn: boolean
@@ -728,7 +720,6 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   activePatternId,
   pinnedHandKeys = [],
   onPatternClick,
-  onPatternDoubleClick,
   onFocusKeyMigrate,
   tilesGuideOn,
   onTilesGuideToggle,
@@ -747,8 +738,6 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   onPinnedPatternChange,
   deadCauseByFocusKey = {},
 }: Props) {
-  const activePatternIdRef = useRef(activePatternId)
-  activePatternIdRef.current = activePatternId
   const pinnedKeySet = useMemo(() => new Set(pinnedHandKeys), [pinnedHandKeys])
   const sections = useMemo(() => {
     const uniq = Array.from(new Set(hands.map((h) => h.section)))
@@ -886,91 +875,23 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     [detachPeekDragWindowListeners],
   )
 
-  /** Last row tap/click used to detect a second tap (touch has no reliable `dblclick`). */
-  const pendingRowClickRef = useRef<{
-    patternId: string
-    focusKey: string
-    at: number
-    /** Deferred single-click timer (only set when the lone tap would unfocus the row). */
-    timer: ReturnType<typeof setTimeout> | null
-  } | null>(null)
-
-  const schedulePatternRowClick = useCallback(
-    /**
-     * `eventTime` MUST be the originating input's `event.timeStamp` (when the tap physically
-     * happened), not `performance.now()` read inside the handler. On slow devices the first tap's
-     * render can block the main thread, so the second tap's handler runs late; measuring from
-     * handler-run time inflates the gap past {@link CLICK_DELAY_MS} and the double-tap is missed.
-     * `event.timeStamp` shares the `performance.now()` time origin, so the deltas are comparable.
-     */
-    (patternId: string, focusKey: string, eventTime: number) => {
-      const now = eventTime
-      const pending = pendingRowClickRef.current
-      if (
-        pending != null &&
-        pending.focusKey === focusKey &&
-        now - pending.at < CLICK_DELAY_MS
-      ) {
-        // Second tap on the same row → double-click (focus + sort to this line).
-        if (pending.timer != null) clearTimeout(pending.timer)
-        pendingRowClickRef.current = null
-        onPatternDoubleClick(patternId, focusKey)
-        return
-      }
-      // New first tap: drop any deferred single-click left over from a previous tap.
-      if (pending?.timer != null) clearTimeout(pending.timer)
-
-      if (focusKey === activePatternIdRef.current) {
-        // The row is already focused, so a lone tap unfocuses it. Defer that toggle-off past
-        // the double-click window: otherwise double-clicking to sort blinks the rack highlight
-        // off (first tap unfocuses) then back on (second tap re-focuses) before it sorts.
-        const timer = setTimeout(() => {
-          if (pendingRowClickRef.current?.at === now) {
-            pendingRowClickRef.current = null
-            onPatternClick(focusKey)
-          }
-        }, CLICK_DELAY_MS)
-        pendingRowClickRef.current = { patternId, focusKey, at: now, timer }
-        return
-      }
-
-      // Unfocused row: focus immediately for a responsive highlight, but remember the tap so a
-      // quick second tap upgrades to the sort (double-click) without re-toggling focus.
-      pendingRowClickRef.current = { patternId, focusKey, at: now, timer: null }
-      onPatternClick(focusKey)
-    },
-    [onPatternClick, onPatternDoubleClick],
-  )
-
-  useEffect(
-    () => () => {
-      if (pendingRowClickRef.current?.timer != null) {
-        clearTimeout(pendingRowClickRef.current.timer)
-      }
-      pendingRowClickRef.current = null
-    },
-    [],
-  )
-
-  /** Touch pointers: count taps on `pointerup` — iOS/PWA often coalesces fast double-taps into one `click`. */
+  /** Touch pointers: act on `pointerup` and suppress the synthetic `click` so a tap toggles focus once. */
   const rowTouchPointerRef = useRef<{
     pointerId: number
     x: number
     y: number
-    patternId: string
     focusKey: string
   } | null>(null)
   const skipRowClickFromTouchRef = useRef({ count: 0, until: 0 })
 
   const bindPatternRowInteraction = useCallback(
-    (patternId: string, focusKey: string) => ({
+    (focusKey: string) => ({
       onPointerDown: (e: PointerEvent<HTMLButtonElement>) => {
         if (e.pointerType !== 'touch') return
         rowTouchPointerRef.current = {
           pointerId: e.pointerId,
           x: e.clientX,
           y: e.clientY,
-          patternId,
           focusKey,
         }
       },
@@ -986,7 +907,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
         suppress.count += 1
         suppress.until = e.timeStamp + TOUCH_CLICK_SUPPRESS_MS
         e.preventDefault()
-        schedulePatternRowClick(start.patternId, start.focusKey, e.timeStamp)
+        onPatternClick(start.focusKey)
       },
       onPointerCancel: () => {
         rowTouchPointerRef.current = null
@@ -1000,10 +921,10 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
           e.preventDefault()
           return
         }
-        schedulePatternRowClick(patternId, focusKey, now)
+        onPatternClick(focusKey)
       },
     }),
-    [schedulePatternRowClick],
+    [onPatternClick],
   )
 
   const filtered = useMemo(
