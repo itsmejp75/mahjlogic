@@ -713,7 +713,7 @@ html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-
   font-size: var(--sorted-discard-suit-label-fs);
   font-weight: 600;
   line-height: 1.08;
-  text-transform: none;
+  text-transform: uppercase;
   letter-spacing: max(0.016em, calc(0.026em + 0.016rem));
   color: var(--tg-ink, #080808);
 }

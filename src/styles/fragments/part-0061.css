@@ -817,7 +817,7 @@
   font-weight: 600;
   font-size: var(--sorted-discard-suit-label-fs);
   line-height: 1.08;
-  text-transform: none;
+  text-transform: uppercase;
   width: auto;
   max-width: 100%;
   text-align: center;

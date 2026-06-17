@@ -42,7 +42,7 @@ import {
 } from './mahjong/deck'
 import type { BlankTileCount } from './mahjong/deck'
 import type { ClaimType, DiscardEntry, EastExposure, Seat, TileDef, TileInstance } from './mahjong/types'
-import { tileAriaLabel } from './mahjong/labels'
+import { tileAriaLabel, tileSuitRackWord } from './mahjong/labels'
 import {
   findFocusedPatternDeadCause,
   type DeadCauseHint,
@@ -875,7 +875,7 @@ function SortedDiscardTrayRow({
   tiles: readonly TileInstance[]
   slotCount: number
   leadingEmptySlots?: number
-  /** One leading slot with the suit name (Bam, Crak, Dot). */
+  /** One leading slot with the suit name (BAM, CRAK, DOT). */
   leadingSuitLabel?: string
   leadingSuitLabelTone?: 'dot' | 'bam' | 'crak'
   /** Glyph-only slots after `tiles` (no matching discard count). */
@@ -1085,7 +1085,7 @@ function DiscardTrackerSlotGrid({
               <SortedDiscardTrayRow
                 tiles={SORTED_DISCARD_ROW1_TILES}
                 slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
-                leadingSuitLabel="Bam"
+                leadingSuitLabel={tileSuitRackWord('bam')}
                 leadingSuitLabelTone="bam"
                 ariaLabel="Sorted discard row 1"
                 discardPile={discardPile}
@@ -1095,7 +1095,7 @@ function DiscardTrackerSlotGrid({
               <SortedDiscardTrayRow
                 tiles={SORTED_DISCARD_ROW2_TILES}
                 slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
-                leadingSuitLabel="Crak"
+                leadingSuitLabel={tileSuitRackWord('crak')}
                 leadingSuitLabelTone="crak"
                 ariaLabel="Sorted discard row 2"
                 discardPile={discardPile}
@@ -1105,7 +1105,7 @@ function DiscardTrackerSlotGrid({
               <SortedDiscardTrayRow
                 tiles={SORTED_DISCARD_ROW3_TILES}
                 slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
-                leadingSuitLabel="Dot"
+                leadingSuitLabel={tileSuitRackWord('dot')}
                 leadingSuitLabelTone="dot"
                 ariaLabel="Sorted discard row 3"
                 discardPile={discardPile}
