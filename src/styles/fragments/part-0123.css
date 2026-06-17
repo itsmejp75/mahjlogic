@@ -522,8 +522,8 @@ html .app-top-exposure-container .discard-tracker__overlay-grid {
     --sorted-discard-suit-label-w: calc(var(--rack-tile-w) * var(--sorted-discard-suit-label-w-mult));
     --sorted-discard-suit-label-h: var(--rack-tile-h);
     --sorted-discard-suit-label-fs: min(
-      calc(var(--sorted-discard-suit-label-h) * 0.48),
-      calc(var(--sorted-discard-suit-label-w) * 0.38)
+      calc(var(--sorted-discard-suit-label-h) * 0.45),
+      calc(var(--sorted-discard-suit-label-w) * 0.35)
     );
     --discard-tracker-sorted-band-w: calc(14 * var(--rack-tile-w) + 13 * var(--player-rack-face-gap));
   }
@@ -708,14 +708,15 @@ html
 }
 
 html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__suit-label {
-  /* Sort-matched type (Figtree 600); ink matches sorted-discard counts (`--tg-ink`). */
+  /* Sort-matched type (Figtree 700); ink matches sorted-discard counts (`--tg-ink`). */
   font-family: 'Figtree', var(--sans);
   font-size: var(--sorted-discard-suit-label-fs);
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.08;
   text-transform: uppercase;
   letter-spacing: max(0.016em, calc(0.026em + 0.016rem));
-  color: var(--tg-ink, #080808);
+  color: #1e222a;
+  opacity: 0.95;
 }
 
 html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__seat-label {

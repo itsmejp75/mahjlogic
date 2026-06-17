@@ -2,14 +2,14 @@ import type { TileDef } from './types'
 import type { Suit } from './types'
 
 /** Suit spelled out for main-rack / staged-discard stacked glyph layout. */
-export function tileSuitRackWord(suit: Suit): 'DOT' | 'BAM' | 'CRAK' {
+export function tileSuitRackWord(suit: Suit): 'DOT' | 'BAM' | 'CRK' {
   switch (suit) {
     case 'dot':
       return 'DOT'
     case 'bam':
       return 'BAM'
     case 'crak':
-      return 'CRAK'
+      return 'CRK'
   }
 }
 

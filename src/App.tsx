@@ -875,7 +875,7 @@ function SortedDiscardTrayRow({
   tiles: readonly TileInstance[]
   slotCount: number
   leadingEmptySlots?: number
-  /** One leading slot with the suit name (BAM, CRAK, DOT). */
+  /** One leading slot with the suit name (BAM, CRK, DOT). */
   leadingSuitLabel?: string
   leadingSuitLabelTone?: 'dot' | 'bam' | 'crak'
   /** Glyph-only slots after `tiles` (no matching discard count). */

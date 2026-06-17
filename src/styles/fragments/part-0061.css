@@ -394,8 +394,8 @@
   --sorted-discard-suit-label-w: calc(var(--rack-tile-w) * var(--sorted-discard-suit-label-w-mult));
   --sorted-discard-suit-label-h: var(--rack-tile-h);
   --sorted-discard-suit-label-fs: min(
-    calc(var(--sorted-discard-suit-label-h) * 0.48),
-    calc(var(--sorted-discard-suit-label-w) * 0.38)
+    calc(var(--sorted-discard-suit-label-h) * 0.45),
+    calc(var(--sorted-discard-suit-label-w) * 0.35)
   );
   /* Sorted band spans grid cols 1–14; label extra width extends right (rank tiles shift, S/W/N col fixed). */
   --discard-tracker-sorted-band-w: calc(14 * var(--rack-tile-w) + 13 * var(--player-rack-face-gap));
@@ -812,9 +812,9 @@
 }
 
 .discard-tracker__overlay-grid .sorted-discard-tray__suit-label {
-  /* Sort-matched type (Figtree 600 + action label color); size scales to the chip box. */
+  /* Sort-matched type (Figtree 700 + action label color); size scales to the chip box. */
   font-family: 'Figtree', var(--sans);
-  font-weight: 600;
+  font-weight: 700;
   font-size: var(--sorted-discard-suit-label-fs);
   line-height: 1.08;
   text-transform: uppercase;
@@ -823,7 +823,7 @@
   text-align: center;
   letter-spacing: max(0.016em, calc(0.026em + 0.016rem));
   box-sizing: border-box;
-  opacity: 1;
+  opacity: 0.95;
   white-space: nowrap;
   pointer-events: none;
 }
@@ -835,7 +835,7 @@
     .sorted-discard-tray__slot--suit-label-crak
   )
   .sorted-discard-tray__suit-label {
-  color: var(--tg-ink, #080808);
+  color: #1e222a;
 }
 
 /*

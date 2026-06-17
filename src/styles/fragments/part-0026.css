@@ -207,14 +207,8 @@
   color: var(--tg-classic-letter-flower);
 }
 
-.app[data-tile-graphics='classic'] .tile--bam .tile-face__suit-text {
-  color: var(--tg-classic-letter-bam);
-}
-.app[data-tile-graphics='classic'] .tile--crak .tile-face__suit-text {
-  color: var(--tg-classic-letter-crak);
-}
-.app[data-tile-graphics='classic'] .tile--dot .tile-face__suit-text {
-  color: var(--tg-classic-letter-dot);
+.app[data-tile-graphics='classic'] .tile--suit .tile-face__suit-text {
+  color: #1e222a;
 }
 
 /* Ivory: joker “J” stays black; ring alone is var(--color-off-black) (see --tg-joker-ring) */

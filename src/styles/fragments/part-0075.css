@@ -743,19 +743,20 @@
 /* Actual DOT/BAM/CRAK — metrics live here; vertically centered in `.tile-face__suit-band` */
 .tile-face.tile-face--rack-suit-stack .tile-face__suit-text {
   font-family: 'Figtree', var(--sans);
-  font-weight: 700;
+  font-weight: 800;
   /*
    * “CRAK” is the widest line — cap size to inner tile width so the label always scales down
    * (no ellipsis); pair with a slightly tighter track than global buttons.
    */
   --suit-tile-w: max(0.5rem, calc(var(--rack-tile-w) - 0.35rem));
   font-size: min(
-    calc(var(--rack-bottom-action-fs) * 0.96),
-    calc(var(--suit-tile-w) * 0.23)
+    calc(var(--rack-bottom-action-fs) * 0.92),
+    calc(var(--suit-tile-w) * 0.21)
   );
   letter-spacing: 0.045em;
   line-height: 1;
-  color: var(--tg-suit-band-ink, var(--color-black));
+  color: #1e222a;
+  opacity: 0.95;
   text-align: center;
   text-transform: uppercase;
   display: block;
