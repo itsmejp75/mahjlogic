@@ -56,3 +56,8 @@ export function writePlayableCardToStorage(id: PlayableCardId): void {
 export function playableCardShortLabel(id: PlayableCardId): string {
   return id === 'mock' ? 'Mock practice card' : '2026 NMJL card'
 }
+
+/** Title-style label for post-game overlays (Mah Jongg win, etc.). */
+export function playableCardHeadingLabel(id: PlayableCardId): string {
+  return id === 'mock' ? 'Practice Card' : '2026 NMJL Card'
+}

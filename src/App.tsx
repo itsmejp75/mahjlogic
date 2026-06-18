@@ -42,7 +42,7 @@ import {
 } from './mahjong/deck'
 import type { BlankTileCount } from './mahjong/deck'
 import type { ClaimType, DiscardEntry, EastExposure, Seat, TileDef, TileInstance } from './mahjong/types'
-import { tileAriaLabel, tileSuitRackWord } from './mahjong/labels'
+import { formatMahjongWinDescription, tileAriaLabel, tileSuitRackWord } from './mahjong/labels'
 import {
   findFocusedPatternDeadCause,
   type DeadCauseHint,
@@ -1354,10 +1354,18 @@ type RoundState = {
   callAmendableAfterClaimTileId: string | null
   /** Legacy call-amend fields kept null for older saved rounds. */
   callAmendFromBotIndex: 0 | 1 | 2 | null
-  /** Non-null when a bot won by self-draw. Drives the bot-mahjong end screen. */
-  botWin: { botIndex: 0 | 1 | 2; how: 'self-draw' | 'east-discard' } | null
+  /** Non-null when a bot won. Drives the bot-mahjong end screen. */
+  botWin:
+    | ({ botIndex: 0 | 1 | 2 } & (
+        | { how: 'self-draw'; tile: TileDef }
+        | { how: 'called-discard'; tile: TileDef; discardFrom: 'east' | (typeof BOT_LABELS)[number] }
+      ))
+    | null
   /** How the player won Mah Jongg (set when mainPhase becomes 'mahjong-declared'). */
-  playerWinMethod: { type: 'self-draw' } | { type: 'called-discard'; botLabel: string } | null
+  playerWinMethod:
+    | { type: 'self-draw'; tile: TileDef }
+    | { type: 'called-discard'; botLabel: (typeof BOT_LABELS)[number]; tile: TileDef }
+    | null
 }
 
 /**
@@ -1628,6 +1636,8 @@ type BotTurnResult = {
   botExposuresOut: BotExposure[]
   /** True when the bot drew their winning tile (self-draw Mah Jongg). */
   botMahjong: boolean
+  /** The tile that completed the hand when `botMahjong` is true. */
+  mahjongTile: TileInstance | null
 }
 
 /**
@@ -1717,7 +1727,7 @@ function runOneBotTurn(
   botWinsEnabled: boolean,
 ): BotTurnResult {
   if (wall.length === 0) {
-    return { botHand, wall, discardPile, discarded: null, eastExposuresOut: eastExposures, botExposuresOut: botExposures, botMahjong: false }
+    return { botHand, wall, discardPile, discarded: null, eastExposuresOut: eastExposures, botExposuresOut: botExposures, botMahjong: false, mahjongTile: null }
   }
   const [drawn, ...wallNext] = wall
   const handWithDraw = [...botHand, drawn]
@@ -1749,6 +1759,7 @@ function runOneBotTurn(
         eastExposuresOut: swapped.eastExposures,
         botExposuresOut: swapped.botExposures,
         botMahjong: true,
+        mahjongTile: drawn,
       }
     }
     // Practice: bot does not self-declare — pick a normal discard and keep the round going.
@@ -1787,6 +1798,7 @@ function runOneBotTurn(
     eastExposuresOut: swapped.eastExposures,
     botExposuresOut: swapped.botExposures,
     botMahjong: false,
+    mahjongTile: null,
   }
 }
 
@@ -2103,7 +2115,7 @@ function commitEastDiscardWithHand(
       drawnTileId: null,
       handTileFlyIn: null,
       selectedHandTileId: null,
-      botWin: { botIndex: mjBot, how: 'east-discard' },
+      botWin: { botIndex: mjBot, how: 'called-discard', tile: discardedTile.def, discardFrom: 'east' },
     })
   }
 
@@ -2258,7 +2270,7 @@ function commitEastDiscardWithHand(
       pendingEastDiscardTile: null,
       drawnTileId: null,
       selectedHandTileId: null,
-      botWin: { botIndex: 0, how: 'self-draw' },
+      botWin: { botIndex: 0, how: 'self-draw', tile: result.mahjongTile!.def },
     }
   }
 
@@ -2373,7 +2385,12 @@ function applySkipBotDiscard(
       drawnTileId: null,
       handTileFlyIn: null,
       selectedHandTileId: null,
-      botWin: { botIndex: mjCaller, how: 'east-discard' },
+      botWin: {
+        botIndex: mjCaller,
+        how: 'called-discard',
+        tile: calledTile.def,
+        discardFrom: BOT_LABELS[fromIdx]!,
+      },
     })
   }
 
@@ -2509,7 +2526,7 @@ function applySkipBotDiscard(
       pendingEastDiscardTile: null,
       drawnTileId: null,
       selectedHandTileId: null,
-      botWin: { botIndex: nextBotIndex as 0 | 1 | 2, how: 'self-draw' },
+      botWin: { botIndex: nextBotIndex as 0 | 1 | 2, how: 'self-draw', tile: result.mahjongTile!.def },
     }
   }
 
@@ -2797,7 +2814,7 @@ function applyCommitStagedCall(
     })
     if (bestTilesAway !== 0) return r
     const eastOrdered = orderEastExposuresForClosestCardLine(r, handNext, pileNext, eastMelds)
-    const botLabel = r.activeBotIndex != null ? (BOT_LABELS[r.activeBotIndex] ?? 'Bot') : 'Bot'
+    const botLabel = BOT_LABELS[r.activeBotIndex as 0 | 1 | 2]!
     return applyBotsJokerSwapsFromEast({
       ...r,
       hand: handNext,
@@ -2811,7 +2828,7 @@ function applyCommitStagedCall(
       drawnTileId: null,
       selectedHandTileId: null,
       stagedCallTileIds: [],
-      playerWinMethod: { type: 'called-discard', botLabel },
+      playerWinMethod: { type: 'called-discard', botLabel, tile: calledTile.def },
     })
   }
 
@@ -2848,7 +2865,7 @@ function applyCommitStagedCall(
     eastTableClaimMelds: nextEast,
   })
   if (awayOpen === 0) {
-    const botLabel = r.activeBotIndex != null ? (BOT_LABELS[r.activeBotIndex] ?? 'Bot') : 'Bot'
+    const botLabel = BOT_LABELS[r.activeBotIndex as 0 | 1 | 2]!
     return applyBotsJokerSwapsFromEast({
       ...r,
       hand: handNext,
@@ -2864,7 +2881,7 @@ function applyCommitStagedCall(
       stagedCallTileIds: [],
       callAmendableAfterClaimTileId: null,
       callAmendFromBotIndex: null,
-      playerWinMethod: { type: 'called-discard', botLabel },
+      playerWinMethod: { type: 'called-discard', botLabel, tile: calledTile.def },
     })
   }
   return applyBotsJokerSwapsFromEast({
@@ -2895,7 +2912,7 @@ function applyDeclareMahjong(r: RoundState): RoundState {
   if ((r.mainPhase !== 'bot-turn' && r.mainPhase !== 'call-staging') || !r.activeBotDiscard) return r
   const calledTile = r.activeBotDiscard
   const pileNext = r.discardPile.filter((e) => e.tile.id !== calledTile.id)
-  const botLabel = r.activeBotIndex != null ? (BOT_LABELS[r.activeBotIndex] ?? 'Bot') : 'Bot'
+  const botLabel = BOT_LABELS[r.activeBotIndex as 0 | 1 | 2]!
   const flyFrom =
     r.activeBotIndex != null ? handTileFlyInFromBotSeat(r.activeBotIndex as 0 | 1 | 2) : ('across' as const)
   return {
@@ -2909,17 +2926,19 @@ function applyDeclareMahjong(r: RoundState): RoundState {
     drawnTileId: null,
     selectedHandTileId: null,
     stagedCallTileIds: [],
-    playerWinMethod: { type: 'called-discard', botLabel },
+    playerWinMethod: { type: 'called-discard', botLabel, tile: calledTile.def },
     handTileFlyIn: { ids: [calledTile.id], from: flyFrom },
   }
 }
 
 /** Self-draw Mah Jongg: player declares on their own drawn tile (east-discard phase). */
 function applyDeclareMahjongSelfDraw(r: RoundState): RoundState {
-  if (r.mainPhase !== 'east-discard') return r
+  if (r.mainPhase !== 'east-discard' || !r.drawnTileId) return r
+  const drawnTile = r.hand.find((t) => t.id === r.drawnTileId)
+  if (!drawnTile) return r
   return {
     ...r,
-    playerWinMethod: { type: 'self-draw' },
+    playerWinMethod: { type: 'self-draw', tile: drawnTile.def },
     mainPhase: 'mahjong-declared',
     drawnTileId: null,
     selectedHandTileId: null,
@@ -3467,6 +3486,7 @@ export default function App() {
     exposureJokerSwapFlyInTileId,
     stagedCallTileIds,
     botWin,
+    playerWinMethod,
   } = round
   const charlestonDone = charlestonPhase === 'done'
 
@@ -3626,6 +3646,9 @@ export default function App() {
    */
   const pendingBotExposureFlyInIdsRef = useRef(new Set<string>())
   const prevBotExposureTileIdsSnapshotRef = useRef<string[]>([])
+  // Per-tile clear timers so a later exposure never resets or prematurely clears an earlier
+  // meld's fly-in (rapid Ignore taps used to skip or double the drop-in with one shared timer).
+  const botExposureFlyInTimersRef = useRef(new Map<string, number>())
   const [botExposureFlyInClearEpoch, setBotExposureFlyInClearEpoch] = useState(0)
 
   const botExposureTileIdsNow = useMemo(
@@ -3654,13 +3677,47 @@ export default function App() {
   }, [botExposureTileIdsNow, animationsEnabled, botExposureFlyInClearEpoch])
 
   useEffect(() => {
-    if (!animationsEnabled || pendingBotExposureFlyInIdsRef.current.size === 0) return
-    const tid = window.setTimeout(() => {
-      pendingBotExposureFlyInIdsRef.current.clear()
-      setBotExposureFlyInClearEpoch((epoch) => epoch + 1)
-    }, 380)
-    return () => window.clearTimeout(tid)
+    const timers = botExposureFlyInTimersRef.current
+    const pending = pendingBotExposureFlyInIdsRef.current
+
+    if (!animationsEnabled) {
+      for (const tid of timers.values()) window.clearTimeout(tid)
+      timers.clear()
+      if (pending.size > 0) {
+        pending.clear()
+        setBotExposureFlyInClearEpoch((epoch) => epoch + 1)
+      }
+      return
+    }
+
+    // Each pending tile gets its own 380ms timer, scheduled once when it first appears so its
+    // drop-in always runs to completion regardless of how quickly the next meld is exposed.
+    for (const id of pending) {
+      if (timers.has(id)) continue
+      const tid = window.setTimeout(() => {
+        timers.delete(id)
+        pendingBotExposureFlyInIdsRef.current.delete(id)
+        setBotExposureFlyInClearEpoch((epoch) => epoch + 1)
+      }, 380)
+      timers.set(id, tid)
+    }
+
+    // Cancel timers for tiles that left the table (e.g. undo) before their drop-in finished.
+    for (const [id, tid] of [...timers]) {
+      if (!pending.has(id)) {
+        window.clearTimeout(tid)
+        timers.delete(id)
+      }
+    }
   }, [botExposureTileIdsNow, animationsEnabled, botExposureFlyInClearEpoch])
+
+  useEffect(
+    () => () => {
+      for (const tid of botExposureFlyInTimersRef.current.values()) window.clearTimeout(tid)
+      botExposureFlyInTimersRef.current.clear()
+    },
+    [],
+  )
 
   /** Claimed discard + staged hand tiles — shared upward wave into the meld (opening-deal stagger). */
   const [eastCallStagedWaveFlyIn, setEastCallStagedWaveFlyIn] = useState<{
@@ -4762,6 +4819,19 @@ export default function App() {
     }
   }, [])
 
+  const playerWinIntro = useMemo(() => {
+    if (!playerWinMethod) return 'You (East) won.'
+    const winMethod =
+      playerWinMethod.type === 'self-draw'
+        ? { how: 'self-draw' as const, tile: playerWinMethod.tile }
+        : {
+            how: 'called-discard' as const,
+            tile: playerWinMethod.tile,
+            discardFrom: playerWinMethod.botLabel,
+          }
+    return formatMahjongWinDescription('You (East)', winMethod)
+  }, [playerWinMethod])
+
   const postGameBotReview = useMemo(() => {
     if (mainPhase !== 'mahjong-declared') return null
     const eastRankInput: RankSuggestedHandsInput = {
@@ -4824,9 +4894,14 @@ export default function App() {
    */
   const postGameBotMahjongReview = useMemo(() => {
     if (mainPhase !== 'bot-mahjong' || !botWin) return null
-    const { botIndex, how } = botWin
+    const { botIndex, how, tile } = botWin
     const winnerSeat = BOT_LABELS[botIndex]!
     const winnerLabel = `Bot ${botIndex + 1} (${winnerSeat})`
+    const winMethod =
+      how === 'self-draw'
+        ? { how: 'self-draw' as const, tile }
+        : { how: 'called-discard' as const, tile, discardFrom: botWin.discardFrom }
+    const winDescription = formatMahjongWinDescription(winnerLabel, winMethod)
 
     type SeatRow = {
       label: string
@@ -4874,7 +4949,7 @@ export default function App() {
       ...botRows.filter((_, idx) => idx !== botIndex),
     ]
 
-    return { how, winnerLabel, winnerRow, loserRows }
+    return { how, winnerLabel, winDescription, winnerRow, loserRows }
   }, [mainPhase, botWin, bots, hand, wall.length, discardTiles, botExposures, eastExposures, cardPatterns])
 
   /**
@@ -7730,9 +7805,6 @@ export default function App() {
                       />
                     </li>
                   ) : null}
-                  {postGameWallGameReview.rows.length > 1 ? (
-                    <li key="wall-east-bot-divider" className="mahjong-win__bots-review-separator" aria-hidden />
-                  ) : null}
                   {postGameWallGameReview.rows.slice(1).map((row) => (
                     <li key={row.label} className="mahjong-win__bots-review-card">
                       <PostGameLoserRackRow
@@ -7753,22 +7825,22 @@ export default function App() {
             <div className="wall-game-dialog__actions">
               <button
                 type="button"
-                className="btn btn--primary wall-game-dialog__action-btn"
+                className="btn btn--primary rack-bottom-tile-cell wall-game-dialog__action-btn"
                 onClick={() => { setWallGameReviewing(true); setMenuOpen(true) }}
               >
                 Menu
               </button>
-              <button type="button" className="btn btn--primary wall-game-dialog__action-btn" onClick={newHand}>
+              <button type="button" className="btn btn--primary rack-bottom-tile-cell wall-game-dialog__action-btn" onClick={newHand}>
                 New Game
               </button>
               <button
                 type="button"
-                className="btn btn--primary wall-game-dialog__action-btn"
+                className="btn btn--primary rack-bottom-tile-cell wall-game-dialog__action-btn"
                 onClick={() => setWallGameReviewing(true)}
               >
                 Review
               </button>
-              <button type="button" className="btn btn--primary wall-game-dialog__action-btn" onClick={replayHand}>
+              <button type="button" className="btn btn--primary rack-bottom-tile-cell wall-game-dialog__action-btn" onClick={replayHand}>
                 Replay
               </button>
             </div>
@@ -7785,13 +7857,10 @@ export default function App() {
               Mah Jongg!
             </h2>
             <p className="wall-game-dialog__intro">
-              You won. Below is each seat&apos;s closest card line (fewest tiles away), tiles away, and full rack in that line&apos;s left-to-right card order.
+              {playerWinIntro}
             </p>
             {postGameBotReview ? (
-              <div className="wall-game-dialog__review mahjong-win__bots-review" aria-labelledby="mj-review-heading">
-                <h3 id="mj-review-heading" className="mahjong-win__bots-review-title">
-                  All seats (practice card)
-                </h3>
+              <div className="wall-game-dialog__review mahjong-win__bots-review" aria-labelledby="mj-win-title">
                 <ul className="mahjong-win__bots-review-list">
                   {postGameBotReview[0] ? (
                     <li key={postGameBotReview[0].label} className="mahjong-win__bots-review-card">
@@ -7807,9 +7876,6 @@ export default function App() {
                         playerSeatFocus
                       />
                     </li>
-                  ) : null}
-                  {postGameBotReview.length > 1 ? (
-                    <li key="mj-win-winner-losers-divider" className="mahjong-win__bots-review-separator" aria-hidden />
                   ) : null}
                   {postGameBotReview.slice(1).map((row) => (
                     <li key={row.label} className="mahjong-win__bots-review-card">
@@ -7831,22 +7897,22 @@ export default function App() {
             <div className="wall-game-dialog__actions">
               <button
                 type="button"
-                className="btn btn--primary wall-game-dialog__action-btn"
+                className="btn btn--primary rack-bottom-tile-cell wall-game-dialog__action-btn"
                 onClick={() => { setMahjongWinReviewing(true); setMenuOpen(true) }}
               >
                 Menu
               </button>
-              <button type="button" className="btn btn--primary wall-game-dialog__action-btn" onClick={newHand}>
+              <button type="button" className="btn btn--primary rack-bottom-tile-cell wall-game-dialog__action-btn" onClick={newHand}>
                 New Game
               </button>
               <button
                 type="button"
-                className="btn btn--primary wall-game-dialog__action-btn"
+                className="btn btn--primary rack-bottom-tile-cell wall-game-dialog__action-btn"
                 onClick={() => setMahjongWinReviewing(true)}
               >
                 Review
               </button>
-              <button type="button" className="btn btn--primary wall-game-dialog__action-btn" onClick={replayHand}>
+              <button type="button" className="btn btn--primary rack-bottom-tile-cell wall-game-dialog__action-btn" onClick={replayHand}>
                 Replay
               </button>
             </div>
@@ -7856,23 +7922,16 @@ export default function App() {
       {charlestonDone && mainPhase === 'bot-mahjong' && postGameBotMahjongReview && !botMahjongWinReviewing && (
         <div className="wall-game-overlay" role="dialog" aria-modal="true" aria-labelledby="bot-mj-win-title">
           <div
-            className="wall-game-dialog wall-game-dialog--wall-seats wall-game-dialog--bot-mahjong"
+            className="wall-game-dialog wall-game-dialog--wall-seats"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id="bot-mj-win-title" className="wall-game-dialog__title">
               Mah Jongg
             </h2>
             <p className="wall-game-dialog__intro">
-              {postGameBotMahjongReview.winnerLabel}
-              {postGameBotMahjongReview.how === 'self-draw'
-                ? ' won on a self-draw. '
-                : ' won on East\'s discard. '}
-              Below is each seat&apos;s closest card line (fewest tiles away), tiles away, and full rack in that line&apos;s left-to-right card order.
+              {postGameBotMahjongReview.winDescription}
             </p>
-            <div className="wall-game-dialog__review mahjong-win__bots-review" aria-labelledby="bot-mj-review-heading">
-              <h3 id="bot-mj-review-heading" className="mahjong-win__bots-review-title">
-                All seats (practice card)
-              </h3>
+            <div className="wall-game-dialog__review mahjong-win__bots-review" aria-labelledby="bot-mj-win-title">
               <ul className="mahjong-win__bots-review-list">
                 <li key={postGameBotMahjongReview.winnerRow.label} className="mahjong-win__bots-review-card">
                   <PostGameLoserRackRow
@@ -7887,9 +7946,6 @@ export default function App() {
                     playerSeatFocus
                   />
                 </li>
-                {postGameBotMahjongReview.loserRows.length > 0 ? (
-                  <li key="bot-mj-winner-losers-divider" className="mahjong-win__bots-review-separator" aria-hidden />
-                ) : null}
                 {postGameBotMahjongReview.loserRows.map((row) => (
                   <li key={row.label} className="mahjong-win__bots-review-card">
                     <PostGameLoserRackRow
@@ -7909,22 +7965,22 @@ export default function App() {
             <div className="wall-game-dialog__actions">
               <button
                 type="button"
-                className="btn btn--primary wall-game-dialog__action-btn"
+                className="btn btn--primary rack-bottom-tile-cell wall-game-dialog__action-btn"
                 onClick={() => { setBotMahjongWinReviewing(true); setMenuOpen(true) }}
               >
                 Menu
               </button>
-              <button type="button" className="btn btn--primary wall-game-dialog__action-btn" onClick={newHand}>
+              <button type="button" className="btn btn--primary rack-bottom-tile-cell wall-game-dialog__action-btn" onClick={newHand}>
                 New Game
               </button>
               <button
                 type="button"
-                className="btn btn--primary wall-game-dialog__action-btn"
+                className="btn btn--primary rack-bottom-tile-cell wall-game-dialog__action-btn"
                 onClick={() => setBotMahjongWinReviewing(true)}
               >
                 Review
               </button>
-              <button type="button" className="btn btn--primary wall-game-dialog__action-btn" onClick={replayHand}>
+              <button type="button" className="btn btn--primary rack-bottom-tile-cell wall-game-dialog__action-btn" onClick={replayHand}>
                 Replay
               </button>
             </div>

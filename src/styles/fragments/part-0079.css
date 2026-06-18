@@ -194,13 +194,94 @@
 .post-game-tied__select {
   font: inherit;
   font-size: 0.96em;
-  max-width: min(100%, 20rem);
+  max-width: min(100%, 24rem);
   border-radius: 0.35rem;
-  padding: 0.18rem 0.4rem;
+  padding: 0.18rem 0.55rem 0.18rem 0.4rem;
   background: color-mix(in srgb, var(--panel-2) 88%, transparent);
   border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
   color: var(--text-h);
   cursor: pointer;
+}
+
+.post-game-tied__picker {
+  position: relative;
+  display: inline-flex;
+  max-width: min(100%, 24rem);
+  width: 100%;
+}
+
+.post-game-tied__trigger {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  padding-inline-end: 1.65rem;
+}
+
+.post-game-tied__trigger-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.post-game-tied__ref,
+.post-game-tied__sep {
+  color: color-mix(in srgb, var(--text-h) 72%, transparent);
+}
+
+.post-game-tied__trigger::after {
+  content: '';
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  width: 0.42rem;
+  height: 0.42rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-70%) rotate(45deg);
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.post-game-tied__menu {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  top: calc(100% + 0.12rem);
+  margin: 0;
+  padding: 0.18rem 0;
+  list-style: none;
+  border-radius: 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  background: color-mix(in srgb, var(--panel-2) 95%, transparent);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  max-height: min(12rem, 40dvh);
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.post-game-tied__menu::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.post-game-tied__option {
+  padding: 0.28rem 0.45rem;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.post-game-tied__option:hover,
+.post-game-tied__option--selected {
+  background: color-mix(in srgb, var(--color-black) 18%, transparent);
 }
 
 /* Player's winning 14 tiles shown directly under "Mah Jongg!" headline */

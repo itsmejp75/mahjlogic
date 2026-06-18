@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import {
   postGameRackAndHighlights,
   suggestedHandCardRefDisplay,
@@ -33,8 +33,101 @@ function segmentRackIntoExposureRuns(
   return runs
 }
 
-function lineLabelPlain(line: SuggestedHandLine): string {
-  return `${suggestedHandCategoryDashCardRef(line)} — ${line.title}`
+function TiedLineHandLabel({ line }: { line: SuggestedHandLine }) {
+  return (
+    <>
+      <span className="post-game-tied__ref">{suggestedHandCategoryDashCardRef(line)}</span>
+      <span className="post-game-tied__sep"> — </span>
+      {line.titleSegments?.length ? (
+        <CardColoredText segments={line.titleSegments} />
+      ) : (
+        line.title
+      )}
+    </>
+  )
+}
+
+function PostGameTiedLinePicker({
+  rowId,
+  lines,
+  selectedIndex,
+  onSelect,
+}: {
+  rowId: string
+  lines: SuggestedHandLine[]
+  selectedIndex: number
+  onSelect: (index: number) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const listId = useId()
+  const selected = lines[selectedIndex] ?? lines[0]
+
+  useEffect(() => {
+    if (!open) return
+    const onDocMouseDown = (event: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setOpen(false)
+      }
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onDocMouseDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onDocMouseDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open])
+
+  if (!selected) return null
+
+  return (
+    <div className="post-game-tied__picker" ref={rootRef}>
+      <button
+        type="button"
+        className="post-game-tied__select post-game-tied__trigger"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={listId}
+        aria-label="Choose among tied hands at the same tiles-away distance"
+        onClick={() => setOpen((wasOpen) => !wasOpen)}
+      >
+        <span className="post-game-tied__trigger-text">
+          <TiedLineHandLabel line={selected} />
+        </span>
+      </button>
+      {open ? (
+        <ul
+          id={listId}
+          className="post-game-tied__menu"
+          role="listbox"
+          aria-label="Tied hands at the same tiles-away distance"
+        >
+          {lines.map((hand, index) => (
+            <li
+              key={`${rowId}-opt-${index}-${hand.id}-${hand.matchedInHand}-${suggestedHandCardRefDisplay(hand)}`}
+              role="option"
+              aria-selected={index === selectedIndex}
+              className={[
+                'post-game-tied__option',
+                index === selectedIndex ? 'post-game-tied__option--selected' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              onClick={() => {
+                onSelect(index)
+                setOpen(false)
+              }}
+            >
+              <TiedLineHandLabel line={hand} />
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  )
 }
 
 export type PostGameLoserRackRowProps = {
@@ -101,24 +194,18 @@ export function PostGameLoserRackRow({
         <span className="mahjong-win__bots-review-ref">{suggestedHandCategoryDashCardRef(line)}</span>
       ) : null}
       <div className="post-game-tied__pattern-line mahjong-win__bots-review-pattern">
-        {line.titleSegments ? <CardColoredText segments={line.titleSegments} /> : line.title}
         {showTiedLinePicker && safe.length > 1 ? (
-          <select
-            className="post-game-tied__select"
-            aria-label="Other hands with the same tiles-away distance on the practice card"
-            value={tiedIndex}
-            onChange={(e) => setTiedIndex(Number(e.target.value))}
-          >
-            {safe.map((h, i) => (
-              <option
-                key={`${rowId}-opt-${i}-${h.id}-${h.matchedInHand}-${suggestedHandCardRefDisplay(h)}`}
-                value={i}
-              >
-                {lineLabelPlain(h)}
-              </option>
-            ))}
-          </select>
-        ) : null}
+          <PostGameTiedLinePicker
+            rowId={rowId}
+            lines={safe}
+            selectedIndex={tiedIndex}
+            onSelect={setTiedIndex}
+          />
+        ) : line.titleSegments ? (
+          <CardColoredText segments={line.titleSegments} />
+        ) : (
+          line.title
+        )}
       </div>
       {trailingLabel === 'bot-mj-loss-pts' ? (
         <span className="mahjong-win__bot-mj-pts">−TBD pts</span>

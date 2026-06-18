@@ -646,19 +646,8 @@
   box-shadow: 0 12px 40px color-mix(in srgb, var(--color-black) 55%, transparent);
 }
 
-.wall-game-dialog--bot-mahjong {
-  border-color: #dc2626;
-  box-shadow:
-    0 0 0 1px rgba(220, 38, 38, 0.25),
-    0 12px 40px color-mix(in srgb, var(--color-black) 55%, transparent);
-}
-
 .wall-game-dialog__title {
   color: var(--post-game-tray-fg);
-}
-
-.wall-game-dialog--bot-mahjong .wall-game-dialog__title {
-  color: #f87171;
 }
 
 .wall-game-dialog__intro {
@@ -669,8 +658,62 @@
   background-color: var(--post-game-tray-inset);
 }
 
+.wall-game-dialog--wall-seats .mahjong-win__bots-review {
+  background-color: transparent;
+}
+
 .wall-game-dialog__review .mahjong-win__bots-review-list {
   background-color: color-mix(in srgb, var(--color-black) 14%, var(--post-game-tray-inset));
+}
+
+.wall-game-dialog--wall-seats .wall-game-dialog__review .mahjong-win__bots-review-list {
+  --hands-row-active-fill: color-mix(in srgb, var(--app-bg-base) 50%, #161d26 50%);
+  --post-game-hand-row-pad-inline: 0.35rem;
+  box-sizing: border-box;
+  background-color: var(--hands-row-active-fill);
+  background-image: none;
+  border: 0.5px solid var(--post-game-tray-border);
+  padding-top: 0.28rem;
+  gap: 0.28rem;
+}
+
+.wall-game-dialog--wall-seats
+  .wall-game-dialog__review
+  .mahjong-win__bots-review-list
+  > .mahjong-win__bots-review-card:not(:first-child) {
+  padding-top: 0.14rem;
+}
+
+.wall-game-dialog--wall-seats
+  .wall-game-dialog__review
+  .mahjong-win__bots-review-list
+  > .mahjong-win__bots-review-card:not(:last-child)::after {
+  content: '';
+  display: block;
+  align-self: center;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  width: calc((100% + 2 * var(--post-game-hand-row-pad-inline)) * 0.8);
+  margin-inline: auto;
+  margin-top: 0.28rem;
+  border-bottom: 0.5px solid var(--post-game-tray-border);
+  pointer-events: none;
+}
+
+/* Post-game overlays: shared intro + review spacing (wall game, Mah Jongg win/lose). */
+.wall-game-dialog--wall-seats
+  .wall-game-dialog__intro
+  + .wall-game-dialog__review.mahjong-win__bots-review {
+  margin-top: -0.42rem;
+  padding-top: 0;
+  padding-bottom: 0.35rem;
+  padding-inline: 0.35rem;
+}
+
+.wall-game-dialog--wall-seats .wall-game-dialog__intro {
+  font-size: 0.92rem;
+  line-height: 1.34;
+  transform: translateY(-0.32rem);
 }
 
 .wall-game-dialog .mahjong-win__bots-review-title,
@@ -691,39 +734,23 @@
   color: var(--post-game-tray-fg);
 }
 
-/* Action row: same flat inset controls as the hand rack (part-0123). */
-.wall-game-overlay
-  .wall-game-dialog
-  .wall-game-dialog__actions
-  .btn.btn--primary.wall-game-dialog__action-btn:not(:disabled) {
-  background: var(--post-game-tray-inset);
-  border: 1px solid var(--post-game-tray-border);
-  color: var(--post-game-tray-fg);
-  box-shadow: none;
-  transition: box-shadow 0.12s ease;
+.wall-game-dialog .post-game-tied__ref,
+.wall-game-dialog .post-game-tied__sep {
+  color: var(--post-game-tray-fg-muted);
 }
 
-.wall-game-overlay
-  .wall-game-dialog
-  .wall-game-dialog__actions
-  .btn.btn--primary.wall-game-dialog__action-btn:disabled {
+.wall-game-dialog .post-game-tied__menu {
   background: var(--post-game-tray-inset);
-  border: 1px solid var(--post-game-tray-border);
-  color: var(--post-game-tray-fg);
-  opacity: 0.45;
-  box-shadow: none;
+  border-color: var(--post-game-tray-border);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-black) 55%, transparent);
 }
 
-.wall-game-overlay
-  .wall-game-dialog
-  .wall-game-dialog__actions
-  .btn.btn--primary.wall-game-dialog__action-btn:active:not(:disabled) {
-  box-shadow:
-    inset 4px 4px 8px var(--post-game-tray-press-dark),
-    inset -4px -4px 8px var(--post-game-tray-press-light);
-  transition: none;
-  transform: none;
+.wall-game-dialog .post-game-tied__option:hover,
+.wall-game-dialog .post-game-tied__option--selected {
+  background: color-mix(in srgb, var(--color-black) 22%, var(--post-game-tray-inset));
 }
+
+/* Post-game action row chrome: part-0091 (rack-action tokens + hand-button-row-h). */
 
 /* Illegal Mah Jongg coach — gray tray shell (not teal felt + white card). */
 .charleston-error-dialog.charleston-error-dialog--mahjong-blocked {

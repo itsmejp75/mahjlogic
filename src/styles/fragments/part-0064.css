@@ -102,9 +102,13 @@
   filter: none;
 }
 
-/* End-game + wall overlay actions. */
-.app[data-color-buttons='off'] .wall-game-dialog__actions .btn--primary:not(:disabled),
-.app[data-color-buttons='off'] .wall-game-dialog__actions .btn--primary:disabled {
+/* End-game + wall overlay actions (flat gray when color buttons off). */
+.app[data-color-buttons='off']
+  .wall-game-dialog__actions
+  .btn--primary:not(.wall-game-dialog__action-btn):not(:disabled),
+.app[data-color-buttons='off']
+  .wall-game-dialog__actions
+  .btn--primary:not(.wall-game-dialog__action-btn):disabled {
   background: var(--color-slate-mid);
   color: var(--color-white);
   filter: none;

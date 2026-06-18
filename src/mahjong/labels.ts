@@ -32,6 +32,40 @@ export function tileShortLabel(def: TileDef): string {
   }
 }
 
+/** User-facing tile name in win summaries (e.g. "1 Bam", "Flower"). */
+export function tileDisplayName(def: TileDef): string {
+  switch (def.cat) {
+    case 'suit': {
+      const suitName = def.suit === 'bam' ? 'Bam' : def.suit === 'dot' ? 'Dot' : 'Crak'
+      return `${def.rank} ${suitName}`
+    }
+    case 'wind':
+      return def.wind === 'E' ? 'East' : def.wind === 'S' ? 'South' : def.wind === 'W' ? 'West' : 'North'
+    case 'dragon':
+      if (def.dragon === 'soap') return 'Soap'
+      return def.dragon === 'red' ? 'Red Dragon' : 'Green Dragon'
+    case 'flower':
+      return 'Flower'
+    case 'joker':
+      return 'Joker'
+    case 'blank':
+      return 'Blank'
+  }
+}
+
+export type MahjongWinMethod =
+  | { how: 'self-draw'; tile: TileDef }
+  | { how: 'called-discard'; tile: TileDef; discardFrom: 'east' | 'South' | 'West' | 'North' }
+
+export function formatMahjongWinDescription(winnerLabel: string, win: MahjongWinMethod): string {
+  const tileName = tileDisplayName(win.tile)
+  if (win.how === 'self-draw') {
+    return `${winnerLabel} won with self-drawn tile (${tileName}).`
+  }
+  const fromLabel = win.discardFrom === 'east' ? "East's" : `${win.discardFrom}'s`
+  return `${winnerLabel} won with ${fromLabel} discard (${tileName}).`
+}
+
 export function tileAriaLabel(def: TileDef): string {
   switch (def.cat) {
     case 'suit': {
