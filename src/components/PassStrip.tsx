@@ -28,12 +28,22 @@ function SortablePassTile({
   inlineTail,
   suggestBest,
   compactShift,
+  returnActive,
+  returnSlideCols,
 }: {
   tile: TileInstance
   onTileClick: () => void
   inlineTail: boolean
   suggestBest: boolean
   compactShift: PassCompactShift | null
+  /**
+   * A pass tile is being dragged back to the hand. The hand grows to accept it, so the remaining
+   * box tiles must compact toward the rightmost slot *now* (during the drag, not on drop) — else a
+   * hand tile slides under the box tile that should have moved right. Overrides `suppressReorderSlide`.
+   */
+  returnActive: boolean
+  /** Columns this tile must slide right to land in its compacted slot once the returning tile leaves. */
+  returnSlideCols: number
 }) {
   const { active } = useDndContext()
   const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({
@@ -41,7 +51,10 @@ function SortablePassTile({
     animateLayoutChanges: () => false,
   })
 
-  const sortableTransform = CSS.Transform.toString(transform)
+  // Translate only — never the scale component. While dragging, the source wrap collapses to the
+  // short green slot chrome, so dnd-kit's rectSortingStrategy would otherwise turn that height
+  // difference into a `scaleY` on a neighbour (the tile "squishes"). Neighbours should just slide.
+  const sortableTransform = CSS.Translate.toString(transform)
   let resolvedTransform: string | undefined = sortableTransform ?? undefined
   let resolvedTransition: string
 
@@ -56,7 +69,16 @@ function SortablePassTile({
   } else if (isDragging) {
     resolvedTransform = undefined
     resolvedTransition = 'none'
+  } else if (active && returnActive) {
+    // Box → hand return: compact toward the rightmost slot so the growing hand can't slide under us.
+    resolvedTransform =
+      returnSlideCols > 0
+        ? `translateX(calc(${returnSlideCols} * (${PASS_COMPACT_SHIFT_COL})))`
+        : 'translateX(0)'
+    resolvedTransition = `transform ${PASS_REORDER_DURATION} ${PASS_REORDER_EASING}`
   } else if (active) {
+    // Within-box reorder: slide to open the insert gap (the dragged tile's source shows its own
+    // green "well" via the slot-chrome child, so sliding neighbours don't hide an empty slot).
     resolvedTransform = sortableTransform ?? undefined
     resolvedTransition = `transform ${PASS_REORDER_DURATION} ${PASS_REORDER_EASING}`
   } else {
@@ -137,6 +159,12 @@ type Props = {
   flyOutFrom?: PassStripFlyOutFrom | null
   /** While this pass tile is registered in the hand sortable list (drag preview), hide its pass-strip sortable. */
   hiddenSortableTileId?: string | null
+  /**
+   * Id of the pass tile currently being dragged back into the hand (the hand shows its insert
+   * preview). While set, the remaining box tiles compact toward the rightmost slot so the growing
+   * hand never slides underneath them.
+   */
+  returningTileId?: string | null
   /** `inlineTail` only: round label inside the teal pass box (e.g. `1st CHARLESTON`). */
   inlineHeaderTitle?: string | null
   /** `inlineTail` only: instruction under the title, same box (string or custom layout). */
@@ -160,6 +188,7 @@ export function PassStrip({
   suggestedBestIds,
   flyOutFrom = null,
   hiddenSortableTileId = null,
+  returningTileId = null,
   inlineHeaderTitle = null,
   inlineHeaderInstruction,
   inlineHeaderInstructionAria,
@@ -167,10 +196,31 @@ export function PassStrip({
   inlineHeaderFooter = null,
 }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: PASS_BOX_ID })
+  const { active } = useDndContext()
+  // A pass tile is the active drag. While it is, the non-dragged tiles slide (reorder) or compact
+  // (return), leaving their home column momentarily empty — show a persistent well backing so those
+  // columns keep their green slot instead of a hole.
+  const activeIsPassTile =
+    active != null && slots.some((s) => s != null && s.id === String(active.id))
   const inlineTail = variant === 'inlineTail'
+  // Index of the box tile being dragged back to the hand (if any). Tiles to its left (higher index)
+  // slide one column right so they pre-occupy their compacted slots while the hand expands.
+  const returnDraggedIdx =
+    returningTileId != null ? slots.findIndex((s) => s?.id === returningTileId) : -1
+  const returnActive = returnDraggedIdx >= 0
   const prevSlotsRef = useRef(slots)
   const compactShiftVersionRef = useRef(0)
   const [compactShifts, setCompactShifts] = useState<Map<string, PassCompactShift>>(new Map())
+  // The returning tile's neighbours already slid to their compacted spots during the drag, so the
+  // post-drop compaction animation below must be skipped for that drop (else they jump back a
+  // column and re-slide — a visible flicker).
+  const pendingReturnTileRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (returningTileId != null) pendingReturnTileRef.current = returningTileId
+  }, [returningTileId])
+  useEffect(() => {
+    if (active == null && returningTileId == null) pendingReturnTileRef.current = null
+  }, [active, returningTileId])
 
   useLayoutEffect(() => {
     const prev = prevSlotsRef.current
@@ -189,6 +239,13 @@ export function PassStrip({
     if (nextOccupied >= prevOccupied) {
       return
     }
+    // A drag-return already slid the survivors right during the drag — don't re-run the slide.
+    const removedId = prev.find((t) => t != null && !slots.some((s) => s?.id === t.id))?.id ?? null
+    if (removedId != null && removedId === pendingReturnTileRef.current) {
+      pendingReturnTileRef.current = null
+      return
+    }
+    pendingReturnTileRef.current = null
 
     const nextShifts = new Map<string, PassCompactShift>()
     slots.forEach((tile, newIndex) => {
@@ -288,6 +345,8 @@ export function PassStrip({
               onTileClick={() => onPassTileClickReturn(index)}
               suggestBest={!!suggestedBestIds?.has(tile.id)}
               compactShift={compactShifts.get(tile.id) ?? null}
+              returnActive={returnActive}
+              returnSlideCols={returnActive && index > returnDraggedIdx ? 1 : 0}
             />
           )
         ) : (
@@ -366,7 +425,16 @@ export function PassStrip({
           </div>
         ) : null}
         <div className="pass-strip-tail__inner" onClick={tileRowClick}>
-          <div className="pass-strip-tail__stack">{tileRow}</div>
+          <div className="pass-strip-tail__stack">
+            {activeIsPassTile ? (
+              <div className="pass-strip-tail__wells" aria-hidden>
+                <div className="exposure-rack__slot exposure-rack__slot--pass-tail exposure-rack__slot--empty pass-strip-tail__well" />
+                <div className="exposure-rack__slot exposure-rack__slot--pass-tail exposure-rack__slot--empty pass-strip-tail__well" />
+                <div className="exposure-rack__slot exposure-rack__slot--pass-tail exposure-rack__slot--empty pass-strip-tail__well" />
+              </div>
+            ) : null}
+            {tileRow}
+          </div>
         </div>
       </div>
     )

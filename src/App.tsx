@@ -838,28 +838,6 @@ function sortedDiscardTrackerSlotNeedsHighlight(
   return needDefs.some((d) => tileDefsEqual(d, def))
 }
 
-/** Pass-box / discard-staging copies: keep the ring when they match a lit tile on the rack (same def). */
-function extendSuggestedBestIdsForStaging(
-  bestIds: ReadonlySet<string>,
-  rack: TileInstance[],
-  stagingTiles: TileInstance[],
-): Set<string> {
-  const extended = new Set(bestIds)
-  if (stagingTiles.length === 0 || bestIds.size === 0) return extended
-  const rackById = new Map(rack.map((t) => [t.id, t] as const))
-  for (const st of stagingTiles) {
-    if (extended.has(st.id)) continue
-    for (const id of bestIds) {
-      const onRack = rackById.get(id)
-      if (onRack && tileDefsEqual(onRack.def, st.def)) {
-        extended.add(st.id)
-        break
-      }
-    }
-  }
-  return extended
-}
-
 function SortedDiscardTrayRow({
   tiles,
   slotCount,
@@ -4371,12 +4349,11 @@ export default function App() {
    */
   const suggestedTileGuideForRack = useMemo(() => {
     if (!suggestedTileGuide) return null
-    const stagingTiles = [
-      ...(pendingEastDiscardTile ? [pendingEastDiscardTile] : []),
-      ...(passSlots.filter(Boolean) as TileInstance[]),
-    ]
-    const withStaging = (ids: ReadonlySet<string>) =>
-      extendSuggestedBestIdsForStaging(ids, rackForSuggestedPatternMatch, stagingTiles)
+    // Pass-box / discard-staging tiles are already part of `rackForSuggestedPatternMatch`, so the
+    // matcher decides whether each staged tile counts toward the focused line. Use `bestIds`
+    // directly — don't re-light a staged tile just because its type matches a lit rack tile, or an
+    // extra copy (e.g. a 3rd soap when the line only needs the pair) would highlight in the discard
+    // slot even though it's correctly dim on the rack.
     const activeDeadTableGuide = deferredSuggestedFocusHandKey
       ? suggestedDeadTableGuidesByKey[deferredSuggestedFocusHandKey]
       : undefined
@@ -4397,9 +4374,9 @@ export default function App() {
     ) {
       const merged = new Set(suggestedTileGuide.bestIds)
       merged.add(activeBotDiscard.id)
-      return { bestIds: withStaging(merged) }
+      return { bestIds: merged }
     }
-    return { bestIds: withStaging(suggestedTileGuide.bestIds) }
+    return { bestIds: suggestedTileGuide.bestIds }
   }, [
     suggestedTileGuide,
     mainPhase,
@@ -4408,9 +4385,6 @@ export default function App() {
     suggestedDeadTableGuidesByKey,
     suggestedDeadTileGuidesByKey,
     deferredSuggestedFocusHandKey,
-    pendingEastDiscardTile,
-    passSlots,
-    rackForSuggestedPatternMatch,
   ])
 
   const prevSuggestedFocusForDeadGuideRef = useRef<string | null>(null)
@@ -5126,24 +5100,41 @@ export default function App() {
           const pointerY = args.pointerCoordinates?.y ?? lastDragPointerRef.current.y
           const handBankContainer = args.droppableContainers.find((c) => String(c.id) === HAND_BANK_ID)
           const handBankRect = handBankContainer ? args.droppableRects.get(handBankContainer.id) : null
-          const pointerInHandBank =
+          const pointerOverHandBankHorizontally =
             handBankRect != null &&
             Number.isFinite(pointerX) &&
-            Number.isFinite(pointerY) &&
             pointerX >= handBankRect.left &&
-            pointerX <= handBankRect.left + handBankRect.width &&
+            pointerX <= handBankRect.left + handBankRect.width
+          const pointerInHandBank =
+            pointerOverHandBankHorizontally &&
+            handBankRect != null &&
+            Number.isFinite(pointerY) &&
             pointerY >= handBankRect.top &&
             pointerY <= handBankRect.top + handBankRect.height
           // Hand → staging: accept as soon as the dragged tile overlaps the slot (pointer can
           // still be in the hand row while the tile has moved up into the exposure row).
+          // Column 14 shares the rack width with the discard slot above — a horizontal-only test
+          // wrongly blocked staging until the pointer moved past the right edge of the rack, so
+          // this direction uses the full (both-axes) hand-bank test for the fallback.
           if (fromHandTile) {
             const stagingOverlap = collisionHitsForTileOverlappingZones(args, [EAST_DISCARD_STAGING_ID])
             if (stagingOverlap.length > 0) return stagingOverlap
+            if (!pointerInHandBank) {
+              const stagingContainers = args.droppableContainers.filter(
+                (c) => String(c.id) === EAST_DISCARD_STAGING_ID,
+              )
+              if (stagingContainers.length > 0) {
+                const pointerStaging = pointerWithin({ ...args, droppableContainers: stagingContainers })
+                if (pointerStaging.length > 0) return pointerStaging
+              }
+            }
           }
-          // Keep hand reorder / return-from-staging while the pointer is still in the hand row.
-          // Column 14 shares the rack width with the discard slot above — a horizontal-only test
-          // wrongly blocked staging until the pointer moved past the right edge of the rack.
-          if (!pointerInHandBank) {
+          // Staging → hand (returning the staged tile to the rack): keep the hand reorder / insert
+          // preview slide alive while the pointer is anywhere over the rack columns. The staged tile
+          // starts out overlapping the discard slot, so a tile-overlap or vertical test would
+          // suppress the rack slide for most of the drag (the tile just snaps in on release). Staging
+          // only wins again once the pointer leaves the hand row horizontally.
+          if (fromStagedDiscard && !pointerOverHandBankHorizontally) {
             const stagingHits = collisionHitsForTileOverlappingZones(args, [EAST_DISCARD_STAGING_ID])
             if (stagingHits.length > 0) return stagingHits
             const stagingContainers = args.droppableContainers.filter(
@@ -5212,7 +5203,7 @@ export default function App() {
                 })
                 .filter((x): x is { container: (typeof handTileContainers)[number]; centerX: number } => x != null)
                 .sort((a, b) => a.centerX - b.centerX)
-              const target = byCenterX.find((x) => pointerX < x.centerX) ?? byCenterX[byCenterX.length - 1]
+              const target = byCenterX.find((x) => pointerX < x.centerX)
               if (target) {
                 return [
                   {
@@ -5224,6 +5215,12 @@ export default function App() {
                   },
                 ]
               }
+              // Pointer is to the right of every tile centre → appending past the last tile.
+              // Resolve to the hand-bank zone (not the last tile) so crossing the last tile's
+              // centre actually changes `over` and re-fires `onDragOver`. If both zones map to
+              // the last tile, dnd-kit never re-fires while the pointer stays over it and the
+              // gap between the two right-most tiles can never open.
+              if (handBankHit) return [handBankHit]
             }
             if (overHandTile) return [overHandTile]
             if (handBankHit) return [handBankHit]
@@ -5447,24 +5444,6 @@ export default function App() {
     [hand.length, handVisualInsertIndexFromPointer],
   )
 
-  const passReturnInsertIndexFromOver = useCallback(
-    (over: { rect: { left: number; width: number } }, overHandIdx: number) => {
-      const pointerX = lastDragPointerRef.current.x
-      if (!Number.isFinite(pointerX)) return hand.length
-      const rect = over.rect
-      const gapEdgeSlop = Math.max(4, Math.min(12, rect.width * 0.16))
-
-      // Returning from the Charleston box should append by default. Only create a gap
-      // before a tile when the pointer is clearly in the space to that tile's left.
-      if (pointerX < rect.left + gapEdgeSlop) return overHandIdx
-      if (pointerX > rect.left + rect.width - gapEdgeSlop) {
-        return Math.min(overHandIdx + 1, hand.length)
-      }
-      return hand.length
-    },
-    [hand.length],
-  )
-
   const onDragOver = useCallback(
     (e: DragOverEvent) => {
       const aid = String(e.active.id)
@@ -5513,7 +5492,7 @@ export default function App() {
       }
       const oid = String(over.id)
       if (oid === HAND_BANK_ID) {
-        const handPreviewIndex = hand.length
+        const handPreviewIndex = handVisualInsertIndexFromPointer() ?? hand.length
         setCharlestonPassIntoHandPreview((prev) =>
           prev?.tileId === aid && prev.handPreviewIndex === handPreviewIndex
             ? prev
@@ -5523,7 +5502,7 @@ export default function App() {
       }
       const overHandIdx = hand.findIndex((t) => t.id === oid)
       if (overHandIdx >= 0) {
-        const handPreviewIndex = passReturnInsertIndexFromOver(over, overHandIdx)
+        const handPreviewIndex = handInsertIndexFromOver(over, overHandIdx)
         setCharlestonPassIntoHandPreview((prev) =>
           prev?.tileId === aid && prev.handPreviewIndex === handPreviewIndex
             ? prev
@@ -5541,7 +5520,6 @@ export default function App() {
       hand,
       handInsertIndexFromOver,
       handVisualInsertIndexFromPointer,
-      passReturnInsertIndexFromOver,
     ],
   )
 
@@ -6562,7 +6540,8 @@ export default function App() {
         passSlotsNext[passFromIdx] = null
         const passOriginsNext: [number | null, number | null, number | null] = [...r.passSlotOrigins]
         passOriginsNext[passFromIdx] = null
-        if (t) handNext.push(t)
+        const insertIdx = Math.min(handVisualInsertIndexFromPointer() ?? handNext.length, handNext.length)
+        if (t) handNext.splice(insertIdx, 0, t)
         const compacted = compactPassSlotsToRight(passSlotsNext, passOriginsNext)
         return {
           ...r,
@@ -6577,7 +6556,7 @@ export default function App() {
         passSlotsNext[passFromIdx] = null
         const passOriginsNext: [number | null, number | null, number | null] = [...r.passSlotOrigins]
         passOriginsNext[passFromIdx] = null
-        const insertIdx = passReturnInsertIndexFromOver(over, overHandIdx)
+        const insertIdx = handInsertIndexFromOver(over, overHandIdx)
         if (t) handNext.splice(insertIdx, 0, t)
         const compacted = compactPassSlotsToRight(passSlotsNext, passOriginsNext)
         return {
@@ -6615,7 +6594,6 @@ export default function App() {
       activeBotDiscard?.id,
       handInsertIndexFromOver,
       handVisualInsertIndexFromPointer,
-      passReturnInsertIndexFromOver,
     ],
   )
 
@@ -8091,6 +8069,7 @@ export default function App() {
                                   suggestedBestIds={suggestedTileGuideForRack?.bestIds}
                                   flyOutFrom={passStripFlyOut}
                                   hiddenSortableTileId={null}
+                                  returningTileId={charlestonPassIntoHandPreview?.tileId ?? null}
                                   inlineHeaderTitle={charlestonRackRoundTitleText}
                                   inlineHeaderInstruction={
                                     <CharlestonPassStripInstructionMain phase={charlestonPhase} />

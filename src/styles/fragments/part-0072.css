@@ -51,6 +51,26 @@
   flex-direction: row-reverse;
 }
 
+/*
+ * Persistent green-well backing, rendered only while a pass tile is dragged. The three wells line up
+ * with the three pass-strip columns (same row-reverse layout/gap as `.pass-strip-tail__tiles`) and
+ * sit behind the tiles (z-index 1 < the tiles' z-index 2). When a non-dragged tile slides for a
+ * reorder, or compacts right on a return, the column it vacated still shows its green well instead of
+ * a hole — the tile that moved simply paints over a different well.
+ */
+.panel--hand .pass-strip-tail__wells {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: row-reverse;
+  gap: var(--player-rack-face-gap);
+  align-items: flex-start;
+  justify-content: center;
+  overflow: visible;
+  pointer-events: none;
+}
+
 .panel--hand .pass-strip-tail .exposure-rack__slot--pass-tail.exposure-rack__slot--empty {
   height: var(--charleston-pass-strip-h);
 }
