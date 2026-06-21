@@ -5389,11 +5389,14 @@ export default function App() {
           (t) => t.id === target.blankTileId && t.def.cat === 'blank',
         )
         if (handIdx >= 0) {
+          const blankTile = r.hand[handIdx]!
           const handNext = [...r.hand]
           handNext[handIdx] = newTile
           return {
             ...r,
             hand: handNext,
+            // The given-up blank goes face-up into the discards — shows under B in the tracker.
+            discardPile: [...r.discardPile, { tile: blankTile, seat: 'east' }],
             drawnTileId: newTile.id,
             selectedHandTileId: null,
           }
@@ -5402,12 +5405,15 @@ export default function App() {
           r.pendingEastDiscardTile?.id === target.blankTileId &&
           r.pendingEastDiscardTile.def.cat === 'blank'
         ) {
+          const blankTile = r.pendingEastDiscardTile
           const insertIdx = Math.min(r.pendingEastDiscardIdx ?? r.hand.length, r.hand.length)
           const handNext = [...r.hand]
           handNext.splice(insertIdx, 0, newTile)
           return {
             ...r,
             hand: handNext,
+            // The given-up blank goes face-up into the discards — shows under B in the tracker.
+            discardPile: [...r.discardPile, { tile: blankTile, seat: 'east' }],
             pendingEastDiscardTile: null,
             pendingEastDiscardIdx: null,
             drawnTileId: newTile.id,
