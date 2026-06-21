@@ -13,7 +13,7 @@
     .panel--bot-exposures__clear
   ):not(.panel--bot-exposures__hint):not(.suggested-hands-tab):not(.app-menu-tray__item):not(.app-menu-tray__diff-btn):not(
     .app-menu-modal__suggested-filters-reset
-  ):not(.wall-game-dialog__action-btn):not(.charleston-error-dialog__rack-action) {
+  ):not(.app-menu-modal__blank-tile-count-btn):not(.wall-game-dialog__action-btn):not(.charleston-error-dialog__rack-action) {
   background: color-mix(in srgb, var(--bg-elevated) 86%, var(--color-white) 14%);
   box-shadow:
     0 2px 5px color-mix(in srgb, var(--color-black) 18%, transparent),
@@ -22,7 +22,7 @@
 
 .btn:active:not(:disabled):not(.rack-bottom-tile-cell):not(.app-bottom-center-controls__menu-btn):not(
     .panel--bot-exposures__hint
-  ):not(.app-menu-tray__item):not(.app-menu-tray__diff-btn):not(.app-menu-modal__suggested-filters-reset):not(.wall-game-dialog__action-btn):not(.charleston-error-dialog__rack-action) {
+  ):not(.app-menu-tray__item):not(.app-menu-tray__diff-btn):not(.app-menu-modal__suggested-filters-reset):not(.app-menu-modal__blank-tile-count-btn):not(.wall-game-dialog__action-btn):not(.charleston-error-dialog__rack-action) {
   transition: none;
   transform: scale(0.98);
   box-shadow:

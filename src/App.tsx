@@ -1138,8 +1138,15 @@ function readBlankExchangeSourceMetrics(): {
   const tileRect = tileSlot?.getBoundingClientRect()
   const suitRect = suitSlot?.getBoundingClientRect()
   const tileW = tileRect?.width ?? 0
-  const tileH = tileRect?.height ?? 0
-  if (tileW < 1 || tileH < 1) return null
+  const measuredTileH = tileRect?.height ?? 0
+  if (tileW < 1 || measuredTileH < 1) return null
+  // The popup's rank tiles always render at the canonical 4:3 ratio — the bx tile-height override
+  // reaches only the suit-label chip, not the rank slots/faces. On mobile/PWA the on-board band is
+  // often vertically squished, so the measured slot height comes back shorter than tileW * 4/3.
+  // Feeding that squished height into the suit-label height + band height made the suit chips
+  // shorter than (and vertically misaligned with) the rank tiles and overflowed the band. Pin the
+  // height to the same ratio the tiles actually use so the whole popup lines up.
+  const tileH = tileW * 4 / 3
 
   const gridStyle = getComputedStyle(sourceGrid)
   const rowGap = parseFloat(gridStyle.gap) || parseFloat(gridStyle.rowGap) || 0
@@ -1148,15 +1155,10 @@ function readBlankExchangeSourceMetrics(): {
     parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--player-rack-face-gap')) ||
     2
 
-  const sourceRows = document.querySelectorAll(
-    '.app-dnd-frame .app-top-exposure-container .discard-tracker__overlay-row',
-  )
-  let bandH = 0
-  for (let i = 0; i < 3 && i < sourceRows.length; i++) {
-    bandH += sourceRows[i]!.getBoundingClientRect().height
-  }
-  if (bandH < 1) bandH = rowRect.height * 3
-  bandH += rowGap * 2
+  // Three rank-tile rows (each tileH tall) plus the two inter-row gaps — derived from the same
+  // normalized tile height so the reserved band matches the rendered rows exactly (summing the
+  // on-board row rects reintroduced the squished/overflow mismatch on mobile).
+  const bandH = tileH * 3 + rowGap * 2
 
   const suitLabelW = suitRect?.width ?? tileW * 1.75
   const suitLabelEl = suitSlot?.querySelector('.sorted-discard-tray__suit-label')
