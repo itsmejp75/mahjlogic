@@ -2339,17 +2339,60 @@ html body .app .panel--discard-tracker :is(
  */
 .blank-exchange-dropzone--over .discard-tracker__overlay-grid::after {
   --_tracker-tile-w: max(1px, (100cqi - 28 * var(--player-rack-face-gap)) / 29);
+  /* Sits just outside the tile edges; absolute + pointer-events:none, so it never shifts layout. */
+  --_frame-outset: 2px;
   content: '';
   position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: calc(13.75 * var(--_tracker-tile-w) + 12 * var(--player-rack-face-gap));
+  top: calc(-1 * var(--_frame-outset));
+  bottom: calc(-1 * var(--_frame-outset));
+  left: calc(-1 * var(--_frame-outset));
+  width: calc(13.75 * var(--_tracker-tile-w) + 12 * var(--player-rack-face-gap) + 2 * var(--_frame-outset));
   box-sizing: border-box;
-  border: 2px solid #ff8a1e;
-  border-radius: var(--discard-tray-tile-corner-r, var(--tile-face-border-radius));
+  border: 1px solid #ff8a1e;
+  border-radius: calc(var(--discard-tray-tile-corner-r, var(--tile-face-border-radius)) + var(--_frame-outset));
   pointer-events: none;
   z-index: 3;
+}
+
+/*
+ * Joker swap: ONE orange frame around the whole bot exposure block (grid cols 16–29, all three rows)
+ * instead of a per-row ring. Drawn on the overlay grid — the `top-exposure-band` container — so its
+ * left edge uses the same column math as the sorted-band frame: the bot band begins after the 14
+ * sorted columns + the 1 seat-label column, i.e. at `15·tileW + 15·gap`, and runs flush to the grid's
+ * right edge. Shown whenever a swappable tile is dragged over any bot seat cell; the drop resolves to
+ * the first valid seat (South→West→North) regardless of which row the pointer is over, so the entire
+ * block acts as one drop area. Outset + pointer-events:none keep it from shifting layout.
+ *
+ * Triggered by EITHER the seat cell (`--swap-over`, fires over the empty wells) OR a meld drop zone
+ * (`exposure-rack__meld-drop--over`, fires over the actual exposed tiles) — so hovering any part of
+ * the block, tiles or wells, lights the frame.
+ */
+html .app-dnd-frame .app-top-exposure-container
+  .discard-tracker__overlay-grid:has(
+    .app-opponents-rail__cell--swap-over,
+    .exposure-rack__meld-drop--over
+  )::before {
+  --_tracker-tile-w: max(1px, (100cqi - 28 * var(--player-rack-face-gap)) / 29);
+  --_frame-outset: 2px;
+  content: '';
+  position: absolute;
+  top: calc(-1 * var(--_frame-outset));
+  bottom: calc(-1 * var(--_frame-outset));
+  right: calc(-1 * var(--_frame-outset));
+  left: calc(15 * var(--_tracker-tile-w) + 15 * var(--player-rack-face-gap) - var(--_frame-outset));
+  box-sizing: border-box;
+  border: 1px solid #ff8a1e;
+  border-radius: calc(var(--discard-tray-tile-corner-r, var(--tile-face-border-radius)) + var(--_frame-outset));
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* The unified frame above replaces the per-row (seat cell) and per-meld (tile) joker-swap rings. */
+html .app-dnd-frame .app-top-exposure-container .app-opponents-rail__cell--swap-over {
+  box-shadow: none;
+}
+html .app-dnd-frame .app-top-exposure-container .exposure-rack__meld-drop--over .exposure-rack__slot {
+  box-shadow: none;
 }
 
 /* Centered enlarged tracker overlay — dim backdrop, tracker tray centered on screen. */

@@ -1083,16 +1083,19 @@ function ArmedBlankExchangeDropZone({ children }: { children: ReactNode }) {
   )
 }
 
-/** Popup tracker: lay out at on-board 1× size, then scale up (min 1.75×, fill modal). */
-const BLANK_EXCHANGE_POPUP_MIN_SCALE = 1.75
+/** Popup tracker: lay out at on-board 1× size, then scale to fill the modal — capped so it never
+ * exceeds the fit-to-viewport scale (forcing a larger min overflowed the right edge on mobile). */
+const BLANK_EXCHANGE_POPUP_MAX_SCALE = 1.75
 
 function computeBlankExchangePopupScale(contentW: number, bandH: number): number {
   const panelPad = 56
   const cancelReserve = 52
   const availW = window.innerWidth * 0.92 - panelPad
   const availH = window.innerHeight * 0.78 - panelPad - cancelReserve
-  const fillScale = Math.min(availW / contentW, availH / bandH)
-  return Math.max(BLANK_EXCHANGE_POPUP_MIN_SCALE, fillScale)
+  // Largest scale that fits both axes; on a narrow phone this is < 1, so we shrink to fit
+  // rather than clipping. Cap the upper end so big screens don't blow it up absurdly.
+  const fitScale = Math.min(availW / contentW, availH / bandH)
+  return Math.min(BLANK_EXCHANGE_POPUP_MAX_SCALE, fitScale)
 }
 
 /** Flex row width: suit label + tile slots + gaps — not the wider 29-col grid cell on the board.
