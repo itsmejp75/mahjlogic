@@ -29,6 +29,30 @@
   align-self: flex-end;
 }
 
+.east-discard-staging__instruction {
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  z-index: 8;
+  margin: 0 calc(var(--player-rack-face-gap, var(--rack-tile-gap)) + 0.18rem) 0 0;
+  padding: 0;
+  transform: translateY(-50%);
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: visible;
+  font-family: 'Figtree', var(--sans);
+  font-size: min(
+    clamp(0.54rem, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 0.24), 1.18rem),
+    calc(var(--rack-tile-h, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 1.3333)) / 5.02)
+  );
+  font-weight: 600;
+  font-variation-settings: 'wght' 600;
+  line-height: 1;
+  letter-spacing: clamp(0.032em, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 0.0026), 0.072em);
+  color: #c2c2c8;
+  text-shadow: none;
+}
+
 /* Inline strip: same fill + footprint as Charleston `.pass-strip-tail__inner`. */
 .exposure-rack__slot--east-discard-slot .east-discard-staging.east-discard-staging--inline,
 .exposure-rack__slot--incoming-discard .east-discard-staging.east-discard-staging--inline {

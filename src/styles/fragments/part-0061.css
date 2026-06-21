@@ -823,7 +823,7 @@
   text-align: center;
   letter-spacing: max(0.016em, calc(0.026em + 0.016rem));
   box-sizing: border-box;
-  opacity: 0.95;
+  opacity: 1;
   white-space: nowrap;
   pointer-events: none;
 }

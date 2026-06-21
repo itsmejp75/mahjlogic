@@ -716,7 +716,7 @@ html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-
   text-transform: uppercase;
   letter-spacing: max(0.016em, calc(0.026em + 0.016rem));
   color: #1e222a;
-  opacity: 0.95;
+  opacity: 1;
 }
 
 html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__seat-label {
@@ -1882,6 +1882,26 @@ html[data-home-screen-app]:not([data-native-app])
   box-shadow: none;
 }
 
+/*
+ * Discard-turn instruction ("Discard >") sits left of the 1-tile discard slot, over the unused
+ * slots 12/13. The green-slot chrome sets `overflow: hidden` at (0,6,0); this must out-specify it
+ * (0,7,0) or the label is clipped away while no tile is staged.
+ */
+.app
+  .panel--hand
+  .rack-stage__rack-top
+  .exposure-rack
+  .exposure-rack__slot.exposure-rack__slot--east-discard-slot.exposure-rack__slot--east-discard-instructed,
+.app
+  .panel--hand
+  .rack-stage__rack-top
+  .exposure-rack
+  .exposure-rack__slot.exposure-rack__slot--incoming-discard.exposure-rack__slot--incoming-discard-instructed {
+  /* Beat every empty-slot `overflow: hidden` chrome rule (multiple at (0,6,0)) so the label is
+     never clipped before a tile is staged. */
+  overflow: visible !important;
+}
+
 /* Call target: drop legacy teal box chrome only — slot fill gradient stays on the cell. */
 .app
   .panel--hand
@@ -2289,5 +2309,277 @@ html body .app .panel--discard-tracker :is(
     .btn.btn--mahjong.btn--mahjong-hint.rack-bottom-tile-cell--c5-6:not(:disabled)
     .btn--mahj__logo-stack {
     animation: none;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Blank-tile exchange (house rule): drag a blank from the rack onto the sorted
+ * discard tracker (your turn) to open an enlarged, tappable copy of the tracker.
+ * Tap any already-discarded tile type to redeem the blank for it.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/* Drop zone wrapping the top tracker. No affordance until the dragged blank crosses the
+   tracker boundary, at which point an orange box frames ONLY the sorted discard tracker
+   (columns 1–14 of the 29-column band) — never the seat labels / bot exposures (15–29). */
+.blank-exchange-dropzone {
+  display: block;
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: var(--discard-tray-tile-corner-r, var(--tile-face-border-radius));
+}
+/*
+ * Orange frame hugging ONLY the sorted discard tracker tiles, never the seat labels / bot
+ * exposures. The box is drawn on the overlay grid — the `top-exposure-band` container — so it is
+ * sized with the SAME column math the grid uses: one `1fr` column equals
+ * `--rack-tile-w = (100cqi - 28·gap) / 29`. The right edge snugs to the last sorted tile (S/W/B):
+ * the sorted row is a flex of a 1.75× suit-label slot + 12 tile slots with 12 gaps between them,
+ * so its content width is `13.75·tileW + 12·gap`. (A box drawn on the dropzone instead sits above
+ * the container context, so `cqi`/`1fr` widths don't resolve and the frame ends up the wrong width.)
+ */
+.blank-exchange-dropzone--over .discard-tracker__overlay-grid::after {
+  --_tracker-tile-w: max(1px, (100cqi - 28 * var(--player-rack-face-gap)) / 29);
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: calc(13.75 * var(--_tracker-tile-w) + 12 * var(--player-rack-face-gap));
+  box-sizing: border-box;
+  border: 2px solid #ff8a1e;
+  border-radius: var(--discard-tray-tile-corner-r, var(--tile-face-border-radius));
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Centered enlarged tracker overlay — dim backdrop, tracker tray centered on screen. */
+.blank-exchange-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2vmin;
+  box-sizing: border-box;
+  pointer-events: auto;
+  background: rgba(20, 17, 15, 0.5);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+/* Tray surface matches the on-board discard tracker (its dark felt) — opaque so the dimmed board
+   never shows through. (`--app-wrapper-surface` is transparent; the on-board tracker is see-through
+   on purpose and shows the app felt behind it — the popup floats, so it needs its own fill.)
+   Action-button tokens match `.panel--hand` action wells (part-0123) for the Cancel control. */
+.blank-exchange-overlay__panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.6vmin;
+  width: fit-content;
+  max-width: 96vw;
+  max-height: 96vh;
+  padding: clamp(12px, 2vmin, 18px) clamp(16px, 2.6vmin, 24px) clamp(14px, 2.2vmin, 20px);
+  box-sizing: border-box;
+  border: 1px solid var(--rack-action-border-color, var(--app-action-btn-border, #6c757e));
+  border-radius: var(
+    --rack-tile-btn-border-radius,
+    max(0.36rem, calc(var(--hand-rack-tile-w, 2.65rem) * 0.128))
+  );
+  background: var(--app-bg-base, #2b2f37);
+  box-shadow: var(--shadow, 0 18px 60px rgba(0, 0, 0, 0.55));
+  --rack-action-label-color: var(--app-action-btn-label);
+  --rack-action-face: var(--app-action-btn-face);
+  --rack-action-face-pressed: var(--app-action-btn-face-pressed);
+  --rack-action-border-color: var(--app-action-btn-border);
+  --rack-action-flat-surface: var(--app-action-btn-bottom);
+  --rack-action-press-shadow-dark: color-mix(
+    in srgb,
+    #000 28%,
+    var(--rack-action-flat-surface, #484c52)
+  );
+  --rack-action-press-shadow-light: color-mix(
+    in srgb,
+    var(--rack-action-border-color, #636870) 72%,
+    var(--rack-action-flat-surface, #484c52)
+  );
+  --rack-action-pressed:
+    inset 4px 4px 8px var(--rack-action-press-shadow-dark),
+    inset -4px -4px 8px var(--rack-action-press-shadow-light);
+}
+
+/*
+ * Popup tracker mirror: on-board 1× layout inside, then CSS transform scale (min 1.75×, fill modal).
+ * Tile sizes are read from real on-board slot rects — not CSS custom props that can parse as 0.
+ */
+.blank-exchange-overlay__scale-host {
+  flex-shrink: 0;
+  position: relative;
+  box-sizing: border-box;
+}
+.blank-exchange-overlay__tracker-mirror {
+  position: absolute;
+  top: 0;
+  left: 0;
+  flex: none;
+  max-height: none;
+  overflow: visible;
+  pointer-events: auto;
+  box-sizing: border-box;
+}
+
+/* Mirror keeps `app-play-split` for tile-band tokens — strip board-only horizontal inset. */
+.blank-exchange-overlay__tracker-mirror.app-play-split {
+  padding-inline: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  background: transparent;
+}
+
+/* Popup rows only show the sorted band — beat on-board 29-col grid on `.app-top-exposure-container`. */
+html .blank-exchange-overlay__tracker-mirror.app-top-exposure-container .discard-tracker__overlay-row {
+  display: flex;
+  flex-direction: row;
+  width: fit-content;
+  grid-template-columns: none;
+  margin-inline: auto;
+}
+.blank-exchange-overlay__tracker-mirror
+  .discard-tracker__overlay-row
+  > .exposure-rack--discard-tracker-sorted-row {
+  grid-column: auto;
+  width: auto;
+  max-width: none;
+  flex: 0 0 auto;
+}
+html
+  .blank-exchange-overlay__tracker-mirror.app-top-exposure-container
+  .exposure-rack--discard-tracker-sorted-row {
+  width: auto;
+  max-width: none;
+}
+.blank-exchange-overlay__tracker-mirror .discard-tracker__shell,
+.blank-exchange-overlay__tracker-mirror .discard-tracker__content--tile-groups-only,
+.blank-exchange-overlay__tracker-mirror .discard-tracker__tile-groups-container {
+  width: fit-content;
+  max-width: none;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.blank-exchange-overlay__tracker-mirror .discard-tracker__overlay-grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+  max-width: none;
+  width: fit-content;
+  pointer-events: auto;
+  container-type: inline-size;
+  container-name: top-exposure-band;
+}
+
+/* Beat on-board @container remix — popup rows inherit scaled vars from the overlay grid. */
+html .blank-exchange-overlay__tracker-mirror.app-top-exposure-container .discard-tracker__overlay-row {
+  --rack-tile-w: var(--bx-rack-tile-w) !important;
+  --rack-tile-h: var(--bx-rack-tile-h) !important;
+  --exposure-slot-h: var(--bx-exposure-slot-h) !important;
+  --tile-face-border-radius: var(--bx-tile-face-border-radius) !important;
+  --discard-tray-tile-corner-r: var(--bx-discard-tray-tile-corner-r) !important;
+  --sorted-discard-suit-label-w: var(--bx-sorted-discard-suit-label-w) !important;
+  --sorted-discard-suit-label-h: var(--bx-sorted-discard-suit-label-h) !important;
+  --sorted-discard-suit-label-fs: var(--bx-sorted-discard-suit-label-fs) !important;
+}
+html
+  .blank-exchange-overlay__tracker-mirror
+  .discard-tracker__overlay-grid
+  .tile-face.tile-face--sorted-discard-glyph {
+  --tile-face-glyph-fs: calc(var(--bx-rack-tile-w) * 1.03 / 2.65 * 2);
+}
+html
+  .blank-exchange-overlay__tracker-mirror
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__count {
+  font-size: calc(var(--bx-rack-tile-w) * 1.03 / 2.65 * 1.5);
+}
+
+/*
+ * Unlit (undiscarded) slots: match the on-board tracker. The `.panel--discard-tracker` rule that
+ * strips the dim `::after` overlay (part-0123 above) doesn't reach this popup, so unlit slots keep
+ * the `--awaiting-discard` dim overlay (opacity 1, part-0075) and read far too dark. Remove it here
+ * so undiscarded slots show the tray background with near-black glyphs, exactly like the board.
+ */
+.blank-exchange-overlay__tracker-mirror
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot:not(.sorted-discard-tray__slot--discarded):not(.sorted-discard-tray__slot--suit-label):not(
+    .sorted-discard-tray__slot--suggest-need
+  )
+  .tile-face:not(.tile--joker)::after {
+  content: none;
+  display: none;
+}
+
+/* Tappable discarded tiles — pointer + subtle lift (popup only). */
+.blank-exchange-overlay__tracker-mirror .sorted-discard-tray__slot--pickable {
+  cursor: pointer;
+}
+.blank-exchange-overlay__tracker-mirror .sorted-discard-tray__slot--pickable .tile-face {
+  transition: transform 0.12s ease;
+}
+.blank-exchange-overlay__tracker-mirror .sorted-discard-tray__slot--pickable:hover .tile-face,
+.blank-exchange-overlay__tracker-mirror .sorted-discard-tray__slot--pickable:focus-visible .tile-face,
+.blank-exchange-overlay__tracker-mirror .sorted-discard-tray__slot--pickable:active .tile-face {
+  transform: translateY(-2px) scale(1.04);
+}
+.blank-exchange-overlay__tracker-mirror .sorted-discard-tray__slot--pickable:focus-visible {
+  outline: none;
+}
+
+/* Cancel matches the action-row Call/Swap button: same gradient face, border, label color, press depth. */
+.blank-exchange-overlay__panel .blank-exchange-overlay__cancel {
+  margin-top: 0.6vmin;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.4em;
+  box-sizing: border-box;
+  border: 1px solid var(--rack-action-border-color, #636870);
+  border-radius: var(--rack-tile-btn-border-radius, max(0.36rem, calc(var(--hand-rack-tile-w, 2.65rem) * 0.128)));
+  font-family: 'Figtree', var(--sans);
+  font-weight: 600;
+  letter-spacing: max(0.028em, calc(0.042em + 0.026rem));
+  font-size: min(
+    var(--rack-hand-action-label-fs, var(--rack-control-label-fs, 0.72rem)),
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h, 2.4rem)) * 0.52),
+    calc(var(--rack-tile-btn-inner-2, 5rem) / 5.9)
+  );
+  line-height: 1.08;
+  text-transform: none;
+  color: var(--rack-action-label-color, #e2e4e8);
+  background: var(--rack-action-face);
+  box-shadow: none;
+  opacity: 1;
+  filter: none;
+  text-shadow: none;
+  cursor: pointer;
+  transition: box-shadow 0.12s ease, background 0.12s ease;
+}
+.blank-exchange-overlay__panel .blank-exchange-overlay__cancel:hover {
+  background: var(--rack-action-face);
+  border: 1px solid var(--rack-action-border-color, #636870);
+  box-shadow: none;
+  color: var(--rack-action-label-color, #e2e4e8);
+  transform: none;
+}
+.blank-exchange-overlay__panel .blank-exchange-overlay__cancel:active {
+  background: var(--rack-action-face-pressed);
+  box-shadow: var(--rack-action-pressed);
+  color: var(--rack-action-label-color, #e2e4e8);
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blank-exchange-overlay__tracker-mirror .sorted-discard-tray__slot--pickable .tile-face {
+    transition: none;
   }
 }

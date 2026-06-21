@@ -7,6 +7,9 @@ export const EAST_DISCARD_STAGING_ID = 'east-discard-staging'
 /** dnd-kit id: first empty exposure slot while an opponent discard is active — training: drop to start Call. */
 export const CALL_INITIATE_FIRST_SLOT_ID = 'call-initiate-first-empty'
 
+/** dnd-kit id: the sorted discard tracker — drop a blank here (your turn) to open the exchange popup. */
+export const BLANK_EXCHANGE_DROP_ID = 'blank-exchange-tracker'
+
 const INCOMING_BOT_DISCARD_DRAG_PREFIX = 'incoming-bot-discard:'
 
 /** Sortable id for the live bot discard in the exposure rack last slot (bot-turn Call drag). */

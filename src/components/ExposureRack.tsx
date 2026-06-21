@@ -927,6 +927,11 @@ type Props = {
   /** Accessibility label for custom last-slot replacement. */
   lastSlotAriaLabel?: string
   /**
+   * Short instruction shown left of the incoming bot discard (e.g. `S >` for South's discard).
+   * Rendered only when `lastSlotTile` is present (default discard column, not `lastSlotReplace`).
+   */
+  lastSlotLabel?: ReactNode
+  /**
    * Content inserted directly after the meld tiles (before empty fill slots).
    * Use `suffixSlotCount` to tell the rack how many grid-columns this content occupies
    * so empty-slot arithmetic stays correct.
@@ -1027,6 +1032,7 @@ export function ExposureRack({
   lastSlotReplace,
   lastSlotClassName,
   lastSlotAriaLabel,
+  lastSlotLabel,
   suffix,
   suffixSlotCount = 0,
   trailingSuffix,
@@ -1369,6 +1375,9 @@ export function ExposureRack({
             className={[
               'exposure-rack__slot',
               lastSlotTile ? 'exposure-rack__slot--incoming-discard' : 'exposure-rack__slot--empty',
+              lastSlotTile && lastSlotLabel != null
+                ? 'exposure-rack__slot--incoming-discard-instructed'
+                : '',
               lastSlotTile && gLast && lastSlotIsBest ? 'exposure-rack__slot--suggest-best' : '',
               lastSlotTile && gLast && lastSlotSuggestDim ? 'exposure-rack__slot--suggest-dim' : '',
               lastSlotTile && lastSlotJoker ? 'exposure-rack__slot--joker' : '',
@@ -1378,6 +1387,11 @@ export function ExposureRack({
             role="listitem"
             aria-label={lastSlotTile ? 'Current bot discard' : undefined}
           >
+            {lastSlotTile && lastSlotLabel != null ? (
+              <p className="east-discard-staging__instruction" aria-hidden="true">
+                {lastSlotLabel}
+              </p>
+            ) : null}
             {lastSlotTile ? (
               lastSlotDraggableForCallInit ? (
                 <>

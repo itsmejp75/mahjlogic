@@ -162,18 +162,22 @@ import {
   MSG_CALL_DEAD_JOKER,
   MSG_CALL_INSUFFICIENT_TILES,
   MSG_MAHJONG_DURING_CHARLESTON,
+  MSG_SWAP_BLANK_NO_DISCARDS,
   MSG_SWAP_NO_EXPOSED_JOKERS,
   MSG_SWAP_NO_LEGAL_FOR_TILE,
+  MSG_SWAP_NOTHING_AVAILABLE,
   MSG_SWAP_PICK_TILE_FIRST,
   type CallValidationRoundSlice,
 } from './mahjong/callValidation'
 import {
+  BLANK_EXCHANGE_DROP_ID,
   CALL_INITIATE_FIRST_SLOT_ID,
   EAST_DISCARD_STAGING_ID,
   incomingBotDiscardDragId,
   JOKER_SWAP_STAGING_ID,
   parseIncomingBotDiscardDragId,
 } from './mahjong/jokerSwapIds'
+import { discardedDefsForBlankExchange } from './mahjong/blankExchange'
 import {
   botExposureSwapDropId,
   botSeatSwapDropId,
@@ -525,6 +529,22 @@ function pointerOverCallInitiateTarget(pointer: { x: number; y: number }): boole
   )
 }
 
+/** True when the pointer is anywhere over the top discard tracker section (blank-exchange drop). */
+function pointerOverBlankExchangeTarget(pointer: { x: number; y: number }): boolean {
+  const el = document.querySelector<HTMLElement>(
+    '.blank-exchange-dropzone, .panel--discard-tracker--top',
+  )
+  if (!el) return false
+  const rect = el.getBoundingClientRect()
+  if (rect.width < 1 || rect.height < 1) return false
+  return (
+    pointer.x >= rect.left &&
+    pointer.x <= rect.left + rect.width &&
+    pointer.y >= rect.top &&
+    pointer.y <= rect.top + rect.height
+  )
+}
+
 function pointerOverPassBoxTarget(pointer: { x: number; y: number }): boolean {
   const el = document.querySelector<HTMLElement>('.pass-strip-tail__inner, .pass-box')
   if (!el) return false
@@ -739,6 +759,8 @@ const DISCARD_TRACKER_SLOTS_ACROSS = 29
 const DISCARD_TRACKER_BOT_PREFIX_SLOTS = 1
 const DISCARD_TRACKER_BOT_ROW_SLOTS = 14
 const DISCARD_TRACKER_SORTED_ROW_SLOTS = 13
+/** Sorted B/C/D band columns (suit label + 13 rank slots) — popup uses this, not the full 29-col grid. */
+const DISCARD_TRACKER_SORTED_BAND_COLS = 14
 
 /** Row 1 of sorted discard: bams 1–9, green dragon (G), North, South. */
 const SORTED_DISCARD_ROW1_TILES: readonly TileInstance[] = [
@@ -849,6 +871,8 @@ function SortedDiscardTrayRow({
   discardPile,
   blankTilesEnabled = true,
   suggestedNeedDefs = null,
+  onSlotActivate = null,
+  pickableDefs = null,
 }: {
   tiles: readonly TileInstance[]
   slotCount: number
@@ -864,6 +888,10 @@ function SortedDiscardTrayRow({
   blankTilesEnabled?: boolean
   /** Focused suggested hand: defs still short — inner ring on matching tracker slots. */
   suggestedNeedDefs?: readonly TileDef[] | null
+  /** Blank-exchange popup: tap a discarded tile type to redeem the blank for it. */
+  onSlotActivate?: ((def: TileDef) => void) | null
+  /** Blank-exchange popup: defs eligible to pick (present in the discard pile). */
+  pickableDefs?: readonly TileDef[] | null
 }) {
   const leadingSlots = (leadingSuitLabel ? 1 : 0) + leadingEmptySlots
   const emptyCount = Math.max(0, slotCount - leadingSlots - tiles.length - trailingGlyphSlots.length)
@@ -929,6 +957,12 @@ function SortedDiscardTrayRow({
           suggestGuideOn && sortedDiscardTrackerSlotNeedsHighlight(trackerDef, suggestedNeedDefs)
         const suggestDim = suggestGuideOn && !suggestNeed
         const awaitingDiscard = !suggestGuideOn && !hasBeenDiscarded
+        const exchangeMode = onSlotActivate !== null
+        const isPickable =
+          exchangeMode &&
+          !blankReplacedByJoker &&
+          (pickableDefs?.some((d) => tileDefsEqual(d, trackerDef)) ?? false)
+        const isUnpickable = exchangeMode && !isPickable
         return (
           <div
             key={tile.id}
@@ -940,12 +974,30 @@ function SortedDiscardTrayRow({
               awaitingDiscard ? 'sorted-discard-tray__slot--awaiting-discard' : '',
               suggestDim ? 'sorted-discard-tray__slot--suggest-dim' : '',
               suggestNeed ? 'sorted-discard-tray__slot--suggest-need' : '',
+              isPickable ? 'sorted-discard-tray__slot--pickable' : '',
+              isUnpickable ? 'sorted-discard-tray__slot--unpickable' : '',
             ]
               .filter(Boolean)
               .join(' ')}
-            role="listitem"
+            role={isPickable ? 'button' : 'listitem'}
+            tabIndex={isPickable ? 0 : undefined}
+            onClick={isPickable ? () => onSlotActivate?.(trackerDef) : undefined}
+            onKeyDown={
+              isPickable
+                ? (ev) => {
+                    if (ev.key === 'Enter' || ev.key === ' ') {
+                      ev.preventDefault()
+                      onSlotActivate?.(trackerDef)
+                    }
+                  }
+                : undefined
+            }
             aria-label={
-              suggestNeed
+              isPickable
+                ? `Exchange blank for ${tileAriaLabel(trackerDef)}${
+                    discardCount > 0 ? `, ${discardCount} discarded` : ''
+                  }`
+                : suggestNeed
                 ? `${tileAriaLabel(trackerDef)}, needed for focused hand${
                     discardCount > 0 ? `, ${discardCount} discarded` : ''
                   }`
@@ -992,6 +1044,317 @@ function SortedDiscardTrayRow({
           aria-hidden
         />
       ))}
+    </div>
+  )
+}
+
+/**
+ * Wraps the sorted discard tracker so a blank dragged from the rack (your turn) can be dropped
+ * anywhere over the tracker boundary. The droppable is only live while `active`.
+ */
+function BlankExchangeDropZone({
+  active,
+  children,
+}: {
+  active: boolean
+  children: ReactNode
+}) {
+  // Mount the droppable only while a blank is in hand-drag (your turn). Mounting it mid-drag — the
+  // same pattern as the Call drop target — guarantees dnd-kit measures its rect, so `isOver`
+  // (orange outline) and `over` (drop) both fire reliably.
+  if (!active) return <>{children}</>
+  return <ArmedBlankExchangeDropZone>{children}</ArmedBlankExchangeDropZone>
+}
+
+function ArmedBlankExchangeDropZone({ children }: { children: ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id: BLANK_EXCHANGE_DROP_ID })
+  return (
+    <div
+      ref={setNodeRef}
+      className={[
+        'blank-exchange-dropzone',
+        isOver ? 'blank-exchange-dropzone--over' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      {children}
+    </div>
+  )
+}
+
+/** Popup tracker: lay out at on-board 1× size, then scale up (min 1.75×, fill modal). */
+const BLANK_EXCHANGE_POPUP_MIN_SCALE = 1.75
+
+function computeBlankExchangePopupScale(contentW: number, bandH: number): number {
+  const panelPad = 56
+  const cancelReserve = 52
+  const availW = window.innerWidth * 0.92 - panelPad
+  const availH = window.innerHeight * 0.78 - panelPad - cancelReserve
+  const fillScale = Math.min(availW / contentW, availH / bandH)
+  return Math.max(BLANK_EXCHANGE_POPUP_MIN_SCALE, fillScale)
+}
+
+/** Flex row width: suit label + tile slots + gaps — not the wider 29-col grid cell on the board.
+ * A row is `slotCount` items total: 1 suit label + (slotCount - 1) tiles, with (slotCount - 1) gaps. */
+function computeSortedBandContentWidth(
+  suitLabelW: number,
+  tileW: number,
+  faceGap: number,
+): number {
+  const tileSlots = DISCARD_TRACKER_SORTED_ROW_SLOTS - 1
+  const gaps = DISCARD_TRACKER_SORTED_ROW_SLOTS - 1
+  return suitLabelW + tileSlots * tileW + gaps * faceGap
+}
+
+function readBlankExchangeSourceMetrics(): {
+  contentW: number
+  bandH: number
+  rowGap: number
+  faceGap: number
+  tileW: number
+  tileH: number
+  cornerR: number
+  suitLabelW: number
+  suitLabelFs: number
+} | null {
+  const sourceGrid = document.querySelector(
+    '.app-dnd-frame .app-top-exposure-container .discard-tracker__overlay-grid',
+  )
+  const sourceRow = document.querySelector(
+    '.app-dnd-frame .app-top-exposure-container .exposure-rack--discard-tracker-sorted-row',
+  )
+  if (!sourceGrid || !sourceRow) return null
+  const rowRect = sourceRow.getBoundingClientRect()
+  if (rowRect.width < 1 || rowRect.height < 1) return null
+
+  const tileSlot = sourceRow.querySelector(
+    '.exposure-rack__slot:not(.sorted-discard-tray__slot--suit-label)',
+  )
+  const suitSlot = sourceRow.querySelector('.sorted-discard-tray__slot--suit-label')
+  const tileRect = tileSlot?.getBoundingClientRect()
+  const suitRect = suitSlot?.getBoundingClientRect()
+  const tileW = tileRect?.width ?? 0
+  const tileH = tileRect?.height ?? 0
+  if (tileW < 1 || tileH < 1) return null
+
+  const gridStyle = getComputedStyle(sourceGrid)
+  const rowGap = parseFloat(gridStyle.gap) || parseFloat(gridStyle.rowGap) || 0
+  const faceGap =
+    parseFloat(gridStyle.getPropertyValue('--player-rack-face-gap')) ||
+    parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--player-rack-face-gap')) ||
+    2
+
+  const sourceRows = document.querySelectorAll(
+    '.app-dnd-frame .app-top-exposure-container .discard-tracker__overlay-row',
+  )
+  let bandH = 0
+  for (let i = 0; i < 3 && i < sourceRows.length; i++) {
+    bandH += sourceRows[i]!.getBoundingClientRect().height
+  }
+  if (bandH < 1) bandH = rowRect.height * 3
+  bandH += rowGap * 2
+
+  const suitLabelW = suitRect?.width ?? tileW * 1.75
+  const suitLabelEl = suitSlot?.querySelector('.sorted-discard-tray__suit-label')
+  const suitLabelFs = suitLabelEl
+    ? parseFloat(getComputedStyle(suitLabelEl).fontSize) || tileW * 0.4
+    : tileW * 0.4
+  const glyphFace = sourceRow.querySelector('.tile-face.tile-face--sorted-discard-glyph')
+  const cornerR = glyphFace
+    ? parseFloat(getComputedStyle(glyphFace).borderRadius) || tileW * 0.116
+    : tileW * 0.116
+
+  return {
+    contentW: computeSortedBandContentWidth(suitLabelW, tileW, faceGap),
+    bandH,
+    rowGap,
+    faceGap,
+    tileW,
+    tileH,
+    cornerR,
+    suitLabelW,
+    suitLabelFs,
+  }
+}
+
+/**
+ * Centered, enlarged copy of the sorted discard tracker, shown after a blank is dropped on the
+ * tracker. It keeps the exact look of the on-board tracker; each already-discarded tile type can
+ * be tapped to redeem the blank for it.
+ */
+function BlankExchangeOverlay({
+  discardPile,
+  blankTilesEnabled,
+  onPick,
+  onCancel,
+}: {
+  discardPile: readonly DiscardEntry[]
+  blankTilesEnabled: boolean
+  onPick: (def: TileDef) => void
+  onCancel: () => void
+}) {
+  const pickableDefs = useMemo(
+    () => discardedDefsForBlankExchange(discardPile),
+    [discardPile],
+  )
+  const [layout, setLayout] = useState<{
+    contentW: number
+    bandH: number
+    rowGap: number
+    faceGap: number
+    scale: number
+    tileW: number
+    tileH: number
+    cornerR: number
+    suitLabelW: number
+    suitLabelFs: number
+  } | null>(null)
+  /** Width/height of the action-row Call/Swap button so Cancel matches its shape. */
+  const [actionBtnSize, setActionBtnSize] = useState<{ w: number; h: number } | null>(null)
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const metrics = readBlankExchangeSourceMetrics()
+      if (metrics) {
+        setLayout({
+          ...metrics,
+          scale: computeBlankExchangePopupScale(metrics.contentW, metrics.bandH),
+        })
+      }
+      const actionBtn = document.querySelector(
+        '.panel--hand .rack-bottom-bar--main .btn--joker-swap-action.rack-bottom-tile-cell--c9-10',
+      )
+      if (actionBtn) {
+        const r = actionBtn.getBoundingClientRect()
+        if (r.width > 1 && r.height > 1) setActionBtnSize({ w: r.width, h: r.height })
+      }
+    }
+    measure()
+    requestAnimationFrame(measure)
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [])
+
+  const overlayGridStyle: CSSProperties = {
+    ['--discard-tracker-slots-across' as string]: DISCARD_TRACKER_SORTED_BAND_COLS,
+    ...(layout
+      ? {
+          width: layout.contentW,
+          gap: `${layout.rowGap}px`,
+          ['--player-rack-face-gap' as string]: `${layout.faceGap}px`,
+          ['--bx-rack-tile-w' as string]: `${layout.tileW}px`,
+          ['--bx-rack-tile-h' as string]: `${layout.tileH}px`,
+          ['--bx-exposure-slot-h' as string]: `${layout.tileH}px`,
+          ['--bx-tile-face-border-radius' as string]: `${layout.cornerR}px`,
+          ['--bx-discard-tray-tile-corner-r' as string]: `${layout.cornerR}px`,
+          ['--bx-sorted-discard-suit-label-w' as string]: `${layout.suitLabelW}px`,
+          ['--bx-sorted-discard-suit-label-h' as string]: `${layout.tileH}px`,
+          ['--bx-sorted-discard-suit-label-fs' as string]: `${layout.suitLabelFs}px`,
+        }
+      : {}),
+  }
+  const scaleHostStyle: CSSProperties | undefined = layout
+    ? {
+        width: layout.contentW * layout.scale,
+        height: layout.bandH * layout.scale,
+        opacity: 1,
+      }
+    : { opacity: 0 }
+  const mirrorStyle: CSSProperties | undefined = layout
+    ? {
+        width: layout.contentW,
+        height: layout.bandH,
+        transform: `scale(${layout.scale})`,
+        transformOrigin: 'top left',
+      }
+    : undefined
+
+  return (
+    <div
+      className="blank-exchange-overlay"
+      role="dialog"
+      aria-modal
+      aria-label="Exchange blank tile"
+      onClick={onCancel}
+    >
+      <div
+        className="blank-exchange-overlay__panel"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="blank-exchange-overlay__scale-host" style={scaleHostStyle}>
+          <div
+            className="blank-exchange-overlay__tracker-mirror app-play-split app-top-exposure-container"
+            style={mirrorStyle}
+          >
+            <div className="discard-tracker__shell">
+              <div className="discard-tracker__content discard-tracker__content--tile-groups-only">
+                <div className="discard-tracker__tile-groups-container">
+                  <div
+                    className="discard-tracker__overlay-grid"
+                    aria-label="Discard tracker exchange"
+                    style={overlayGridStyle}
+                  >
+                    <div className="discard-tracker__overlay-row">
+                      <SortedDiscardTrayRow
+                        tiles={SORTED_DISCARD_ROW1_TILES}
+                        slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
+                        leadingSuitLabel={tileSuitRackWord('bam')}
+                        leadingSuitLabelTone="bam"
+                        ariaLabel="Exchange row 1"
+                        discardPile={discardPile}
+                        onSlotActivate={onPick}
+                        pickableDefs={pickableDefs}
+                      />
+                    </div>
+                    <div className="discard-tracker__overlay-row">
+                      <SortedDiscardTrayRow
+                        tiles={SORTED_DISCARD_ROW2_TILES}
+                        slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
+                        leadingSuitLabel={tileSuitRackWord('crak')}
+                        leadingSuitLabelTone="crak"
+                        ariaLabel="Exchange row 2"
+                        discardPile={discardPile}
+                        onSlotActivate={onPick}
+                        pickableDefs={pickableDefs}
+                      />
+                    </div>
+                    <div className="discard-tracker__overlay-row">
+                      <SortedDiscardTrayRow
+                        tiles={SORTED_DISCARD_ROW3_TILES}
+                        slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
+                        leadingSuitLabel={tileSuitRackWord('dot')}
+                        leadingSuitLabelTone="dot"
+                        ariaLabel="Exchange row 3"
+                        discardPile={discardPile}
+                        blankTilesEnabled={blankTilesEnabled}
+                        onSlotActivate={onPick}
+                        pickableDefs={pickableDefs}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          className="btn btn--joker-swap-action blank-exchange-overlay__cancel"
+          onClick={onCancel}
+          style={
+            actionBtnSize
+              ? {
+                  width: actionBtnSize.w,
+                  height: actionBtnSize.h,
+                  minHeight: actionBtnSize.h,
+                }
+              : undefined
+          }
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   )
 }
@@ -3762,6 +4125,17 @@ export default function App() {
   }, [pendingJokerSwapTileId, pendingEastDiscardTile, hand, botExposures, eastExposures])
 
   /**
+   * Deferred snapshots of the rack inputs that feed the heavy suggested-hands analysis
+   * (`rankSuggestedHands` over the whole card book, plus the per-pattern greedy rack-highlight
+   * passes). Tile clicks — staging a discard, returning it, skipping a bot discard — mutate `hand`
+   * and `pendingEastDiscardTile`; reading them through `useDeferredValue` lets the tile movement
+   * paint immediately on the urgent render while the analysis recomputes a frame later at low
+   * priority. The rack itself still renders from the live `hand`, so only the panel/highlights lag.
+   */
+  const deferredHand = useDeferredValue(hand)
+  const deferredPendingEastDiscardTile = useDeferredValue(pendingEastDiscardTile)
+
+  /**
    * Same ids as `rackForSuggestedHandsUi` (below), but jokers in open melds use the tile they represent
    * for distance / strip matching (NMJL) — declared early for joker-swap hint bounce timing.
    */
@@ -3770,15 +4144,15 @@ export default function App() {
       const exposureIds = new Set(eastExposures.flatMap((e) => e.tiles).map((t) => t.id))
       const rack = tileInstancesWithClaimMeldJokersResolved(
         [
-          ...hand,
-          ...(pendingEastDiscardTile ? [pendingEastDiscardTile] : []),
+          ...deferredHand,
+          ...(deferredPendingEastDiscardTile ? [deferredPendingEastDiscardTile] : []),
           ...(passSlots.filter(Boolean) as TileInstance[]),
         ],
         eastExposures,
       )
       return [...rack].sort((a, b) => Number(exposureIds.has(b.id)) - Number(exposureIds.has(a.id)))
     },
-    [hand, pendingEastDiscardTile, passSlots, eastExposures],
+    [deferredHand, deferredPendingEastDiscardTile, passSlots, eastExposures],
   )
 
   const suggestedHandsExposureTileIds = useMemo((): ReadonlySet<string> | undefined => {
@@ -4045,7 +4419,7 @@ export default function App() {
 
   const suggestedRankInput = useMemo(
     (): RankSuggestedHandsInput => ({
-      hand,
+      hand: deferredHand,
       wallRemaining: wall.length,
       discards: discardTiles,
       exposures: botExposures,
@@ -4053,7 +4427,7 @@ export default function App() {
       eastTableClaimMelds: eastExposures,
       patterns: cardPatterns,
     }),
-    [hand, wall.length, discardTiles, botExposures, eastExposures, cardPatterns],
+    [deferredHand, wall.length, discardTiles, botExposures, eastExposures, cardPatterns],
   )
 
   /** Staged-call Mah Jongg distance — mirrors `declareMahjong` when call-staging tiles are selected. */
@@ -4260,16 +4634,16 @@ export default function App() {
       deferredSuggestedFocusHandKey,
       rackForSuggestedPatternMatch,
       botExposures,
-      hand,
-      pendingEastDiscardTile,
+      deferredHand,
+      deferredPendingEastDiscardTile,
       eastExposures,
       suggestedHandsExposureTileIds,
       cardPatterns,
     )
     // Belt-and-suspenders: keep bot joker rings in sync with joker-swap eligibility on your rack.
     for (const id of collectSwappableJokerTileIds(
-      hand,
-      pendingEastDiscardTile,
+      deferredHand,
+      deferredPendingEastDiscardTile,
       botExposures,
       eastExposures,
     )) {
@@ -4282,8 +4656,8 @@ export default function App() {
     mainPhase,
     rackForSuggestedPatternMatch,
     botExposures,
-    hand,
-    pendingEastDiscardTile,
+    deferredHand,
+    deferredPendingEastDiscardTile,
     eastExposures,
     suggestedHandsExposureTileIds,
     cardPatterns,
@@ -4984,6 +5358,75 @@ export default function App() {
   const [dragOverlayTile, setDragOverlayTile] = useState<TileInstance | null>(null)
   const [dragOverlayMeldTiles, setDragOverlayMeldTiles] = useState<TileInstance[] | null>(null)
   const [dragOverlayRackSuitStacked, setDragOverlayRackSuitStacked] = useState(false)
+  /** Set when a blank is dropped on the tracker: the centered tracker becomes tappable to pick a discard. */
+  const [blankExchangeOpen, setBlankExchangeOpen] = useState<{ blankTileId: string } | null>(null)
+  /** A blank tile is being dragged on your turn — from the rack OR staged in the discard slot —
+   * arms the tracker drop zone (shows the orange outline + enables the drop). */
+  const blankExchangeDragArmed =
+    charlestonDone &&
+    mainPhase === 'east-discard' &&
+    dragOverlayTile?.def.cat === 'blank' &&
+    (hand.some((t) => t.id === dragOverlayTile.id) ||
+      pendingEastDiscardTile?.id === dragOverlayTile.id)
+
+  const closeBlankExchange = useCallback(() => {
+    setBlankExchangeOpen(null)
+  }, [])
+
+  const performBlankExchange = useCallback(
+    (chosenDef: TileDef) => {
+      const target = blankExchangeOpen
+      if (!target) return
+      pushRound((r) => {
+        if (r.mainPhase !== 'east-discard') return r
+        const eligible = discardedDefsForBlankExchange(r.discardPile)
+        if (!eligible.some((d) => tileDefsEqual(d, chosenDef))) return r
+        const newTile: TileInstance = { id: crypto.randomUUID(), def: chosenDef }
+
+        // The blank can be in the hand (dragged to the tracker) or staged in the discard slot
+        // (tapped in, then Swap). Either way the redeemed tile lands back in the hand.
+        const handIdx = r.hand.findIndex(
+          (t) => t.id === target.blankTileId && t.def.cat === 'blank',
+        )
+        if (handIdx >= 0) {
+          const handNext = [...r.hand]
+          handNext[handIdx] = newTile
+          return {
+            ...r,
+            hand: handNext,
+            drawnTileId: newTile.id,
+            selectedHandTileId: null,
+          }
+        }
+        if (
+          r.pendingEastDiscardTile?.id === target.blankTileId &&
+          r.pendingEastDiscardTile.def.cat === 'blank'
+        ) {
+          const insertIdx = Math.min(r.pendingEastDiscardIdx ?? r.hand.length, r.hand.length)
+          const handNext = [...r.hand]
+          handNext.splice(insertIdx, 0, newTile)
+          return {
+            ...r,
+            hand: handNext,
+            pendingEastDiscardTile: null,
+            pendingEastDiscardIdx: null,
+            drawnTileId: newTile.id,
+            selectedHandTileId: null,
+          }
+        }
+        return r
+      })
+      closeBlankExchange()
+    },
+    [blankExchangeOpen, pushRound, closeBlankExchange],
+  )
+
+  // If the player's turn ends (e.g. undo, new deal) close any open exchange popup.
+  useEffect(() => {
+    if (mainPhase !== 'east-discard') {
+      setBlankExchangeOpen(null)
+    }
+  }, [mainPhase])
   /** While dragging a Charleston pass tile over the hand, lift it into the hand sortable list so neighbours slide. */
   const [charlestonPassIntoHandPreview, setCharlestonPassIntoHandPreview] = useState<{
     tileId: string
@@ -5088,6 +5531,19 @@ export default function App() {
           if (pointerCall.length > 0) return pointerCall
         }
         return []
+      }
+
+      // Blank tile dragged on your turn — from the rack OR staged in the discard slot — → the sorted
+      // discard tracker wins as soon as the tile overlaps it (so it can be dropped anywhere over the
+      // tracker boundary). The staged path mirrors how a blank drags out of the main rack.
+      if (
+        charlestonDone &&
+        mainPhase === 'east-discard' &&
+        ((fromHandTile && hand.some((t) => t.id === aid && t.def.cat === 'blank')) ||
+          (fromStagedDiscard && pendingEastDiscardTile?.def.cat === 'blank'))
+      ) {
+        const trackerHits = collisionHitsForTileOverlappingZones(args, [BLANK_EXCHANGE_DROP_ID])
+        if (trackerHits.length > 0) return trackerHits
       }
 
       if (fromHandTile || fromBotDiscardForCall || fromPassSlot || fromStagedDiscard) {
@@ -5990,6 +6446,94 @@ export default function App() {
     pushRound((r) => applyEastNaturalForExposedJoker(r, { ...pick, eastTileId: pid }))
   }, [jokerSwapUiActive, pendingJokerSwapTileId, pendingEastDiscardTile, jokerSwapPick, pushRound])
 
+  /**
+   * The shared "Swap" button on your turn. Routes to whichever swap applies:
+   *  1. A staged/selected blank → open the discard-tracker exchange popup (any discard except jokers).
+   *  2. A staged natural matching an exposed joker → redeem that joker.
+   *  3. A blank anywhere in hand (nothing staged) → open the exchange popup.
+   *  4. An exposed joker with no valid staging → delegate to the joker-swap validator (shows guidance).
+   *  5. Nothing to swap → explain the two swap paths.
+   */
+  const executeSwapFromSlot = useCallback(() => {
+    const canBlankExchange = charlestonDone && mainPhase === 'east-discard'
+    const selectedTile =
+      (pendingJokerSwapTileId
+        ? hand.find((t) => t.id === pendingJokerSwapTileId)
+        : selectedHandTileId
+          ? hand.find((t) => t.id === selectedHandTileId)
+          : null) ?? null
+    const eligibleDiscards = discardedDefsForBlankExchange(discardPile)
+
+    const openBlankExchange = (blankTileId: string) => {
+      if (eligibleDiscards.length === 0) {
+        setBlockingDialog({
+          variant: 'table',
+          title: BLOCKING_TITLE_SWAP_ERROR,
+          message: MSG_SWAP_BLANK_NO_DISCARDS,
+        })
+        return
+      }
+      setBlankExchangeOpen({ blankTileId })
+    }
+
+    // 1) A blank is staged in the discard slot, or selected in the hand — exchange it.
+    const stagedBlank =
+      pendingEastDiscardTile?.def.cat === 'blank'
+        ? pendingEastDiscardTile
+        : selectedTile?.def.cat === 'blank'
+          ? selectedTile
+          : null
+    if (canBlankExchange && stagedBlank) {
+      openBlankExchange(stagedBlank.id)
+      return
+    }
+
+    // 2) A natural is staged that can redeem an exposed joker.
+    const jokerSwapReady =
+      jokerSwapUiActive &&
+      (pendingJokerSwapTileId != null || pendingEastDiscardTile != null) &&
+      jokerSwapPick != null
+    if (jokerSwapReady) {
+      executeJokerSwapFromSlot()
+      return
+    }
+
+    // 3) Nothing staged, but a blank is in hand — exchange the first one.
+    if (canBlankExchange) {
+      const anyBlank = hand.find((t) => t.def.cat === 'blank')
+      if (anyBlank) {
+        openBlankExchange(anyBlank.id)
+        return
+      }
+    }
+
+    // 4) An exposed joker exists but the staging isn't valid — let the joker validator explain.
+    if (jokerSwapUiActive) {
+      executeJokerSwapFromSlot()
+      return
+    }
+
+    // 5) Neither path is available.
+    setBlockingDialog({
+      variant: 'table',
+      title: BLOCKING_TITLE_SWAP_ERROR,
+      message: MSG_SWAP_NOTHING_AVAILABLE,
+    })
+  }, [
+    charlestonDone,
+    mainPhase,
+    pendingJokerSwapTileId,
+    selectedHandTileId,
+    pendingEastDiscardTile,
+    hand,
+    discardPile,
+    jokerSwapUiActive,
+    jokerSwapPick,
+    executeJokerSwapFromSlot,
+    setBlankExchangeOpen,
+    setBlockingDialog,
+  ])
+
   const sortHand = useCallback(() => {
     const focusKey = suggestedFocusHandKeyRef.current
     if (focusKey && focusKey !== suggestedSuppressedHandKey) {
@@ -6285,6 +6829,23 @@ export default function App() {
         passSlots.some((s) => s?.id === aid) &&
         pointerOverPassBoxTarget(lastDragPointerRef.current)
       try {
+        // Blank dropped anywhere over the discard tracker (your turn) → open the centered exchange
+        // popup. Accepts a blank dragged from the hand OR one staged in the discard slot. Checked
+        // first (with a pointer-position fallback) so it works even if dnd-kit hasn't measured the
+        // tracker droppable for this drag.
+        const draggedBlankForExchange =
+          hand.some((t) => t.id === aid && t.def.cat === 'blank') ||
+          (pendingEastDiscardTile?.id === aid && pendingEastDiscardTile.def.cat === 'blank')
+        if (
+          charlestonDone &&
+          mainPhase === 'east-discard' &&
+          draggedBlankForExchange &&
+          (String(over?.id) === BLANK_EXCHANGE_DROP_ID ||
+            pointerOverBlankExchangeTarget(lastDragPointerRef.current))
+        ) {
+          setBlankExchangeOpen({ blankTileId: aid })
+          return
+        }
         if (!over) {
           if (
             isActiveBotDiscardDrag(aid, activeBotDiscard ?? null) &&
@@ -6588,6 +7149,8 @@ export default function App() {
       jokerSwapUiActive,
       mainPhase,
       passSlots,
+      pendingEastDiscardTile,
+      setBlankExchangeOpen,
       stagedCallTileIds,
       pushRound,
       initiateCall,
@@ -6690,10 +7253,12 @@ export default function App() {
 
   const mainGameCallDisabled = mainPhase !== 'bot-turn' || !activeBotDiscard
   /**
-   * Shared c9–10 cell: Swap only when joker-swap UI applies (east discard or call-staging and at least
-   * one exposed joker). Otherwise show Call (bot-turn) or the same Call control disabled on your turn.
+   * Shared c9–10 cell: on your turn (East discard) the control is always "Swap" — it redeems an
+   * exposed joker (staged natural) or exchanges a blank for a discarded tile. Joker-swap UI also
+   * makes it "Swap" during call-staging. Otherwise it's "Call" (active only on a bot's discard).
    */
-  const mainBarSharedSlotIsJokerSwap = jokerSwapUiActive
+  const mainBarSharedSlotIsSwap =
+    jokerSwapUiActive || (charlestonDone && mainPhase === 'east-discard')
   const mahjongButtonEnabled =
     charlestonDone &&
     (mainPhase === 'east-discard' ||
@@ -8012,6 +8577,7 @@ export default function App() {
                   >
                     <div className="discard-tracker__shell">
                       <div className="discard-tracker__content discard-tracker__content--tile-groups-only">
+                        <BlankExchangeDropZone active={!!blankExchangeDragArmed}>
                         <div className="discard-tracker__tile-groups-container">
                         <DiscardTrackerSlotGrid
                           discardPile={displayedDiscardPile}
@@ -8032,6 +8598,7 @@ export default function App() {
                           suggestedDiscardTrackerNeedDefs={suggestedDiscardTrackerNeedDefs}
                         />
                         </div>
+                        </BlankExchangeDropZone>
                       </div>
                     </div>
                   </section>
@@ -8333,29 +8900,48 @@ export default function App() {
                               lastSlotDraggableForCallInit={
                                 mainPhase === 'bot-turn' && activeBotDiscard != null
                               }
-                              lastSlotClassName={
-                                pendingEastDiscardTile &&
-                                suggestedTileGuideForRack?.bestIds.has(pendingEastDiscardTile.id)
-                                  ? 'exposure-rack__slot--suggest-best'
+                              lastSlotLabel={
+                                mainPhase === 'bot-turn' &&
+                                activeBotDiscard != null &&
+                                activeBotIndex != null
+                                  ? `${BOT_LABELS[activeBotIndex]?.charAt(0) ?? ''} >`
                                   : undefined
+                              }
+                              lastSlotClassName={
+                                [
+                                  mainPhase === 'east-discard'
+                                    ? 'exposure-rack__slot--east-discard-instructed'
+                                    : '',
+                                  pendingEastDiscardTile &&
+                                  suggestedTileGuideForRack?.bestIds.has(pendingEastDiscardTile.id)
+                                    ? 'exposure-rack__slot--suggest-best'
+                                    : '',
+                                ]
+                                  .filter(Boolean)
+                                  .join(' ') || undefined
                               }
                               lastSlotReplace={
                                 mainPhase === 'east-discard' ? (
-                                  <EastDiscardStagingSlot
-                                    enabled={charlestonDone}
-                                    compact
-                                    tile={pendingEastDiscardTile}
-                                    onTileClickReturn={returnStagedEastDiscard}
-                                    suggestBest={
-                                      !!pendingEastDiscardTile &&
-                                      !!suggestedTileGuideForRack?.bestIds.has(pendingEastDiscardTile.id)
-                                    }
-                                    jokerSwapHintBounce={
-                                      !!pendingEastDiscardTile &&
-                                      !!jokerSwapHintBounceIds?.hand.has(pendingEastDiscardTile.id)
-                                    }
-                                    jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
-                                  />
+                                  <>
+                                    <p className="east-discard-staging__instruction" aria-hidden="true">
+                                      Discard &gt;
+                                    </p>
+                                    <EastDiscardStagingSlot
+                                      enabled={charlestonDone}
+                                      compact
+                                      tile={pendingEastDiscardTile}
+                                      onTileClickReturn={returnStagedEastDiscard}
+                                      suggestBest={
+                                        !!pendingEastDiscardTile &&
+                                        !!suggestedTileGuideForRack?.bestIds.has(pendingEastDiscardTile.id)
+                                      }
+                                      jokerSwapHintBounce={
+                                        !!pendingEastDiscardTile &&
+                                        !!jokerSwapHintBounceIds?.hand.has(pendingEastDiscardTile.id)
+                                      }
+                                      jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
+                                    />
+                                  </>
                                 ) : null
                               }
                               firstEmptyOverride={
@@ -8490,12 +9076,12 @@ export default function App() {
                                 >
                                   <img className="btn--logic__img" src={logicLogoSrc} alt="Logic" draggable={false} />
                                 </button>
-                                {mainBarSharedSlotIsJokerSwap ? (
+                                {mainBarSharedSlotIsSwap ? (
                                   <button
                                     type="button"
                                     className="btn btn--joker-swap-action rack-bottom-tile-cell rack-bottom-tile-cell--c9-10"
-                                    onClick={executeJokerSwapFromSlot}
-                                    aria-label="Joker swap"
+                                    onClick={executeSwapFromSlot}
+                                    aria-label="Swap"
                                   >
                                     Swap
                                   </button>
@@ -8628,6 +9214,14 @@ export default function App() {
                 </section>
               </div>
             ) : null}
+              {blankExchangeOpen ? (
+                <BlankExchangeOverlay
+                  discardPile={displayedDiscardPile}
+                  blankTilesEnabled={blankTilesEnabled}
+                  onPick={performBlankExchange}
+                  onCancel={closeBlankExchange}
+                />
+              ) : null}
               <DragOverlay dropAnimation={null}>
                 {dragOverlayMeldTiles ? (
                   <div className="drag-overlay-meld">

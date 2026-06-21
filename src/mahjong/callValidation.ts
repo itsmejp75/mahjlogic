@@ -50,6 +50,14 @@ export const MSG_SWAP_PICK_TILE_FIRST =
 export const MSG_SWAP_NO_LEGAL_FOR_TILE =
   'That tile cannot complete a legal joker swap with any exposure on the table. Try staging a different natural tile, or drag your tile directly onto the specific meld whose joker you mean to replace.'
 
+/** Swap error: you hold a blank but nothing eligible has been discarded yet. */
+export const MSG_SWAP_BLANK_NO_DISCARDS =
+  'There are no discarded tiles to exchange your blank for yet. Once any tile (except a joker) has been discarded, tap Swap to trade a blank in your hand for one of those discards.'
+
+/** Swap error: your turn, but there is no exposed joker to redeem and no blank to exchange. */
+export const MSG_SWAP_NOTHING_AVAILABLE =
+  'There is nothing to swap right now. On your turn you can redeem an exposed joker by staging the matching natural tile, or exchange a blank in your hand for any discarded tile (except a joker).'
+
 export type CallValidationRoundSlice = {
   mainPhase: string
   activeBotDiscard: TileInstance | null
