@@ -215,15 +215,17 @@ import {
 import { TileGraphicsProvider } from './tiles/TileGraphicsContext'
 import './styles/style.css'
 
-/** Tiles in wall after opening deal (`dealOpeningFour`); meter stays flat green until below this. */
-const OPENING_WALL_TILES = 99
 /** Conservative floor used while the suggested-hands sheet is remeasured during orientation changes. */
 const SUGGESTED_DISCARD_OVERLAY_MIN_SHEET_PX = 112
 
-function wallRemainHeatStyle(wallLen: number): CSSProperties | undefined {
-  if (wallLen >= OPENING_WALL_TILES || wallLen === 0) return undefined
+/** Wall-heat gradient: flat green at opening count; slides toward red after the first tile leaves the wall. */
+function wallRemainHeatStyle(
+  wallLen: number,
+  openingWallLen: number,
+): CSSProperties | undefined {
+  if (wallLen >= openingWallLen || wallLen === 0 || openingWallLen <= 1) return undefined
   return {
-    '--wall-t': String(Math.max(0, Math.min(1, wallLen / (OPENING_WALL_TILES - 1)))),
+    '--wall-t': String(Math.max(0, Math.min(1, wallLen / (openingWallLen - 1)))),
   } as CSSProperties
 }
 
@@ -759,8 +761,13 @@ const DISCARD_TRACKER_SLOTS_ACROSS = 29
 const DISCARD_TRACKER_BOT_PREFIX_SLOTS = 1
 const DISCARD_TRACKER_BOT_ROW_SLOTS = 14
 const DISCARD_TRACKER_SORTED_ROW_SLOTS = 13
-/** Sorted B/C/D band columns (suit label + 13 rank slots) — popup uses this, not the full 29-col grid. */
-const DISCARD_TRACKER_SORTED_BAND_COLS = 14
+/**
+ * Sorted B/C/D band width in tile-width units: the suit-label chip is 1.75× a tile + 12 rank tiles
+ * = 13.75. Used as the popup's `--discard-tracker-slots-across` divisor so the @container sizes
+ * tiles to fill the grid almost exactly (an integer 14 left ~half a tile of centered slack each
+ * side, which read as the box being too wide). Popup-only; the on-board grid uses 29.
+ */
+const DISCARD_TRACKER_SORTED_BAND_COLS = 13.75
 
 /** Row 1 of sorted discard: bams 1–9, green dragon (G), North, South. */
 const SORTED_DISCARD_ROW1_TILES: readonly TileInstance[] = [
@@ -1170,8 +1177,9 @@ function BlankExchangeOverlay({
   }
   const scaleHostStyle: CSSProperties = bandW !== null ? { opacity: 1 } : { opacity: 0 }
   // No transform: the grid is sized directly and its @container fills it with tiles. Flow the mirror
-  // in-line (override the absolute board-mirror positioning) so the panel sizes to the band.
-  const mirrorStyle: CSSProperties = { position: 'static' }
+  // in-line (override the absolute board-mirror positioning) so the panel sizes to the band. Zero the
+  // padding so the board's `.app-play-split` horizontal inset doesn't pad the popup wider than its band.
+  const mirrorStyle: CSSProperties = { position: 'static', padding: 0 }
 
   return (
     <div
@@ -1546,6 +1554,8 @@ type RoundState = {
   hand: TileInstance[]
   bots: [TileInstance[], TileInstance[], TileInstance[]]
   wall: TileInstance[]
+  /** Wall length right after opening deal — drives the rack wall-heat meter for this hand. */
+  openingWallTileCount: number
   passSlots: PassSlots
   selectedHandTileId: string | null
   charlestonPhase: CharlestonPhase
@@ -1796,6 +1806,7 @@ function roundStateFromOpeningDeck(deck: TileInstance[]): RoundState {
     hand: east,
     bots: [south, west, north],
     wall,
+    openingWallTileCount: wall.length,
     passSlots: [null, null, null],
     passSlotOrigins: [null, null, null],
     selectedHandTileId: null,
@@ -3712,6 +3723,7 @@ export default function App() {
   const {
     hand,
     wall,
+    openingWallTileCount,
     bots,
     passSlots,
     selectedHandTileId,
@@ -8616,9 +8628,9 @@ export default function App() {
                               <WallTilesRemainCell
                                 count={wall.length}
                                 className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell rack-bottom-tile-cell--c3${
-                                  wall.length >= OPENING_WALL_TILES ? ' rack-bottom-wall--full' : ''
+                                  wall.length >= openingWallTileCount ? ' rack-bottom-wall--full' : ''
                                 }${wall.length === 0 ? ' rack-bottom-wall--empty' : ''}`}
-                                style={wallRemainHeatStyle(wall.length)}
+                                style={wallRemainHeatStyle(wall.length, openingWallTileCount)}
                               />
                               {showSuggestedHandsPanel ? (
                                 <button
@@ -8929,9 +8941,9 @@ export default function App() {
                                 <WallTilesRemainCell
                                   count={wall.length}
                                   className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell rack-bottom-tile-cell--c3${
-                                    wall.length >= OPENING_WALL_TILES ? ' rack-bottom-wall--full' : ''
+                                    wall.length >= openingWallTileCount ? ' rack-bottom-wall--full' : ''
                                   }${wall.length === 0 ? ' rack-bottom-wall--empty' : ''}`}
-                                  style={wallRemainHeatStyle(wall.length)}
+                                  style={wallRemainHeatStyle(wall.length, openingWallTileCount)}
                                 />
                                 {showSuggestedHandsPanel ? (
                                   <button

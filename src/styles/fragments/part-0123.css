@@ -2205,9 +2205,16 @@ html body .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-g
   filter: none;
 }
 
+/*
+ * Call / Swap pressed: keep the resting gradient face and add only the inset depth — identical to
+ * Sort / Hands (no darker fill, no hover wash) so its pressed look matches the other rack actions.
+ */
 html body .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  button.btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled):active,
+html body .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
   button.btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled):active {
-  background: var(--rack-action-face-pressed);
+  background: var(--rack-action-face);
+  box-shadow: var(--rack-action-pressed);
   color: var(--rack-action-label-color, #e2e4e8);
   opacity: 1;
   filter: none;
@@ -2423,7 +2430,8 @@ html .app-dnd-frame .app-top-exposure-container .exposure-rack__meld-drop--over 
   width: fit-content;
   max-width: 96vw;
   max-height: 96vh;
-  padding: clamp(12px, 2vmin, 18px) clamp(16px, 2.6vmin, 24px) clamp(14px, 2.2vmin, 20px);
+  /* Left/right padding matches the top so the band sits the same distance from every edge. */
+  padding: clamp(12px, 2vmin, 18px) clamp(12px, 2vmin, 18px) clamp(14px, 2.2vmin, 20px);
   box-sizing: border-box;
   border: 1px solid var(--rack-action-border-color, var(--app-action-btn-border, #6c757e));
   border-radius: var(
@@ -2550,7 +2558,6 @@ html
 .blank-exchange-overlay__tracker-mirror .sorted-discard-tray__slot--pickable .tile-face {
   transition: transform 0.12s ease;
 }
-.blank-exchange-overlay__tracker-mirror .sorted-discard-tray__slot--pickable:hover .tile-face,
 .blank-exchange-overlay__tracker-mirror .sorted-discard-tray__slot--pickable:focus-visible .tile-face,
 .blank-exchange-overlay__tracker-mirror .sorted-discard-tray__slot--pickable:active .tile-face {
   transform: translateY(-2px) scale(1.04);
@@ -2586,8 +2593,9 @@ html
   filter: none;
   text-shadow: none;
   cursor: pointer;
-  transition: box-shadow 0.12s ease, background 0.12s ease;
+  transition: box-shadow 0.12s ease;
 }
+/* No hover treatment — the resting gradient/border is the only non-pressed state (matches Sort/Hands). */
 .blank-exchange-overlay__panel .blank-exchange-overlay__cancel:hover {
   background: var(--rack-action-face);
   border: 1px solid var(--rack-action-border-color, #636870);
@@ -2595,8 +2603,10 @@ html
   color: var(--rack-action-label-color, #e2e4e8);
   transform: none;
 }
+/* Pressed: keep the resting gradient face and add only the inset depth — identical to Sort/Hands. */
 .blank-exchange-overlay__panel .blank-exchange-overlay__cancel:active {
-  background: var(--rack-action-face-pressed);
+  background: var(--rack-action-face);
+  border: 1px solid var(--rack-action-border-color, #636870);
   box-shadow: var(--rack-action-pressed);
   color: var(--rack-action-label-color, #e2e4e8);
   transform: none;
