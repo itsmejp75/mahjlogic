@@ -1091,19 +1091,22 @@ function ArmedBlankExchangeDropZone({ children }: { children: ReactNode }) {
  * the on-board tracker. The band therefore always fits the panel, and tiles stay as large as will
  * fit so they remain easy to tap.
  */
-const BLANK_EXCHANGE_POPUP_FACE_GAP = 2
-const BLANK_EXCHANGE_POPUP_ROW_GAP = 3
-/** Don't enlarge past this on big screens — ~40px tiles are already comfortably tappable. */
-const BLANK_EXCHANGE_POPUP_MAX_BAND_W = 600
+const BLANK_EXCHANGE_POPUP_FACE_GAP = 3
+const BLANK_EXCHANGE_POPUP_ROW_GAP = 4
+/** Don't enlarge past this on big screens — ~55px tiles are already plenty large. */
+const BLANK_EXCHANGE_POPUP_MAX_BAND_W = 780
 
 /** Width the popup grid should take so the 3-row band fits both viewport axes (incl. the Cancel row). */
 function computeBlankExchangePopupBandWidth(): number {
-  const panelPad = 56 // panel inline padding + border, both sides
-  const cancelReserve = 96 // gap + Cancel button row beneath the band
+  const panelPad = 48 // panel inline padding + border, both sides
+  const cancelReserve = 64 // gap + Cancel button row beneath the band
   const gap = BLANK_EXCHANGE_POPUP_FACE_GAP
   const cols = DISCARD_TRACKER_SORTED_BAND_COLS
-  const availW = window.innerWidth * 0.94 - panelPad
-  const availH = window.innerHeight * 0.82 - panelPad - cancelReserve
+  // Fill most of the width so the tiles/text are as large as the box allows.
+  const availW = window.innerWidth * 0.92 - panelPad
+  // Generous vertical budget so the band is normally width-bound (fills the box) and only shrinks
+  // when the viewport is genuinely too short — that's what keeps tiles big and the box tall.
+  const availH = window.innerHeight * 0.9 - panelPad - cancelReserve
   // tileW = (W - (cols-1)*gap) / cols; band height = 3*(tileW*4/3) + 2*rowGap = 4*tileW + 2*rowGap.
   // Solve the widest W whose band height still fits availH so tall layouts never clip vertically.
   const maxWByHeight =
@@ -5283,6 +5286,14 @@ export default function App() {
         if (!eligible.some((d) => tileDefsEqual(d, chosenDef))) return r
         const newTile: TileInstance = { id: crypto.randomUUID(), def: chosenDef }
 
+        // The redeemed tile is taken out of the discards: drop one matching entry so its tracker
+        // count falls by one (and it stops being exchangeable once none of that type remain).
+        const takenIdx = r.discardPile.findIndex(({ tile }) => tileDefsEqual(tile.def, chosenDef))
+        const discardWithoutTaken =
+          takenIdx >= 0
+            ? [...r.discardPile.slice(0, takenIdx), ...r.discardPile.slice(takenIdx + 1)]
+            : [...r.discardPile]
+
         // The blank can be in the hand (dragged to the tracker) or staged in the discard slot
         // (tapped in, then Swap). Either way the redeemed tile lands back in the hand.
         const handIdx = r.hand.findIndex(
@@ -5296,7 +5307,7 @@ export default function App() {
             ...r,
             hand: handNext,
             // The given-up blank goes face-up into the discards — shows under B in the tracker.
-            discardPile: [...r.discardPile, { tile: blankTile, seat: 'east' }],
+            discardPile: [...discardWithoutTaken, { tile: blankTile, seat: 'east' }],
             drawnTileId: newTile.id,
             selectedHandTileId: null,
           }
@@ -5313,7 +5324,7 @@ export default function App() {
             ...r,
             hand: handNext,
             // The given-up blank goes face-up into the discards — shows under B in the tracker.
-            discardPile: [...r.discardPile, { tile: blankTile, seat: 'east' }],
+            discardPile: [...discardWithoutTaken, { tile: blankTile, seat: 'east' }],
             pendingEastDiscardTile: null,
             pendingEastDiscardIdx: null,
             drawnTileId: newTile.id,
