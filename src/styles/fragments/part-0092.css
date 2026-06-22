@@ -35,14 +35,16 @@
   position: fixed;
   inset: 0;
   z-index: 380;
-  padding: 1.25rem 1.5rem;
+  padding: max(1.25rem, env(safe-area-inset-top, 0px)) 1.5rem max(1.25rem, env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
-  overflow-y: auto;
-  /* Avoid centered dialog + scrollbar appearing/disappearing “nudging” content sideways */
-  scrollbar-gutter: stable;
-  -webkit-overflow-scrolling: touch;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: hidden;
+  overflow-anchor: none;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
-
 .app-menu-modal__backdrop {
   position: absolute;
   inset: 0;
@@ -71,7 +73,12 @@
   position: relative;
   z-index: 1;
   max-width: min(38rem, 100%);
-  max-height: min(90dvh, 48rem);
+  max-height: min(
+    calc(
+      100dvh - max(1.25rem, env(safe-area-inset-top, 0px)) - max(1.25rem, env(safe-area-inset-bottom, 0px))
+    ),
+    48rem
+  );
   overflow: hidden;
   border-radius: 0.9rem;
   border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);

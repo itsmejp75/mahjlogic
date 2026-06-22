@@ -3218,13 +3218,27 @@ function AppMenuSettingSwitch({
   pressed: boolean
   onToggle: () => void
 }) {
+  const menuScrollTopRef = useRef<number | null>(null)
+
+  useLayoutEffect(() => {
+    const savedScrollTop = menuScrollTopRef.current
+    if (savedScrollTop === null) return
+    menuScrollTopRef.current = null
+    const body = document.querySelector('.app-menu-modal__body')
+    if (body instanceof HTMLElement) body.scrollTop = savedScrollTop
+  }, [pressed])
+
   return (
     <button
       type="button"
       className="btn app-menu-tray__item app-menu-tray__item--toggle app-menu-tray__item--switch app-menu-modal__toggle"
       aria-labelledby={labelId}
       aria-pressed={pressed}
-      onClick={onToggle}
+      onClick={(e) => {
+        const body = e.currentTarget.closest('.app-menu-modal__body')
+        menuScrollTopRef.current = body instanceof HTMLElement ? body.scrollTop : null
+        onToggle()
+      }}
     >
       <span className="app-menu-sr-only">{pressed ? 'On' : 'Off'}</span>
       <span

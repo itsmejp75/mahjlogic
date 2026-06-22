@@ -72,6 +72,8 @@
 /* Blank tiles: switch, then label with 2 / 4 / 6 chips inline immediately after. */
 .app-menu-modal__row--blank-tiles {
   grid-template-columns: auto minmax(0, 1fr);
+  /* Count chips share a row with the switch — lock height so enabling chips never reflows the menu. */
+  min-height: calc(1.55rem + 0.48rem);
 }
 
 .app-menu-modal__blank-tiles-trail {

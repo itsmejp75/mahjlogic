@@ -57,12 +57,21 @@
   min-height: 0;
   overflow: auto;
   overflow-x: hidden;
-  scrollbar-gutter: stable;
+  overflow-anchor: none;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   padding: 0.85rem 1.2rem 1.15rem;
   display: flex;
   flex-direction: column;
   gap: 0;
   /* Flex `gap` + some hosts: use sibling margins so toggle rows never stack/overlap */
+}
+
+.app-menu-modal__body::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 .app-menu-modal__body > * + * {
   margin-top: var(--app-menu-body-gap, max(0.36rem, calc(var(--rack-action-touch-min-h) / 3.5)));
