@@ -2453,8 +2453,9 @@ html .app-dnd-frame .app-top-exposure-container .exposure-rack__meld-drop--over 
 }
 
 /*
- * Popup tracker mirror: on-board 1× layout inside, then CSS transform scale (min 1.75×, fill modal).
- * Tile sizes are read from real on-board slot rects — not CSS custom props that can parse as 0.
+ * Popup tracker mirror: the band grid is given a viewport-fitted width (set inline) and the
+ * `top-exposure-band` @container sizes the tiles to fill it. The mirror flows in-line (position is
+ * overridden to static via the component) so the panel sizes to the band; no transform/scale.
  */
 .blank-exchange-overlay__scale-host {
   flex-shrink: 0;
@@ -2462,9 +2463,6 @@ html .app-dnd-frame .app-top-exposure-container .exposure-rack__meld-drop--over 
   box-sizing: border-box;
 }
 .blank-exchange-overlay__tracker-mirror {
-  position: absolute;
-  top: 0;
-  left: 0;
   flex: none;
   max-height: none;
   overflow: visible;
@@ -2522,29 +2520,12 @@ html
   container-name: top-exposure-band;
 }
 
-/* Beat on-board @container remix — popup rows inherit scaled vars from the overlay grid. */
-html .blank-exchange-overlay__tracker-mirror.app-top-exposure-container .discard-tracker__overlay-row {
-  --rack-tile-w: var(--bx-rack-tile-w) !important;
-  --rack-tile-h: var(--bx-rack-tile-h) !important;
-  --exposure-slot-h: var(--bx-exposure-slot-h) !important;
-  --tile-face-border-radius: var(--bx-tile-face-border-radius) !important;
-  --discard-tray-tile-corner-r: var(--bx-discard-tray-tile-corner-r) !important;
-  --sorted-discard-suit-label-w: var(--bx-sorted-discard-suit-label-w) !important;
-  --sorted-discard-suit-label-h: var(--bx-sorted-discard-suit-label-h) !important;
-  --sorted-discard-suit-label-fs: var(--bx-sorted-discard-suit-label-fs) !important;
-}
-html
-  .blank-exchange-overlay__tracker-mirror
-  .discard-tracker__overlay-grid
-  .tile-face.tile-face--sorted-discard-glyph {
-  --tile-face-glyph-fs: calc(var(--bx-rack-tile-w) * 1.03 / 2.65 * 2);
-}
-html
-  .blank-exchange-overlay__tracker-mirror
-  .discard-tracker__overlay-grid
-  .sorted-discard-tray__count {
-  font-size: calc(var(--bx-rack-tile-w) * 1.03 / 2.65 * 1.5);
-}
+/*
+ * Popup tile sizing is driven entirely by the shared `top-exposure-band` @container (above): the
+ * overlay grid is given an explicit, viewport-fitted width and the container query sizes the rank
+ * tiles, suit-label chip, glyph and count to fill it — identical math to the on-board tracker. No
+ * per-popup tile-size overrides are needed (an earlier fixed-scale mirror overflowed on mobile).
+ */
 
 /*
  * Unlit (undiscarded) slots: match the on-board tracker. The `.panel--discard-tracker` rule that

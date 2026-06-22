@@ -1083,104 +1083,32 @@ function ArmedBlankExchangeDropZone({ children }: { children: ReactNode }) {
   )
 }
 
-/** Popup tracker: lay out at on-board 1× size, then scale to fill the modal — capped so it never
- * exceeds the fit-to-viewport scale (forcing a larger min overflowed the right edge on mobile). */
-const BLANK_EXCHANGE_POPUP_MAX_SCALE = 1.75
+/**
+ * The popup is one horizontal band of {@link DISCARD_TRACKER_SORTED_BAND_COLS} slot-columns. Rather
+ * than mirror the on-board tracker at a fixed scale (its estimated width undershot the real band on
+ * mobile and the last column spilled past the panel's right edge), we hand the grid a viewport-fit
+ * width and let the shared `top-exposure-band` @container size every tile to fill it — exactly like
+ * the on-board tracker. The band therefore always fits the panel, and tiles stay as large as will
+ * fit so they remain easy to tap.
+ */
+const BLANK_EXCHANGE_POPUP_FACE_GAP = 2
+const BLANK_EXCHANGE_POPUP_ROW_GAP = 3
+/** Don't enlarge past this on big screens — ~40px tiles are already comfortably tappable. */
+const BLANK_EXCHANGE_POPUP_MAX_BAND_W = 600
 
-function computeBlankExchangePopupScale(contentW: number, bandH: number): number {
-  const panelPad = 56
-  const cancelReserve = 52
-  const availW = window.innerWidth * 0.92 - panelPad
-  const availH = window.innerHeight * 0.78 - panelPad - cancelReserve
-  // Largest scale that fits both axes; on a narrow phone this is < 1, so we shrink to fit
-  // rather than clipping. Cap the upper end so big screens don't blow it up absurdly.
-  const fitScale = Math.min(availW / contentW, availH / bandH)
-  return Math.min(BLANK_EXCHANGE_POPUP_MAX_SCALE, fitScale)
-}
-
-/** Flex row width: suit label + tile slots + gaps — not the wider 29-col grid cell on the board.
- * A row is `slotCount` items total: 1 suit label + (slotCount - 1) tiles, with (slotCount - 1) gaps. */
-function computeSortedBandContentWidth(
-  suitLabelW: number,
-  tileW: number,
-  faceGap: number,
-): number {
-  const tileSlots = DISCARD_TRACKER_SORTED_ROW_SLOTS - 1
-  const gaps = DISCARD_TRACKER_SORTED_ROW_SLOTS - 1
-  return suitLabelW + tileSlots * tileW + gaps * faceGap
-}
-
-function readBlankExchangeSourceMetrics(): {
-  contentW: number
-  bandH: number
-  rowGap: number
-  faceGap: number
-  tileW: number
-  tileH: number
-  cornerR: number
-  suitLabelW: number
-  suitLabelFs: number
-} | null {
-  const sourceGrid = document.querySelector(
-    '.app-dnd-frame .app-top-exposure-container .discard-tracker__overlay-grid',
-  )
-  const sourceRow = document.querySelector(
-    '.app-dnd-frame .app-top-exposure-container .exposure-rack--discard-tracker-sorted-row',
-  )
-  if (!sourceGrid || !sourceRow) return null
-  const rowRect = sourceRow.getBoundingClientRect()
-  if (rowRect.width < 1 || rowRect.height < 1) return null
-
-  const tileSlot = sourceRow.querySelector(
-    '.exposure-rack__slot:not(.sorted-discard-tray__slot--suit-label)',
-  )
-  const suitSlot = sourceRow.querySelector('.sorted-discard-tray__slot--suit-label')
-  const tileRect = tileSlot?.getBoundingClientRect()
-  const suitRect = suitSlot?.getBoundingClientRect()
-  const tileW = tileRect?.width ?? 0
-  const measuredTileH = tileRect?.height ?? 0
-  if (tileW < 1 || measuredTileH < 1) return null
-  // The popup's rank tiles always render at the canonical 4:3 ratio — the bx tile-height override
-  // reaches only the suit-label chip, not the rank slots/faces. On mobile/PWA the on-board band is
-  // often vertically squished, so the measured slot height comes back shorter than tileW * 4/3.
-  // Feeding that squished height into the suit-label height + band height made the suit chips
-  // shorter than (and vertically misaligned with) the rank tiles and overflowed the band. Pin the
-  // height to the same ratio the tiles actually use so the whole popup lines up.
-  const tileH = tileW * 4 / 3
-
-  const gridStyle = getComputedStyle(sourceGrid)
-  const rowGap = parseFloat(gridStyle.gap) || parseFloat(gridStyle.rowGap) || 0
-  const faceGap =
-    parseFloat(gridStyle.getPropertyValue('--player-rack-face-gap')) ||
-    parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--player-rack-face-gap')) ||
-    2
-
-  // Three rank-tile rows (each tileH tall) plus the two inter-row gaps — derived from the same
-  // normalized tile height so the reserved band matches the rendered rows exactly (summing the
-  // on-board row rects reintroduced the squished/overflow mismatch on mobile).
-  const bandH = tileH * 3 + rowGap * 2
-
-  const suitLabelW = suitRect?.width ?? tileW * 1.75
-  const suitLabelEl = suitSlot?.querySelector('.sorted-discard-tray__suit-label')
-  const suitLabelFs = suitLabelEl
-    ? parseFloat(getComputedStyle(suitLabelEl).fontSize) || tileW * 0.4
-    : tileW * 0.4
-  const glyphFace = sourceRow.querySelector('.tile-face.tile-face--sorted-discard-glyph')
-  const cornerR = glyphFace
-    ? parseFloat(getComputedStyle(glyphFace).borderRadius) || tileW * 0.116
-    : tileW * 0.116
-
-  return {
-    contentW: computeSortedBandContentWidth(suitLabelW, tileW, faceGap),
-    bandH,
-    rowGap,
-    faceGap,
-    tileW,
-    tileH,
-    cornerR,
-    suitLabelW,
-    suitLabelFs,
-  }
+/** Width the popup grid should take so the 3-row band fits both viewport axes (incl. the Cancel row). */
+function computeBlankExchangePopupBandWidth(): number {
+  const panelPad = 56 // panel inline padding + border, both sides
+  const cancelReserve = 96 // gap + Cancel button row beneath the band
+  const gap = BLANK_EXCHANGE_POPUP_FACE_GAP
+  const cols = DISCARD_TRACKER_SORTED_BAND_COLS
+  const availW = window.innerWidth * 0.94 - panelPad
+  const availH = window.innerHeight * 0.82 - panelPad - cancelReserve
+  // tileW = (W - (cols-1)*gap) / cols; band height = 3*(tileW*4/3) + 2*rowGap = 4*tileW + 2*rowGap.
+  // Solve the widest W whose band height still fits availH so tall layouts never clip vertically.
+  const maxWByHeight =
+    ((availH - 2 * BLANK_EXCHANGE_POPUP_ROW_GAP) * cols) / 4 + (cols - 1) * gap
+  return Math.max(120, Math.min(availW, maxWByHeight, BLANK_EXCHANGE_POPUP_MAX_BAND_W))
 }
 
 /**
@@ -1203,30 +1131,16 @@ function BlankExchangeOverlay({
     () => discardedDefsForBlankExchange(discardPile),
     [discardPile],
   )
-  const [layout, setLayout] = useState<{
-    contentW: number
-    bandH: number
-    rowGap: number
-    faceGap: number
-    scale: number
-    tileW: number
-    tileH: number
-    cornerR: number
-    suitLabelW: number
-    suitLabelFs: number
-  } | null>(null)
+  /** Width handed to the band grid; the `top-exposure-band` @container sizes tiles to fill it. */
+  const [bandW, setBandW] = useState<number | null>(null)
   /** Width/height of the action-row Call/Swap button so Cancel matches its shape. */
   const [actionBtnSize, setActionBtnSize] = useState<{ w: number; h: number } | null>(null)
 
   useLayoutEffect(() => {
     const measure = () => {
-      const metrics = readBlankExchangeSourceMetrics()
-      if (metrics) {
-        setLayout({
-          ...metrics,
-          scale: computeBlankExchangePopupScale(metrics.contentW, metrics.bandH),
-        })
-      }
+      const w = computeBlankExchangePopupBandWidth()
+      setBandW((prev) => (prev !== null && Math.abs(prev - w) < 0.5 ? prev : w))
+
       const actionBtn = document.querySelector(
         '.panel--hand .rack-bottom-bar--main .btn--joker-swap-action.rack-bottom-tile-cell--c9-10',
       )
@@ -1243,37 +1157,18 @@ function BlankExchangeOverlay({
 
   const overlayGridStyle: CSSProperties = {
     ['--discard-tracker-slots-across' as string]: DISCARD_TRACKER_SORTED_BAND_COLS,
-    ...(layout
+    ...(bandW !== null
       ? {
-          width: layout.contentW,
-          gap: `${layout.rowGap}px`,
-          ['--player-rack-face-gap' as string]: `${layout.faceGap}px`,
-          ['--bx-rack-tile-w' as string]: `${layout.tileW}px`,
-          ['--bx-rack-tile-h' as string]: `${layout.tileH}px`,
-          ['--bx-exposure-slot-h' as string]: `${layout.tileH}px`,
-          ['--bx-tile-face-border-radius' as string]: `${layout.cornerR}px`,
-          ['--bx-discard-tray-tile-corner-r' as string]: `${layout.cornerR}px`,
-          ['--bx-sorted-discard-suit-label-w' as string]: `${layout.suitLabelW}px`,
-          ['--bx-sorted-discard-suit-label-h' as string]: `${layout.tileH}px`,
-          ['--bx-sorted-discard-suit-label-fs' as string]: `${layout.suitLabelFs}px`,
+          width: bandW,
+          gap: `${BLANK_EXCHANGE_POPUP_ROW_GAP}px`,
+          ['--player-rack-face-gap' as string]: `${BLANK_EXCHANGE_POPUP_FACE_GAP}px`,
         }
       : {}),
   }
-  const scaleHostStyle: CSSProperties | undefined = layout
-    ? {
-        width: layout.contentW * layout.scale,
-        height: layout.bandH * layout.scale,
-        opacity: 1,
-      }
-    : { opacity: 0 }
-  const mirrorStyle: CSSProperties | undefined = layout
-    ? {
-        width: layout.contentW,
-        height: layout.bandH,
-        transform: `scale(${layout.scale})`,
-        transformOrigin: 'top left',
-      }
-    : undefined
+  const scaleHostStyle: CSSProperties = bandW !== null ? { opacity: 1 } : { opacity: 0 }
+  // No transform: the grid is sized directly and its @container fills it with tiles. Flow the mirror
+  // in-line (override the absolute board-mirror positioning) so the panel sizes to the band.
+  const mirrorStyle: CSSProperties = { position: 'static' }
 
   return (
     <div
