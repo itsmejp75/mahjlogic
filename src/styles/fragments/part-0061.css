@@ -898,6 +898,13 @@
   opacity: 1;
 }
 
+/* Called-tile thrower: inner green border on the seat box (no fill) — marks who threw the called tile. */
+.discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--seat-label.sorted-discard-tray__slot--seat-called:not(.sorted-discard-tray__slot--seat-turn) {
+  border-radius: var(--discard-tray-tile-corner-r, var(--tile-face-border-radius));
+  box-shadow: inset 0 0 0 max(1.5px, calc(var(--rack-tile-w) * 0.07)) var(--card-ink-green, #52b147);
+}
+
 /*
  * Undiscarded slots: glyph-only on the tray unless --suggest-need (coach lit fill).
  * Undiscarded --suggest-dim keeps transparent face; glyph fades via opacity below.

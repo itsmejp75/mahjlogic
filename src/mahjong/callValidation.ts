@@ -58,6 +58,10 @@ export const MSG_SWAP_BLANK_NO_DISCARDS =
 export const MSG_SWAP_NOTHING_AVAILABLE =
   'There is nothing to swap right now. On your turn you can redeem an exposed joker by staging the matching natural tile, or exchange a blank in your hand for any discarded tile (except a joker).'
 
+/** Discard blocked: blank staged but the rack can still chase a winning line. */
+export const MSG_DISCARD_BLANK_USE_SWAP =
+  'A blank tile is too valuable to throw away while you still have a playable hand. Use Swap to exchange it for a discarded tile instead.'
+
 export type CallValidationRoundSlice = {
   mainPhase: string
   activeBotDiscard: TileInstance | null

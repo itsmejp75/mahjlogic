@@ -1092,6 +1092,72 @@ export function greedyPatternMatchDetail(
   return { usedOrder: usedOut, usedMeta }
 }
 
+/** One blank redeemed against a distinct discarded tile the focused pattern still needs. */
+export type BlankExchangeFill = { blankTileId: string; targetDef: TileDef }
+
+/**
+ * Greedily redeem each blank in `rack` against a distinct discarded tile the pattern is still short.
+ * A blank counts only when swapping it for an available discard copy raises the `computeGroupMatch`
+ * score (same basis as tiles-away). Each redemption consumes one discard copy, so N blanks require
+ * N distinct discarded tiles. Returns one entry per blank that helps (rack order), capped so the
+ * pattern is never credited past `roughTarget`. `eligibleDiscardDefs` carries multiplicity (one
+ * entry per available discard copy — exclude jokers/blanks before passing).
+ */
+export function computeBlankExchangeFills(
+  rack: TileInstance[],
+  p: PracticePattern,
+  eligibleDiscardDefs: readonly TileDef[],
+  opts?: { exposureTileIds?: ReadonlySet<string> },
+): BlankExchangeFill[] {
+  const blanks = rack.filter((t) => t.def.cat === 'blank')
+  if (blanks.length === 0 || eligibleDiscardDefs.length === 0) return []
+
+  const availByKey = new Map<string, { def: TileDef; count: number }>()
+  for (const d of eligibleDiscardDefs) {
+    const k = fullDefKey(d)
+    const cur = availByKey.get(k)
+    if (cur) cur.count += 1
+    else availByKey.set(k, { def: d, count: 1 })
+  }
+
+  const matchOpts: GroupMatchOpts = {
+    noJokers: p.section === 'SINGLES AND PAIRS',
+    leftToRight: true,
+    exposureTileIds: opts?.exposureTileIds,
+  }
+  const score = (tiles: TileInstance[]): number =>
+    p.groups?.length
+      ? computeGroupMatch(tiles, p.groups, matchOpts)
+      : tiles.filter((t) => p.matches(t.def)).length
+
+  // Blanks never match a pattern slot on their own, so drop them from the working rack and
+  // simulate each redemption as adding a real tile of the chosen discard def.
+  const working = rack.filter((t) => t.def.cat !== 'blank')
+  let current = score(working)
+  const fills: BlankExchangeFill[] = []
+  let probeSeq = 0
+
+  for (const blank of blanks) {
+    if (current >= p.roughTarget) break
+    let picked: { key: string; def: TileDef; next: number } | null = null
+    for (const [key, entry] of availByKey) {
+      if (entry.count <= 0) continue
+      const next = score([...working, { id: `__bx_probe_${probeSeq}`, def: entry.def }])
+      probeSeq += 1
+      if (next > current) {
+        picked = { key, def: entry.def, next }
+        break
+      }
+    }
+    if (!picked) break
+    working.push({ id: `__bx_${blank.id}`, def: picked.def })
+    current = picked.next
+    availByKey.get(picked.key)!.count -= 1
+    fills.push({ blankTileId: blank.id, targetDef: picked.def })
+  }
+  return fills
+}
+
 /**
  * Tile ids to ring on the rack for the focused line. With explicit `p.groups`, starts from strip
  * placement (`computePreviewStripAssignment`) for joker/coach alignment, then **always** includes
@@ -4853,6 +4919,13 @@ export type RankSuggestedHandsInput = {
    * Card book to rank against. Defaults to the session book ({@link getActiveCardPatterns}).
    */
   patterns?: PracticePattern[]
+  /**
+   * Discarded tile defs eligible to redeem a blank in hand (one entry per available copy; exclude
+   * jokers/blanks). When provided and the rack holds blanks, each line credits blanks that can be
+   * swapped for a discard the line still needs toward {@link SuggestedHandLine.tilesNeededRough}
+   * (see {@link computeBlankExchangeFills}). Omit (or empty) for no blank-exchange credit.
+   */
+  blankExchangeDiscardDefs?: readonly TileDef[]
 }
 
 function cardBookForRankInput(input: RankSuggestedHandsInput): PracticePattern[] {
@@ -4929,7 +5002,19 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
         })
       : rackForPattern.filter((t) => p.matches(t.def)).length
     const visibleDeadMatches = visible.filter((t) => p.matches(t.def)).length
-    const tilesNeededRough = Math.max(0, p.roughTarget - matchedInHand)
+    // Credit blanks in hand that could be redeemed for a discard this line still needs. Each blank
+    // consumes a distinct discard copy, so multiple blanks need multiple distinct discarded tiles.
+    const blankFillCount =
+      input.blankExchangeDiscardDefs && input.blankExchangeDiscardDefs.length > 0
+        ? computeBlankExchangeFills(
+            rackForPattern,
+            p,
+            input.blankExchangeDiscardDefs,
+            groupMatchExposureOpts,
+          ).length
+        : 0
+    const matchedWithBlanks = Math.min(p.roughTarget, matchedInHand + blankFillCount)
+    const tilesNeededRough = Math.max(0, p.roughTarget - matchedWithBlanks)
     const pressure = pressureLabel(tilesNeededRough, wallRemaining)
 
     const note =
@@ -4941,7 +5026,7 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
       id: p.id,
       title: p.title,
       titleSegments: p.titleSegments,
-      matchedInHand,
+      matchedInHand: matchedWithBlanks,
       tilesNeededRough,
       wallRemaining,
       visibleDeadMatches,

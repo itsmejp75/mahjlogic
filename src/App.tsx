@@ -105,6 +105,7 @@ import { getActiveCardPatterns, setActiveCardPatterns } from './card/activeCardP
 import {
   buildPinnedPatternsFromFocusKey,
   computeRackPatternHighlightIds,
+  computeBlankExchangeFills,
   greedyPatternMatchDetail,
   jokerSwapHandHintUsesSingleBounceIteration,
   rankSuggestedHands,
@@ -145,6 +146,7 @@ import {
   chooseBotCharlestonPass,
   chooseBotDiscard,
   botCallStrategicProbability,
+  tryBotBlankExchange,
   DEFAULT_BOT_DIFFICULTY,
   isBotDifficulty,
   type BotRankContext,
@@ -162,6 +164,7 @@ import {
   MSG_CALL_DEAD_JOKER,
   MSG_CALL_INSUFFICIENT_TILES,
   MSG_MAHJONG_DURING_CHARLESTON,
+  MSG_DISCARD_BLANK_USE_SWAP,
   MSG_SWAP_BLANK_NO_DISCARDS,
   MSG_SWAP_NO_EXPOSED_JOKERS,
   MSG_SWAP_NO_LEGAL_FOR_TILE,
@@ -217,6 +220,9 @@ import './styles/style.css'
 
 /** Conservative floor used while the suggested-hands sheet is remeasured during orientation changes. */
 const SUGGESTED_DISCARD_OVERLAY_MIN_SHEET_PX = 112
+
+/** Stable empty list so blank-exchange inputs keep a constant identity when no blank is held. */
+const EMPTY_TILE_DEF_LIST: readonly TileDef[] = []
 
 /** Wall-heat gradient: flat green at opening count; slides toward red after the first tile leaves the wall. */
 function wallRemainHeatStyle(
@@ -726,9 +732,11 @@ function HandRackMenuAnchor({
 function DiscardTrackerBotSeatLabel({
   seat,
   isActiveTurn = false,
+  isCalledThrower = false,
 }: {
   seat: BotSeat
   isActiveTurn?: boolean
+  isCalledThrower?: boolean
 }) {
   const label = seat[0]
   return (
@@ -743,6 +751,7 @@ function DiscardTrackerBotSeatLabel({
           'sorted-discard-tray__slot',
           'sorted-discard-tray__slot--seat-label',
           isActiveTurn ? 'sorted-discard-tray__slot--seat-turn' : '',
+          isCalledThrower ? 'sorted-discard-tray__slot--seat-called' : '',
         ]
           .filter(Boolean)
           .join(' ')}
@@ -1136,11 +1145,14 @@ function computeBlankExchangePopupBandWidth(): number {
 function BlankExchangeOverlay({
   discardPile,
   blankTilesEnabled,
+  suggestedNeedDefs,
   onPick,
   onCancel,
 }: {
   discardPile: readonly DiscardEntry[]
   blankTilesEnabled: boolean
+  /** Mirrors the on-board tracker's suggested-hand guide: needed tiles lit, others dimmed. */
+  suggestedNeedDefs: readonly TileDef[] | null
   onPick: (def: TileDef) => void
   onCancel: () => void
 }) {
@@ -1152,6 +1164,8 @@ function BlankExchangeOverlay({
   const [bandW, setBandW] = useState<number | null>(null)
   /** Width/height of the action-row Call/Swap button so Cancel matches its shape. */
   const [actionBtnSize, setActionBtnSize] = useState<{ w: number; h: number } | null>(null)
+  /** Horizontal shift (px) so the panel centers on the playing area, not the whole viewport. */
+  const [centerOffsetX, setCenterOffsetX] = useState(0)
 
   useLayoutEffect(() => {
     const measure = () => {
@@ -1164,6 +1178,31 @@ function BlankExchangeOverlay({
       if (actionBtn) {
         const r = actionBtn.getBoundingClientRect()
         if (r.width > 1 && r.height > 1) setActionBtnSize({ w: r.width, h: r.height })
+      }
+
+      // Center on the main rack / action-button area (shifted right by the device cutout's safe
+      // inset) rather than the whole window. Offset = play-area center − viewport center.
+      const playArea =
+        document.querySelector('.panel--hand') ??
+        document.querySelector('.app-rack-stage') ??
+        document.querySelector('.app-play-split')
+      if (playArea) {
+        const pr = playArea.getBoundingClientRect()
+        if (pr.width > 1) {
+          let offset = pr.left + pr.width / 2 - window.innerWidth / 2
+          // Clamp so the (centered) panel never spills past either viewport edge once shifted.
+          const panelEl = document.querySelector('.blank-exchange-overlay__panel')
+          const panelW = panelEl ? panelEl.getBoundingClientRect().width : 0
+          if (panelW > 1) {
+            const margin = 6
+            const half = panelW / 2
+            const winCenter = window.innerWidth / 2
+            const minOffset = margin + half - winCenter
+            const maxOffset = window.innerWidth - margin - half - winCenter
+            if (minOffset <= maxOffset) offset = Math.min(Math.max(offset, minOffset), maxOffset)
+          }
+          setCenterOffsetX((prev) => (Math.abs(prev - offset) < 0.5 ? prev : offset))
+        }
       }
     }
     measure()
@@ -1199,6 +1238,7 @@ function BlankExchangeOverlay({
       <div
         className="blank-exchange-overlay__panel"
         onClick={(e) => e.stopPropagation()}
+        style={centerOffsetX ? { transform: `translateX(${centerOffsetX}px)` } : undefined}
       >
         <div className="blank-exchange-overlay__scale-host" style={scaleHostStyle}>
           <div
@@ -1221,6 +1261,7 @@ function BlankExchangeOverlay({
                         leadingSuitLabelTone="bam"
                         ariaLabel="Exchange row 1"
                         discardPile={discardPile}
+                        suggestedNeedDefs={suggestedNeedDefs}
                         onSlotActivate={onPick}
                         pickableDefs={pickableDefs}
                       />
@@ -1233,6 +1274,7 @@ function BlankExchangeOverlay({
                         leadingSuitLabelTone="crak"
                         ariaLabel="Exchange row 2"
                         discardPile={discardPile}
+                        suggestedNeedDefs={suggestedNeedDefs}
                         onSlotActivate={onPick}
                         pickableDefs={pickableDefs}
                       />
@@ -1246,6 +1288,7 @@ function BlankExchangeOverlay({
                         ariaLabel="Exchange row 3"
                         discardPile={discardPile}
                         blankTilesEnabled={blankTilesEnabled}
+                        suggestedNeedDefs={suggestedNeedDefs}
                         onSlotActivate={onPick}
                         pickableDefs={pickableDefs}
                       />
@@ -1283,6 +1326,7 @@ function DiscardTrackerSlotGrid({
   botExposures,
   mainPhase,
   activeBotIndex,
+  calledThrowerRowIdx,
   jokerSwapUiActive,
   animationsEnabled,
   botExposureFlyInTileIds,
@@ -1298,6 +1342,8 @@ function DiscardTrackerSlotGrid({
   botExposures: BotExposure[]
   mainPhase: MainPhase
   activeBotIndex: number | null
+  /** Seat row (0=South, 1=West, 2=North) that threw the tile currently being called. */
+  calledThrowerRowIdx: number | null
   jokerSwapUiActive: boolean
   animationsEnabled: boolean
   botExposureFlyInTileIds: ReadonlySet<string> | null
@@ -1375,6 +1421,7 @@ function DiscardTrackerSlotGrid({
             <DiscardTrackerBotSeatLabel
               seat={seat}
               isActiveTurn={mainPhase === 'bot-turn' && activeBotIndex === rowIdx}
+              isCalledThrower={calledThrowerRowIdx === rowIdx}
             />
             <OpponentExposureDropZone
               seat={seat}
@@ -1555,6 +1602,8 @@ function EastDiscardStagingSlot({
 type BotTurnBanner = {
   callerBotIndex: 0 | 1 | 2
   calledDef: TileDef
+  /** Seat (0=South, 1=West, 2=North) that threw the tile the caller claimed. */
+  discarderBotIndex: 0 | 1 | 2
 }
 
 type RoundState = {
@@ -1968,6 +2017,40 @@ function performBotPreDiscardSwaps(
   return { hand: curHand, eastExposures: curEast, botExposures: curBots }
 }
 
+/** Joker redemptions then blank-for-discard exchange — both on this bot's own turn only. */
+function applyBotTurnSwapsAndBlankExchange(
+  hand: TileInstance[],
+  discardPile: DiscardEntry[],
+  seat: Seat,
+  botSeat: BotSeat,
+  wall: TileInstance[],
+  eastExposures: EastExposure[],
+  botExposures: BotExposure[],
+  difficulty: BotDifficulty,
+): {
+  hand: TileInstance[]
+  discardPile: DiscardEntry[]
+  eastExposures: EastExposure[]
+  botExposures: BotExposure[]
+} {
+  const swapped = performBotPreDiscardSwaps(hand, eastExposures, botExposures, difficulty)
+  const ctx: BotRankContext = {
+    hand: swapped.hand,
+    botSeat,
+    wall,
+    discardPile,
+    eastExposures: swapped.eastExposures,
+    botExposures: swapped.botExposures,
+  }
+  const exchanged = tryBotBlankExchange(ctx, seat, difficulty)
+  return {
+    hand: exchanged.hand,
+    discardPile: exchanged.discardPile,
+    eastExposures: swapped.eastExposures,
+    botExposures: swapped.botExposures,
+  }
+}
+
 /**
  * Tiles remaining threshold below which a bot may discard a joker as a deliberate
  * defensive play. Discarded jokers are dead — no opponent can call them — making
@@ -1993,19 +2076,29 @@ function runOneBotTurn(
   }
   const [drawn, ...wallNext] = wall
   const handWithDraw = [...botHand, drawn]
-  // Redeem any jokers available in exposed melds before deciding what to discard
-  const swapped = performBotPreDiscardSwaps(handWithDraw, eastExposures, botExposures, botDifficulty)
+  const botSeat = (seat.charAt(0).toUpperCase() + seat.slice(1)) as BotSeat
+  const swapped = applyBotTurnSwapsAndBlankExchange(
+    handWithDraw,
+    discardPile,
+    seat,
+    botSeat,
+    wallNext,
+    eastExposures,
+    botExposures,
+    botDifficulty,
+  )
   const handAfterSwaps = swapped.hand
+  const discardPileAfterSwaps = swapped.discardPile
   const nonJokers = handAfterSwaps.filter((t) => t.def.cat !== 'joker')
   const jokers = handAfterSwaps.filter((t) => t.def.cat === 'joker')
 
   // ── Self-draw Mah Jongg check ───────────────────────────────────────────────
-  const botSeatLabel = (seat.charAt(0).toUpperCase() + seat.slice(1)) as typeof BOT_LABELS[number]
+  const botSeatLabel = botSeat as typeof BOT_LABELS[number]
   const thisBotExposures = swapped.botExposures.filter((e) => e.seat === botSeatLabel)
   const mjRankInput: RankSuggestedHandsInput = {
     hand: handAfterSwaps,
     wallRemaining: wallNext.length,
-    discards: discardPile.map((e) => e.tile),
+    discards: discardPileAfterSwaps.map((e) => e.tile),
     exposures: swapped.botExposures,
     playerClaimMelds: thisBotExposures,
     eastTableClaimMelds: swapped.eastExposures,
@@ -2016,7 +2109,7 @@ function runOneBotTurn(
       return {
         botHand: handAfterSwaps,
         wall: wallNext,
-        discardPile,
+        discardPile: discardPileAfterSwaps,
         discarded: null,
         eastExposuresOut: swapped.eastExposures,
         botExposuresOut: swapped.botExposures,
@@ -2040,12 +2133,11 @@ function runOneBotTurn(
     pick = jokers[Math.floor(Math.random() * jokers.length)]!
   } else {
     // Strategic discard: drop the tile that hurts the best hand least.
-    const botSeat = (seat.charAt(0).toUpperCase() + seat.slice(1)) as BotSeat
     const ctx: BotRankContext = {
       hand: handAfterSwaps,
       botSeat,
       wall: wallNext,
-      discardPile,
+      discardPile: discardPileAfterSwaps,
       eastExposures: swapped.eastExposures,
       botExposures: swapped.botExposures,
     }
@@ -2055,7 +2147,7 @@ function runOneBotTurn(
   return {
     botHand: handNext,
     wall: wallNext,
-    discardPile: [...discardPile, { tile: pick, seat }],
+    discardPile: [...discardPileAfterSwaps, { tile: pick, seat }],
     discarded: pick,
     eastExposuresOut: swapped.eastExposures,
     botExposuresOut: swapped.botExposures,
@@ -2425,15 +2517,20 @@ function commitEastDiscardWithHand(
     // Before discarding, let the bot redeem any available jokers from exposures.
     // The called tile is already locked in the newExposure — only hand tiles are eligible for swaps.
     const allBotExposuresWithNew = [...r.botExposures, newExposure]
-    const postCallSwap = performBotPreDiscardSwaps(
-      botsNext[botIndex],
+    const postCallPrep = applyBotTurnSwapsAndBlankExchange(
+      botsNext[botIndex]!,
+      r.discardPile,
+      BOT_SEATS[botIndex]!,
+      BOT_LABELS[botIndex]! as BotSeat,
+      r.wall,
       r.eastExposures,
       allBotExposuresWithNew,
       botDifficulty,
     )
-    botsNext[botIndex] = postCallSwap.hand
-    const eastExposuresAfterCallSwap = postCallSwap.eastExposures
-    const botExposuresAfterCallSwap = postCallSwap.botExposures
+    botsNext[botIndex] = postCallPrep.hand
+    const eastExposuresAfterCallSwap = postCallPrep.eastExposures
+    const botExposuresAfterCallSwap = postCallPrep.botExposures
+    const discardPileAfterCallPrep = postCallPrep.discardPile
 
     const afterCallCtx = buildBotContext(
       r,
@@ -2441,6 +2538,7 @@ function commitEastDiscardWithHand(
       botIndex,
       { east: eastExposuresAfterCallSwap, bot: botExposuresAfterCallSwap },
     )
+    afterCallCtx.discardPile = discardPileAfterCallPrep
     const nonJokersAfterCall = botsNext[botIndex]!.filter((t) => t.def.cat !== 'joker')
     const pick = nonJokersAfterCall.length > 0
       ? chooseBotDiscard(afterCallCtx, botDifficulty)
@@ -2472,7 +2570,7 @@ function commitEastDiscardWithHand(
     botsNext[botIndex] = botsNext[botIndex].filter((t) => t.id !== pick.id)
     // East's discard was called — it goes into the exposure, not the pile
     const pileWithCallerDiscard: DiscardEntry[] = [
-      ...r.discardPile,
+      ...discardPileAfterCallPrep,
       { tile: pick, seat: BOT_SEATS[botIndex]! },
     ]
 
@@ -2692,15 +2790,20 @@ function applySkipBotDiscard(
     // Before discarding, let the calling bot redeem any available jokers.
     // The called tile is locked in newExposure — only remaining hand tiles are eligible.
     const allBotExposuresSkip = [...r.botExposures, newExposure]
-    const postCallSwapSkip = performBotPreDiscardSwaps(
+    const postCallPrepSkip = applyBotTurnSwapsAndBlankExchange(
       botsNext[callerIdx]!,
+      pileWithoutClaimed,
+      BOT_SEATS[callerIdx]!,
+      BOT_LABELS[callerIdx]! as BotSeat,
+      r.wall,
       r.eastExposures,
       allBotExposuresSkip,
       botDifficulty,
     )
-    botsNext[callerIdx] = postCallSwapSkip.hand
-    const eastExposuresAfterSkipSwap = postCallSwapSkip.eastExposures
-    const botExposuresAfterSkipSwap = postCallSwapSkip.botExposures
+    botsNext[callerIdx] = postCallPrepSkip.hand
+    const eastExposuresAfterSkipSwap = postCallPrepSkip.eastExposures
+    const botExposuresAfterSkipSwap = postCallPrepSkip.botExposures
+    const discardPileAfterSkipPrep = postCallPrepSkip.discardPile
 
     const afterSkipCtx = buildBotContext(
       r,
@@ -2708,6 +2811,7 @@ function applySkipBotDiscard(
       callerIdx,
       { east: eastExposuresAfterSkipSwap, bot: botExposuresAfterSkipSwap },
     )
+    afterSkipCtx.discardPile = discardPileAfterSkipPrep
     const nonJokersSkip = botsNext[callerIdx]!.filter((t) => t.def.cat !== 'joker')
     const pick =
       nonJokersSkip.length > 0
@@ -2721,7 +2825,7 @@ function applySkipBotDiscard(
         hand: draw.hand,
         wall: draw.wall,
         bots: botsNext,
-        discardPile: pileWithoutClaimed,
+        discardPile: discardPileAfterSkipPrep,
         eastExposures: eastExposuresAfterSkipSwap,
         botExposures: botExposuresAfterSkipSwap,
         mainPhase: draw.drawnTileId === null ? 'wall-game' : 'east-discard',
@@ -2737,7 +2841,7 @@ function applySkipBotDiscard(
 
     botsNext[callerIdx] = botsNext[callerIdx]!.filter((t) => t.id !== pick.id)
     const discardPile: DiscardEntry[] = [
-      ...pileWithoutClaimed,
+      ...discardPileAfterSkipPrep,
       { tile: pick, seat: BOT_SEATS[callerIdx]! },
     ]
 
@@ -2754,6 +2858,7 @@ function applySkipBotDiscard(
       botTurnBanner: {
         callerBotIndex: callerIdx,
         calledDef: calledTile.def,
+        discarderBotIndex: fromIdx as 0 | 1 | 2,
       },
       drawnTileId: null,
       selectedHandTileId: null,
@@ -3208,6 +3313,34 @@ function applyDeclareMahjongSelfDraw(r: RoundState): RoundState {
   }
 }
 
+/**
+ * Mobile WebKit (iOS PWA) scrolls a freshly-focused control into view on the first tap inside a
+ * scroll container, which yanks the menu body to the top. We can't observe that jump from `onClick`
+ * (focus + its scroll already happened by then), so capture the body's `scrollTop` on `pointerdown`
+ * — which fires *before* focus — and re-pin it for a few frames afterward (the native scroll can land
+ * a frame or two late). Returns the captured top so the caller can restore it after toggling.
+ */
+function captureMenuBodyScrollTop(target: HTMLElement): {
+  body: HTMLElement
+  top: number
+} | null {
+  const body = target.closest('.app-menu-modal__body')
+  if (!(body instanceof HTMLElement)) return null
+  return { body, top: body.scrollTop }
+}
+
+function pinMenuBodyScrollTop(captured: { body: HTMLElement; top: number } | null) {
+  if (!captured) return
+  const { body, top } = captured
+  let frames = 0
+  const restore = () => {
+    if (body.scrollTop !== top) body.scrollTop = top
+    frames += 1
+    if (frames < 8) requestAnimationFrame(restore)
+  }
+  restore()
+}
+
 /** Settings menu: horizontal on/off switch (see `.app-menu-tray__toggle-slider` in `src/styles`). */
 function AppMenuSettingSwitch({
   labelId,
@@ -3218,15 +3351,7 @@ function AppMenuSettingSwitch({
   pressed: boolean
   onToggle: () => void
 }) {
-  const menuScrollTopRef = useRef<number | null>(null)
-
-  useLayoutEffect(() => {
-    const savedScrollTop = menuScrollTopRef.current
-    if (savedScrollTop === null) return
-    menuScrollTopRef.current = null
-    const body = document.querySelector('.app-menu-modal__body')
-    if (body instanceof HTMLElement) body.scrollTop = savedScrollTop
-  }, [pressed])
+  const capturedRef = useRef<{ body: HTMLElement; top: number } | null>(null)
 
   return (
     <button
@@ -3234,10 +3359,14 @@ function AppMenuSettingSwitch({
       className="btn app-menu-tray__item app-menu-tray__item--toggle app-menu-tray__item--switch app-menu-modal__toggle"
       aria-labelledby={labelId}
       aria-pressed={pressed}
-      onClick={(e) => {
-        const body = e.currentTarget.closest('.app-menu-modal__body')
-        menuScrollTopRef.current = body instanceof HTMLElement ? body.scrollTop : null
+      onPointerDownCapture={(e) => {
+        capturedRef.current = captureMenuBodyScrollTop(e.currentTarget)
+      }}
+      onClick={() => {
+        const captured = capturedRef.current
+        capturedRef.current = null
         onToggle()
+        pinMenuBodyScrollTop(captured)
       }}
     >
       <span className="app-menu-sr-only">{pressed ? 'On' : 'Off'}</span>
@@ -3304,6 +3433,7 @@ export default function App() {
   const [suggestedDiscardOverlayPeekPx, setSuggestedDiscardOverlayPeekPx] = useState(0)
   const suggestedHandsPopupRef = useRef<HTMLDivElement>(null)
   const eastExposureRackTopRef = useRef<HTMLDivElement>(null)
+  const blankCountScrollRef = useRef<{ body: HTMLElement; top: number } | null>(null)
   const [suggestedDiscardOverlayBounds, setSuggestedDiscardOverlayBounds] = useState({
     topExtendPx: 0,
     bottomExtendPx: 0,
@@ -3754,6 +3884,7 @@ export default function App() {
     drawnTileId,
     activeBotIndex,
     activeBotDiscard,
+    botTurnBanner,
     eastExposures,
     botExposures,
     pendingEastDiscardTile,
@@ -4096,6 +4227,19 @@ export default function App() {
     return ids.length > 0 ? new Set(ids) : undefined
   }, [eastExposures])
 
+  /**
+   * Discarded tile defs (with multiplicity — one entry per copy) a blank in hand could be redeemed
+   * for. Mirrors {@link discardedDefsForBlankExchange} eligibility (jokers/blanks excluded) but
+   * keeps duplicates so multiple blanks can each claim a distinct discarded tile. Empty (stable
+   * identity) unless the hand holds a blank, so non-blank racks pay no extra ranking/highlight cost.
+   */
+  const blankExchangeEligibleDiscardDefs = useMemo((): readonly TileDef[] => {
+    if (!deferredHand.some((t) => t.def.cat === 'blank')) return EMPTY_TILE_DEF_LIST
+    return discardPile
+      .map((e) => e.tile.def)
+      .filter((d) => d.cat !== 'joker' && d.cat !== 'blank')
+  }, [deferredHand, discardPile])
+
   /** Joker swap hint (dock-bounce): only starts during East's discard turn. */
   const activeJokerSwapHintBounceIds = useMemo(() => {
     if (mainPhase !== 'east-discard' || !jokerSwapUiActive || !animationsEnabled) {
@@ -4362,8 +4506,17 @@ export default function App() {
       playerClaimMelds: eastExposures,
       eastTableClaimMelds: eastExposures,
       patterns: cardPatterns,
+      blankExchangeDiscardDefs: blankExchangeEligibleDiscardDefs,
     }),
-    [deferredHand, wall.length, discardTiles, botExposures, eastExposures, cardPatterns],
+    [
+      deferredHand,
+      wall.length,
+      discardTiles,
+      botExposures,
+      eastExposures,
+      cardPatterns,
+      blankExchangeEligibleDiscardDefs,
+    ],
   )
 
   /** Staged-call Mah Jongg distance — mirrors `declareMahjong` when call-staging tiles are selected. */
@@ -4541,6 +4694,23 @@ export default function App() {
         }
       }
 
+      // Light blanks that could be redeemed for a discarded tile this line still needs (no glyph —
+      // the target is ambiguous when several discards qualify). Same fill logic as the tray's
+      // tiles-away credit, so the ring and the "Away" count stay consistent.
+      if (
+        blankExchangeEligibleDiscardDefs.length > 0 &&
+        rackForSuggestedPatternMatch.some((t) => t.def.cat === 'blank')
+      ) {
+        for (const fill of computeBlankExchangeFills(
+          rackForSuggestedPatternMatch,
+          pinnedP,
+          blankExchangeEligibleDiscardDefs,
+          greedyUiOpts,
+        )) {
+          bestIds.add(fill.blankTileId)
+        }
+      }
+
       return bestIds
     }
 
@@ -4557,7 +4727,7 @@ export default function App() {
     }
 
     return { bestIds: computeAvailableRackHighlightIds(p) }
-  }, [deferredSuggestedFocusHandKey, suggestedSuppressedHandKey, mainPhase, rackForSuggestedPatternMatch, suggestedHandsExposureTileIds, cardPatterns, deadTileHintEnabled, discardTiles, botExposures])
+  }, [deferredSuggestedFocusHandKey, suggestedSuppressedHandKey, mainPhase, rackForSuggestedPatternMatch, suggestedHandsExposureTileIds, cardPatterns, deadTileHintEnabled, discardTiles, botExposures, blankExchangeEligibleDiscardDefs])
 
   /**
    * Bot exposure rings for the focused line: naturals that match strip “need” slots (dead tiles you
@@ -6208,10 +6378,31 @@ export default function App() {
     [pushRound],
   )
   const commitEastDiscard = useCallback(() => {
+    const cur = roundRef.current
+    const pendingTile = cur.pendingEastDiscardTile
+    if (cur.mainPhase === 'east-discard' && pendingTile?.def.cat === 'blank') {
+      const rankInput: RankSuggestedHandsInput = {
+        hand: [...cur.hand, pendingTile],
+        wallRemaining: cur.wall.length,
+        discards: cur.discardPile.map((e) => e.tile),
+        exposures: cur.botExposures,
+        playerClaimMelds: cur.eastExposures,
+        eastTableClaimMelds: cur.eastExposures,
+        patterns: getActiveCardPatterns(),
+      }
+      if (summarizeRackTowardWin(rankInput).bestTilesAway < 14) {
+        queueMicrotask(() =>
+          setBlockingDialog({
+            variant: 'table',
+            title: BLOCKING_TITLE_SWAP_ERROR,
+            message: MSG_DISCARD_BLANK_USE_SWAP,
+          }),
+        )
+        return
+      }
+    }
     if (gameModeRef.current === 'training') {
-      const cur = roundRef.current
       // Post-discard rack: the parked discard is leaving the hand and becomes table-visible.
-      const pendingTile = cur.pendingEastDiscardTile
       if (cur.mainPhase === 'east-discard' && pendingTile) {
         const rankInput: RankSuggestedHandsInput = {
           hand: cur.hand,
@@ -7888,7 +8079,15 @@ export default function App() {
                           role="radio"
                           aria-checked={blankTilesEnabled && blankTileCount === n}
                           disabled={!blankTilesEnabled}
-                          onClick={() => setBlankTileCountLevel(n)}
+                          onPointerDownCapture={(e) => {
+                            blankCountScrollRef.current = captureMenuBodyScrollTop(e.currentTarget)
+                          }}
+                          onClick={() => {
+                            const captured = blankCountScrollRef.current
+                            blankCountScrollRef.current = null
+                            setBlankTileCountLevel(n)
+                            pinMenuBodyScrollTop(captured)
+                          }}
                         >
                           {n}
                         </button>
@@ -8534,6 +8733,11 @@ export default function App() {
                           botExposures={botExposures}
                           mainPhase={mainPhase}
                           activeBotIndex={activeBotIndex}
+                          calledThrowerRowIdx={
+                            mainPhase === 'call-staging' && activeBotIndex != null
+                              ? activeBotIndex
+                              : botTurnBanner?.discarderBotIndex ?? null
+                          }
                           jokerSwapUiActive={jokerSwapUiActive}
                           animationsEnabled={animationsEnabled}
                           botExposureFlyInTileIds={botExposureFlyInTileIds}
@@ -9168,6 +9372,7 @@ export default function App() {
                 <BlankExchangeOverlay
                   discardPile={displayedDiscardPile}
                   blankTilesEnabled={blankTilesEnabled}
+                  suggestedNeedDefs={suggestedDiscardTrackerNeedDefs}
                   onPick={performBlankExchange}
                   onCancel={closeBlankExchange}
                 />

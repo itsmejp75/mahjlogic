@@ -24,17 +24,26 @@
  * *combined* table exposures must fit at least one non–closed book line—same
  * structural check the ranker uses (`openClaimMeldsFitSomePracticeLine` /
  * `claimMeldsFitPracticePattern`).
+ *
+ * On its own turn, before discarding, a bot may exchange a blank for a discarded tile
+ * when that type is still needed for its best line — otherwise it holds the blank.
  */
 
 import {
+  computeSuggestedDiscardTrackerNeedDefs,
+  focusKeyForSuggestedHandLine,
   getRackTilesNotHelpingPattern,
   rankSuggestedHands,
+  suggestedHandsTiedAtBest,
+  summarizeRackTowardWin,
   type RankSuggestedHandsInput,
 } from './suggestedHands'
 import { getActiveCardPatterns } from '../card/activeCardPatternsScope'
+import { applyBlankExchange, discardedDefsForBlankExchange } from '../mahjong/blankExchange'
 import { charlestonPassEligible, pickRandomPass } from '../mahjong/charleston'
 import { shuffle } from '../mahjong/deck'
-import type { DiscardEntry, TileInstance } from '../mahjong/types'
+import type { DiscardEntry, Seat, TileDef, TileInstance } from '../mahjong/types'
+import { tileDefsEqual } from '../mahjong/tileUtils'
 import type { BotExposure, BotSeat } from './types'
 
 /** Tuning for discard heuristics and call eagerness. */
@@ -79,6 +88,17 @@ function buildInput(ctx: BotRankContext): RankSuggestedHandsInput {
 
 // ── Discard selection ─────────────────────────────────────────────────────────
 
+/** Blanks are exchanged for discards, not thrown away — unless the rack is already dead. */
+function rackIsHopelesslyDead(ctx: BotRankContext): boolean {
+  return summarizeRackTowardWin(buildInput(ctx)).bestTilesAway >= 14
+}
+
+function discardEligibleFromHand(hand: TileInstance[], allowBlankDiscards: boolean): TileInstance[] {
+  return hand.filter(
+    (t) => t.def.cat !== 'joker' && (allowBlankDiscards || t.def.cat !== 'blank'),
+  )
+}
+
 /**
  * Choose the best tile for a bot to discard.
  *
@@ -86,7 +106,8 @@ function buildInput(ctx: BotRankContext): RankSuggestedHandsInput {
  * 1. Find the best hand on the practice card (`tilesNeededRough` minimum).
  * 2. Identify which hand tiles are NOT helping that pattern.
  * 3. Discard one of those non-helpers (randomly among equals — avoids telegraphing).
- * 4. If every tile helps, discard a random non-joker (rare mid-game edge case).
+ * 4. If every tile helps, discard a random eligible tile (rare mid-game edge case).
+ * Blanks are never discarded while a winning line is still plausible — only when the rack is dead.
  */
 /** Rough wall count during Charleston for suggested-hand pressure heuristics. */
 const CHARLESTON_WALL_REMAINING_GUESS = 88
@@ -173,25 +194,30 @@ export function chooseBotDiscard(
   difficulty: BotDifficulty = 'normal',
 ): TileInstance {
   const { hand } = ctx
-  const nonJokers = hand.filter((t) => t.def.cat !== 'joker')
-  if (nonJokers.length === 0) return hand[0]! // edge case: all jokers
+  const allowBlankDiscards = rackIsHopelesslyDead(ctx)
+  const eligible = discardEligibleFromHand(hand, allowBlankDiscards)
+  if (eligible.length === 0) {
+    const jokers = hand.filter((t) => t.def.cat === 'joker')
+    if (jokers.length > 0) return jokers[0]!
+    return hand[0]! // edge case: all jokers
+  }
 
   // Weaker play: more random, wasteful discards at easy; occasional slip at normal.
   if (difficulty === 'easy' && Math.random() < 0.52) {
-    return nonJokers[Math.floor(Math.random() * nonJokers.length)]!
+    return eligible[Math.floor(Math.random() * eligible.length)]!
   }
-  if (difficulty === 'normal' && nonJokers.length > 1 && Math.random() < 0.1) {
-    return nonJokers[Math.floor(Math.random() * nonJokers.length)]!
+  if (difficulty === 'normal' && eligible.length > 1 && Math.random() < 0.1) {
+    return eligible[Math.floor(Math.random() * eligible.length)]!
   }
 
   const ranked = rankSuggestedHands(buildInput(ctx))
   if (ranked.length === 0) {
-    return nonJokers[Math.floor(Math.random() * nonJokers.length)]!
+    return eligible[Math.floor(Math.random() * eligible.length)]!
   }
 
   const bestLine = ranked[0]!
   const p = getActiveCardPatterns().find((x) => x.id === bestLine.id)
-  if (!p) return nonJokers[Math.floor(Math.random() * nonJokers.length)]!
+  if (!p) return eligible[Math.floor(Math.random() * eligible.length)]!
 
   // Rack = concealed hand + own exposed tiles (both count toward the 14).
   const ownExposureTiles = ctx.botExposures
@@ -200,10 +226,11 @@ export function chooseBotDiscard(
   const rack = [...hand, ...ownExposureTiles]
 
   const notHelpingRack = getRackTilesNotHelpingPattern(rack, p)
-  // Restrict to concealed hand only (can't discard exposed tiles) and exclude jokers.
+  // Restrict to concealed hand only (can't discard exposed tiles), jokers, and blanks (unless dead).
   const handIds = new Set(hand.map((t) => t.id))
+  const eligibleIds = new Set(eligible.map((t) => t.id))
   const nonHelpers = notHelpingRack.filter(
-    (t) => handIds.has(t.id) && t.def.cat !== 'joker',
+    (t) => handIds.has(t.id) && eligibleIds.has(t.id),
   )
 
   if (nonHelpers.length > 0) {
@@ -214,8 +241,107 @@ export function chooseBotDiscard(
     return nonHelpers[Math.floor(Math.random() * nonHelpers.length)]!
   }
 
-  // Every tile contributes — discard a random non-joker.
-  return nonJokers[Math.floor(Math.random() * nonJokers.length)]!
+  // Every tile contributes — discard a random eligible tile.
+  return eligible[Math.floor(Math.random() * eligible.length)]!
+}
+
+// ── Blank exchange ────────────────────────────────────────────────────────────
+
+function defSortKey(def: TileDef): string {
+  return JSON.stringify(def)
+}
+
+/** Natural tile types the bot's best line is still short — same basis as the discard-tracker need rings. */
+function neededDefsForBotBestLine(ctx: BotRankContext): TileDef[] {
+  const { linesAtMin, bestTilesAway } = suggestedHandsTiedAtBest(buildInput(ctx))
+  const best = linesAtMin[0]
+  if (!best || bestTilesAway >= 14) return []
+
+  const focusKey = focusKeyForSuggestedHandLine(best) ?? best.id
+  const ownExposureTiles = ctx.botExposures
+    .filter((e) => e.seat === ctx.botSeat)
+    .flatMap((e) => e.tiles)
+  const rack = [...ctx.hand, ...ownExposureTiles]
+  const exposureTileIds =
+    ownExposureTiles.length > 0
+      ? new Set(ownExposureTiles.map((t) => t.id))
+      : undefined
+  return computeSuggestedDiscardTrackerNeedDefs(focusKey, rack, exposureTileIds)
+}
+
+function defMatchesAny(def: TileDef, defs: readonly TileDef[]): boolean {
+  return defs.some((d) => tileDefsEqual(d, def))
+}
+
+/**
+ * Pick a discarded tile type to redeem a blank for. Returns null when nothing in the
+ * pile matches a need on the bot's promising hand, or when the swap would not help.
+ */
+export function chooseBotBlankExchangeDef(
+  ctx: BotRankContext,
+  eligibleDefs: readonly TileDef[],
+  difficulty: BotDifficulty = 'normal',
+): TileDef | null {
+  if (eligibleDefs.length === 0) return null
+  if (!ctx.hand.some((t) => t.def.cat === 'blank')) return null
+
+  if (difficulty === 'easy' && Math.random() < 0.42) return null
+  if (difficulty === 'normal' && Math.random() < 0.07) return null
+
+  const neededDefs = neededDefsForBotBestLine(ctx)
+  if (neededDefs.length === 0) return null
+
+  const candidates = eligibleDefs.filter((d) => defMatchesAny(d, neededDefs))
+  if (candidates.length === 0) return null
+
+  const blank = ctx.hand.find((t) => t.def.cat === 'blank')!
+  const before = tilesAway(ctx)
+  let bestAfter = before
+  const bestDefs: TileDef[] = []
+
+  for (const def of candidates) {
+    const blankIdx = ctx.hand.findIndex((t) => t.id === blank.id)
+    if (blankIdx < 0) break
+    const handAfter = [...ctx.hand]
+    handAfter[blankIdx] = { ...handAfter[blankIdx]!, def }
+    const after = tilesAway({ ...ctx, hand: handAfter })
+    if (after < bestAfter) {
+      bestAfter = after
+      bestDefs.length = 0
+      bestDefs.push(def)
+    } else if (after === bestAfter && after < before) {
+      if (!defMatchesAny(def, bestDefs)) bestDefs.push(def)
+    }
+  }
+
+  if (bestDefs.length === 0) return null
+
+  if (difficulty === 'normal' && bestDefs.length > 1 && Math.random() < 0.14) {
+    return bestDefs[Math.floor(Math.random() * bestDefs.length)]!
+  }
+  if (difficulty === 'unfair') {
+    return [...bestDefs].sort((a, b) => defSortKey(a).localeCompare(defSortKey(b)))[0]!
+  }
+  return bestDefs[Math.floor(Math.random() * bestDefs.length)]!
+}
+
+/**
+ * On this bot's turn, exchange a blank for a discarded tile the best line still needs.
+ */
+export function tryBotBlankExchange(
+  ctx: BotRankContext,
+  seat: Seat,
+  difficulty: BotDifficulty = 'normal',
+): { hand: TileInstance[]; discardPile: DiscardEntry[] } {
+  const blank = ctx.hand.find((t) => t.def.cat === 'blank')
+  if (!blank) return { hand: ctx.hand, discardPile: ctx.discardPile }
+
+  const eligible = discardedDefsForBlankExchange(ctx.discardPile)
+  const chosen = chooseBotBlankExchangeDef(ctx, eligible, difficulty)
+  if (!chosen) return { hand: ctx.hand, discardPile: ctx.discardPile }
+
+  const applied = applyBlankExchange(ctx.hand, ctx.discardPile, blank.id, chosen, seat)
+  return applied ?? { hand: ctx.hand, discardPile: ctx.discardPile }
 }
 
 // ── Call decisions ────────────────────────────────────────────────────────────

@@ -41,8 +41,16 @@
   white-space: nowrap;
   overflow: visible;
   font-family: 'Figtree', var(--sans);
+  /* Match `.pass-strip-tail__instruction` (Pass 3 Right, etc.). */
+  --pass-strip-box-w: calc(3 * var(--rack-tile-w, var(--hand-top-rack-tile-w)) + 2 * var(--player-rack-face-gap, var(--rack-tile-gap)));
+  --_pass-strip-fs-pref: clamp(
+    calc(var(--pass-strip-box-w) * 0.04),
+    calc(var(--pass-strip-box-w) * 0.109),
+    1.42rem
+  );
   font-size: min(
-    clamp(0.54rem, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 0.24), 1.18rem),
+    var(--_pass-strip-fs-pref),
+    calc(var(--pass-strip-box-w) / 9.95),
     calc(var(--rack-tile-h, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 1.3333)) / 5.02)
   );
   font-weight: 600;

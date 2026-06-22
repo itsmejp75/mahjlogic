@@ -1,4 +1,4 @@
-import type { DiscardEntry, TileDef } from './types'
+import type { DiscardEntry, Seat, TileDef, TileInstance } from './types'
 import { tileDefsEqual } from './tileUtils'
 
 /**
@@ -14,4 +14,36 @@ export function discardedDefsForBlankExchange(pile: readonly DiscardEntry[]): Ti
     out.push(def)
   }
   return out
+}
+
+/**
+ * Exchange a blank in hand for a discarded tile type. Removes one matching discard entry,
+ * replaces the blank with a new tile of `chosenDef`, and puts the blank face-up in the pile.
+ */
+export function applyBlankExchange(
+  hand: TileInstance[],
+  discardPile: readonly DiscardEntry[],
+  blankTileId: string,
+  chosenDef: TileDef,
+  seat: Seat,
+): { hand: TileInstance[]; discardPile: DiscardEntry[] } | null {
+  const handIdx = hand.findIndex((t) => t.id === blankTileId && t.def.cat === 'blank')
+  if (handIdx < 0) return null
+  const eligible = discardedDefsForBlankExchange(discardPile)
+  if (!eligible.some((d) => tileDefsEqual(d, chosenDef))) return null
+
+  const takenIdx = discardPile.findIndex(({ tile }) => tileDefsEqual(tile.def, chosenDef))
+  const discardWithoutTaken =
+    takenIdx >= 0
+      ? [...discardPile.slice(0, takenIdx), ...discardPile.slice(takenIdx + 1)]
+      : [...discardPile]
+
+  const blankTile = hand[handIdx]!
+  const handNext = [...hand]
+  handNext[handIdx] = { id: crypto.randomUUID(), def: chosenDef }
+
+  return {
+    hand: handNext,
+    discardPile: [...discardWithoutTaken, { tile: blankTile, seat }],
+  }
 }
