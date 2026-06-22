@@ -3313,37 +3313,6 @@ function applyDeclareMahjongSelfDraw(r: RoundState): RoundState {
   }
 }
 
-/**
- * Mobile WebKit (iOS PWA) scrolls a freshly-focused control into view when you tap a button inside
- * an overflowing scroll container — which yanks the menu body (it only overflows in landscape, hence
- * the portrait/landscape difference the user sees). That native scroll is asynchronous and can be
- * animated, so a short rAF pin from `onClick` misses it. Instead, arm this on `pointerdown` (which
- * fires *before* focus): record the body's current `scrollTop`, then forcibly revert any scroll on
- * the body for a brief window. The user isn't drag-scrolling while tapping a toggle, so reverting
- * scroll events during this window only undoes the unwanted focus-scroll.
- */
-function holdMenuBodyScrollFromTap(target: HTMLElement) {
-  const body = target.closest('.app-menu-modal__body')
-  if (!(body instanceof HTMLElement)) return
-  const top = body.scrollTop
-  let active = true
-  const force = () => {
-    if (active && body.scrollTop !== top) body.scrollTop = top
-  }
-  body.addEventListener('scroll', force, { passive: true })
-  const start = performance.now()
-  const tick = () => {
-    force()
-    if (active && performance.now() - start < 450) {
-      requestAnimationFrame(tick)
-    } else {
-      active = false
-      body.removeEventListener('scroll', force)
-    }
-  }
-  requestAnimationFrame(tick)
-}
-
 /** Settings menu: horizontal on/off switch (see `.app-menu-tray__toggle-slider` in `src/styles`). */
 function AppMenuSettingSwitch({
   labelId,
@@ -3354,36 +3323,13 @@ function AppMenuSettingSwitch({
   pressed: boolean
   onToggle: () => void
 }) {
-  const touchHandledRef = useRef(false)
-
   return (
     <button
       type="button"
       className="btn app-menu-tray__item app-menu-tray__item--toggle app-menu-tray__item--switch app-menu-modal__toggle"
       aria-labelledby={labelId}
       aria-pressed={pressed}
-      onPointerDownCapture={(e) => {
-        holdMenuBodyScrollFromTap(e.currentTarget)
-        if (e.pointerType !== 'mouse') {
-          e.preventDefault()
-          touchHandledRef.current = true
-        }
-      }}
-      onPointerUp={(e) => {
-        if (!touchHandledRef.current || e.pointerType === 'mouse') return
-        onToggle()
-      }}
-      onPointerCancel={() => {
-        touchHandledRef.current = false
-      }}
-      onClick={(e) => {
-        if (touchHandledRef.current) {
-          touchHandledRef.current = false
-          e.preventDefault()
-          return
-        }
-        onToggle()
-      }}
+      onClick={onToggle}
     >
       <span className="app-menu-sr-only">{pressed ? 'On' : 'Off'}</span>
       <span
@@ -3449,7 +3395,6 @@ export default function App() {
   const [suggestedDiscardOverlayPeekPx, setSuggestedDiscardOverlayPeekPx] = useState(0)
   const suggestedHandsPopupRef = useRef<HTMLDivElement>(null)
   const eastExposureRackTopRef = useRef<HTMLDivElement>(null)
-  const blankCountTouchHandledRef = useRef<BlankTileCount | null>(null)
   const [suggestedDiscardOverlayBounds, setSuggestedDiscardOverlayBounds] = useState({
     topExtendPx: 0,
     bottomExtendPx: 0,
@@ -8095,28 +8040,7 @@ export default function App() {
                           role="radio"
                           aria-checked={blankTilesEnabled && blankTileCount === n}
                           disabled={!blankTilesEnabled}
-                          onPointerDownCapture={(e) => {
-                            holdMenuBodyScrollFromTap(e.currentTarget)
-                            if (e.pointerType !== 'mouse') {
-                              e.preventDefault()
-                              blankCountTouchHandledRef.current = n
-                            }
-                          }}
-                          onPointerUp={(e) => {
-                            if (e.pointerType === 'mouse' || blankCountTouchHandledRef.current !== n) return
-                            setBlankTileCountLevel(n)
-                          }}
-                          onPointerCancel={() => {
-                            if (blankCountTouchHandledRef.current === n) blankCountTouchHandledRef.current = null
-                          }}
-                          onClick={(e) => {
-                            if (blankCountTouchHandledRef.current === n) {
-                              blankCountTouchHandledRef.current = null
-                              e.preventDefault()
-                              return
-                            }
-                            setBlankTileCountLevel(n)
-                          }}
+                          onClick={() => setBlankTileCountLevel(n)}
                         >
                           {n}
                         </button>
