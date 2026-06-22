@@ -43,6 +43,7 @@
   width: 100%;
   box-sizing: border-box;
   padding: 0.12rem 0 0;
+  --hands-header-chip-fs: 1rem;
 }
 
 /* Minimalist / Illustrative: category lines — side accent lines, centered label. */
@@ -75,7 +76,7 @@
 .app-menu-modal__diff-block--tile-graphics .app-menu-modal__tile-graphics-category__label {
   flex: 0 0 auto;
   text-align: center;
-  font-size: var(--app-ui-control-fs-xs);
+  font-size: 1.15rem;
   font-weight: 600;
   letter-spacing: 0.03em;
   text-transform: capitalize;

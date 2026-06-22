@@ -32,8 +32,9 @@
   contain: layout;
 }
 
-.app-menu-modal__label {
-  font-size: var(--app-ui-control-fs, 0.9rem);
+.app-menu-modal__label,
+.app-menu-modal__row-label {
+  font-size: 1.15rem;
   font-weight: 500;
   line-height: 1.3;
   text-align: left;
@@ -117,7 +118,7 @@
   justify-content: center;
   border-radius: 999px;
   font-family: 'Figtree', var(--sans);
-  font-size: max(0.8125rem, var(--app-ui-control-fs-sm));
+  font-size: 1rem;
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0.02em;
@@ -157,7 +158,7 @@
 
 .app-menu-modal__subhead {
   margin: 0.35rem 0 0.1rem;
-  font-size: var(--app-ui-control-fs-xs);
+  font-size: 1.15rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: capitalize;
@@ -185,7 +186,7 @@
   box-sizing: border-box;
   margin: 0.12rem 0 0.45rem;
   padding: 0.38rem 0.55rem;
-  font-size: max(0.8125rem, var(--app-ui-control-fs-xs));
+  font-size: 1.15rem;
   font-weight: 600;
   text-transform: none;
   letter-spacing: 0.02em;
@@ -229,7 +230,7 @@
   font-family: 'Figtree', var(--sans);
   min-height: var(--rack-action-touch-min-h);
   padding: 0.2rem 0.3rem;
-  font-size: var(--rack-bottom-action-fs);
+  font-size: 1.15rem;
   font-weight: 400;
   border-radius: var(--rack-tile-btn-border-radius);
   white-space: nowrap;
@@ -293,7 +294,7 @@
   box-sizing: border-box;
   flex: 1 1 20%;
   min-width: 0;
-  font-size: var(--app-ui-control-fs-xs);
+  font-size: 1rem;
   font-weight: 500;
   padding: 0.35rem 0.2rem;
   line-height: 1.2;
@@ -307,7 +308,7 @@
 .app-menu-modal .app-menu-tray__diff-btn {
   min-height: 2.5rem;
   padding: 0.42rem 0.3rem;
-  font-size: max(0.8125rem, var(--app-ui-control-fs-xs));
+  font-size: 1rem;
   font-weight: 600;
   border-radius: var(--rack-tile-btn-border-radius);
 }

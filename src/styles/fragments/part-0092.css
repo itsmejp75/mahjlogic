@@ -44,6 +44,17 @@
   overflow-anchor: none;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Fixed menu type scale (not rack / viewport derived). */
+  --app-menu-type-body: 1.15rem;
+  --app-menu-type-chip: 1rem;
+  --app-ui-control-fs: var(--app-menu-type-body);
+  --app-ui-control-fs-sm: var(--app-menu-type-chip);
+  --app-ui-control-fs-xs: var(--app-menu-type-body);
+  --rack-bottom-action-fs: var(--app-menu-type-body);
+  --btn-font-size: var(--app-menu-type-body);
+  --hands-header-chip-fs: var(--app-menu-type-chip);
 }
 .app-menu-modal__backdrop {
   position: absolute;
@@ -69,16 +80,16 @@
   --app-menu-rim-hover-bright: color-mix(in srgb, var(--color-white) 50%, #94a3b8 50%);
   /* Space between menu rows / sections (slightly under one-third touch target height) */
   --app-menu-body-gap: max(0.36rem, calc(var(--rack-action-touch-min-h) / 3.5));
-  /*
-   * Keep modal type independent from the rack-derived app control scale. Mobile Safari/PWA can
-   * resolve that rack scale smaller on first paint, then larger after the first tap, which reflows
-   * the menu. Start at the larger menu size and keep it stable.
-   */
-  --app-ui-control-fs: 1.15rem;
-  --app-ui-control-fs-sm: 1rem;
-  --app-ui-control-fs-xs: 0.9rem;
-  --rack-bottom-action-fs: var(--app-ui-control-fs);
-  --btn-font-size: var(--app-ui-control-fs);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  --app-menu-type-body: 1.15rem;
+  --app-menu-type-chip: 1rem;
+  --app-ui-control-fs: var(--app-menu-type-body);
+  --app-ui-control-fs-sm: var(--app-menu-type-chip);
+  --app-ui-control-fs-xs: var(--app-menu-type-body);
+  --rack-bottom-action-fs: var(--app-menu-type-body);
+  --btn-font-size: var(--app-menu-type-body);
+  --hands-header-chip-fs: var(--app-menu-type-chip);
 
   position: relative;
   z-index: 1;

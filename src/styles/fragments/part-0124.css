@@ -1032,3 +1032,26 @@
   content: none;
   display: none;
 }
+
+/*
+ * Menu typography must not use rack/container-derived `--app-ui-control-fs*`. On iPhone
+ * landscape first paint those tokens resolve tiny, then jump larger after the first tap.
+ */
+.app-menu-modal-layer .app-menu-modal .btn {
+  font-size: 1.15rem;
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-tray__diff-btn,
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__blank-tile-count-btn.btn {
+  font-size: 1rem;
+}
+
+.app-menu-modal-layer .app-menu-modal__label,
+.app-menu-modal-layer .app-menu-modal__row-label,
+.app-menu-modal-layer .app-menu-modal__subhead,
+.app-menu-modal-layer .app-menu-modal__diff-block .app-menu-modal__tile-graphics-category__label,
+.app-menu-modal-layer .app-menu-modal .app-menu-tray__item:not(.app-menu-tray__item--switch),
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__suggested-filters-reset,
+.app-menu-modal-layer .app-menu-modal .suggested-hands-popup__header-controls .hands-panel__display-toggle {
+  font-size: 1.15rem;
+}

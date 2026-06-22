@@ -293,6 +293,14 @@ html {
   padding: 0 !important;
   overflow: hidden;
   box-sizing: border-box;
+  /*
+   * Disable iOS/WebKit text autosizing ("font boosting") at the document root.
+   * WebKit's idempotent text-autosizing only honors text-size-adjust reliably
+   * when set on the root element — setting it on nested containers (e.g. the
+   * menu modal) is ignored, which made menu type re-inflate on rotation/reflow.
+   */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   /* Disable double-tap zoom on mobile browsers / installed PWA. */
   touch-action: manipulation;
   /* iOS WKWebView fallback when dvh is quirky */
