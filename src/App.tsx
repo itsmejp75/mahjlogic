@@ -1091,34 +1091,41 @@ function ArmedBlankExchangeDropZone({ children }: { children: ReactNode }) {
 }
 
 /**
- * The popup is one horizontal band of {@link DISCARD_TRACKER_SORTED_BAND_COLS} slot-columns. Rather
- * than mirror the on-board tracker at a fixed scale (its estimated width undershot the real band on
- * mobile and the last column spilled past the panel's right edge), we hand the grid a viewport-fit
- * width and let the shared `top-exposure-band` @container size every tile to fill it — exactly like
- * the on-board tracker. The band therefore always fits the panel, and tiles stay as large as will
- * fit so they remain easy to tap.
+ * The popup is one horizontal band of {@link DISCARD_TRACKER_SORTED_BAND_COLS} slot-columns. We size
+ * it relative to whatever the on-board sorted discard band currently measures in this window: the
+ * popup band is exactly {@link BLANK_EXCHANGE_POPUP_SCALE}× that width, so the popup always looks the
+ * same proportion bigger than the tracker regardless of window/PWA size. The shared
+ * `top-exposure-band` @container then sizes every tile to fill the band — just like the on-board
+ * tracker. A viewport-fit clamp keeps it from ever overflowing on very small/short screens.
  */
 const BLANK_EXCHANGE_POPUP_FACE_GAP = 3
 const BLANK_EXCHANGE_POPUP_ROW_GAP = 4
-/** Don't enlarge past this on big screens — ~55px tiles are already plenty large. */
-const BLANK_EXCHANGE_POPUP_MAX_BAND_W = 780
+/** Popup band is this multiple of the on-board sorted discard band (≈50% larger). */
+const BLANK_EXCHANGE_POPUP_SCALE = 1.5
 
-/** Width the popup grid should take so the 3-row band fits both viewport axes (incl. the Cancel row). */
+/** Width the popup grid should take: 1.5× the on-board band, clamped so the 3-row band + Cancel fit. */
 function computeBlankExchangePopupBandWidth(): number {
   const panelPad = 48 // panel inline padding + border, both sides
   const cancelReserve = 64 // gap + Cancel button row beneath the band
   const gap = BLANK_EXCHANGE_POPUP_FACE_GAP
   const cols = DISCARD_TRACKER_SORTED_BAND_COLS
-  // Fill most of the width so the tiles/text are as large as the box allows.
-  const availW = window.innerWidth * 0.92 - panelPad
-  // Generous vertical budget so the band is normally width-bound (fills the box) and only shrinks
-  // when the viewport is genuinely too short — that's what keeps tiles big and the box tall.
-  const availH = window.innerHeight * 0.9 - panelPad - cancelReserve
+  // Largest width that still fits the viewport on both axes (incl. the Cancel row beneath the band).
+  const availW = window.innerWidth * 0.94 - panelPad
+  const availH = window.innerHeight * 0.92 - panelPad - cancelReserve
   // tileW = (W - (cols-1)*gap) / cols; band height = 3*(tileW*4/3) + 2*rowGap = 4*tileW + 2*rowGap.
   // Solve the widest W whose band height still fits availH so tall layouts never clip vertically.
   const maxWByHeight =
     ((availH - 2 * BLANK_EXCHANGE_POPUP_ROW_GAP) * cols) / 4 + (cols - 1) * gap
-  return Math.max(120, Math.min(availW, maxWByHeight, BLANK_EXCHANGE_POPUP_MAX_BAND_W))
+  const fitCap = Math.min(availW, maxWByHeight)
+
+  // Preferred: exactly 1.5× the on-board sorted discard band as rendered right now in this window.
+  const onboardRow = Array.from(
+    document.querySelectorAll('.exposure-rack--discard-tracker-sorted-row'),
+  ).find((el) => !el.closest('.blank-exchange-overlay'))
+  const onboardW = onboardRow ? onboardRow.getBoundingClientRect().width : 0
+  const preferred = onboardW > 1 ? onboardW * BLANK_EXCHANGE_POPUP_SCALE : fitCap
+
+  return Math.max(120, Math.min(preferred, fitCap))
 }
 
 /**
