@@ -3314,31 +3314,34 @@ function applyDeclareMahjongSelfDraw(r: RoundState): RoundState {
 }
 
 /**
- * Mobile WebKit (iOS PWA) scrolls a freshly-focused control into view on the first tap inside a
- * scroll container, which yanks the menu body to the top. We can't observe that jump from `onClick`
- * (focus + its scroll already happened by then), so capture the body's `scrollTop` on `pointerdown`
- * — which fires *before* focus — and re-pin it for a few frames afterward (the native scroll can land
- * a frame or two late). Returns the captured top so the caller can restore it after toggling.
+ * Mobile WebKit (iOS PWA) scrolls a freshly-focused control into view when you tap a button inside
+ * an overflowing scroll container — which yanks the menu body (it only overflows in landscape, hence
+ * the portrait/landscape difference the user sees). That native scroll is asynchronous and can be
+ * animated, so a short rAF pin from `onClick` misses it. Instead, arm this on `pointerdown` (which
+ * fires *before* focus): record the body's current `scrollTop`, then forcibly revert any scroll on
+ * the body for a brief window. The user isn't drag-scrolling while tapping a toggle, so reverting
+ * scroll events during this window only undoes the unwanted focus-scroll.
  */
-function captureMenuBodyScrollTop(target: HTMLElement): {
-  body: HTMLElement
-  top: number
-} | null {
+function holdMenuBodyScrollFromTap(target: HTMLElement) {
   const body = target.closest('.app-menu-modal__body')
-  if (!(body instanceof HTMLElement)) return null
-  return { body, top: body.scrollTop }
-}
-
-function pinMenuBodyScrollTop(captured: { body: HTMLElement; top: number } | null) {
-  if (!captured) return
-  const { body, top } = captured
-  let frames = 0
-  const restore = () => {
-    if (body.scrollTop !== top) body.scrollTop = top
-    frames += 1
-    if (frames < 8) requestAnimationFrame(restore)
+  if (!(body instanceof HTMLElement)) return
+  const top = body.scrollTop
+  let active = true
+  const force = () => {
+    if (active && body.scrollTop !== top) body.scrollTop = top
   }
-  restore()
+  body.addEventListener('scroll', force, { passive: true })
+  const start = performance.now()
+  const tick = () => {
+    force()
+    if (active && performance.now() - start < 450) {
+      requestAnimationFrame(tick)
+    } else {
+      active = false
+      body.removeEventListener('scroll', force)
+    }
+  }
+  requestAnimationFrame(tick)
 }
 
 /** Settings menu: horizontal on/off switch (see `.app-menu-tray__toggle-slider` in `src/styles`). */
@@ -3351,8 +3354,6 @@ function AppMenuSettingSwitch({
   pressed: boolean
   onToggle: () => void
 }) {
-  const capturedRef = useRef<{ body: HTMLElement; top: number } | null>(null)
-
   return (
     <button
       type="button"
@@ -3360,14 +3361,9 @@ function AppMenuSettingSwitch({
       aria-labelledby={labelId}
       aria-pressed={pressed}
       onPointerDownCapture={(e) => {
-        capturedRef.current = captureMenuBodyScrollTop(e.currentTarget)
+        holdMenuBodyScrollFromTap(e.currentTarget)
       }}
-      onClick={() => {
-        const captured = capturedRef.current
-        capturedRef.current = null
-        onToggle()
-        pinMenuBodyScrollTop(captured)
-      }}
+      onClick={onToggle}
     >
       <span className="app-menu-sr-only">{pressed ? 'On' : 'Off'}</span>
       <span
@@ -3433,7 +3429,6 @@ export default function App() {
   const [suggestedDiscardOverlayPeekPx, setSuggestedDiscardOverlayPeekPx] = useState(0)
   const suggestedHandsPopupRef = useRef<HTMLDivElement>(null)
   const eastExposureRackTopRef = useRef<HTMLDivElement>(null)
-  const blankCountScrollRef = useRef<{ body: HTMLElement; top: number } | null>(null)
   const [suggestedDiscardOverlayBounds, setSuggestedDiscardOverlayBounds] = useState({
     topExtendPx: 0,
     bottomExtendPx: 0,
@@ -8080,14 +8075,9 @@ export default function App() {
                           aria-checked={blankTilesEnabled && blankTileCount === n}
                           disabled={!blankTilesEnabled}
                           onPointerDownCapture={(e) => {
-                            blankCountScrollRef.current = captureMenuBodyScrollTop(e.currentTarget)
+                            holdMenuBodyScrollFromTap(e.currentTarget)
                           }}
-                          onClick={() => {
-                            const captured = blankCountScrollRef.current
-                            blankCountScrollRef.current = null
-                            setBlankTileCountLevel(n)
-                            pinMenuBodyScrollTop(captured)
-                          }}
+                          onClick={() => setBlankTileCountLevel(n)}
                         >
                           {n}
                         </button>
