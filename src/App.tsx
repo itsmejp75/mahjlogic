@@ -3354,6 +3354,8 @@ function AppMenuSettingSwitch({
   pressed: boolean
   onToggle: () => void
 }) {
+  const touchHandledRef = useRef(false)
+
   return (
     <button
       type="button"
@@ -3362,8 +3364,26 @@ function AppMenuSettingSwitch({
       aria-pressed={pressed}
       onPointerDownCapture={(e) => {
         holdMenuBodyScrollFromTap(e.currentTarget)
+        if (e.pointerType !== 'mouse') {
+          e.preventDefault()
+          touchHandledRef.current = true
+        }
       }}
-      onClick={onToggle}
+      onPointerUp={(e) => {
+        if (!touchHandledRef.current || e.pointerType === 'mouse') return
+        onToggle()
+      }}
+      onPointerCancel={() => {
+        touchHandledRef.current = false
+      }}
+      onClick={(e) => {
+        if (touchHandledRef.current) {
+          touchHandledRef.current = false
+          e.preventDefault()
+          return
+        }
+        onToggle()
+      }}
     >
       <span className="app-menu-sr-only">{pressed ? 'On' : 'Off'}</span>
       <span
@@ -3429,6 +3449,7 @@ export default function App() {
   const [suggestedDiscardOverlayPeekPx, setSuggestedDiscardOverlayPeekPx] = useState(0)
   const suggestedHandsPopupRef = useRef<HTMLDivElement>(null)
   const eastExposureRackTopRef = useRef<HTMLDivElement>(null)
+  const blankCountTouchHandledRef = useRef<BlankTileCount | null>(null)
   const [suggestedDiscardOverlayBounds, setSuggestedDiscardOverlayBounds] = useState({
     topExtendPx: 0,
     bottomExtendPx: 0,
@@ -8076,8 +8097,26 @@ export default function App() {
                           disabled={!blankTilesEnabled}
                           onPointerDownCapture={(e) => {
                             holdMenuBodyScrollFromTap(e.currentTarget)
+                            if (e.pointerType !== 'mouse') {
+                              e.preventDefault()
+                              blankCountTouchHandledRef.current = n
+                            }
                           }}
-                          onClick={() => setBlankTileCountLevel(n)}
+                          onPointerUp={(e) => {
+                            if (e.pointerType === 'mouse' || blankCountTouchHandledRef.current !== n) return
+                            setBlankTileCountLevel(n)
+                          }}
+                          onPointerCancel={() => {
+                            if (blankCountTouchHandledRef.current === n) blankCountTouchHandledRef.current = null
+                          }}
+                          onClick={(e) => {
+                            if (blankCountTouchHandledRef.current === n) {
+                              blankCountTouchHandledRef.current = null
+                              e.preventDefault()
+                              return
+                            }
+                            setBlankTileCountLevel(n)
+                          }}
                         >
                           {n}
                         </button>
