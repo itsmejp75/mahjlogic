@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react'
 import { useRef, useLayoutEffect, useEffect, useState, useMemo } from 'react'
 import { useDndContext } from '@dnd-kit/core'
 import { useSortable } from '@dnd-kit/sortable'
-import { CSS, type Transform } from '@dnd-kit/utilities'
+import { CSS } from '@dnd-kit/utilities'
 import type { TileInstance } from '../mahjong/types'
 import type { HandTileFlyIn } from '../mahjong/handTileFlyIn'
 import { DeadCauseWarning } from './DeadCauseWarning'
@@ -17,18 +17,6 @@ const REMOVAL_SHIFT_TRANSFORM =
   'translateX(calc(var(--rack-tile-w) + var(--player-rack-face-gap, var(--rack-tile-gap))))'
 const RACK_REORDER_EASING = 'cubic-bezier(0.2, 0, 0.2, 1)'
 const RACK_REORDER_DURATION = '0.16s'
-
-/**
- * Horizontal slide only — never scale. rectSortingStrategy compares full rects; when the dragged
- * tile leaves the row its height/width delta becomes scaleY/scaleX on neighbours (PassStrip
- * comment). On mobile / installed PWA (WKWebView) sub-pixel rect reads make those FLIP deltas
- * large enough to read as the whole rack jogging up/down; desktop sub-pixels stay invisible.
- * Strip `y` too — vertical translate is never wanted in this single-row rack.
- */
-function rackSortableTransform(transform: Transform | null): string | undefined {
-  if (transform == null) return undefined
-  return CSS.Translate.toString({ ...transform, y: 0 }) ?? undefined
-}
 
 function SortableTile({
   tile,
@@ -52,7 +40,6 @@ function SortableTile({
   externalPreviewActive = false,
   deferHandFlyMeasure = false,
   shiftPhase = null,
-  inRackReorderHover = false,
 }: {
   tile: TileInstance
   selected: boolean
@@ -94,8 +81,6 @@ function SortableTile({
    *   `null`   — no shift in progress.
    */
   shiftPhase?: 'pre' | 'post' | null
-  /** True while the dragged tile hovers another hand sortable for in-rack reorder (not pass/discard/call). */
-  inRackReorderHover?: boolean
 }) {
   const { active } = useDndContext()
   const { attributes, listeners, setNodeRef, transform } =
@@ -106,8 +91,7 @@ function SortableTile({
       animateLayoutChanges: () => false,
     })
 
-  // Horizontal translate only for smooth slides; scale + vertical FLIP stripped (see rackSortableTransform).
-  const sortableTransform = rackSortableTransform(transform)
+  const sortableTransform = CSS.Transform.toString(transform)
   const externalShiftTransform = REMOVAL_SHIFT_TRANSFORM
   const draggingThisTile = active != null && String(active.id) === tile.id
 
@@ -120,9 +104,8 @@ function SortableTile({
     resolvedTransform = externalShift ? externalShiftTransform : undefined
     resolvedTransition = active ? `transform ${RACK_REORDER_DURATION} ${RACK_REORDER_EASING}` : 'none'
   } else if (draggingThisTile) {
-    // DragOverlay carries the visible tile — park the source in its grid slot (opacity 0) so
-    // moving it with dnd-kit transforms does not skew rectSortingStrategy measurements.
-    resolvedTransform = undefined
+    // The dragged tile tracks the pointer with no easing; the DragOverlay clone is what the user sees.
+    resolvedTransform = sortableTransform ?? undefined
     resolvedTransition = 'none'
   } else if (shiftPhase === 'pre') {
     // Park one column to the right (the tile's old position) without easing so the next render
@@ -130,18 +113,13 @@ function SortableTile({
     resolvedTransform = REMOVAL_SHIFT_TRANSFORM
     resolvedTransition = 'none'
   } else if (shiftPhase === 'post') {
-    // Slide back to the new column — ignore leftover dnd-kit FLIP deltas (can include y on mobile).
-    resolvedTransform = undefined
-    resolvedTransition = `transform ${RACK_REORDER_DURATION} ${RACK_REORDER_EASING}`
-  } else if (active && inRackReorderHover) {
-    // In-rack reorder only — while dragging out to pass / discard / call on mobile, `over`
-    // flickers across non-hand droppables and dnd-kit emits brief FLIP transforms.
+    // Slide back to the new column. Same easing/duration as in-rack rearrange.
     resolvedTransform = sortableTransform ?? undefined
-    // When hover leaves the rack, dnd-kit clears transforms; don't ease back through a FLIP
-    // delta (especially visible on WKWebView as a vertical jog).
-    resolvedTransition = sortableTransform
-      ? `transform ${RACK_REORDER_DURATION} ${RACK_REORDER_EASING}`
-      : 'none'
+    resolvedTransition = `transform ${RACK_REORDER_DURATION} ${RACK_REORDER_EASING}`
+  } else if (active) {
+    // Some other tile is being dragged — let dnd-kit's transform smoothly position this neighbour.
+    resolvedTransform = sortableTransform ?? undefined
+    resolvedTransition = `transform ${RACK_REORDER_DURATION} ${RACK_REORDER_EASING}`
   } else {
     // Programmatic reorder (suggested-hand sort) must not apply dnd-kit FLIP deltas — they can
     // include a vertical component on mobile and read as the whole rack jogging up/down.
@@ -309,7 +287,7 @@ function CharlestonPassHandPhantomSortable({ tile }: { tile: TileInstance }) {
     animateLayoutChanges: () => false,
   })
   const style: CSSProperties = {
-    transform: rackSortableTransform(transform),
+    transform: CSS.Transform.toString(transform),
     transition:
       isDragging
         ? 'none'
@@ -437,12 +415,6 @@ export function SortableHand({
   const g = suggestedTileGuide
   const deadGuide = suggestedDeadTileGuide
   const externalPreviewActive = externalInsertPreviewIndex != null
-  const { over, active: dndActive } = useDndContext()
-  const inRackReorderHover =
-    over != null &&
-    dndActive != null &&
-    String(over.id) !== String(dndActive.id) &&
-    renderIds.includes(String(over.id))
 
   /**
    * Post-removal slide animation. The hand row is a CSS Grid (`repeat(14, 1fr)`),
@@ -592,7 +564,6 @@ export function SortableHand({
               }
               externalPreviewActive={externalPreviewActive}
               shiftPhase={shiftPhase}
-              inRackReorderHover={inRackReorderHover}
               onSelect={onTileActivate}
             />
           )

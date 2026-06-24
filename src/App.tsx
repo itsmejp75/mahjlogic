@@ -5738,18 +5738,26 @@ export default function App() {
             hits.some((h) => handTileIds.has(String(h.id))) ||
             hits.some((h) => String(h.id) === HAND_BANK_ID)
           if (overHandRack) {
-            const pointerX = args.pointerCoordinates?.x ?? lastDragPointerRef.current.x
+            // Drive the gap off the dragged tile's *visible* center (collisionRect = the lifted
+            // tile translated by the drag), not the raw finger position. Grabbing a tile off-centre
+            // otherwise left the finger in the tile's home column while the tile visibly overlapped a
+            // neighbour, so no gap opened until you jiggled. Fall back to the pointer if the active
+            // rect isn't measured yet.
+            const activeReorderX =
+              args.collisionRect != null
+                ? args.collisionRect.left + args.collisionRect.width / 2
+                : args.pointerCoordinates?.x ?? lastDragPointerRef.current.x
             const activeHandContainer = args.droppableContainers.find((c) => String(c.id) === aid)
             const activeHandRect = activeHandContainer ? args.droppableRects.get(activeHandContainer.id) : null
             if (
               activeHandContainer &&
               activeHandRect &&
-              Number.isFinite(pointerX) &&
-              pointerX >= activeHandRect.left &&
-              pointerX <= activeHandRect.left + activeHandRect.width
+              Number.isFinite(activeReorderX) &&
+              activeReorderX >= activeHandRect.left &&
+              activeReorderX <= activeHandRect.left + activeHandRect.width
             ) {
               // Keep the lifted tile's original slot reachable. Otherwise the two neighbours
-              // that closed around it can never reopen while the pointer is between them.
+              // that closed around it can never reopen while it hovers its own home column.
               return [
                 {
                   id: activeHandContainer.id,
@@ -5765,7 +5773,7 @@ export default function App() {
               return id !== aid && handTileIds.has(id)
             })
             if (handTileContainers.length > 0) {
-              if (Number.isFinite(pointerX)) {
+              if (Number.isFinite(activeReorderX)) {
                 const byCenterX = handTileContainers
                   .map((container) => {
                     const rect = args.droppableRects.get(container.id)
@@ -5777,14 +5785,14 @@ export default function App() {
                   })
                   .filter((x): x is { container: (typeof handTileContainers)[number]; centerX: number } => x != null)
                   .sort((a, b) => a.centerX - b.centerX)
-                const target = byCenterX.find((x) => pointerX < x.centerX) ?? byCenterX[byCenterX.length - 1]
+                const target = byCenterX.find((x) => activeReorderX < x.centerX) ?? byCenterX[byCenterX.length - 1]
                 if (target) {
                   return [
                     {
                       id: target.container.id,
                       data: {
                         droppableContainer: target.container,
-                        value: Math.abs(pointerX - target.centerX),
+                        value: Math.abs(activeReorderX - target.centerX),
                       },
                     },
                   ]
