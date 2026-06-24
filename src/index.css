@@ -443,7 +443,7 @@ code {
 
 /* Suggested strip: flowers match main rack flower tile (`.tile--flower`). */
 .tile-face.tile-face--card-skin-rack-flower {
-  background: var(--tg-cs-rack-flower-bg, #ab47bc);
+  background: var(--tg-cs-rack-flower-bg, #b359c3);
   color: var(--tg-cs-rack-flower-fg, #000);
 }
 

@@ -47,7 +47,7 @@ export function preloadClassicTileArt(): void {
 }
 
 /** SVG URL for the Illustrative Classic tile set, or null when no art exists (e.g. blank). */
-export function classicTileArtUrl(def: TileDef, alternateDragons: boolean): string | null {
+export function classicTileArtUrl(def: TileDef): string | null {
   switch (def.cat) {
     case 'suit':
       return classicTileUrlByStem.get(`${def.suit}_${def.rank}`) ?? null
@@ -58,9 +58,6 @@ export function classicTileArtUrl(def: TileDef, alternateDragons: boolean): stri
         return classicTileUrlByStem.get('dragon_red') ?? null
       }
       const stem = `dragon_${def.dragon}`
-      if (alternateDragons && (def.dragon === 'red' || def.dragon === 'green')) {
-        return classicTileUrlByStem.get(`${stem}_alternate`) ?? classicTileUrlByStem.get(stem) ?? null
-      }
       return classicTileUrlByStem.get(stem) ?? null
     }
     case 'flower':

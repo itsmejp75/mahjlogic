@@ -799,7 +799,7 @@
 }
 
 .tile-face.tile--flower {
-  background: var(--tg-flower, #ab47bc);
+  background: var(--tg-flower, #b359c3);
 }
 
 .tile-face.tile--joker {

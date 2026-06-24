@@ -1,27 +1,23 @@
-/** Minimalist (CSS/glyph) tile face themes on `.app[data-tile-graphics]`. */
-export const MINIMALIST_TILE_GRAPHICS = [
-  'solid-color',
-  'light',
-  'designer',
-  'bakelite',
-  'classic',
-] as const
+/** Minimalist (CSS/glyph) tile face themes on `.app[data-tile-graphics]` — menu-visible set. */
+export const MINIMALIST_TILE_GRAPHICS = ['solid-color'] as const
 
 /** Illustrative (SVG art) tile face themes. */
 export const ILLUSTRATIVE_TILE_GRAPHICS = ['illustrative-classic'] as const
 
 export const TILE_GRAPHICS = [...MINIMALIST_TILE_GRAPHICS, ...ILLUSTRATIVE_TILE_GRAPHICS] as const
 
+/** Menu row order: Classic (illustrative) then Prism (minimalist). */
+export const MENU_TILE_GRAPHICS: readonly TileGraphics[] = [
+  'illustrative-classic',
+  'solid-color',
+]
+
 export type MinimalistTileGraphics = (typeof MINIMALIST_TILE_GRAPHICS)[number]
 export type IllustrativeTileGraphics = (typeof ILLUSTRATIVE_TILE_GRAPHICS)[number]
 export type TileGraphics = (typeof TILE_GRAPHICS)[number]
 
 export const TILE_GRAPHICS_LABEL: Record<TileGraphics, string> = {
-  classic: 'Ivory',
   'solid-color': 'Prism',
-  light: 'Sorbet',
-  designer: 'Jewel',
-  bakelite: 'Autumn',
   'illustrative-classic': 'Classic',
 }
 

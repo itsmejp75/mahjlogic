@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react'
 import { useRef, useLayoutEffect, useEffect, useState, useMemo } from 'react'
 import { useDndContext } from '@dnd-kit/core'
 import { useSortable } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+import { CSS, type Transform } from '@dnd-kit/utilities'
 import type { TileInstance } from '../mahjong/types'
 import type { HandTileFlyIn } from '../mahjong/handTileFlyIn'
 import { DeadCauseWarning } from './DeadCauseWarning'
@@ -17,6 +17,16 @@ const REMOVAL_SHIFT_TRANSFORM =
   'translateX(calc(var(--rack-tile-w) + var(--player-rack-face-gap, var(--rack-tile-gap))))'
 const RACK_REORDER_EASING = 'cubic-bezier(0.2, 0, 0.2, 1)'
 const RACK_REORDER_DURATION = '0.16s'
+
+/**
+ * Keep dnd-kit's full horizontal transform (incl. scaleX when present) for smooth neighbour
+ * slides, but strip `y` / `scaleY`. rectSortingStrategy can emit vertical FLIP deltas on mobile
+ * sub-pixel layout — reads as the whole rack jogging up/down.
+ */
+function rackSortableTransform(transform: Transform | null): string | undefined {
+  if (transform == null) return undefined
+  return CSS.Transform.toString({ ...transform, y: 0, scaleY: 1 }) ?? undefined
+}
 
 function SortableTile({
   tile,
@@ -91,9 +101,8 @@ function SortableTile({
       animateLayoutChanges: () => false,
     })
 
-  // Translate only — never scale. rectSortingStrategy can emit scaleY when dragged vs neighbour
-  // rects differ in height (common on mobile sub-pixel layout), which reads as the rack jogging up/down.
-  const sortableTransform = CSS.Translate.toString(transform)
+  // Full horizontal transform for smooth slides; vertical FLIP stripped (see rackSortableTransform).
+  const sortableTransform = rackSortableTransform(transform)
   const externalShiftTransform = REMOVAL_SHIFT_TRANSFORM
   const draggingThisTile = active != null && String(active.id) === tile.id
 
@@ -115,8 +124,8 @@ function SortableTile({
     resolvedTransform = REMOVAL_SHIFT_TRANSFORM
     resolvedTransition = 'none'
   } else if (shiftPhase === 'post') {
-    // Slide back to the new column. Same easing/duration as in-rack rearrange.
-    resolvedTransform = sortableTransform ?? undefined
+    // Slide back to the new column — ignore leftover dnd-kit FLIP deltas (can include y on mobile).
+    resolvedTransform = undefined
     resolvedTransition = `transform ${RACK_REORDER_DURATION} ${RACK_REORDER_EASING}`
   } else if (active) {
     // Some other tile is being dragged — let dnd-kit's transform smoothly position this neighbour.
@@ -289,7 +298,7 @@ function CharlestonPassHandPhantomSortable({ tile }: { tile: TileInstance }) {
     animateLayoutChanges: () => false,
   })
   const style: CSSProperties = {
-    transform: CSS.Translate.toString(transform),
+    transform: rackSortableTransform(transform),
     transition:
       isDragging
         ? 'none'

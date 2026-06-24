@@ -10,6 +10,7 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react'
+import { flushSync } from 'react-dom'
 import {
   DndContext,
   DragOverlay,
@@ -205,14 +206,10 @@ import {
 import logicLogoSrc from './assets/logic-logo.svg?url'
 import mahjLogoSrc from './assets/mahj-logo.svg?url'
 import {
-  defaultMinimalistTileGraphics,
   DEFAULT_TILE_GRAPHICS,
-  ILLUSTRATIVE_TILE_GRAPHICS,
-  isMinimalistTileGraphics,
   isTileGraphics,
-  MINIMALIST_TILE_GRAPHICS,
+  MENU_TILE_GRAPHICS,
   TILE_GRAPHICS_LABEL,
-  type MinimalistTileGraphics,
   type TileGraphics,
 } from './tiles/tileGraphics'
 import { TileGraphicsProvider } from './tiles/TileGraphicsContext'
@@ -236,16 +233,14 @@ function wallRemainHeatStyle(
 }
 
 const BOT_DIFFICULTY_LABEL: Record<BotDifficulty, string> = {
-  easy: 'Easy',
-  normal: 'Normal',
-  hard: 'Hard',
-  unfair: 'Unfair',
+  easy: 'Novice',
+  normal: 'Advanced',
+  hard: 'Expert',
 }
 
 const LS_KEY_BOT_WINS = 'mahjlogic.botWinsEnabled'
 
 const BOT_WINS_LABEL = 'Bot wins'
-const LS_KEY_ANIMATIONS = 'mahjlogic.animationsEnabled'
 /** When false, rack / table action buttons use neutral gray (like Sort) instead of teal, purple, etc. */
 const LS_KEY_COLOR_BUTTONS = 'mahjlogic.colorButtonsEnabled'
 const LS_KEY_BOT_DIFFICULTY = 'mahjlogic.botDifficulty'
@@ -255,8 +250,8 @@ const LS_KEY_BOT_DIFFICULTY = 'mahjlogic.botDifficulty'
  * their server-side settings (and can sync down to replace or seed this key on login).
  */
 const LS_KEY_TILE_GRAPHICS = 'mahjlogic.tileGraphics'
-/** Illustrative Classic: red/green dragon `_alternate` SVG variants. */
-const LS_KEY_ALTERNATE_DRAGONS = 'mahjlogic.alternateDragons'
+/** Set when the player picks Classic or Prism in the menu (not a legacy default). */
+const LS_KEY_TILE_GRAPHICS_USER_PICKED = 'mahjlogic.tileGraphicsUserPicked'
 /** One-time migration: legacy Ivory (`classic`) / Obsidian (`dark`) defaults → Illustrative Classic. */
 const LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED = 'mahjlogic.tileGraphicsDefaultMigrated'
 /** One-time migration: Prism (`solid-color`) was the prior product default → Illustrative Classic. */
@@ -287,9 +282,6 @@ const JOKER_SWAP_HINT_BOUNCE_ITERATIONS_SINGLE = 1
 /** The keyframe has returned to translateY(0) at 52%; the rest of the iteration is idle. */
 const JOKER_SWAP_HINT_BOUNCE_VISIBLE_MS = JOKER_SWAP_HINT_BOUNCE_DURATION_MS * 0.52
 
-/** Menu order: Prism first; Ivory (classic) last in the minimalist row. */
-const ALTERNATE_DRAGONS_LABEL = 'Alternate Dragons'
-
 /** Menu Tile graphics sample row: same `TileFace` layout as the main hand rack (stacked suit tiles). */
 const MENU_TILE_GRAPHICS_PREVIEW: readonly { label: string; def: TileDef }[] = [
   { label: '1d', def: { cat: 'suit', suit: 'dot', rank: 1 } },
@@ -304,34 +296,23 @@ const MENU_TILE_GRAPHICS_PREVIEW: readonly { label: string; def: TileDef }[] = [
   { label: 'J', def: { cat: 'joker' } },
 ]
 
-const TILE_GRAPHICS_CATEGORY_MINIMALIST_ID = 'tile-graphics-category-minimalist'
-const TILE_GRAPHICS_CATEGORY_ILLUSTRATIVE_ID = 'tile-graphics-category-illustrative'
-const TILE_GRAPHICS_ALTERNATE_DRAGONS_LABEL_ID = 'tile-graphics-alternate-dragons-label'
-
-function readAlternateDragonsFromStorage(): boolean {
-  try {
-    const v = localStorage.getItem(LS_KEY_ALTERNATE_DRAGONS)
-    return v === 'true' || v === '1'
-  } catch {
-    return false
-  }
-}
-
 function readTileGraphicsFromStorage(): TileGraphics {
   try {
     const v = localStorage.getItem(LS_KEY_TILE_GRAPHICS)
-    // Default for new players / missing key is Illustrative Classic. Older sessions may still
-    // have Ivory (`classic`) or Obsidian (`dark`) from earlier defaults (see migration below).
-    if (v === 'classic' && localStorage.getItem(LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED) !== 'true') {
+    const userPicked = localStorage.getItem(LS_KEY_TILE_GRAPHICS_USER_PICKED) === 'true'
+    if (userPicked && v != null && isTileGraphics(v)) return v
+    /** Obsidian (`dark`) and Ivory (`classic`) removed from the menu → Illustrative Classic. */
+    if (v === 'dark' || v === 'classic') {
       localStorage.setItem(LS_KEY_TILE_GRAPHICS, DEFAULT_TILE_GRAPHICS)
       localStorage.setItem(LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED, 'true')
       return DEFAULT_TILE_GRAPHICS
     }
-    /** Obsidian (`dark`) removed from the menu; migrate persisted choice to Illustrative Classic. */
-    if (v === 'dark') {
-      localStorage.setItem(LS_KEY_TILE_GRAPHICS, DEFAULT_TILE_GRAPHICS)
+    /** Sorbet, Jewel, Autumn removed from the menu → Prism. */
+    if (v === 'light' || v === 'designer' || v === 'bakelite') {
+      localStorage.setItem(LS_KEY_TILE_GRAPHICS, 'solid-color')
       localStorage.setItem(LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED, 'true')
-      return DEFAULT_TILE_GRAPHICS
+      localStorage.setItem(LS_KEY_TILE_GRAPHICS_PRISM_LEGACY_MIGRATED, 'true')
+      return 'solid-color'
     }
     /**
      * Prism was the product default before Illustrative Classic; sessions that still have
@@ -349,22 +330,25 @@ function readTileGraphicsFromStorage(): TileGraphics {
   return DEFAULT_TILE_GRAPHICS
 }
 
+function persistTileGraphicsChoice(g: TileGraphics): void {
+  try {
+    // Mark explicit choice + migration flags before the mode value so any storage sync read
+    // cannot treat a fresh Prism pick as a legacy default and revert to Classic.
+    localStorage.setItem(LS_KEY_TILE_GRAPHICS_USER_PICKED, 'true')
+    localStorage.setItem(LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED, 'true')
+    localStorage.setItem(LS_KEY_TILE_GRAPHICS_PRISM_LEGACY_MIGRATED, 'true')
+    localStorage.setItem(LS_KEY_TILE_GRAPHICS, g)
+  } catch {
+    /* ignore */
+  }
+}
+
 function readBotWinsEnabledFromStorage(): boolean {
   try {
     const v = localStorage.getItem(LS_KEY_BOT_WINS)
     return v === 'true' || v === '1'
   } catch {
     return false
-  }
-}
-
-function readAnimationsEnabledFromStorage(): boolean {
-  try {
-    const v = localStorage.getItem(LS_KEY_ANIMATIONS)
-    if (v === null) return true
-    return v === 'true' || v === '1'
-  } catch {
-    return true
   }
 }
 
@@ -381,6 +365,7 @@ function readColorButtonsFromStorage(): boolean {
 function readBotDifficultyFromStorage(): BotDifficulty {
   try {
     const v = localStorage.getItem(LS_KEY_BOT_DIFFICULTY)
+    if (v === 'unfair') return 'hard'
     if (v != null && isBotDifficulty(v)) return v
   } catch {
     /* ignore */
@@ -3323,17 +3308,30 @@ function AppMenuSettingSwitch({
   pressed: boolean
   onToggle: () => void
 }) {
+  const [displayPressed, setDisplayPressed] = useState(pressed)
+
+  useEffect(() => {
+    setDisplayPressed(pressed)
+  }, [pressed])
+
+  const handleClick = () => {
+    flushSync(() => {
+      setDisplayPressed((v) => !v)
+    })
+    window.setTimeout(onToggle, 0)
+  }
+
   return (
     <button
       type="button"
       className="btn app-menu-tray__item app-menu-tray__item--toggle app-menu-tray__item--switch app-menu-modal__toggle"
       aria-labelledby={labelId}
-      aria-pressed={pressed}
-      onClick={onToggle}
+      aria-pressed={displayPressed}
+      onClick={handleClick}
     >
-      <span className="app-menu-sr-only">{pressed ? 'On' : 'Off'}</span>
+      <span className="app-menu-sr-only">{displayPressed ? 'On' : 'Off'}</span>
       <span
-        className={['app-menu-tray__toggle-slider', pressed ? 'app-menu-tray__toggle-slider--on' : '']
+        className={['app-menu-tray__toggle-slider', displayPressed ? 'app-menu-tray__toggle-slider--on' : '']
           .filter(Boolean)
           .join(' ')}
         aria-hidden="true"
@@ -3439,7 +3437,7 @@ export default function App() {
 
   // ── Game options (persisted) ──────────────────────────────────────────────
   const [botWinsEnabled, setBotWinsEnabled] = useState<boolean>(() => readBotWinsEnabledFromStorage())
-  const [animationsEnabled, setAnimationsEnabled] = useState<boolean>(() => readAnimationsEnabledFromStorage())
+  const animationsEnabled = true
   const [colorButtonsEnabled, setColorButtonsEnabled] = useState<boolean>(() => readColorButtonsFromStorage())
 
   const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>(() => readBotDifficultyFromStorage())
@@ -3468,10 +3466,6 @@ export default function App() {
   }, [cardPatterns])
 
   const [tileGraphics, setTileGraphics] = useState<TileGraphics>(() => readTileGraphicsFromStorage())
-  const [lastMinimalistTileGraphics, setLastMinimalistTileGraphics] = useState<MinimalistTileGraphics>(
-    () => defaultMinimalistTileGraphics(readTileGraphicsFromStorage()),
-  )
-  const [alternateDragons, setAlternateDragons] = useState<boolean>(() => readAlternateDragonsFromStorage())
   const [deadHandWarningsEnabled, setDeadHandWarningsEnabled] = useState<boolean>(() =>
     readDeadHandWarningsFromStorage(),
   )
@@ -3485,28 +3479,7 @@ export default function App() {
   const [undoEnabled, setUndoEnabled] = useState<boolean>(() => readUndoFromStorage())
   const setTileGraphicsMode = useCallback((g: TileGraphics) => {
     setTileGraphics(g)
-    if (isMinimalistTileGraphics(g)) {
-      setLastMinimalistTileGraphics(g)
-    }
-    try {
-      localStorage.setItem(LS_KEY_TILE_GRAPHICS, g)
-      localStorage.setItem(LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED, 'true')
-      localStorage.setItem(LS_KEY_TILE_GRAPHICS_PRISM_LEGACY_MIGRATED, 'true')
-    } catch {
-      /* ignore */
-    }
-  }, [])
-
-  const toggleAlternateDragons = useCallback(() => {
-    setAlternateDragons((v) => {
-      const next = !v
-      try {
-        localStorage.setItem(LS_KEY_ALTERNATE_DRAGONS, next ? 'true' : 'false')
-      } catch {
-        /* ignore */
-      }
-      return next
-    })
+    persistTileGraphicsChoice(g)
   }, [])
 
   const setBotDifficultyLevel = useCallback((d: BotDifficulty) => {
@@ -3523,18 +3496,6 @@ export default function App() {
       const next = !v
       try {
         localStorage.setItem(LS_KEY_BOT_WINS, next ? 'true' : 'false')
-      } catch {
-        /* ignore */
-      }
-      return next
-    })
-  }, [])
-
-  const toggleAnimations = useCallback(() => {
-    setAnimationsEnabled((v) => {
-      const next = !v
-      try {
-        localStorage.setItem(LS_KEY_ANIMATIONS, next ? 'true' : 'false')
       } catch {
         /* ignore */
       }
@@ -3655,11 +3616,6 @@ export default function App() {
     tenJokersEnabledRef.current = tenJokersEnabled
   }, [tenJokersEnabled])
 
-  const animationsEnabledRef = useRef(animationsEnabled)
-  useEffect(() => {
-    animationsEnabledRef.current = animationsEnabled
-  }, [animationsEnabled])
-
   const deadHandWarningsEnabledRef = useRef(deadHandWarningsEnabled)
   useEffect(() => {
     deadHandWarningsEnabledRef.current = deadHandWarningsEnabled
@@ -3677,10 +3633,6 @@ export default function App() {
     const w = readBotWinsEnabledFromStorage()
     setBotWinsEnabled((prev) => (prev === w ? prev : w))
     botWinsEnabledRef.current = w
-    setAnimationsEnabled((prev) => {
-      const a = readAnimationsEnabledFromStorage()
-      return prev === a ? prev : a
-    })
     setColorButtonsEnabled((prev) => {
       const c = readColorButtonsFromStorage()
       return prev === c ? prev : c
@@ -3737,25 +3689,16 @@ export default function App() {
         const on = e.newValue === 'true' || e.newValue === '1'
         setBotWinsEnabled(on)
         botWinsEnabledRef.current = on
-      } else if (e.key === LS_KEY_ANIMATIONS) {
-        if (e.newValue == null) return
-        const on = e.newValue === 'true' || e.newValue === '1'
-        setAnimationsEnabled(on)
-        animationsEnabledRef.current = on
       } else if (e.key === LS_KEY_COLOR_BUTTONS) {
         if (e.newValue == null) return
         setColorButtonsEnabled(e.newValue === 'true' || e.newValue === '1')
       } else if (e.key === LS_KEY_BOT_DIFFICULTY) {
         if (e.newValue == null) return
         if (isBotDifficulty(e.newValue)) setBotDifficulty(e.newValue)
+        else if (e.newValue === 'unfair') setBotDifficulty('hard')
       } else if (e.key === LS_KEY_TILE_GRAPHICS) {
-        if (e.newValue == null) return
-        const g = readTileGraphicsFromStorage()
-        setTileGraphics(g)
-        if (isMinimalistTileGraphics(g)) setLastMinimalistTileGraphics(g)
-      } else if (e.key === LS_KEY_ALTERNATE_DRAGONS) {
-        if (e.newValue == null) return
-        setAlternateDragons(e.newValue === 'true' || e.newValue === '1')
+        if (e.newValue == null || !isTileGraphics(e.newValue)) return
+        setTileGraphics(e.newValue)
       } else if (e.key === LS_KEY_DEAD_HAND_WARNINGS) {
         if (e.newValue == null) return
         const on = e.newValue === 'true' || e.newValue === '1'
@@ -6310,10 +6253,6 @@ export default function App() {
       sendCharlestonPass()
       return
     }
-    if (!animationsEnabledRef.current) {
-      sendCharlestonPass()
-      return
-    }
     const flyOutDir: PassStripFlyOutFrom | null = courtesyPhaseLocal
       ? 'courtesy-top'
       : handTileFlyInFromCharlestonPhase(charlestonPhase)
@@ -7613,7 +7552,7 @@ export default function App() {
   }
 
   return (
-    <TileGraphicsProvider tileGraphics={tileGraphics} alternateDragons={alternateDragons}>
+    <TileGraphicsProvider tileGraphics={tileGraphics}>
     <div
       className="app"
       data-tile-graphics={tileGraphics}
@@ -7712,25 +7651,22 @@ export default function App() {
                 </div>
               </div>
               <div className="app-menu-modal__diff-block app-menu-modal__diff-block--tile-graphics">
-                <div className="app-menu-modal__subhead" id="tile-graphics-menu-label">
-                  Tile graphics
-                </div>
                 <div className="app-menu-modal__tile-graphics-category">
                   <hr className="app-menu-modal__tile-graphics-category__line" aria-hidden="true" />
                   <span
                     className="app-menu-modal__tile-graphics-category__label"
-                    id={TILE_GRAPHICS_CATEGORY_MINIMALIST_ID}
+                    id="tile-graphics-menu-label"
                   >
-                    Minimalist
+                    Tile graphics
                   </span>
                   <hr className="app-menu-modal__tile-graphics-category__line" aria-hidden="true" />
                 </div>
                 <div
                   className="app-menu-modal__tile-graphics-modes app-menu-tray__diff-row app-menu-modal__diff-row"
                   role="radiogroup"
-                  aria-labelledby={['tile-graphics-menu-label', TILE_GRAPHICS_CATEGORY_MINIMALIST_ID].join(' ')}
+                  aria-labelledby="tile-graphics-menu-label"
                 >
-                  {MINIMALIST_TILE_GRAPHICS.map((g) => (
+                  {MENU_TILE_GRAPHICS.map((g) => (
                     <button
                       key={g}
                       type="button"
@@ -7749,120 +7685,32 @@ export default function App() {
                     </button>
                   ))}
                 </div>
-                <TileGraphicsProvider
-                  tileGraphics={lastMinimalistTileGraphics}
-                  alternateDragons={false}
-                >
-                  <div
-                    className="app-menu-modal__tile-graphics-preview"
-                    role="group"
-                    aria-label="Sample Minimalist-style tiles for the current selection"
-                  >
-                    {MENU_TILE_GRAPHICS_PREVIEW.map((spec) => (
-                      <TileFace
-                        key={spec.label}
-                        def={spec.def}
-                        rackSuitStacked
-                      />
-                    ))}
-                  </div>
-                </TileGraphicsProvider>
                 <div
-                  className="app-menu-modal__tile-graphics-category app-menu-modal__tile-graphics-category--illustrative"
+                  key={tileGraphics}
+                  className="app-menu-modal__tile-graphics-preview"
+                  role="group"
+                  aria-label="Sample tiles for the current tile graphics selection"
                 >
+                  {MENU_TILE_GRAPHICS_PREVIEW.map((spec) => (
+                    <TileFace
+                      key={spec.label}
+                      def={spec.def}
+                      rackSuitStacked
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="app-menu-modal__diff-block app-menu-modal__diff-block--suggested-hand-filters">
+                <div className="app-menu-modal__tile-graphics-category">
                   <hr className="app-menu-modal__tile-graphics-category__line" aria-hidden="true" />
                   <span
                     className="app-menu-modal__tile-graphics-category__label"
-                    id={TILE_GRAPHICS_CATEGORY_ILLUSTRATIVE_ID}
+                    id="app-menu-sh-filters-heading"
                   >
-                    Illustrative
+                    Suggested Hand Filters
                   </span>
                   <hr className="app-menu-modal__tile-graphics-category__line" aria-hidden="true" />
                 </div>
-                <div
-                  className="app-menu-modal__tile-graphics-modes app-menu-tray__diff-row app-menu-modal__diff-row app-menu-modal__tile-graphics-illustrative-options"
-                  role="radiogroup"
-                  aria-labelledby={['tile-graphics-menu-label', TILE_GRAPHICS_CATEGORY_ILLUSTRATIVE_ID].join(' ')}
-                >
-                  {ILLUSTRATIVE_TILE_GRAPHICS.map((g) => (
-                    <button
-                      key={g}
-                      type="button"
-                      className={[
-                        'btn',
-                        'app-menu-tray__diff-btn',
-                        tileGraphics === g ? 'app-menu-tray__diff-btn--on' : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                      role="radio"
-                      aria-checked={tileGraphics === g}
-                      onClick={() => setTileGraphicsMode(g)}
-                    >
-                      {TILE_GRAPHICS_LABEL[g]}
-                    </button>
-                  ))}
-                  <div className="app-menu-modal__row app-menu-modal__row--toggle">
-                    <span
-                      className="app-menu-modal__row-label"
-                      id={TILE_GRAPHICS_ALTERNATE_DRAGONS_LABEL_ID}
-                    >
-                      {ALTERNATE_DRAGONS_LABEL}
-                    </span>
-                    <AppMenuSettingSwitch
-                      labelId={TILE_GRAPHICS_ALTERNATE_DRAGONS_LABEL_ID}
-                      pressed={alternateDragons}
-                      onToggle={toggleAlternateDragons}
-                    />
-                  </div>
-                </div>
-                <TileGraphicsProvider tileGraphics="illustrative-classic" alternateDragons={alternateDragons}>
-                  <div
-                    className="app-menu-modal__tile-graphics-preview app-menu-modal__tile-graphics-preview--illustrative"
-                    role="group"
-                    aria-label="Sample Illustrative Classic tiles"
-                  >
-                    {MENU_TILE_GRAPHICS_PREVIEW.map((spec) => (
-                      <TileFace
-                        key={`illustrative-${spec.label}`}
-                        def={spec.def}
-                        rackSuitStacked
-                      />
-                    ))}
-                  </div>
-                </TileGraphicsProvider>
-              </div>
-              <div className="app-menu-modal__diff-block">
-                <div className="app-menu-modal__subhead" id="app-menu-sh-settings-heading">
-                  Suggested hands settings
-                </div>
-                <div
-                  className="suggested-hands-popup__header-controls app-menu-modal__suggested-hands-toolbar"
-                  role="toolbar"
-                  aria-labelledby="app-menu-sh-settings-heading"
-                >
-                  <button
-                    type="button"
-                    className={['hands-panel__display-toggle', suggestedPanelTilesOn ? 'hands-panel__display-toggle--on' : ''].filter(Boolean).join(' ')}
-                    aria-pressed={suggestedPanelTilesOn}
-                    aria-label="Show tile patterns"
-                    onClick={toggleSuggestedPanelTilesOn}
-                  >
-                    Tiles
-                  </button>
-                </div>
-              </div>
-              <div className="app-menu-modal__suggested-hand-filters">
-                <div className="app-menu-modal__subhead" id="app-menu-sh-filters-heading">
-                  Filters for suggested hands
-                </div>
-                <button
-                  type="button"
-                  className="btn app-menu-modal__suggested-filters-reset"
-                  onClick={() => setSuggestedHandsUncheckedSections(new Set())}
-                >
-                  Reset Category Filters
-                </button>
                 <div
                   className="app-menu-modal__suggested-hand-filters-inner"
                   role="group"
@@ -7904,18 +7752,20 @@ export default function App() {
                             </div>
                           )
                         })}
+                        {ci === suggestedHandsFilterColumns.length - 1 ? (
+                          <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                            <AppMenuSettingSwitch
+                              labelId="app-menu-label-sh-show-concealed"
+                              pressed={!suggestedHandsHideConcealed}
+                              onToggle={() => setSuggestedHandsHideConcealed((v) => !v)}
+                            />
+                            <span className="app-menu-modal__label" id="app-menu-label-sh-show-concealed">
+                              Concealed (C)
+                            </span>
+                          </div>
+                        ) : null}
                       </div>
                     ))}
-                  </div>
-                  <div className="app-menu-modal__row app-menu-modal__row--toggle">
-                    <AppMenuSettingSwitch
-                      labelId="app-menu-label-sh-show-concealed"
-                      pressed={!suggestedHandsHideConcealed}
-                      onToggle={() => setSuggestedHandsHideConcealed((v) => !v)}
-                    />
-                    <span className="app-menu-modal__label" id="app-menu-label-sh-show-concealed">
-                      Concealed (C)
-                    </span>
                   </div>
                 </div>
               </div>
@@ -7946,12 +7796,12 @@ export default function App() {
                 </div>
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
                   <AppMenuSettingSwitch
-                    labelId="app-menu-label-anim"
-                    pressed={animationsEnabled}
-                    onToggle={toggleAnimations}
+                    labelId="app-menu-label-suggested-tiles"
+                    pressed={suggestedPanelTilesOn}
+                    onToggle={toggleSuggestedPanelTilesOn}
                   />
-                  <span className="app-menu-modal__label" id="app-menu-label-anim">
-                    Animations
+                  <span className="app-menu-modal__label" id="app-menu-label-suggested-tiles">
+                    Show suggested tiles
                   </span>
                 </div>
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">

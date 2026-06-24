@@ -67,7 +67,7 @@ function cardInkForTileFace(
 ): CardInk | undefined {
   if (cardInk == null) return undefined
   if (def.cat !== 'flower' && def.cat !== 'dragon') return cardInk
-  if (isIllustrativeTileGraphics(tileGraphics) || tileGraphics === 'classic') return undefined
+  if (isIllustrativeTileGraphics(tileGraphics)) return undefined
   return cardInk
 }
 
@@ -102,11 +102,11 @@ export const TileFace = memo(function TileFace({
   sortedDiscardBamGreen = false,
   sortedDiscardCrakRed = false,
 }: Props) {
-  const { tileGraphics, alternateDragons } = useTileGraphics()
+  const { tileGraphics } = useTileGraphics()
   const skinCardInk = cardInkForTileFace(def, cardInk, tileGraphics)
   const illustrativeMode =
     skinCardInk == null && isIllustrativeTileGraphics(tileGraphics) && !sortedDiscardGlyph
-  const artUrl = illustrativeMode ? classicTileArtUrl(def, alternateDragons) : null
+  const artUrl = illustrativeMode ? classicTileArtUrl(def) : null
   // Blanks have no art image, but in illustrative mode they should still wear the illustrative
   // ivory face + rim bevel (the `::before` highlight/shadow) so they match every other rack tile
   // instead of falling back to a flat solid fill that reads as a different white.
@@ -121,6 +121,7 @@ export const TileFace = memo(function TileFace({
 
   return (
     <div
+      key={tileGraphics}
       className={[
         'tile-face',
         skinClass,

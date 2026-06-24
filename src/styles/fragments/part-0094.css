@@ -25,26 +25,30 @@
   min-height: 2.75rem;
   margin: 0;
   padding: 0;
-  border: 1px solid var(--app-menu-rim-hairline, color-mix(in srgb, var(--color-white) 20%, #1a1d22));
+  border: 1px solid var(--rack-action-border-color, var(--app-action-btn-border));
   border-radius: 0.45rem;
-  background: var(--app-menu-sort-surface, var(--color-slate-mid));
+  background: var(--rack-action-face, var(--app-action-btn-face));
   font: inherit;
   font-size: 1.6rem;
   line-height: 1;
   font-weight: 500;
-  color: var(--color-white);
+  color: var(--rack-action-label-color, var(--app-action-btn-label));
   cursor: pointer;
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--color-black) 28%, transparent);
-  transition: background 0.12s, color 0.12s, border-color 0.12s, box-shadow 0.12s;
+  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
+  transition: box-shadow 0.12s ease, background 0.12s ease;
 }
 
 .app-menu-modal__close:hover {
-  background: var(--app-menu-sort-surface-hover, color-mix(in srgb, var(--color-white) 7%, var(--color-slate-mid)));
-  color: var(--color-white);
-  border-color: color-mix(in srgb, var(--color-white) 28%, #1f2429);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--color-white) 12%, transparent),
-    0 2px 6px color-mix(in srgb, var(--color-black) 20%, transparent);
+  background: var(--rack-action-face, var(--app-action-btn-face));
+  color: var(--rack-action-label-color, var(--app-action-btn-label));
+  border-color: var(--rack-action-border-color, var(--app-action-btn-border));
+  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
+}
+
+.app-menu-modal__close:active {
+  background: var(--rack-action-face-pressed, var(--app-action-btn-face-pressed));
+  box-shadow: var(--rack-action-pressed);
+  transition: none;
 }
 
 .app-menu-modal__close:focus-visible {

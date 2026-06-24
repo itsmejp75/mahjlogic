@@ -65,7 +65,8 @@
   --tg-dragon-green: var(--card-ink-green);
   --tg-dragon-soap: var(--card-ink-navy);
   --tg-dragon-any: #5c6470;
-  --tg-flower: #ab47bc;
+  --tg-flower-fill: #b359c3;
+  --tg-flower: var(--tg-flower-fill);
   --tg-joker: #ab47bc;
   --tg-ink: var(--color-black);
   --tg-suit-band-ink: var(--color-black);
@@ -82,7 +83,7 @@
   --tg-cs-neutral-fg: var(--card-tile-skin-neutral-fg);
   --tg-cs-rack-wind-bg: var(--wind-tile-bg);
   --tg-cs-rack-wind-fg: var(--color-black);
-  --tg-cs-rack-flower-bg: #ab47bc;
+  --tg-cs-rack-flower-bg: var(--tg-flower-fill);
   --tg-cs-rack-flower-fg: var(--color-black);
   /* Suggested-hand dim: flat `::after` cover (see rules below; no gradient). */
   --suggest-dim-overlay: rgba(0, 0, 0, 0.38);
@@ -146,7 +147,7 @@
   --tg-cs-neutral-fg: var(--card-tile-skin-neutral-fg);
   --tg-cs-rack-wind-bg: var(--tg-ivory-face);
   --tg-cs-rack-wind-fg: var(--color-off-black);
-  --tg-cs-rack-flower-bg: #ab47bc;
+  --tg-cs-rack-flower-bg: var(--tg-flower-fill);
   --tg-cs-rack-flower-fg: var(--color-black);
   /* Spot colors: rank + B/D/C and DOT/BAM/CRAK bar use the same bam / crak / dot inks */
   --tg-classic-letter-bam: #2d6a4f;
@@ -226,7 +227,7 @@
   --tg-dragon-green: var(--card-ink-green);
   --tg-dragon-soap: var(--card-ink-navy);
   --tg-dragon-any: #5c6470;
-  --tg-flower: #ab47bc;
+  --tg-flower: var(--tg-flower-fill);
   --tg-joker: #ffc107;
   --tg-blank: var(--tg-wind, var(--wind-tile-bg));
   --tg-ink: #080808;
@@ -244,7 +245,7 @@
   --tg-cs-neutral-fg: #080808;
   --tg-cs-rack-wind-bg: var(--wind-tile-bg);
   --tg-cs-rack-wind-fg: #080808;
-  --tg-cs-rack-flower-bg: #ab47bc;
+  --tg-cs-rack-flower-bg: var(--tg-flower-fill);
   --tg-cs-rack-flower-fg: #080808;
 }
 

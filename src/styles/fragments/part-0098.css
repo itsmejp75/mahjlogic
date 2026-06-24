@@ -25,79 +25,96 @@
   box-sizing: border-box;
   place-self: center;
   flex: none;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 3 / 4;
-  /* Match main-rack / bot `TileFace` chrome vars (glyph math + joker ring). */
+  /* Explicit face size so rim `::before` inset math matches rendered width (same as hand rack). */
   --rack-tile-w: calc((100cqw - 9 * var(--menu-tile-g)) / 10);
   --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
-  /* Strip lift; Jewel adds inner highlight in a more specific rule so lustre + tray read together. */
-  box-shadow:
-    0 1px 0 color-mix(in srgb, var(--color-black) 12%, transparent),
-    0 2px 7px color-mix(in srgb, var(--color-black) 35%, transparent);
-  transition: box-shadow 0.12s ease;
+  width: var(--rack-tile-w);
+  height: var(--rack-tile-h);
 }
 
 .app .app-menu-modal__tile-graphics-preview .tile-face.tile-face--illustrative-art {
   box-sizing: border-box;
   place-self: center;
   flex: none;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 3 / 4;
   --rack-tile-w: calc((100cqw - 9 * var(--menu-tile-g)) / 10);
   --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
-}
-
-.app[data-tile-graphics='designer'] .app-menu-modal__tile-graphics-preview .tile-face:not(.tile-face--illustrative-art) {
-  box-shadow:
-    0 1px 0 color-mix(in srgb, var(--color-black) 12%, transparent),
-    0 2px 7px color-mix(in srgb, var(--color-black) 35%, transparent),
-    0 0 12px -2px color-mix(in srgb, #7a7e9a 9%, transparent),
-    inset 0 1px 0 color-mix(in srgb, #f0f2fa 14%, transparent),
-    inset 0 -1px 0 color-mix(in srgb, var(--color-black) 20%, transparent);
+  width: var(--rack-tile-w);
+  height: var(--rack-tile-h);
 }
 
 .app-menu-modal__diff-block--tile-graphics {
   padding-bottom: 0.58rem;
 }
 
-/* Game settings: same pill face as main rack `.rack-bottom-bar .btn.rack-bottom-tile-cell` (part-0069 default; `:active` uses rack press inset). */
+.app-menu-modal__diff-block--suggested-hand-filters {
+  padding-bottom: 0.5rem;
+}
+
+/* Game settings: same pill face as hand rack action row (part-0123). */
 .app-menu-modal .app-menu-tray__item:not(.app-menu-tray__item--switch) {
   box-sizing: border-box;
-  border: none;
-  background: var(--color-slate-mid);
-  color: #dcdce0;
+  border: 1px solid var(--rack-action-border-color, var(--app-action-btn-border));
+  background: var(--rack-action-face, var(--app-action-btn-face));
+  color: var(--rack-action-label-color, var(--app-action-btn-label));
   text-shadow: none;
+  opacity: 1;
+  filter: none;
   /* Outrank global `.app-menu-tray__item { text-transform: uppercase }` — title case for full-width actions (e.g. New Game). */
   text-transform: capitalize;
-  box-shadow:
-    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
-    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
-  transition: box-shadow 0.14s ease, transform 0.12s ease;
+  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
+  transition: box-shadow 0.12s ease, background 0.12s ease;
 }
 
 .app-menu-modal .app-menu-tray__item:not(.app-menu-tray__item--switch):hover:not(:disabled) {
-  /* No hover tint — match rack neutral (part-0067 hover is optional; menu freezes default face). */
-  background: var(--color-slate-mid);
-  color: #dcdce0;
-  box-shadow:
-    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
-    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
+  background: var(--rack-action-face, var(--app-action-btn-face));
+  color: var(--rack-action-label-color, var(--app-action-btn-label));
+  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
   transform: none;
 }
 
 .app-menu-modal .app-menu-tray__item:not(.app-menu-tray__item--switch):active:not(:disabled) {
-  /* Pressed face — same as `.rack-bottom-bar .btn.rack-bottom-tile-cell:active` (part-0069). */
+  background: var(--rack-action-face-pressed, var(--app-action-btn-face-pressed));
+  box-shadow: var(--rack-action-pressed);
   transition: none;
   transform: none;
-  box-shadow:
-    inset 4px 4px 11px rgba(0, 0, 0, 0.48),
-    inset -3px -3px 8px rgba(255, 255, 255, 0.1),
-    inset 0 0 0 2px rgba(255, 255, 255, 0.24);
 }
 
 .app-menu-modal .app-menu-tray__item:not(.app-menu-tray__item--switch):disabled {
-  opacity: 0.5;
+  color: var(--rack-action-label-color, var(--app-action-btn-label));
+  cursor: not-allowed;
+  box-shadow: none;
+  opacity: 1;
   filter: none;
+}
+
+/* Hands / Tiles chips in menu blocks — same pill as rack action row. */
+.app-menu-modal .suggested-hands-popup__header-controls .hands-panel__display-toggle {
+  border: 1px solid var(--rack-action-border-color, var(--app-action-btn-border));
+  background: var(--rack-action-face, var(--app-action-btn-face));
+  color: var(--rack-action-label-color, var(--app-action-btn-label));
+  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
+  transition: box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.app-menu-modal .suggested-hands-popup__header-controls .hands-panel__display-toggle:hover:not(:disabled) {
+  background: var(--rack-action-face, var(--app-action-btn-face));
+  color: var(--rack-action-label-color, var(--app-action-btn-label));
+  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
+  transform: none;
+}
+
+.app-menu-modal .suggested-hands-popup__header-controls .hands-panel__display-toggle:active:not(:disabled) {
+  background: var(--rack-action-face-pressed, var(--app-action-btn-face-pressed));
+  box-shadow: var(--rack-action-pressed);
+  transition: none;
+  transform: none;
+}
+
+.app-menu-modal .suggested-hands-popup__header-controls .hands-panel__display-toggle--on,
+.app-menu-modal .suggested-hands-popup__header-controls .hands-panel__display-toggle--on:hover:not(:disabled),
+.app-menu-modal .suggested-hands-popup__header-controls .hands-panel__display-toggle--on:active:not(:disabled) {
+  background: var(--rack-action-face-pressed, var(--app-action-btn-face-pressed));
+  color: var(--rack-action-label-color, var(--app-action-btn-label));
+  box-shadow: var(--rack-action-pressed);
+  transform: none;
 }

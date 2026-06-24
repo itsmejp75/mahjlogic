@@ -627,7 +627,7 @@
 .discard-tracker__overlay-grid
   .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
   .tile-face.tile--dragon-red {
-  background: var(--tg-crak, var(--card-ink-red));
+  background: #ff5252;
 }
 
 .discard-tracker__overlay-grid
@@ -639,7 +639,7 @@
 .discard-tracker__overlay-grid
   .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
   .tile-face.tile--flower {
-  background: var(--tg-flower, #ab47bc);
+  background: var(--tg-flower, #b359c3);
 }
 
 .discard-tracker__overlay-grid
@@ -838,6 +838,15 @@
   color: #1e222a;
 }
 
+.discard-tracker__overlay-grid
+  :is(
+    .sorted-discard-tray__suit-label--bam,
+    .sorted-discard-tray__suit-label--dot,
+    .sorted-discard-tray__suit-label--crak
+  ) {
+  letter-spacing: max(0.024em, calc(0.035em + 0.02rem));
+}
+
 /*
  * Wide suit-label chip: rim inset shadows scale to chip width (rank tiles use `--rack-tile-w`).
  */
@@ -1027,14 +1036,14 @@
 .panel--discard-tracker .discard-tracker__overlay-grid .exposure-rack--discard-tracker-sorted-row,
 .panel--discard-tracker .discard-tracker__overlay-grid .exposure-rack--discard-tracker-prefix {
   --tg-bam: var(--card-ink-green);
-  --tg-crak: var(--card-ink-red);
+  --tg-crak: #ff5252;
   --tg-dot: var(--card-ink-navy);
   --tg-wind: var(--wind-tile-bg);
-  --tg-dragon-red: var(--card-ink-red);
+  --tg-dragon-red: #ff5252;
   --tg-dragon-green: var(--card-ink-green);
   --tg-dragon-soap: var(--card-ink-navy);
   --tg-dragon-any: #5c6470;
-  --tg-flower: #ab47bc;
+  --tg-flower: #b359c3;
   --tg-joker: #ffc107;
   --tg-blank: var(--wind-tile-bg);
   --tg-ink: #080808;
@@ -1044,7 +1053,7 @@
   --tg-cs-navy-fg: #080808;
   --tg-cs-black-bg: var(--card-tile-skin-black-bg);
   --tg-cs-black-fg: #080808;
-  --tg-cs-red-bg: var(--card-tile-skin-red-bg);
+  --tg-cs-red-bg: #ff5252;
   --tg-cs-red-fg: #080808;
   --tg-cs-green-bg: var(--card-tile-skin-green-bg);
   --tg-cs-green-fg: #080808;
@@ -1052,7 +1061,7 @@
   --tg-cs-neutral-fg: #080808;
   --tg-cs-rack-wind-bg: var(--wind-tile-bg);
   --tg-cs-rack-wind-fg: #080808;
-  --tg-cs-rack-flower-bg: #ab47bc;
+  --tg-cs-rack-flower-bg: #b359c3;
   --tg-cs-rack-flower-fg: #080808;
 }
 

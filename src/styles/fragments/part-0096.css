@@ -46,8 +46,8 @@
   --hands-header-chip-fs: 1rem;
 }
 
-/* Minimalist / Illustrative: category lines — side accent lines, centered label. */
-.app-menu-modal__diff-block--tile-graphics .app-menu-modal__tile-graphics-category {
+/* Raised tray sections: category lines — side accent lines, centered label (tile graphics, suggested-hand filters). */
+.app-menu-modal__diff-block .app-menu-modal__tile-graphics-category {
   display: flex;
   align-items: center;
   gap: 0.55rem;
@@ -57,7 +57,7 @@
   margin: 0.02rem 0 0.2rem;
 }
 
-.app-menu-modal__diff-block--tile-graphics .app-menu-modal__tile-graphics-category__line {
+.app-menu-modal__diff-block .app-menu-modal__tile-graphics-category__line {
   /* `hr` flex lines: reset margins + use contrast vs panel (border-mix was invisible on dark). */
   flex: 1 1 0;
   min-width: 0.3rem;
@@ -73,7 +73,7 @@
   flex-shrink: 1;
 }
 
-.app-menu-modal__diff-block--tile-graphics .app-menu-modal__tile-graphics-category__label {
+.app-menu-modal__diff-block .app-menu-modal__tile-graphics-category__label {
   flex: 0 0 auto;
   text-align: center;
   font-size: 1.15rem;
@@ -88,7 +88,7 @@
   margin-top: 0.55rem;
 }
 
-/* Tile graphics: mode strip layout lives in part-0102 (grid, same width as preview). */
+/* Tile graphics: Classic + Prism row layout in part-0102 (centered flex pair). */
 .app-menu-modal__tile-graphics-modes {
   min-width: 0;
 }

@@ -6,19 +6,15 @@
  * wall draws change their rack.
  *
  * **Difficulty (behavioral design)**
- * - **Easy** — Weaker at pattern work: more random / wasteful discards, weaker
+ * - **Novice** (`easy`) — Weaker at pattern work: more random / wasteful discards, weaker
  *   call discipline, joker-swap and Charleston passes are noisier (more mistakes).
  *   Good for learning without punishing “perfect-robot” pressure.
- * - **Normal** — Solid default: reads the hand against the book and the visible
+ * - **Advanced** (`normal`) — Solid default: reads the hand against the book and the visible
  *   table; mostly catches joker-swap on the *second* pass of the per-turn swap
  *   search (a human “I missed it, then I saw it”); Charleston blends strategy with
  *   a bit of variety.
- * - **Hard** — Plays to the same *information* a strong human has (rack, discards,
+ * - **Expert** (`hard`) — Plays to the same *information* a strong human has (rack, discards,
  *   exposures) with consistently tight discards and call judgment—no “wall hacks.”
- * - **Unfair** — Near-optimally exploitative: deterministically good discards in
- *   some branches, joker-swap and Charleston align tightly with the ranker, and
- *   the bot leans into calls that advance its best line—still structurally table-
- *   legal, but extremely sharp.
  *
  * **Open calls** (pung/kong/quint) are also gated in `App.tsx` so a bot’s
  * *combined* table exposures must fit at least one non–closed book line—same
@@ -47,14 +43,14 @@ import { tileDefsEqual } from '../mahjong/tileUtils'
 import type { BotExposure, BotSeat } from './types'
 
 /** Tuning for discard heuristics and call eagerness. */
-export type BotDifficulty = 'easy' | 'normal' | 'hard' | 'unfair'
+export type BotDifficulty = 'easy' | 'normal' | 'hard'
 
 export const DEFAULT_BOT_DIFFICULTY: BotDifficulty = 'normal'
 
-export const BOT_DIFFICULTIES: readonly BotDifficulty[] = ['easy', 'normal', 'hard', 'unfair'] as const
+export const BOT_DIFFICULTIES: readonly BotDifficulty[] = ['easy', 'normal', 'hard'] as const
 
 export function isBotDifficulty(s: string | null | undefined): s is BotDifficulty {
-  return s === 'easy' || s === 'normal' || s === 'hard' || s === 'unfair'
+  return s === 'easy' || s === 'normal' || s === 'hard'
 }
 
 // ── Context ───────────────────────────────────────────────────────────────────
@@ -131,7 +127,6 @@ export function chooseBotCharlestonPass(
     easy: 0.58,
     normal: 0.14,
     hard: 0.05,
-    unfair: 0,
   }
   if (Math.random() < randomPassP[difficulty]) {
     return pickRandomPass(hand, n)
@@ -165,17 +160,10 @@ export function chooseBotCharlestonPass(
   }
 
   if (nonHelpers.length > n) {
-    if (difficulty === 'unfair') {
-      const stable = [...nonHelpers].sort((a, b) => a.id.localeCompare(b.id))
-      return stable.slice(0, n)
-    }
     return shuffle([...nonHelpers]).slice(0, n)
   }
 
   if (nonHelpers.length === n) {
-    if (difficulty === 'unfair') {
-      return [...nonHelpers].sort((a, b) => a.id.localeCompare(b.id))
-    }
     return shuffle([...nonHelpers])
   }
 
@@ -234,10 +222,6 @@ export function chooseBotDiscard(
   )
 
   if (nonHelpers.length > 0) {
-    if (difficulty === 'unfair') {
-      const stable = [...nonHelpers].sort((a, b) => a.id.localeCompare(b.id))
-      return stable[0]!
-    }
     return nonHelpers[Math.floor(Math.random() * nonHelpers.length)]!
   }
 
@@ -246,10 +230,6 @@ export function chooseBotDiscard(
 }
 
 // ── Blank exchange ────────────────────────────────────────────────────────────
-
-function defSortKey(def: TileDef): string {
-  return JSON.stringify(def)
-}
 
 /** Natural tile types the bot's best line is still short — same basis as the discard-tracker need rings. */
 function neededDefsForBotBestLine(ctx: BotRankContext): TileDef[] {
@@ -319,9 +299,6 @@ export function chooseBotBlankExchangeDef(
   if (difficulty === 'normal' && bestDefs.length > 1 && Math.random() < 0.14) {
     return bestDefs[Math.floor(Math.random() * bestDefs.length)]!
   }
-  if (difficulty === 'unfair') {
-    return [...bestDefs].sort((a, b) => defSortKey(a).localeCompare(defSortKey(b)))[0]!
-  }
   return bestDefs[Math.floor(Math.random() * bestDefs.length)]!
 }
 
@@ -369,7 +346,6 @@ const CALL_P_BY_DIFFICULTY: Record<BotDifficulty, readonly [number, number, numb
   easy: [0.32, 0.05, 0.01],
   normal: [0.8, 0.11, 0.03],
   hard: [0.9, 0.15, 0.04],
-  unfair: [0.998, 0.38, 0.14],
 }
 
 export function botCallStrategicProbability(

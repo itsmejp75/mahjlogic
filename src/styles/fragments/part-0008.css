@@ -65,4 +65,6 @@
   width: 100%;
   min-width: 0;
   max-width: none;
+  /* Pin to the top track edge so dnd transforms / sub-pixel scale never re-center tiles vertically. */
+  align-self: start;
 }

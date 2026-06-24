@@ -70,10 +70,29 @@
 }
 
 .app-menu-modal {
-  /* Same as hand Sort (`.btn--rack-neutral`): var(--color-slate-mid) + white type */
-  --app-menu-sort-surface: var(--color-slate-mid);
-  --app-menu-sort-surface-hover: color-mix(in srgb, var(--color-white) 7%, var(--color-slate-mid));
-  --app-menu-sort-surface-emphasis: color-mix(in srgb, var(--color-white) 12%, var(--color-slate-mid));
+  /* Pressables: same PokerStars gray pill as hand rack action row (part-0123 / app-background.css). */
+  --rack-action-label-color: var(--app-action-btn-label);
+  --rack-action-face: var(--app-action-btn-face);
+  --rack-action-face-pressed: var(--app-action-btn-face-pressed);
+  --rack-action-shadow-rest: var(--app-action-btn-shadow-rest);
+  --rack-action-border-color: var(--app-action-btn-border);
+  --rack-action-flat-surface: var(--app-action-btn-bottom);
+  --rack-action-press-shadow-dark: color-mix(
+    in srgb,
+    #000 28%,
+    var(--rack-action-flat-surface, #484c52)
+  );
+  --rack-action-press-shadow-light: color-mix(
+    in srgb,
+    var(--rack-action-border-color, #636870) 72%,
+    var(--rack-action-flat-surface, #484c52)
+  );
+  --rack-action-pressed:
+    inset 4px 4px 8px var(--rack-action-press-shadow-dark),
+    inset -4px -4px 8px var(--rack-action-press-shadow-light);
+  --app-menu-sort-surface: var(--rack-action-face);
+  --app-menu-sort-surface-hover: var(--rack-action-face);
+  --app-menu-sort-surface-emphasis: var(--rack-action-face-pressed);
   /* Subtle top edge on Sort-style menu controls */
   --app-menu-rim-hairline: color-mix(in srgb, var(--color-white) 22%, #1f242a);
   --app-menu-rim-active: #22c55e;
