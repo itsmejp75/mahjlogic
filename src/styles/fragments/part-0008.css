@@ -68,3 +68,11 @@
   /* Pin to the top track edge so dnd transforms / sub-pixel scale never re-center tiles vertically. */
   align-self: start;
 }
+
+/* Touch / installed PWA: row-level center + WKWebView sub-pixel FLIP reads as a vertical jog
+   when a tile is dragged out of the rack (align-self: start on slots is not always enough). */
+@media (pointer: coarse) {
+  .panel--hand .panel-hand-rack__hand-tray .hand-row {
+    align-items: start;
+  }
+}

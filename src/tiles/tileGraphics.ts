@@ -6,7 +6,7 @@ export const ILLUSTRATIVE_TILE_GRAPHICS = ['illustrative-classic'] as const
 
 export const TILE_GRAPHICS = [...MINIMALIST_TILE_GRAPHICS, ...ILLUSTRATIVE_TILE_GRAPHICS] as const
 
-/** Menu row order: Classic (illustrative) then Prism (minimalist). */
+/** Menu row order: Classic (illustrative) then Simple (minimalist). */
 export const MENU_TILE_GRAPHICS: readonly TileGraphics[] = [
   'illustrative-classic',
   'solid-color',
@@ -17,7 +17,7 @@ export type IllustrativeTileGraphics = (typeof ILLUSTRATIVE_TILE_GRAPHICS)[numbe
 export type TileGraphics = (typeof TILE_GRAPHICS)[number]
 
 export const TILE_GRAPHICS_LABEL: Record<TileGraphics, string> = {
-  'solid-color': 'Prism',
+  'solid-color': 'Simple',
   'illustrative-classic': 'Classic',
 }
 
