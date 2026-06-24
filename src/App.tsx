@@ -5457,6 +5457,14 @@ export default function App() {
     tileId: string
     handPreviewIndex: number
   } | null>(null)
+  /**
+   * While dragging a hand tile up onto a Charleston pass slot, the pass box wins the drop target so
+   * dnd-kit clears the hand's reorder transforms — the slid neighbours would otherwise snap back to
+   * their home columns ("slide right"). Holding the lifted tile's id here tells the hand to preview
+   * the rack *compacted* (as if the tile were already removed), which matches the dropped state, so
+   * there is no jarring snap.
+   */
+  const [charlestonHandPassStageTileId, setCharlestonHandPassStageTileId] = useState<string | null>(null)
   /** Same idea as Charleston: while dragging staged East discard over the rack, hand list preview + phantom so neighbours slide. */
   const [eastDiscardIntoHandPreview, setEastDiscardIntoHandPreview] = useState<{
     tileId: string
@@ -5573,8 +5581,32 @@ export default function App() {
 
       if (fromHandTile || fromBotDiscardForCall || fromPassSlot || fromStagedDiscard) {
         if (!charlestonDone && fromHandTile) {
-          const passBoxHits = collisionHitsForTileOverlappingZones(args, [PASS_BOX_ID])
-          if (passBoxHits.length > 0) return passBoxHits
+          // The pass strip is a thin (~1/3-tile) slot strip sitting just above the hand row, with the
+          // slots hovering over the right-most hand tiles. Claiming it on any rect overlap let it
+          // steal the `over` the instant a tile was lifted slightly toward it — collapsing the in-rack
+          // reorder so neighbours (including the tiles under the slots) snapped back to their home
+          // columns. Instead, claim once the dragged tile is horizontally over the slot strip AND
+          // nudged up onto it — the tile's top edge rising above the slot strip's mid-line. At rack
+          // height the tile's top sits at the hand-row top (below that line), so the in-rack reorder
+          // keeps running and every tile slides as the drag crosses it; lift the tile onto a slot and
+          // the pass box grabs it so it drops straight in.
+          const passContainer = args.droppableContainers.find((c) => String(c.id) === PASS_BOX_ID)
+          const passRect = passContainer ? args.droppableRects.get(passContainer.id) : null
+          const dragRect = args.collisionRect
+          if (passContainer && passRect && dragRect) {
+            const cx = dragRect.left + dragRect.width / 2
+            const horizontallyOverSlots = cx >= passRect.left && cx <= passRect.left + passRect.width
+            const slotGrabLine = passRect.top + passRect.height / 2
+            const liftedOntoSlots = dragRect.top < slotGrabLine
+            if (horizontallyOverSlots && liftedOntoSlots) {
+              return [
+                {
+                  id: passContainer.id,
+                  data: { droppableContainer: passContainer, value: 0 },
+                },
+              ]
+            }
+          }
         }
         if (charlestonDone && mainPhase === 'east-discard' && (fromHandTile || fromStagedDiscard)) {
           const pointerX = args.pointerCoordinates?.x ?? lastDragPointerRef.current.x
@@ -5739,67 +5771,63 @@ export default function App() {
             hits.some((h) => handTileIds.has(String(h.id))) ||
             hits.some((h) => String(h.id) === HAND_BANK_ID)
           if (overHandRack) {
-            // Drive the gap off the dragged tile's *visible* center (collisionRect = the lifted
-            // tile translated by the drag), not the raw finger position. Grabbing a tile off-centre
-            // otherwise left the finger in the tile's home column while the tile visibly overlapped a
-            // neighbour, so no gap opened until you jiggled. Fall back to the pointer if the active
-            // rect isn't measured yet.
-            const activeReorderX =
-              args.collisionRect != null
-                ? args.collisionRect.left + args.collisionRect.width / 2
-                : args.pointerCoordinates?.x ?? lastDragPointerRef.current.x
-            const activeHandContainer = args.droppableContainers.find((c) => String(c.id) === aid)
-            const activeHandRect = activeHandContainer ? args.droppableRects.get(activeHandContainer.id) : null
-            if (
-              activeHandContainer &&
-              activeHandRect &&
-              Number.isFinite(activeReorderX) &&
-              activeReorderX >= activeHandRect.left &&
-              activeReorderX <= activeHandRect.left + activeHandRect.width
-            ) {
-              // Keep the lifted tile's original slot reachable. Otherwise the two neighbours
-              // that closed around it can never reopen while it hovers its own home column.
+            // Rack reorder is driven off the lifted tile's *edges* crossing neighbour *centres*,
+            // not off the finger position or a "left my home column" test. The dragged tile's
+            // measured rect (collisionRect) is the visible lifted tile translated by the drag; the
+            // neighbour rects stay at their original (pre-shift) positions while dragging, so their
+            // centres are stable thresholds. A neighbour only yields once the dragged tile's leading
+            // edge has travelled *past that neighbour's centre* — i.e. the tile is more than half
+            // overlapped — instead of jumping the instant the two tiles touch.
+            type RackEntry = { id: string; container: (typeof args.droppableContainers)[number]; centerX: number }
+            const rackTiles: RackEntry[] = hand
+              .map((t): RackEntry | null => {
+                const container = args.droppableContainers.find((c) => String(c.id) === t.id)
+                const rect = container ? args.droppableRects.get(container.id) : null
+                if (!container || !rect) return null
+                return { id: t.id, container, centerX: rect.left + rect.width / 2 }
+              })
+              .filter((x): x is RackEntry => x != null)
+              .sort((a, b) => a.centerX - b.centerX)
+
+            const activeIdx = rackTiles.findIndex((x) => x.id === aid)
+            const activeEntry = activeIdx >= 0 ? rackTiles[activeIdx] : null
+            const activeHandRect = activeEntry ? args.droppableRects.get(activeEntry.container.id) : null
+
+            if (activeEntry && activeHandRect) {
+              const halfW = activeHandRect.width / 2
+              const centerX =
+                args.collisionRect != null
+                  ? args.collisionRect.left + args.collisionRect.width / 2
+                  : args.pointerCoordinates?.x ?? lastDragPointerRef.current.x
+              const rightEdge =
+                args.collisionRect != null ? args.collisionRect.left + args.collisionRect.width : centerX + halfW
+              const leftEdge = args.collisionRect != null ? args.collisionRect.left : centerX - halfW
+
+              let newIdx = activeIdx
+              if (Number.isFinite(rightEdge)) {
+                for (let i = activeIdx + 1; i < rackTiles.length; i++) {
+                  if (rightEdge > rackTiles[i]!.centerX) newIdx = i
+                  else break
+                }
+              }
+              if (newIdx === activeIdx && Number.isFinite(leftEdge)) {
+                for (let i = activeIdx - 1; i >= 0; i--) {
+                  if (leftEdge < rackTiles[i]!.centerX) newIdx = i
+                  else break
+                }
+              }
+              // newIdx === activeIdx returns the lifted tile's own slot (no shift) and keeps the
+              // home column reachable so neighbours can reopen around it.
+              const overEntry = rackTiles[newIdx] ?? activeEntry
               return [
                 {
-                  id: activeHandContainer.id,
+                  id: overEntry.container.id,
                   data: {
-                    droppableContainer: activeHandContainer,
-                    value: 0,
+                    droppableContainer: overEntry.container,
+                    value: Number.isFinite(centerX) ? Math.abs(centerX - overEntry.centerX) : 0,
                   },
                 },
               ]
-            }
-            const handTileContainers = args.droppableContainers.filter((c) => {
-              const id = String(c.id)
-              return id !== aid && handTileIds.has(id)
-            })
-            if (handTileContainers.length > 0) {
-              if (Number.isFinite(activeReorderX)) {
-                const byCenterX = handTileContainers
-                  .map((container) => {
-                    const rect = args.droppableRects.get(container.id)
-                    if (!rect) return null
-                    return {
-                      container,
-                      centerX: rect.left + rect.width / 2,
-                    }
-                  })
-                  .filter((x): x is { container: (typeof handTileContainers)[number]; centerX: number } => x != null)
-                  .sort((a, b) => a.centerX - b.centerX)
-                const target = byCenterX.find((x) => activeReorderX < x.centerX) ?? byCenterX[byCenterX.length - 1]
-                if (target) {
-                  return [
-                    {
-                      id: target.container.id,
-                      data: {
-                        droppableContainer: target.container,
-                        value: Math.abs(activeReorderX - target.centerX),
-                      },
-                    },
-                  ]
-                }
-              }
-              return closestCenter({ ...args, droppableContainers: handTileContainers })
             }
           }
         }
@@ -5972,8 +6000,15 @@ export default function App() {
       const passFromIdx = passSlots.findIndex((s) => s?.id === aid)
       if (passFromIdx < 0) {
         setCharlestonPassIntoHandPreview(null)
+        // Hand tile lifted onto a pass slot → preview the rack compacting (tile removed) so the slid
+        // neighbours don't snap back to home when the pass box takes the drop target.
+        const overId = e.over ? String(e.over.id) : null
+        setCharlestonHandPassStageTileId(
+          overId === PASS_BOX_ID && hand.some((t) => t.id === aid) ? aid : null,
+        )
         return
       }
+      setCharlestonHandPassStageTileId(null)
       const over = e.over
       if (!over) {
         setCharlestonPassIntoHandPreview(null)
@@ -6016,6 +6051,7 @@ export default function App() {
     setIncomingBotDiscardCallDragActive(false)
     setCharlestonPassIntoHandPreview(null)
     setEastDiscardIntoHandPreview(null)
+    setCharlestonHandPassStageTileId(null)
     setDragOverlayTile(null)
     setDragOverlayMeldTiles(null)
     setDragOverlayRackSuitStacked(false)
@@ -7188,6 +7224,7 @@ export default function App() {
         setDragOverlayRackSuitStacked(false)
         setCharlestonPassIntoHandPreview(null)
         setEastDiscardIntoHandPreview(null)
+        setCharlestonHandPassStageTileId(null)
       }
     },
     [
@@ -8621,6 +8658,7 @@ export default function App() {
                                     sortableOrder={charlestonHandSortableIds}
                                     charlestonPassPhantomTile={charlestonPassPhantomTile}
                                     externalInsertPreviewIndex={charlestonPassIntoHandPreview?.handPreviewIndex ?? null}
+                                    passStageTileId={charlestonHandPassStageTileId}
                                     selectedTileId={selectedHandTileId}
                                     onTileActivate={onHandTileActivate}
                                     highlightedTileId={drawnTileId}

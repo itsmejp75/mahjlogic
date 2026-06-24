@@ -15,6 +15,9 @@ import { TileFace } from './TileFace'
  */
 const REMOVAL_SHIFT_TRANSFORM =
   'translateX(calc(var(--rack-tile-w) + var(--player-rack-face-gap, var(--rack-tile-gap))))'
+/** One column to the *left* — closes the gap of a tile being lifted out to pass (compaction preview). */
+const PASS_STAGE_SHIFT_TRANSFORM =
+  'translateX(calc(-1 * (var(--rack-tile-w) + var(--player-rack-face-gap, var(--rack-tile-gap)))))'
 const RACK_REORDER_EASING = 'cubic-bezier(0.2, 0, 0.2, 1)'
 const RACK_REORDER_DURATION = '0.16s'
 
@@ -52,6 +55,7 @@ function SortableTile({
   externalPreviewActive = false,
   deferHandFlyMeasure = false,
   shiftPhase = null,
+  passStageShiftLeft = false,
 }: {
   tile: TileInstance
   selected: boolean
@@ -93,6 +97,12 @@ function SortableTile({
    *   `null`   — no shift in progress.
    */
   shiftPhase?: 'pre' | 'post' | null
+  /**
+   * This tile sits to the right of a hand tile being lifted onto a Charleston pass slot: slide one
+   * column left to preview the rack closing up around the removed tile, instead of letting dnd-kit
+   * snap it back to its home column when the pass box wins the drop target.
+   */
+  passStageShiftLeft?: boolean
 }) {
   const { active } = useDndContext()
   const { attributes, listeners, setNodeRef, transform } =
@@ -129,6 +139,11 @@ function SortableTile({
   } else if (shiftPhase === 'post') {
     // Slide back to the new column — ignore leftover dnd-kit FLIP deltas (can include y on mobile).
     resolvedTransform = undefined
+    resolvedTransition = `transform ${RACK_REORDER_DURATION} ${RACK_REORDER_EASING}`
+  } else if (passStageShiftLeft) {
+    // Tile being passed is lifted onto a slot: close its gap (slide left one column) so the rack
+    // previews the removed state instead of dnd-kit snapping the slid neighbours back to home.
+    resolvedTransform = PASS_STAGE_SHIFT_TRANSFORM
     resolvedTransition = `transform ${RACK_REORDER_DURATION} ${RACK_REORDER_EASING}`
   } else if (active) {
     // Any active drag — in-rack reorder OR dragging a tile out to the pass box / discard / call.
@@ -378,6 +393,11 @@ type Props = {
   charlestonPassPhantomTile?: TileInstance | null
   /** Preview insertion point for a cross-zone tile without registering that tile as a hand sortable. */
   externalInsertPreviewIndex?: number | null
+  /**
+   * Id of a hand tile currently lifted onto a Charleston pass slot. While set, tiles to its right
+   * slide one column left so the rack previews the removed/compacted state (no snap-back to home).
+   */
+  passStageTileId?: string | null
 }
 
 /**
@@ -416,8 +436,10 @@ export function SortableHand({
   sortableOrder,
   charlestonPassPhantomTile = null,
   externalInsertPreviewIndex = null,
+  passStageTileId = null,
 }: Props) {
   const renderIds = sortableOrder ?? tiles.map((t) => t.id)
+  const passStageIndex = passStageTileId != null ? renderIds.indexOf(passStageTileId) : -1
   const deferHandFlyMeasure =
     handTileFlyIn != null &&
     handTileFlyIn.ids.length > 1 &&
@@ -451,6 +473,13 @@ export function SortableHand({
     applied: boolean
     version: number
   } | null>(null)
+  // Remember the id of a tile that was previewed as compacted (lifted onto a pass slot). When it is
+  // actually removed on drop, the neighbours are already in their compacted positions, so the
+  // standard post-removal slide must be skipped (else they jump a column right and re-slide).
+  const lastPassStageIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (passStageTileId != null) lastPassStageIdRef.current = passStageTileId
+  }, [passStageTileId])
 
   useLayoutEffect(() => {
     const prev = prevRenderIdsRef.current
@@ -459,6 +488,12 @@ export function SortableHand({
     if (externalPreviewActive) return
     if (prev.length === renderIds.length + 1) {
       const removedIndex = prev.findIndex((id) => !renderIds.includes(id))
+      const removedId = prev.find((id) => !renderIds.includes(id)) ?? null
+      if (removedId != null && removedId === lastPassStageIdRef.current) {
+        lastPassStageIdRef.current = null
+        setRemovalShift(null)
+        return
+      }
       if (removedIndex >= 0 && removedIndex < renderIds.length) {
         removalVersionRef.current += 1
         setRemovalShift({
@@ -584,6 +619,7 @@ export function SortableHand({
               }
               externalPreviewActive={externalPreviewActive}
               shiftPhase={shiftPhase}
+              passStageShiftLeft={passStageIndex >= 0 && index > passStageIndex}
               onSelect={onTileActivate}
             />
           )
