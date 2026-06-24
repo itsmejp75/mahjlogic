@@ -1596,7 +1596,7 @@ html[data-home-screen-app]:not([data-native-app])
     calc(var(--rack-tile-w) * 0.44),
     calc(var(--rack-inline-slot-strip-h) * 0.86)
   );
-  --rack-inline-slot-fill-fade-start: 52%;
+  --rack-inline-slot-fill-fade-start: 65%;
 }
 
 .panel--hand .pass-strip-tail {
@@ -1708,6 +1708,29 @@ html[data-home-screen-app]:not([data-native-app])
   border: 0;
   border-radius: var(--rack-inline-slot-corner-r) var(--rack-inline-slot-corner-r) 0 0;
   overflow: hidden;
+}
+
+/*
+ * Box→hand drag: the dragged column renders BOTH its persistent well (`.pass-strip-tail__well`,
+ * behind) and the drag source's own `.pass-strip__slot-chrome` (in front). Both carry the green
+ * fill + `::after` top rule, so on that one column two gradients/top-rules stack and the overlapping
+ * fades read as "more green" (~70%) versus the single-gradient 65% everywhere else. The wells back
+ * every column, so the chrome is redundant — drop it to leave exactly one gradient per column.
+ */
+.app .panel--hand .pass-strip-tail .pass-strip__slot-chrome {
+  display: none;
+}
+
+/*
+ * During a drag the front tile-row's empty columns become plain spacers (see PassStrip): they keep
+ * the column's width/height but render no green chrome, so the wells layer behind is the only green
+ * source on every column (no double-fade, no stacking-context shadow occlusion).
+ */
+.app .panel--hand .pass-strip-tail .pass-strip-tail__tiles .pass-strip-tail__empty-spacer {
+  height: var(--charleston-pass-strip-h);
+  background: none;
+  border: 0;
+  box-shadow: none;
 }
 
 .app

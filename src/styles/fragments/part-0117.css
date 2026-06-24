@@ -128,7 +128,16 @@
  * `--hand-rack-tile-w * --hand-rack-tile-scale` (existing `.exposure-rack` rule) and
  * the row's inline content size.
  */
-.panel--hand .rack-stage__rack-top .exposure-rack,
-.panel--hand .panel-hand-rack__hand-tray .hand-row {
+.panel--hand .rack-stage__rack-top .exposure-rack {
   container-type: inline-size;
 }
+
+/*
+ * The hand row is intentionally NOT a container query container. Its tile width comes from the
+ * panel-level `--hand-top-rack-tile-w` (part-0118), and no `@container` query targets the row —
+ * so the `container-type` here was redundant. Worse, on iOS WKWebView a `container-type` element
+ * that holds transformed children (the dragged tile + the neighbours dnd-kit slides) triggers a
+ * repaint/relayout of the contained subtree mid-drag, which shows up as the resting tiles
+ * shrinking from the top (the long-standing "vertical jog"). Dropping the redundant container on
+ * the row removes that innermost containment boundary so the drag transforms no longer thrash it.
+ */

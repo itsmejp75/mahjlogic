@@ -354,7 +354,13 @@ export function PassStrip({
             key={`pass-empty-${index}`}
             className={
               inlineTail
-                ? 'exposure-rack__slot exposure-rack__slot--empty exposure-rack__slot--pass-tail'
+                ? activeIsPassTile
+                  ? // While the wells layer is mounted it is the single green source for every
+                    // column. Drop `--empty` here so this front slot paints no green/pseudos —
+                    // otherwise its semi-transparent fade lets the well behind bleed through and
+                    // the column reads "more green". The spacer keeps the column's width/height.
+                    'exposure-rack__slot exposure-rack__slot--pass-tail pass-strip-tail__empty-spacer'
+                  : 'exposure-rack__slot exposure-rack__slot--empty exposure-rack__slot--pass-tail'
                 : 'pass-box__cell'
             }
             aria-hidden
