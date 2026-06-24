@@ -91,7 +91,9 @@ function SortableTile({
       animateLayoutChanges: () => false,
     })
 
-  const sortableTransform = CSS.Transform.toString(transform)
+  // Translate only — never scale. rectSortingStrategy can emit scaleY when dragged vs neighbour
+  // rects differ in height (common on mobile sub-pixel layout), which reads as the rack jogging up/down.
+  const sortableTransform = CSS.Translate.toString(transform)
   const externalShiftTransform = REMOVAL_SHIFT_TRANSFORM
   const draggingThisTile = active != null && String(active.id) === tile.id
 
@@ -287,7 +289,7 @@ function CharlestonPassHandPhantomSortable({ tile }: { tile: TileInstance }) {
     animateLayoutChanges: () => false,
   })
   const style: CSSProperties = {
-    transform: CSS.Transform.toString(transform),
+    transform: CSS.Translate.toString(transform),
     transition:
       isDragging
         ? 'none'
