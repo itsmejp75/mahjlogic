@@ -5369,6 +5369,36 @@ export default function App() {
   const [dragOverlayTile, setDragOverlayTile] = useState<TileInstance | null>(null)
   const [dragOverlayMeldTiles, setDragOverlayMeldTiles] = useState<TileInstance[] | null>(null)
   const [dragOverlayRackSuitStacked, setDragOverlayRackSuitStacked] = useState(false)
+
+  /**
+   * Rack tile sizing comes from container-query `cqi` math on `.panel--hand` (see part-0117 /
+   * part-0118). On the installed iOS PWA (WKWebView) the `cqi`-derived `--rack-tile-h` is
+   * re-measured a sub-pixel smaller while a tile is being dragged (the lifted tile's transform
+   * triggers a layout pass), so the resting tiles visibly shrink from the top — the long-standing
+   * "vertical jog". Freezing the two source width vars to their exact current pixels for the drag's
+   * duration removes the live `cqi` dependency, so nothing can resize mid-drag. Restored on drop.
+   */
+  const panelHandRef = useRef<HTMLElement | null>(null)
+  const rackDimsFrozenRef = useRef(false)
+  const freezeRackTileDims = useCallback(() => {
+    const panel = panelHandRef.current
+    if (!panel || rackDimsFrozenRef.current) return
+    const tile = panel.querySelector<HTMLElement>(
+      '.panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap, .rack-stage__rack-top .exposure-rack .tile-face',
+    )
+    const w = tile?.getBoundingClientRect().width ?? 0
+    if (!(w > 0)) return
+    panel.style.setProperty('--hand-top-rack-tile-w', `${w}px`)
+    panel.style.setProperty('--hand-rack-tile-w', `${w}px`)
+    rackDimsFrozenRef.current = true
+  }, [])
+  const unfreezeRackTileDims = useCallback(() => {
+    const panel = panelHandRef.current
+    if (!panel || !rackDimsFrozenRef.current) return
+    panel.style.removeProperty('--hand-top-rack-tile-w')
+    panel.style.removeProperty('--hand-rack-tile-w')
+    rackDimsFrozenRef.current = false
+  }, [])
   /** Set when a blank is dropped on the tracker: the centered tracker becomes tappable to pick a discard. */
   const [blankExchangeOpen, setBlankExchangeOpen] = useState<{ blankTileId: string } | null>(null)
   /** A blank tile is being dragged on your turn — from the rack OR staged in the discard slot —
@@ -5833,6 +5863,8 @@ export default function App() {
 
   const onDragStart = useCallback(
     (e: DragStartEvent) => {
+      // Pin rack tile dimensions before anything moves so the cqi-derived height can't shrink mid-drag.
+      freezeRackTileDims()
       setCharlestonPassIntoHandPreview(null)
       setEastDiscardIntoHandPreview(null)
       globalDragPointerCleanupRef.current?.()
@@ -5895,6 +5927,7 @@ export default function App() {
       mainPhase,
       activeBotDiscard,
       eastExposures,
+      freezeRackTileDims,
     ],
   )
 
@@ -6013,13 +6046,14 @@ export default function App() {
   )
 
   const onDragCancel = useCallback(() => {
+    unfreezeRackTileDims()
     setIncomingBotDiscardCallDragActive(false)
     setCharlestonPassIntoHandPreview(null)
     setEastDiscardIntoHandPreview(null)
     setDragOverlayTile(null)
     setDragOverlayMeldTiles(null)
     setDragOverlayRackSuitStacked(false)
-  }, [])
+  }, [unfreezeRackTileDims])
 
   const passSlotCount = passSlots.filter(Boolean).length
   const blindPhase = !charlestonDone && charlestonAllowsBlind(charlestonPhase)
@@ -6872,6 +6906,8 @@ export default function App() {
 
   const onDragEnd = useCallback(
     (e: DragEndEvent) => {
+      // Drag is over — restore responsive (cqi) rack sizing. Safe on every path below.
+      unfreezeRackTileDims()
       const { active, over } = e
       const aid = String(active.id)
       const passTileStillOverPassBox =
@@ -7204,6 +7240,7 @@ export default function App() {
       activeBotDiscard?.id,
       handInsertIndexFromOver,
       handVisualInsertIndexFromPointer,
+      unfreezeRackTileDims,
     ],
   )
 
@@ -8570,7 +8607,7 @@ export default function App() {
             ) : null}
               <div className="app-rack-stage">
             {/* ── Hand ── */}
-            <section className="panel panel--hand" aria-label="Your hand, East">
+            <section ref={panelHandRef} className="panel panel--hand" aria-label="Your hand, East">
               <div className="panel-hand-rack">
                 <div className="panel-hand-rack__column">
                   {!charlestonDone ? (
