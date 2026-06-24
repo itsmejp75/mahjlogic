@@ -39,7 +39,30 @@ export function firstEmptyPassSlotIndex(passSlots: PassSlots): number {
   return passSlots.findIndex((s) => s == null)
 }
 
-/** `pass-box` → rightmost empty slot; or a tile id already in a pass slot (reorder / swap). */
+function movePassSlotTuple<T>(tuple: [T, T, T], from: number, to: number): [T, T, T] {
+  const next = [...tuple]
+  const [item] = next.splice(from, 1)
+  next.splice(to, 0, item!)
+  return next as [T, T, T]
+}
+
+/** Reorder tiles within the pass strip (insert/move, not pairwise swap). */
+export function reorderPassSlots(
+  passSlots: PassSlots,
+  passSlotOrigins: PassSlotOrigins,
+  from: number,
+  to: number,
+): { passSlots: PassSlots; passSlotOrigins: PassSlotOrigins } {
+  if (from === to) {
+    return { passSlots, passSlotOrigins }
+  }
+  return {
+    passSlots: movePassSlotTuple(passSlots, from, to),
+    passSlotOrigins: movePassSlotTuple(passSlotOrigins, from, to),
+  }
+}
+
+/** `pass-box` → rightmost empty slot; or a tile id already in a pass slot (reorder). */
 export function passDropIndex(overId: string, passSlots: PassSlots): number | null {
   if (overId === PASS_BOX_ID) {
     const idx = firstEmptyPassSlotIndex(passSlots)

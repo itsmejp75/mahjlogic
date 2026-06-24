@@ -68,6 +68,7 @@ import {
   compactPassSlotsToRight,
   firstEmptyPassSlotIndex,
   passDropIndex,
+  reorderPassSlots,
   type PassSlots,
 } from './mahjong/passTargets'
 import {
@@ -6862,7 +6863,7 @@ export default function App() {
         lastPassReturnTileIdRef.current = null
         return { ...r, hand: handNext, passSlots: passNext, passSlotOrigins: passOriginsNext, selectedHandTileId: null }
       }
-      return { ...r, selectedHandTileId: r.selectedHandTileId === id ? null : id }
+      return r
     })
     if (passBlockedCat) {
       setCharlestonPassError(charlestonPassBlockedMessage(passBlockedCat))
@@ -7116,16 +7117,13 @@ export default function App() {
 
       if (!blockPass && passFromIdx >= 0 && passToIdx !== null && handIdx < 0) {
         if (passFromIdx === passToIdx) return { ...r, selectedHandTileId: null }
-        const moved = passSlotsNext[passFromIdx]!
-        const target = passSlotsNext[passToIdx]
-        if (target) {
-          passSlotsNext[passFromIdx] = target
-          passSlotsNext[passToIdx] = moved
-        } else {
-          passSlotsNext[passFromIdx] = null
-          passSlotsNext[passToIdx] = moved
+        const reordered = reorderPassSlots(r.passSlots, r.passSlotOrigins, passFromIdx, passToIdx)
+        return {
+          ...r,
+          passSlots: reordered.passSlots,
+          passSlotOrigins: reordered.passSlotOrigins,
+          selectedHandTileId: null,
         }
-        return { ...r, passSlots: passSlotsNext, selectedHandTileId: null }
       }
 
       if (!blockPass && handIdx >= 0 && passToIdx !== null) {
