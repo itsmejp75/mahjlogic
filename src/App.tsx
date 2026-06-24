@@ -3394,6 +3394,7 @@ export default function App() {
   const [suggestedDiscardOverlayPeekPx, setSuggestedDiscardOverlayPeekPx] = useState(0)
   const suggestedHandsPopupRef = useRef<HTMLDivElement>(null)
   const eastExposureRackTopRef = useRef<HTMLDivElement>(null)
+  const handPanelRef = useRef<HTMLElement>(null)
   const [suggestedDiscardOverlayBounds, setSuggestedDiscardOverlayBounds] = useState({
     topExtendPx: 0,
     bottomExtendPx: 0,
@@ -7303,6 +7304,49 @@ export default function App() {
     })
   }, [pushRound])
 
+  /*
+   * Freeze the hand panel's container-query width to a px value (`--hand-panel-cqw`, consumed by
+   * part-0117.css). WKWebView re-evaluates live `100cqi` while a transformed descendant animates
+   * (the post-removal slide / drag), which momentarily shrinks every cqi-derived height — the tile
+   * faces AND the dark-tray bank. Because the rack column is bottom-anchored, a bank shrink slides
+   * the top-pinned tiles down toward the action row (the "tiles get pushed down" report). A
+   * ResizeObserver only fires on a REAL box change (resize / orientation / sibling-panel relayout),
+   * never during a transient transform, so the frozen px stays put and the dip can't happen. The
+   * measured content-box inline size equals what `100cqi` resolves to at rest → pixel-identical.
+   */
+  useLayoutEffect(() => {
+    const el = handPanelRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    // Content-box inline size == what `100cqi` resolves to for this inline-size container.
+    const contentWidth = () => {
+      const cs = getComputedStyle(el)
+      const padInline =
+        parseFloat(cs.paddingLeft || '0') + parseFloat(cs.paddingRight || '0')
+      return el.clientWidth - padInline
+    }
+    const setVar = (w: number) => {
+      if (!Number.isFinite(w) || w < 1) return
+      const next = `${w}px`
+      if (el.style.getPropertyValue('--hand-panel-cqw') !== next) {
+        el.style.setProperty('--hand-panel-cqw', next)
+      }
+    }
+    setVar(contentWidth())
+    const ro = new ResizeObserver((entries) => {
+      const inline = entries[0]?.contentBoxSize?.[0]?.inlineSize
+      setVar(inline ?? contentWidth())
+    })
+    ro.observe(el)
+    const onViewportChange = () => setVar(contentWidth())
+    window.addEventListener('orientationchange', onViewportChange)
+    window.visualViewport?.addEventListener('resize', onViewportChange)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('orientationchange', onViewportChange)
+      window.visualViewport?.removeEventListener('resize', onViewportChange)
+    }
+  }, [])
+
   // During call-staging, staged tiles are shown in the exposure rack — hide them from the hand.
   const visibleHandTiles =
     mainPhase === 'call-staging' && stagedCallTileIds.length > 0
@@ -8607,7 +8651,7 @@ export default function App() {
             ) : null}
               <div className="app-rack-stage">
             {/* ── Hand ── */}
-            <section className="panel panel--hand" aria-label="Your hand, East">
+            <section ref={handPanelRef} className="panel panel--hand" aria-label="Your hand, East">
               <div className="panel-hand-rack">
                 <div className="panel-hand-rack__column">
                   {!charlestonDone ? (

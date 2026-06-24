@@ -65,8 +65,32 @@
   width: 100%;
   min-width: 0;
   max-width: none;
+  /*
+   * Height comes from the slot's own (grid `1fr`) rendered width via aspect-ratio — NOT from
+   * `--rack-tile-h`, which is `--rack-tile-w * 1.3333` resolved from the panel's live `100cqi`.
+   * The on-screen width is already pinned by the grid track (stable), but the cqi-derived height
+   * gets re-measured by WKWebView during a drag/removal transform, which nudged every tile a
+   * couple px (the "tiles shrink / get pushed down behind the action-row gap" report). Sizing the
+   * height off the stable rendered width makes the vertical box immune to that cqi wiggle.
+   * `3 / 4` == width : height = 1 : 1.3333, identical to the resting `--rack-tile-h` value.
+   */
+  height: auto;
+  aspect-ratio: 3 / 4;
   /* Pin to the top track edge so dnd transforms / sub-pixel scale never re-center tiles vertically. */
   align-self: start;
+}
+
+/*
+ * The visible face must fill the stable aspect-ratio slot box (above) instead of reading the
+ * live cqi `--rack-tile-w` / `--rack-tile-h` itself — otherwise the wrap stays put but the face
+ * inside it still shrinks/jogs on the cqi re-measure. Width is the stable grid track; height is
+ * the aspect-ratio box. `.app` prefix matches the high-specificity face rules in part-0123 so the
+ * earlier-loaded base fragment is not out-cascaded on these two properties.
+ */
+.app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap .sortable-tile-wrap__fly,
+.app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap .tile-face {
+  width: 100%;
+  height: 100%;
 }
 
 /* Touch / installed PWA: row-level center + WKWebView sub-pixel FLIP reads as a vertical jog

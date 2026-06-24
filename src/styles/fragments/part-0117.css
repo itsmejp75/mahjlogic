@@ -38,8 +38,20 @@
  */
 .panel--hand {
   container-type: inline-size;
+  /*
+   * `--hand-panel-cqw` is the panel's content-box inline size, measured once by a ResizeObserver
+   * in App.tsx and written as an inline px value. It only updates on a REAL resize (window /
+   * orientation / sibling-panel layout change) — never during a drag/removal `transform`. The
+   * fallback `100cqi` keeps SSR / no-JS / first-paint correct. This matters because WKWebView
+   * re-evaluates live `100cqi` while a transformed descendant animates (the removal slide), which
+   * shrank every cqi-derived height — tile faces AND the bank — for a few frames. With the rack
+   * column bottom-anchored, a bank shrink slid the top-pinned tiles DOWN toward the action row
+   * ("tiles pushed down behind the gap above the action buttons"). Reading a frozen px width
+   * removes that wiggle while staying pixel-identical to `100cqi` at rest.
+   */
+  --hand-panel-cqw-resolved: var(--hand-panel-cqw, 100cqi);
   --hand-rack-tile-w: calc(
-    (100cqi - 2 * var(--hand-rack-tray-inset-inline) - 13 * var(--player-rack-face-gap)) / 14
+    (var(--hand-panel-cqw-resolved) - 2 * var(--hand-rack-tray-inset-inline) - 13 * var(--player-rack-face-gap)) / 14
   );
   --hand-rack-tile-h: calc(var(--hand-rack-tile-w) * 1.3333);
   /*
@@ -62,7 +74,7 @@
   --hand-rack-content-offset-x: 0px;
   --hand-rack-container-pad-block: 2px;
   --hand-top-rack-tile-w: calc(
-    (100cqi - var(--hand-rack-rim-inline) - 13 * var(--player-rack-face-gap)) / 14
+    (var(--hand-panel-cqw-resolved) - var(--hand-rack-rim-inline) - 13 * var(--player-rack-face-gap)) / 14
   );
   --hand-top-rack-tile-h: calc(var(--hand-top-rack-tile-w) * 1.3333);
   --hand-rack-outer-h: calc(
