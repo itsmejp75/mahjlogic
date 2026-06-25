@@ -88,10 +88,14 @@
   height: 100%;
 }
 
-/* Touch / installed PWA: row-level center + WKWebView sub-pixel FLIP reads as a vertical jog
-   when a tile is dragged out of the rack (align-self: start on slots is not always enough). */
+/* Touch / installed PWA: belt-and-suspenders — JS already skips drag slides; keep row geometry fixed. */
 @media (pointer: coarse) {
   .panel--hand .panel-hand-rack__hand-tray .hand-row {
     align-items: start;
+  }
+
+  .panel--hand .panel-hand-rack__hand-tray .hand-row.hand-row--dnd-active > .sortable-tile-wrap .sortable-tile-wrap__fly {
+    transform: none !important;
+    transition: none !important;
   }
 }

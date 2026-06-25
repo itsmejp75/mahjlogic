@@ -3395,6 +3395,14 @@ export default function App() {
   const suggestedHandsPopupRef = useRef<HTMLDivElement>(null)
   const eastExposureRackTopRef = useRef<HTMLDivElement>(null)
   const handPanelRef = useRef<HTMLElement>(null)
+  /** While true, ResizeObserver / visualViewport must not rewrite `--hand-panel-cqw` (mobile drag). */
+  const handPanelCqwFrozenRef = useRef(false)
+  const refreshHandPanelCqwRef = useRef<() => void>(() => {})
+  const handBankHeightPinRef = useRef<{
+    el: HTMLElement
+    prevHeight: string
+    prevMinHeight: string
+  } | null>(null)
   const [suggestedDiscardOverlayBounds, setSuggestedDiscardOverlayBounds] = useState({
     topExtendPx: 0,
     bottomExtendPx: 0,
@@ -5860,8 +5868,35 @@ export default function App() {
     ],
   )
 
+  const pinHandRackGeometryForMobileDrag = useCallback(() => {
+    if (typeof window === 'undefined' || !window.matchMedia('(pointer: coarse)').matches) return
+    handPanelCqwFrozenRef.current = true
+    const bank = handPanelRef.current?.querySelector('.hand-bank') as HTMLElement | null
+    if (!bank) return
+    const h = `${Math.round(bank.getBoundingClientRect().height)}px`
+    handBankHeightPinRef.current = {
+      el: bank,
+      prevHeight: bank.style.height,
+      prevMinHeight: bank.style.minHeight,
+    }
+    bank.style.height = h
+    bank.style.minHeight = h
+  }, [])
+
+  const releaseHandRackGeometryAfterMobileDrag = useCallback(() => {
+    handPanelCqwFrozenRef.current = false
+    const pin = handBankHeightPinRef.current
+    if (pin) {
+      pin.el.style.height = pin.prevHeight
+      pin.el.style.minHeight = pin.prevMinHeight
+      handBankHeightPinRef.current = null
+    }
+    refreshHandPanelCqwRef.current()
+  }, [])
+
   const onDragStart = useCallback(
     (e: DragStartEvent) => {
+      pinHandRackGeometryForMobileDrag()
       setCharlestonPassIntoHandPreview(null)
       setEastDiscardIntoHandPreview(null)
       globalDragPointerCleanupRef.current?.()
@@ -5924,6 +5959,7 @@ export default function App() {
       mainPhase,
       activeBotDiscard,
       eastExposures,
+      pinHandRackGeometryForMobileDrag,
     ],
   )
 
@@ -6049,6 +6085,7 @@ export default function App() {
   )
 
   const onDragCancel = useCallback(() => {
+    releaseHandRackGeometryAfterMobileDrag()
     setIncomingBotDiscardCallDragActive(false)
     setCharlestonPassIntoHandPreview(null)
     setEastDiscardIntoHandPreview(null)
@@ -6056,7 +6093,7 @@ export default function App() {
     setDragOverlayTile(null)
     setDragOverlayMeldTiles(null)
     setDragOverlayRackSuitStacked(false)
-  }, [])
+  }, [releaseHandRackGeometryAfterMobileDrag])
 
   const passSlotCount = passSlots.filter(Boolean).length
   const blindPhase = !charlestonDone && charlestonAllowsBlind(charlestonPhase)
@@ -7218,6 +7255,7 @@ export default function App() {
           setCharlestonPassError(charlestonPassBlockedMessage(passBlockedCat))
         }
       } finally {
+        releaseHandRackGeometryAfterMobileDrag()
         globalDragPointerCleanupRef.current?.()
         setIncomingBotDiscardCallDragActive(false)
         setDragOverlayTile(null)
@@ -7231,6 +7269,7 @@ export default function App() {
     [
       hand,
       charlestonDone,
+      releaseHandRackGeometryAfterMobileDrag,
       jokerSwapUiActive,
       mainPhase,
       passSlots,
@@ -7328,6 +7367,7 @@ export default function App() {
       return el.clientWidth - padInline
     }
     const setVar = (w: number) => {
+      if (handPanelCqwFrozenRef.current) return
       if (!Number.isFinite(w) || w < 1) return
       const next = `${w}px`
       for (const target of [el, dndFrame]) {
@@ -7337,8 +7377,10 @@ export default function App() {
         }
       }
     }
-    setVar(contentWidth())
-    const onViewportChange = () => setVar(contentWidth())
+    const refresh = () => setVar(contentWidth())
+    refreshHandPanelCqwRef.current = refresh
+    refresh()
+    const onViewportChange = () => refresh()
     let ro: ResizeObserver | null = null
     if (typeof ResizeObserver !== 'undefined') {
       ro = new ResizeObserver((entries) => {
