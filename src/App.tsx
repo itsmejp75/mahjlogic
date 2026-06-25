@@ -7316,8 +7316,11 @@ export default function App() {
    */
   useLayoutEffect(() => {
     const el = handPanelRef.current
-    if (!el || typeof ResizeObserver === 'undefined') return
-    // Content-box inline size == what `100cqi` resolves to for this inline-size container.
+    if (!el) return
+    // Content-box inline size == what `100cqi` used to resolve to for this (formerly) inline-size
+    // container. `.panel--hand` no longer sets `container-type` (it caused a per-frame WKWebView
+    // relayout during drags), so this px value is now the ONLY source for the rack tile math — it
+    // must always be set, hence the unconditional first write before any ResizeObserver guard.
     const contentWidth = () => {
       const cs = getComputedStyle(el)
       const padInline =
@@ -7332,16 +7335,22 @@ export default function App() {
       }
     }
     setVar(contentWidth())
-    const ro = new ResizeObserver((entries) => {
-      const inline = entries[0]?.contentBoxSize?.[0]?.inlineSize
-      setVar(inline ?? contentWidth())
-    })
-    ro.observe(el)
     const onViewportChange = () => setVar(contentWidth())
+    let ro: ResizeObserver | null = null
+    if (typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver((entries) => {
+        const inline = entries[0]?.contentBoxSize?.[0]?.inlineSize
+        setVar(inline ?? contentWidth())
+      })
+      ro.observe(el)
+    } else {
+      window.addEventListener('resize', onViewportChange)
+    }
     window.addEventListener('orientationchange', onViewportChange)
     window.visualViewport?.addEventListener('resize', onViewportChange)
     return () => {
-      ro.disconnect()
+      ro?.disconnect()
+      window.removeEventListener('resize', onViewportChange)
       window.removeEventListener('orientationchange', onViewportChange)
       window.visualViewport?.removeEventListener('resize', onViewportChange)
     }

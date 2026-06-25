@@ -37,18 +37,29 @@
  * 4 px each side) and 13 inter-tile gaps; divide by 14 for tile-w.
  */
 .panel--hand {
-  container-type: inline-size;
   /*
-   * `--hand-panel-cqw` is the panel's content-box inline size, measured once by a ResizeObserver
-   * in App.tsx and written as an inline px value. It only updates on a REAL resize (window /
-   * orientation / sibling-panel layout change) — never during a drag/removal `transform`. The
-   * fallback `100cqi` keeps SSR / no-JS / first-paint correct. This matters because WKWebView
-   * re-evaluates live `100cqi` while a transformed descendant animates (the removal slide), which
-   * shrank every cqi-derived height — tile faces AND the bank — for a few frames. With the rack
-   * column bottom-anchored, a bank shrink slid the top-pinned tiles DOWN toward the action row
-   * ("tiles pushed down behind the gap above the action buttons"). Reading a frozen px width
-   * removes that wiggle while staying pixel-identical to `100cqi` at rest.
+   * NO `container-type` here on purpose. `--hand-panel-cqw` is the panel's content-box inline size,
+   * measured by a ResizeObserver in App.tsx (in a `useLayoutEffect`, so it is written BEFORE the
+   * first paint) and stored as an inline px value. All tile/chrome math reads that px below, so the
+   * panel no longer needs to be a query container.
+   *
+   * Why removing `container-type` matters: on iOS WKWebView, every drag move re-writes the inline
+   * `transform`/`transition` on the sliding tiles. When the panel was a `container-type: inline-size`
+   * element, that per-frame style mutation forced WebKit to re-run layout (and re-round positions)
+   * across the whole contained subtree, which jogged the resting tiles up/down a couple px — their
+   * bottoms clipping behind the action-row gap. Without the container there is no per-frame relayout
+   * trigger, so the rack stays rock-still during a drag. The math is unaffected because it reads the
+   * frozen px (`--hand-panel-cqw`); the `100cqi` fallback only applies if JS never ran. No `@container`
+   * query resolves against this panel — the suggested-hands list, discard tray, top-exposure band and
+   * rack-lock all use their own NAMED containers — so dropping the type here changes no query.
+   *
+   * `container-type` also used to give the panel a containing block (for abs-positioned descendants)
+   * and a stacking context. Re-establish both explicitly so removing the container changes nothing
+   * else — but via `position`/`isolation`, neither of which is a query container, so there is no
+   * per-frame relayout on a descendant transform.
    */
+  position: relative;
+  isolation: isolate;
   --hand-panel-cqw-resolved: var(--hand-panel-cqw, 100cqi);
   --hand-rack-tile-w: calc(
     (var(--hand-panel-cqw-resolved) - 2 * var(--hand-rack-tray-inset-inline) - 13 * var(--player-rack-face-gap)) / 14
