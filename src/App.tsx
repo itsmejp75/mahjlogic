@@ -5884,7 +5884,9 @@ export default function App() {
     // Freezing the bank height alone never fixed this because the bank's *position* still moved.
     const rackTop = eastExposureRackTopRef.current
     if (rackTop) {
-      const rh = `${Math.round(rackTop.getBoundingClientRect().height)}px`
+      // EXACT fractional px (no rounding): a rounded height differs from the natural height by up
+      // to half a pixel, which snaps the flex-end rack column and nudges the action button row.
+      const rh = `${rackTop.getBoundingClientRect().height}px`
       rackTopHeightPinRef.current = {
         el: rackTop,
         prevHeight: rackTop.style.height,
@@ -5897,7 +5899,7 @@ export default function App() {
     }
     const bank = handPanelRef.current?.querySelector('.hand-bank') as HTMLElement | null
     if (!bank) return
-    const h = `${Math.round(bank.getBoundingClientRect().height)}px`
+    const h = `${bank.getBoundingClientRect().height}px`
     handBankHeightPinRef.current = {
       el: bank,
       prevHeight: bank.style.height,
