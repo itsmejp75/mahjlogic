@@ -7317,10 +7317,10 @@ export default function App() {
   useLayoutEffect(() => {
     const el = handPanelRef.current
     if (!el) return
-    // Content-box inline size == what `100cqi` used to resolve to for this (formerly) inline-size
-    // container. `.panel--hand` no longer sets `container-type` (it caused a per-frame WKWebView
-    // relayout during drags), so this px value is now the ONLY source for the rack tile math — it
-    // must always be set, hence the unconditional first write before any ResizeObserver guard.
+    const dndFrame = el.closest('.app-dnd-frame') as HTMLElement | null
+    // Content-box inline size == what `100cqi` used to resolve to. Written on `.panel--hand` (rack
+    // tile math) and `.app-dnd-frame` (DragOverlay sizing). Neither element uses `container-type`
+    // anymore — live cqi + per-frame drag transforms caused the mobile rack vertical jog on WKWebView.
     const contentWidth = () => {
       const cs = getComputedStyle(el)
       const padInline =
@@ -7330,8 +7330,11 @@ export default function App() {
     const setVar = (w: number) => {
       if (!Number.isFinite(w) || w < 1) return
       const next = `${w}px`
-      if (el.style.getPropertyValue('--hand-panel-cqw') !== next) {
-        el.style.setProperty('--hand-panel-cqw', next)
+      for (const target of [el, dndFrame]) {
+        if (!target) continue
+        if (target.style.getPropertyValue('--hand-panel-cqw') !== next) {
+          target.style.setProperty('--hand-panel-cqw', next)
+        }
       }
     }
     setVar(contentWidth())

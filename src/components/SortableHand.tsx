@@ -162,11 +162,16 @@ function SortableTile({
     resolvedTransition = 'none'
   }
 
-  const style: CSSProperties = {
-    transform: resolvedTransform,
-    transition: resolvedTransition,
+  // Grid slot (wrap): layout only — no transform. dnd-kit slide transforms live on `__fly` so
+  // WKWebView never re-lays out the `repeat(14, 1fr)` row when neighbours animate (the mobile
+  // up/down rack jog; tap-to-pass never mutates transforms, so it never jogged).
+  const wrapStyle: CSSProperties = {
     opacity: draggingThisTile ? 0 : undefined,
     zIndex: draggingThisTile ? 2 : undefined,
+  }
+  const flyMotionStyle: CSSProperties = {
+    transform: resolvedTransform,
+    transition: resolvedTransition,
   }
 
   // When the tile becomes "just drawn", measure the delta from the active discard slot
@@ -264,17 +269,18 @@ function SortableTile({
     deferHandFlyMeasure,
   ])
 
-  const flyStyle: CSSProperties | undefined =
-    handFlyInWaveDelayMs != null ? { animationDelay: `${handFlyInWaveDelayMs}ms` } : undefined
+  const flyStyle: CSSProperties = {
+    ...flyMotionStyle,
+    ...(handFlyInWaveDelayMs != null ? { animationDelay: `${handFlyInWaveDelayMs}ms` } : {}),
+  }
 
   return (
     <div
       ref={setWrapRef}
-      style={style}
+      style={wrapStyle}
       data-hand-tile-id={tile.id}
       className={[
         'sortable-tile-wrap',
-        active ? 'sortable-tile-wrap--dnd-live' : '',
         isJustDrawn && drawInFromRackBottom ? 'sortable-tile-wrap--joker-swap-fly-clip' : '',
         selected ? 'sortable-tile-wrap--selected' : '',
         charlestonGlow ? 'sortable-tile-wrap--charleston-new' : '',
@@ -322,7 +328,7 @@ function CharlestonPassHandPhantomSortable({ tile }: { tile: TileInstance }) {
     id: tile.id,
     animateLayoutChanges: () => false,
   })
-  const style: CSSProperties = {
+  const flyMotionStyle: CSSProperties = {
     transform: rackSortableTransform(transform),
     transition:
       isDragging
@@ -330,18 +336,16 @@ function CharlestonPassHandPhantomSortable({ tile }: { tile: TileInstance }) {
         : active
           ? 'transform 0.14s cubic-bezier(0.2, 0, 0.2, 1)'
           : 'none',
-    opacity: 0,
-    pointerEvents: 'none',
   }
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={{ opacity: 0, pointerEvents: 'none' }}
       className="sortable-tile-wrap"
       {...attributes}
       aria-hidden
     >
-      <div className="sortable-tile-wrap__fly">
+      <div className="sortable-tile-wrap__fly" style={flyMotionStyle}>
         <TileFace def={tile.def} elevated={false} rackSuitStacked />
       </div>
     </div>

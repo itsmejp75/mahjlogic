@@ -127,15 +127,16 @@
 }
 
 /*
- * DragOverlay is a direct child of `.app-dnd-frame` (outside `.panel--hand`), so it does not
- * inherit the panel container-query `--hand-top-rack-tile-w`. Mirror the hand-row formula
- * (rack-stage horizontal pad + rim + 13 gaps) so dragged tiles keep the same width and
- * corner radius as resting main-rack faces.
+ * DragOverlay is a direct child of `.app-dnd-frame` (outside `.panel--hand`). Hand tiles inside the
+ * frame are descendants too — do NOT set `container-type` here. On iOS WKWebView, per-frame inline
+ * `transform` updates on grid slots (even on an inner wrapper) used to re-run cqi layout for every
+ * ancestor query container and jog the whole rack vertically. Tile / overlay sizing reads the same
+ * frozen `--hand-panel-cqw` px written on this element in App.tsx (ResizeObserver on `.panel--hand`).
  */
 .app-dnd-frame {
-  container-type: inline-size;
+  --hand-panel-cqw-resolved: var(--hand-panel-cqw, 100cqi);
   --hand-drag-overlay-tile-w: calc(
-    (100cqi - 2 * var(--app-h-pad) - var(--hand-rack-rim-inline, 2px) - 13 * var(--player-rack-face-gap)) / 14
+    (var(--hand-panel-cqw-resolved) - 2 * var(--app-h-pad) - var(--hand-rack-rim-inline, 2px) - 13 * var(--player-rack-face-gap)) / 14
   );
   --hand-drag-overlay-tile-h: calc(var(--hand-drag-overlay-tile-w) * 1.3333);
 }
@@ -151,12 +152,14 @@
  * `--hand-rack-tile-w * --hand-rack-tile-scale` (existing `.exposure-rack` rule) and
  * the row's inline content size.
  */
-.panel--hand .rack-stage__rack-top .exposure-rack {
-  container-type: inline-size;
-}
+/*
+ * Exposure rack: intentionally no `container-type` here (removed). Tile sizes come from the
+ * panel-level frozen `--hand-panel-cqw` tokens. A query container on this row re-ran layout on
+ * the exposure↔hand column whenever hand-tile drag transforms updated under `.app-dnd-frame`.
+ */
 
 /*
- * The hand row is intentionally NOT a container query container. Its tile width comes from the
+ * The hand row is intentionally NOT a container query container.
  * panel-level `--hand-top-rack-tile-w` (part-0118), and no `@container` query targets the row —
  * so the `container-type` here was redundant. Worse, on iOS WKWebView a `container-type` element
  * that holds transformed children (the dragged tile + the neighbours dnd-kit slides) triggers a

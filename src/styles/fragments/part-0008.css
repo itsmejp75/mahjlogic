@@ -27,6 +27,7 @@
   );
   border-radius: var(--tile-face-border-radius);
   /* Bank is the dark tray; tiles fill it with only the rim/highlight in the border box. */
+  align-items: flex-start;
 }
 
 .panel--hand .panel-hand-rack__hand-tray .hand-row {
@@ -44,6 +45,7 @@
    * `display: flex` + `gap: var(--rack-tile-gap)` from part-0075 are overridden here. */
   display: grid;
   grid-template-columns: repeat(14, 1fr);
+  grid-auto-rows: var(--rack-tile-h);
   gap: var(--player-rack-face-gap);
   align-items: start;
   /* Single implicit row packed to the top (not stretched/centered) so a mid-drag relayout has no
@@ -76,27 +78,9 @@
 }
 
 /*
- * While a drag is in progress, promote the hand tiles to their own compositor layer. The dnd-kit
- * reorder slide sets an inline `transform: translate3d(x,0,0)` on the NEIGHBOURS; on iOS WKWebView,
- * mutating a transform on a descendant of a `container-type: inline-size` element (`.panel--hand`)
- * triggers a relayout of the contained subtree, and that relayout nudged the resting tiles down a
- * couple px — their bottoms clipped behind the action-row gap, and only when the drag moved
- * sideways (i.e. when a neighbour actually got a slide transform). With `will-change: transform`
- * the slide is a GPU-only composite that never dirties layout, so the container is not re-evaluated
- * and the tiles stay put. The `.sortable-tile-wrap--dnd-live` class is added by SortableHand only
- * while `active != null`, so there are no always-on layers (and no resting-state text blur).
- * `will-change` (not a `transform` value) so dnd-kit's inline transform can't override the hint.
- */
-.panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap.sortable-tile-wrap--dnd-live {
-  will-change: transform;
-}
-
-/*
- * The visible face fills its slot box (the frozen-height wrap above): width = the stable grid `1fr`
- * track, height = 100% of the wrap's frozen `--rack-tile-h`. This keeps the face off the live cqi
- * `--rack-tile-w` / `--rack-tile-h` so it can't shrink/jog if WKWebView re-measures mid-transform.
- * `.app` prefix matches the high-specificity face rules in part-0123 so the earlier-loaded base
- * fragment is not out-cascaded on these two properties.
+ * dnd-kit reorder / pass-preview slides run on this inner wrapper (SortableHand), NOT on the grid
+ * slot (`.sortable-tile-wrap`). Keeping the slot free of inline `transform`/`transition` stops
+ * iOS WKWebView from re-laying out the 14-column grid every drag frame (the mobile rack jog).
  */
 .app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap .sortable-tile-wrap__fly,
 .app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap .tile-face {
