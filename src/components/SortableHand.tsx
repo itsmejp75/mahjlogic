@@ -274,6 +274,7 @@ function SortableTile({
       data-hand-tile-id={tile.id}
       className={[
         'sortable-tile-wrap',
+        active ? 'sortable-tile-wrap--dnd-live' : '',
         isJustDrawn && drawInFromRackBottom ? 'sortable-tile-wrap--joker-swap-fly-clip' : '',
         selected ? 'sortable-tile-wrap--selected' : '',
         charlestonGlow ? 'sortable-tile-wrap--charleston-new' : '',

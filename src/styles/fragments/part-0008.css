@@ -45,7 +45,10 @@
   display: grid;
   grid-template-columns: repeat(14, 1fr);
   gap: var(--player-rack-face-gap);
-  align-items: center;
+  align-items: start;
+  /* Single implicit row packed to the top (not stretched/centered) so a mid-drag relayout has no
+     leftover vertical space to redistribute — tiles can't drift down within the bank. */
+  align-content: start;
   padding-inline: 0;
   box-sizing: border-box;
   margin-left: 0;
@@ -65,27 +68,35 @@
   width: 100%;
   min-width: 0;
   max-width: none;
-  /*
-   * Height comes from the slot's own (grid `1fr`) rendered width via aspect-ratio — NOT from
-   * `--rack-tile-h`, which is `--rack-tile-w * 1.3333` resolved from the panel's live `100cqi`.
-   * The on-screen width is already pinned by the grid track (stable), but the cqi-derived height
-   * gets re-measured by WKWebView during a drag/removal transform, which nudged every tile a
-   * couple px (the "tiles shrink / get pushed down behind the action-row gap" report). Sizing the
-   * height off the stable rendered width makes the vertical box immune to that cqi wiggle.
-   * `3 / 4` == width : height = 1 : 1.3333, identical to the resting `--rack-tile-h` value.
-   */
-  height: auto;
-  aspect-ratio: 3 / 4;
+  /* `--rack-tile-h` is now frozen to a px value (panel `--hand-panel-cqw`, part-0117), so it no
+     longer wiggles with the live `100cqi`. Height is a fixed px box. */
+  height: var(--rack-tile-h);
   /* Pin to the top track edge so dnd transforms / sub-pixel scale never re-center tiles vertically. */
   align-self: start;
 }
 
 /*
- * The visible face must fill the stable aspect-ratio slot box (above) instead of reading the
- * live cqi `--rack-tile-w` / `--rack-tile-h` itself — otherwise the wrap stays put but the face
- * inside it still shrinks/jogs on the cqi re-measure. Width is the stable grid track; height is
- * the aspect-ratio box. `.app` prefix matches the high-specificity face rules in part-0123 so the
- * earlier-loaded base fragment is not out-cascaded on these two properties.
+ * While a drag is in progress, promote the hand tiles to their own compositor layer. The dnd-kit
+ * reorder slide sets an inline `transform: translate3d(x,0,0)` on the NEIGHBOURS; on iOS WKWebView,
+ * mutating a transform on a descendant of a `container-type: inline-size` element (`.panel--hand`)
+ * triggers a relayout of the contained subtree, and that relayout nudged the resting tiles down a
+ * couple px — their bottoms clipped behind the action-row gap, and only when the drag moved
+ * sideways (i.e. when a neighbour actually got a slide transform). With `will-change: transform`
+ * the slide is a GPU-only composite that never dirties layout, so the container is not re-evaluated
+ * and the tiles stay put. The `.sortable-tile-wrap--dnd-live` class is added by SortableHand only
+ * while `active != null`, so there are no always-on layers (and no resting-state text blur).
+ * `will-change` (not a `transform` value) so dnd-kit's inline transform can't override the hint.
+ */
+.panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap.sortable-tile-wrap--dnd-live {
+  will-change: transform;
+}
+
+/*
+ * The visible face fills its slot box (the frozen-height wrap above): width = the stable grid `1fr`
+ * track, height = 100% of the wrap's frozen `--rack-tile-h`. This keeps the face off the live cqi
+ * `--rack-tile-w` / `--rack-tile-h` so it can't shrink/jog if WKWebView re-measures mid-transform.
+ * `.app` prefix matches the high-specificity face rules in part-0123 so the earlier-loaded base
+ * fragment is not out-cascaded on these two properties.
  */
 .app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap .sortable-tile-wrap__fly,
 .app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap .tile-face {
