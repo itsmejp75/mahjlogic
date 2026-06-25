@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react'
 import { useRef, useLayoutEffect, useEffect, useState, useMemo } from 'react'
 import { useDndContext } from '@dnd-kit/core'
 import { useSortable } from '@dnd-kit/sortable'
-import { CSS, type Transform } from '@dnd-kit/utilities'
+import type { Transform } from '@dnd-kit/utilities'
 import type { TileInstance } from '../mahjong/types'
 import type { HandTileFlyIn } from '../mahjong/handTileFlyIn'
 import { DeadCauseWarning } from './DeadCauseWarning'
@@ -13,13 +13,16 @@ import { TileFace } from './TileFace'
  * `.panel--hand .panel-hand-rack__hand-tray .hand-row` uses (`repeat(14, 1fr)` + `gap`).
  * Using `--rack-tile-w` + face-gap keeps the math identical to one column step.
  */
-const REMOVAL_SHIFT_TRANSFORM =
-  'translateX(calc(var(--rack-tile-w) + var(--player-rack-face-gap, var(--rack-tile-gap))))'
+const RACK_FLY_TX_ZERO = '0px'
+/** One column to the right — opens a gap for a tile hovering over / leaving the rack. */
+const RACK_FLY_TX_ONE_COL =
+  'calc(var(--rack-tile-w) + var(--player-rack-face-gap, var(--rack-tile-gap)))'
 /** One column to the *left* — closes the gap of a tile being lifted out to pass (compaction preview). */
-const PASS_STAGE_SHIFT_TRANSFORM =
-  'translateX(calc(-1 * (var(--rack-tile-w) + var(--player-rack-face-gap, var(--rack-tile-gap)))))'
+const RACK_FLY_TX_ONE_COL_LEFT =
+  'calc(-1 * (var(--rack-tile-w) + var(--player-rack-face-gap, var(--rack-tile-gap)))'
 const RACK_REORDER_EASING = 'cubic-bezier(0.2, 0, 0.2, 1)'
 const RACK_REORDER_DURATION = '0.16s'
+const RACK_FLY_MOTION_TRANSITION = `--rack-fly-tx ${RACK_REORDER_DURATION} ${RACK_REORDER_EASING}`
 
 /**
  * Horizontal slide only — never scale. rectSortingStrategy compares full rects; when the dragged
@@ -28,9 +31,9 @@ const RACK_REORDER_DURATION = '0.16s'
  * large enough to read as the whole rack jogging up/down; desktop sub-pixels stay invisible.
  * Strip `y` too — vertical translate is never wanted in this single-row rack.
  */
-function rackSortableTransform(transform: Transform | null): string | undefined {
-  if (transform == null) return undefined
-  return CSS.Translate.toString({ ...transform, y: 0 }) ?? undefined
+function rackSortableFlyTx(transform: Transform | null): string {
+  if (transform == null) return RACK_FLY_TX_ZERO
+  return `${transform.x}px`
 }
 
 function SortableTile({
@@ -113,52 +116,47 @@ function SortableTile({
       animateLayoutChanges: () => false,
     })
 
-  // Horizontal translate only for smooth slides; scale + vertical FLIP stripped (see rackSortableTransform).
-  const sortableTransform = rackSortableTransform(transform)
-  const externalShiftTransform = REMOVAL_SHIFT_TRANSFORM
+  // Horizontal translate only for smooth slides; scale + vertical FLIP stripped (see rackSortableFlyTx).
   const draggingThisTile = active != null && String(active.id) === tile.id
 
-  let resolvedTransform: string | undefined
+  let rackFlyTx: string
   let resolvedTransition: string
 
   if (externalPreviewActive) {
     // Cross-zone drags (Charleston pass or discard staging hovering the rack): use only the
     // single rightward gap transform; ignore dnd-kit context transforms that would fight it.
-    resolvedTransform = externalShift ? externalShiftTransform : undefined
-    resolvedTransition = active ? `transform ${RACK_REORDER_DURATION} ${RACK_REORDER_EASING}` : 'none'
+    rackFlyTx = externalShift ? RACK_FLY_TX_ONE_COL : RACK_FLY_TX_ZERO
+    resolvedTransition = active ? RACK_FLY_MOTION_TRANSITION : 'none'
   } else if (draggingThisTile) {
     // DragOverlay carries the visible tile — park the source in its grid slot (opacity 0) so
     // moving it with dnd-kit transforms does not skew rectSortingStrategy measurements.
-    resolvedTransform = undefined
+    rackFlyTx = RACK_FLY_TX_ZERO
     resolvedTransition = 'none'
   } else if (shiftPhase === 'pre') {
     // Park one column to the right (the tile's old position) without easing so the next render
     // can transition cleanly back to the new column.
-    resolvedTransform = REMOVAL_SHIFT_TRANSFORM
+    rackFlyTx = RACK_FLY_TX_ONE_COL
     resolvedTransition = 'none'
   } else if (shiftPhase === 'post') {
     // Slide back to the new column — ignore leftover dnd-kit FLIP deltas (can include y on mobile).
-    resolvedTransform = undefined
-    resolvedTransition = `transform ${RACK_REORDER_DURATION} ${RACK_REORDER_EASING}`
+    rackFlyTx = RACK_FLY_TX_ZERO
+    resolvedTransition = RACK_FLY_MOTION_TRANSITION
   } else if (passStageShiftLeft) {
     // Tile being passed is lifted onto a slot: close its gap (slide left one column) so the rack
     // previews the removed state instead of dnd-kit snapping the slid neighbours back to home.
-    resolvedTransform = PASS_STAGE_SHIFT_TRANSFORM
-    resolvedTransition = `transform ${RACK_REORDER_DURATION} ${RACK_REORDER_EASING}`
+    rackFlyTx = RACK_FLY_TX_ONE_COL_LEFT
+    resolvedTransition = RACK_FLY_MOTION_TRANSITION
   } else if (active) {
     // Any active drag — in-rack reorder OR dragging a tile out to the pass box / discard / call.
     // Neighbours slide horizontally to open or close the gap so they move out of the dragged
-    // tile's way in real time (not on release). `rackSortableTransform` already dropped the
-    // vertical + scale components and the row is top-anchored (part-0008), so this can only ever
-    // translate sideways — never the vertical jog WKWebView used to show.
-    resolvedTransform = sortableTransform ?? undefined
-    resolvedTransition = sortableTransform
-      ? `transform ${RACK_REORDER_DURATION} ${RACK_REORDER_EASING}`
-      : 'none'
+    // tile's way in real time (not on release). Motion is `--rack-fly-tx` only so authored
+    // `translateZ(0)` on `__fly` is never replaced by inline `transform` (mobile size flicker).
+    rackFlyTx = rackSortableFlyTx(transform)
+    resolvedTransition = RACK_FLY_MOTION_TRANSITION
   } else {
     // Programmatic reorder (suggested-hand sort) must not apply dnd-kit FLIP deltas — they can
     // include a vertical component on mobile and read as the whole rack jogging up/down.
-    resolvedTransform = undefined
+    rackFlyTx = RACK_FLY_TX_ZERO
     resolvedTransition = 'none'
   }
 
@@ -170,7 +168,7 @@ function SortableTile({
     zIndex: draggingThisTile ? 2 : undefined,
   }
   const flyMotionStyle: CSSProperties = {
-    transform: resolvedTransform,
+    ['--rack-fly-tx' as string]: rackFlyTx,
     transition: resolvedTransition,
   }
 
@@ -329,11 +327,11 @@ function CharlestonPassHandPhantomSortable({ tile }: { tile: TileInstance }) {
     animateLayoutChanges: () => false,
   })
   const flyMotionStyle: CSSProperties = {
-    transform: rackSortableTransform(transform),
+    ['--rack-fly-tx' as string]: rackSortableFlyTx(transform),
     transition: isDragging
       ? 'none'
       : active
-        ? 'transform 0.14s cubic-bezier(0.2, 0, 0.2, 1)'
+        ? RACK_FLY_MOTION_TRANSITION
         : 'none',
   }
   return (

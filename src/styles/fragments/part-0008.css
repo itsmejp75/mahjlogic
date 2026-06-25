@@ -89,6 +89,17 @@
 }
 
 /*
+ * Registered so `--rack-fly-tx` can transition without inline `transform` overrides (SortableHand).
+ * Inline `transform` used to replace `translateZ(0)` during neighbour slides, which made WKWebView
+ * re-rasterise those tiles at a slightly different scale until the drag ended.
+ */
+@property --rack-fly-tx {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+/*
  * Keep each hand tile face ALWAYS on its own composited layer. On iOS WKWebView (and the
  * simulator's scaled display especially), an element that is NOT a layer at rest but BECOMES one
  * the instant a `transform` is applied (the dnd neighbour slide) gets its Y re-snapped to a device
@@ -96,9 +107,12 @@
  * position, not the rasterised layer position). Browsers don't surface it; the simulator does.
  * Promoting the layer permanently means the resting Y and the dragging Y round identically, so the
  * face cannot shift vertically when the slide transform turns on/off.
+ *
+ * Motion is `--rack-fly-tx` only — never inline `transform` — so `translateZ(0)` stays in the
+ * authored transform list for the whole drag.
  */
 .app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap .sortable-tile-wrap__fly {
-  transform: translateZ(0);
+  transform: translateZ(0) translateX(var(--rack-fly-tx, 0px));
   backface-visibility: hidden;
   will-change: transform;
 }
