@@ -3403,6 +3403,13 @@ export default function App() {
     prevHeight: string
     prevMinHeight: string
   } | null>(null)
+  /** Mobile drag: pin the exposure/charleston rack-top height so it can't grow and shove the hand row down. */
+  const rackTopHeightPinRef = useRef<{
+    el: HTMLElement
+    prevHeight: string
+    prevMinHeight: string
+    prevMaxHeight: string
+  } | null>(null)
   const [suggestedDiscardOverlayBounds, setSuggestedDiscardOverlayBounds] = useState({
     topExtendPx: 0,
     bottomExtendPx: 0,
@@ -5871,6 +5878,23 @@ export default function App() {
   const pinHandRackGeometryForMobileDrag = useCallback(() => {
     if (typeof window === 'undefined' || !window.matchMedia('(pointer: coarse)').matches) return
     handPanelCqwFrozenRef.current = true
+    // Pin the exposure/charleston rack-top height FIRST. It sits above the hand tray in the
+    // rack column; if a drag transform makes WebKit re-measure and its empty slots grow even a
+    // sub-pixel, the whole hand tray (top-anchored tiles) is pushed down — the "vertical jog".
+    // Freezing the bank height alone never fixed this because the bank's *position* still moved.
+    const rackTop = eastExposureRackTopRef.current
+    if (rackTop) {
+      const rh = `${Math.round(rackTop.getBoundingClientRect().height)}px`
+      rackTopHeightPinRef.current = {
+        el: rackTop,
+        prevHeight: rackTop.style.height,
+        prevMinHeight: rackTop.style.minHeight,
+        prevMaxHeight: rackTop.style.maxHeight,
+      }
+      rackTop.style.height = rh
+      rackTop.style.minHeight = rh
+      rackTop.style.maxHeight = rh
+    }
     const bank = handPanelRef.current?.querySelector('.hand-bank') as HTMLElement | null
     if (!bank) return
     const h = `${Math.round(bank.getBoundingClientRect().height)}px`
@@ -5890,6 +5914,13 @@ export default function App() {
       pin.el.style.height = pin.prevHeight
       pin.el.style.minHeight = pin.prevMinHeight
       handBankHeightPinRef.current = null
+    }
+    const rackTopPin = rackTopHeightPinRef.current
+    if (rackTopPin) {
+      rackTopPin.el.style.height = rackTopPin.prevHeight
+      rackTopPin.el.style.minHeight = rackTopPin.prevMinHeight
+      rackTopPin.el.style.maxHeight = rackTopPin.prevMaxHeight
+      rackTopHeightPinRef.current = null
     }
     refreshHandPanelCqwRef.current()
   }, [])
