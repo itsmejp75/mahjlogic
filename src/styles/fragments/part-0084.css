@@ -87,7 +87,7 @@
   gap: var(--player-rack-face-gap);
   overflow: visible;
   pointer-events: auto;
-  transform: translateY(calc(var(--play-tray-h-divider) / 2));
+  transform: translateY(var(--rack-inline-slot-nudge-y, calc(var(--play-tray-h-divider) / 2)));
 }
 
 .panel--hand .exposure-rack__call-meld-strip {

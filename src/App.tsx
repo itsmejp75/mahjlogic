@@ -3398,18 +3398,6 @@ export default function App() {
   /** While true, ResizeObserver / visualViewport must not rewrite `--hand-panel-cqw` (mobile drag). */
   const handPanelCqwFrozenRef = useRef(false)
   const refreshHandPanelCqwRef = useRef<() => void>(() => {})
-  const handBankHeightPinRef = useRef<{
-    el: HTMLElement
-    prevHeight: string
-    prevMinHeight: string
-  } | null>(null)
-  /** Mobile drag: pin the exposure/charleston rack-top height so it can't grow and shove the hand row down. */
-  const rackTopHeightPinRef = useRef<{
-    el: HTMLElement
-    prevHeight: string
-    prevMinHeight: string
-    prevMaxHeight: string
-  } | null>(null)
   const [suggestedDiscardOverlayBounds, setSuggestedDiscardOverlayBounds] = useState({
     topExtendPx: 0,
     bottomExtendPx: 0,
@@ -5877,53 +5865,15 @@ export default function App() {
 
   const pinHandRackGeometryForMobileDrag = useCallback(() => {
     if (typeof window === 'undefined' || !window.matchMedia('(pointer: coarse)').matches) return
+    // Freeze panel width tokens only. Height pins on `.rack-stage__rack-top` / `.hand-bank` caused
+    // a persistent dead band between the green exposure slots and the hand row when the pinned box
+    // was taller than the compact strip (inline height stuck or content top-aligned in the box).
+    // The jog is handled by composited tile faces (part-0008) + this cqw freeze.
     handPanelCqwFrozenRef.current = true
-    // Pin the exposure/charleston rack-top height FIRST. It sits above the hand tray in the
-    // rack column; if a drag transform makes WebKit re-measure and its empty slots grow even a
-    // sub-pixel, the whole hand tray (top-anchored tiles) is pushed down — the "vertical jog".
-    // Freezing the bank height alone never fixed this because the bank's *position* still moved.
-    const rackTop = eastExposureRackTopRef.current
-    if (rackTop) {
-      // EXACT fractional px (no rounding): a rounded height differs from the natural height by up
-      // to half a pixel, which snaps the flex-end rack column and nudges the action button row.
-      const rh = `${rackTop.getBoundingClientRect().height}px`
-      rackTopHeightPinRef.current = {
-        el: rackTop,
-        prevHeight: rackTop.style.height,
-        prevMinHeight: rackTop.style.minHeight,
-        prevMaxHeight: rackTop.style.maxHeight,
-      }
-      rackTop.style.height = rh
-      rackTop.style.minHeight = rh
-      rackTop.style.maxHeight = rh
-    }
-    const bank = handPanelRef.current?.querySelector('.hand-bank') as HTMLElement | null
-    if (!bank) return
-    const h = `${bank.getBoundingClientRect().height}px`
-    handBankHeightPinRef.current = {
-      el: bank,
-      prevHeight: bank.style.height,
-      prevMinHeight: bank.style.minHeight,
-    }
-    bank.style.height = h
-    bank.style.minHeight = h
   }, [])
 
   const releaseHandRackGeometryAfterMobileDrag = useCallback(() => {
     handPanelCqwFrozenRef.current = false
-    const pin = handBankHeightPinRef.current
-    if (pin) {
-      pin.el.style.height = pin.prevHeight
-      pin.el.style.minHeight = pin.prevMinHeight
-      handBankHeightPinRef.current = null
-    }
-    const rackTopPin = rackTopHeightPinRef.current
-    if (rackTopPin) {
-      rackTopPin.el.style.height = rackTopPin.prevHeight
-      rackTopPin.el.style.minHeight = rackTopPin.prevMinHeight
-      rackTopPin.el.style.maxHeight = rackTopPin.prevMaxHeight
-      rackTopHeightPinRef.current = null
-    }
     refreshHandPanelCqwRef.current()
   }, [])
 
@@ -7433,6 +7383,22 @@ export default function App() {
       window.visualViewport?.removeEventListener('resize', onViewportChange)
     }
   }, [])
+
+  // Clear inline height locks left by an earlier rack-top / hand-bank pin (removed — they caused a
+  // dead band between green exposure slots and the hand row when the box was taller than content).
+  useLayoutEffect(() => {
+    const rackTop = eastExposureRackTopRef.current
+    if (rackTop) {
+      rackTop.style.removeProperty('height')
+      rackTop.style.removeProperty('min-height')
+      rackTop.style.removeProperty('max-height')
+    }
+    const bank = handPanelRef.current?.querySelector('.hand-bank') as HTMLElement | null
+    if (bank) {
+      bank.style.removeProperty('height')
+      bank.style.removeProperty('min-height')
+    }
+  }, [charlestonDone, mainPhase])
 
   // During call-staging, staged tiles are shown in the exposure rack — hide them from the hand.
   const visibleHandTiles =

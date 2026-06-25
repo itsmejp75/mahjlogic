@@ -1561,6 +1561,23 @@ html[data-home-screen-app]:not([data-native-app])
 
 .app .panel--hand .rack-stage__rack-top {
   --rack-action-border-color: #636870;
+  --rack-inline-slot-nudge-y: calc(var(--play-tray-h-divider) / 2);
+}
+
+/*
+ * Lower inline green wells (Charleston pass, discard, call, empty exposure slots) to the same
+ * exposure↔hand divider position as the call-staging “+” add slot (`.exposure-rack__call-meld-anchor`).
+ */
+.app .panel--hand :is(
+  .rack-stage__rack-top .pass-strip-tail,
+  .rack-stage__rack-top .exposure-rack__slot--east-discard-slot,
+  .rack-stage__rack-top .exposure-rack__slot--incoming-discard,
+  .rack-stage__rack-top
+    .exposure-rack
+    > .exposure-rack__slot--empty:not(.exposure-rack__call-meld-add-slot):not(.exposure-rack__slot--pass-tail),
+  .rack-stage__rack-top .exposure-rack__call-initiate-target--near
+) {
+  transform: translateY(var(--rack-inline-slot-nudge-y));
 }
 
 .app

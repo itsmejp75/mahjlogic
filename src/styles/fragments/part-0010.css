@@ -9,7 +9,7 @@
 
 
 .panel--hand .rack-stage__rack-col {
-  gap: var(--play-tray-h-divider);
+  gap: var(--hand-exposure-to-rack-gap, var(--play-tray-h-divider));
   /* Pin the column to exactly 14 face-widths + 13 gaps + tray insets (`--hand-rack-tile-w` from `.panel--hand` container query). */
   width: calc(
     14 * var(--hand-rack-tile-w) + 13 * var(--player-rack-face-gap) + 2 * var(--hand-rack-tray-inset-inline)

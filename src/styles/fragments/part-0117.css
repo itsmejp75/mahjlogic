@@ -60,6 +60,8 @@
    */
   position: relative;
   isolation: isolate;
+  /* Vertical strip between green exposure wells and the hand+action block (tiles + buttons move together). */
+  --hand-exposure-to-rack-gap: max(1px, calc(var(--play-tray-h-divider) - 3px));
   --hand-panel-cqw-resolved: var(--hand-panel-cqw, 100cqi);
   --hand-rack-tile-w: calc(
     (var(--hand-panel-cqw-resolved) - 2 * var(--hand-rack-tray-inset-inline) - 13 * var(--player-rack-face-gap)) / 14
