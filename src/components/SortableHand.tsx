@@ -33,11 +33,6 @@ function rackSortableTransform(transform: Transform | null): string | undefined 
   return CSS.Translate.toString({ ...transform, y: 0 }) ?? undefined
 }
 
-/** Touch / installed PWA only — desktop keeps live neighbour slides. */
-function prefersCoarsePointer(): boolean {
-  return typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
-}
-
 function SortableTile({
   tile,
   selected,
@@ -163,17 +158,6 @@ function SortableTile({
   } else {
     // Programmatic reorder (suggested-hand sort) must not apply dnd-kit FLIP deltas — they can
     // include a vertical component on mobile and read as the whole rack jogging up/down.
-    resolvedTransform = undefined
-    resolvedTransition = 'none'
-  }
-
-  /*
-   * Mobile / PWA (coarse pointer): skip every drag-time slide transform. Safari hides/shows the
-   * URL bar while the finger moves (visualViewport resize), and even inner-wrapper transforms
-   * still jog the whole rack vertically on WKWebView. Tap-to-pass never runs this branch — only
-   * finger drags do — which matches the “mobile only + click is fine” report. Desktop keeps slides.
-   */
-  if (prefersCoarsePointer() && active && shiftPhase == null) {
     resolvedTransform = undefined
     resolvedTransition = 'none'
   }
@@ -345,16 +329,12 @@ function CharlestonPassHandPhantomSortable({ tile }: { tile: TileInstance }) {
     animateLayoutChanges: () => false,
   })
   const flyMotionStyle: CSSProperties = {
-    transform:
-      prefersCoarsePointer() && active ? undefined : rackSortableTransform(transform),
-    transition:
-      prefersCoarsePointer() && active
-        ? 'none'
-        : isDragging
-          ? 'none'
-          : active
-            ? 'transform 0.14s cubic-bezier(0.2, 0, 0.2, 1)'
-            : 'none',
+    transform: rackSortableTransform(transform),
+    transition: isDragging
+      ? 'none'
+      : active
+        ? 'transform 0.14s cubic-bezier(0.2, 0, 0.2, 1)'
+        : 'none',
   }
   return (
     <div

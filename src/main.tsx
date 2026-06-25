@@ -52,19 +52,28 @@ export function AppWithNativeSplashHandoff() {
       return
     }
 
+    const hideNative = () => {
+      void SplashScreen.hide({ fadeOutDuration: 250 }).catch(() => undefined)
+    }
+
+    // Try immediately (bridge is up once this bundle runs), then after paint, then as a
+    // safety net if React mount or the plugin call fails — otherwise launchAutoHide:false
+    // leaves the native splash up forever (common simulator report).
+    hideNative()
     let cancelled = false
     let firstFrame = 0
     let secondFrame = 0
+    const safetyTimer = window.setTimeout(hideNative, 3500)
 
     firstFrame = window.requestAnimationFrame(() => {
       secondFrame = window.requestAnimationFrame(() => {
-        if (cancelled) return
-        void SplashScreen.hide({ fadeOutDuration: 250 }).catch(() => undefined)
+        if (!cancelled) hideNative()
       })
     })
 
     return () => {
       cancelled = true
+      window.clearTimeout(safetyTimer)
       window.cancelAnimationFrame(firstFrame)
       window.cancelAnimationFrame(secondFrame)
     }

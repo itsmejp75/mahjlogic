@@ -88,14 +88,11 @@
   height: 100%;
 }
 
-/* Touch / installed PWA: belt-and-suspenders — JS already skips drag slides; keep row geometry fixed. */
+/* Touch / installed PWA: keep the hand row top-anchored so neighbour slide transforms can only
+ * ever move sideways — the vertical jog is prevented by freezing panel width + rack height on
+ * drag start (App.tsx), so the horizontal slide animation stays enabled here. */
 @media (pointer: coarse) {
   .panel--hand .panel-hand-rack__hand-tray .hand-row {
     align-items: start;
-  }
-
-  .panel--hand .panel-hand-rack__hand-tray .hand-row.hand-row--dnd-active > .sortable-tile-wrap .sortable-tile-wrap__fly {
-    transform: none !important;
-    transition: none !important;
   }
 }
