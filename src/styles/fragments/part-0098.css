@@ -73,8 +73,8 @@
 }
 
 .app-menu-modal .app-menu-tray__item:not(.app-menu-tray__item--switch):disabled {
-  color: var(--rack-action-label-color, var(--app-action-btn-label));
-  cursor: not-allowed;
+  color: var(--rack-action-label-color-disabled, var(--app-action-btn-label-disabled));
+  cursor: default;
   box-shadow: none;
   opacity: 1;
   filter: none;

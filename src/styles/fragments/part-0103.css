@@ -63,8 +63,7 @@
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open.rack-bottom-tile-cell--c4-5:disabled,
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled,
-.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.rack-bottom-tile-cell--c12-14:not(:disabled),
-.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.rack-bottom-tile-cell--c12-14:disabled {
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.rack-bottom-tile-cell--c12-14:not(:disabled) {
   color: var(--rack-action-label-color, var(--app-action-btn-label));
 }
 

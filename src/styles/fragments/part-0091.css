@@ -1077,8 +1077,8 @@
   .wall-game-dialog--wall-seats
   .wall-game-dialog__actions
   .btn.wall-game-dialog__action-btn:disabled {
-  color: var(--rack-action-label-color, #e2e4e8);
-  cursor: not-allowed;
+  color: var(--rack-action-label-color-disabled, var(--app-action-btn-label-disabled));
+  cursor: default;
   box-shadow: none;
   opacity: 1;
   filter: none;

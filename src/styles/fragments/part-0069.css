@@ -111,7 +111,7 @@
   color: var(--color-white);
   opacity: 0.5;
   filter: none;
-  cursor: not-allowed;
+  cursor: default;
 }
 
 .rack-bottom-bar .btn.rack-bottom-tile-cell:not(:disabled) {

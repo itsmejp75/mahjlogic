@@ -198,10 +198,26 @@
   vertical-align: baseline;
 }
 
-/* Logo-only cell: `.rack-bottom-tile-cell` uses overflow:hidden for text labels (part-0001).
-   That clips the Mah Jongg SVG hint so often only the lower strokes pulse. */
+/* Logo-only cell: clip glyph inside the 1px border (hint animation is opacity-only on the stack). */
 .panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong.rack-bottom-tile-cell--c5-6 {
-  overflow: visible;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  line-height: 0;
+  height: var(--hand-button-row-h, var(--rack-action-touch-min-h));
+}
+
+.panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong.rack-bottom-tile-cell--c5-6 .btn--mahj__logo-stack {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 1px;
 }
 
 .btn--mahj__logo-stack {
@@ -214,23 +230,6 @@
 
 .btn--mahj__logo-stack__well {
   display: none;
-}
-
-.btn--mahjong-hint .btn--mahj__logo-stack {
-  transform-origin: center center;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  will-change: opacity;
-  animation: mahjong-logo-hint-stack-cycle 4.5s ease-in-out infinite;
-}
-
-.btn--mahjong-hint .btn--mahj__logo-stack .btn--mahj__img {
-  position: relative;
-  z-index: 0;
-  opacity: 1;
-  filter: none;
-  transform: none;
-  animation: none;
 }
 
 /*
@@ -275,30 +274,17 @@
   opacity: 1;
 }
 
-.app-layout[data-animations='off'] .btn--mahjong-hint .btn--mahj__logo-stack {
-  animation: none;
-  opacity: 1;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .btn--mahjong-hint .btn--mahj__logo-stack {
-    animation: none !important;
-    opacity: 1 !important;
-  }
-
-  .btn--mahjong-hint .btn--mahj__logo-stack .btn--mahj__img {
-    filter: none !important;
-  }
-}
-
-.btn--mahj__img {
-  height: 1.6em;
+.panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong.rack-bottom-tile-cell--c5-6 .btn--mahj__img {
+  display: block;
   width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
   pointer-events: none;
-  vertical-align: baseline;
-  position: relative;
-  top: 0.15em;
+  position: static;
+  top: auto;
+  vertical-align: middle;
 }
 
 /* Call / Swap (c9–10): enabled + disabled chrome — flat white faces in part-0123. */

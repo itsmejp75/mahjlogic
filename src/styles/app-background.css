@@ -76,6 +76,8 @@
   --app-action-btn-border: color-mix(in srgb, #6c757e 78%, #ffffff 22%);
   --app-action-btn-highlight: rgba(255, 255, 255, 0.16);
   --app-action-btn-label: #e2e4e8;
+  --app-action-btn-label-disabled: color-mix(in srgb, var(--app-action-btn-label) 38%, #6d6d73 62%);
+  --rack-action-hint-border: #b56fd0;
   --app-action-btn-face: linear-gradient(
     180deg,
     var(--app-action-btn-top) 0%,

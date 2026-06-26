@@ -1108,11 +1108,189 @@ html body .app .app-menu-modal-layer .app-menu-modal :is(
 ) {
   background: var(--rack-action-face, var(--app-action-btn-face));
   border: 1px solid var(--rack-action-border-rest, var(--app-action-btn-border-rest));
-  color: var(--rack-action-label-color, var(--app-action-btn-label));
-  cursor: not-allowed;
+  color: var(--rack-action-label-color-disabled, var(--app-action-btn-label-disabled));
+  cursor: default;
   box-shadow: none;
   opacity: 1;
   filter: none;
   text-shadow: none;
   transform: none;
+}
+
+/*
+ * Transient press chrome: `:active` matches until pointer-up even after leave (CSS spec).
+ * `buttonPointerPress.ts` toggles `.btn--pointer-down` only while the pointer is inside;
+ * these rules restore resting appearance when :active sticks without that class.
+ * Toggled-on classes (Hands open, Menu open, etc.) are excluded — they stay pressed-in.
+ */
+.app .panel--hand :is(.rack-bottom-bar--tile-grid, .hand-bank__mj-review-actions, .panel-hand-rack__review-new-game-row) :is(
+    .btn.rack-bottom-tile-cell,
+    .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn
+  ):active:not(:disabled):not(.btn--pointer-down):not(.suggested-hands-tab--open):not(
+    .app-bottom-center-controls__menu-btn--open
+  ):not(.btn--mahjong-rack-pressed-in) {
+  background: var(--rack-action-face);
+  box-shadow: var(--rack-action-shadow-rest);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+  transform: none;
+}
+
+html body .app .panel--hand :is(.panel-hand-rack__action-well, .panel-hand-rack__charleston-actions-well)
+  .rack-bottom-bar--tile-grid
+  .app-menu-anchor--hand-rack
+  .btn.btn--rack-neutral.app-bottom-center-controls__menu-btn:active:not(:disabled):not(.btn--pointer-down):not(
+    .app-bottom-center-controls__menu-btn--open
+  ) {
+  background: var(--rack-action-face);
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
+  box-shadow: var(--rack-action-shadow-rest);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+  transform: none;
+}
+
+.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:active:not(:disabled):not(
+    .btn--pointer-down
+  ) {
+  background: var(--rack-action-face);
+  box-shadow: var(--rack-action-shadow-rest);
+}
+
+html body .app .app-menu-modal-layer .app-menu-modal :is(
+  .app-menu-tray__diff-btn:not(:disabled),
+  .app-menu-tray__item:not(.app-menu-tray__item--switch):not(:disabled),
+  .app-menu-modal__blank-tile-count-btn.btn:not(:disabled),
+  .suggested-hands-popup__header-controls .hands-panel__display-toggle:not(:disabled),
+  .app-menu-modal__suggested-filters-reset:not(:disabled),
+  .app-menu-modal__close:not(:disabled)
+):active:not(.btn--pointer-down):not(.app-menu-tray__diff-btn--on):not(.app-menu-modal__blank-tile-count-btn--on):not(
+    .hands-panel__display-toggle--on
+  ) {
+  background: var(--rack-action-face, var(--app-action-btn-face));
+  border: 1px solid var(--rack-action-border-rest, var(--app-action-btn-border-rest));
+  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
+  transition: background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  transform: none;
+}
+
+.wall-game-overlay
+  .wall-game-dialog--wall-seats
+  .wall-game-dialog__actions
+  .btn.wall-game-dialog__action-btn:active:not(:disabled):not(.btn--pointer-down) {
+  background: var(--rack-action-face);
+  box-shadow: var(--rack-action-shadow-rest);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+  transform: none;
+}
+
+.charleston-error-dialog.charleston-error-dialog--new-game-warning
+  .charleston-error-dialog__actions--spread
+  .charleston-error-dialog__rack-action:active:not(:disabled):not(.btn--pointer-down),
+.charleston-error-dialog.charleston-error-dialog--new-game-warning
+  .charleston-error-dialog__actions--spread
+  .charleston-error-dialog__rack-action.btn--primary:active:not(:disabled):not(.btn--pointer-down) {
+  transition: box-shadow 0.14s ease, transform 0.12s ease;
+  transform: none;
+  box-shadow:
+    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
+    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
+}
+
+.suggested-hands-filter-tray__item.btn:active:not(:disabled):not(.btn--pointer-down) {
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+  transform: none;
+  box-shadow:
+    0 2px 5px color-mix(in srgb, var(--color-black) 18%, transparent),
+    0 1px 3px color-mix(in srgb, var(--color-black) 12%, transparent);
+}
+
+.hands-panel__display-toggle:active:not(:disabled):not(.btn--pointer-down):not(.hands-panel__display-toggle--on) {
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+  transform: none;
+  box-shadow:
+    0 2px 5px color-mix(in srgb, var(--color-black) 18%, transparent),
+    0 1px 3px color-mix(in srgb, var(--color-black) 12%, transparent);
+}
+
+.btn:active:not(:disabled):not(.btn--pointer-down):not(.rack-bottom-tile-cell):not(.app-bottom-center-controls__menu-btn):not(
+    .panel--bot-exposures__hint
+  ):not(.app-menu-tray__item):not(.app-menu-tray__diff-btn):not(.app-menu-modal__suggested-filters-reset):not(
+    .app-menu-modal__blank-tile-count-btn
+  ):not(.wall-game-dialog__action-btn):not(.charleston-error-dialog__rack-action):not(.blank-exchange-overlay__cancel) {
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+  transform: none;
+  box-shadow:
+    0 2px 5px color-mix(in srgb, var(--color-black) 18%, transparent),
+    0 1px 3px color-mix(in srgb, var(--color-black) 12%, transparent);
+}
+
+.rack-bottom-bar .btn.rack-bottom-tile-cell:active:not(:disabled):not(.btn--pointer-down):not(.suggested-hands-tab--open):not(
+    .btn--mahjong-rack-pressed-in
+  ) {
+  transition: box-shadow 0.14s ease, transform 0.12s ease;
+  transform: none;
+  box-shadow: var(--rack-action-shadow-rest, none);
+}
+
+.discard-tracker__content
+  > .app-menu-anchor-stack--discard-tracker
+  > .app-menu-anchor--discard-tracker
+  > .btn.rack-bottom-tile-cell:active:not(:disabled):not(.btn--pointer-down) {
+  transition: box-shadow 0.14s ease, transform 0.12s ease;
+  transform: none;
+  box-shadow: var(--rack-action-shadow-rest, none);
+}
+
+.app .panel--hand .rack-bottom-bar--tile-grid .btn__undo-inset:active:not(.btn--pointer-down) {
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: none;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+  transform: none;
+}
+
+.app .panel--hand .rack-bottom-bar--tile-grid
+  .btn.rack-bottom-tile-cell--c12-14:active:not(:disabled):not(.btn--pointer-down) + .btn__undo-inset:not(:active) {
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: none;
+}
+
+/* Inactive rack + menu action buttons: gray label, default cursor (beats part-0103 enabled+disabled pairs). */
+.app .panel--hand :is(.rack-bottom-bar--tile-grid, .hand-bank__mj-review-actions, .panel-hand-rack__review-new-game-row) :is(
+    .btn.rack-bottom-tile-cell,
+    .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn
+  ):disabled:not(.btn--mahjong-rack-pressed-in):not(.suggested-hands-tab--open) {
+  color: var(--rack-action-label-color-disabled, var(--app-action-btn-label-disabled));
+  cursor: default;
+}
+
+.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong.rack-bottom-tile-cell--c5-6:disabled:not(
+    .btn--mahjong-rack-pressed-in
+  )
+  .btn--mahj__img {
+  opacity: 0.42;
+}
+
+/* Charleston Pass (c12–14): gray label when slots aren't ready — beats part-0103 / part-0123 / part-0069. */
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
+  .btn.btn--primary.charleston-pass-btn.rack-bottom-tile-cell--c12-14:disabled:not(.suggested-hands-tab) {
+  background: var(--rack-action-face);
+  color: var(--rack-action-label-color-disabled, var(--app-action-btn-label-disabled));
+  opacity: 1;
+  filter: none;
+  cursor: default;
+}
+
+/*
+ * Rack action hints: bright purple border on MAHJ (legal win).
+ * Rest / hover only — pressed-in toggles and :active keep their own chrome.
+ */
+html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-tile-cell.btn--mahjong-hint:not(:disabled):not(:active):not(
+    .btn--mahjong-rack-pressed-in
+  ),
+html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-tile-cell.btn--mahjong-hint:not(:disabled):hover:not(:active):not(
+    .btn--mahjong-rack-pressed-in
+  ) {
+  border: 1px solid var(--rack-action-hint-border, #b56fd0) !important;
+  box-shadow:
+    var(--rack-action-shadow-rest),
+    0 0 0 2px color-mix(in srgb, var(--rack-action-hint-border, #b56fd0) 92%, transparent) !important;
 }

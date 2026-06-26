@@ -400,50 +400,6 @@
   100% { filter: brightness(var(--suggest-dim-joker-brightness)); }
 }
 
-/*
- * Mah Jongg rack logo hint: same timing as the former masked flash (2.5s bursts + 2s hold).
- * Opacity-only pulse on the logo stack — no scale (glyph must not read as the button pressing in).
- * Avoid animated `filter` on `<img>`; iOS / WKWebView ignores it.
- */
-@keyframes mahjong-logo-hint-stack-cycle {
-  0% {
-    opacity: 1;
-  }
-  5.556% {
-    opacity: 0.42;
-  }
-  11.111% {
-    opacity: 1;
-  }
-  16.667% {
-    opacity: 0.42;
-  }
-  22.222% {
-    opacity: 1;
-  }
-  27.778% {
-    opacity: 0.42;
-  }
-  33.333% {
-    opacity: 1;
-  }
-  38.889% {
-    opacity: 0.42;
-  }
-  44.444% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.42;
-  }
-  55.556% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
 .sortable-tile-wrap--suggest-dying .tile-face,
 .exposure-rack__slot--suggest-dying .tile-face,
 .discard-entry--suggest-dying .tile-face {

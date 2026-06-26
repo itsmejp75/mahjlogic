@@ -112,6 +112,7 @@ import {
   jokerSwapHandHintUsesSingleBounceIteration,
   rankSuggestedHands,
   focusKeyForSuggestedHandLine,
+  focusKeyPatternId,
   sortHandForSuggestedPattern,
   sortFullRackTilesForPattern,
   suggestedHandsTiedAtBest,
@@ -140,6 +141,8 @@ import {
   SUGGESTED_HANDS_UNCHECKED_SECTIONS_KEY,
   suggestedHandSectionMenuLabel,
   suggestedHandSectionsAvailableWithClaimMelds,
+  isSuggestedHandSectionFilterEnabled,
+  toggledSuggestedHandSectionFilter,
 } from './suggestedHands/filterSettings'
 import type { BotExposure, BotSeat } from './analysis/types'
 import {
@@ -4218,10 +4221,12 @@ export default function App() {
    */
   const blankExchangeEligibleDiscardDefs = useMemo((): readonly TileDef[] => {
     if (!deferredHand.some((t) => t.def.cat === 'blank')) return EMPTY_TILE_DEF_LIST
-    return discardPile
+    // Only count discards committed to the tracker — a bot's live discard is still claimable
+    // and can't back a blank exchange yet, so it must not light the blank in the rack.
+    return discardPileCommittedForDisplay({ discardPile, mainPhase, activeBotDiscard })
       .map((e) => e.tile.def)
       .filter((d) => d.cat !== 'joker' && d.cat !== 'blank')
-  }, [deferredHand, discardPile])
+  }, [deferredHand, discardPile, mainPhase, activeBotDiscard])
 
   /** Joker swap hint (dock-bounce): only starts during East's discard turn. */
   const activeJokerSwapHintBounceIds = useMemo(() => {
@@ -4515,72 +4520,6 @@ export default function App() {
       blankExchangeEligibleDiscardDefs,
     ],
   )
-
-  /** Staged-call Mah Jongg distance — mirrors `declareMahjong` when call-staging tiles are selected. */
-  const stagedCallMahjongAway = useMemo((): number | null => {
-    if (mainPhase !== 'call-staging' || !activeBotDiscard || stagedCallTileIds.length === 0) {
-      return null
-    }
-    return previewStagedCallBestTilesAway({
-      mainPhase,
-      activeBotDiscard,
-      hand,
-      eastExposures,
-      botExposures,
-      wall,
-      discardPile,
-      stagedCallTileIds,
-    } as RoundState)
-  }, [
-    mainPhase,
-    activeBotDiscard,
-    hand,
-    eastExposures,
-    botExposures,
-    wall,
-    discardPile,
-    stagedCallTileIds,
-  ])
-
-  /** Matches `declareMahjong` success preconditions for the main rack MAHJ control (self-draw vs live discard). */
-  const mahjongWinLegallyAvailable = useMemo(() => {
-    if (!charlestonDone || !mahjongHintEnabled) return false
-    if (mainPhase === 'east-discard') {
-      const handForWin = pendingEastDiscardTile ? [...hand, pendingEastDiscardTile] : hand
-      return isSelfDrawMahjongWin({ ...suggestedRankInput, hand: handForWin })
-    }
-    if (
-      (mainPhase === 'bot-turn' || mainPhase === 'call-staging') &&
-      activeBotDiscard
-    ) {
-      return isMahjongWinOnLiveBotDiscard(
-        {
-          mainPhase,
-          activeBotDiscard,
-          hand,
-          eastExposures,
-          botExposures,
-          wall,
-          discardPile,
-        },
-        stagedCallMahjongAway,
-      )
-    }
-    return false
-  }, [
-    charlestonDone,
-    mahjongHintEnabled,
-    mainPhase,
-    suggestedRankInput,
-    pendingEastDiscardTile,
-    hand,
-    activeBotDiscard,
-    eastExposures,
-    botExposures,
-    wall,
-    discardPile,
-    stagedCallMahjongAway,
-  ])
 
   const eastSuggestedHands = useMemo(() => {
     if (mainPhase === 'mahjong-declared' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand' || mainPhase === 'wall-game') return []
@@ -4883,6 +4822,32 @@ export default function App() {
     })
   }, [])
 
+  /** Drop focus / pins when their category is turned off in the menu. */
+  useEffect(() => {
+    const focusKey = suggestedFocusHandKeyRef.current
+    if (focusKey) {
+      const patternId = focusKeyPatternId(focusKey)
+      const focusedPattern = cardPatterns.find((p) => p.id === patternId)
+      if (
+        focusedPattern &&
+        !isSuggestedHandSectionFilterEnabled(focusedPattern.section, suggestedHandsUncheckedSections)
+      ) {
+        setSuggestedFocusHandKey(null)
+        setSuggestedSuppressedHandKey(null)
+        clearSuggestedDeadGuidesForHandKey(focusKey)
+      }
+    }
+    setSuggestedPinnedHandKeys((prev) => {
+      if (prev.length === 0) return prev
+      const next = prev.filter((key) => {
+        const patternId = focusKeyPatternId(key)
+        const p = cardPatterns.find((x) => x.id === patternId)
+        return !p || isSuggestedHandSectionFilterEnabled(p.section, suggestedHandsUncheckedSections)
+      })
+      return next.length === prev.length ? prev : next
+    })
+  }, [suggestedHandsUncheckedSections, cardPatterns, clearSuggestedDeadGuidesForHandKey])
+
   useEffect(() => {
     const prevFocus = prevSuggestedFocusForDeadGuideRef.current
     if (prevFocus && prevFocus !== suggestedFocusHandKey) {
@@ -5158,8 +5123,10 @@ export default function App() {
   const suggestedDeadCauseByFocusKey = useMemo(() => {
     if (!deadTileHintEnabled) return {} as Record<string, DeadCauseHint>
     const unavailableByKey = new Map<string, number>()
+    // Use the committed pile (same as the tracker) — a bot's live, still-claimable discard isn't
+    // settled yet, so it must not count against copies-left and dead-flag a rack tile prematurely.
     for (const tile of [
-      ...discardPile.map((e) => e.tile),
+      ...discardPileCommittedForDisplay({ discardPile, mainPhase, activeBotDiscard }).map((e) => e.tile),
       ...botExposures.flatMap((e) => e.tiles),
     ]) {
       const key = deadHintDefKey(tile.def)
@@ -5189,6 +5156,8 @@ export default function App() {
     suggestedDeadTileGuidesByKey,
     suggestedFocusHandKey,
     discardPile,
+    mainPhase,
+    activeBotDiscard,
     botExposures,
     cardPatterns,
     rackForSuggestedPatternMatch,
@@ -7596,6 +7565,43 @@ export default function App() {
       ? 'Discard'
       : 'Ignore'
 
+  const showMahjongRackHint = useMemo(() => {
+    if (!mahjongHintEnabled || !charlestonDone) return false
+    if (mainPhase === 'east-discard') {
+      return isSelfDrawMahjongWin(suggestedRankInput)
+    }
+    if (
+      (mainPhase === 'bot-turn' || mainPhase === 'call-staging') &&
+      activeBotDiscard
+    ) {
+      const slice: CallValidationRoundSlice = {
+        mainPhase,
+        activeBotDiscard,
+        hand,
+        eastExposures,
+        botExposures,
+        wall,
+        discardPile,
+      }
+      const stagedAway =
+        mainPhase === 'call-staging' ? previewStagedCallBestTilesAway(round) : null
+      return isMahjongWinOnLiveBotDiscard(slice, stagedAway)
+    }
+    return false
+  }, [
+    mahjongHintEnabled,
+    charlestonDone,
+    mainPhase,
+    activeBotDiscard,
+    suggestedRankInput,
+    hand,
+    eastExposures,
+    botExposures,
+    wall,
+    discardPile,
+    round,
+  ])
+
   /** Discard tracker + suggested hands row below rack (always on so layout is visible during Charleston). */
   const showPlaySplitRow = true
 
@@ -8005,7 +8011,10 @@ export default function App() {
                     {suggestedHandsFilterColumns.map((col, ci) => (
                       <div key={ci} className="app-menu-modal__suggested-hand-filters-col">
                         {col.map((section) => {
-                          const shown = !suggestedHandsUncheckedSections.has(section)
+                          const shown = isSuggestedHandSectionFilterEnabled(
+                            section,
+                            suggestedHandsUncheckedSections,
+                          )
                           const dimmed =
                             !shown || !suggestedHandsExposureAvailableSections.has(section)
                           return (
@@ -8014,12 +8023,9 @@ export default function App() {
                               pressed={shown}
                               dimmed={dimmed}
                               onToggle={() =>
-                                setSuggestedHandsUncheckedSections((prev) => {
-                                  const next = new Set(prev)
-                                  if (next.has(section)) next.delete(section)
-                                  else next.add(section)
-                                  return next
-                                })
+                                setSuggestedHandsUncheckedSections((prev) =>
+                                  toggledSuggestedHandSectionFilter(section, prev, !shown),
+                                )
                               }
                             >
                               {suggestedHandSectionMenuLabel(section)}
@@ -8974,7 +8980,12 @@ export default function App() {
                               ) : null}
                               <button
                                 type="button"
-                                className="btn btn--mahjong rack-bottom-tile-cell rack-bottom-tile-cell--c5-6"
+                                className={[
+                                  'btn btn--mahjong rack-bottom-tile-cell rack-bottom-tile-cell--c5-6',
+                                  showMahjongRackHint ? 'btn--mahjong-hint' : '',
+                                ]
+                                  .filter(Boolean)
+                                  .join(' ')}
                                 disabled={!mahjongButtonEnabled}
                                 onClick={declareMahjong}
                                 aria-label="Mah Jongg"
@@ -9289,7 +9300,7 @@ export default function App() {
                                   type="button"
                                   className={[
                                     'btn btn--mahjong rack-bottom-tile-cell rack-bottom-tile-cell--c5-6',
-                                    mahjongButtonEnabled && mahjongWinLegallyAvailable ? 'btn--mahjong-hint' : '',
+                                    showMahjongRackHint ? 'btn--mahjong-hint' : '',
                                     mainPhase === 'mahjong-declared' && mahjongWinReviewing
                                       ? 'btn--mahjong-rack-pressed-in'
                                       : '',
@@ -9297,11 +9308,7 @@ export default function App() {
                                     .filter(Boolean)
                                     .join(' ')}
                                   disabled={!mahjongButtonEnabled}
-                                  aria-label={
-                                    mahjongButtonEnabled && mahjongWinLegallyAvailable
-                                      ? 'Mah Jongg — legal win available'
-                                      : 'Mah Jongg'
-                                  }
+                                  aria-label="Mah Jongg"
                                   onClick={declareMahjong}
                                 >
                                   <span className="btn--mahj__logo-stack">

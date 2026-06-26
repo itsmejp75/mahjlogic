@@ -4,7 +4,10 @@ import { StrictMode, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { initButtonPointerPress } from './buttonPointerPress'
 import { preloadClassicTileArt } from './tiles/classicTileArt'
+
+initButtonPointerPress()
 
 type NavigatorWithStandalone = Navigator & { standalone?: boolean }
 

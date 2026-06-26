@@ -134,7 +134,8 @@
 }
 
 .app-menu-modal .app-menu-modal__blank-tile-count-btn.btn:disabled {
-  cursor: not-allowed;
+  color: var(--rack-action-label-color-disabled, var(--app-action-btn-label-disabled));
+  cursor: default;
   box-shadow: none;
   opacity: 1;
   filter: none;
@@ -304,7 +305,8 @@
 }
 
 .app-menu-modal .app-menu-tray__diff-btn:disabled {
-  cursor: not-allowed;
+  color: var(--rack-action-label-color-disabled, var(--app-action-btn-label-disabled));
+  cursor: default;
   box-shadow: none;
   opacity: 1;
   filter: none;

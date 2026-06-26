@@ -27,6 +27,61 @@ export const HIDE_CONCEALED_HANDS_STORAGE_KEY = 'mahjlogic:suggested-hands-hide-
 /** JSON array of section names the user has turned off in the menu. */
 export const SUGGESTED_HANDS_UNCHECKED_SECTIONS_KEY = 'mahjlogic.suggestedHandsUncheckedSections'
 
+/**
+ * Mock vs 2026 CSV use different canonical section strings for the same menu category.
+ * Filter storage and checks always treat these keys as one toggle.
+ */
+const SUGGESTED_HAND_SECTION_FILTER_ALIAS_GROUPS: readonly (readonly string[])[] = [
+  ['CONSECUTIVE RUN', 'CONSECUTIVE RUNS'],
+  ['WINDS - DRAGONS', 'WINDS-DRAGONS'],
+]
+
+const suggestedHandSectionFilterAliasKeys = new Map<string, readonly string[]>()
+for (const group of SUGGESTED_HAND_SECTION_FILTER_ALIAS_GROUPS) {
+  for (const key of group) {
+    suggestedHandSectionFilterAliasKeys.set(key, group)
+  }
+}
+
+/** All filter keys tied to this section (including cross-card aliases). */
+export function suggestedHandSectionFilterKeys(section: string): readonly string[] {
+  return suggestedHandSectionFilterAliasKeys.get(section) ?? [section]
+}
+
+/** True when the menu category is on and hands from this section may appear in the list. */
+export function isSuggestedHandSectionFilterEnabled(
+  section: string,
+  uncheckedSections: ReadonlySet<string>,
+): boolean {
+  return !suggestedHandSectionFilterKeys(section).some((k) => uncheckedSections.has(k))
+}
+
+/** Apply one menu toggle; keeps alias keys in sync across cards. */
+export function toggledSuggestedHandSectionFilter(
+  section: string,
+  uncheckedSections: ReadonlySet<string>,
+  enable: boolean,
+): Set<string> {
+  const keys = suggestedHandSectionFilterKeys(section)
+  const next = new Set(uncheckedSections)
+  if (enable) {
+    for (const k of keys) next.delete(k)
+  } else {
+    for (const k of keys) next.add(k)
+  }
+  return next
+}
+
+function normalizeUncheckedSectionAliases(set: Set<string>): Set<string> {
+  const next = new Set(set)
+  for (const group of SUGGESTED_HAND_SECTION_FILTER_ALIAS_GROUPS) {
+    if (group.some((k) => next.has(k))) {
+      for (const k of group) next.add(k)
+    }
+  }
+  return next
+}
+
 export function readHideConcealedHandsFromStorage(): boolean {
   try {
     const raw = localStorage.getItem(HIDE_CONCEALED_HANDS_STORAGE_KEY)
@@ -51,7 +106,9 @@ export function readUncheckedSectionsFromStorage(): Set<string> {
     if (raw == null || raw === '') return new Set()
     const arr = JSON.parse(raw) as unknown
     if (!Array.isArray(arr)) return new Set()
-    return new Set(arr.filter((x): x is string => typeof x === 'string'))
+    return normalizeUncheckedSectionAliases(
+      new Set(arr.filter((x): x is string => typeof x === 'string')),
+    )
   } catch {
     return new Set()
   }

@@ -31,7 +31,10 @@ import {
 } from '../mahjong/deadCauseHint'
 import type { CardTextSeg } from '../card/cardText'
 import type { SuggestedHandLine } from '../training/types'
-import { suggestedHandSectionMenuLabel } from '../suggestedHands/filterSettings'
+import {
+  isSuggestedHandSectionFilterEnabled,
+  suggestedHandSectionMenuLabel,
+} from '../suggestedHands/filterSettings'
 import { DeadCauseWarning } from './DeadCauseWarning'
 import { TileFace } from './TileFace'
 
@@ -737,23 +740,6 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   deadCauseByFocusKey = {},
 }: Props) {
   const pinnedKeySet = useMemo(() => new Set(pinnedHandKeys), [pinnedHandKeys])
-  const sections = useMemo(() => {
-    const uniq = Array.from(new Set(hands.map((h) => h.section)))
-    const rank = new Map(cardSectionOrder.map((s, i) => [s, i]))
-    return uniq.sort((a, b) => {
-      const ra = rank.get(a)
-      const rb = rank.get(b)
-      if (ra !== undefined && rb !== undefined) return ra - rb
-      if (ra !== undefined) return -1
-      if (rb !== undefined) return 1
-      return a.localeCompare(b)
-    })
-  }, [hands, cardSectionOrder])
-
-  const checkedSections = useMemo(
-    () => new Set(sections.filter((s) => !uncheckedSections.has(s))),
-    [sections, uncheckedSections],
-  )
   const peekDragRef = useRef<{
     pointerId: number
     startY: number
@@ -926,8 +912,8 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   )
 
   const filtered = useMemo(
-    () => hands.filter((h) => checkedSections.has(h.section)),
-    [hands, checkedSections],
+    () => hands.filter((h) => isSuggestedHandSectionFilterEnabled(h.section, uncheckedSections)),
+    [hands, uncheckedSections],
   )
 
   const handEntryKey = useCallback((h: (typeof filtered)[number]) => handEntryKeyForLine(h), [])
