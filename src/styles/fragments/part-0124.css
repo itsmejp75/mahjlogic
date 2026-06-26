@@ -1280,7 +1280,7 @@ html body .app .app-menu-modal-layer .app-menu-modal :is(
 }
 
 /*
- * Rack action hints: bright purple border on MAHJ (legal win).
+ * Rack action hints: bright purple border on MAHJ (legal win) and Swap (joker swap available).
  * Rest / hover only — pressed-in toggles and :active keep their own chrome.
  */
 html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-tile-cell.btn--mahjong-hint:not(:disabled):not(:active):not(
@@ -1288,7 +1288,9 @@ html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-t
   ),
 html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-tile-cell.btn--mahjong-hint:not(:disabled):hover:not(:active):not(
     .btn--mahjong-rack-pressed-in
-  ) {
+  ),
+html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-tile-cell.btn--joker-swap-hint:not(:disabled):not(:active),
+html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-tile-cell.btn--joker-swap-hint:not(:disabled):hover:not(:active) {
   border: 1px solid var(--rack-action-hint-border, #b56fd0) !important;
   box-shadow:
     var(--rack-action-shadow-rest),

@@ -3374,7 +3374,7 @@ function AppMenuSettingSwitch({
     flushSync(() => {
       setDisplayPressed((v) => !v)
     })
-    window.setTimeout(onToggle, 0)
+    onToggle()
   }
 
   return (
@@ -3482,6 +3482,8 @@ export default function App() {
   const [mahjongWinReviewing, setMahjongWinReviewing] = useState(false)
   const [botMahjongWinReviewing, setBotMahjongWinReviewing] = useState(false)
   const [suggestedPanelTilesOn, setSuggestedPanelTilesOn] = useState(false)
+  /** Strip slot rows in the suggested-hands tray are expensive; defer so the menu toggle paints first. */
+  const deferredSuggestedPanelTilesOn = useDeferredValue(suggestedPanelTilesOn)
   const toggleSuggestedPanelTilesOn = useCallback(() => {
     setSuggestedPanelTilesOn((v) => !v)
   }, [])
@@ -4228,14 +4230,9 @@ export default function App() {
       .filter((d) => d.cat !== 'joker' && d.cat !== 'blank')
   }, [deferredHand, discardPile, mainPhase, activeBotDiscard])
 
-  /** Joker swap hint (dock-bounce): only starts during East's discard turn. */
-  const activeJokerSwapHintBounceIds = useMemo(() => {
-    if (
-      mainPhase !== 'east-discard' ||
-      !jokerSwapHintEnabled ||
-      !jokerSwapUiActive ||
-      !animationsEnabled
-    ) {
+  /** Hand naturals / exposed jokers that can swap during East's discard when the hint is on. */
+  const jokerSwapHintTargetIds = useMemo(() => {
+    if (mainPhase !== 'east-discard' || !jokerSwapHintEnabled || !jokerSwapUiActive) {
       return null
     }
     const hand_ = collectHandTileIdsSwappableForJokers(
@@ -4256,12 +4253,17 @@ export default function App() {
     mainPhase,
     jokerSwapHintEnabled,
     jokerSwapUiActive,
-    animationsEnabled,
     hand,
     pendingEastDiscardTile,
     botExposures,
     eastExposures,
   ])
+
+  /** Joker swap hint (dock-bounce): same targets as `jokerSwapHintTargetIds`, animations only. */
+  const activeJokerSwapHintBounceIds = useMemo(() => {
+    if (!jokerSwapHintTargetIds || !animationsEnabled) return null
+    return jokerSwapHintTargetIds
+  }, [jokerSwapHintTargetIds, animationsEnabled])
 
   const suggestedLineFocusActiveForJokerSwapHint = useMemo(() => {
     if (!suggestedFocusHandKey) return false
@@ -7565,6 +7567,8 @@ export default function App() {
       ? 'Discard'
       : 'Ignore'
 
+  const showJokerSwapRackHint = !!jokerSwapHintTargetIds && mainBarSharedSlotIsSwap
+
   const showMahjongRackHint = useMemo(() => {
     if (!mahjongHintEnabled || !charlestonDone) return false
     if (mainPhase === 'east-discard') {
@@ -7816,7 +7820,7 @@ export default function App() {
           pinnedHandKeys={suggestedPinnedHandKeys}
           onPatternClick={onSuggestedPatternClick}
           onFocusKeyMigrate={onSuggestedFocusKeyMigrate}
-          tilesGuideOn={suggestedPanelTilesOn}
+          tilesGuideOn={deferredSuggestedPanelTilesOn}
           rackTilesForSuggestedStrip={rackForSuggestedHandsUi}
           rackTilesForPatternMatch={rackForSuggestedPatternMatch}
           exposureTileIdsForSuggestedStrip={suggestedHandsExposureTileIds}
@@ -9327,7 +9331,12 @@ export default function App() {
                                 {mainBarSharedSlotIsSwap ? (
                                   <button
                                     type="button"
-                                    className="btn btn--joker-swap-action rack-bottom-tile-cell rack-bottom-tile-cell--c9-10"
+                                    className={[
+                                      'btn btn--joker-swap-action rack-bottom-tile-cell rack-bottom-tile-cell--c9-10',
+                                      showJokerSwapRackHint ? 'btn--joker-swap-hint' : '',
+                                    ]
+                                      .filter(Boolean)
+                                      .join(' ')}
                                     onClick={executeSwapFromSlot}
                                     aria-label="Swap"
                                   >
