@@ -89,22 +89,23 @@
 
 /* Hands / Tiles chips in menu blocks — same pill as rack action row. */
 .app-menu-modal .suggested-hands-popup__header-controls .hands-panel__display-toggle {
-  border: 1px solid var(--rack-action-border-color, var(--app-action-btn-border));
+  border: none;
   background: var(--rack-action-face, var(--app-action-btn-face));
   color: var(--rack-action-label-color, var(--app-action-btn-label));
-  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
+  box-shadow: var(--app-menu-diff-btn-rest);
   transition: box-shadow 0.12s ease, background 0.12s ease;
 }
 
-.app-menu-modal .suggested-hands-popup__header-controls .hands-panel__display-toggle:hover:not(:disabled) {
+.app-menu-modal .suggested-hands-popup__header-controls .hands-panel__display-toggle:hover:not(:disabled):not(.hands-panel__display-toggle--on) {
   background: var(--rack-action-face, var(--app-action-btn-face));
   color: var(--rack-action-label-color, var(--app-action-btn-label));
-  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
+  box-shadow: var(--app-menu-diff-btn-rest);
   transform: none;
 }
 
-.app-menu-modal .suggested-hands-popup__header-controls .hands-panel__display-toggle:active:not(:disabled) {
+.app-menu-modal .suggested-hands-popup__header-controls .hands-panel__display-toggle:active:not(:disabled):not(.hands-panel__display-toggle--on) {
   background: var(--rack-action-face-pressed, var(--app-action-btn-face-pressed));
+  border: 1px solid var(--rack-action-border-color, var(--app-action-btn-border));
   box-shadow: var(--rack-action-pressed);
   transition: none;
   transform: none;
@@ -113,8 +114,11 @@
 .app-menu-modal .suggested-hands-popup__header-controls .hands-panel__display-toggle--on,
 .app-menu-modal .suggested-hands-popup__header-controls .hands-panel__display-toggle--on:hover:not(:disabled),
 .app-menu-modal .suggested-hands-popup__header-controls .hands-panel__display-toggle--on:active:not(:disabled) {
-  background: var(--rack-action-face-pressed, var(--app-action-btn-face-pressed));
-  color: var(--rack-action-label-color, var(--app-action-btn-label));
-  box-shadow: var(--rack-action-pressed);
+  background: var(--app-menu-diff-btn-face-pressed);
+  border: 1px solid var(--app-menu-diff-btn-border-pressed);
+  color: var(--app-menu-diff-btn-label-pressed);
+  box-shadow: var(--app-menu-diff-btn-pressed);
+  font-weight: 700;
+  text-shadow: none;
   transform: none;
 }

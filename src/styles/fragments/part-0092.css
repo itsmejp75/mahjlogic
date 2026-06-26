@@ -96,6 +96,27 @@
   /* Subtle top edge on Sort-style menu controls */
   --app-menu-rim-hairline: color-mix(in srgb, var(--color-white) 22%, #1f242a);
   --app-menu-rim-active: #22c55e;
+  /* Menu pressed-in selection pills (radio groups, blank-tile counts, etc.). */
+  --app-menu-diff-btn-face-pressed: var(--card-ink-green, #52b147);
+  --app-menu-diff-btn-press-shadow-dark: color-mix(
+    in srgb,
+    #000000 36%,
+    var(--card-ink-green, #52b147)
+  );
+  --app-menu-diff-btn-press-shadow-light: color-mix(
+    in srgb,
+    var(--card-ink-green, #52b147) 68%,
+    #ffffff 32%
+  );
+  --app-menu-diff-btn-pressed:
+    inset 4px 4px 8px var(--app-menu-diff-btn-press-shadow-dark),
+    inset -4px -4px 8px var(--app-menu-diff-btn-press-shadow-light);
+  /* Unpressed gray pills: raised face (highlight top-left, shadow bottom-right). */
+  --app-menu-diff-btn-rest:
+    inset 4px 4px 8px var(--rack-action-press-shadow-light),
+    inset -4px -4px 8px var(--rack-action-press-shadow-dark);
+  --app-menu-diff-btn-label-pressed: #1e222a; /* discard tracker B/C/D suit labels (part-0061) */
+  --app-menu-diff-btn-border-pressed: color-mix(in srgb, var(--card-ink-green, #52b147) 52%, #ffffff 48%);
   --app-menu-rim-hover-bright: color-mix(in srgb, var(--color-white) 50%, #94a3b8 50%);
   /* Space between menu rows / sections (slightly under one-third touch target height) */
   --app-menu-body-gap: max(0.36rem, calc(var(--rack-action-touch-min-h) / 3.5));

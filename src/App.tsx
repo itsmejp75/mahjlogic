@@ -3299,6 +3299,38 @@ function applyDeclareMahjongSelfDraw(r: RoundState): RoundState {
   }
 }
 
+/** Suggested-hand filter row: pressable pill with label inside (matches menu radio chips). */
+function AppMenuFilterToggleButton({
+  pressed,
+  dimmed = false,
+  onToggle,
+  children,
+}: {
+  pressed: boolean
+  dimmed?: boolean
+  onToggle: () => void
+  children: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      className={[
+        'btn',
+        'app-menu-tray__diff-btn',
+        'app-menu-modal__sh-filter-btn',
+        pressed ? 'app-menu-tray__diff-btn--on' : '',
+        dimmed ? 'app-menu-modal__sh-filter-btn--dimmed' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      aria-pressed={pressed}
+      onClick={onToggle}
+    >
+      {children}
+    </button>
+  )
+}
+
 /** Settings menu: horizontal on/off switch (see `.app-menu-tray__toggle-slider` in `src/styles`). */
 function AppMenuSettingSwitch({
   labelId,
@@ -7860,49 +7892,34 @@ export default function App() {
                     {suggestedHandsFilterColumns.map((col, ci) => (
                       <div key={ci} className="app-menu-modal__suggested-hand-filters-col">
                         {col.map((section) => {
-                          const labelId = `app-menu-sh-sec-${section.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '')}`
                           const shown = !suggestedHandsUncheckedSections.has(section)
-                          const labelDimmed =
+                          const dimmed =
                             !shown || !suggestedHandsExposureAvailableSections.has(section)
                           return (
-                            <div key={section} className="app-menu-modal__row app-menu-modal__row--toggle">
-                              <AppMenuSettingSwitch
-                                labelId={labelId}
-                                pressed={shown}
-                                onToggle={() =>
-                                  setSuggestedHandsUncheckedSections((prev) => {
-                                    const next = new Set(prev)
-                                    if (next.has(section)) next.delete(section)
-                                    else next.add(section)
-                                    return next
-                                  })
-                                }
-                              />
-                              <span
-                                className={[
-                                  'app-menu-modal__label',
-                                  labelDimmed ? 'app-menu-modal__label--exposure-unavailable' : '',
-                                ]
-                                  .filter(Boolean)
-                                  .join(' ')}
-                                id={labelId}
-                              >
-                                {suggestedHandSectionMenuLabel(section)}
-                              </span>
-                            </div>
+                            <AppMenuFilterToggleButton
+                              key={section}
+                              pressed={shown}
+                              dimmed={dimmed}
+                              onToggle={() =>
+                                setSuggestedHandsUncheckedSections((prev) => {
+                                  const next = new Set(prev)
+                                  if (next.has(section)) next.delete(section)
+                                  else next.add(section)
+                                  return next
+                                })
+                              }
+                            >
+                              {suggestedHandSectionMenuLabel(section)}
+                            </AppMenuFilterToggleButton>
                           )
                         })}
                         {ci === suggestedHandsFilterColumns.length - 1 ? (
-                          <div className="app-menu-modal__row app-menu-modal__row--toggle">
-                            <AppMenuSettingSwitch
-                              labelId="app-menu-label-sh-show-concealed"
-                              pressed={!suggestedHandsHideConcealed}
-                              onToggle={() => setSuggestedHandsHideConcealed((v) => !v)}
-                            />
-                            <span className="app-menu-modal__label" id="app-menu-label-sh-show-concealed">
-                              Concealed (C)
-                            </span>
-                          </div>
+                          <AppMenuFilterToggleButton
+                            pressed={!suggestedHandsHideConcealed}
+                            onToggle={() => setSuggestedHandsHideConcealed((v) => !v)}
+                          >
+                            Concealed (C)
+                          </AppMenuFilterToggleButton>
                         ) : null}
                       </div>
                     ))}

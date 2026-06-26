@@ -125,22 +125,23 @@
   text-transform: none;
   color: var(--rack-action-label-color, var(--app-action-btn-label));
   background: var(--rack-action-face, var(--app-action-btn-face));
-  border: 1px solid var(--rack-action-border-color, var(--app-action-btn-border));
-  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
+  border: none;
+  box-shadow: var(--app-menu-diff-btn-rest);
   cursor: pointer;
   transition: box-shadow 0.12s ease, background 0.12s ease;
 }
 
-.app-menu-modal .app-menu-modal__blank-tile-count-btn.btn:hover:not(:disabled) {
+.app-menu-modal .app-menu-modal__blank-tile-count-btn.btn:hover:not(:disabled):not(.app-menu-modal__blank-tile-count-btn--on) {
   background: var(--rack-action-face, var(--app-action-btn-face));
-  border-color: var(--rack-action-border-color, var(--app-action-btn-border));
   color: var(--rack-action-label-color, var(--app-action-btn-label));
+  box-shadow: var(--app-menu-diff-btn-rest);
   transform: none;
   filter: none;
 }
 
-.app-menu-modal .app-menu-modal__blank-tile-count-btn.btn:active:not(:disabled) {
+.app-menu-modal .app-menu-modal__blank-tile-count-btn.btn:active:not(:disabled):not(.app-menu-modal__blank-tile-count-btn--on) {
   background: var(--rack-action-face-pressed, var(--app-action-btn-face-pressed));
+  border: 1px solid var(--rack-action-border-color, var(--app-action-btn-border));
   box-shadow: var(--rack-action-pressed);
   transition: none;
   transform: none;
@@ -148,11 +149,14 @@
 }
 
 .app-menu-modal .app-menu-modal__blank-tile-count-btn--on.btn,
-.app-menu-modal .app-menu-modal__blank-tile-count-btn--on.btn:hover:not(:disabled) {
-  color: var(--rack-action-label-color, var(--app-action-btn-label));
-  background: var(--rack-action-face-pressed, var(--app-action-btn-face-pressed));
-  border-color: var(--rack-action-border-color, var(--app-action-btn-border));
-  box-shadow: var(--rack-action-pressed);
+.app-menu-modal .app-menu-modal__blank-tile-count-btn--on.btn:hover:not(:disabled),
+.app-menu-modal .app-menu-modal__blank-tile-count-btn--on.btn:active:not(:disabled) {
+  color: var(--app-menu-diff-btn-label-pressed);
+  background: var(--app-menu-diff-btn-face-pressed);
+  border: 1px solid var(--app-menu-diff-btn-border-pressed);
+  box-shadow: var(--app-menu-diff-btn-pressed);
+  font-weight: 700;
+  text-shadow: none;
 }
 
 .app-menu-modal .app-menu-modal__blank-tile-count-btn.btn:disabled {
@@ -184,7 +188,22 @@
 .app-menu-modal__suggested-hand-filters-col {
   display: flex;
   flex-direction: column;
+  gap: 0.4rem;
   min-width: 0;
+}
+
+.app-menu-modal__sh-filter-btn {
+  width: 100%;
+  flex: none;
+  text-align: center;
+}
+
+.app-menu-modal__sh-filter-btn--dimmed:not(.app-menu-tray__diff-btn--on) {
+  opacity: 0.58;
+}
+
+.app-menu-modal__sh-filter-btn--dimmed.app-menu-tray__diff-btn--on {
+  color: color-mix(in srgb, var(--app-menu-diff-btn-label-pressed) 62%, var(--card-ink-green, #52b147) 38%);
 }
 
 .app-menu-modal__suggested-filters-reset {
@@ -308,6 +327,7 @@
   font-size: 1rem;
   font-weight: 600;
   border-radius: var(--rack-tile-btn-border-radius);
+  border: none;
 }
 
 .app-menu-modal .app-menu-tray__diff-btn:not(:disabled) {
@@ -316,28 +336,30 @@
   text-shadow: none;
   opacity: 1;
   filter: none;
-  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
+  box-shadow: var(--app-menu-diff-btn-rest);
 }
 
-.app-menu-modal .app-menu-tray__diff-btn.app-menu-tray__diff-btn--on:not(:disabled) {
-  background: var(--rack-action-face-pressed, var(--app-action-btn-face-pressed));
-  box-shadow: var(--rack-action-pressed);
+.app-menu-modal .app-menu-tray__diff-btn.app-menu-tray__diff-btn--on:not(:disabled),
+.app-menu-modal .app-menu-tray__diff-btn.app-menu-tray__diff-btn--on:hover:not(:disabled),
+.app-menu-modal .app-menu-tray__diff-btn.app-menu-tray__diff-btn--on:active:not(:disabled) {
+  background: var(--app-menu-diff-btn-face-pressed);
+  border: 1px solid var(--app-menu-diff-btn-border-pressed);
+  box-shadow: var(--app-menu-diff-btn-pressed);
+  color: var(--app-menu-diff-btn-label-pressed);
+  font-weight: 700;
+  text-shadow: none;
 }
 
 .app-menu-modal .app-menu-tray__diff-btn:hover:not(:disabled) {
   background: var(--rack-action-face, var(--app-action-btn-face));
   color: var(--rack-action-label-color, var(--app-action-btn-label));
-  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
+  box-shadow: var(--app-menu-diff-btn-rest);
   transform: none;
 }
 
-.app-menu-modal .app-menu-tray__diff-btn.app-menu-tray__diff-btn--on:hover:not(:disabled) {
+.app-menu-modal .app-menu-tray__diff-btn:active:not(:disabled):not(.app-menu-tray__diff-btn--on) {
   background: var(--rack-action-face-pressed, var(--app-action-btn-face-pressed));
-  box-shadow: var(--rack-action-pressed);
-}
-
-.app-menu-modal .app-menu-tray__diff-btn:active:not(:disabled) {
-  background: var(--rack-action-face-pressed, var(--app-action-btn-face-pressed));
+  border: 1px solid var(--rack-action-border-color, var(--app-action-btn-border));
   box-shadow: var(--rack-action-pressed);
   transition: none;
   transform: none;
