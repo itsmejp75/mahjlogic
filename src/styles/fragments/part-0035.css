@@ -31,3 +31,28 @@
   overflow: visible;
   z-index: 5;
 }
+
+/*
+ * Staged discard dock-bounce rises into the top bot-exposure band. That band lives in
+ * `.app-play-split` (z-index 1 on the overlay chain); paint the hand rack above it while bouncing.
+ */
+.app-layout[data-joker-swap-hint='on'][data-animations='on']
+  .app-dnd-frame:has(.east-discard-staging__tile--joker-swap-hint-bounce)
+  > .app-rack-stage {
+  position: relative;
+  z-index: 2;
+}
+
+.app-layout[data-joker-swap-hint='on'][data-animations='on']
+  .panel--hand
+  .rack-stage__rack-top:has(.east-discard-staging__tile--joker-swap-hint-bounce) {
+  z-index: 10;
+}
+
+.app-layout[data-joker-swap-hint='on'][data-animations='on']
+  .panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__slot--east-discard-slot:has(.east-discard-staging__tile--joker-swap-hint-bounce) {
+  overflow: visible;
+  z-index: 10;
+}

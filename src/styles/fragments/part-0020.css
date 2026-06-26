@@ -50,12 +50,6 @@
   overflow: hidden;
 }
 
-.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn,
-.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:hover,
-.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn--open {
-  box-shadow: none;
-}
-
 /* Three-line icon: clamp to the actual one-slot button box, not just inherited font size. */
 .hand-rack-menu-hamburger {
   display: flex;

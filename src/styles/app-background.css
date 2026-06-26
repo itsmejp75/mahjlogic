@@ -73,22 +73,86 @@
   --app-action-btn-bottom: #434b53;
   --app-action-btn-top-pressed: #4a525a;
   --app-action-btn-bottom-pressed: #363d44;
-  --app-action-btn-border: #6c757e;
+  --app-action-btn-border: color-mix(in srgb, #6c757e 78%, #ffffff 22%);
   --app-action-btn-highlight: rgba(255, 255, 255, 0.16);
-  --app-action-btn-label: #ffffff;
+  --app-action-btn-label: #e2e4e8;
   --app-action-btn-face: linear-gradient(
     180deg,
     var(--app-action-btn-top) 0%,
     color-mix(in srgb, var(--app-action-btn-top) 38%, var(--app-action-btn-bottom) 62%) 48%,
-    var(--app-action-btn-bottom) 100%
+    color-mix(in srgb, var(--app-action-btn-bottom) 94%, #000 6%) 100%
   );
-  --app-action-btn-face-pressed: linear-gradient(
-    180deg,
-    var(--app-action-btn-top-pressed) 0%,
-    var(--app-action-btn-bottom-pressed) 100%
+  /* Flat fill — top-light gradient reads as a horizontal band; bottom peek stays for rim glow. */
+  --app-action-btn-face-pressed: var(--app-action-btn-bottom-pressed);
+  /* Unpressed gray pills: soft raised face (highlight top-left, shadow bottom-right). */
+  --app-action-btn-rest-shadow-light: color-mix(
+    in srgb,
+    color-mix(
+      in srgb,
+      var(--app-action-btn-border) 72%,
+      var(--app-action-btn-bottom) 28%
+    ) 42%,
+    transparent
   );
-  /* Top light comes from the gradient face — no inset line at rest (matches disabled MAHJ/Call/Pass). */
-  --app-action-btn-shadow-rest: none;
+  --app-action-btn-rest-shadow-dark: color-mix(
+    in srgb,
+    color-mix(in srgb, #000 30%, var(--app-action-btn-bottom)) 42%,
+    transparent
+  );
+  --app-action-btn-shadow-rest:
+    inset 1px 1px 2px 0 var(--app-action-btn-rest-shadow-light),
+    inset 2px 2px 10px -3px var(--app-action-btn-rest-shadow-light),
+    inset -1px -1px 2px 0 var(--app-action-btn-rest-shadow-dark),
+    inset -2px -2px 10px -3px var(--app-action-btn-rest-shadow-dark);
+  --app-action-btn-border-rest: color-mix(
+    in srgb,
+    var(--app-action-btn-border) 56%,
+    var(--app-action-btn-bottom) 44%
+  );
+  --app-action-btn-border-hold: color-mix(
+    in srgb,
+    var(--app-action-btn-border) 68%,
+    var(--app-action-btn-bottom) 32%
+  );
+  --app-action-btn-press-shadow-dark: color-mix(
+    in srgb,
+    #000 28%,
+    var(--app-action-btn-bottom)
+  );
+  --app-action-btn-press-shadow-light: color-mix(
+    in srgb,
+    color-mix(
+      in srgb,
+      var(--app-action-btn-border) 70%,
+      var(--app-action-btn-bottom) 30%
+    ) 72%,
+    #ffffff 28%
+  );
+  --app-action-btn-press-shadow-light-edge: color-mix(
+    in srgb,
+    var(--app-action-btn-press-shadow-light) 70%,
+    var(--app-action-btn-bottom-pressed) 30%
+  );
+  --app-action-btn-press-shadow-light-fade: color-mix(
+    in srgb,
+    var(--app-action-btn-press-shadow-light) 42%,
+    var(--app-action-btn-bottom-pressed) 58%
+  );
+  --app-action-btn-press-bottom-peek: linear-gradient(
+    0deg,
+    color-mix(in srgb, var(--app-action-btn-press-shadow-light) 32%, transparent 68%) 0%,
+    color-mix(in srgb, var(--app-action-btn-press-shadow-light) 11%, transparent 89%) 18%,
+    transparent 48%
+  );
+  --app-action-btn-face-pressed-chrome:
+    var(--app-action-btn-press-bottom-peek),
+    var(--app-action-btn-face-pressed);
+  /* Pressed-in: dark top/left/right via inset shadow; bottom rim glow on background peek. */
+  --app-action-btn-shadow-pressed:
+    inset 4px 4px 8px var(--app-action-btn-press-shadow-dark),
+    inset -4px 0 8px var(--app-action-btn-press-shadow-dark),
+    inset 0 -1px 2px 0 color-mix(in srgb, var(--app-action-btn-press-shadow-light-edge) 55%, transparent 45%),
+    inset 0 -2px 10px -4px color-mix(in srgb, var(--app-action-btn-press-shadow-light-fade) 65%, transparent 35%);
 }
 
 /*

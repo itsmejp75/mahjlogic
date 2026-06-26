@@ -1660,7 +1660,7 @@ html[data-home-screen-app]:not([data-native-app])
  * Hand action row: PokerStars-style gray pill (gradient face + border).
  * Recipe tokens: --app-action-btn-* in src/styles/app-background.css.
  * Inset depth only while pressed (:active) or toggled active (Menu / Hands open / MAHJ held).
- * Resting + hover: flat (no inset highlight — gradient supplies the top light).
+ * Resting + hover: soft raised inset (same as menu diff pills).
  */
 .panel--hand :is(
     .panel-hand-rack__action-well,
@@ -1671,23 +1671,16 @@ html[data-home-screen-app]:not([data-native-app])
   --rack-action-label-color: var(--app-action-btn-label);
   --rack-action-face: var(--app-action-btn-face);
   --rack-action-face-pressed: var(--app-action-btn-face-pressed);
+  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed-chrome);
   --rack-action-shadow-rest: var(--app-action-btn-shadow-rest);
+  --rack-action-border-rest: var(--app-action-btn-border-rest);
+  --rack-action-border-hold: var(--app-action-btn-border-hold);
   --rack-action-well-surface: var(--hand-rack-tray-surface);
   --rack-action-flat-surface: var(--app-action-btn-bottom);
   --rack-action-border-color: var(--app-action-btn-border);
-  --rack-action-press-shadow-dark: color-mix(
-    in srgb,
-    #000 28%,
-    var(--rack-action-flat-surface, #484c52)
-  );
-  --rack-action-press-shadow-light: color-mix(
-    in srgb,
-    var(--rack-action-border-color, #636870) 72%,
-    var(--rack-action-flat-surface, #484c52)
-  );
-  --rack-action-pressed:
-    inset 4px 4px 8px var(--rack-action-press-shadow-dark),
-    inset -4px -4px 8px var(--rack-action-press-shadow-light);
+  --rack-action-press-shadow-dark: var(--app-action-btn-press-shadow-dark);
+  --rack-action-press-shadow-light: var(--app-action-btn-press-shadow-light);
+  --rack-action-pressed: var(--app-action-btn-shadow-pressed);
 }
 
 /*
@@ -1964,8 +1957,9 @@ html[data-home-screen-app]:not([data-native-app])
     .btn.rack-bottom-tile-cell,
     .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn
   ) {
+  position: relative;
   background: var(--rack-action-face);
-  border: 1px solid var(--rack-action-border-color, #636870);
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
   opacity: 1;
   filter: none;
   text-shadow: none;
@@ -2015,23 +2009,13 @@ html[data-home-screen-app]:not([data-native-app])
     .btn.rack-bottom-tile-cell,
     .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn
   ):active:not(:disabled) {
-  background: var(--rack-action-face-pressed);
+  background: var(--rack-action-face-pressed-chrome);
   box-shadow: var(--rack-action-pressed);
   transition: none;
   transform: none;
 }
 
-/* Toggled active (not resting hover) */
-.app
-  .panel--hand
-  .rack-bottom-bar--tile-grid
-  .app-menu-anchor--hand-rack
-  .app-bottom-center-controls__menu-btn--open:is(:disabled, :not(:disabled)),
-.app
-  .panel--hand
-  .rack-bottom-bar--tile-grid
-  .app-menu-anchor--hand-rack
-  .app-bottom-center-controls__menu-btn--open:hover:not(:disabled),
+/* Toggled pressed-in (Hands open, MAHJ held) — opaque face on the button; Menu uses ::before below. */
 .app
   .panel--hand
   .rack-bottom-bar--tile-grid
@@ -2058,7 +2042,7 @@ html[data-home-screen-app]:not([data-native-app])
     :disabled,
     :not(:disabled)
   ) {
-  background: var(--rack-action-face-pressed);
+  background: var(--rack-action-face-pressed-chrome);
   color: var(--rack-action-label-color, #e2e4e8);
   box-shadow: var(--rack-action-pressed);
 }
@@ -2190,9 +2174,9 @@ html[data-home-screen-app]:not([data-native-app])
   filter: none;
 }
 
-.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--logic.rack-bottom-tile-cell--c7-8:active:not(:disabled),
 .app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:active:not(:disabled) {
-  background: var(--rack-action-face-pressed);
+  background: var(--rack-action-face-pressed-chrome);
+  box-shadow: var(--rack-action-pressed);
   color: var(--rack-action-label-color, #e2e4e8);
 }
 
@@ -2202,15 +2186,15 @@ html body .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid
 html body .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid
   button.btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled):hover {
   background: var(--rack-action-face);
-  border: 1px solid var(--rack-action-border-color, #636870);
-  box-shadow: none;
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
+  box-shadow: var(--rack-action-shadow-rest);
   color: var(--rack-action-label-color, #e2e4e8);
   opacity: 1;
   filter: none;
 }
 
 /*
- * Sort / HANDS / Logic / Menu: flat resting face — beat legacy neumorphic inset
+ * Sort / HANDS / Logic / Menu: soft raised resting face — beat legacy neumorphic inset
  * (part-0067 / part-0069) that only hit btn--rack-neutral + suggested-hands-tab.
  */
 html body .app .panel--hand .rack-bottom-bar--tile-grid :is(
@@ -2224,11 +2208,66 @@ html body .app .panel--hand .rack-bottom-bar--tile-grid :is(
     )
 ):not(:active) {
   background: var(--rack-action-face);
-  border: 1px solid var(--rack-action-border-color, #636870);
-  box-shadow: none;
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
+  box-shadow: var(--rack-action-shadow-rest);
   color: var(--rack-action-label-color, #e2e4e8);
   opacity: 1;
   filter: none;
+}
+
+/*
+ * Hand-rack Menu pressed (pointer-down) + toggled open: match Sort's *appearance*, not its raw
+ * tokens. Sort's --rack-action-face-pressed-chrome / --rack-action-pressed carry a light bottom
+ * "peek" gradient + bottom light insets that read as a thin bottom edge on Sort's wide, short
+ * button — but on the small near-square hamburger that same light fills a large share of the face
+ * and reads as a "bottom glow". So the hamburger uses a flat pressed face + a dark-only inset
+ * (top/left/right inner-border shadow) so it visually matches Sort with no bottom glow.
+ */
+html body .app .panel--hand :is(
+    .panel-hand-rack__action-well,
+    .panel-hand-rack__charleston-actions-well
+  )
+  .rack-bottom-bar--tile-grid
+  .app-menu-anchor--hand-rack
+  .btn.btn--rack-neutral.app-bottom-center-controls__menu-btn:active:not(:disabled),
+html body .app .panel--hand :is(
+    .panel-hand-rack__action-well,
+    .panel-hand-rack__charleston-actions-well
+  )
+  .rack-bottom-bar--tile-grid
+  .app-menu-anchor--hand-rack
+  .btn.btn--rack-neutral.app-bottom-center-controls__menu-btn--open:is(:disabled, :not(:disabled)),
+html body .app .panel--hand :is(
+    .panel-hand-rack__action-well,
+    .panel-hand-rack__charleston-actions-well
+  )
+  .rack-bottom-bar--tile-grid
+  .app-menu-anchor--hand-rack
+  .btn.btn--rack-neutral.app-bottom-center-controls__menu-btn--open:hover:not(:disabled) {
+  background: var(--rack-action-face);
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
+  box-shadow: var(--rack-action-pressed);
+  color: var(--rack-action-label-color, #e2e4e8);
+  opacity: 1;
+  filter: none;
+  transition: none;
+  transform: none;
+}
+
+html body .app .panel--hand :is(
+    .panel-hand-rack__action-well,
+    .panel-hand-rack__charleston-actions-well
+  )
+  .rack-bottom-bar--tile-grid
+  .app-menu-anchor--hand-rack
+  .btn.btn--rack-neutral.app-bottom-center-controls__menu-btn:is(
+    :active:not(:disabled),
+    .app-bottom-center-controls__menu-btn--open:is(:disabled, :not(:disabled)),
+    .app-bottom-center-controls__menu-btn--open:hover:not(:disabled)
+  )
+  .hand-rack-menu-hamburger {
+  position: relative;
+  z-index: 1;
 }
 
 html body .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid :is(
@@ -2238,23 +2277,8 @@ html body .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-g
     )
 ):not(:active) {
   background: var(--rack-action-face);
-  border: 1px solid var(--rack-action-border-color, #636870);
-  box-shadow: none;
-  color: var(--rack-action-label-color, #e2e4e8);
-  opacity: 1;
-  filter: none;
-}
-
-/*
- * Call / Swap pressed: keep the resting gradient face and add only the inset depth — identical to
- * Sort / Hands (no darker fill, no hover wash) so its pressed look matches the other rack actions.
- */
-html body .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid
-  button.btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled):active,
-html body .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
-  button.btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled):active {
-  background: var(--rack-action-face);
-  box-shadow: var(--rack-action-pressed);
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
+  box-shadow: var(--rack-action-shadow-rest);
   color: var(--rack-action-label-color, #e2e4e8);
   opacity: 1;
   filter: none;
@@ -2483,21 +2507,11 @@ html .app-dnd-frame .app-top-exposure-container .exposure-rack__meld-drop--over 
   --rack-action-label-color: var(--app-action-btn-label);
   --rack-action-face: var(--app-action-btn-face);
   --rack-action-face-pressed: var(--app-action-btn-face-pressed);
+  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed-chrome);
   --rack-action-border-color: var(--app-action-btn-border);
-  --rack-action-flat-surface: var(--app-action-btn-bottom);
-  --rack-action-press-shadow-dark: color-mix(
-    in srgb,
-    #000 28%,
-    var(--rack-action-flat-surface, #484c52)
-  );
-  --rack-action-press-shadow-light: color-mix(
-    in srgb,
-    var(--rack-action-border-color, #636870) 72%,
-    var(--rack-action-flat-surface, #484c52)
-  );
-  --rack-action-pressed:
-    inset 4px 4px 8px var(--rack-action-press-shadow-dark),
-    inset -4px -4px 8px var(--rack-action-press-shadow-light);
+  --rack-action-press-shadow-dark: var(--app-action-btn-press-shadow-dark);
+  --rack-action-press-shadow-light: var(--app-action-btn-press-shadow-light);
+  --rack-action-pressed: var(--app-action-btn-shadow-pressed);
 }
 
 /*
@@ -2591,6 +2605,28 @@ html
   display: none;
 }
 
+/* Popup exchange grid: rank centered in the tile face — no discard count below. */
+.blank-exchange-overlay__tracker-mirror
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot:not(.sorted-discard-tray__slot--suit-label) {
+  --sorted-discard-glyph-pad-top: 0;
+}
+
+.blank-exchange-overlay__tracker-mirror
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot:not(.sorted-discard-tray__slot--suit-label)
+  .tile-face.tile-face--sorted-discard-glyph {
+  align-items: center;
+  justify-content: center;
+  padding-top: 0;
+}
+
+.blank-exchange-overlay__tracker-mirror
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__count {
+  display: none;
+}
+
 /* Tappable discarded tiles — pointer + subtle lift (popup only). */
 .blank-exchange-overlay__tracker-mirror .sorted-discard-tray__slot--pickable {
   cursor: pointer;
@@ -2614,7 +2650,7 @@ html
   justify-content: center;
   padding: 0 0.4em;
   box-sizing: border-box;
-  border: 1px solid var(--rack-action-border-color, #636870);
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
   border-radius: var(--rack-tile-btn-border-radius, max(0.36rem, calc(var(--hand-rack-tile-w, 2.65rem) * 0.128)));
   font-family: 'Figtree', var(--sans);
   font-weight: 600;
@@ -2628,7 +2664,7 @@ html
   text-transform: none;
   color: var(--rack-action-label-color, #e2e4e8);
   background: var(--rack-action-face);
-  box-shadow: none;
+  box-shadow: var(--rack-action-shadow-rest);
   opacity: 1;
   filter: none;
   text-shadow: none;
@@ -2638,14 +2674,14 @@ html
 /* No hover treatment — the resting gradient/border is the only non-pressed state (matches Sort/Hands). */
 .blank-exchange-overlay__panel .blank-exchange-overlay__cancel:hover {
   background: var(--rack-action-face);
-  border: 1px solid var(--rack-action-border-color, #636870);
-  box-shadow: none;
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
+  box-shadow: var(--rack-action-shadow-rest);
   color: var(--rack-action-label-color, #e2e4e8);
   transform: none;
 }
 /* Pressed: keep the resting gradient face and add only the inset depth — identical to Sort/Hands. */
 .blank-exchange-overlay__panel .blank-exchange-overlay__cancel:active {
-  background: var(--rack-action-face);
+  background: var(--rack-action-face-pressed-chrome, var(--app-action-btn-face-pressed-chrome));
   border: 1px solid var(--rack-action-border-color, #636870);
   box-shadow: var(--rack-action-pressed);
   color: var(--rack-action-label-color, #e2e4e8);

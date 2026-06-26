@@ -677,7 +677,6 @@ type Props = {
   /** Rerank changed variant keys — migrate selection instead of clearing it. */
   onFocusKeyMigrate?: (nextKey: string | null) => void
   tilesGuideOn: boolean
-  onTilesGuideToggle?: () => void
   rackTilesForSuggestedStrip: TileInstance[]
   /**
    * Same ids as `rackTilesForSuggestedStrip`, but jokers in open melds use their stand-in `TileDef`
@@ -722,7 +721,6 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   onPatternClick,
   onFocusKeyMigrate,
   tilesGuideOn,
-  onTilesGuideToggle,
   rackTilesForSuggestedStrip,
   rackTilesForPatternMatch,
   exposureTileIdsForSuggestedStrip,
@@ -1116,28 +1114,6 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     onDiscardOverlayPeekPxChange && discardOverlayMeasureRef
   )
 
-  const displayModeHeaderButtons = (
-    <div className="hands-sheet__display-toggles" role="toolbar" aria-label="Suggested hands display">
-      <button
-        type="button"
-        className={[
-          'hands-sheet__display-toggle',
-          tilesGuideOn ? 'hands-sheet__display-toggle--on' : '',
-        ]
-          .filter(Boolean)
-          .join(' ')}
-        aria-pressed={tilesGuideOn}
-        onClick={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          onTilesGuideToggle?.()
-        }}
-      >
-        Tiles
-      </button>
-    </div>
-  )
-
   useLayoutEffect(() => {
     if (!trayHeaderPeekResize) return
     const scrollEl = handsListScrollRef.current
@@ -1167,11 +1143,6 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
       if (!onDiscardOverlayPeekPxChange || !discardOverlayMeasureRef?.current) return
       const t = e.target
       if (!(t instanceof Element)) return
-      /*
-       * Header peek-drag uses setPointerCapture on this scroll root. That would swallow the
-       * Tiles toggle button's pointer stream so it never receives a real `click`.
-       */
-      if (t.closest('.hands-sheet__display-toggles')) return
       if (
         !t.closest('.hands-list__freeze-header') &&
         !t.closest('.hands-sheet__cell--header')
@@ -1311,9 +1282,8 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                 <div
                   className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--tiles"
                   role="columnheader"
-                >
-                  {displayModeHeaderButtons}
-                </div>
+                  aria-hidden
+                />
                 <div
                   className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--away"
                   role="columnheader"
@@ -1351,9 +1321,8 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                   <div
                     className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--hand"
                     role="columnheader"
-                  >
-                    {displayModeHeaderButtons}
-                  </div>
+                    aria-hidden
+                  />
                   <div
                     className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--away"
                     role="columnheader"

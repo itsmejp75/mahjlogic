@@ -1006,22 +1006,13 @@
   --rack-action-label-color: var(--app-action-btn-label);
   --rack-action-face: var(--app-action-btn-face);
   --rack-action-face-pressed: var(--app-action-btn-face-pressed);
+  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed-chrome);
   --rack-action-shadow-rest: var(--app-action-btn-shadow-rest);
   --rack-action-flat-surface: var(--app-action-btn-bottom);
   --rack-action-border-color: var(--app-action-btn-border);
-  --rack-action-press-shadow-dark: color-mix(
-    in srgb,
-    #000 28%,
-    var(--rack-action-flat-surface, #484c52)
-  );
-  --rack-action-press-shadow-light: color-mix(
-    in srgb,
-    var(--rack-action-border-color, #636870) 72%,
-    var(--rack-action-flat-surface, #484c52)
-  );
-  --rack-action-pressed:
-    inset 4px 4px 8px var(--rack-action-press-shadow-dark),
-    inset -4px -4px 8px var(--rack-action-press-shadow-light);
+  --rack-action-press-shadow-dark: var(--app-action-btn-press-shadow-dark);
+  --rack-action-press-shadow-light: var(--app-action-btn-press-shadow-light);
+  --rack-action-pressed: var(--app-action-btn-shadow-pressed);
   /* Mirror .panel--hand --hand-top-rack-height-delta (part-0117 + rim zeroed in part-0123). */
   --hand-top-rack-height-delta-mirror: calc(
     2 * var(--hand-rack-tray-inset-inline, var(--bot-exposure-inner-pad, 4px)) / 14 * 1.3333
@@ -1106,7 +1097,7 @@
   .wall-game-dialog--wall-seats
   .wall-game-dialog__actions
   .btn.wall-game-dialog__action-btn:active:not(:disabled) {
-  background: var(--rack-action-face-pressed);
+  background: var(--rack-action-face-pressed-chrome);
   box-shadow: var(--rack-action-pressed);
   transition: none;
   transform: none;

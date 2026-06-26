@@ -1002,3 +1002,117 @@
 .app-menu-modal-layer .app-menu-modal .suggested-hands-popup__header-controls .hands-panel__display-toggle {
   font-size: 1.15rem;
 }
+
+/*
+ * Menu modal pressables — same resting / hold / pressed-in chrome as hand rack action row
+ * (part-0123): gradient face, border, inset rest shadow; pressed face + inset on :active / --on.
+ * Loaded last so these beat tray-item / diff-btn layout rules in earlier fragments.
+ */
+html body .app .app-menu-modal-layer .app-menu-modal :is(
+  .app-menu-tray__diff-btn,
+  .app-menu-tray__item:not(.app-menu-tray__item--switch),
+  .app-menu-modal__blank-tile-count-btn.btn,
+  .suggested-hands-popup__header-controls .hands-panel__display-toggle,
+  .app-menu-modal__suggested-filters-reset,
+  .app-menu-modal__close
+) {
+  position: relative;
+  isolation: isolate;
+}
+
+html body .app .app-menu-modal-layer .app-menu-modal .suggested-hands-popup__header-controls .hands-panel__display-toggle {
+  border-radius: var(--rack-tile-btn-border-radius);
+}
+
+/* Resting + hover — same face, border, inset shadow as rack-bottom-tile-cell (part-0123). */
+html body .app .app-menu-modal-layer .app-menu-modal :is(
+  .app-menu-tray__diff-btn:not(:disabled),
+  .app-menu-tray__item:not(.app-menu-tray__item--switch):not(:disabled),
+  .app-menu-modal__blank-tile-count-btn.btn:not(:disabled),
+  .suggested-hands-popup__header-controls .hands-panel__display-toggle:not(:disabled),
+  .app-menu-modal__suggested-filters-reset:not(:disabled),
+  .app-menu-modal__close:not(:disabled)
+):not(:active):not(.app-menu-tray__diff-btn--on):not(.app-menu-modal__blank-tile-count-btn--on):not(
+    .hands-panel__display-toggle--on
+  ) {
+  background: var(--rack-action-face, var(--app-action-btn-face));
+  border: 1px solid var(--rack-action-border-rest, var(--app-action-btn-border-rest));
+  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
+  color: var(--rack-action-label-color, var(--app-action-btn-label));
+  opacity: 1;
+  filter: none;
+  text-shadow: none;
+}
+
+html body .app .app-menu-modal-layer .app-menu-modal :is(
+  .app-menu-tray__diff-btn:not(:disabled),
+  .app-menu-tray__item:not(.app-menu-tray__item--switch):not(:disabled),
+  .app-menu-modal__blank-tile-count-btn.btn:not(:disabled),
+  .suggested-hands-popup__header-controls .hands-panel__display-toggle:not(:disabled),
+  .app-menu-modal__suggested-filters-reset:not(:disabled),
+  .app-menu-modal__close:not(:disabled)
+):not(:active):not(.app-menu-tray__diff-btn--on):not(.app-menu-modal__blank-tile-count-btn--on):not(
+    .hands-panel__display-toggle--on
+  ):hover {
+  background: var(--rack-action-face, var(--app-action-btn-face));
+  border-color: var(--rack-action-border-rest, var(--app-action-btn-border-rest));
+  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
+  transform: none;
+}
+
+/* Hold + toggled on: same pressed face, border, and left/top/right inset shading as the main action row. */
+html body .app .app-menu-modal-layer .app-menu-modal :is(
+  .app-menu-tray__diff-btn:not(:disabled),
+  .app-menu-tray__item:not(.app-menu-tray__item--switch):not(:disabled),
+  .app-menu-modal__blank-tile-count-btn.btn:not(:disabled),
+  .suggested-hands-popup__header-controls .hands-panel__display-toggle:not(:disabled),
+  .app-menu-modal__suggested-filters-reset:not(:disabled),
+  .app-menu-modal__close:not(:disabled)
+):is(
+  :active,
+  .app-menu-tray__diff-btn--on,
+  .app-menu-modal__blank-tile-count-btn--on,
+  .hands-panel__display-toggle--on
+),
+html body .app .app-menu-modal-layer .app-menu-modal :is(
+  .app-menu-tray__diff-btn:not(:disabled),
+  .app-menu-tray__item:not(.app-menu-tray__item--switch):not(:disabled),
+  .app-menu-modal__blank-tile-count-btn.btn:not(:disabled),
+  .suggested-hands-popup__header-controls .hands-panel__display-toggle:not(:disabled),
+  .app-menu-modal__suggested-filters-reset:not(:disabled),
+  .app-menu-modal__close:not(:disabled)
+):is(
+  .app-menu-tray__diff-btn--on,
+  .app-menu-modal__blank-tile-count-btn--on,
+  .hands-panel__display-toggle--on
+):hover:not(:disabled) {
+  background: var(--rack-action-face, var(--app-action-btn-face));
+  border: 1px solid var(--rack-action-border-rest, var(--app-action-btn-border-rest));
+  box-shadow: var(--rack-action-pressed, var(--app-action-btn-shadow-pressed));
+  color: var(--rack-action-label-color, var(--app-action-btn-label));
+  opacity: 1;
+  filter: none;
+  text-shadow: none;
+  transition: none;
+  transform: none;
+}
+
+/* Disabled — same flat face, no inset (matches rack-bottom-tile-cell :disabled, part-0123). */
+html body .app .app-menu-modal-layer .app-menu-modal :is(
+  .app-menu-tray__diff-btn:disabled,
+  .app-menu-tray__item:not(.app-menu-tray__item--switch):disabled,
+  .app-menu-modal__blank-tile-count-btn.btn:disabled,
+  .suggested-hands-popup__header-controls .hands-panel__display-toggle:disabled,
+  .app-menu-modal__suggested-filters-reset:disabled,
+  .app-menu-modal__close:disabled
+) {
+  background: var(--rack-action-face, var(--app-action-btn-face));
+  border: 1px solid var(--rack-action-border-rest, var(--app-action-btn-border-rest));
+  color: var(--rack-action-label-color, var(--app-action-btn-label));
+  cursor: not-allowed;
+  box-shadow: none;
+  opacity: 1;
+  filter: none;
+  text-shadow: none;
+  transform: none;
+}

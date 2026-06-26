@@ -15,20 +15,16 @@
   transform: none;
 }
 
-/* Hand rack: flat resting/hover — part-0123 PokerStars tokens. */
+/* Hand rack: soft raised resting/hover — part-0123 PokerStars tokens. */
 .app .panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:hover:not(:disabled):not(:active) {
-  box-shadow: none;
+  box-shadow: var(--rack-action-shadow-rest);
   transform: none;
 }
 
 .panel--hand .rack-bottom-bar--tile-grid .rack-bottom-tile-cell,
 .panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell,
 .panel--hand .rack-bottom-bar--tile-grid .rack-bottom-tile-cell:disabled,
-.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:disabled,
-.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn,
-.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:disabled,
-.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn--open,
-.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn--open:hover {
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:disabled {
   box-shadow: none;
 }
 

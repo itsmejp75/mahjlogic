@@ -37,6 +37,8 @@
 .app-layout[data-joker-swap-hint='on'][data-animations='on']
   .sortable-tile-wrap:has(.sortable-tile-wrap__fly--joker-swap-hint-bounce),
 .app-layout[data-joker-swap-hint='on'][data-animations='on']
-  .exposure-rack__slot--joker-swap-hint-bounce {
+  .exposure-rack__slot--joker-swap-hint-bounce,
+.app-layout[data-joker-swap-hint='on'][data-animations='on']
+  .east-discard-staging__tile--joker-swap-hint-bounce {
   z-index: 50;
 }

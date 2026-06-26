@@ -50,31 +50,24 @@
   padding-bottom: 0.5rem;
 }
 
-/* Game settings: same pill face as hand rack action row (part-0123). */
+/* Game settings tray items — layout only; pill chrome in part-0124 (matches rack action row). */
 .app-menu-modal .app-menu-tray__item:not(.app-menu-tray__item--switch) {
   box-sizing: border-box;
-  border: 1px solid var(--rack-action-border-color, var(--app-action-btn-border));
-  background: var(--rack-action-face, var(--app-action-btn-face));
   color: var(--rack-action-label-color, var(--app-action-btn-label));
   text-shadow: none;
   opacity: 1;
   filter: none;
   /* Outrank global `.app-menu-tray__item { text-transform: uppercase }` — title case for full-width actions (e.g. New Game). */
   text-transform: capitalize;
-  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
   transition: box-shadow 0.12s ease, background 0.12s ease;
 }
 
 .app-menu-modal .app-menu-tray__item:not(.app-menu-tray__item--switch):hover:not(:disabled) {
-  background: var(--rack-action-face, var(--app-action-btn-face));
   color: var(--rack-action-label-color, var(--app-action-btn-label));
-  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
   transform: none;
 }
 
 .app-menu-modal .app-menu-tray__item:not(.app-menu-tray__item--switch):active:not(:disabled) {
-  background: var(--rack-action-face-pressed, var(--app-action-btn-face-pressed));
-  box-shadow: var(--rack-action-pressed);
   transition: none;
   transform: none;
 }
@@ -87,26 +80,18 @@
   filter: none;
 }
 
-/* Hands / Tiles chips in menu blocks — same pill as rack action row. */
+/* Hands / Tiles chips in menu blocks — layout only; pill chrome in part-0124. */
 .app-menu-modal .suggested-hands-popup__header-controls .hands-panel__display-toggle {
-  border: none;
-  background: var(--rack-action-face, var(--app-action-btn-face));
   color: var(--rack-action-label-color, var(--app-action-btn-label));
-  box-shadow: var(--app-menu-diff-btn-rest);
   transition: box-shadow 0.12s ease, background 0.12s ease;
 }
 
 .app-menu-modal .suggested-hands-popup__header-controls .hands-panel__display-toggle:hover:not(:disabled):not(.hands-panel__display-toggle--on) {
-  background: var(--rack-action-face, var(--app-action-btn-face));
   color: var(--rack-action-label-color, var(--app-action-btn-label));
-  box-shadow: var(--app-menu-diff-btn-rest);
   transform: none;
 }
 
 .app-menu-modal .suggested-hands-popup__header-controls .hands-panel__display-toggle:active:not(:disabled):not(.hands-panel__display-toggle--on) {
-  background: var(--rack-action-face-pressed, var(--app-action-btn-face-pressed));
-  border: 1px solid var(--rack-action-border-color, var(--app-action-btn-border));
-  box-shadow: var(--rack-action-pressed);
   transition: none;
   transform: none;
 }
@@ -114,11 +99,10 @@
 .app-menu-modal .suggested-hands-popup__header-controls .hands-panel__display-toggle--on,
 .app-menu-modal .suggested-hands-popup__header-controls .hands-panel__display-toggle--on:hover:not(:disabled),
 .app-menu-modal .suggested-hands-popup__header-controls .hands-panel__display-toggle--on:active:not(:disabled) {
-  background: var(--app-menu-diff-btn-face-pressed);
-  border: 1px solid var(--app-menu-diff-btn-border-pressed);
-  color: var(--app-menu-diff-btn-label-pressed);
-  box-shadow: var(--app-menu-diff-btn-pressed);
-  font-weight: 700;
+  color: var(--rack-action-label-color, var(--app-action-btn-label));
+  font-weight: 600;
   text-shadow: none;
   transform: none;
 }
+
+/* Menu pill chrome (rest / hold / pressed-in): part-0124.css — loaded last, mirrors part-0123. */

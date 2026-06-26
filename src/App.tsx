@@ -257,6 +257,10 @@ const LS_KEY_TILE_GRAPHICS_USER_PICKED = 'mahjlogic.tileGraphicsUserPicked'
 const LS_KEY_TILE_GRAPHICS_DEFAULT_MIGRATED = 'mahjlogic.tileGraphicsDefaultMigrated'
 /** One-time migration: Prism (`solid-color`) was the prior product default → Illustrative Classic. */
 const LS_KEY_TILE_GRAPHICS_PRISM_LEGACY_MIGRATED = 'mahjlogic.tileGraphicsPrismLegacyMigrated'
+const LS_KEY_JOKER_SWAP_HINT = 'mahjlogic.jokerSwapHintEnabled'
+/** Former “Joker Flash” preference; read once to seed `LS_KEY_JOKER_SWAP_HINT` if missing. */
+const LS_KEY_JOKER_FLASH_LEGACY = 'mahjlogic.jokerFlashEnabled'
+const JOKER_SWAP_HINT_LABEL = 'Joker swap hint'
 /** Training / practice: confirm before dead hand from bad call, bad Mah Jongg, or hopeless discard. */
 const LS_KEY_UNDO = 'mahjlogic.undoEnabled'
 const UNDO_LABEL = 'Undo'
@@ -372,6 +376,22 @@ function readBotDifficultyFromStorage(): BotDifficulty {
     /* ignore */
   }
   return DEFAULT_BOT_DIFFICULTY
+}
+
+function readJokerSwapHintFromStorage(): boolean {
+  try {
+    const v = localStorage.getItem(LS_KEY_JOKER_SWAP_HINT)
+    if (v != null) return v === 'true' || v === '1'
+    const legacy = localStorage.getItem(LS_KEY_JOKER_FLASH_LEGACY)
+    if (legacy != null) {
+      const on = legacy === 'true' || legacy === '1'
+      localStorage.setItem(LS_KEY_JOKER_SWAP_HINT, on ? 'true' : 'false')
+      return on
+    }
+  } catch {
+    /* ignore */
+  }
+  return true
 }
 
 function readDeadHandWarningsFromStorage(): boolean {
@@ -3503,6 +3523,9 @@ export default function App() {
   }, [cardPatterns])
 
   const [tileGraphics, setTileGraphics] = useState<TileGraphics>(() => readTileGraphicsFromStorage())
+  const [jokerSwapHintEnabled, setJokerSwapHintEnabled] = useState<boolean>(() =>
+    readJokerSwapHintFromStorage(),
+  )
   const [deadHandWarningsEnabled, setDeadHandWarningsEnabled] = useState<boolean>(() =>
     readDeadHandWarningsFromStorage(),
   )
@@ -3580,6 +3603,18 @@ export default function App() {
       const next = !v
       try {
         localStorage.setItem(LS_KEY_DEAD_HAND_WARNINGS, next ? 'true' : 'false')
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }, [])
+
+  const toggleJokerSwapHint = useCallback(() => {
+    setJokerSwapHintEnabled((v) => {
+      const next = !v
+      try {
+        localStorage.setItem(LS_KEY_JOKER_SWAP_HINT, next ? 'true' : 'false')
       } catch {
         /* ignore */
       }
@@ -3682,6 +3717,10 @@ export default function App() {
       const t = readTileGraphicsFromStorage()
       return prev === t ? prev : t
     })
+    setJokerSwapHintEnabled((prev) => {
+      const h = readJokerSwapHintFromStorage()
+      return prev === h ? prev : h
+    })
     setDeadHandWarningsEnabled((prev) => {
       const d = readDeadHandWarningsFromStorage()
       return prev === d ? prev : d
@@ -3741,6 +3780,9 @@ export default function App() {
         const on = e.newValue === 'true' || e.newValue === '1'
         setDeadHandWarningsEnabled(on)
         deadHandWarningsEnabledRef.current = on
+      } else if (e.key === LS_KEY_JOKER_SWAP_HINT) {
+        if (e.newValue == null) return
+        setJokerSwapHintEnabled(e.newValue === 'true' || e.newValue === '1')
       } else if (e.key === LS_KEY_MAHJONG_HINT) {
         if (e.newValue == null) return
         setMahjongHintEnabled(e.newValue === 'true' || e.newValue === '1')
@@ -4183,7 +4225,12 @@ export default function App() {
 
   /** Joker swap hint (dock-bounce): only starts during East's discard turn. */
   const activeJokerSwapHintBounceIds = useMemo(() => {
-    if (mainPhase !== 'east-discard' || !jokerSwapUiActive || !animationsEnabled) {
+    if (
+      mainPhase !== 'east-discard' ||
+      !jokerSwapHintEnabled ||
+      !jokerSwapUiActive ||
+      !animationsEnabled
+    ) {
       return null
     }
     const hand_ = collectHandTileIdsSwappableForJokers(
@@ -4200,7 +4247,16 @@ export default function App() {
     )
     if (hand_.size === 0 && jokers.size === 0) return null
     return { hand: hand_, jokers }
-  }, [mainPhase, jokerSwapUiActive, animationsEnabled, hand, pendingEastDiscardTile, botExposures, eastExposures])
+  }, [
+    mainPhase,
+    jokerSwapHintEnabled,
+    jokerSwapUiActive,
+    animationsEnabled,
+    hand,
+    pendingEastDiscardTile,
+    botExposures,
+    eastExposures,
+  ])
 
   const suggestedLineFocusActiveForJokerSwapHint = useMemo(() => {
     if (!suggestedFocusHandKey) return false
@@ -6200,6 +6256,52 @@ export default function App() {
     return true
   }, [performNewHandDeal])
 
+  const canEndGame =
+    charlestonDone &&
+    mainPhase !== 'wall-game' &&
+    mainPhase !== 'mahjong-declared' &&
+    mainPhase !== 'bot-mahjong' &&
+    mainPhase !== 'dead-hand'
+
+  const endGame = useCallback(() => {
+    if (!charlestonDone) return
+    setCharlestonPassError(null)
+    setCallRuleError(null)
+    setBlockingDialog(null)
+    setPendingJokerSwapTileId(null)
+    setWallGameReviewing(false)
+    setMahjongWinReviewing(false)
+    setBotMahjongWinReviewing(false)
+    setRound((r) => {
+      if (
+        r.mainPhase === 'wall-game' ||
+        r.mainPhase === 'mahjong-declared' ||
+        r.mainPhase === 'bot-mahjong' ||
+        r.mainPhase === 'dead-hand'
+      ) {
+        return r
+      }
+      return {
+        ...r,
+        mainPhase: 'wall-game',
+        activeBotIndex: null,
+        activeBotDiscard: null,
+        botTurnBanner: null,
+        pendingEastDiscardTile: null,
+        pendingEastDiscardIdx: null,
+        drawnTileId: null,
+        handTileFlyIn: null,
+        selectedHandTileId: null,
+        stagedCallTileIds: [],
+        callAmendableAfterClaimTileId: null,
+        callAmendFromBotIndex: null,
+        botWin: null,
+        playerWinMethod: null,
+      }
+    })
+    setMenuOpen(false)
+  }, [charlestonDone])
+
   /** Same shuffled deck + opening deal as before Charleston on the last fresh deal (reshuffle only via New Game). */
   const replayHand = useCallback((): boolean => {
     performNewHandDeal({ replayLastOpening: true })
@@ -7709,7 +7811,6 @@ export default function App() {
           onPatternClick={onSuggestedPatternClick}
           onFocusKeyMigrate={onSuggestedFocusKeyMigrate}
           tilesGuideOn={suggestedPanelTilesOn}
-          onTilesGuideToggle={toggleSuggestedPanelTilesOn}
           rackTilesForSuggestedStrip={rackForSuggestedHandsUi}
           rackTilesForPatternMatch={rackForSuggestedPatternMatch}
           exposureTileIdsForSuggestedStrip={suggestedHandsExposureTileIds}
@@ -7790,15 +7891,27 @@ export default function App() {
                   ))}
                 </div>
               </div>
-              <button
-                type="button"
-                className="btn app-menu-tray__item app-menu-modal__new-game"
-                onClick={() => {
-                  if (newHand()) setMenuOpen(false)
-                }}
-              >
-                New Game
-              </button>
+              <div className="app-menu-modal__diff-block app-menu-modal__diff-block--game-actions">
+                <div className="app-menu-modal__game-actions-row app-menu-tray__diff-row app-menu-modal__diff-row">
+                  <button
+                    type="button"
+                    className="btn app-menu-tray__diff-btn app-menu-modal__end-game"
+                    disabled={!canEndGame}
+                    onClick={endGame}
+                  >
+                    End Game
+                  </button>
+                  <button
+                    type="button"
+                    className="btn app-menu-tray__diff-btn app-menu-modal__new-game"
+                    onClick={() => {
+                      if (newHand()) setMenuOpen(false)
+                    }}
+                  >
+                    New Game
+                  </button>
+                </div>
+              </div>
               <div className="app-menu-modal__diff-block">
                 <div className="app-menu-modal__subhead" id="bot-difficulty-menu-label">
                   Bot difficulty
@@ -7982,6 +8095,19 @@ export default function App() {
                   />
                   <span className="app-menu-modal__label" id="app-menu-label-mahjong-hint">
                     {MAHJONG_HINT_LABEL}
+                  </span>
+                </div>
+                <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                  <AppMenuSettingSwitch
+                    labelId="app-menu-label-joker-swap-hint"
+                    pressed={jokerSwapHintEnabled}
+                    onToggle={toggleJokerSwapHint}
+                  />
+                  <span
+                    className="app-menu-modal__label"
+                    id="app-menu-label-joker-swap-hint"
+                  >
+                    {JOKER_SWAP_HINT_LABEL}
                   </span>
                 </div>
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
@@ -8650,7 +8776,7 @@ export default function App() {
       <div
         className="app-layout"
         data-animations={animationsEnabled ? 'on' : 'off'}
-        data-joker-swap-hint="on"
+        data-joker-swap-hint={jokerSwapHintEnabled ? 'on' : 'off'}
         data-joker-swap-hint-iter={jokerSwapHandHintSingleBounce ? '1' : '4'}
       >
         <div className="app-main">

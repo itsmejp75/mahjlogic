@@ -10,12 +10,14 @@
 
 .app-menu-modal__header {
   position: relative;
+  z-index: 1;
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   padding: 0.75rem 0.75rem 0.6rem;
   border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
+  background: var(--app-menu-bg, var(--app-bg-base));
 }
 
 .app-menu-modal__close {
@@ -25,30 +27,13 @@
   min-height: 2.75rem;
   margin: 0;
   padding: 0;
-  border: 1px solid var(--rack-action-border-color, var(--app-action-btn-border));
   border-radius: 0.45rem;
-  background: var(--rack-action-face, var(--app-action-btn-face));
   font: inherit;
   font-size: 1.6rem;
   line-height: 1;
   font-weight: 500;
-  color: var(--rack-action-label-color, var(--app-action-btn-label));
   cursor: pointer;
-  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
   transition: box-shadow 0.12s ease, background 0.12s ease;
-}
-
-.app-menu-modal__close:hover {
-  background: var(--rack-action-face, var(--app-action-btn-face));
-  color: var(--rack-action-label-color, var(--app-action-btn-label));
-  border-color: var(--rack-action-border-color, var(--app-action-btn-border));
-  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
-}
-
-.app-menu-modal__close:active {
-  background: var(--rack-action-face-pressed, var(--app-action-btn-face-pressed));
-  box-shadow: var(--rack-action-pressed);
-  transition: none;
 }
 
 .app-menu-modal__close:focus-visible {
@@ -57,6 +42,8 @@
 }
 
 .app-menu-modal__body {
+  position: relative;
+  z-index: 1;
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
@@ -65,10 +52,14 @@
   overscroll-behavior: contain;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
   padding: 0.85rem 1.2rem 1.15rem;
   display: flex;
   flex-direction: column;
   gap: 0;
+  background: var(--app-menu-bg, var(--app-bg-base));
   /* Flex `gap` + some hosts: use sibling margins so toggle rows never stack/overlap */
 }
 

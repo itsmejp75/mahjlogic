@@ -51,7 +51,7 @@
 .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled,
 .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:not(:disabled),
 .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:disabled {
-  color: #DCDCE0;
+  color: var(--rack-action-label-color, var(--app-action-btn-label));
 }
 
 /* Charleston rack row: same muted label color as main (Sort / Hands / Swap / Pass). */
@@ -65,7 +65,7 @@
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled,
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.rack-bottom-tile-cell--c12-14:not(:disabled),
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.rack-bottom-tile-cell--c12-14:disabled {
-  color: #DCDCE0;
+  color: var(--rack-action-label-color, var(--app-action-btn-label));
 }
 
 /*
@@ -103,7 +103,7 @@
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn--open:not(:disabled),
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn--open:hover:not(:disabled),
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn:active:not(:disabled) {
-  color: #DCDCE0;
+  color: var(--rack-action-label-color, var(--app-action-btn-label));
 }
 
 /* ── Suggested Hands: absolute overlay on discard tray (child of `.discard-tracker__content`). */

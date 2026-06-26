@@ -93,7 +93,6 @@
     inset -3px -3px 8px rgba(255, 255, 255, 0.1),
     inset 0 0 0 2px rgba(255, 255, 255, 0.24);
 }
-
 /* Wall game hand bar: New Game. */
 .app[data-color-buttons='off'] .panel--hand .rack-bottom-bar--wall-game .btn.btn--primary:not(:disabled),
 .app[data-color-buttons='off'] .panel--hand .rack-bottom-bar--wall-game .btn.btn--primary:disabled {
@@ -141,15 +140,15 @@
     0 1px 2px color-mix(in srgb, var(--color-black) 10%, transparent);
 }
 
-/* Menu (blue) + open tint — align with neutral rack. */
-.app[data-color-buttons='off'] .app-bottom-center-controls__menu-btn:not(:disabled),
-.app[data-color-buttons='off'] .app-bottom-center-controls__menu-btn:disabled {
+/* Menu (blue) + open tint — bot toolbar only; hand-rack hamburger uses action-row chrome (part-0123). */
+.app[data-color-buttons='off'] .panel--bot-exposures__toolbar-well .app-bottom-center-controls__menu-btn:not(:disabled),
+.app[data-color-buttons='off'] .panel--bot-exposures__toolbar-well .app-bottom-center-controls__menu-btn:disabled {
   background: var(--color-slate-mid);
   color: var(--color-white);
 }
 
-.app[data-color-buttons='off'] .app-bottom-center-controls__menu-btn--open,
-.app[data-color-buttons='off'] .app-bottom-center-controls__menu-btn--open:hover:not(:disabled) {
+.app[data-color-buttons='off'] .panel--bot-exposures__toolbar-well .app-bottom-center-controls__menu-btn--open,
+.app[data-color-buttons='off'] .panel--bot-exposures__toolbar-well .app-bottom-center-controls__menu-btn--open:hover:not(:disabled) {
   background: var(--color-slate-mid);
   color: var(--color-white);
   box-shadow:
