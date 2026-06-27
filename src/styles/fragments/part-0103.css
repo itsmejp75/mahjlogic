@@ -77,7 +77,7 @@
   background: var(--rack-action-face);
   border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
   box-shadow: var(--rack-action-shadow-rest);
-  color: var(--rack-action-label-color-disabled, var(--app-action-btn-label-disabled));
+  color: var(--rack-action-label-color-disabled-text, var(--app-action-btn-label-disabled-text));
   opacity: 1;
   filter: none;
 }

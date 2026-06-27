@@ -221,11 +221,11 @@
 .app[data-tile-graphics='solid-color'] {
   --tg-bam: var(--card-ink-green);
   --tg-crak: var(--card-ink-red);
-  --tg-dot: var(--card-ink-navy);
+  --tg-dot: var(--tg-wind, var(--wind-tile-bg));
   --tg-wind: var(--wind-tile-bg);
   --tg-dragon-red: var(--card-ink-red);
   --tg-dragon-green: var(--card-ink-green);
-  --tg-dragon-soap: var(--card-ink-navy);
+  --tg-dragon-soap: var(--tg-wind, var(--wind-tile-bg));
   --tg-dragon-any: #5c6470;
   --tg-flower: var(--tg-flower-fill);
   --tg-joker: #ffc107;

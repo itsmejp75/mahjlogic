@@ -1037,11 +1037,11 @@
 .panel--discard-tracker .discard-tracker__overlay-grid .exposure-rack--discard-tracker-prefix {
   --tg-bam: var(--card-ink-green);
   --tg-crak: #ff5252;
-  --tg-dot: var(--card-ink-navy);
+  --tg-dot: var(--tg-wind, var(--wind-tile-bg));
   --tg-wind: var(--wind-tile-bg);
   --tg-dragon-red: #ff5252;
   --tg-dragon-green: var(--card-ink-green);
-  --tg-dragon-soap: var(--card-ink-navy);
+  --tg-dragon-soap: var(--tg-wind, var(--wind-tile-bg));
   --tg-dragon-any: #5c6470;
   --tg-flower: #b359c3;
   --tg-joker: #ffc107;

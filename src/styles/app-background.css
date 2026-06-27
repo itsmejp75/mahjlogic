@@ -85,6 +85,12 @@
     var(--app-action-btn-bottom) 28%,
     var(--app-action-btn-bottom-pressed) 72%
   );
+  /* Inactive labels: slightly darker than glyph fill so antialiased type matches the MAHJ mark. */
+  --app-action-btn-label-disabled-text: color-mix(
+    in srgb,
+    var(--app-action-btn-label-disabled) 16%,
+    var(--app-action-btn-bottom-pressed) 84%
+  );
   --rack-action-hint-border: #b56fd0;
   --app-action-btn-face: linear-gradient(
     180deg,

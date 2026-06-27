@@ -807,15 +807,15 @@ const SORTED_DISCARD_ROW1_TILES: readonly TileInstance[] = [
   },
 ]
 
-/** Row 2 of sorted discard: craks 1–9, red dragon (R), East, West. */
+/** Row 2 of sorted discard: dots 1–9, soap (0), East, West. */
 const SORTED_DISCARD_ROW2_TILES: readonly TileInstance[] = [
   ...([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((rank) => ({
-    id: `sorted-discard-r2-c${rank}`,
-    def: { cat: 'suit' as const, suit: 'crak' as const, rank },
+    id: `sorted-discard-r2-d${rank}`,
+    def: { cat: 'suit' as const, suit: 'dot' as const, rank },
   })),
   {
-    id: 'sorted-discard-r2-red',
-    def: { cat: 'dragon' as const, dragon: 'red' as const },
+    id: 'sorted-discard-r2-soap',
+    def: { cat: 'dragon' as const, dragon: 'soap' as const },
   },
   {
     id: 'sorted-discard-r2-e',
@@ -827,15 +827,15 @@ const SORTED_DISCARD_ROW2_TILES: readonly TileInstance[] = [
   },
 ]
 
-/** Row 3 of sorted discard: dots 1–9, soap (0), flower (F), blank (B) or joker (J) when blanks off. */
+/** Row 3 of sorted discard: craks 1–9, red dragon (R), flower (F), blank (B) or joker (J) when blanks off. */
 const SORTED_DISCARD_ROW3_TILES: readonly TileInstance[] = [
   ...([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((rank) => ({
-    id: `sorted-discard-r3-d${rank}`,
-    def: { cat: 'suit' as const, suit: 'dot' as const, rank },
+    id: `sorted-discard-r3-c${rank}`,
+    def: { cat: 'suit' as const, suit: 'crak' as const, rank },
   })),
   {
-    id: 'sorted-discard-r3-soap',
-    def: { cat: 'dragon' as const, dragon: 'soap' as const },
+    id: 'sorted-discard-r3-red',
+    def: { cat: 'dragon' as const, dragon: 'red' as const },
   },
   {
     id: 'sorted-discard-r3-f',
@@ -1279,8 +1279,8 @@ function BlankExchangeOverlay({
                       <SortedDiscardTrayRow
                         tiles={SORTED_DISCARD_ROW2_TILES}
                         slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
-                        leadingSuitLabel={tileSuitRackWord('crak')}
-                        leadingSuitLabelTone="crak"
+                        leadingSuitLabel={tileSuitRackWord('dot')}
+                        leadingSuitLabelTone="dot"
                         ariaLabel="Exchange row 2"
                         discardPile={discardPile}
                         suggestedNeedDefs={suggestedNeedDefs}
@@ -1292,8 +1292,8 @@ function BlankExchangeOverlay({
                       <SortedDiscardTrayRow
                         tiles={SORTED_DISCARD_ROW3_TILES}
                         slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
-                        leadingSuitLabel={tileSuitRackWord('dot')}
-                        leadingSuitLabelTone="dot"
+                        leadingSuitLabel={tileSuitRackWord('crak')}
+                        leadingSuitLabelTone="crak"
                         ariaLabel="Exchange row 3"
                         discardPile={discardPile}
                         blankTilesEnabled={blankTilesEnabled}
@@ -1409,8 +1409,8 @@ function DiscardTrackerSlotGrid({
               <SortedDiscardTrayRow
                 tiles={SORTED_DISCARD_ROW2_TILES}
                 slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
-                leadingSuitLabel={tileSuitRackWord('crak')}
-                leadingSuitLabelTone="crak"
+                leadingSuitLabel={tileSuitRackWord('dot')}
+                leadingSuitLabelTone="dot"
                 ariaLabel="Sorted discard row 2"
                 discardPile={discardPile}
                 suggestedNeedDefs={suggestedDiscardTrackerNeedDefs}
@@ -1419,8 +1419,8 @@ function DiscardTrackerSlotGrid({
               <SortedDiscardTrayRow
                 tiles={SORTED_DISCARD_ROW3_TILES}
                 slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
-                leadingSuitLabel={tileSuitRackWord('dot')}
-                leadingSuitLabelTone="dot"
+                leadingSuitLabel={tileSuitRackWord('crak')}
+                leadingSuitLabelTone="crak"
                 ariaLabel="Sorted discard row 3"
                 discardPile={discardPile}
                 blankTilesEnabled={blankTilesEnabled}

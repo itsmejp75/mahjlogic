@@ -1670,6 +1670,7 @@ html[data-home-screen-app]:not([data-native-app])
   ) {
   --rack-action-label-color: var(--app-action-btn-label);
   --rack-action-label-color-disabled: var(--app-action-btn-label-disabled);
+  --rack-action-label-color-disabled-text: var(--app-action-btn-label-disabled-text);
   --rack-action-face: var(--app-action-btn-face);
   --rack-action-face-pressed: var(--app-action-btn-face-pressed);
   --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed-chrome);
@@ -1988,7 +1989,7 @@ html[data-home-screen-app]:not([data-native-app])
     .btn.rack-bottom-tile-cell,
     .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn
   ):disabled {
-  color: var(--rack-action-label-color-disabled, var(--app-action-btn-label-disabled));
+  color: var(--rack-action-label-color-disabled-text, var(--app-action-btn-label-disabled-text));
   cursor: default;
   box-shadow: none;
   opacity: 1;
@@ -2068,7 +2069,7 @@ html[data-home-screen-app]:not([data-native-app])
 .app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.rack-bottom-tile-cell--c12-14:disabled:not(.suggested-hands-tab),
 .btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):disabled {
   background: var(--rack-action-face);
-  color: var(--rack-action-label-color-disabled, var(--app-action-btn-label-disabled));
+  color: var(--rack-action-label-color-disabled-text, var(--app-action-btn-label-disabled-text));
   opacity: 1;
   filter: none;
 }
@@ -2322,7 +2323,7 @@ html body .app .panel--hand .rack-bottom-bar--tile-grid :is(
   background: var(--rack-action-face);
   border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
   box-shadow: var(--rack-action-shadow-rest);
-  color: var(--rack-action-label-color-disabled, var(--app-action-btn-label-disabled));
+  color: var(--rack-action-label-color-disabled-text, var(--app-action-btn-label-disabled-text));
   opacity: 1;
   filter: none;
   cursor: default;
@@ -2389,7 +2390,7 @@ html body .app .panel--discard-tracker :is(
  * ────────────────────────────────────────────────────────────────────────── */
 
 /* Drop zone wrapping the top tracker. No affordance until the dragged blank crosses the
-   tracker boundary, at which point an orange box frames ONLY the sorted discard tracker
+   tracker boundary, at which point a Simple joker yellow box frames ONLY the sorted discard tracker
    (columns 1–14 of the 29-column band) — never the seat labels / bot exposures (15–29). */
 .blank-exchange-dropzone {
   display: block;
@@ -2399,8 +2400,8 @@ html body .app .panel--discard-tracker :is(
   border-radius: var(--discard-tray-tile-corner-r, var(--tile-face-border-radius));
 }
 /*
- * Orange frame hugging ONLY the sorted discard tracker tiles, never the seat labels / bot
- * exposures. The box is drawn on the overlay grid — the `top-exposure-band` container — so it is
+ * Simple joker yellow frame hugging ONLY the sorted discard tracker tiles, never the seat labels /
+ * bot exposures. The box is drawn on the overlay grid — the `top-exposure-band` container — so it is
  * sized with the SAME column math the grid uses: one `1fr` column equals
  * `--rack-tile-w = (100cqi - 28·gap) / 29`. The right edge snugs to the last sorted tile (S/W/B):
  * the sorted row is a flex of a 1.75× suit-label slot + 12 tile slots with 12 gaps between them,
@@ -2418,14 +2419,14 @@ html body .app .panel--discard-tracker :is(
   left: calc(-1 * var(--_frame-outset));
   width: calc(13.75 * var(--_tracker-tile-w) + 12 * var(--player-rack-face-gap) + 2 * var(--_frame-outset));
   box-sizing: border-box;
-  border: 1px solid #ff8a1e;
+  border: 1px solid #ffc107;
   border-radius: calc(var(--discard-tray-tile-corner-r, var(--tile-face-border-radius)) + var(--_frame-outset));
   pointer-events: none;
   z-index: 3;
 }
 
 /*
- * Joker swap: ONE orange frame around the whole bot exposure block (grid cols 16–29, all three rows)
+ * Joker swap: ONE Simple joker yellow frame around the whole bot exposure block (grid cols 16–29, all three rows)
  * instead of a per-row ring. Drawn on the overlay grid — the `top-exposure-band` container — so its
  * left edge uses the same column math as the sorted-band frame: the bot band begins after the 14
  * sorted columns + the 1 seat-label column, i.e. at `15·tileW + 15·gap`, and runs flush to the grid's
@@ -2451,7 +2452,7 @@ html .app-dnd-frame .app-top-exposure-container
   right: calc(-1 * var(--_frame-outset));
   left: calc(15 * var(--_tracker-tile-w) + 15 * var(--player-rack-face-gap) - var(--_frame-outset));
   box-sizing: border-box;
-  border: 1px solid #ff8a1e;
+  border: 1px solid #ffc107;
   border-radius: calc(var(--discard-tray-tile-corner-r, var(--tile-face-border-radius)) + var(--_frame-outset));
   pointer-events: none;
   z-index: 3;
@@ -2505,6 +2506,7 @@ html .app-dnd-frame .app-top-exposure-container .exposure-rack__meld-drop--over 
   box-shadow: var(--shadow, 0 18px 60px rgba(0, 0, 0, 0.55));
   --rack-action-label-color: var(--app-action-btn-label);
   --rack-action-label-color-disabled: var(--app-action-btn-label-disabled);
+  --rack-action-label-color-disabled-text: var(--app-action-btn-label-disabled-text);
   --rack-action-face: var(--app-action-btn-face);
   --rack-action-face-pressed: var(--app-action-btn-face-pressed);
   --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed-chrome);
