@@ -84,6 +84,14 @@
     color-mix(in srgb, var(--app-action-btn-top) 38%, var(--app-action-btn-bottom) 62%) 48%,
     color-mix(in srgb, var(--app-action-btn-bottom) 94%, #000 6%) 100%
   );
+  /* Same light-top / dark-bottom shape as --app-action-btn-face, for layering on colored fills (wall heat). */
+  --app-action-btn-face-overlay: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(255, 255, 255, 0.08) 38%,
+    transparent 48%,
+    rgba(0, 0, 0, 0.06) 100%
+  );
   /* Flat fill — top-light gradient reads as a horizontal band; bottom peek stays for rim glow. */
   --app-action-btn-face-pressed: var(--app-action-btn-bottom-pressed);
   /* Unpressed gray pills: soft raised face (highlight top-left, shadow bottom-right). */

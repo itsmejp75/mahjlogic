@@ -104,7 +104,7 @@
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: flex-end;
   gap: clamp(0.28rem, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 0.14), 0.55rem);
   /* Sit left of the box in empty exposure slots — no extra rack height or width. */
@@ -192,6 +192,11 @@
     #334155 38%,
     color-mix(in srgb, #f2f2e9 28%, var(--coach-teal-border) 72%) 62%
   );
+}
+
+.pass-strip-tail__copy:has(.pass-strip-tail__instruction) .pass-strip-tail__instruction {
+  /* Bottom-align with round title text (0.82×); pipe divider stays centered in title. */
+  transform: translateY(calc((var(--pass-strip-header-fs) * 0.82 - var(--pass-strip-header-fs)) / 2));
 }
 
 .pass-strip-tail__instruction {

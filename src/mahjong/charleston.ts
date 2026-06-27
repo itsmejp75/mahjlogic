@@ -92,7 +92,7 @@ export function charlestonRackRoundTitle(phase: CharlestonPhase): string | null 
     case 'right2':
       return '2nd CHARLESTON'
     case 'courtesy':
-      return 'Courtesy Pass'
+      return 'COURTESY PASS'
     default:
       return null
   }

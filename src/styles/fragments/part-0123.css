@@ -1968,12 +1968,13 @@ html[data-home-screen-app]:not([data-native-app])
   transition: box-shadow 0.12s ease, background 0.12s ease;
 }
 
-/* Wall count: heat gradient only — flat chrome like the divider band. */
+/* Wall count: heat fill + same resting chrome as Sort / Menu (top overlay on fill in part-0021). */
 .app
   .panel--hand
   .rack-bottom-bar--tile-grid
   .rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell {
-  box-shadow: none;
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
+  box-shadow: var(--rack-action-shadow-rest);
 }
 
 .app .panel--hand :is(.rack-bottom-bar--tile-grid, .hand-bank__mj-review-actions, .panel-hand-rack__review-new-game-row) :is(

@@ -65,11 +65,7 @@
 
 /* Panel-hand tile grid: reinforce wall flex centering over any later generic rack-cell rules. */
 .panel--hand .rack-bottom-bar--tile-grid .rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell {
-  border: none;
-  /* Match Sort / Menu inset “pill” (read-only; not a button). */
-  box-shadow:
-    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
-    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
+  /* Border + inset rest shadow: part-0123 (PokerStars tokens). */
   pointer-events: none;
   cursor: default;
   display: flex;
