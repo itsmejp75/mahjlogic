@@ -737,7 +737,7 @@
   z-index: 2;
   pointer-events: none;
   font-family: 'Noto Sans Arabic', var(--sans);
-  font-weight: 600;
+  font-weight: 500;
   font-size: calc(var(--rack-tile-w) * 1.03 / 2.65 * 1.5);
   line-height: 0.82;
   color: var(--tg-ink, #080808);
@@ -770,7 +770,7 @@
   box-sizing: border-box;
 }
 
-/* Suit label chips: same lit `.tile-face` material stack as discarded rank tiles. */
+/* Suit label chips: main-rack rim bevel + inset highlight (part-0061 suit-label block); rank slots stay flat. */
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--suit-label .tile-face.tile-face--sorted-discard-glyph {
   width: 100%;
   height: 100%;
@@ -848,8 +848,41 @@
 }
 
 /*
- * Wide suit-label chip: rim inset shadows scale to chip width (rank tiles use `--rack-tile-w`).
+ * B/C/D suit-label chips only: main-rack rim bevel + inset highlight (hand row: no outer drop shadow).
+ * Inset rim scales to the wider chip (`--sorted-discard-suit-label-w`); numbered sorted slots stay flat.
  */
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suit-label
+  .tile-face.tile-face--sorted-discard-glyph {
+  --tile-face-base-shadow: 0 0 0 0 transparent;
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+  box-shadow: var(--tile-face-base-shadow), var(--tile-face-highlight-inset), var(--tile-face-highlight-shadow),
+    var(--tile-face-suggest-dim-inset);
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.app[data-tile-graphics='bakelite']
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suit-label
+  .tile-face.tile-face--sorted-discard-glyph {
+  --tile-face-base-shadow: inset 0 1px 0 color-mix(in srgb, #d4a060 11%, transparent);
+}
+
+.app[data-tile-graphics='designer']
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suit-label
+  .tile-face.tile-face--sorted-discard-glyph {
+  --tile-face-base-shadow:
+    inset 0 1px 0 color-mix(in srgb, #f0f2fa 10%, transparent),
+    inset 0 -1px 0 color-mix(in srgb, var(--color-black) 26%, transparent);
+}
+
 .app[data-tile-graphics='classic']
   .panel--discard-tracker
   .discard-tracker__overlay-grid
@@ -869,7 +902,49 @@
   .panel--discard-tracker
   .discard-tracker__overlay-grid
   .sorted-discard-tray__slot--suit-label
+  .tile-face.tile-face--sorted-discard-glyph::before,
+.app[data-tile-graphics='illustrative-classic']
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suit-label
   .tile-face.tile-face--sorted-discard-glyph::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  pointer-events: none;
+  --tile-rim-fade: 9%;
+  --tile-shadow-fade: 7.5%;
+  background:
+    linear-gradient(
+      to bottom,
+      var(--tile-rim-top-peak) 0%,
+      var(--tile-rim-top-mid) calc(var(--tile-rim-fade) * 0.4),
+      var(--tile-rim-top-tail) calc(var(--tile-rim-fade) * 0.75),
+      transparent var(--tile-rim-fade)
+    ),
+    linear-gradient(
+      to top,
+      rgba(28, 25, 22, 0.55) 0%,
+      rgba(28, 25, 22, 0.2) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.05) calc(var(--tile-shadow-fade) * 0.75),
+      transparent var(--tile-shadow-fade)
+    ),
+    linear-gradient(
+      to right,
+      rgba(28, 25, 22, 0.45) 0%,
+      rgba(28, 25, 22, 0.14) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
+      transparent calc(var(--tile-shadow-fade) * 0.92)
+    ),
+    linear-gradient(
+      to left,
+      rgba(28, 25, 22, 0.45) 0%,
+      rgba(28, 25, 22, 0.14) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
+      transparent calc(var(--tile-shadow-fade) * 0.92)
+    );
   box-shadow:
     inset calc(var(--sorted-discard-suit-label-w) * 0.045) 0 calc(var(--sorted-discard-suit-label-w) * 0.1)
       calc(var(--sorted-discard-suit-label-w) * -0.3) rgba(28, 25, 22, 0.38),
@@ -1076,7 +1151,7 @@
   :is(.exposure-rack--discard-tracker-sorted-row, .exposure-rack--discard-tracker-prefix)
   .sorted-discard-tray__slot--discarded:not(.sorted-discard-tray__slot--suggest-need):not(
     .sorted-discard-tray__slot--suggest-dim
-  )
+  ):not(.sorted-discard-tray__slot--suit-label)
   .tile-face.tile-face--sorted-discard-glyph {
   --tile-face-base-shadow: 0 0 0 0 transparent;
   --tile-face-highlight-inset: 0 0 0 0 transparent;
@@ -1091,7 +1166,7 @@
   :is(.exposure-rack--discard-tracker-sorted-row, .exposure-rack--discard-tracker-prefix)
   .sorted-discard-tray__slot--discarded:not(.sorted-discard-tray__slot--suggest-need):not(
     .sorted-discard-tray__slot--suggest-dim
-  )
+  ):not(.sorted-discard-tray__slot--suit-label)
   .tile-face.tile-face--sorted-discard-glyph::before {
   content: none;
   display: none;

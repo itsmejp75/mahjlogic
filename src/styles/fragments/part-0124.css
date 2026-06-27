@@ -862,10 +862,13 @@
  * Discard tracker — flat dim / lit tiles (sorted prism band, discard pile, bot exposures).
  * No drop shadow, rim lustre, or dim vignette overlays; coach focus keeps the white ring only
  * (--suggest-need on sorted / pile slots, --suggest-best on bot row — part-0061 / above).
+ * B/C/D suit-label chips are excluded — they use main-rack rim material (part-0061).
  */
 .panel--discard-tracker
   .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot--discarded:not(.sorted-discard-tray__slot--suggest-need)
+  .sorted-discard-tray__slot--discarded:not(.sorted-discard-tray__slot--suggest-need):not(
+    .sorted-discard-tray__slot--suit-label
+  )
   .tile-face.tile-face--sorted-discard-glyph,
 .panel--discard-tracker
   .discard-tracker__content
@@ -888,7 +891,9 @@
   .panel--discard-tracker
   .discard-tracker__overlay-grid
   .sorted-discard-tray__slot:is(
-    .sorted-discard-tray__slot--discarded:not(.sorted-discard-tray__slot--suggest-need),
+    .sorted-discard-tray__slot--discarded:not(.sorted-discard-tray__slot--suggest-need):not(
+      .sorted-discard-tray__slot--suit-label
+    ),
     .sorted-discard-tray__slot--suggest-need
   )
   .tile-face.tile-face--sorted-discard-glyph::before,
