@@ -1265,14 +1265,53 @@ html body .app .app-menu-modal-layer .app-menu-modal :is(
 .app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong.rack-bottom-tile-cell--c5-6:disabled:not(
     .btn--mahjong-rack-pressed-in
   )
+  .btn--mahj__logo-stack::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: var(--rack-action-label-color-disabled, var(--app-action-btn-label-disabled));
+  -webkit-mask-image: url('../../assets/mahj-logo.svg');
+  mask-image: url('../../assets/mahj-logo.svg');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  pointer-events: none;
+}
+
+.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong.rack-bottom-tile-cell--c5-6:disabled:not(
+    .btn--mahjong-rack-pressed-in
+  )
   .btn--mahj__img {
-  opacity: 0.42;
+  opacity: 0;
+  filter: none;
 }
 
 /* Charleston Pass (c12–14): gray label when slots aren't ready — beats part-0103 / part-0123 / part-0069. */
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
   .btn.btn--primary.charleston-pass-btn.rack-bottom-tile-cell--c12-14:disabled:not(.suggested-hands-tab) {
   background: var(--rack-action-face);
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
+  box-shadow: var(--rack-action-shadow-rest);
+  color: var(--rack-action-label-color-disabled, var(--app-action-btn-label-disabled));
+  opacity: 1;
+  filter: none;
+  cursor: default;
+}
+
+/*
+ * Inactive MAHJ / Call / Pass — last word: resting inset must survive generic `:disabled` resets.
+ */
+html body .app .panel--hand .rack-bottom-bar--tile-grid :is(
+  button.btn.btn--mahjong.rack-bottom-tile-cell--c5-6:disabled:not(.btn--mahjong-rack-pressed-in),
+  button.btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled,
+  button.btn.btn--primary.charleston-pass-btn.rack-bottom-tile-cell--c12-14:disabled:not(.suggested-hands-tab)
+):not(:active) {
+  background: var(--rack-action-face);
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
+  box-shadow: var(--rack-action-shadow-rest);
   color: var(--rack-action-label-color-disabled, var(--app-action-btn-label-disabled));
   opacity: 1;
   filter: none;

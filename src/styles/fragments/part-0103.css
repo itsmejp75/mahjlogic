@@ -48,13 +48,12 @@
 .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open.rack-bottom-tile-cell--c4-5:not(:disabled),
 .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open.rack-bottom-tile-cell--c4-5:disabled,
 .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
-.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled,
 .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:not(:disabled),
 .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:disabled {
   color: var(--rack-action-label-color, var(--app-action-btn-label));
 }
 
-/* Charleston rack row: same muted label color as main (Sort / Hands / Swap / Pass). */
+/* Charleston rack row: same label color as main (Sort / Hands / Swap / Pass). */
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--rack-neutral.rack-bottom-tile-cell--c1:not(:disabled),
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--rack-neutral.rack-bottom-tile-cell--c1:disabled,
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c4-5:not(:disabled),
@@ -62,23 +61,25 @@
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open.rack-bottom-tile-cell--c4-5:not(:disabled),
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open.rack-bottom-tile-cell--c4-5:disabled,
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
-.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled,
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.rack-bottom-tile-cell--c12-14:not(:disabled) {
   color: var(--rack-action-label-color, var(--app-action-btn-label));
 }
 
 /*
- * Inactive Mah Jongg / Call / Swap / Pass / Discard: keep muted fills + opacity; restore inset
- * depth like Sort / Menu (part-0067 / part-0069). Wins over generic `:disabled { box-shadow: none }`.
+ * Inactive Mah Jongg / Call / Swap / Pass / Discard: muted label + PokerStars resting inset
+ * (same highlight as Sort / Menu). Wins over generic `:disabled { box-shadow: none }`.
  */
 .app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong.rack-bottom-tile-cell--c5-6:disabled:not(.btn--mahjong-rack-pressed-in),
 .app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:disabled,
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
   .btn.btn--primary.charleston-pass-btn.rack-bottom-tile-cell--c12-14:disabled:not(.suggested-hands-tab),
 .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:disabled {
-  box-shadow:
-    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
-    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
+  background: var(--rack-action-face);
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
+  box-shadow: var(--rack-action-shadow-rest);
+  color: var(--rack-action-label-color-disabled, var(--app-action-btn-label-disabled));
+  opacity: 1;
+  filter: none;
 }
 
 /* Hand-rack Menu: hamburger bars use `currentColor` (part-0020) — align with Sort (#DCDCE0). */
