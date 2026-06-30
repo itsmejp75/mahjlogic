@@ -1605,6 +1605,87 @@
   box-shadow: none;
 }
 
+/*
+ * Hands-only detail row (parenthetical / tile strip): painting the combined cell as one
+ * block spans both grid rows and covers the row-2 ::before divider. Split the active fill
+ * across line 1 / line 2 children; pad + spacer cells carry the fill in pin / metric cols.
+ */
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row--active:has(.hands-sheet__hand-stack-detail)
+  > .hands-sheet__row-btn
+  > .hands-sheet__cell--combined-hands {
+  background: transparent;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row--active:has(.hands-sheet__hand-stack-detail)
+  .hands-sheet__cell--combined-hands
+  > .hands-sheet__category {
+  display: flex;
+  align-items: flex-end;
+  align-self: stretch;
+  justify-self: stretch;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--hands-row-active-fill);
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row--active:has(.hands-sheet__hand-stack-detail)
+  .hands-sheet__cell--combined-hands
+  .hands-sheet__hand-stack-main {
+  display: flex;
+  align-items: flex-end;
+  align-self: stretch;
+  background: var(--hands-row-active-fill);
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row--active:has(.hands-sheet__hand-stack-detail)
+  .hands-sheet__cell--combined-hands::before {
+  content: '';
+  grid-column: 1;
+  grid-row: 2;
+  align-self: stretch;
+  justify-self: stretch;
+  background: var(--hands-row-active-fill);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row--active:has(.hands-sheet__hand-stack-detail)
+  .hands-sheet__cell--combined-hands
+  .hands-sheet__hand-stack-detail {
+  align-self: stretch;
+  background: var(--hands-row-active-fill);
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row--active
+  > :is(.hands-sheet__cell--detail-pad, .hands-sheet__row-spacer),
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row--active
+  > .hands-sheet__row-btn
+  > .hands-sheet__cell--detail-pad {
+  align-self: stretch;
+  background: var(--hands-row-active-fill);
+}
+
 .hands-sheet__category {
   display: inline-flex;
   align-items: baseline;
@@ -1947,6 +2028,7 @@
   display: block;
   width: 100%;
   margin-inline-start: 0;
+  padding-block: 0.2em;
   font-size: var(--hands-metric-column-header-fs);
   line-height: 1;
   opacity: 0.72;
@@ -2343,12 +2425,12 @@
 }
 
 .hands-suggested-pin--pressed {
-  color: color-mix(in srgb, var(--card-ink-green) 72%, #000000 28%);
+  color: var(--tg-bam, var(--card-ink-green));
   background: transparent;
 }
 
 .hands-suggested-pin--pressed:hover {
-  color: color-mix(in srgb, var(--card-ink-green) 72%, #000000 28%);
+  color: var(--tg-bam, var(--card-ink-green));
   background: transparent;
 }
 

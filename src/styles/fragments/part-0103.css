@@ -82,7 +82,7 @@
   filter: none;
 }
 
-/* Hand-rack Menu: hamburger bars use `currentColor` (part-0020) — align with Sort (#DCDCE0). */
+/* Hand-rack Menu: label uses `currentColor` — align with Sort (#DCDCE0). */
 .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn,
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn {
   width: 100%;

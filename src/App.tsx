@@ -698,7 +698,7 @@ function OpponentExposureDropZone({
   )
 }
 
-/** Hand / Charleston action bar: column 2 menu (hamburger). */
+/** Hand / Charleston action bar: column 2 menu. */
 function HandRackMenuAnchor({
   menuOpen,
   onToggle,
@@ -727,11 +727,7 @@ function HandRackMenuAnchor({
         aria-controls={menuOpen ? 'app-menu-modal' : undefined}
         onClick={onToggle}
       >
-        <span className="hand-rack-menu-hamburger" aria-hidden>
-          <span className="hand-rack-menu-hamburger__bar" />
-          <span className="hand-rack-menu-hamburger__bar" />
-          <span className="hand-rack-menu-hamburger__bar" />
-        </span>
+        Menu
       </button>
     </div>
   )
