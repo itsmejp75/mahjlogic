@@ -848,13 +848,29 @@
 }
 
 /*
- * B/C/D suit-label chips only: main-rack rim bevel + inset highlight (hand row: no outer drop shadow).
- * Inset rim scales to the wider chip (`--sorted-discard-suit-label-w`); numbered sorted slots stay flat.
+ * B/C/D suit-label chips + lit S/W/N seat boxes: main-rack rim bevel + inset highlight
+ * (hand row: no outer drop shadow). Inset rim scales via `--sorted-discard-rim-inset-w`.
+ * Numbered sorted slots stay flat.
  */
 .panel--discard-tracker
   .discard-tracker__overlay-grid
   .sorted-discard-tray__slot--suit-label
   .tile-face.tile-face--sorted-discard-glyph {
+  --sorted-discard-rim-inset-w: var(--sorted-discard-suit-label-w);
+}
+
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--seat-label.sorted-discard-tray__slot--seat-turn {
+  --sorted-discard-rim-inset-w: var(--rack-tile-w);
+}
+
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  :is(
+    .sorted-discard-tray__slot--suit-label .tile-face.tile-face--sorted-discard-glyph,
+    .sorted-discard-tray__slot--seat-label.sorted-discard-tray__slot--seat-turn
+  ) {
   --tile-face-base-shadow: 0 0 0 0 transparent;
   --tile-face-highlight-inset: 0 0 0 0 transparent;
   --tile-face-highlight-shadow: 0 0 0 0 transparent;
@@ -868,16 +884,20 @@
 .app[data-tile-graphics='bakelite']
   .panel--discard-tracker
   .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot--suit-label
-  .tile-face.tile-face--sorted-discard-glyph {
+  :is(
+    .sorted-discard-tray__slot--suit-label .tile-face.tile-face--sorted-discard-glyph,
+    .sorted-discard-tray__slot--seat-label.sorted-discard-tray__slot--seat-turn
+  ) {
   --tile-face-base-shadow: inset 0 1px 0 color-mix(in srgb, #d4a060 11%, transparent);
 }
 
 .app[data-tile-graphics='designer']
   .panel--discard-tracker
   .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot--suit-label
-  .tile-face.tile-face--sorted-discard-glyph {
+  :is(
+    .sorted-discard-tray__slot--suit-label .tile-face.tile-face--sorted-discard-glyph,
+    .sorted-discard-tray__slot--seat-label.sorted-discard-tray__slot--seat-turn
+  ) {
   --tile-face-base-shadow:
     inset 0 1px 0 color-mix(in srgb, #f0f2fa 10%, transparent),
     inset 0 -1px 0 color-mix(in srgb, var(--color-black) 26%, transparent);
@@ -886,28 +906,38 @@
 .app[data-tile-graphics='classic']
   .panel--discard-tracker
   .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot--suit-label
-  .tile-face.tile-face--sorted-discard-glyph::before,
+  :is(
+    .sorted-discard-tray__slot--suit-label .tile-face.tile-face--sorted-discard-glyph,
+    .sorted-discard-tray__slot--seat-label.sorted-discard-tray__slot--seat-turn
+  )::before,
 .app[data-tile-graphics='solid-color']
   .panel--discard-tracker
   .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot--suit-label
-  .tile-face.tile-face--sorted-discard-glyph::before,
+  :is(
+    .sorted-discard-tray__slot--suit-label .tile-face.tile-face--sorted-discard-glyph,
+    .sorted-discard-tray__slot--seat-label.sorted-discard-tray__slot--seat-turn
+  )::before,
 .app[data-tile-graphics='light']
   .panel--discard-tracker
   .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot--suit-label
-  .tile-face.tile-face--sorted-discard-glyph::before,
+  :is(
+    .sorted-discard-tray__slot--suit-label .tile-face.tile-face--sorted-discard-glyph,
+    .sorted-discard-tray__slot--seat-label.sorted-discard-tray__slot--seat-turn
+  )::before,
 .app[data-tile-graphics='dark']
   .panel--discard-tracker
   .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot--suit-label
-  .tile-face.tile-face--sorted-discard-glyph::before,
+  :is(
+    .sorted-discard-tray__slot--suit-label .tile-face.tile-face--sorted-discard-glyph,
+    .sorted-discard-tray__slot--seat-label.sorted-discard-tray__slot--seat-turn
+  )::before,
 .app[data-tile-graphics='illustrative-classic']
   .panel--discard-tracker
   .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot--suit-label
-  .tile-face.tile-face--sorted-discard-glyph::before {
+  :is(
+    .sorted-discard-tray__slot--suit-label .tile-face.tile-face--sorted-discard-glyph,
+    .sorted-discard-tray__slot--seat-label.sorted-discard-tray__slot--seat-turn
+  )::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -946,10 +976,10 @@
       transparent calc(var(--tile-shadow-fade) * 0.92)
     );
   box-shadow:
-    inset calc(var(--sorted-discard-suit-label-w) * 0.045) 0 calc(var(--sorted-discard-suit-label-w) * 0.1)
-      calc(var(--sorted-discard-suit-label-w) * -0.3) rgba(28, 25, 22, 0.38),
-    inset calc(var(--sorted-discard-suit-label-w) * -0.045) calc(var(--sorted-discard-suit-label-w) * -0.045)
-      calc(var(--sorted-discard-suit-label-w) * 0.1) calc(var(--sorted-discard-suit-label-w) * -0.3)
+    inset calc(var(--sorted-discard-rim-inset-w) * 0.045) 0 calc(var(--sorted-discard-rim-inset-w) * 0.1)
+      calc(var(--sorted-discard-rim-inset-w) * -0.3) rgba(28, 25, 22, 0.38),
+    inset calc(var(--sorted-discard-rim-inset-w) * -0.045) calc(var(--sorted-discard-rim-inset-w) * -0.045)
+      calc(var(--sorted-discard-rim-inset-w) * 0.1) calc(var(--sorted-discard-rim-inset-w) * -0.3)
       rgba(28, 25, 22, 0.4);
 }
 
@@ -978,6 +1008,7 @@
 .discard-tracker__overlay-grid
   .sorted-discard-tray__slot--seat-label.sorted-discard-tray__slot--seat-turn
   .sorted-discard-tray__seat-label {
+  z-index: 3;
   color: #ffffff;
   opacity: 1;
 }

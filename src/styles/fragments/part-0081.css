@@ -1210,6 +1210,31 @@
    */
   font-size: clamp(0.78rem, 2.05cqi, 2.35rem);
   line-height: 1.2;
+  /*
+   * Away / Points header type: same pass-instruction scale as "Pass 3 Right", derived from a
+   * 3-tile pass-box width. Prefer the sheet's tile-track width (cqi) when it exceeds rack tile w.
+   */
+  --hands-sheet-tile-gap: var(--player-rack-face-gap, var(--rack-tile-gap, 0.125rem));
+  --_hands-metric-pass-tile-w: max(
+    var(--hand-rack-tile-w),
+    calc(
+      (
+        100cqi - var(--hands-sheet-pin-w) - var(--hands-sheet-category-w) - var(--hands-sheet-away-w) -
+          var(--hands-sheet-values-w) - 4 * var(--hands-sheet-cell-pad-x) - 13 * var(--hands-sheet-tile-gap)
+      ) / 14
+    )
+  );
+  --_hands-metric-pass-box-w: calc(3 * var(--_hands-metric-pass-tile-w) + 2 * var(--hands-sheet-tile-gap));
+  --_hands-metric-pass-fs-pref: clamp(
+    calc(var(--_hands-metric-pass-box-w) * 0.04),
+    calc(var(--_hands-metric-pass-box-w) * 0.109),
+    1.42rem
+  );
+  --hands-metric-column-header-fs: min(
+    var(--_hands-metric-pass-fs-pref),
+    calc(var(--_hands-metric-pass-box-w) / 9.95),
+    calc(var(--_hands-metric-pass-tile-w) * 1.3333 / 5.02)
+  );
 }
 
 /* Scroll on the list body only — header row stays fixed above the scrollbar track. */
@@ -1405,6 +1430,62 @@
   text-overflow: clip;
 }
 
+/*
+ * Away / Points column titles — match Charleston pass instructions (`.pass-strip-tail__instruction`,
+ * part-0071): semibold, lighter ink, same scale as "Pass 3 Right".
+ */
+.panel--hands {
+  --_hands-metric-pass-box-w: calc(
+    3 * var(--hand-rack-tile-w) + 2 * var(--player-rack-face-gap, var(--rack-tile-gap, 0.125rem))
+  );
+  --_hands-metric-pass-fs-pref: clamp(
+    calc(var(--_hands-metric-pass-box-w) * 0.04),
+    calc(var(--_hands-metric-pass-box-w) * 0.109),
+    1.42rem
+  );
+  --hands-metric-column-header-fs: min(
+    var(--_hands-metric-pass-fs-pref),
+    calc(var(--_hands-metric-pass-box-w) / 9.95),
+    calc(var(--hand-rack-tile-h, calc(var(--hand-rack-tile-w) * 1.3333)) / 5.02)
+  );
+}
+
+.suggested-hands-popup .panel--hands .hands-sheet__cell--header.hands-sheet__cell--away,
+.suggested-hands-popup .panel--hands .hands-sheet__cell--header.hands-sheet__cell--values,
+.suggested-hands-popup .panel--hands .hands-list__freeze-header .hands-list__cell--away .hands-list__header-meta,
+.suggested-hands-popup .panel--hands .hands-list__freeze-header .hands-list__cell--values .hands-list__header-meta {
+  font-family: 'Figtree', var(--sans);
+  font-weight: 600;
+  font-variation-settings: 'wght' 600;
+  font-size: var(--hands-metric-column-header-fs);
+  line-height: 1;
+  letter-spacing: clamp(0.032em, calc(var(--hand-rack-tile-w) * 0.0026), 0.072em);
+  color: #c2c2c8;
+}
+
+.app[data-color-buttons='off']
+  .suggested-hands-popup
+  .panel--hands
+  .hands-sheet__cell--header.hands-sheet__cell--away,
+.app[data-color-buttons='off']
+  .suggested-hands-popup
+  .panel--hands
+  .hands-sheet__cell--header.hands-sheet__cell--values,
+.app[data-color-buttons='off']
+  .suggested-hands-popup
+  .panel--hands
+  .hands-list__freeze-header
+  .hands-list__cell--away
+  .hands-list__header-meta,
+.app[data-color-buttons='off']
+  .suggested-hands-popup
+  .panel--hands
+  .hands-list__freeze-header
+  .hands-list__cell--values
+  .hands-list__header-meta {
+  color: #c2c2c8;
+}
+
 .hands-sheet__display-toggles {
   display: inline-flex;
   align-items: center;
@@ -1567,7 +1648,98 @@
 
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__cell--cat,
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__cell--hand {
-  align-items: flex-start;
+  align-items: flex-end;
+}
+
+/*
+ * Hands-only body rows: two synchronized spreadsheet tracks.
+ * Horizontal rules are row-level pseudo-elements, not per-cell borders, so they stay continuous
+ * when columns / rows move around.
+ */
+.hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__row {
+  --hands-sheet-spacer-row-h: 0.38em;
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  grid-template-rows: auto auto;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row:not(:has(.hands-sheet__hand-stack-detail)) {
+  grid-template-rows: auto;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row:has(> .hands-sheet__row-spacer) {
+  grid-template-rows: auto auto var(--hands-sheet-spacer-row-h);
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row
+  .hands-sheet__cell:not(.hands-sheet__cell--header) {
+  border-block-end: none;
+}
+
+.hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__row::before {
+  content: '';
+  grid-column: 1 / -1;
+  grid-row: 2;
+  align-self: start;
+  justify-self: stretch;
+  width: auto;
+  min-height: 0;
+  border-block-start: var(--hands-sheet-debug-grid-border);
+  pointer-events: none;
+  z-index: 7;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row:not(:has(.hands-sheet__hand-stack-detail))::before {
+  display: none;
+}
+
+.hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__row::after {
+  content: '';
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+  align-self: end;
+  justify-self: stretch;
+  width: auto;
+  min-height: 0;
+  border-block-end: var(--hands-sheet-debug-grid-border);
+  pointer-events: none;
+  z-index: 7;
+}
+
+.hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__row-spacer {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  min-height: var(--hands-sheet-spacer-row-h);
+  border-block-start: var(--hands-sheet-debug-grid-border);
+  pointer-events: none;
+  z-index: 7;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__cell--pin:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad) {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  padding-inline: 0;
+  overflow: visible;
 }
 
 .hands-panel__content
@@ -1577,9 +1749,11 @@
   position: relative;
   display: grid;
   grid-column: 2 / span 2;
+  grid-row: 1 / -1;
   grid-template-columns: subgrid;
-  grid-template-rows: auto auto;
+  grid-template-rows: subgrid;
   align-items: stretch;
+  justify-items: start;
   padding: 0;
   overflow: visible;
 }
@@ -1587,14 +1761,79 @@
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__cell--combined-hands::after {
-  content: '';
-  grid-column: 1 / -1;
+  .hands-sheet__row:not(:has(.hands-sheet__hand-stack-detail))
+  .hands-sheet__cell--combined-hands {
+  grid-row: 1;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row-btn
+  > .hands-sheet__cell--away:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad) {
+  grid-column: 4;
+  grid-row: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  padding-inline: var(--hands-sheet-metric-pad-x);
+  text-align: center;
+  overflow: visible;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row-btn
+  > .hands-sheet__cell--values:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad) {
+  grid-column: 5;
+  grid-row: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  padding-inline-end: calc(var(--hands-sheet-rail) + var(--hands-sheet-metric-pad-x));
+  padding-inline-start: var(--hands-sheet-metric-pad-x);
+  text-align: center;
+  overflow: visible;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__cell--detail-pad {
   grid-row: 2;
-  align-self: start;
-  border-block-start: var(--hands-sheet-debug-grid-border);
-  pointer-events: none;
-  z-index: 1;
+  padding: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__cell--pin.hands-sheet__cell--detail-pad {
+  grid-column: 1;
+  padding-inline: 0;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row-btn
+  > .hands-sheet__cell--away.hands-sheet__cell--detail-pad {
+  grid-column: 4;
+  padding-inline: var(--hands-sheet-metric-pad-x);
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row-btn
+  > .hands-sheet__cell--values.hands-sheet__cell--detail-pad {
+  grid-column: 5;
+  padding-inline-end: calc(var(--hands-sheet-rail) + var(--hands-sheet-metric-pad-x));
+  padding-inline-start: var(--hands-sheet-metric-pad-x);
 }
 
 .hands-panel__content
@@ -1611,10 +1850,12 @@
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__category {
   grid-column: 1;
   grid-row: 1;
-  align-self: start;
+  align-self: end;
+  justify-self: start;
   white-space: normal;
   flex-wrap: wrap;
-  padding: var(--hands-sheet-cell-pad-y) var(--hands-sheet-cell-pad-x);
+  padding-block: 0;
+  padding-inline: var(--hands-sheet-cell-pad-x);
 }
 
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__hand-stack {
@@ -1664,7 +1905,9 @@
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__hand-stack-main,
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__hand-stack-detail {
   min-width: 0;
-  padding: var(--hands-sheet-cell-pad-y) var(--hands-sheet-cell-pad-x);
+  justify-self: stretch;
+  padding-inline: var(--hands-sheet-cell-pad-x);
+  padding-block: 0;
 }
 
 .hands-panel__content
@@ -1674,6 +1917,7 @@
   .hands-sheet__hand-stack-main {
   grid-column: 2;
   grid-row: 1;
+  align-self: end;
 }
 
 .hands-panel__content
@@ -1683,10 +1927,7 @@
   .hands-sheet__hand-stack-detail {
   grid-column: 2;
   grid-row: 2;
-}
-
-.hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__hand-stack-detail {
-  padding-block-start: 0.18em;
+  align-self: end;
 }
 
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__hand-title-line {
@@ -1706,7 +1947,8 @@
   display: block;
   width: 100%;
   margin-inline-start: 0;
-  font-size: 0.9em;
+  font-size: var(--hands-metric-column-header-fs);
+  line-height: 1;
   opacity: 0.72;
   text-align: left;
   white-space: normal;
@@ -2051,10 +2293,6 @@
   grid-column: 1;
 }
 
-.hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__cell--pin:not(.hands-sheet__cell--header) {
-  grid-column: 1;
-}
-
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__cell--header.hands-sheet__cell--pin {
   grid-column: 1;
   grid-row: 1;
@@ -2146,8 +2384,9 @@
 
 .hands-sheet--tilesHands .hands-sheet__cell--combined .hands-sheet__category {
   grid-column: 1;
+  grid-row: 1;
   justify-self: start;
-  align-self: start;
+  align-self: center;
   /* Anchor flush to the cat track's left edge — same x as the strip's first tile. */
   padding-inline-start: 0;
   /* Minimal gap before the hand column — subgrid already separates tracks. */

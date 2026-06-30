@@ -385,6 +385,8 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
   const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points)}`
   const parenText = !tilesGuideOn ? suggestedHandParenText(h) : null
   const showTileDetail = tilesGuideOn && rowStripSlots.length > 0
+  const showDetailRow = showTileDetail || Boolean(parenText)
+  const showSpacerRow = showDetailRow
 
   return (
     <li
@@ -401,6 +403,13 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
             onPinToggle={onPinToggle}
           />
         </div>
+      ) : null}
+      {showPinColumn && showDetailRow ? (
+        <div
+          className="hands-sheet__cell hands-sheet__cell--pin hands-sheet__cell--detail-pad"
+          role="cell"
+          aria-hidden="true"
+        />
       ) : null}
       <button
         type="button"
@@ -488,7 +497,22 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
         >
           <SuggestedHandValueDisplay points={h.points} />
         </div>
+        {showDetailRow ? (
+          <>
+            <div
+              className="hands-sheet__cell hands-sheet__cell--away hands-sheet__cell--detail-pad"
+              role="cell"
+              aria-hidden="true"
+            />
+            <div
+              className="hands-sheet__cell hands-sheet__cell--values hands-sheet__cell--detail-pad"
+              role="cell"
+              aria-hidden="true"
+            />
+          </>
+        ) : null}
       </button>
+      {showSpacerRow ? <div className="hands-sheet__row-spacer" aria-hidden="true" /> : null}
     </li>
   )
 })

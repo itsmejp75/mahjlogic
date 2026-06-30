@@ -57,8 +57,8 @@ function renderGlyphChars(label: string): ReactNode {
 }
 
 /**
- * Suggested-strip `cardInk` paints prism card-print solids. Under illustrative Classic or Ivory,
- * flowers and dragons should match the main rack (SVG art or ivory glyphs), not those solids.
+ * Suggested-strip `cardInk` paints prism card-print solids. Under illustrative Classic,
+ * honor tiles should match the main rack (SVG art), not card-print wind/flower skins.
  */
 function cardInkForTileFace(
   def: TileDef,
@@ -66,8 +66,16 @@ function cardInkForTileFace(
   tileGraphics: TileGraphics,
 ): CardInk | undefined {
   if (cardInk == null) return undefined
-  if (def.cat !== 'flower' && def.cat !== 'dragon') return cardInk
-  if (isIllustrativeTileGraphics(tileGraphics)) return undefined
+  if (!isIllustrativeTileGraphics(tileGraphics)) return cardInk
+  if (
+    def.cat === 'flower' ||
+    def.cat === 'dragon' ||
+    def.cat === 'wind' ||
+    def.cat === 'joker' ||
+    def.cat === 'blank'
+  ) {
+    return undefined
+  }
   return cardInk
 }
 
