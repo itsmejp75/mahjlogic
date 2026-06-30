@@ -4154,13 +4154,6 @@ export default function App() {
     return false
   }, [botExposures, eastExposures])
 
-  /** Any exposure meld on your rack or a bot’s (used to hide Charleston “Swap” until something is on table). */
-  const anyTableExposure = useMemo(() => {
-    if (eastExposures.some((e) => e.tiles.length > 0)) return true
-    if (botExposures.some((e) => e.tiles.length > 0)) return true
-    return false
-  }, [eastExposures, botExposures])
-
   const jokerSwapUiActive =
     charlestonDone &&
     (mainPhase === 'east-discard' || mainPhase === 'call-staging') &&
@@ -7540,7 +7533,17 @@ export default function App() {
    * makes it "Swap" during call-staging. Otherwise it's "Call" (active only on a bot's discard).
    */
   const mainBarSharedSlotIsSwap =
-    jokerSwapUiActive || (charlestonDone && mainPhase === 'east-discard')
+    jokerSwapUiActive || mainPhase === 'east-discard'
+  /** Dim Swap until joker redemption or blank exchange is actually possible (matches Charleston). */
+  const mainGameSwapDisabled =
+    !jokerSwapUiActive &&
+    !(
+      charlestonDone &&
+      mainPhase === 'east-discard' &&
+      blankTilesEnabled &&
+      hand.some((t) => t.def.cat === 'blank') &&
+      discardedDefsForBlankExchange(discardPile).length > 0
+    )
   const mahjongButtonEnabled =
     charlestonDone &&
     (mainPhase === 'east-discard' ||
@@ -9003,38 +9006,14 @@ export default function App() {
                               >
                                 <img className="btn--logic__img" src={logicLogoSrc} alt="Logic" draggable={false} />
                               </button>
-                              {anyTableExposure ? (
-                                <button
-                                  type="button"
-                                  className="btn btn--joker-swap-action rack-bottom-tile-cell rack-bottom-tile-cell--c9-10"
-                                  disabled
-                                  aria-label="Joker swap"
-                                >
-                                  Swap
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  className={[
-                                    'btn btn--joker-swap-action rack-bottom-tile-cell rack-bottom-tile-cell--c9-10',
-                                    concealedHandReminderEnabled && focusedHandIsConcealed ? 'btn--call-concealed' : '',
-                                  ]
-                                    .filter(Boolean)
-                                    .join(' ')}
-                                  disabled={mainGameCallDisabled}
-                                  onClick={initiateCall}
-                                  aria-label="Call discard"
-                                >
-                                  {concealedHandReminderEnabled && focusedHandIsConcealed ? (
-                                    <>
-                                      <span
-                                        className="btn--call-concealed__c"
-                                        aria-label="Concealed hand"
-                                      >C</span>all
-                                    </>
-                                  ) : 'Call'}
-                                </button>
-                              )}
+                              <button
+                                type="button"
+                                className="btn btn--joker-swap-action rack-bottom-tile-cell rack-bottom-tile-cell--c9-10"
+                                disabled
+                                aria-label="Swap"
+                              >
+                                Swap
+                              </button>
                               <button
                                 type="button"
                                 className="btn btn--primary charleston-pass-btn rack-bottom-tile-cell rack-bottom-tile-cell--c12-14"
@@ -9333,6 +9312,8 @@ export default function App() {
                                     ]
                                       .filter(Boolean)
                                       .join(' ')}
+                                    disabled={mainGameSwapDisabled}
+                                    aria-disabled={mainGameSwapDisabled}
                                     onClick={executeSwapFromSlot}
                                     aria-label="Swap"
                                   >

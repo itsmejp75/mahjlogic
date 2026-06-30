@@ -1973,6 +1973,7 @@
   .hands-sheet__tiles-grid {
   flex-wrap: wrap;
   max-width: 100%;
+  padding-block: 0.2em;
 }
 
 .hands-panel__content

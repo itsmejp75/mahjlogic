@@ -45,8 +45,9 @@
   text-overflow: clip;
 }
 
-/* East hand action strip + bot toolbar HANDS / CLR HL / HINT: shared label scale (Menu icons stay smaller). */
+/* East hand action strip + bot toolbar HANDS / CLR HL / HINT: shared label scale. */
 .panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell,
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn,
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__clear,
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__hint {
   font-size: min(
@@ -56,10 +57,9 @@
 }
 
 /*
- * One-tile text controls (Sort / HINT / narrow toolbar actions) need a tighter cap than wider
- * actions so labels scale down with the button instead of clipping/spilling in small windows.
+ * Bot toolbar one-tile actions need a tighter cap than wider hand-rack controls so labels scale
+ * down with the button instead of clipping in small windows.
  */
-.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1,
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__clear,
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__hint {
   font-size: min(var(--rack-hand-action-label-fs), calc(var(--hand-rack-tile-w) * 0.34));
@@ -69,7 +69,9 @@
   white-space: nowrap;
 }
 
-/* Two- and three-slot hand controls shrink by both row height and label width before they can spill. */
+/* Two- and three-slot hand controls (Hands, Sort, Menu, …) share one label scale. */
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1,
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn,
 .panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c3-4,
 .panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c4-5,
 .panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c5-6,
@@ -85,6 +87,10 @@
     calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.52),
     calc(var(--rack-tile-btn-inner-2) / 5.9)
   );
+  line-height: 1.08;
+  text-transform: none;
+  overflow: hidden;
+  text-overflow: clip;
   white-space: nowrap;
 }
 
@@ -106,21 +112,17 @@
 }
 
 /* Main rack action row (Sort, Hands, Call/Swap, Discard/Ignore, …): slightly bolder + more tracking. */
-.panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell {
+.panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell,
+.panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn {
   font-weight: 600;
   letter-spacing: max(0.028em, calc(0.042em + 0.026rem));
-}
-
-.panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1 {
-  letter-spacing: max(0.016em, calc(0.026em + 0.016rem));
 }
 
 /* Charleston action row: same label weight + tracking as main rack (was main-only before). */
-.panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell {
+.panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell,
+.panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
+  .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn {
   font-weight: 600;
   letter-spacing: max(0.028em, calc(0.042em + 0.026rem));
-}
-
-.panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1 {
-  letter-spacing: max(0.016em, calc(0.026em + 0.016rem));
 }

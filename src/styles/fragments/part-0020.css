@@ -41,12 +41,4 @@
   min-height: 0;
   border-radius: inherit;
   padding: var(--rack-control-pad-block) var(--rack-control-pad-inline);
-  font-size: min(var(--rack-hand-action-label-fs), calc(var(--hand-rack-tile-w) * 0.34));
-  font-weight: 600;
-  letter-spacing: max(0.016em, calc(0.026em + 0.016rem));
-  line-height: 1.08;
-  text-transform: none;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: clip;
 }
