@@ -630,40 +630,70 @@
   z-index: 500;
   background: color-mix(in srgb, #0a0a0a 72%, transparent);
   backdrop-filter: blur(3px);
+  --app-menu-type-body: 1.15rem;
+  --rack-action-label-color: var(--app-action-btn-label);
+  --rack-action-face: var(--app-action-btn-face);
+  --rack-action-shadow-rest: var(--app-action-btn-shadow-rest);
+  --rack-action-border-rest: var(--app-action-btn-border-rest);
+  --rack-action-pressed: var(--app-action-btn-shadow-pressed);
 }
 
 .dead-hand-dialog {
   width: 100%;
-  max-width: min(38rem, calc(100vw - 2rem));
-  padding: 1.5rem 1.75rem 1.25rem;
-  border-radius: 0.75rem;
-  background: #1e1210;
-  border: 2px solid #c0392b;
+  max-width: min(38rem, 100%);
+  margin-inline: auto;
+  box-sizing: border-box;
+  padding: 1.35rem 1.25rem 1.45rem;
+  border-radius: 0.9rem;
+  background: var(--app-bg-base);
+  border: 1px solid #c0392b;
   box-shadow:
-    0 0 0 1px rgba(192, 57, 43, 0.3),
-    0 12px 40px rgba(0, 0, 0, 0.7);
+    var(--shadow, 0 8px 32px rgba(0, 0, 0, 0.28)),
+    0 0 0 1px color-mix(in srgb, #c0392b 35%, transparent);
   text-align: center;
 }
 
 .dead-hand-dialog__title {
-  margin: 0 0 0.75rem;
-  font-family: var(--sans);
-  font-size: clamp(1.3rem, 4vw, 1.7rem);
-  font-weight: 800;
+  display: flex;
+  justify-content: center;
+  margin: 0 0 0.85rem;
+  font-family: 'Figtree', var(--sans);
+  font-size: 1.35rem;
+  font-weight: 700;
   color: #e74c3c;
-  letter-spacing: 0.03em;
+  letter-spacing: var(--btn-letter-spacing);
+  text-transform: none;
+  line-height: 1.2;
+}
+
+.dead-hand-dialog__title-text {
+  position: relative;
+  display: inline-block;
+}
+
+.dead-hand-dialog__skull {
+  position: absolute;
+  right: calc(100% + 0.2em);
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.12em;
+  line-height: 1;
 }
 
 .dead-hand-dialog__body {
-  margin: 0 0 1.4rem;
-  font-size: 0.97rem;
-  line-height: 1.55;
-  color: #f0ddd8;
+  margin: 0 0 1.2rem;
+  font-family: 'Figtree', var(--sans);
+  font-size: var(--app-menu-type-body);
+  font-weight: 400;
+  line-height: 1.35;
+  letter-spacing: var(--btn-letter-spacing);
+  color: var(--rack-action-label-color, #dcdce0);
 }
 
 .dead-hand-dialog__actions {
   display: flex;
   justify-content: center;
+  margin-top: 0.95rem;
 }
 
 /* Modal shells: no drag-to-select (avoids native blue text highlight on card lines / readouts). */

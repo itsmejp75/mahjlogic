@@ -2757,28 +2757,6 @@ html
   display: none;
 }
 
-/* Popup exchange grid: rank centered in the tile face — no discard count below. */
-.blank-exchange-overlay__tracker-mirror
-  .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot:not(.sorted-discard-tray__slot--suit-label) {
-  --sorted-discard-glyph-pad-top: 0;
-}
-
-.blank-exchange-overlay__tracker-mirror
-  .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot:not(.sorted-discard-tray__slot--suit-label)
-  .tile-face.tile-face--sorted-discard-glyph {
-  align-items: center;
-  justify-content: center;
-  padding-top: 0;
-}
-
-.blank-exchange-overlay__tracker-mirror
-  .discard-tracker__overlay-grid
-  .sorted-discard-tray__count {
-  display: none;
-}
-
 /* Tappable discarded tiles — pointer + subtle lift (popup only). */
 .blank-exchange-overlay__tracker-mirror .sorted-discard-tray__slot--pickable {
   cursor: pointer;

@@ -159,7 +159,6 @@ import {
 import {
   getCallInitiateBlockMessage,
   getCallCapacityFlags,
-  getCallInsufficientDetail,
   maxOpenClaimHandTiles,
   claimTypeForHandTilesFromDiscard,
   BLOCKING_TITLE_SWAP_ERROR,
@@ -177,8 +176,8 @@ import {
   MSG_SWAP_PICK_TILE_FIRST,
   type CallValidationRoundSlice,
 } from './mahjong/callValidation'
+import { deadHandExplanation, type DeadHandReason } from './mahjong/deadHandReason'
 import {
-  BLANK_EXCHANGE_DROP_ID,
   CALL_INITIATE_FIRST_SLOT_ID,
   EAST_DISCARD_STAGING_ID,
   incomingBotDiscardDragId,
@@ -497,8 +496,8 @@ type GameBlockingDialog =
   | { variant: 'card'; message: string }
   | { variant: 'table'; title: string; message: string }
   | { variant: 'mahjong-blocked'; rankInput: RankSuggestedHandsInput }
-  | { variant: 'dead-hand-warning'; detail?: string | null }
-  | { variant: 'mahjong-dead-warning'; rankInput: RankSuggestedHandsInput }
+  | { variant: 'dead-hand-warning' }
+  | { variant: 'mahjong-dead-warning'; rankInput: RankSuggestedHandsInput; deadHandReason: DeadHandReason }
   | { variant: 'call-exposure-dead-warning'; rankInput: RankSuggestedHandsInput }
   | {
       variant: 'call-meld-size-warning'
@@ -1681,6 +1680,8 @@ type RoundState = {
     | { type: 'self-draw'; tile: TileDef }
     | { type: 'called-discard'; botLabel: (typeof BOT_LABELS)[number]; tile: TileDef }
     | null
+  /** Set when mainPhase becomes 'dead-hand' — drives the end-game explanation. */
+  deadHandReason: DeadHandReason | null
 }
 
 /**
@@ -1897,7 +1898,12 @@ function roundStateFromOpeningDeck(deck: TileInstance[]): RoundState {
     callAmendFromBotIndex: null,
     botWin: null,
     playerWinMethod: null,
+    deadHandReason: null,
   }
+}
+
+function applyDeadHand(r: RoundState, reason: DeadHandReason): RoundState {
+  return { ...r, mainPhase: 'dead-hand', deadHandReason: reason }
 }
 
 function createNewRound(
@@ -3165,7 +3171,7 @@ function applyCommitStagedCall(
     )
     if (!meldOk) {
       if (gameMode === 'training') return r
-      return { ...r, mainPhase: 'dead-hand' }
+      return applyDeadHand(r, 'invalid-call-meld')
     }
     const stagedIds = new Set(r.stagedCallTileIds)
     const handNext = r.hand.filter((t) => !stagedIds.has(t.id))
@@ -3212,7 +3218,7 @@ function applyCommitStagedCall(
     (t) => t.def.cat === 'joker' || tileDefsEqual(t.def, calledTile.def),
   )
   if (!meldIsValid && gameMode !== 'training') {
-    return { ...r, mainPhase: 'dead-hand' }
+    return applyDeadHand(r, 'invalid-call-meld')
   }
   const claimType = claimTypeForHandTilesFromDiscard(stagedTiles.length)
   if (!claimType) return r
@@ -6533,10 +6539,16 @@ export default function App() {
         const { bestTilesAway } = summarizeRackTowardWin(rankInput)
         if (bestTilesAway !== 0) {
           if (gameModeRef.current === 'training' && deadHandWarningsEnabledRef.current) {
-            queueMicrotask(() => setBlockingDialog({ variant: 'mahjong-dead-warning', rankInput }))
+            queueMicrotask(() =>
+              setBlockingDialog({
+                variant: 'mahjong-dead-warning',
+                rankInput,
+                deadHandReason: 'illegal-mahjong-self-draw',
+              }),
+            )
             return cur
           }
-          return { ...cur, mainPhase: 'dead-hand' }
+          return applyDeadHand(cur, 'illegal-mahjong-self-draw')
         }
         return applyDeclareMahjongSelfDraw(cur)
       }
@@ -6557,10 +6569,16 @@ export default function App() {
             patterns: getActiveCardPatterns(),
           }
           if (gameModeRef.current === 'training' && deadHandWarningsEnabledRef.current) {
-            queueMicrotask(() => setBlockingDialog({ variant: 'mahjong-dead-warning', rankInput }))
+            queueMicrotask(() =>
+              setBlockingDialog({
+                variant: 'mahjong-dead-warning',
+                rankInput,
+                deadHandReason: 'illegal-mahjong-call-staged',
+              }),
+            )
             return cur
           }
-          return { ...cur, mainPhase: 'dead-hand' }
+          return applyDeadHand(cur, 'illegal-mahjong-call-staged')
         }
         const slice: CallValidationRoundSlice = {
           mainPhase: 'call-staging',
@@ -6583,10 +6601,16 @@ export default function App() {
             patterns: getActiveCardPatterns(),
           }
           if (gameModeRef.current === 'training' && deadHandWarningsEnabledRef.current) {
-            queueMicrotask(() => setBlockingDialog({ variant: 'mahjong-dead-warning', rankInput }))
+            queueMicrotask(() =>
+              setBlockingDialog({
+                variant: 'mahjong-dead-warning',
+                rankInput,
+                deadHandReason: 'illegal-mahjong-call-discard',
+              }),
+            )
             return cur
           }
-          return { ...cur, mainPhase: 'dead-hand' }
+          return applyDeadHand(cur, 'illegal-mahjong-call-discard')
         }
         return applyDeclareMahjong({ ...cur, mainPhase: 'bot-turn' })
       }
@@ -6613,10 +6637,16 @@ export default function App() {
         }
         if (gameModeRef.current === 'training' && deadHandWarningsEnabledRef.current) {
           // Training mode: warn before committing to dead hand
-          queueMicrotask(() => setBlockingDialog({ variant: 'mahjong-dead-warning', rankInput }))
+          queueMicrotask(() =>
+            setBlockingDialog({
+              variant: 'mahjong-dead-warning',
+              rankInput,
+              deadHandReason: 'illegal-mahjong-bot-discard',
+            }),
+          )
           return cur
         }
-        return { ...cur, mainPhase: 'dead-hand' }
+        return applyDeadHand(cur, 'illegal-mahjong-bot-discard')
       }
       return applyDeclareMahjong(cur)
     })
@@ -6815,7 +6845,6 @@ export default function App() {
         setCallRuleError(null)
         setBlockingDialog({
           variant: 'dead-hand-warning',
-          detail: getCallInsufficientDetail(cur.hand, cur.activeBotDiscard),
         })
       } else {
         setBlockingDialog(null)
@@ -8224,9 +8253,15 @@ export default function App() {
             className={[
               'charleston-error-dialog',
               blockingDialog?.variant === 'table' ? 'charleston-error-dialog--table' : '',
-              blockingDialog?.variant === 'dead-hand-warning' ||
+              blockingDialog?.variant === 'concealed-call-warning' ||
+              blockingDialog?.variant === 'dead-hand-warning'
+                ? 'charleston-error-dialog--menu-shell'
+                : '',
               blockingDialog?.variant === 'concealed-call-warning'
-                ? 'charleston-error-dialog--blocking-neutral charleston-error-dialog--dead-hand-warning'
+                ? 'charleston-error-dialog--concealed-call-warning'
+                : '',
+              blockingDialog?.variant === 'dead-hand-warning'
+                ? 'charleston-error-dialog--dead-hand-warning'
                 : '',
               blockingDialog?.variant === 'different-card-requires-new-game'
                 ? 'charleston-error-dialog--blocking-neutral'
@@ -8271,7 +8306,8 @@ export default function App() {
               blockingDialog?.variant === 'mahjong-dead-warning' ||
               blockingDialog?.variant === 'call-exposure-dead-warning' ||
               blockingDialog?.variant === 'call-meld-size-warning' ||
-              blockingDialog?.variant === 'discard-dead-warning'
+              blockingDialog?.variant === 'discard-dead-warning' ||
+              blockingDialog?.variant === 'concealed-call-warning'
                 ? 'game-blocking-error-body'
                 : undefined
             }
@@ -8310,15 +8346,15 @@ export default function App() {
             ) : blockingDialog?.variant === 'concealed-call-warning' ? (
               <>
                 <h2 id="game-blocking-error-title" className="charleston-error-dialog__title">
-                  Concealed Hand
+                  Concealed Hand Reminder
                 </h2>
                 <p id="game-blocking-error-body" className="charleston-error-dialog__body">
-                  You have a concealed hand highlighted from your suggested hands. Are you sure you want to call?
+                  Are you sure you want to call?
                 </p>
                 <div className="charleston-error-dialog__actions charleston-error-dialog__actions--spread">
                   <button
                     type="button"
-                    className="btn"
+                    className="btn charleston-error-dialog__rack-action"
                     onClick={(e) => {
                       e.stopPropagation()
                       setBlockingDialog(null)
@@ -8328,29 +8364,29 @@ export default function App() {
                   </button>
                   <button
                     type="button"
-                    className="btn btn--primary"
+                    className="btn charleston-error-dialog__rack-action"
                     onClick={() => {
                       setBlockingDialog(null)
                       proceedWithCallRef.current?.()
                     }}
                   >
-                    Continue
+                    Call
                   </button>
                 </div>
               </>
             ) : blockingDialog?.variant === 'dead-hand-warning' ? (
               <>
                 <h2 id="game-blocking-error-title" className="charleston-error-dialog__title">
-                  ⚠️ Calling this discard is not legal
+                  Dead Hand Warning
                 </h2>
                 <p id="game-blocking-error-body" className="charleston-error-dialog__body">
-                  {blockingDialog.detail ??
-                    'With this discard, you cannot form a valid Pung, Kong, Quint, or Sextent from your hand — you do not have the required matching tiles and jokers. If you proceed anyway, your hand will be officially dead — the game is over.'}
+                  You do not have tiles to create a valid meld with this call. If you call, your hand
+                  will be dead and this game will be over.
                 </p>
                 <div className="charleston-error-dialog__actions charleston-error-dialog__actions--spread">
                   <button
                     type="button"
-                    className="btn"
+                    className="btn charleston-error-dialog__rack-action"
                     onClick={() => {
                       setBlockingDialog(null)
                     }}
@@ -8359,13 +8395,13 @@ export default function App() {
                   </button>
                   <button
                     type="button"
-                    className="btn btn--danger"
+                    className="btn charleston-error-dialog__rack-action"
                     onClick={() => {
                       setBlockingDialog(null)
-                      pushRound((r) => ({ ...r, mainPhase: 'dead-hand' }))
+                      pushRound((r) => applyDeadHand(r, 'call-insufficient-meld'))
                     }}
                   >
-                    Proceed (Dead Hand)
+                    Call (Dead Hand)
                   </button>
                 </div>
               </>
@@ -8426,7 +8462,9 @@ export default function App() {
                     className="btn btn--danger"
                     onClick={() => {
                       setBlockingDialog(null)
-                      pushRound((r) => ({ ...r, mainPhase: 'dead-hand' }))
+                      pushRound((r) =>
+                        applyDeadHand(r, blockingDialog.deadHandReason),
+                      )
                     }}
                   >
                     Proceed (Dead Hand)
@@ -8511,7 +8549,14 @@ export default function App() {
                     className="btn btn--danger"
                     onClick={() => {
                       setBlockingDialog(null)
-                      pushRound((r) => ({ ...r, mainPhase: 'dead-hand' }))
+                      pushRound((r) =>
+                        applyDeadHand(
+                          r,
+                          blockingDialog.variant === 'call-exposure-dead-warning'
+                            ? 'call-exposure-no-line'
+                            : 'discard-no-line',
+                        ),
+                      )
                     }}
                   >
                     Proceed (Dead Hand)
@@ -8553,16 +8598,19 @@ export default function App() {
       {mainPhase === 'dead-hand' ? (
         <div className="dead-hand-overlay" role="dialog" aria-modal="true" aria-labelledby="dead-hand-title">
           <div className="dead-hand-dialog" onClick={(e) => e.stopPropagation()}>
-            <h2 id="dead-hand-title" className="dead-hand-dialog__title">💀 Dead Hand</h2>
+            <h2 id="dead-hand-title" className="dead-hand-dialog__title">
+              <span className="dead-hand-dialog__title-text">
+                <span className="dead-hand-dialog__skull" aria-hidden="true">💀</span>
+                Dead Hand
+              </span>
+            </h2>
             <p className="dead-hand-dialog__body">
-              Your tiles and exposures do not form a legal hand on the{' '}
-              <strong>{playableCardShortLabel(committedCardId)}</strong>. Your hand is officially dead —
-              the game is over.
+              {deadHandExplanation(round.deadHandReason, playableCardShortLabel(committedCardId))}
             </p>
             <div className="dead-hand-dialog__actions">
               <button
                 type="button"
-                className="btn btn--primary"
+                className="btn charleston-error-dialog__rack-action"
                 onClick={newHand}
               >
                 New Game
@@ -9342,7 +9390,7 @@ export default function App() {
                                     {concealedHandReminderEnabled && focusedHandIsConcealed ? (
                                       <>
                                         <span
-                                          className="btn--call-concealed__c"
+                                          className="hands-list__card-c"
                                           aria-label="Concealed hand"
                                         >C</span>all
                                       </>

@@ -834,32 +834,26 @@
   align-self: center;
 }
 
-/* Concealed annotation on "Call" in the rack action well. */
-.btn--call-concealed__c {
-  display: inline-block;
-  box-sizing: border-box;
-  padding: 0 0.08em 0.02em;
-  border: 1px solid var(--card-ink-red);
-  border-radius: 0.18em;
-  color: var(--card-ink-red);
-  line-height: 1;
-}
-
 /* NMJL card “C” (concealed) — compact red outline; `em` tracks the category hand line size. */
 .hands-list__card-c {
   box-sizing: border-box;
   margin-left: 0;
   padding: 0.02em 0.14em 0.04em;
   border: 1px solid var(--card-ink-red);
-  border-radius: 1px;
+  border-radius: 0.18em;
   line-height: 1;
   font-family: var(--font-concealed-c);
-  font-size: 0.68em;
+  font-size: 0.58em;
   font-weight: 700;
   letter-spacing: 0;
   color: var(--card-ink-red);
   flex-shrink: 0;
   white-space: nowrap;
+}
+
+/* Concealed C on Call — tray badge scaled to match the button label. */
+.btn--call-concealed .hands-list__card-c {
+  font-size: 1em;
 }
 
 .hands-list__tiles-away {
