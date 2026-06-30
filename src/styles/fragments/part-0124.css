@@ -105,8 +105,11 @@
 .app[data-tile-graphics='illustrative-classic']
   :is(
     .sortable-tile-wrap--suggest-best,
+    .sortable-tile-wrap--blank-exchange-hint,
     .drag-overlay-tile.sortable-tile-wrap--suggest-best,
+    .drag-overlay-tile.sortable-tile-wrap--blank-exchange-hint,
     .pass-strip__tile-wrap--suggest-best,
+    .pass-strip__tile-wrap--blank-exchange-hint,
     .east-discard-staging__tile--suggest-best,
     .discard-entry--suggest-need,
     .discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-need
@@ -121,9 +124,14 @@
   :is(
     .sortable-tile-wrap--suggest-best,
     .sortable-tile-wrap--suggest-dim.sortable-tile-wrap--suggest-best,
+    .sortable-tile-wrap--blank-exchange-hint,
+    .sortable-tile-wrap--suggest-dim.sortable-tile-wrap--blank-exchange-hint,
     .drag-overlay-tile.sortable-tile-wrap--suggest-best,
+    .drag-overlay-tile.sortable-tile-wrap--blank-exchange-hint,
     .pass-strip__tile-wrap--suggest-best,
     .pass-strip__tile-wrap--suggest-dim.pass-strip__tile-wrap--suggest-best,
+    .pass-strip__tile-wrap--blank-exchange-hint,
+    .pass-strip__tile-wrap--suggest-dim.pass-strip__tile-wrap--blank-exchange-hint,
     .east-discard-staging__tile--suggest-best,
     .discard-entry--suggest-need,
     .discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-need
@@ -143,12 +151,38 @@
   padding-bottom: 0;
   z-index: 5;
   box-sizing: border-box;
-  border: var(--illustrative-suggest-best-border);
   border-radius: inherit;
   pointer-events: none;
   background: transparent;
   box-shadow: none;
   opacity: 1;
+}
+
+.app[data-tile-graphics='illustrative-classic']
+  :is(
+    .sortable-tile-wrap--suggest-best,
+    .sortable-tile-wrap--suggest-dim.sortable-tile-wrap--suggest-best,
+    .drag-overlay-tile.sortable-tile-wrap--suggest-best,
+    .pass-strip__tile-wrap--suggest-best,
+    .pass-strip__tile-wrap--suggest-dim.pass-strip__tile-wrap--suggest-best,
+    .east-discard-staging__tile--suggest-best,
+    .discard-entry--suggest-need,
+    .discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-need
+  )
+  .tile-face.tile-face--illustrative-art::after {
+  border: var(--illustrative-suggest-best-border);
+}
+
+.app[data-tile-graphics='illustrative-classic']
+  :is(
+    .sortable-tile-wrap--blank-exchange-hint,
+    .sortable-tile-wrap--suggest-dim.sortable-tile-wrap--blank-exchange-hint,
+    .drag-overlay-tile.sortable-tile-wrap--blank-exchange-hint,
+    .pass-strip__tile-wrap--blank-exchange-hint,
+    .pass-strip__tile-wrap--suggest-dim.pass-strip__tile-wrap--blank-exchange-hint
+  )
+  .tile-face.tile-face--illustrative-art::after {
+  border: var(--illustrative-blank-exchange-hint-border);
 }
 
 /* Joker: beat circular-ring + SVG suppress rules — same full-tile inner border as naturals. */

@@ -1006,31 +1006,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   const displayHands = useMemo(() => {
     const base = hideConcealedHands ? filtered.filter((h) => !h.closed) : filtered
     const rank = new Map(cardSectionOrder.map((s, i) => [s, i]))
-    const pinIndex = new Map(pinnedHandKeys.map((key, i) => [key, i]))
-    const pinOrderFor = (h: SuggestedHandLine): number | null => {
-      if (pinIndex.size === 0) return null
-      // Pin matches when ANY of the line's variant focus keys is pinned (covers expanded
-      // variant rows that pin per-variant). Rank by the earliest matching pin index.
-      const baseKey = handEntryKeyForLine(h)
-      let best: number | null = pinIndex.has(baseKey) ? pinIndex.get(baseKey)! : null
-      const entry = stripSlotRowsByKey.get(baseKey)
-      if (entry && entry.rows.length > 1 && entry.ocVariantSuffixes.length === entry.rows.length) {
-        for (const suf of entry.ocVariantSuffixes) {
-          const k = `${h.id}::${suf}`
-          if (pinIndex.has(k)) {
-            const idx = pinIndex.get(k)!
-            if (best == null || idx < best) best = idx
-          }
-        }
-      }
-      return best
-    }
     return [...base].sort((a, b) => {
-      const ap = pinOrderFor(a)
-      const bp = pinOrderFor(b)
-      if (ap !== null && bp !== null) return ap - bp
-      if (ap !== null) return -1
-      if (bp !== null) return 1
       if (a.tilesNeededRough !== b.tilesNeededRough) return a.tilesNeededRough - b.tilesNeededRough
       const ra = rank.get(a.section) ?? 999
       const rb = rank.get(b.section) ?? 999
@@ -1040,7 +1016,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
       if (oa !== ob) return oa - ob
       return a.id.localeCompare(b.id)
     })
-  }, [filtered, hideConcealedHands, cardSectionOrder, pinnedHandKeys, stripSlotRowsByKey])
+  }, [filtered, hideConcealedHands, cardSectionOrder])
 
   const listRowsForHandsPanel = displayHands
 
@@ -1081,8 +1057,20 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
         pinKey: baseKey,
       })
     }
+    if (pinnedHandKeys.length === 0) return out
+    const pinIndex = new Map(pinnedHandKeys.map((key, i) => [key, i]))
     return out
-  }, [listRowsForHandsPanel, stripSlotRowsByKey, tilesGuideOn])
+      .map((row, i) => ({ row, i }))
+      .sort((a, b) => {
+        const ap = pinIndex.has(a.row.pinKey) ? pinIndex.get(a.row.pinKey)! : null
+        const bp = pinIndex.has(b.row.pinKey) ? pinIndex.get(b.row.pinKey)! : null
+        if (ap !== null && bp !== null) return ap - bp || a.i - b.i
+        if (ap !== null) return -1
+        if (bp !== null) return 1
+        return a.i - b.i
+      })
+      .map(({ row }) => row)
+  }, [listRowsForHandsPanel, stripSlotRowsByKey, tilesGuideOn, pinnedHandKeys])
 
   const emitRowPinToggle = useCallback(
     (pinKey: string) => {

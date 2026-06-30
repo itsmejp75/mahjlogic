@@ -43,6 +43,7 @@ function SortableTile({
   discardMode,
   suggestDim,
   suggestBest,
+  suggestBlankExchange,
   suggestDying,
   suggestDeadCause,
   stagedForMeld,
@@ -66,6 +67,8 @@ function SortableTile({
   discardMode: boolean
   suggestDim: boolean
   suggestBest: boolean
+  /** Blank could be redeemed for a discard this line still needs — Simple joker yellow ring. */
+  suggestBlankExchange: boolean
   suggestDying: boolean
   suggestDeadCause: boolean
   stagedForMeld: boolean
@@ -285,6 +288,7 @@ function SortableTile({
         discardMode ? 'sortable-tile-wrap--discard-mode' : '',
         suggestDim ? 'sortable-tile-wrap--suggest-dim' : '',
         suggestBest ? 'sortable-tile-wrap--suggest-best' : '',
+        suggestBlankExchange ? 'sortable-tile-wrap--blank-exchange-hint' : '',
         suggestDying ? 'sortable-tile-wrap--suggest-dying' : '',
         suggestDeadCause ? 'sortable-tile-wrap--suggest-dead-cause' : '',
         stagedForMeld ? 'sortable-tile-wrap--staged-meld' : '',
@@ -365,6 +369,7 @@ type Props = {
   /** Suggested-hand guide: white inset ring only on tiles in `bestIds` (count toward the focused line). Other tiles stay full brightness. */
   suggestedTileGuide?: {
     bestIds: ReadonlySet<string>
+    blankExchangeIds?: ReadonlySet<string>
   } | null
   /** Tiles that were previously highlighted but became dead for the focused suggestion. */
   suggestedDeadTileGuide?: {
@@ -575,6 +580,7 @@ export function SortableHand({
         const tile = tiles.find((t) => t.id === id)
         if (tile) {
           const isBest = !!g && g.bestIds.has(tile.id)
+          const isBlankExchange = !!g?.blankExchangeIds?.has(tile.id)
           const isNewlyReceived =
             tile.id === highlightedTileId ||
             (charlestonGlowTileIds?.has(tile.id) ?? false)
@@ -606,8 +612,9 @@ export function SortableHand({
               selected={selectedTileId === tile.id}
               charlestonGlow={charlestonGlowTileIds?.has(tile.id) ?? false}
               discardMode={discardMode}
-              suggestDim={isDeadSuggested || (!!g && !isBest && !isNewlyReceived)}
+              suggestDim={isDeadSuggested || (!!g && !isBest && !isBlankExchange && !isNewlyReceived)}
               suggestBest={isBest}
+              suggestBlankExchange={isBlankExchange}
               suggestDying={isDeadSuggested}
               suggestDeadCause={isDeadCause}
               stagedForMeld={stagedForMeldIds?.has(tile.id) ?? false}

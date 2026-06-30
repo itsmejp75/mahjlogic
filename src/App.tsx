@@ -4499,7 +4499,6 @@ export default function App() {
       playerClaimMelds: eastExposures,
       eastTableClaimMelds: eastExposures,
       patterns: cardPatterns,
-      blankExchangeDiscardDefs: blankExchangeEligibleDiscardDefs,
     }),
     [
       deferredHand,
@@ -4508,7 +4507,6 @@ export default function App() {
       botExposures,
       eastExposures,
       cardPatterns,
-      blankExchangeEligibleDiscardDefs,
     ],
   )
 
@@ -4594,6 +4592,24 @@ export default function App() {
         ])
       : null
 
+    const computeBlankExchangeIds = (pinnedP: PracticePattern): Set<string> => {
+      const blankIds = new Set<string>()
+      if (
+        blankExchangeEligibleDiscardDefs.length > 0 &&
+        rackForSuggestedPatternMatch.some((t) => t.def.cat === 'blank')
+      ) {
+        for (const fill of computeBlankExchangeFills(
+          rackForSuggestedPatternMatch,
+          pinnedP,
+          blankExchangeEligibleDiscardDefs,
+          greedyUiOpts,
+        )) {
+          blankIds.add(fill.blankTileId)
+        }
+      }
+      return blankIds
+    }
+
     const computeAvailableRackHighlightIds = (pinnedP: PracticePattern) => {
       let rack = rackForSuggestedPatternMatch
       let detail = greedyPatternMatchDetail(rack, pinnedP, greedyUiOpts)
@@ -4621,23 +4637,6 @@ export default function App() {
         }
       }
 
-      // Light blanks that could be redeemed for a discarded tile this line still needs (no glyph —
-      // the target is ambiguous when several discards qualify). Same fill logic as the tray's
-      // tiles-away credit, so the ring and the "Away" count stay consistent.
-      if (
-        blankExchangeEligibleDiscardDefs.length > 0 &&
-        rackForSuggestedPatternMatch.some((t) => t.def.cat === 'blank')
-      ) {
-        for (const fill of computeBlankExchangeFills(
-          rackForSuggestedPatternMatch,
-          pinnedP,
-          blankExchangeEligibleDiscardDefs,
-          greedyUiOpts,
-        )) {
-          bestIds.add(fill.blankTileId)
-        }
-      }
-
       return bestIds
     }
 
@@ -4645,15 +4644,20 @@ export default function App() {
       const pinnedPatterns = buildPinnedPatternsFromFocusKey(p, deferredSuggestedFocusHandKey)
       if (pinnedPatterns.length > 0) {
         const unionIds = new Set<string>()
+        const unionBlankIds = new Set<string>()
         for (const pinnedP of pinnedPatterns) {
           const ids = computeAvailableRackHighlightIds(pinnedP)
           for (const id of ids) unionIds.add(id)
+          for (const id of computeBlankExchangeIds(pinnedP)) unionBlankIds.add(id)
         }
-        return { bestIds: unionIds }
+        return { bestIds: unionIds, blankExchangeIds: unionBlankIds }
       }
     }
 
-    return { bestIds: computeAvailableRackHighlightIds(p) }
+    return {
+      bestIds: computeAvailableRackHighlightIds(p),
+      blankExchangeIds: computeBlankExchangeIds(p),
+    }
   }, [deferredSuggestedFocusHandKey, suggestedSuppressedHandKey, mainPhase, rackForSuggestedPatternMatch, suggestedHandsExposureTileIds, cardPatterns, deadTileHintEnabled, discardTiles, botExposures, blankExchangeEligibleDiscardDefs])
 
   /**
@@ -4781,9 +4785,12 @@ export default function App() {
     ) {
       const merged = new Set(suggestedTileGuide.bestIds)
       merged.add(activeBotDiscard.id)
-      return { bestIds: merged }
+      return { bestIds: merged, blankExchangeIds: suggestedTileGuide.blankExchangeIds }
     }
-    return { bestIds: suggestedTileGuide.bestIds }
+    return {
+      bestIds: suggestedTileGuide.bestIds,
+      blankExchangeIds: suggestedTileGuide.blankExchangeIds,
+    }
   }, [
     suggestedTileGuide,
     mainPhase,
@@ -9465,9 +9472,11 @@ export default function App() {
                         key={tile.id}
                         className={[
                           'drag-overlay-tile',
-                          suggestedTileGuideForRack?.bestIds.has(tile.id)
-                            ? 'sortable-tile-wrap--suggest-best'
-                            : '',
+                          suggestedTileGuideForRack?.blankExchangeIds?.has(tile.id)
+                            ? 'sortable-tile-wrap--blank-exchange-hint'
+                            : suggestedTileGuideForRack?.bestIds.has(tile.id)
+                              ? 'sortable-tile-wrap--suggest-best'
+                              : '',
                         ]
                           .filter(Boolean)
                           .join(' ')}
@@ -9484,9 +9493,11 @@ export default function App() {
                   <div
                     className={[
                       'drag-overlay-tile',
-                      suggestedTileGuideForRack?.bestIds.has(dragOverlayTile.id)
-                        ? 'sortable-tile-wrap--suggest-best'
-                        : '',
+                      suggestedTileGuideForRack?.blankExchangeIds?.has(dragOverlayTile.id)
+                        ? 'sortable-tile-wrap--blank-exchange-hint'
+                        : suggestedTileGuideForRack?.bestIds.has(dragOverlayTile.id)
+                          ? 'sortable-tile-wrap--suggest-best'
+                          : '',
                     ]
                       .filter(Boolean)
                       .join(' ')}

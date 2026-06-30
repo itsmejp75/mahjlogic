@@ -102,6 +102,10 @@
   --call-meld-group-border: var(--tile-highlight-border);
   --suggest-best-ring: inset 0 0 0 2px var(--tile-highlight-border);
   --suggest-best-ring-narrow: inset 0 0 0 1.5px var(--tile-highlight-border);
+  /* UI affordance yellow (blank-drop / joker-swap frames) — not `--tg-joker`, which follows tile skin. */
+  --simple-joker-yellow: #ffc107;
+  --illustrative-blank-exchange-hint-border: 2px solid var(--simple-joker-yellow);
+  --blank-exchange-hint-ring: inset 0 0 0 2px var(--simple-joker-yellow);
   --tile-highlight-lift-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
   /* Joker swap hint: wait from turn start (hint active) before dock bounce (see keyframes). */
   --joker-swap-hint-bounce-delay: 500ms;

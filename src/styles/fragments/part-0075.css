@@ -315,6 +315,7 @@
 
 .sortable-tile-wrap--suggest-dim.sortable-tile-wrap--selected .tile-face,
 .sortable-tile-wrap--suggest-dim.sortable-tile-wrap--suggest-best .tile-face,
+.sortable-tile-wrap--suggest-dim.sortable-tile-wrap--blank-exchange-hint .tile-face,
 .hands-sheet__tile-cell--suggest-dim.hands-sheet__tile-cell--suggest-best .tile-face {
   opacity: 1;
 }
@@ -323,6 +324,45 @@
   border-radius: var(--tile-face-border-radius);
   --tile-face-highlight-inset: 0 0 0 0 transparent;
   --tile-face-highlight-shadow: var(--suggest-best-ring);
+}
+
+.sortable-tile-wrap--blank-exchange-hint .tile-face {
+  border-radius: var(--tile-face-border-radius);
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
+}
+
+/* Yellow ring on `::after` (z-index 5) — above rim bevel / dim overlay, same stack as green suggest-best. */
+.sortable-tile-wrap--blank-exchange-hint .tile-face:not(.tile--joker)::after,
+.sortable-tile-wrap--blank-exchange-hint.sortable-tile-wrap--suggest-dim .tile-face:not(.tile--joker)::after,
+.drag-overlay-tile.sortable-tile-wrap--blank-exchange-hint .tile-face:not(.tile--joker)::after,
+.pass-strip__tile-wrap--blank-exchange-hint .tile-face:not(.tile--joker)::after,
+.pass-strip__tile-wrap--blank-exchange-hint.pass-strip__tile-wrap--suggest-dim
+  .tile-face:not(.tile--joker)::after {
+  content: '';
+  display: block;
+  position: absolute;
+  inset: 0;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  transform: none;
+  width: auto;
+  height: auto;
+  padding-bottom: 0;
+  z-index: 5;
+  box-sizing: border-box;
+  border: var(--illustrative-blank-exchange-hint-border, 2px solid var(--simple-joker-yellow, #ffc107));
+  border-radius: inherit;
+  pointer-events: none;
+  background: transparent;
+  box-shadow: none;
+  opacity: 1;
+}
+
+.sortable-tile-wrap--suggest-dim.sortable-tile-wrap--blank-exchange-hint .tile-face {
+  opacity: 1;
 }
 
 @keyframes suggest-dying-flash {

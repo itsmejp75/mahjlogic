@@ -4661,6 +4661,21 @@ function stripOrderedHandIdsForPattern(
   return { orderedIds, usedIds: new Set(orderedIds) }
 }
 
+/** Blanks never occupy strip slots; group them after pattern-sorted tiles (rack order preserved). */
+function blanksAfterPatternSortInHandOrder(
+  handOrder: readonly TileInstance[],
+  seen: Set<string>,
+): TileInstance[] {
+  const out: TileInstance[] = []
+  for (const t of handOrder) {
+    if (t.def.cat === 'blank' && !seen.has(t.id)) {
+      out.push(t)
+      seen.add(t.id)
+    }
+  }
+  return out
+}
+
 export function sortHandForSuggestedPattern(
   hand: TileInstance[],
   patternId: string,
@@ -4709,12 +4724,14 @@ export function sortHandForSuggestedPattern(
     }
   }
 
+  const blanksAfterPattern = blanksAfterPatternSortInHandOrder(hand, seen)
+
   /*
    * Dim tiles keep their current rack order so repeated double-clicks on different hands
    * slide the best tiles left without scrambling everything to the right.
    */
   const rest = hand.filter((t) => !seen.has(t.id))
-  return [...orderedBest, ...rest]
+  return [...orderedBest, ...blanksAfterPattern, ...rest]
 }
 
 /**
@@ -4769,11 +4786,12 @@ export function sortFullRackTilesForPattern(
   const pForMatch: PracticePattern = sortPattern
   const greedyOpts: GreedyPatternMatchOpts | undefined =
     exposureTileIds?.size ? { exposureTileIds } : undefined
+  const blanksAfterPattern = blanksAfterPatternSortInHandOrder(input.hand, seen)
   const tailDetail = greedyPatternMatchDetail(rackForPattern, pForMatch, greedyOpts)
   const usedRank = new Map(tailDetail.usedOrder.map((id, i) => [id, i] as const))
   const rest = rackRaw.filter((t) => !seen.has(t.id))
   rest.sort((a, b) => (usedRank.get(a.id) ?? 99_999) - (usedRank.get(b.id) ?? 99_999))
-  return [...ordered, ...rest]
+  return [...ordered, ...blanksAfterPattern, ...rest]
 }
 
 /**
@@ -4919,13 +4937,6 @@ export type RankSuggestedHandsInput = {
    * Card book to rank against. Defaults to the session book ({@link getActiveCardPatterns}).
    */
   patterns?: PracticePattern[]
-  /**
-   * Discarded tile defs eligible to redeem a blank in hand (one entry per available copy; exclude
-   * jokers/blanks). When provided and the rack holds blanks, each line credits blanks that can be
-   * swapped for a discard the line still needs toward {@link SuggestedHandLine.tilesNeededRough}
-   * (see {@link computeBlankExchangeFills}). Omit (or empty) for no blank-exchange credit.
-   */
-  blankExchangeDiscardDefs?: readonly TileDef[]
 }
 
 function cardBookForRankInput(input: RankSuggestedHandsInput): PracticePattern[] {
@@ -5002,19 +5013,8 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
         })
       : rackForPattern.filter((t) => p.matches(t.def)).length
     const visibleDeadMatches = visible.filter((t) => p.matches(t.def)).length
-    // Credit blanks in hand that could be redeemed for a discard this line still needs. Each blank
-    // consumes a distinct discard copy, so multiple blanks need multiple distinct discarded tiles.
-    const blankFillCount =
-      input.blankExchangeDiscardDefs && input.blankExchangeDiscardDefs.length > 0
-        ? computeBlankExchangeFills(
-            rackForPattern,
-            p,
-            input.blankExchangeDiscardDefs,
-            groupMatchExposureOpts,
-          ).length
-        : 0
-    const matchedWithBlanks = Math.min(p.roughTarget, matchedInHand + blankFillCount)
-    const tilesNeededRough = Math.max(0, p.roughTarget - matchedWithBlanks)
+    // Blanks are not counted toward tiles-away — a blank is not the needed tile until redeemed.
+    const tilesNeededRough = Math.max(0, p.roughTarget - matchedInHand)
     const pressure = pressureLabel(tilesNeededRough, wallRemaining)
 
     const note =
@@ -5026,7 +5026,7 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
       id: p.id,
       title: p.title,
       titleSegments: p.titleSegments,
-      matchedInHand: matchedWithBlanks,
+      matchedInHand,
       tilesNeededRough,
       wallRemaining,
       visibleDeadMatches,
