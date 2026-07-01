@@ -1102,7 +1102,9 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 .panel--hand .rack-stage__rack-top .exposure-rack__slot:not(.exposure-rack__slot--suggest-best):not(
     .pass-strip__tile-wrap--suggest-best
-  ):not(:has(.east-discard-staging__tile--suggest-best))
+  ):not(:has(.east-discard-staging__tile--suggest-best)):not(
+    :has(.east-discard-staging__tile--blank-exchange-hint)
+  )
   .tile-face:not(.tile--joker)::after,
 .panel--hand
   .rack-stage__rack-top
@@ -1128,6 +1130,11 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 /* Charleston pass + discard staging use pass/staging wrappers (not only exposure-rack__slot--suggest-best). */
 .panel--hand .rack-stage__rack-top .pass-strip__tile-wrap--suggest-best .tile-face:not(.tile--joker),
 .panel--hand .rack-stage__rack-top .east-discard-staging__tile--suggest-best .tile-face:not(.tile--joker) {
+  filter: none;
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
+}
+
+.panel--hand .rack-stage__rack-top .east-discard-staging__tile--blank-exchange-hint .tile-face:not(.tile--joker) {
   filter: none;
   --tile-face-highlight-shadow: 0 0 0 0 transparent;
 }

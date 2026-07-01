@@ -111,6 +111,7 @@
     .pass-strip__tile-wrap--suggest-best,
     .pass-strip__tile-wrap--blank-exchange-hint,
     .east-discard-staging__tile--suggest-best,
+    .east-discard-staging__tile--blank-exchange-hint,
     .discard-entry--suggest-need,
     .discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-need
   )
@@ -133,6 +134,7 @@
     .pass-strip__tile-wrap--blank-exchange-hint,
     .pass-strip__tile-wrap--suggest-dim.pass-strip__tile-wrap--blank-exchange-hint,
     .east-discard-staging__tile--suggest-best,
+    .east-discard-staging__tile--blank-exchange-hint,
     .discard-entry--suggest-need,
     .discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-need
   )
@@ -179,7 +181,8 @@
     .sortable-tile-wrap--suggest-dim.sortable-tile-wrap--blank-exchange-hint,
     .drag-overlay-tile.sortable-tile-wrap--blank-exchange-hint,
     .pass-strip__tile-wrap--blank-exchange-hint,
-    .pass-strip__tile-wrap--suggest-dim.pass-strip__tile-wrap--blank-exchange-hint
+    .pass-strip__tile-wrap--suggest-dim.pass-strip__tile-wrap--blank-exchange-hint,
+    .east-discard-staging__tile--blank-exchange-hint
   )
   .tile-face.tile-face--illustrative-art::after {
   border: var(--illustrative-blank-exchange-hint-border);

@@ -338,7 +338,8 @@
 .drag-overlay-tile.sortable-tile-wrap--blank-exchange-hint .tile-face:not(.tile--joker)::after,
 .pass-strip__tile-wrap--blank-exchange-hint .tile-face:not(.tile--joker)::after,
 .pass-strip__tile-wrap--blank-exchange-hint.pass-strip__tile-wrap--suggest-dim
-  .tile-face:not(.tile--joker)::after {
+  .tile-face:not(.tile--joker)::after,
+.east-discard-staging__tile--blank-exchange-hint .tile-face:not(.tile--joker)::after {
   content: '';
   display: block;
   position: absolute;
@@ -698,6 +699,12 @@
 /* Pass slot and discard staging tiles that belong to the focused suggested hand */
 .pass-strip__tile-wrap--suggest-best .tile-face,
 .east-discard-staging__tile--suggest-best .tile-face {
+  border-radius: var(--tile-face-border-radius);
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
+}
+
+.east-discard-staging__tile--blank-exchange-hint .tile-face {
   border-radius: var(--tile-face-border-radius);
   --tile-face-highlight-inset: 0 0 0 0 transparent;
   --tile-face-highlight-shadow: 0 0 0 0 transparent;

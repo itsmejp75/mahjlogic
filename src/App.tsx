@@ -178,6 +178,7 @@ import {
 } from './mahjong/callValidation'
 import { deadHandExplanation, type DeadHandReason } from './mahjong/deadHandReason'
 import {
+  BLANK_EXCHANGE_DROP_ID,
   CALL_INITIATE_FIRST_SLOT_ID,
   EAST_DISCARD_STAGING_ID,
   incomingBotDiscardDragId,
@@ -1483,12 +1484,15 @@ function EastOwnJokerSwapDropZone({ active, children }: { active: boolean; child
 function EastDiscardStagingSortableFace({
   tile,
   suggestBest,
+  suggestBlankExchange,
   jokerSwapHintBounce = false,
   jokerSwapHintBounceEpoch = 0,
   onTileClickReturn,
 }: {
   tile: TileInstance
   suggestBest?: boolean
+  /** Blank could be redeemed for a discard this line still needs — Simple joker yellow ring. */
+  suggestBlankExchange?: boolean
   jokerSwapHintBounce?: boolean
   jokerSwapHintBounceEpoch?: number
   onTileClickReturn: () => void
@@ -1516,6 +1520,7 @@ function EastDiscardStagingSortableFace({
         'east-discard-staging__tile',
         isDragging ? 'east-discard-staging__tile--dragging' : '',
         suggestBest ? 'east-discard-staging__tile--suggest-best' : '',
+        suggestBlankExchange ? 'east-discard-staging__tile--blank-exchange-hint' : '',
         jokerSwapHintBounce ? 'east-discard-staging__tile--joker-swap-hint-bounce' : '',
       ]
         .filter(Boolean)
@@ -1551,6 +1556,7 @@ function EastDiscardStagingSlot({
   sortableSuppressed,
   onTileClickReturn,
   suggestBest,
+  suggestBlankExchange,
   jokerSwapHintBounce = false,
   jokerSwapHintBounceEpoch = 0,
 }: {
@@ -1566,6 +1572,8 @@ function EastDiscardStagingSlot({
   onTileClickReturn: () => void
   /** Tile matches the focused suggested hand — show white inset ring. */
   suggestBest?: boolean
+  /** Blank could be redeemed for a discard this line still needs — Simple joker yellow ring. */
+  suggestBlankExchange?: boolean
   /** Joker swap hint: dock-bounce the staged tile when it can redeem an exposed joker. */
   jokerSwapHintBounce?: boolean
   jokerSwapHintBounceEpoch?: number
@@ -1591,6 +1599,7 @@ function EastDiscardStagingSlot({
         <EastDiscardStagingSortableFace
           tile={tile}
           suggestBest={suggestBest}
+          suggestBlankExchange={suggestBlankExchange}
           jokerSwapHintBounce={jokerSwapHintBounce}
           jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
           onTileClickReturn={onTileClickReturn}
@@ -9176,6 +9185,10 @@ export default function App() {
                                       suggestBest={
                                         !!pendingEastDiscardTile &&
                                         !!suggestedTileGuideForRack?.bestIds.has(pendingEastDiscardTile.id)
+                                      }
+                                      suggestBlankExchange={
+                                        !!pendingEastDiscardTile &&
+                                        !!suggestedTileGuideForRack?.blankExchangeIds?.has(pendingEastDiscardTile.id)
                                       }
                                       jokerSwapHintBounce={
                                         !!pendingEastDiscardTile &&
