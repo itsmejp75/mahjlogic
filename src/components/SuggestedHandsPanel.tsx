@@ -158,6 +158,19 @@ function findRowForSnapshotAnchor(
   return (key ? findRowByKey(scrollEl, key) : null) ?? (patternId ? findRowByPatternId(scrollEl, patternId) : null)
 }
 
+/** List row key for highlight/scroll when the stored focus key’s variant suffix goes stale. */
+function resolveEffectiveFocusRowKey(
+  activePatternId: string | null,
+  expandedHandsRows: ReadonlyArray<{ focusKey: string; line: { id: string } }>,
+  listRowsForHandsPanel: ReadonlyArray<{ id: string }>,
+): string | null {
+  if (activePatternId == null) return null
+  if (expandedHandsRows.some((r) => r.focusKey === activePatternId)) return activePatternId
+  const patternId = focusKeyPatternId(activePatternId)
+  if (!listRowsForHandsPanel.some((h) => h.id === patternId)) return activePatternId
+  return expandedHandsRows.find((r) => r.line.id === patternId)?.focusKey ?? activePatternId
+}
+
 type StripRowsEntry = {
   rows: SuggestedStripSlot[][]
   /** Per-row variant focus-key suffix (parallel to {@link rows}). Format:
@@ -840,7 +853,7 @@ type Props = {
   /** Pinned suggested row keys (see {@link suggestedRowPinKey}). Toggle via {@link onPinnedPatternChange}. */
   pinnedHandKeys?: readonly string[]
   onPatternClick: (handKey: string) => void
-  /** Rerank changed variant keys — migrate selection instead of clearing it. */
+  /** Rerank changed variant keys — clear selection only when the pattern leaves the list. */
   onFocusKeyMigrate?: (nextKey: string | null) => void
   tilesGuideOn: boolean
   rackTilesForSuggestedStrip: TileInstance[]
@@ -908,24 +921,6 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     anchorOffset: 0,
     scrollTop: 0,
   })
-
-  const refreshScrollSnapshot = useCallback(
-    (rowKeys?: string[]) => {
-      const scrollEl = getTrayScrollTarget()
-      if (!scrollEl) return
-      const activePatternLineId = activePatternId ? focusKeyPatternId(activePatternId) : null
-      const anchor = findScrollRowAnchor(scrollEl, activePatternId, activePatternLineId)
-      const snap = handsListScrollSnapshotRef.current
-      handsListScrollSnapshotRef.current = {
-        rowKeys: rowKeys ?? snap.rowKeys,
-        anchorKey: anchor?.key ?? null,
-        anchorPatternId: anchor?.patternId ?? null,
-        anchorOffset: anchor?.offset ?? 0,
-        scrollTop: scrollEl.scrollTop,
-      }
-    },
-    [activePatternId, getTrayScrollTarget],
-  )
 
   const dragScrollRef = useRef<{
     pointerId: number
@@ -1260,33 +1255,62 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
       .map(({ row }) => row)
   }, [listRowsForHandsPanel, stripSlotRowsByKey, tilesGuideOn, pinnedHandKeys])
 
+  const effectiveFocusRowKey = useMemo(
+    () => resolveEffectiveFocusRowKey(activePatternId, expandedHandsRows, listRowsForHandsPanel),
+    [activePatternId, expandedHandsRows, listRowsForHandsPanel],
+  )
+
+  const refreshScrollSnapshot = useCallback(
+    (rowKeys?: string[]) => {
+      const scrollEl = getTrayScrollTarget()
+      if (!scrollEl) return
+      const anchorPatternLineId = effectiveFocusRowKey
+        ? focusKeyPatternId(effectiveFocusRowKey)
+        : null
+      const anchor = findScrollRowAnchor(
+        scrollEl,
+        effectiveFocusRowKey,
+        anchorPatternLineId,
+      )
+      const snap = handsListScrollSnapshotRef.current
+      handsListScrollSnapshotRef.current = {
+        rowKeys: rowKeys ?? snap.rowKeys,
+        anchorKey: anchor?.key ?? null,
+        anchorPatternId: anchor?.patternId ?? null,
+        anchorOffset: anchor?.offset ?? 0,
+        scrollTop: scrollEl.scrollTop,
+      }
+    },
+    [effectiveFocusRowKey, getTrayScrollTarget],
+  )
+
   useEffect(() => {
-    if (activePatternId == null) {
+    if (effectiveFocusRowKey == null) {
       selectedAwayBaselineKeyRef.current = null
       setSelectedAwayBaseline(null)
       return
     }
 
-    if (selectedAwayBaselineKeyRef.current === activePatternId) return
+    if (selectedAwayBaselineKeyRef.current === effectiveFocusRowKey) return
 
-    const activeRow = expandedHandsRows.find((row) => row.focusKey === activePatternId)
+    const activeRow = expandedHandsRows.find((row) => row.focusKey === effectiveFocusRowKey)
     if (!activeRow) return
 
-    selectedAwayBaselineKeyRef.current = activePatternId
+    selectedAwayBaselineKeyRef.current = effectiveFocusRowKey
     setSelectedAwayBaseline({
-      focusKey: activePatternId,
+      focusKey: effectiveFocusRowKey,
       tilesAway: activeRow.line.tilesNeededRough,
     })
-  }, [activePatternId, expandedHandsRows])
+  }, [effectiveFocusRowKey, expandedHandsRows])
 
   const activeAwayTrendState = useMemo<{
     trend: SelectedHandAwayTrend
     delta: number | null
   }>(() => {
-    if (!activePatternId || selectedAwayBaseline?.focusKey !== activePatternId) {
+    if (!effectiveFocusRowKey || selectedAwayBaseline?.focusKey !== effectiveFocusRowKey) {
       return { trend: null, delta: null }
     }
-    const activeRow = expandedHandsRows.find((row) => row.focusKey === activePatternId)
+    const activeRow = expandedHandsRows.find((row) => row.focusKey === effectiveFocusRowKey)
     if (!activeRow || expandedHandsRows.length === 0) return { trend: null, delta: null }
 
     const currentAway = activeRow.line.tilesNeededRough
@@ -1299,7 +1323,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
       return { trend: 'behind-best', delta: bestAway - currentAway }
     }
     return { trend: null, delta: null }
-  }, [activePatternId, expandedHandsRows, selectedAwayBaseline])
+  }, [effectiveFocusRowKey, expandedHandsRows, selectedAwayBaseline])
 
   useEffect(() => {
     const scrollEl = getTrayScrollTarget()
@@ -1322,11 +1346,15 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
       prev.anchorKey &&
       !dragScrollActiveRef.current
     ) {
-      const anchorRow = findRowForSnapshotAnchor(
-        scrollEl,
-        prev.anchorKey,
-        prev.anchorPatternId,
-      )
+      const anchorRow =
+        findRowForSnapshotAnchor(scrollEl, prev.anchorKey, prev.anchorPatternId) ??
+        (effectiveFocusRowKey
+          ? findRowForSnapshotAnchor(
+              scrollEl,
+              effectiveFocusRowKey,
+              focusKeyPatternId(effectiveFocusRowKey),
+            )
+          : null)
       if (anchorRow) {
         const newOffset = rowOffsetInScrollContainer(anchorRow, scrollEl)
         const delta = newOffset - prev.anchorOffset
@@ -1337,7 +1365,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     }
 
     refreshScrollSnapshot(rowKeys)
-  }, [expandedHandsRows, getTrayScrollTarget, refreshScrollSnapshot])
+  }, [expandedHandsRows, effectiveFocusRowKey, getTrayScrollTarget, refreshScrollSnapshot])
 
   const emitRowPinToggle = useCallback(
     (pinKey: string) => {
@@ -1349,18 +1377,10 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
 
   useEffect(() => {
     if (activePatternId == null || !onFocusKeyMigrate) return
-    if (expandedHandsRows.some((r) => r.focusKey === activePatternId)) return
-
     const patternId = focusKeyPatternId(activePatternId)
-    const replacement = expandedHandsRows.find((r) => r.line.id === patternId)
-    if (replacement) {
-      onFocusKeyMigrate(replacement.focusKey)
-      return
-    }
-    if (!listRowsForHandsPanel.some((h) => h.id === patternId)) {
-      onFocusKeyMigrate(null)
-    }
-  }, [activePatternId, expandedHandsRows, listRowsForHandsPanel, onFocusKeyMigrate])
+    if (listRowsForHandsPanel.some((h) => h.id === patternId)) return
+    onFocusKeyMigrate(null)
+  }, [activePatternId, listRowsForHandsPanel, onFocusKeyMigrate])
 
   const handsListOn = true
   const showHandCategoryLabels = handsListOn
@@ -1473,7 +1493,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                   <ol className="hands-sheet__rows" aria-label="Suggested hand lines">
                     {expandedHandsRows.map((row) => {
                       const focusKey = row.focusKey
-                      const rowIsFocused = activePatternId === focusKey
+                      const rowIsFocused = effectiveFocusRowKey === focusKey
                       return (
                         <SuggestedHandsSheetRow
                           key={row.reactKey}
@@ -1482,7 +1502,9 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                           awayTrend={rowIsFocused ? activeAwayTrendState.trend : null}
                           awayTrendDelta={rowIsFocused ? activeAwayTrendState.delta : null}
                           rowDeadCause={
-                            rowIsFocused ? deadCauseByFocusKey[focusKey] ?? null : null
+                            rowIsFocused && activePatternId
+                              ? deadCauseByFocusKey[activePatternId] ?? null
+                              : null
                           }
                           tilesGuideOn={tilesGuideOn}
                           isPinned={pinnedKeySet.has(row.pinKey)}
@@ -1604,14 +1626,16 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
             >
               {expandedHandsRows.map((row) => {
                 const focusKey = row.focusKey
-                const rowIsFocused = activePatternId === focusKey
+                const rowIsFocused = effectiveFocusRowKey === focusKey
                 return (
                   <SuggestedHandsCompactListRow
                     key={row.reactKey}
                     row={row}
                     rowIsFocused={rowIsFocused}
                     rowDeadCause={
-                      rowIsFocused ? deadCauseByFocusKey[focusKey] ?? null : null
+                      rowIsFocused && activePatternId
+                        ? deadCauseByFocusKey[activePatternId] ?? null
+                        : null
                     }
                     tilesGuideOn={tilesGuideOn}
                     handsListOn={handsListOn}
