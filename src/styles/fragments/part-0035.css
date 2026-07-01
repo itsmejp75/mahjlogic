@@ -32,15 +32,44 @@
   z-index: 5;
 }
 
+.app-layout[data-joker-swap-hint='on'][data-animations='on']
+  .app-top-exposure-container
+  .discard-tracker__overlay-row
+  > .app-opponents-rail__cell:has(.exposure-rack__slot--joker-swap-hint-bounce) {
+  overflow: visible;
+  z-index: 5;
+}
+
+.app-layout[data-joker-swap-hint='on'][data-animations='on']
+  .app-top-exposure-container
+  .discard-tracker__tile-groups-container:has(.exposure-rack__slot--joker-swap-hint-bounce) {
+  overflow: visible;
+}
+
 /*
- * Staged discard dock-bounce rises into the top bot-exposure band. That band lives in
- * `.app-play-split` (z-index 1 on the overlay chain); paint the hand rack above it while bouncing.
+ * Staged discard dock-bounce rises into `.app-top-exposure-container` bot rows (z-index 1 on the
+ * overlay chain). Lift the hand rack above that band while bouncing — same pattern as
+ * `.panel-hand-rack__review-new-game-row` / hint rings in part-0123 / part-0124.
  */
+.app-layout[data-joker-swap-hint='on'][data-animations='on']
+  .app-dnd-frame:has(.east-discard-staging__tile--joker-swap-hint-bounce)
+  > .app-play-split.app-top-exposure-container {
+  position: relative;
+  z-index: 0;
+}
+
 .app-layout[data-joker-swap-hint='on'][data-animations='on']
   .app-dnd-frame:has(.east-discard-staging__tile--joker-swap-hint-bounce)
   > .app-rack-stage {
   position: relative;
-  z-index: 2;
+  z-index: 5;
+  overflow: visible;
+}
+
+.app-layout[data-joker-swap-hint='on'][data-animations='on']
+  .app-dnd-frame:has(.east-discard-staging__tile--joker-swap-hint-bounce)
+  :is(> .app-rack-stage, .panel--hand, .panel-hand-rack) {
+  overflow: visible;
 }
 
 .app-layout[data-joker-swap-hint='on'][data-animations='on']
@@ -55,4 +84,13 @@
   .exposure-rack__slot--east-discard-slot:has(.east-discard-staging__tile--joker-swap-hint-bounce) {
   overflow: visible;
   z-index: 10;
+}
+
+.app-layout[data-joker-swap-hint='on'][data-animations='on']
+  .app
+  .panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__slot--east-discard-slot:has(.east-discard-staging__tile--joker-swap-hint-bounce)
+  .east-discard-staging.east-discard-staging--inline {
+  z-index: 50;
 }

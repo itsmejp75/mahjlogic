@@ -220,6 +220,15 @@
   --hands-sheet-debug-grid-border: var(--hands-sheet-border);
 }
 
+/* Tray: hide the full-width divider between hand title and parenthesis/tiles detail row. */
+.suggested-hands-popup
+  .hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row:has(.hands-sheet__hand-stack-detail)::before {
+  display: none;
+}
+
 /*
  * Discard tray: drop the spreadsheet outer frame (side/top/bottom) so the sheet reads flush
  * with `.discard-tracker__content`; keep per-cell grid lines inside.

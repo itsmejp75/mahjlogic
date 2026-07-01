@@ -1378,6 +1378,39 @@ html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-t
   box-shadow:
     var(--rack-action-shadow-rest),
     0 0 0 2px color-mix(in srgb, var(--rack-action-hint-border, #b56fd0) 92%, transparent) !important;
+  overflow: visible;
+}
+
+/*
+ * Hint ring extends below the action row into the hand↔discard seam. The lower discard tray
+ * (`.app-discard-bottom-container`, z-index 2) otherwise paints over the bottom edge — same
+ * lift pattern as `.panel-hand-rack__review-new-game-row` in part-0123.
+ */
+.app-dnd-frame:has(
+    .rack-bottom-bar--tile-grid .btn--mahjong-hint,
+    .rack-bottom-bar--tile-grid .btn--joker-swap-hint
+  )
+  > .app-rack-stage {
+  position: relative;
+  z-index: 5;
+  overflow: visible;
+}
+
+.app-dnd-frame:has(
+    .rack-bottom-bar--tile-grid .btn--mahjong-hint,
+    .rack-bottom-bar--tile-grid .btn--joker-swap-hint
+  )
+  > .app-discard-bottom-container {
+  position: relative;
+  z-index: 1;
+}
+
+.app-dnd-frame:has(
+    .rack-bottom-bar--tile-grid .btn--mahjong-hint,
+    .rack-bottom-bar--tile-grid .btn--joker-swap-hint
+  )
+  :is(.panel--hand, .panel-hand-rack, .panel-hand-rack__action-well, .panel-hand-rack__charleston-actions-well) {
+  overflow: visible;
 }
 
 /*

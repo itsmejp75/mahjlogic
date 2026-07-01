@@ -5,6 +5,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
   type CSSProperties,
   type MouseEvent,
   type PointerEvent,
@@ -167,6 +168,13 @@ type StripRowsEntry = {
   ocVariantSuffixes: string[]
 }
 
+type SelectedHandAwayTrend = 'improved' | 'behind-best' | null
+
+type SelectedAwayBaseline = {
+  focusKey: string
+  tilesAway: number
+}
+
 /** A single concrete focus key per suggested-hand line. Tied flexible variants are split into
  * separate lines (sub-best `consecRanksTier` at line build, primary-tier flex via
  * {@link expandedHandsRows} at panel level), so this never returns a multi-combo key. */
@@ -196,6 +204,21 @@ function formatSuggestedHandValue(points: number): string {
   return `${points}`
 }
 
+const SuggestedHandConcealedMark = memo(function SuggestedHandConcealedMark({
+  variant,
+}: {
+  variant: 'sheet' | 'list'
+}) {
+  return (
+    <span
+      className={variant === 'sheet' ? 'hands-sheet__card-c' : 'hands-list__card-c'}
+      aria-label="Concealed hand"
+    >
+      C
+    </span>
+  )
+})
+
 /** Parenthetical card note (hands-only sheet shows it under the main card line, like Hands & Tiles). */
 function suggestedHandParenText(h: SuggestedHandLine): string | null {
   const p = h.cardParenthesis?.trim()
@@ -222,6 +245,47 @@ const SuggestedHandValueDisplay = memo(function SuggestedHandValueDisplay({
   points: number
 }) {
   return <>{points}</>
+})
+
+const SuggestedHandAwayTrendIndicator = memo(function SuggestedHandAwayTrendIndicator({
+  trend,
+  delta,
+}: {
+  trend: Exclude<SelectedHandAwayTrend, null>
+  /** Negative offset vs the best suggested hand (e.g. -3 when 9 away vs top at 6). */
+  delta?: number | null
+}) {
+  const deltaLabel =
+    trend === 'behind-best' && delta != null && delta < 0 ? `, ${delta} vs best` : ''
+  const label =
+    trend === 'improved'
+      ? 'Selected hand is fewer tiles away'
+      : `Another suggested hand is fewer tiles away${deltaLabel}`
+  const points = trend === 'improved' ? '6 15 12 9 18 15' : '6 9 12 15 18 9'
+  return (
+    <span className="hands-sheet__away-trend-wrap" role="img" aria-label={label}>
+      <svg
+        className={`hands-sheet__away-trend hands-sheet__away-trend--${trend}`}
+        viewBox="0 0 24 24"
+        aria-hidden
+      >
+        <title>{label}</title>
+        <polyline
+          points={points}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.35"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      {trend === 'behind-best' && delta != null && delta < 0 ? (
+        <span className="hands-sheet__away-trend-delta" aria-hidden>
+          {delta}
+        </span>
+      ) : null}
+    </span>
+  )
 })
 
 /**
@@ -436,6 +500,8 @@ const SuggestedHandSheetTileGrid = memo(function SuggestedHandSheetTileGrid({
 const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
   row,
   rowIsFocused,
+  awayTrend,
+  awayTrendDelta,
   rowDeadCause,
   tilesGuideOn,
   isPinned,
@@ -445,6 +511,8 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
 }: {
   row: ExpandedHandsRow
   rowIsFocused: boolean
+  awayTrend: SelectedHandAwayTrend
+  awayTrendDelta: number | null
   rowDeadCause: DeadCauseHint | null
   tilesGuideOn: boolean
   isPinned: boolean
@@ -458,7 +526,7 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
   const rowStripSlots = row.stripSlots ?? []
   const rowLit = tilesGuideOn && rowIsFocused
   const cardRef = suggestedHandCardRefDisplay(h)
-  const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points)}`
+  const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}${h.closed ? ', concealed' : ''}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points)}`
   const parenText = !tilesGuideOn ? suggestedHandParenText(h) : null
   const showTileDetail = tilesGuideOn && rowStripSlots.length > 0
   const showDetailRow = showTileDetail || Boolean(parenText)
@@ -517,20 +585,12 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
                       segments={h.titleSegments}
                       deadCause={rowDeadCause}
                     />
-                    {h.closed ? (
-                      <span className="hands-sheet__card-c" aria-label="Concealed hand">
-                        C
-                      </span>
-                    ) : null}
+                    {h.closed ? <SuggestedHandConcealedMark variant="sheet" /> : null}
                   </>
                 ) : (
                   <>
                     {parenText ? suggestedHandPlainTitleWithoutParen(h) : h.title}
-                    {h.closed ? (
-                      <span className="hands-sheet__card-c" aria-label="Concealed hand">
-                        C
-                      </span>
-                    ) : null}
+                    {h.closed ? <SuggestedHandConcealedMark variant="sheet" /> : null}
                   </>
                 )}
                 {rowDeadCause ? <SuggestedHandDeadCauseIcon cause={rowDeadCause} /> : null}
@@ -562,6 +622,11 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
           role="cell"
         >
           {h.tilesNeededRough}
+          {!showDetailRow && awayTrend ? (
+            <span className="hands-sheet__away-trend-overlay">
+              <SuggestedHandAwayTrendIndicator trend={awayTrend} delta={awayTrendDelta} />
+            </span>
+          ) : null}
         </div>
         <div
           className={[
@@ -579,8 +644,14 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
             <div
               className="hands-sheet__cell hands-sheet__cell--away hands-sheet__cell--detail-pad"
               role="cell"
-              aria-hidden="true"
-            />
+              aria-hidden={awayTrend ? undefined : true}
+            >
+              {awayTrend ? (
+                <span className="hands-sheet__away-trend-overlay">
+                  <SuggestedHandAwayTrendIndicator trend={awayTrend} delta={awayTrendDelta} />
+                </span>
+              ) : null}
+            </div>
             <div
               className="hands-sheet__cell hands-sheet__cell--values hands-sheet__cell--detail-pad"
               role="cell"
@@ -624,7 +695,7 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
   const cardRef = suggestedHandCardRefDisplay(h)
   const rowAriaLabel =
     !handsListOn || !showHandCategoryLabels
-      ? `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points)}`
+      ? `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}${h.closed ? ', concealed' : ''}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points)}`
       : undefined
   const outerClass = [
     'hands-list__row-hit',
@@ -680,11 +751,7 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
                       segments={h.titleSegments}
                       deadCause={rowDeadCause}
                     />
-                    {h.closed ? (
-                      <span className="hands-list__card-c" aria-label="Concealed hand">
-                        C
-                      </span>
-                    ) : null}
+                    {h.closed ? <SuggestedHandConcealedMark variant="list" /> : null}
                     {(() => {
                       const paren = h.cardParenthesis?.trim()
                       if (paren) {
@@ -697,11 +764,7 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
                 ) : (
                   <>
                     {h.title}
-                    {h.closed ? (
-                      <span className="hands-list__card-c" aria-label="Concealed hand">
-                        C
-                      </span>
-                    ) : null}
+                    {h.closed ? <SuggestedHandConcealedMark variant="list" /> : null}
                   </>
                 )}
                 {rowDeadCause ? <SuggestedHandDeadCauseIcon cause={rowDeadCause} /> : null}
@@ -761,7 +824,7 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
         <div className="hands-list__cell hands-list__cell--values">
           <span
             className="hands-list__tiles-away hands-list__tiles-away--values-col"
-            aria-label={`Hand value ${formatSuggestedHandValue(h.points)}`}
+            aria-label={`Hand value ${formatSuggestedHandValue(h.points)}${h.closed ? ', concealed' : ''}`}
           >
             <SuggestedHandValueDisplay points={h.points} />
           </span>
@@ -828,6 +891,9 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
 }: Props) {
   const pinnedKeySet = useMemo(() => new Set(pinnedHandKeys), [pinnedHandKeys])
   const handsListScrollRef = useRef<HTMLDivElement>(null)
+  const selectedAwayBaselineKeyRef = useRef<string | null>(null)
+  const [selectedAwayBaseline, setSelectedAwayBaseline] =
+    useState<SelectedAwayBaseline | null>(null)
 
   const getTrayScrollTarget = useCallback((): HTMLElement | null => {
     const shell = handsListScrollRef.current
@@ -1195,6 +1261,47 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   }, [listRowsForHandsPanel, stripSlotRowsByKey, tilesGuideOn, pinnedHandKeys])
 
   useEffect(() => {
+    if (activePatternId == null) {
+      selectedAwayBaselineKeyRef.current = null
+      setSelectedAwayBaseline(null)
+      return
+    }
+
+    if (selectedAwayBaselineKeyRef.current === activePatternId) return
+
+    const activeRow = expandedHandsRows.find((row) => row.focusKey === activePatternId)
+    if (!activeRow) return
+
+    selectedAwayBaselineKeyRef.current = activePatternId
+    setSelectedAwayBaseline({
+      focusKey: activePatternId,
+      tilesAway: activeRow.line.tilesNeededRough,
+    })
+  }, [activePatternId, expandedHandsRows])
+
+  const activeAwayTrendState = useMemo<{
+    trend: SelectedHandAwayTrend
+    delta: number | null
+  }>(() => {
+    if (!activePatternId || selectedAwayBaseline?.focusKey !== activePatternId) {
+      return { trend: null, delta: null }
+    }
+    const activeRow = expandedHandsRows.find((row) => row.focusKey === activePatternId)
+    if (!activeRow || expandedHandsRows.length === 0) return { trend: null, delta: null }
+
+    const currentAway = activeRow.line.tilesNeededRough
+    if (currentAway < selectedAwayBaseline.tilesAway) {
+      return { trend: 'improved', delta: null }
+    }
+
+    const bestAway = Math.min(...expandedHandsRows.map((row) => row.line.tilesNeededRough))
+    if (bestAway < currentAway) {
+      return { trend: 'behind-best', delta: bestAway - currentAway }
+    }
+    return { trend: null, delta: null }
+  }, [activePatternId, expandedHandsRows, selectedAwayBaseline])
+
+  useEffect(() => {
     const scrollEl = getTrayScrollTarget()
     if (!scrollEl) return
     const onScroll = () => refreshScrollSnapshot()
@@ -1372,6 +1479,8 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                           key={row.reactKey}
                           row={row}
                           rowIsFocused={rowIsFocused}
+                          awayTrend={rowIsFocused ? activeAwayTrendState.trend : null}
+                          awayTrendDelta={rowIsFocused ? activeAwayTrendState.delta : null}
                           rowDeadCause={
                             rowIsFocused ? deadCauseByFocusKey[focusKey] ?? null : null
                           }

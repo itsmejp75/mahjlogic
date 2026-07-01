@@ -4502,25 +4502,38 @@ export default function App() {
 
   const showCallStagingDoneButton = canCommitStagedCallDone && !shouldHideCallStagingDoneButton
 
-  const suggestedRankInput = useMemo(
-    (): RankSuggestedHandsInput => ({
-      hand: deferredHand,
+  const suggestedRankInput = useMemo((): RankSuggestedHandsInput => {
+    let handForRank = deferredHand
+    if (mainPhase === 'call-staging' || mainPhase === 'bot-turn') {
+      if (stagedCallTileIds.length > 0) {
+        const staged = new Set(stagedCallTileIds)
+        handForRank = handForRank.filter((t) => !staged.has(t.id))
+      }
+      // Hand jokers bound for an open claim must not reduce tiles-away until the exposure commits.
+      if (activeBotDiscard) {
+        handForRank = handForRank.filter((t) => t.def.cat !== 'joker')
+      }
+    }
+    return {
+      hand: handForRank,
       wallRemaining: wall.length,
       discards: discardTiles,
       exposures: botExposures,
       playerClaimMelds: eastExposures,
       eastTableClaimMelds: eastExposures,
       patterns: cardPatterns,
-    }),
-    [
-      deferredHand,
-      wall.length,
-      discardTiles,
-      botExposures,
-      eastExposures,
-      cardPatterns,
-    ],
-  )
+    }
+  }, [
+    deferredHand,
+    mainPhase,
+    stagedCallTileIds,
+    activeBotDiscard,
+    wall.length,
+    discardTiles,
+    botExposures,
+    eastExposures,
+    cardPatterns,
+  ])
 
   const eastSuggestedHands = useMemo(() => {
     if (mainPhase === 'mahjong-declared' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand' || mainPhase === 'wall-game') return []

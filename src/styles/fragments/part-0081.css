@@ -834,16 +834,16 @@
   align-self: center;
 }
 
-/* NMJL card “C” (concealed) — compact red outline; `em` tracks the category hand line size. */
+/* NMJL card “C” (concealed) — compact red outline; `em` tracks parent metric size. */
 .hands-list__card-c {
   box-sizing: border-box;
   margin-left: 0;
-  padding: 0.02em 0.14em 0.04em;
+  padding: 0.01em 0.11em 0.03em;
   border: 1px solid var(--card-ink-red);
-  border-radius: 0.18em;
+  border-radius: 0.15em;
   line-height: 1;
   font-family: var(--font-concealed-c);
-  font-size: 0.58em;
+  font-size: 0.52em;
   font-weight: 700;
   letter-spacing: 0;
   color: var(--card-ink-red);
@@ -1382,6 +1382,40 @@
   text-overflow: clip;
 }
 
+.hands-sheet__away-trend {
+  display: block;
+  flex-shrink: 0;
+  width: 1.25em;
+  height: 1.25em;
+}
+
+.hands-sheet__away-trend-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  line-height: 1;
+}
+
+.hands-sheet__away-trend-delta {
+  flex-shrink: 0;
+  margin-inline-start: -0.1em;
+  font-size: 0.72em;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: #ff9f1a;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.hands-sheet__away-trend--improved {
+  color: #37d76b;
+}
+
+.hands-sheet__away-trend--behind-best {
+  color: #ff9f1a;
+}
+
 .hands-sheet > .hands-sheet__cell--values,
 .hands-sheet > .hands-sheet__rows .hands-sheet__row > *:last-child > .hands-sheet__cell--values,
 .hands-sheet > .hands-sheet__rows .hands-sheet__row > .hands-sheet__cell--values {
@@ -1838,6 +1872,17 @@
   grid-row: 1;
 }
 
+.hands-sheet__away-trend-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  pointer-events: none;
+}
+
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)
@@ -1851,6 +1896,26 @@
   padding: 0;
   padding-inline: var(--hands-sheet-metric-pad-x);
   text-align: center;
+  overflow: visible;
+  position: relative;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row:not(:has(.hands-sheet__hand-stack-detail))
+  .hands-sheet__away-trend-overlay {
+  top: 50%;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row-btn
+  > .hands-sheet__cell--away.hands-sheet__cell--detail-pad {
+  grid-column: 4;
+  padding: 0;
+  position: relative;
   overflow: visible;
 }
 
@@ -1887,15 +1952,6 @@
   .hands-sheet__cell--pin.hands-sheet__cell--detail-pad {
   grid-column: 1;
   padding-inline: 0;
-}
-
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__row-btn
-  > .hands-sheet__cell--away.hands-sheet__cell--detail-pad {
-  grid-column: 4;
-  padding-inline: var(--hands-sheet-metric-pad-x);
 }
 
 .hands-panel__content
@@ -2028,7 +2084,7 @@
   display: block;
   width: 100%;
   margin-inline-start: 0;
-  padding-block: 0.2em;
+  padding-block-end: 0.38em;
   /* em: secondary note under the hand line — smaller than Away/Points headers. */
   font-size: 0.68em;
   line-height: 1;
@@ -2040,24 +2096,20 @@
 
 .hands-sheet__card-c {
   box-sizing: border-box;
-  /* Matches the surrounding hand-title font size so the `C` reads at the same scale. */
-  font-size: 1em;
+  font-size: 0.85em;
   font-weight: 600;
   line-height: 1;
-  width: 1.15em;
-  height: 1.15em;
+  width: 1.02em;
+  height: 1.02em;
   margin-inline-start: 0.35em;
   padding: 0;
   border: 1px solid currentColor;
-  border-radius: 0.18em;
+  border-radius: 0.15em;
   color: var(--card-ink-red);
 }
 
-/* Points column: boxed C precedes the number — drop hand-line leading margin; tight gap before digits. */
-.hands-sheet__cell--values .hands-sheet__card-c,
-.hands-list__tiles-away--values-col .hands-list__card-c {
-  margin-inline-start: 0;
-  margin-inline-end: 0.08em;
+.hands-sheet__hand-title-line .hands-sheet__card-c {
+  align-self: center;
 }
 
 /* Tiles-only spreadsheet: tile strip | away | values. */
@@ -2482,7 +2534,7 @@
   width: 100%;
   margin-inline: 0;
   margin-top: 0.1em;
-  margin-bottom: 0;
+  margin-bottom: 0.18em;
   padding: 0;
   font-size: 0.68em;
   opacity: 0.72;

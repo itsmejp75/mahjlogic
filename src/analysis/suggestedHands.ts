@@ -24,7 +24,7 @@ import { suggestedHandSectionMenuLabel } from '../suggestedHands/filterSettings'
 import type { BotExposure } from './types'
 import {
   claimMeldsFitPracticePattern,
-  tileInstancesWithClaimMeldJokersResolved,
+  tileInstancesWithClaimMeldJokersResolvedForTilesAway,
 } from './eastExposurePatternFit'
 import {
   addDeadHintNeed,
@@ -46,12 +46,12 @@ function tableVisibleTiles(
   ]
 }
 
-/** Hand + claim melds for `computeGroupMatch` / greedy detail: exposure jokers use their meld tile. */
+/** Hand + claim melds for tiles-away: flower-meld jokers stay off the rack; other melds resolve jokers. */
 function rackForPatternWithClaimMelds(
   hand: TileInstance[],
   playerClaimMelds: ReadonlyArray<{ tiles: TileInstance[] }>,
 ): TileInstance[] {
-  return tileInstancesWithClaimMeldJokersResolved(hand, playerClaimMelds)
+  return tileInstancesWithClaimMeldJokersResolvedForTilesAway(hand, playerClaimMelds)
 }
 
 function pressureLabel(need: number, wall: number): SuggestedHandLine['pressure'] {
@@ -143,6 +143,11 @@ type GroupMatchOpts = {
    * `shared-rank-suits` group (e.g. ANY LIKE NUMBERS) fixes the like-number rank to that exposure.
    */
   exposureTileIds?: ReadonlySet<string>
+  /**
+   * When true, a suit-permute color group made only of non-joker run singles (e.g. 234) is credited
+   * only if every rank in that group is available on the rack — partial runs do not reduce tiles-away.
+   */
+  requireCompleteRunSingles?: boolean
 }
 
 /**
@@ -386,6 +391,29 @@ function pickBestOddPairKongsTriple(
   return { pairRank: bestPairRank, perm: bestPerm }
 }
 
+function isRunSinglesColorGroup(
+  slots: ReadonlyArray<{ need: number; canUseJoker?: boolean }>,
+): boolean {
+  return slots.length >= 2 && slots.every((sg) => sg.need === 1 && !sg.canUseJoker)
+}
+
+function runSinglesColorGroupFullyAvailable(
+  remaining: readonly TileInstance[],
+  suit: Suit,
+  slots: ReadonlyArray<{ rank: number; need: number }>,
+  base: number,
+): boolean {
+  for (const sg of slots) {
+    const rank = sg.rank - 1 + base
+    let c = 0
+    for (const t of remaining) {
+      if (t.def.cat === 'suit' && t.def.suit === suit && t.def.rank === rank) c++
+    }
+    if (c < sg.need) return false
+  }
+  return true
+}
+
 function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: GroupMatchOpts): number {
   const remaining = [...hand]
   let total = 0
@@ -496,7 +524,8 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
         }
         const m = take(pred, g.need)
         total += m
-        noteJokerSlots(g.need, m)
+        // NMJL: jokers never substitute for flowers ({@link meldDefIsJokerEligible}).
+        noteJokerSlots(g.need, m, g.test({ cat: 'flower', flower: 1 }))
         break
       }
 
@@ -975,7 +1004,15 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
         // Remove matched tiles for the best (permutation, base) and track unfilled joker slots.
         for (let ci = 0; ci < n; ci++) {
           const s = bestPerm[ci] as Suit
-          for (const sg of g.colorGroups[ci]!) {
+          const slots = g.colorGroups[ci]!
+          if (
+            opts?.requireCompleteRunSingles &&
+            isRunSinglesColorGroup(slots) &&
+            !runSinglesColorGroupFullyAvailable(remaining, s, slots, bestBase)
+          ) {
+            continue
+          }
+          for (const sg of slots) {
             const rank = sg.rank - 1 + bestBase
             const matched = take(
               d => d.cat === 'suit' && d.suit === s && d.rank === rank,
@@ -4980,8 +5017,11 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
   const rackForPattern = rackForPatternWithClaimMelds(hand, playerClaimMelds)
   const exposureTileIds: ReadonlySet<string> | undefined =
     hasPlayerClaimMelds ? new Set(playerClaimMelds.flatMap((e) => e.tiles).map((t) => t.id)) : undefined
-  const groupMatchExposureOpts: Pick<GroupMatchOpts, 'exposureTileIds'> =
-    exposureTileIds && exposureTileIds.size > 0 ? { exposureTileIds } : {}
+  const groupMatchExposureOpts: Pick<GroupMatchOpts, 'exposureTileIds' | 'requireCompleteRunSingles'> =
+    {
+      requireCompleteRunSingles: true,
+      ...(exposureTileIds && exposureTileIds.size > 0 ? { exposureTileIds } : {}),
+    }
   const greedyExposureOpts: GreedyPatternMatchOpts | undefined =
     exposureTileIds && exposureTileIds.size > 0 ? { exposureTileIds } : undefined
   const visible = tableVisibleTiles(discards, exposures, eastTableClaimMelds)

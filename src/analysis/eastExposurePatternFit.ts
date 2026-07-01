@@ -90,6 +90,25 @@ export function tileInstancesWithClaimMeldJokersResolved(
   return [...hand.map(mapOne), ...claimMelds.flatMap((e) => e.tiles.map(mapOne))]
 }
 
+/**
+ * Rack merge for **tiles-away** only. Jokers in a flower exposure never substitute for flowers
+ * (NMJL) and are omitted from the rack so they cannot inflate FFF or suit groups before the line
+ * is committed. Suit/dragon/wind melds still resolve jokers to their stand-in tile.
+ */
+export function tileInstancesWithClaimMeldJokersResolvedForTilesAway(
+  hand: TileInstance[],
+  claimMelds: ReadonlyArray<{ tiles: TileInstance[] }>,
+): TileInstance[] {
+  const meldsForAway = claimMelds.map((exp) => {
+    const anchor = exp.tiles.find((t) => t.def.cat !== 'joker')
+    if (anchor?.def.cat === 'flower') {
+      return { tiles: exp.tiles.filter((t) => t.def.cat !== 'joker') }
+    }
+    return exp
+  })
+  return tileInstancesWithClaimMeldJokersResolved(hand, meldsForAway)
+}
+
 function normalizeExposureTiles(exposures: ReadonlyArray<{ tiles: TileInstance[] }>): TileDef[] {
   const out: TileDef[] = []
   for (const exp of exposures) {
