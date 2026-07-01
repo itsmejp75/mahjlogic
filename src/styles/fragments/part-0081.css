@@ -825,7 +825,7 @@
 .hands-list__paren {
   margin-left: 0.28em;
   /* em: tracks .hands-list__title font-size (including list scale on suggested hands). */
-  font-size: 0.79em;
+  font-size: 0.68em;
   font-weight: 500;
   line-height: 1.15;
   opacity: 0.72;
@@ -1049,7 +1049,7 @@
   height: 100%;
   width: 100%;
   max-width: none;
-  border-radius: clamp(0.1rem, calc(0.12 * var(--hands-strip-em)), 0.35rem);
+  border-radius: var(--hands-strip-tile-radius, calc(0.116 * var(--hands-preview-tile-w)));
 }
 
 .hands-list__pattern-tile-cell {
@@ -1062,6 +1062,9 @@
   width: var(--hands-preview-tile-w);
   height: var(--hands-preview-tile-h);
   min-width: 0;
+  --hands-strip-tile-radius: calc(0.116 * var(--hands-preview-tile-w));
+  border-radius: var(--hands-strip-tile-radius);
+  overflow: hidden;
   /* Grid + size container: face fills the slot so row fill does not show as a “frame”. */
   container-type: size;
   display: grid;
@@ -1077,24 +1080,27 @@
   min-height: 0;
   --rack-tile-w: 100cqw;
   --rack-tile-h: 100cqh;
-  border-radius: calc(0.116 * var(--rack-tile-w));
+  --tile-face-border-radius: var(--hands-strip-tile-radius);
+  border-radius: var(--hands-strip-tile-radius);
+  overflow: hidden;
   text-align: center;
   /* No hairline border — on dark rows it reads as an unwanted “surround”; highlight uses inset ring only. */
   border: none;
 }
 
-/* Single crisp inset ring on the face edge (no soft vignette stack — avoids a second “rim” past the tile). */
-.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-best .tile-face {
-  border-radius: clamp(0.1rem, calc(0.12 * var(--hands-strip-em)), 0.35rem);
-  --tile-face-highlight-inset: 0 0 0 0 transparent;
-  --tile-face-highlight-shadow: var(--suggest-best-ring);
-  border: none;
-}
-
-.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker .tile-face {
-  border-radius: clamp(0.1rem, calc(0.12 * var(--hands-strip-em)), 0.35rem);
+/* Coaching rings: front border on face `::after` (part-0075) — not inset face shadow. */
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-best .tile-face,
+.hands-sheet__tile-cell--suggest-best .tile-face,
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker .tile-face,
+.hands-sheet__tile-cell--suggest-joker .tile-face,
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--dead-cause .tile-face,
+.hands-sheet__tile-cell--dead-cause .tile-face {
   --tile-face-highlight-inset: 0 0 0 0 transparent;
   --tile-face-highlight-shadow: 0 0 0 0 transparent;
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+  border-radius: max(var(--tile-face-border-radius), var(--hands-coaching-ring-radius-min, 0.22rem));
+  overflow: hidden;
+  filter: none;
   border: none;
 }
 
@@ -1106,6 +1112,13 @@
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim .tile-face:not(.tile--joker)::after,
 .hands-sheet__tile-cell--suggest-dim .tile-face:not(.tile--joker)::after {
   box-shadow: none;
+}
+
+.hands-list__row-hit--with-tiles
+  .hands-list__pattern-tile-cell--dead-cause.hands-list__pattern-tile-cell--suggest-dim
+  .tile-face:not(.tile--joker)::after,
+.hands-sheet__tile-cell--dead-cause.hands-sheet__tile-cell--suggest-dim .tile-face:not(.tile--joker)::after {
+  box-shadow: var(--dead-cause-border-front);
 }
 
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim .tile-face.tile--joker,
@@ -1602,7 +1615,7 @@
 /*
  * Hands-only detail row (parenthetical / tile strip): painting the combined cell as one
  * block spans both grid rows and covers the row-2 ::before divider. Split the active fill
- * across line 1 / line 2 children; pad + spacer cells carry the fill in pin / metric cols.
+ * across line 1 / line 2 children; pad cells carry the fill in pin / metric cols.
  */
 .hands-panel__content
   .hands-list-scroll
@@ -1669,7 +1682,7 @@
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)
   .hands-sheet__row--active
-  > :is(.hands-sheet__cell--detail-pad, .hands-sheet__row-spacer),
+  > .hands-sheet__cell--detail-pad,
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)
@@ -1732,7 +1745,6 @@
  * when columns / rows move around.
  */
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__row {
-  --hands-sheet-spacer-row-h: 0.38em;
   display: grid;
   grid-column: 1 / -1;
   grid-template-columns: subgrid;
@@ -1744,13 +1756,6 @@
   > .hands-sheet:not(.hands-sheet--tiles2)
   .hands-sheet__row:not(:has(.hands-sheet__hand-stack-detail)) {
   grid-template-rows: auto;
-}
-
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__row:has(> .hands-sheet__row-spacer) {
-  grid-template-rows: auto auto var(--hands-sheet-spacer-row-h);
 }
 
 .hands-panel__content
@@ -1790,15 +1795,6 @@
   width: auto;
   min-height: 0;
   border-block-end: var(--hands-sheet-debug-grid-border);
-  pointer-events: none;
-  z-index: 7;
-}
-
-.hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__row-spacer {
-  grid-column: 1 / -1;
-  grid-row: 3;
-  min-height: var(--hands-sheet-spacer-row-h);
-  border-block-start: var(--hands-sheet-debug-grid-border);
   pointer-events: none;
   z-index: 7;
 }
@@ -2018,13 +2014,22 @@
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__hand-title-line
+  .hands-list__dead-cause-icon {
+  align-self: center;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
   .hands-sheet__hand-stack-detail
   .hands-sheet__paren {
   display: block;
   width: 100%;
   margin-inline-start: 0;
   padding-block: 0.2em;
-  font-size: var(--hands-metric-column-header-fs);
+  /* em: secondary note under the hand line — smaller than Away/Points headers. */
+  font-size: 0.68em;
   line-height: 1;
   opacity: 0.72;
   text-align: left;
@@ -2184,7 +2189,9 @@
   flex: 0 0 auto;
   width: var(--hands-sheet-tile-w);
   height: var(--hands-sheet-tile-h);
-  border-radius: calc(0.116 * var(--hands-sheet-tile-w));
+  --hands-sheet-tile-radius: calc(0.116 * var(--hands-sheet-tile-w));
+  border-radius: var(--hands-sheet-tile-radius);
+  overflow: hidden;
   transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   container-type: size;
   display: grid;
@@ -2204,42 +2211,15 @@
   min-height: 0;
   --rack-tile-w: 100cqw;
   --rack-tile-h: 100cqh;
-  --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
-  border-radius: var(--tile-face-border-radius);
+  --tile-face-border-radius: var(--hands-sheet-tile-radius);
+  border-radius: var(--hands-sheet-tile-radius);
   border: none;
 }
 
-/* Same edge-aligned ring as the list strip (no soft vignette stack). */
-.hands-sheet__tile-cell--suggest-best .tile-face {
-  --tile-face-highlight-inset: 0 0 0 0 transparent;
-  --tile-face-highlight-shadow: var(--suggest-best-ring);
-  border: none;
-}
-
-.hands-sheet__tile-cell--suggest-joker .tile-face {
-  --tile-face-highlight-inset: 0 0 0 0 transparent;
-  --tile-face-highlight-shadow: 0 0 0 0 transparent;
-  border: none;
-}
-
-/*
- * Joker-stand-in preview slots: 2px dotted green ring (same ink as suggest-best border).
- * Square corners — no radius on the ring itself.
- */
-:is(
-  .hands-sheet__tile-cell--suggest-joker,
-  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker
-)::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  grid-area: 1 / 1;
-  z-index: 6;
-  box-sizing: border-box;
-  border-radius: 0;
-  pointer-events: none;
-  border: 2px dotted var(--tg-bam, var(--card-ink-green));
-  background: transparent;
+.hands-sheet__tile-cell--suggest-best .tile-face,
+.hands-sheet__tile-cell--suggest-joker .tile-face,
+.hands-sheet__tile-cell--dead-cause .tile-face {
+  border-radius: var(--hands-sheet-tile-radius);
 }
 
 .hands-sheet__tile-cell .tile-face:not(.tile--joker)::after {
@@ -2503,7 +2483,7 @@
   margin-top: 0.1em;
   margin-bottom: 0;
   padding: 0;
-  font-size: 0.9em;
+  font-size: 0.68em;
   opacity: 0.72;
   text-align: left;
 }
@@ -2871,6 +2851,7 @@
   min-width: 0;
   max-width: 100%;
   justify-content: center;
+  align-items: center;
 }
 
 .hands-panel__content .hands-list__tiles-away {
@@ -3090,7 +3071,7 @@
 .exposure-rack__slot--suggest-best .tile-face {
   border-radius: 0.35rem;
   --tile-face-highlight-inset: 0 0 0 0 transparent;
-  --tile-face-highlight-shadow: var(--suggest-best-ring);
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
 }
 
 .exposure-rack__slot--called .tile-face {

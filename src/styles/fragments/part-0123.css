@@ -1067,7 +1067,9 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .panel--hand
   .panel-hand-rack__hand-tray
   .hand-row
-  > .sortable-tile-wrap:not(.sortable-tile-wrap--suggest-best):not(.sortable-tile-wrap--blank-exchange-hint)
+  > .sortable-tile-wrap:not(.sortable-tile-wrap--suggest-best):not(.sortable-tile-wrap--blank-exchange-hint):not(
+    .sortable-tile-wrap--suggest-dead-cause
+  )
   .tile-face:not(.tile--joker)::after {
   content: none !important;
   display: none !important;
@@ -1079,7 +1081,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 .app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--suggest-best .tile-face:not(.tile--joker) {
   filter: none;
-  --tile-face-highlight-shadow: var(--suggest-best-ring);
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
 }
 
 .app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--blank-exchange-hint .tile-face:not(.tile--joker) {
@@ -1120,14 +1122,14 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 .panel--hand .rack-stage__rack-top .exposure-rack__call-meld-strip__tile.exposure-rack__slot--suggest-best
   .tile-face:not(.tile--joker) {
   filter: none;
-  --tile-face-highlight-shadow: var(--suggest-best-ring);
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
 }
 
 /* Charleston pass + discard staging use pass/staging wrappers (not only exposure-rack__slot--suggest-best). */
 .panel--hand .rack-stage__rack-top .pass-strip__tile-wrap--suggest-best .tile-face:not(.tile--joker),
 .panel--hand .rack-stage__rack-top .east-discard-staging__tile--suggest-best .tile-face:not(.tile--joker) {
   filter: none;
-  --tile-face-highlight-shadow: var(--suggest-best-ring);
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
 }
 
 /* Bakelite / designer: keep inset edge highlights; drop only the outer depth on the hand row. */

@@ -3447,8 +3447,6 @@ export default function App() {
     >
   >({})
   const [suggestedPanelHandsOn, setSuggestedPanelHandsOn] = useState(false)
-  /** Vertical peek (px): drag suggested-hands header down to reveal more of the discard strip above the sheet. */
-  const [suggestedDiscardOverlayPeekPx, setSuggestedDiscardOverlayPeekPx] = useState(0)
   const suggestedHandsPopupRef = useRef<HTMLDivElement>(null)
   const eastExposureRackTopRef = useRef<HTMLDivElement>(null)
   const handPanelRef = useRef<HTMLElement>(null)
@@ -3464,7 +3462,6 @@ export default function App() {
     viewportWidthPx: 0,
     viewportBottomPx: 0,
   })
-  const suggestedDiscardOverlayInitialPeekPendingRef = useRef(false)
   const [suggestedPinnedHandKeys, setSuggestedPinnedHandKeys] = useState<string[]>([])
   const toggleSuggestedPinnedHandKey = useCallback((key: string) => {
     setSuggestedPinnedHandKeys((prev) =>
@@ -3488,9 +3485,6 @@ export default function App() {
   const deferredSuggestedPanelTilesOn = useDeferredValue(suggestedPanelTilesOn)
   const toggleSuggestedPanelTilesOn = useCallback(() => {
     setSuggestedPanelTilesOn((v) => !v)
-  }, [])
-  const closeSuggestedPanelHandsOn = useCallback(() => {
-    setSuggestedPanelHandsOn(false)
   }, [])
   const [suggestedHandsUncheckedSections, setSuggestedHandsUncheckedSections] = useState<Set<string>>(
     () => readUncheckedSectionsFromStorage(),
@@ -7648,20 +7642,6 @@ export default function App() {
   const showSuggestedHandsPanel =
     mainPhase !== 'dead-hand' && mainPhase !== 'bot-mahjong'
 
-  useLayoutEffect(() => {
-    if (suggestedPanelHandsOn) {
-      suggestedDiscardOverlayInitialPeekPendingRef.current = true
-      return
-    }
-    suggestedDiscardOverlayInitialPeekPendingRef.current = false
-    /* Reset peek after the sheet close transition — immediate reset changes `max-height` mid-slide and reads jerky. */
-    const peekResetMs = 320
-    const t = window.setTimeout(() => {
-      setSuggestedDiscardOverlayPeekPx(0)
-    }, peekResetMs)
-    return () => window.clearTimeout(t)
-  }, [suggestedPanelHandsOn])
-
   const updateSuggestedDiscardOverlayBounds = useCallback(() => {
     const popup = suggestedHandsPopupRef.current
     const exposureTopEl = eastExposureRackTopRef.current
@@ -7722,20 +7702,6 @@ export default function App() {
         ? prev
         : next,
     )
-    if (suggestedDiscardOverlayInitialPeekPendingRef.current) {
-      /* Peek 0 + CSS top-extend = flush to discard content top; drag adjusts peek only. */
-      setSuggestedDiscardOverlayPeekPx(0)
-      suggestedDiscardOverlayInitialPeekPendingRef.current = false
-    } else {
-      setSuggestedDiscardOverlayPeekPx((prev) => {
-        const maxPeek = Math.max(
-          0,
-          next.contentHeightPx - SUGGESTED_DISCARD_OVERLAY_MIN_SHEET_PX,
-        )
-        const clamped = Math.max(-next.topExtendPx, Math.min(maxPeek, prev))
-        return clamped === prev ? prev : clamped
-      })
-    }
   }, [])
 
   useLayoutEffect(() => {
@@ -7813,7 +7779,7 @@ export default function App() {
     if (!showSuggestedHandsPanel) return null
 
     const overlayStyle: CSSProperties = {
-      ['--suggested-overlay-top-peek' as string]: `${suggestedDiscardOverlayPeekPx}px`,
+      ['--suggested-overlay-top-peek' as string]: '0px',
       ['--suggested-overlay-content-h' as string]: `${suggestedDiscardOverlayBounds.contentHeightPx}px`,
       ['--suggested-overlay-top-extend' as string]: `${suggestedDiscardOverlayBounds.topExtendPx}px`,
       ['--suggested-overlay-bottom-extend' as string]: `${suggestedDiscardOverlayBounds.bottomExtendPx}px`,
@@ -7831,9 +7797,6 @@ export default function App() {
           'suggested-hands-popup',
           'suggested-hands-popup--discard-overlay',
           suggestedPanelHandsOn ? 'suggested-hands-popup--open' : '',
-          suggestedPanelHandsOn && suggestedDiscardOverlayPeekPx < 0
-            ? 'suggested-hands-popup--peek-above'
-            : '',
         ]
           .filter(Boolean)
           .join(' ')}
@@ -7845,10 +7808,6 @@ export default function App() {
       >
         <SuggestedHandsPanel
           discardTraySurface
-          discardOverlayPeekPx={suggestedDiscardOverlayPeekPx}
-          onDiscardOverlayPeekPxChange={setSuggestedDiscardOverlayPeekPx}
-          discardOverlayMeasureRef={suggestedHandsPopupRef}
-          onTrayHeaderClick={closeSuggestedPanelHandsOn}
           onPinnedPatternChange={toggleSuggestedPinnedHandKey}
           hands={eastSuggestedHands}
           activePatternId={suggestedFocusHandKey}
@@ -8860,9 +8819,6 @@ export default function App() {
               className={[
                 'app-dnd-frame',
                 suggestedPanelHandsOn ? 'app-dnd-frame--suggested-hands-open' : '',
-                suggestedPanelHandsOn && suggestedDiscardOverlayPeekPx < 0
-                  ? 'app-dnd-frame--suggested-hands-peek-above'
-                  : '',
               ]
                 .filter(Boolean)
                 .join(' ')}

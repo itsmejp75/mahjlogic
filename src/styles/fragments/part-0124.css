@@ -88,7 +88,7 @@
 /* Ivory + illustrative classic: green coaching ring (not the default white rack ring). */
 .app[data-tile-graphics='classic'],
 .app[data-tile-graphics='illustrative-classic'] {
-  --illustrative-suggest-best-border: 2px solid var(--tile-highlight-border);
+  --illustrative-suggest-best-border: inset 0 0 0 2px var(--tile-highlight-border);
 }
 
 /*
@@ -99,7 +99,7 @@
 .app[data-tile-graphics='illustrative-classic']
   .panel--discard-tracker
   :is(.discard-tracker__overlay-grid, .discard-pile) {
-  --illustrative-suggest-best-border: 2px solid rgba(255, 255, 255, 0.68);
+  --illustrative-suggest-best-border: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
 }
 
 .app[data-tile-graphics='illustrative-classic']
@@ -154,7 +154,6 @@
   border-radius: inherit;
   pointer-events: none;
   background: transparent;
-  box-shadow: none;
   opacity: 1;
 }
 
@@ -170,7 +169,8 @@
     .discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-need
   )
   .tile-face.tile-face--illustrative-art::after {
-  border: var(--illustrative-suggest-best-border);
+  border: none;
+  box-shadow: var(--illustrative-suggest-best-border);
 }
 
 .app[data-tile-graphics='illustrative-classic']
@@ -212,91 +212,51 @@
   padding-bottom: 0;
   z-index: 5;
   box-sizing: border-box;
-  border: var(--illustrative-suggest-best-border);
+  border: none;
+  box-shadow: var(--illustrative-suggest-best-border);
   border-radius: inherit;
   pointer-events: none;
   background: transparent;
-  box-shadow: none;
   opacity: 1;
 }
 
 /*
- * Suggested-hands strip + sheet: paint the green coaching ring on the tile CELL (not the face
- * box-shadow). Full-bleed illustrative `<img>` art occludes face `::after` rings on ivory faces;
- * card-skin winds were the only tiles that still showed a ring (green box-shadow) while suits /
- * dragons looked unhighlighted. Cells use the same grid slot as `.tile-face` so the border stacks
- * above the art; per-face inset shadows are cleared to avoid a second (white) ring.
- *
- * Ring + face share one radius via the cell (inherit chain). Pattern-strip wrappers had no corner
- * curve; illustrative faces inside the discard overlay were picking up tracker
- * `--tile-face-border-radius` instead of the mini-tile size.
+ * Illustrative classic: clear face-level rings (cell overlay in part-0081 paints above art).
  */
 .app[data-tile-graphics='classic'] .hands-list__row-hit--with-tiles
-  .hands-list__pattern-tile-cell--suggest-best,
-.app[data-tile-graphics='illustrative-classic']
-  .hands-list__row-hit--with-tiles
-  .hands-list__pattern-tile-cell--suggest-best,
-.app[data-tile-graphics='classic'] .hands-sheet__tile-cell--suggest-best,
-.app[data-tile-graphics='illustrative-classic'] .hands-sheet__tile-cell--suggest-best {
-  border-radius: clamp(0.1rem, calc(0.12 * var(--hands-strip-em)), 0.35rem);
-}
-
-.app[data-tile-graphics='classic'] .hands-list__row-hit--with-tiles
-  .hands-list__pattern-tile-cell--suggest-joker,
-.app[data-tile-graphics='illustrative-classic']
-  .hands-list__row-hit--with-tiles
-  .hands-list__pattern-tile-cell--suggest-joker,
-.app[data-tile-graphics='classic'] .hands-sheet__tile-cell--suggest-joker,
-.app[data-tile-graphics='illustrative-classic'] .hands-sheet__tile-cell--suggest-joker {
-  border-radius: clamp(0.1rem, calc(0.12 * var(--hands-strip-em)), 0.35rem);
-}
-
-.app[data-tile-graphics='classic'] .hands-list__row-hit--with-tiles
-  .hands-list__pattern-tile-cell--suggest-best::after,
-.app[data-tile-graphics='illustrative-classic']
-  .hands-list__row-hit--with-tiles
-  .hands-list__pattern-tile-cell--suggest-best::after,
-.app[data-tile-graphics='classic'] .hands-sheet__tile-cell--suggest-best::after,
-.app[data-tile-graphics='illustrative-classic'] .hands-sheet__tile-cell--suggest-best::after {
-  content: '';
-  display: block;
-  position: absolute;
-  inset: 0;
-  grid-area: 1 / 1;
-  align-self: stretch;
-  justify-self: stretch;
-  width: auto;
-  height: auto;
-  z-index: 6;
-  box-sizing: border-box;
-  border: 2px solid var(--card-ink-green, #52B147);
-  border-radius: inherit;
-  pointer-events: none;
-  background: transparent;
-}
-
-.app[data-tile-graphics='classic'] .hands-list__row-hit--with-tiles
   .hands-list__pattern-tile-cell--suggest-best
-  .tile-face,
+  .tile-face.tile-face--illustrative-art,
 .app[data-tile-graphics='illustrative-classic']
   .hands-list__row-hit--with-tiles
   .hands-list__pattern-tile-cell--suggest-best
-  .tile-face,
-.app[data-tile-graphics='classic'] .hands-sheet__tile-cell--suggest-best .tile-face,
-.app[data-tile-graphics='illustrative-classic'] .hands-sheet__tile-cell--suggest-best .tile-face,
-.app[data-tile-graphics='classic'] .hands-sheet__tile-cell--suggest-joker .tile-face,
-.app[data-tile-graphics='illustrative-classic'] .hands-sheet__tile-cell--suggest-joker .tile-face,
+  .tile-face.tile-face--illustrative-art,
+.app[data-tile-graphics='classic'] .hands-sheet__tile-cell--suggest-best .tile-face.tile-face--illustrative-art,
+.app[data-tile-graphics='illustrative-classic'] .hands-sheet__tile-cell--suggest-best .tile-face.tile-face--illustrative-art,
+.app[data-tile-graphics='classic'] .hands-sheet__tile-cell--suggest-joker .tile-face.tile-face--illustrative-art,
+.app[data-tile-graphics='illustrative-classic'] .hands-sheet__tile-cell--suggest-joker .tile-face.tile-face--illustrative-art,
 .app[data-tile-graphics='classic']
   .hands-list__row-hit--with-tiles
   .hands-list__pattern-tile-cell--suggest-joker
-  .tile-face,
+  .tile-face.tile-face--illustrative-art,
 .app[data-tile-graphics='illustrative-classic']
   .hands-list__row-hit--with-tiles
   .hands-list__pattern-tile-cell--suggest-joker
-  .tile-face {
-  border-radius: inherit;
+  .tile-face.tile-face--illustrative-art,
+.app[data-tile-graphics='classic'] .hands-sheet__tile-cell--dead-cause .tile-face.tile-face--illustrative-art,
+.app[data-tile-graphics='illustrative-classic'] .hands-sheet__tile-cell--dead-cause .tile-face.tile-face--illustrative-art,
+.app[data-tile-graphics='classic']
+  .hands-list__row-hit--with-tiles
+  .hands-list__pattern-tile-cell--dead-cause
+  .tile-face.tile-face--illustrative-art,
+.app[data-tile-graphics='illustrative-classic']
+  .hands-list__row-hit--with-tiles
+  .hands-list__pattern-tile-cell--dead-cause
+  .tile-face.tile-face--illustrative-art {
+  border-radius: var(--hands-strip-tile-radius, var(--hands-sheet-tile-radius));
   --tile-face-highlight-inset: 0 0 0 0 transparent;
   --tile-face-highlight-shadow: 0 0 0 0 transparent;
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+  filter: none;
 }
 
 /* Player hand exposures: meld group border only — no per-tile rings on SVG faces. */
@@ -332,11 +292,11 @@
   padding-bottom: 0;
   z-index: 5;
   box-sizing: border-box;
-  border: var(--illustrative-suggest-best-border);
+  border: none;
+  box-shadow: var(--illustrative-suggest-best-border);
   border-radius: inherit;
   pointer-events: none;
   background: transparent;
-  box-shadow: none;
   opacity: 1;
 }
 
@@ -373,11 +333,11 @@
   padding-bottom: 0;
   z-index: 5;
   box-sizing: border-box;
-  border: var(--illustrative-suggest-best-border);
+  border: none;
+  box-shadow: var(--illustrative-suggest-best-border);
   border-radius: inherit;
   pointer-events: none;
   background: transparent;
-  box-shadow: none;
   opacity: 1;
 }
 
@@ -987,7 +947,6 @@
   border-radius: inherit;
   pointer-events: none;
   background: transparent;
-  box-shadow: none;
   opacity: 1;
 }
 

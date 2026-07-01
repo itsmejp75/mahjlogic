@@ -106,6 +106,23 @@
   --simple-joker-yellow: #ffc107;
   --illustrative-blank-exchange-hint-border: 2px solid var(--simple-joker-yellow);
   --blank-exchange-hint-ring: inset 0 0 0 2px var(--simple-joker-yellow);
+  --dead-cause-warning: #f97316;
+  --dead-cause-warning-ink: #9a3412;
+  --dead-cause-warn-icon-fill: #facc15;
+  --dead-cause-border-front: inset 0 0 0 var(--hands-coaching-ring-w) var(--dead-cause-warning);
+  --dead-cause-ring: inset 0 0 0 1px var(--dead-cause-warning);
+  --dead-cause-border: 2px solid var(--dead-cause-warning);
+  --hands-coaching-ring-w: 2px;
+  --hands-coaching-ring-radius-min: 0.22rem;
+  --hands-coaching-ring-green: var(--card-ink-green, #52B147);
+  --hands-coaching-ring-joker: var(--simple-joker-yellow, #ffc107);
+  --hands-coaching-ring-dead-cause: var(--dead-cause-warning);
+  --hands-coaching-ring-green-inset: inset 0 0 0 1px var(--hands-coaching-ring-green);
+  --hands-coaching-ring-joker-inset: inset 0 0 0 1px var(--hands-coaching-ring-joker);
+  /* Front rings: inset shadow on face `::after` (z-index 5) — tracks corner radius; `border` reads square inside on mini tiles. */
+  --hands-coaching-ring-green-front: inset 0 0 0 var(--hands-coaching-ring-w) var(--hands-coaching-ring-green);
+  --hands-coaching-ring-joker-front: inset 0 0 0 var(--hands-coaching-ring-w) var(--hands-coaching-ring-joker);
+  --hands-coaching-ring-dead-cause-inset: inset 0 0 0 1px var(--dead-cause-warning);
   --tile-highlight-lift-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
   /* Joker swap hint: wait from turn start (hint active) before dock bounce (see keyframes). */
   --joker-swap-hint-bounce-delay: 500ms;

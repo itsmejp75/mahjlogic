@@ -93,16 +93,68 @@
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  cursor: grab;
+  touch-action: pan-y;
 }
 
-/* Hands-only sheet: body scroll lives on `.hands-sheet__rows` (part-0081), not the outer shell. */
-.suggested-hands-popup .hands-list-scroll:has(> .hands-sheet:not(.hands-sheet--tiles2)) {
-  overflow-y: visible;
+.suggested-hands-popup .hands-list-scroll.hands-list-scroll--drag-scrolling {
+  cursor: grabbing;
+  user-select: none;
 }
 
-/* Discard overlay: hands-only spreadsheet — slightly tighter horizontal cell padding on narrow widths. */
+.suggested-hands-popup .hands-list-scroll.hands-list-scroll--drag-scrolling * {
+  cursor: grabbing !important;
+}
+
+.suggested-hands-popup .hands-list-scroll .hands-sheet__row-btn,
+.suggested-hands-popup .hands-list-scroll .hands-list__row-hit {
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+.suggested-hands-popup .hands-list-scroll .hands-suggested-pin {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/*
+ * Hands-only sheet: keep scroll on `.hands-sheet__rows` (part-0081) so the header row stays
+ * fixed above the scroller — grid lines never pass under Away / Points. Grab / wheel on the
+ * header band is forwarded to `.hands-sheet__rows` in SuggestedHandsPanel.
+ */
 .suggested-hands-popup .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) {
   --hands-sheet-cell-pad-x: 0.52em;
+}
+
+.app .suggested-hands-popup
+  .hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  > .hands-sheet__cell--header,
+.app .suggested-hands-popup .hands-list-scroll > .hands-list__freeze-header.hands-list__row-hit {
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+.app .suggested-hands-popup
+  .hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  > .hands-sheet__rows {
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+.suggested-hands-popup .hands-list-scroll > .hands-list {
+  overflow-y: visible;
+  flex: 0 0 auto;
+  min-height: auto;
+}
+
+.suggested-hands-popup .hands-list-scroll > .hands-list__freeze-header,
+.suggested-hands-popup .hands-list-scroll > .hands-list__freeze-header.hands-list__row-hit {
+  cursor: grab;
+  touch-action: pan-y;
 }
 
 /*

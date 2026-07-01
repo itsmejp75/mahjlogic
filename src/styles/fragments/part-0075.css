@@ -52,7 +52,7 @@
 /* Drag preview: keep focused suggested-hand ring while dragging to pass / discard / rack. */
 .drag-overlay-tile.sortable-tile-wrap--suggest-best .tile-face:not(.tile--joker) {
   --tile-face-highlight-inset: 0 0 0 0 transparent;
-  --tile-face-highlight-shadow: var(--suggest-best-ring);
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
   box-shadow: var(--tile-face-base-shadow, 0 0 0 0 transparent), var(--tile-face-highlight-inset),
     var(--tile-face-highlight-shadow), var(--tile-face-suggest-dim-inset, 0 0 0 0 transparent);
 }
@@ -323,7 +323,7 @@
 .sortable-tile-wrap--suggest-best .tile-face {
   border-radius: var(--tile-face-border-radius);
   --tile-face-highlight-inset: 0 0 0 0 transparent;
-  --tile-face-highlight-shadow: var(--suggest-best-ring);
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
 }
 
 .sortable-tile-wrap--blank-exchange-hint .tile-face {
@@ -363,6 +363,171 @@
 
 .sortable-tile-wrap--suggest-dim.sortable-tile-wrap--blank-exchange-hint .tile-face {
   opacity: 1;
+}
+
+/*
+ * Coaching rings (suggest-best / joker / dead-cause): inset shadow on face `::after`
+ * (z-index 5) — above rim/art/glyphs/dim. Coached tiles use a minimum radius so
+ * the highlighted strip tiles don't show square tile corners inside the ring.
+ */
+:is(
+  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-best,
+  .hands-sheet__tile-cell--suggest-best,
+  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
+  .hands-sheet__tile-cell--suggest-joker,
+  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--dead-cause,
+  .hands-sheet__tile-cell--dead-cause,
+  .sortable-tile-wrap--suggest-best,
+  .sortable-tile-wrap--suggest-dead-cause,
+  .drag-overlay-tile.sortable-tile-wrap--suggest-best,
+  .drag-overlay-tile.sortable-tile-wrap--suggest-dead-cause,
+  .pass-strip__tile-wrap--suggest-best,
+  .east-discard-staging__tile--suggest-best,
+  .exposure-rack__slot--suggest-best,
+  .exposure-rack__call-meld-strip__tile.exposure-rack__slot--suggest-best
+) .tile-face::after {
+  content: '';
+  display: block;
+  position: absolute;
+  inset: 0;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  transform: none;
+  width: auto;
+  height: auto;
+  padding-bottom: 0;
+  z-index: 5;
+  box-sizing: border-box;
+  border: none;
+  border-radius: max(var(--tile-face-border-radius), var(--hands-coaching-ring-radius-min, 0.22rem));
+  pointer-events: none;
+  opacity: 1;
+}
+
+:is(
+  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-best,
+  .hands-sheet__tile-cell--suggest-best,
+  .sortable-tile-wrap--suggest-best,
+  .drag-overlay-tile.sortable-tile-wrap--suggest-best,
+  .pass-strip__tile-wrap--suggest-best,
+  .east-discard-staging__tile--suggest-best,
+  .exposure-rack__slot--suggest-best,
+  .exposure-rack__call-meld-strip__tile.exposure-rack__slot--suggest-best
+) .tile-face::after {
+  box-shadow: var(--hands-coaching-ring-green-front);
+  background: transparent;
+}
+
+:is(
+  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
+  .hands-sheet__tile-cell--suggest-joker
+) .tile-face::after {
+  box-shadow: var(--hands-coaching-ring-joker-front);
+  background: transparent;
+}
+
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--dead-cause .tile-face:not(.tile--joker)::after,
+.hands-sheet__tile-cell--dead-cause .tile-face:not(.tile--joker)::after,
+.sortable-tile-wrap--suggest-dead-cause .tile-face:not(.tile--joker)::after,
+.drag-overlay-tile.sortable-tile-wrap--suggest-dead-cause .tile-face:not(.tile--joker)::after {
+  box-shadow: var(--dead-cause-border-front);
+  background: transparent;
+}
+
+/* Beat suggest-dim vignette shadow — ring only on coached dead-cause overlays. */
+.hands-list__row-hit--with-tiles
+  .hands-list__pattern-tile-cell--dead-cause.hands-list__pattern-tile-cell--suggest-dim
+  .tile-face:not(.tile--joker)::after,
+.hands-sheet__tile-cell--dead-cause.hands-sheet__tile-cell--suggest-dim
+  .tile-face:not(.tile--joker)::after {
+  box-shadow: var(--dead-cause-border-front);
+}
+
+/* Dead-cause without dim: clear overlay; with dim the wash from suggest-dim rules remains. */
+:is(
+  .hands-list__row-hit--with-tiles
+    .hands-list__pattern-tile-cell--dead-cause:not(.hands-list__pattern-tile-cell--suggest-dim),
+  .hands-sheet__tile-cell--dead-cause:not(.hands-sheet__tile-cell--suggest-dim),
+  .sortable-tile-wrap--suggest-dead-cause:not(.sortable-tile-wrap--suggest-dim)
+) .tile-face::after {
+  background: transparent;
+}
+
+/* Joker coaching slots: replace inscribed circle ring with full-tile inset shadow ring. */
+:is(
+  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
+  .hands-sheet__tile-cell--suggest-joker,
+  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-best,
+  .hands-sheet__tile-cell--suggest-best,
+  .sortable-tile-wrap--suggest-best,
+  .drag-overlay-tile.sortable-tile-wrap--suggest-best,
+  .pass-strip__tile-wrap--suggest-best,
+  .east-discard-staging__tile--suggest-best,
+  .exposure-rack__slot--suggest-best,
+  .exposure-rack__call-meld-strip__tile.exposure-rack__slot--suggest-best,
+  .sortable-tile-wrap--suggest-dead-cause,
+  .drag-overlay-tile.sortable-tile-wrap--suggest-dead-cause
+) .tile-face.tile--joker::after {
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  transform: none;
+  width: auto;
+  height: auto;
+  padding-bottom: 0;
+}
+
+:is(
+  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-best,
+  .hands-sheet__tile-cell--suggest-best,
+  .sortable-tile-wrap--suggest-best,
+  .drag-overlay-tile.sortable-tile-wrap--suggest-best,
+  .pass-strip__tile-wrap--suggest-best,
+  .east-discard-staging__tile--suggest-best,
+  .exposure-rack__slot--suggest-best,
+  .exposure-rack__call-meld-strip__tile.exposure-rack__slot--suggest-best
+) .tile-face.tile--joker::after {
+  box-shadow: var(--hands-coaching-ring-green-front);
+  background: transparent;
+}
+
+:is(
+  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
+  .hands-sheet__tile-cell--suggest-joker
+) .tile-face.tile--joker::after {
+  box-shadow: var(--hands-coaching-ring-joker-front);
+  background: transparent;
+}
+
+.sortable-tile-wrap--suggest-dead-cause .tile-face.tile--joker::after,
+.drag-overlay-tile.sortable-tile-wrap--suggest-dead-cause .tile-face.tile--joker::after {
+  box-shadow: var(--dead-cause-border-front);
+  background: transparent;
+}
+
+:is(
+  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-best,
+  .hands-sheet__tile-cell--suggest-best,
+  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
+  .hands-sheet__tile-cell--suggest-joker,
+  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--dead-cause,
+  .hands-sheet__tile-cell--dead-cause,
+  .sortable-tile-wrap--suggest-best,
+  .sortable-tile-wrap--suggest-dead-cause,
+  .pass-strip__tile-wrap--suggest-best,
+  .east-discard-staging__tile--suggest-best,
+  .exposure-rack__slot--suggest-best,
+  .exposure-rack__call-meld-strip__tile.exposure-rack__slot--suggest-best
+) .tile-face {
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+  border-radius: max(var(--tile-face-border-radius), var(--hands-coaching-ring-radius-min, 0.22rem));
+  overflow: hidden;
+  filter: none;
+  border: none;
 }
 
 @keyframes suggest-dying-flash {
@@ -488,43 +653,46 @@
   filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.45));
 }
 
-.hands-list__dead-cause-badge {
+.hands-list__dead-cause-icon {
   display: inline-flex;
   align-items: center;
-  gap: 0.28em;
-  margin-left: 0.28em;
-  vertical-align: middle;
-  max-width: min(100%, 14rem);
-}
-
-.hands-list__dead-cause-badge .hands-list__dead-cause-warn {
-  margin-left: 0;
+  justify-content: center;
+  align-self: center;
+  margin-left: 0.35em;
   flex-shrink: 0;
+  line-height: 0;
 }
 
-.hands-list__dead-cause-reason {
-  font-size: 0.72em;
-  font-weight: 600;
-  line-height: 1.15;
-  color: #92400e;
-  white-space: normal;
+.hands-list__dead-cause-icon .hands-list__dead-cause-warn {
+  margin-left: 0;
+  display: block;
+}
+
+.dead-cause-warn path {
+  fill: var(--dead-cause-warn-icon-fill, #facc15);
+  stroke: var(--dead-cause-warning, #f97316);
+}
+
+.dead-cause-warn text {
+  fill: var(--hands-row-active-fill, #334155);
 }
 
 .hands-list__title-dead-cause-run {
-  box-shadow: 0 0 0 2px #facc15;
-  border-radius: 0.12em;
-  padding-inline: 0.04em;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0.02em 0.1em 0.04em;
+  border: 1px solid var(--dead-cause-warning, #f97316);
+  border-radius: 0.18em;
+  vertical-align: baseline;
+  flex-shrink: 0;
 }
 
-.hands-list__pattern-tile-cell--dead-cause,
-.hands-sheet__tile-cell--dead-cause {
-  box-shadow: 0 0 0 2px #facc15;
-  border-radius: 0.2rem;
-}
-
-.hands-list__pattern-tile-cell--dead-cause.hands-list__pattern-tile-cell--suggest-dim,
-.hands-sheet__tile-cell--dead-cause.hands-sheet__tile-cell--suggest-dim {
-  box-shadow: 0 0 0 2px #facc15;
+.sortable-tile-wrap--suggest-dead-cause .tile-face {
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
 }
 
 /* Pass slot and discard staging tiles that belong to the focused suggested hand */
@@ -532,7 +700,7 @@
 .east-discard-staging__tile--suggest-best .tile-face {
   border-radius: var(--tile-face-border-radius);
   --tile-face-highlight-inset: 0 0 0 0 transparent;
-  --tile-face-highlight-shadow: var(--suggest-best-ring);
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
 }
 
 .sortable-tile-wrap--discard-mode {

@@ -2,13 +2,11 @@ import {
   memo,
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   type CSSProperties,
   type MouseEvent,
   type PointerEvent,
-  type RefObject,
 } from 'react'
 import {
   buildConsecRanksTierStripRow,
@@ -39,14 +37,24 @@ import { DeadCauseWarning } from './DeadCauseWarning'
 import { TileFace } from './TileFace'
 
 const TOUCH_CLICK_SUPPRESS_MS = 750
-const PEEK_DRAG_THRESHOLD_PX = 10
-const PEEK_DRAG_CLICK_SUPPRESS_MS = 180
-/** Header tap-to-close only when press duration is below this (hold + release does not dismiss). */
-const HEADER_DISMISS_MAX_MS = 350
-/** Blocks pass-through + rack ghost taps while resizing the discard overlay (see part-0104.css). */
-const PEEK_DRAG_SHELL_CLASS = 'suggested-hands-popup--peek-dragging'
-/** Used when the sheet has not laid out yet (no measurable header/row). */
-const SUGGESTED_SHEET_MIN_FALLBACK_PX = 112
+const ROW_TOUCH_SLOP_PX = 10
+const DRAG_SCROLL_SLOP_PX = 4
+const DRAG_SCROLL_CLICK_SUPPRESS_MS = 280
+const DRAG_SCROLL_CLASS = 'hands-list-scroll--drag-scrolling'
+
+function isTrayHeaderTarget(el: Element): boolean {
+  return (
+    !!el.closest('.hands-sheet__cell--header') ||
+    !!el.closest('.hands-list__freeze-header')
+  )
+}
+
+function trayBodyScrollEl(shell: HTMLElement): HTMLElement {
+  const rows = shell.querySelector(
+    ':scope > .hands-sheet:not(.hands-sheet--tiles2) > .hands-sheet__rows',
+  )
+  return rows instanceof HTMLElement ? rows : shell
+}
 
 type StripRowsEntry = {
   rows: SuggestedStripSlot[][]
@@ -80,42 +88,6 @@ type ExpandedHandsRow = {
   reactKey: string
   /** Pin toggle key — same as {@link focusKey} so each variant pins independently. */
   pinKey: string
-}
-
-/**
- * Minimum panel height so the discard-overlay resize always leaves the sticky header
- * plus at least one hand/tile row visible (measured from DOM).
- */
-function measureMinSuggestedSheetPx(scrollRoot: HTMLElement): number {
-  const sheet = scrollRoot.querySelector('.hands-sheet')
-  if (sheet instanceof HTMLElement) {
-    const headerCells = sheet.querySelectorAll(':scope > .hands-sheet__cell--header')
-    let headerH = 0
-    for (const c of headerCells) {
-      if (c instanceof HTMLElement) {
-        headerH = Math.max(headerH, c.getBoundingClientRect().height)
-      }
-    }
-    const rows = sheet.querySelector('.hands-sheet__rows')
-    const firstRowEl = rows?.querySelector(':scope > .hands-sheet__row')
-    const rowH =
-      firstRowEl instanceof HTMLElement ? firstRowEl.getBoundingClientRect().height : 52
-    return Math.max(SUGGESTED_SHEET_MIN_FALLBACK_PX, Math.ceil(headerH + rowH + 8))
-  }
-
-  const freeze = scrollRoot.querySelector('.hands-list__freeze-header')
-  const list = scrollRoot.querySelector('.hands-list')
-  const firstListRowEl = list?.querySelector(':scope > .hands-list__row')
-  if (freeze instanceof HTMLElement) {
-    const fh = freeze.getBoundingClientRect().height
-    const rh =
-      firstListRowEl instanceof HTMLElement
-        ? firstListRowEl.getBoundingClientRect().height
-        : 52
-    return Math.max(SUGGESTED_SHEET_MIN_FALLBACK_PX, Math.ceil(fh + rh + 8))
-  }
-
-  return SUGGESTED_SHEET_MIN_FALLBACK_PX
 }
 
 /** Points column / aria value — number only (concealed C lives on the hand line). */
@@ -198,15 +170,18 @@ const CardColoredTextWithDeadCause = memo(function CardColoredTextWithDeadCause(
   )
 })
 
-const SuggestedHandDeadCauseBadge = memo(function SuggestedHandDeadCauseBadge({
+const SuggestedHandDeadCauseIcon = memo(function SuggestedHandDeadCauseIcon({
   cause,
 }: {
   cause: DeadCauseHint
 }) {
   return (
-    <span className="hands-list__dead-cause-badge" title={formatDeadCauseMessage(cause)}>
+    <span
+      className="hands-list__dead-cause-icon"
+      title={formatDeadCauseMessage(cause)}
+      aria-label={formatDeadCauseMessage(cause)}
+    >
       <DeadCauseWarning className="hands-list__dead-cause-warn" />
-      <span className="hands-list__dead-cause-reason">{formatDeadCauseMessage(cause)}</span>
     </span>
   )
 })
@@ -386,7 +361,6 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
   const parenText = !tilesGuideOn ? suggestedHandParenText(h) : null
   const showTileDetail = tilesGuideOn && rowStripSlots.length > 0
   const showDetailRow = showTileDetail || Boolean(parenText)
-  const showSpacerRow = showDetailRow
 
   return (
     <li
@@ -430,7 +404,6 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
           <span className="hands-sheet__category">
             {suggestedHandSectionMenuLabel(h.section)}
             <span className="hands-sheet__section-num"> - {cardRef}</span>
-            {rowDeadCause ? <SuggestedHandDeadCauseBadge cause={rowDeadCause} /> : null}
           </span>
           <div className="hands-sheet__hand-stack" aria-label={h.title}>
             <div className="hands-sheet__hand-stack-main">
@@ -457,6 +430,7 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
                     ) : null}
                   </>
                 )}
+                {rowDeadCause ? <SuggestedHandDeadCauseIcon cause={rowDeadCause} /> : null}
               </span>
             </div>
             {showTileDetail ? (
@@ -512,7 +486,6 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
           </>
         ) : null}
       </button>
-      {showSpacerRow ? <div className="hands-sheet__row-spacer" aria-hidden="true" /> : null}
     </li>
   )
 })
@@ -595,7 +568,6 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
             <span className="hands-list__with-tiles-category">
               {suggestedHandSectionMenuLabel(h.section)}
               <span className="hands-list__section-num"> - {cardRef}</span>
-              {rowDeadCause ? <SuggestedHandDeadCauseBadge cause={rowDeadCause} /> : null}
             </span>
             {handsListOn ? (
               <span className="hands-list__category-inline-hand" aria-label={h.title}>
@@ -629,6 +601,7 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
                     ) : null}
                   </>
                 )}
+                {rowDeadCause ? <SuggestedHandDeadCauseIcon cause={rowDeadCause} /> : null}
               </span>
             ) : null}
           </div>
@@ -726,15 +699,6 @@ type Props = {
    * live on the parent `.suggested-hands-popup` wrapper in `App`.
    */
   discardTraySurface?: boolean
-  /**
-   * When set (discard-tray overlay), a click on the sticky column-header row dismisses the tray.
-   */
-  onTrayHeaderClick?: () => void
-  /** Current top “peek” height in px — empty strip above the sheet (shows discards). */
-  discardOverlayPeekPx?: number
-  /** Updates peek while dragging the header; measure ref must be the overlay shell (`#suggested-hands-popup`). */
-  onDiscardOverlayPeekPxChange?: (px: number) => void
-  discardOverlayMeasureRef?: RefObject<HTMLElement | null>
   /** Toggle whether `handKey` is pinned (add/remove from {@link pinnedHandKeys}). */
   onPinnedPatternChange?: (handKey: string) => void
   /** Per focus key: why the line is no longer completable (dead tile hint). */
@@ -756,132 +720,144 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   cardPatterns,
   cardSectionOrder,
   discardTraySurface,
-  onTrayHeaderClick,
-  discardOverlayPeekPx = 0,
-  onDiscardOverlayPeekPxChange,
-  discardOverlayMeasureRef,
   onPinnedPatternChange,
   deadCauseByFocusKey = {},
 }: Props) {
   const pinnedKeySet = useMemo(() => new Set(pinnedHandKeys), [pinnedHandKeys])
-  const peekDragRef = useRef<{
-    pointerId: number
-    startY: number
-    startPeek: number
-  } | null>(null)
-  const headerPointerSlopRef = useRef(false)
-  /** Pointerdown target when a discard-overlay header peek-drag may start (used for tap-to-dismiss). */
-  const headerPointerDownTargetRef = useRef<Element | null>(null)
-  const headerPointerDownAtRef = useRef(0)
-  const suppressHeaderClickUntilRef = useRef(0)
-  const peekDragShellSuppressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const peekDragWindowCleanupRef = useRef<(() => void) | null>(null)
-  const discardOverlayPeekRef = useRef(discardOverlayPeekPx)
-  useEffect(() => {
-    discardOverlayPeekRef.current = discardOverlayPeekPx
-  }, [discardOverlayPeekPx])
-
   const handsListScrollRef = useRef<HTMLDivElement>(null)
-  const minSheetHeightPxRef = useRef(SUGGESTED_SHEET_MIN_FALLBACK_PX)
 
-  const syncPeekDragShellBlock = useCallback(
-    (mode: 'active' | 'suppress' | 'off') => {
-      const shell = discardOverlayMeasureRef?.current
-      if (!shell) return
-      if (peekDragShellSuppressTimerRef.current != null) {
-        clearTimeout(peekDragShellSuppressTimerRef.current)
-        peekDragShellSuppressTimerRef.current = null
-      }
-      if (mode === 'active' || mode === 'suppress') {
-        shell.classList.add(PEEK_DRAG_SHELL_CLASS)
-      } else {
-        shell.classList.remove(PEEK_DRAG_SHELL_CLASS)
-      }
-      if (mode === 'suppress') {
-        peekDragShellSuppressTimerRef.current = setTimeout(() => {
-          shell.classList.remove(PEEK_DRAG_SHELL_CLASS)
-          peekDragShellSuppressTimerRef.current = null
-        }, PEEK_DRAG_CLICK_SUPPRESS_MS)
-      }
-    },
-    [discardOverlayMeasureRef],
-  )
-
-  useEffect(
-    () => () => {
-      syncPeekDragShellBlock('off')
-    },
-    [syncPeekDragShellBlock],
-  )
-
-  const detachPeekDragWindowListeners = useCallback(() => {
-    peekDragWindowCleanupRef.current?.()
-    peekDragWindowCleanupRef.current = null
+  const getTrayScrollTarget = useCallback((): HTMLElement | null => {
+    const shell = handsListScrollRef.current
+    if (!shell) return null
+    return trayBodyScrollEl(shell)
   }, [])
 
-  const finishPeekDrag = useCallback(
+  const dragScrollRef = useRef<{
+    pointerId: number
+    startY: number
+    startScrollTop: number
+  } | null>(null)
+  const dragScrollActiveRef = useRef(false)
+  const suppressRowClickFromDragRef = useRef(0)
+  const dragScrollWindowCleanupRef = useRef<(() => void) | null>(null)
+
+  const detachDragScrollWindowListeners = useCallback(() => {
+    dragScrollWindowCleanupRef.current?.()
+    dragScrollWindowCleanupRef.current = null
+  }, [])
+
+  const finishDragScroll = useCallback(
     (e: PointerEvent<HTMLDivElement> | globalThis.PointerEvent) => {
-      const d = peekDragRef.current
+      const d = dragScrollRef.current
       if (!d || e.pointerId !== d.pointerId) return
-      detachPeekDragWindowListeners()
-      const downTarget = headerPointerDownTargetRef.current
-      headerPointerDownTargetRef.current = null
-      peekDragRef.current = null
-      const hadSlop = headerPointerSlopRef.current
-      const pressMs = performance.now() - headerPointerDownAtRef.current
-      const isHeaderRelease =
-        downTarget instanceof Element &&
-        !downTarget.closest('.hands-suggested-pin') &&
-        !downTarget.closest('button') &&
-        (downTarget.closest('.hands-list__freeze-header') ||
-          downTarget.closest('.hands-sheet__cell--header'))
-      const isHeaderDismissTap =
-        onTrayHeaderClick &&
-        !hadSlop &&
-        isHeaderRelease &&
-        pressMs <= HEADER_DISMISS_MAX_MS
-      if (hadSlop || isHeaderRelease) {
-        suppressHeaderClickUntilRef.current = performance.now() + PEEK_DRAG_CLICK_SUPPRESS_MS
+      detachDragScrollWindowListeners()
+      dragScrollRef.current = null
+      const shell = handsListScrollRef.current
+      if (dragScrollActiveRef.current) {
+        suppressRowClickFromDragRef.current =
+          performance.now() + DRAG_SCROLL_CLICK_SUPPRESS_MS
         e.preventDefault()
-        syncPeekDragShellBlock('suppress')
-      } else {
-        syncPeekDragShellBlock('off')
       }
-      headerPointerSlopRef.current = false
-      const scrollEl = handsListScrollRef.current
+      dragScrollActiveRef.current = false
+      shell?.classList.remove(DRAG_SCROLL_CLASS)
       try {
-        scrollEl?.releasePointerCapture(e.pointerId)
+        shell?.releasePointerCapture(e.pointerId)
       } catch {
         /* capture already released */
       }
-      if (isHeaderDismissTap) {
-        onTrayHeaderClick()
-      }
     },
-    [detachPeekDragWindowListeners, onTrayHeaderClick, syncPeekDragShellBlock],
+    [detachDragScrollWindowListeners],
   )
 
-  const attachPeekDragWindowListeners = useCallback(() => {
-    detachPeekDragWindowListeners()
+  const attachDragScrollWindowListeners = useCallback(() => {
+    detachDragScrollWindowListeners()
     const onWindowPointerEnd = (ev: globalThis.PointerEvent) => {
-      finishPeekDrag(ev)
+      finishDragScroll(ev)
     }
     window.addEventListener('pointerup', onWindowPointerEnd)
     window.addEventListener('pointercancel', onWindowPointerEnd)
-    peekDragWindowCleanupRef.current = () => {
+    dragScrollWindowCleanupRef.current = () => {
       window.removeEventListener('pointerup', onWindowPointerEnd)
       window.removeEventListener('pointercancel', onWindowPointerEnd)
     }
-  }, [detachPeekDragWindowListeners, finishPeekDrag])
+  }, [detachDragScrollWindowListeners, finishDragScroll])
 
   useEffect(
     () => () => {
-      detachPeekDragWindowListeners()
-      peekDragRef.current = null
-      headerPointerSlopRef.current = false
+      detachDragScrollWindowListeners()
+      dragScrollRef.current = null
+      dragScrollActiveRef.current = false
+      handsListScrollRef.current?.classList.remove(DRAG_SCROLL_CLASS)
     },
-    [detachPeekDragWindowListeners],
+    [detachDragScrollWindowListeners],
   )
+
+  const handleListScrollPointerDown = useCallback(
+    (e: PointerEvent<HTMLDivElement>) => {
+      if (!discardTraySurface) return
+      const t = e.target
+      if (!(t instanceof Element)) return
+      if (t.closest('.hands-suggested-pin')) return
+      if (e.pointerType === 'touch' && !isTrayHeaderTarget(t)) return
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      const scrollEl = getTrayScrollTarget()
+      if (!scrollEl || scrollEl.scrollHeight <= scrollEl.clientHeight) return
+      dragScrollRef.current = {
+        pointerId: e.pointerId,
+        startY: e.clientY,
+        startScrollTop: scrollEl.scrollTop,
+      }
+      dragScrollActiveRef.current = false
+      attachDragScrollWindowListeners()
+    },
+    [discardTraySurface, getTrayScrollTarget, attachDragScrollWindowListeners],
+  )
+
+  const handleListScrollPointerMove = useCallback(
+    (e: PointerEvent<HTMLDivElement>) => {
+      const d = dragScrollRef.current
+      if (!d || e.pointerId !== d.pointerId) return
+      if (e.pointerType === 'mouse' && (e.buttons & 1) === 0) {
+        finishDragScroll(e)
+        return
+      }
+      const scrollEl = getTrayScrollTarget()
+      if (!scrollEl) return
+      const dy = e.clientY - d.startY
+      if (!dragScrollActiveRef.current) {
+        if (Math.abs(dy) < DRAG_SCROLL_SLOP_PX) return
+        dragScrollActiveRef.current = true
+        handsListScrollRef.current?.classList.add(DRAG_SCROLL_CLASS)
+        e.currentTarget.setPointerCapture(e.pointerId)
+      }
+      e.preventDefault()
+      scrollEl.scrollTop = d.startScrollTop - dy
+    },
+    [finishDragScroll, getTrayScrollTarget],
+  )
+
+  const handleListScrollPointerUpOrCancel = useCallback(
+    (e: PointerEvent<HTMLDivElement>) => {
+      finishDragScroll(e)
+    },
+    [finishDragScroll],
+  )
+
+  useEffect(() => {
+    if (!discardTraySurface) return
+    const shell = handsListScrollRef.current
+    if (!shell) return
+    const onWheel = (e: WheelEvent) => {
+      const t = e.target
+      if (!(t instanceof Element) || !isTrayHeaderTarget(t)) return
+      const scrollEl = trayBodyScrollEl(shell)
+      if (scrollEl.scrollHeight <= scrollEl.clientHeight) return
+      scrollEl.scrollTop += e.deltaY
+      e.preventDefault()
+    }
+    shell.addEventListener('wheel', onWheel, { capture: true, passive: false })
+    return () => shell.removeEventListener('wheel', onWheel, { capture: true })
+  }, [discardTraySurface, hands.length, tilesGuideOn, pinnedHandKeys.length])
 
   /** Touch pointers: act on `pointerup` and suppress the synthetic `click` so a tap toggles focus once. */
   const rowTouchPointerRef = useRef<{
@@ -910,7 +886,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
         rowTouchPointerRef.current = null
         const dx = e.clientX - start.x
         const dy = e.clientY - start.y
-        if (dx * dx + dy * dy > PEEK_DRAG_THRESHOLD_PX * PEEK_DRAG_THRESHOLD_PX) return
+        if (dx * dx + dy * dy > ROW_TOUCH_SLOP_PX * ROW_TOUCH_SLOP_PX) return
         const suppress = skipRowClickFromTouchRef.current
         suppress.count += 1
         suppress.until = e.timeStamp + TOUCH_CLICK_SUPPRESS_MS
@@ -921,6 +897,10 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
         rowTouchPointerRef.current = null
       },
       onClick: (e: MouseEvent<HTMLButtonElement>) => {
+        if (performance.now() < suppressRowClickFromDragRef.current) {
+          e.preventDefault()
+          return
+        }
         const suppress = skipRowClickFromTouchRef.current
         const now = e.timeStamp
         if (now > suppress.until) suppress.count = 0
@@ -1108,140 +1088,10 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     return { gridTemplateAreas: handsRowGridTemplateAreas(showHandCategoryLabels, tilesGuideOn) }
   }, [handsListSpreadsheetHands, showHandCategoryLabels, tilesGuideOn])
 
-  const trayHeaderPeekResize = !!(
-    onDiscardOverlayPeekPxChange && discardOverlayMeasureRef
-  )
-
-  useLayoutEffect(() => {
-    if (!trayHeaderPeekResize) return
-    const scrollEl = handsListScrollRef.current
-    if (!scrollEl) return
-    const syncMin = () => {
-      minSheetHeightPxRef.current = measureMinSuggestedSheetPx(scrollEl)
-    }
-    syncMin()
-    const ro = new ResizeObserver(syncMin)
-    ro.observe(scrollEl)
-    for (const sel of ['.hands-sheet', '.hands-list', '.hands-list__freeze-header']) {
-      const node = scrollEl.querySelector(sel)
-      if (node instanceof HTMLElement) ro.observe(node)
-    }
-    return () => ro.disconnect()
-  }, [
-    trayHeaderPeekResize,
-    handsListOn,
-    tilesGuideOn,
-    listRowsForHandsPanel.length,
-    rackTilesForSuggestedStrip.length,
-    pinnedHandKeys.length,
-  ])
-
-  const handleScrollPointerDownCapture = useCallback(
-    (e: PointerEvent<HTMLDivElement>) => {
-      if (!onDiscardOverlayPeekPxChange || !discardOverlayMeasureRef?.current) return
-      const t = e.target
-      if (!(t instanceof Element)) return
-      if (
-        !t.closest('.hands-list__freeze-header') &&
-        !t.closest('.hands-sheet__cell--header')
-      ) {
-        return
-      }
-      if (e.button !== 0) return
-      const scrollEl = handsListScrollRef.current
-      if (scrollEl) {
-        minSheetHeightPxRef.current = measureMinSuggestedSheetPx(scrollEl)
-      }
-      headerPointerDownTargetRef.current = t
-      headerPointerDownAtRef.current = performance.now()
-      peekDragRef.current = {
-        pointerId: e.pointerId,
-        startY: e.clientY,
-        startPeek: discardOverlayPeekRef.current,
-      }
-      headerPointerSlopRef.current = false
-      syncPeekDragShellBlock('active')
-      e.currentTarget.setPointerCapture(e.pointerId)
-      attachPeekDragWindowListeners()
-    },
-    [
-      onDiscardOverlayPeekPxChange,
-      discardOverlayMeasureRef,
-      syncPeekDragShellBlock,
-      attachPeekDragWindowListeners,
-    ],
-  )
-
-  const handleScrollPointerMove = useCallback(
-    (e: PointerEvent<HTMLDivElement>) => {
-      const d = peekDragRef.current
-      if (!d || e.pointerId !== d.pointerId || !onDiscardOverlayPeekPxChange) return
-      if (e.pointerType === 'mouse' && (e.buttons & 1) === 0) {
-        finishPeekDrag(e)
-        return
-      }
-      const dy = e.clientY - d.startY
-      if (Math.abs(dy) >= PEEK_DRAG_THRESHOLD_PX) headerPointerSlopRef.current = true
-      if (!headerPointerSlopRef.current) return
-      e.preventDefault()
-      const shell = discardOverlayMeasureRef?.current
-      if (!shell) return
-      const minH = Math.ceil(minSheetHeightPxRef.current)
-      const shellH = shell.getBoundingClientRect().height
-      const topExtendPx = (() => {
-        const raw = getComputedStyle(shell)
-          .getPropertyValue('--suggested-overlay-top-extend')
-          .trim()
-        const n = parseFloat(raw)
-        return Number.isFinite(n) ? Math.max(0, n) : 0
-      })()
-      /*
-       * Positive peek shrinks the bottom-anchored sheet (reveals discards above). Negative peek
-       * translates the sheet up into the exposure band (up to topExtendPx above the content box).
-       */
-      const minPeek = -topExtendPx
-      const maxPeek = Math.max(0, shellH - minH)
-      onDiscardOverlayPeekPxChange(
-        Math.max(minPeek, Math.min(maxPeek, d.startPeek + dy)),
-      )
-    },
-    [onDiscardOverlayPeekPxChange, discardOverlayMeasureRef, finishPeekDrag],
-  )
-
-  const handleScrollPointerUpOrCancel = useCallback(
-    (e: PointerEvent<HTMLDivElement>) => {
-      finishPeekDrag(e)
-    },
-    [finishPeekDrag],
-  )
-
-  const handleTrayHeaderAreaClick = useCallback(
-    (e: MouseEvent<HTMLDivElement>) => {
-      if (performance.now() < suppressHeaderClickUntilRef.current) {
-        return
-      }
-      if (performance.now() - headerPointerDownAtRef.current > HEADER_DISMISS_MAX_MS) {
-        return
-      }
-      if (!onTrayHeaderClick) return
-      const t = e.target
-      if (!(t instanceof Element)) return
-      if (
-        t.closest('.hands-list__freeze-header') ||
-        t.closest('.hands-sheet__cell--header')
-      ) {
-        onTrayHeaderClick()
-      }
-    },
-    [onTrayHeaderClick],
-  )
-
   const rootClassName = [
     'panel',
     'panel--hands',
     discardTraySurface ? 'suggested-hands-popup__user-shift' : '',
-    onTrayHeaderClick ? 'panel--hands--tray-header-dismiss' : '',
-    trayHeaderPeekResize ? 'panel--hands--tray-header-resizable' : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -1253,14 +1103,13 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
             <div
               ref={handsListScrollRef}
               className="hands-list-scroll"
-              {...(onTrayHeaderClick ? { onClick: handleTrayHeaderAreaClick } : {})}
-              {...(trayHeaderPeekResize
+              {...(discardTraySurface
                 ? {
-                    onPointerDownCapture: handleScrollPointerDownCapture,
-                    onPointerMove: handleScrollPointerMove,
-                    onPointerUp: handleScrollPointerUpOrCancel,
-                    onPointerCancel: handleScrollPointerUpOrCancel,
-                    onLostPointerCapture: handleScrollPointerUpOrCancel,
+                    onPointerDown: handleListScrollPointerDown,
+                    onPointerMove: handleListScrollPointerMove,
+                    onPointerUp: handleListScrollPointerUpOrCancel,
+                    onPointerCancel: handleListScrollPointerUpOrCancel,
+                    onLostPointerCapture: handleListScrollPointerUpOrCancel,
                   }
                 : {})}
             >
