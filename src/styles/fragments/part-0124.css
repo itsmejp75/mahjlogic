@@ -1391,6 +1391,7 @@ html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-t
   --btn-font-size: var(--app-menu-type-body);
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  background: color-mix(in srgb, #0a0a0a 82%, transparent);
 }
 
 .charleston-error-dialog.charleston-error-dialog--menu-shell {
@@ -1443,12 +1444,17 @@ html body .app .charleston-error-overlay .charleston-error-dialog--menu-shell .c
 }
 
 html body .app .charleston-error-overlay .charleston-error-dialog--menu-shell
-  .charleston-error-dialog__actions--spread {
+  .charleston-error-dialog__actions--spread,
+html body .app .charleston-error-overlay .charleston-error-dialog--menu-shell
+  .charleston-error-dialog__actions--center {
   margin-top: 0.95rem;
 }
 
 html body .app .charleston-error-overlay .charleston-error-dialog--menu-shell
   .charleston-error-dialog__actions--spread
+  .charleston-error-dialog__rack-action.btn,
+html body .app .charleston-error-overlay .charleston-error-dialog--menu-shell
+  .charleston-error-dialog__actions--center
   .charleston-error-dialog__rack-action.btn {
   box-sizing: border-box;
   min-width: 7rem;

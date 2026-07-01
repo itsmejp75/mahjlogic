@@ -2530,6 +2530,19 @@ html .app-dnd-frame .app-top-exposure-container .exposure-rack__meld-drop--over 
   --rack-action-pressed: var(--app-action-btn-shadow-pressed);
 }
 
+.blank-exchange-overlay__title {
+  margin: 0;
+  width: 100%;
+  font-family: 'Figtree', var(--sans);
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: var(--btn-line-height, 1.2);
+  letter-spacing: var(--btn-letter-spacing, 0.02em);
+  text-align: center;
+  text-transform: none;
+  color: var(--rack-action-label-color, #dcdce0);
+}
+
 /*
  * Popup tracker mirror: the band grid is given a viewport-fitted width (set inline) and the
  * `top-exposure-band` @container sizes the tiles to fill it. The mirror flows in-line (position is

@@ -1268,6 +1268,7 @@
   list-style: none;
   overflow-y: auto;
   overflow-x: visible;
+  overflow-anchor: none;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
 }

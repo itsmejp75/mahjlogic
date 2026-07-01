@@ -1237,7 +1237,7 @@ function BlankExchangeOverlay({
       className="blank-exchange-overlay"
       role="dialog"
       aria-modal
-      aria-label="Exchange blank tile"
+      aria-labelledby="blank-exchange-overlay-title"
       onClick={onCancel}
     >
       <div
@@ -1245,6 +1245,9 @@ function BlankExchangeOverlay({
         onClick={(e) => e.stopPropagation()}
         style={centerOffsetX ? { transform: `translateX(${centerOffsetX}px)` } : undefined}
       >
+        <h2 id="blank-exchange-overlay-title" className="blank-exchange-overlay__title">
+          Select a tile to recover.
+        </h2>
         <div className="blank-exchange-overlay__scale-host" style={scaleHostStyle}>
           <div
             className="blank-exchange-overlay__tracker-mirror app-play-split app-top-exposure-container"
@@ -6740,7 +6743,12 @@ export default function App() {
     }
 
     // 3) Nothing staged, but a blank is in hand — exchange the first one.
-    if (canBlankExchange) {
+    if (
+      canBlankExchange &&
+      !pendingEastDiscardTile &&
+      !pendingJokerSwapTileId &&
+      !selectedHandTileId
+    ) {
       const anyBlank = hand.find((t) => t.def.cat === 'blank')
       if (anyBlank) {
         openBlankExchange(anyBlank.id)
@@ -7574,13 +7582,15 @@ export default function App() {
   const mainBarSharedSlotIsSwap =
     jokerSwapUiActive || mainPhase === 'east-discard'
   /** Dim Swap until joker redemption or blank exchange is actually possible (matches Charleston). */
+  const hasBlankForExchange =
+    hand.some((t) => t.def.cat === 'blank') || pendingEastDiscardTile?.def.cat === 'blank'
   const mainGameSwapDisabled =
     !jokerSwapUiActive &&
     !(
       charlestonDone &&
       mainPhase === 'east-discard' &&
       blankTilesEnabled &&
-      hand.some((t) => t.def.cat === 'blank') &&
+      hasBlankForExchange &&
       discardedDefsForBlankExchange(discardPile).length > 0
     )
   const mahjongButtonEnabled =
@@ -8220,9 +8230,10 @@ export default function App() {
           <div
             className={[
               'charleston-error-dialog',
-              blockingDialog?.variant === 'table' ? 'charleston-error-dialog--table' : '',
               blockingDialog?.variant === 'concealed-call-warning' ||
-              blockingDialog?.variant === 'dead-hand-warning'
+              blockingDialog?.variant === 'dead-hand-warning' ||
+              blockingDialog?.variant === 'table' ||
+              charlestonPassError
                 ? 'charleston-error-dialog--menu-shell'
                 : '',
               blockingDialog?.variant === 'concealed-call-warning'
@@ -8375,18 +8386,6 @@ export default function App() {
               </>
             ) : blockingDialog?.variant === 'table' ? (
               <>
-                <button
-                  type="button"
-                  className="charleston-error-dialog__dismiss"
-                  aria-label="Close"
-                  onClick={() => {
-                    setCharlestonPassError(null)
-                    setCallRuleError(null)
-                    setBlockingDialog(null)
-                  }}
-                >
-                  ×
-                </button>
                 <h2 id="game-blocking-error-title" className="charleston-error-dialog__title">
                   {blockingDialog.title}
                 </h2>
@@ -8396,7 +8395,7 @@ export default function App() {
                 <div className="charleston-error-dialog__actions charleston-error-dialog__actions--center">
                   <button
                     type="button"
-                    className="btn game-blocking-dialog__ok-btn"
+                    className="btn charleston-error-dialog__rack-action"
                     onClick={() => {
                       setCharlestonPassError(null)
                       setCallRuleError(null)
@@ -8540,10 +8539,29 @@ export default function App() {
                   setBlockingDialog(null)
                 }}
               />
+            ) : charlestonPassError ? (
+              <>
+                <p id="game-blocking-error-msg" className="charleston-error-dialog__body">
+                  {charlestonPassError}
+                </p>
+                <div className="charleston-error-dialog__actions charleston-error-dialog__actions--center">
+                  <button
+                    type="button"
+                    className="btn charleston-error-dialog__rack-action"
+                    onClick={() => {
+                      setCharlestonPassError(null)
+                      setCallRuleError(null)
+                      setBlockingDialog(null)
+                    }}
+                  >
+                    OK
+                  </button>
+                </div>
+              </>
             ) : (
               <>
                 <p id="game-blocking-error-msg" className="charleston-error-dialog__message">
-                  {charlestonPassError ?? callRuleError ?? blockingDialog?.message}
+                  {callRuleError ?? blockingDialog?.message}
                 </p>
                 <div className="charleston-error-dialog__actions">
                   <button

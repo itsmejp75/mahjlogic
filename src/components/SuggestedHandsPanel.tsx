@@ -2,6 +2,7 @@ import {
   memo,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   type CSSProperties,
@@ -54,6 +55,106 @@ function trayBodyScrollEl(shell: HTMLElement): HTMLElement {
     ':scope > .hands-sheet:not(.hands-sheet--tiles2) > .hands-sheet__rows',
   )
   return rows instanceof HTMLElement ? rows : shell
+}
+
+type HandsListScrollSnapshot = {
+  rowKeys: string[]
+  anchorKey: string | null
+  anchorPatternId: string | null
+  anchorOffset: number
+  scrollTop: number
+}
+
+function rowKeysInOrder(rows: ReadonlyArray<{ reactKey: string }>): string[] {
+  return rows.map((r) => r.reactKey)
+}
+
+function rowKeysOrderChanged(prev: string[], next: string[]): boolean {
+  if (prev.length !== next.length) return true
+  for (let i = 0; i < prev.length; i++) {
+    if (prev[i] !== next[i]) return true
+  }
+  return false
+}
+
+function rowOffsetInScrollContainer(row: HTMLElement, scrollEl: HTMLElement): number {
+  const rowRect = row.getBoundingClientRect()
+  const scrollRect = scrollEl.getBoundingClientRect()
+  return rowRect.top - scrollRect.top + scrollEl.scrollTop
+}
+
+function isVisibleInScrollContainer(row: HTMLElement, scrollEl: HTMLElement): boolean {
+  const scrollRect = scrollEl.getBoundingClientRect()
+  const rect = row.getBoundingClientRect()
+  return rect.bottom > scrollRect.top + 1 && rect.top < scrollRect.bottom - 1
+}
+
+function escapedDataAttrValue(value: string): string {
+  return typeof CSS !== 'undefined' && 'escape' in CSS
+    ? CSS.escape(value)
+    : value.replace(/["\\]/g, '\\$&')
+}
+
+function findRowByKey(scrollEl: HTMLElement, key: string): HTMLElement | null {
+  const row = scrollEl.querySelector(`[data-hands-row-key="${escapedDataAttrValue(key)}"]`)
+  return row instanceof HTMLElement ? row : null
+}
+
+function findRowByPatternId(scrollEl: HTMLElement, patternId: string): HTMLElement | null {
+  const row = scrollEl.querySelector(
+    `[data-hands-pattern-id="${escapedDataAttrValue(patternId)}"]`,
+  )
+  return row instanceof HTMLElement ? row : null
+}
+
+function findScrollRowAnchor(
+  scrollEl: HTMLElement,
+  preferredKey: string | null,
+  preferredPatternId: string | null,
+): { key: string; patternId: string | null; offset: number } | null {
+  // Keep the selected/highlighted hand visually anchored through re-ranks. If a new
+  // suggested row appears above it, the list should scroll upward instead of pushing it down.
+  const preferredByKey = preferredKey ? findRowByKey(scrollEl, preferredKey) : null
+  if (preferredByKey) {
+    return {
+      key: preferredByKey.dataset.handsRowKey!,
+      patternId: preferredByKey.dataset.handsPatternId ?? null,
+      offset: rowOffsetInScrollContainer(preferredByKey, scrollEl),
+    }
+  }
+
+  const preferredByPattern = preferredPatternId
+    ? findRowByPatternId(scrollEl, preferredPatternId)
+    : null
+  if (preferredByPattern) {
+    return {
+      key: preferredByPattern.dataset.handsRowKey!,
+      patternId: preferredByPattern.dataset.handsPatternId ?? null,
+      offset: rowOffsetInScrollContainer(preferredByPattern, scrollEl),
+    }
+  }
+
+  for (const el of scrollEl.querySelectorAll('[data-hands-row-key]')) {
+    if (!(el instanceof HTMLElement)) continue
+    const key = el.dataset.handsRowKey
+    if (!key) continue
+    if (isVisibleInScrollContainer(el, scrollEl)) {
+      return {
+        key,
+        patternId: el.dataset.handsPatternId ?? null,
+        offset: rowOffsetInScrollContainer(el, scrollEl),
+      }
+    }
+  }
+  return null
+}
+
+function findRowForSnapshotAnchor(
+  scrollEl: HTMLElement,
+  key: string | null,
+  patternId: string | null,
+): HTMLElement | null {
+  return (key ? findRowByKey(scrollEl, key) : null) ?? (patternId ? findRowByPatternId(scrollEl, patternId) : null)
 }
 
 type StripRowsEntry = {
@@ -368,6 +469,8 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
         .filter(Boolean)
         .join(' ')}
       role="row"
+      data-hands-row-key={rowKey}
+      data-hands-pattern-id={h.id}
     >
       {showPinColumn ? (
         <div className="hands-sheet__cell hands-sheet__cell--pin" role="cell">
@@ -539,7 +642,7 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
     .join(' ')
 
   return (
-    <li className={liClassName}>
+    <li className={liClassName} data-hands-row-key={row.reactKey} data-hands-pattern-id={h.id}>
       {showPinColumn ? (
         <div
           className="hands-list__cell hands-list__cell--pin"
@@ -732,6 +835,32 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     return trayBodyScrollEl(shell)
   }, [])
 
+  const handsListScrollSnapshotRef = useRef<HandsListScrollSnapshot>({
+    rowKeys: [],
+    anchorKey: null,
+    anchorPatternId: null,
+    anchorOffset: 0,
+    scrollTop: 0,
+  })
+
+  const refreshScrollSnapshot = useCallback(
+    (rowKeys?: string[]) => {
+      const scrollEl = getTrayScrollTarget()
+      if (!scrollEl) return
+      const activePatternLineId = activePatternId ? focusKeyPatternId(activePatternId) : null
+      const anchor = findScrollRowAnchor(scrollEl, activePatternId, activePatternLineId)
+      const snap = handsListScrollSnapshotRef.current
+      handsListScrollSnapshotRef.current = {
+        rowKeys: rowKeys ?? snap.rowKeys,
+        anchorKey: anchor?.key ?? null,
+        anchorPatternId: anchor?.patternId ?? null,
+        anchorOffset: anchor?.offset ?? 0,
+        scrollTop: scrollEl.scrollTop,
+      }
+    },
+    [activePatternId, getTrayScrollTarget],
+  )
+
   const dragScrollRef = useRef<{
     pointerId: number
     startY: number
@@ -841,6 +970,19 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
       finishDragScroll(e)
     },
     [finishDragScroll],
+  )
+
+  const handleTrayHeaderClick = useCallback(
+    (e: MouseEvent<HTMLDivElement>) => {
+      const t = e.target
+      if (!(t instanceof Element) || !isTrayHeaderTarget(t)) return
+      if (t.closest('.hands-suggested-pin')) return
+      if (performance.now() < suppressRowClickFromDragRef.current) return
+      const scrollEl = getTrayScrollTarget()
+      if (!scrollEl || scrollEl.scrollTop <= 0) return
+      scrollEl.scrollTo({ top: 0, behavior: 'smooth' })
+    },
+    [getTrayScrollTarget],
   )
 
   useEffect(() => {
@@ -1052,6 +1194,44 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
       .map(({ row }) => row)
   }, [listRowsForHandsPanel, stripSlotRowsByKey, tilesGuideOn, pinnedHandKeys])
 
+  useEffect(() => {
+    const scrollEl = getTrayScrollTarget()
+    if (!scrollEl) return
+    const onScroll = () => refreshScrollSnapshot()
+    scrollEl.addEventListener('scroll', onScroll, { passive: true })
+    return () => scrollEl.removeEventListener('scroll', onScroll)
+  }, [getTrayScrollTarget, refreshScrollSnapshot, expandedHandsRows.length])
+
+  useLayoutEffect(() => {
+    const scrollEl = getTrayScrollTarget()
+    if (!scrollEl) return
+
+    const rowKeys = rowKeysInOrder(expandedHandsRows)
+    const prev = handsListScrollSnapshotRef.current
+
+    if (
+      prev.rowKeys.length > 0 &&
+      rowKeysOrderChanged(prev.rowKeys, rowKeys) &&
+      prev.anchorKey &&
+      !dragScrollActiveRef.current
+    ) {
+      const anchorRow = findRowForSnapshotAnchor(
+        scrollEl,
+        prev.anchorKey,
+        prev.anchorPatternId,
+      )
+      if (anchorRow) {
+        const newOffset = rowOffsetInScrollContainer(anchorRow, scrollEl)
+        const delta = newOffset - prev.anchorOffset
+        if (delta !== 0) {
+          scrollEl.scrollTop += delta
+        }
+      }
+    }
+
+    refreshScrollSnapshot(rowKeys)
+  }, [expandedHandsRows, getTrayScrollTarget, refreshScrollSnapshot])
+
   const emitRowPinToggle = useCallback(
     (pinKey: string) => {
       onPinnedPatternChange?.(pinKey)
@@ -1103,6 +1283,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
             <div
               ref={handsListScrollRef}
               className="hands-list-scroll"
+              onClick={handleTrayHeaderClick}
               {...(discardTraySurface
                 ? {
                     onPointerDown: handleListScrollPointerDown,
