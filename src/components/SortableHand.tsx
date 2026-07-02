@@ -19,10 +19,17 @@ const RACK_FLY_TX_ONE_COL =
   'calc(var(--rack-tile-w) + var(--player-rack-face-gap, var(--rack-tile-gap)))'
 /** One column to the *left* — closes the gap of a tile being lifted out to pass (compaction preview). */
 const RACK_FLY_TX_ONE_COL_LEFT =
-  'calc(-1 * (var(--rack-tile-w) + var(--player-rack-face-gap, var(--rack-tile-gap)))'
+  'calc(-1 * (var(--rack-tile-w) + var(--player-rack-face-gap, var(--rack-tile-gap))))'
 const RACK_REORDER_EASING = 'cubic-bezier(0.2, 0, 0.2, 1)'
 const RACK_REORDER_DURATION = '0.16s'
-const RACK_FLY_MOTION_TRANSITION = `--rack-fly-tx ${RACK_REORDER_DURATION} ${RACK_REORDER_EASING}`
+/**
+ * Neighbour-slide transition. Animates the independent `translate` property (NOT a custom property
+ * fed into `transform`): `translate` is GPU-composited, so the slides keep up on mobile even while
+ * the main thread is busy — the old `--rack-fly-tx` custom-property transition ran on the main
+ * thread every frame, so under load the tiles lagged at different rates and left multiple gaps.
+ * `transform: translateZ(0)` stays permanent in CSS, so the layer never toggles (iOS jog guard).
+ */
+const RACK_FLY_MOTION_TRANSITION = `translate ${RACK_REORDER_DURATION} ${RACK_REORDER_EASING}`
 
 /**
  * Horizontal slide only — never scale. rectSortingStrategy compares full rects; when the dragged
@@ -152,8 +159,8 @@ function SortableTile({
   } else if (active) {
     // Any active drag — in-rack reorder OR dragging a tile out to the pass box / discard / call.
     // Neighbours slide horizontally to open or close the gap so they move out of the dragged
-    // tile's way in real time (not on release). Motion is `--rack-fly-tx` only so authored
-    // `translateZ(0)` on `__fly` is never replaced by inline `transform` (mobile size flicker).
+    // tile's way in real time (not on release). Motion is the composited `translate` property so
+    // authored `translateZ(0)` on `__fly` stays put (mobile size flicker / jog guard).
     rackFlyTx = rackSortableFlyTx(transform)
     resolvedTransition = RACK_FLY_MOTION_TRANSITION
   } else {
@@ -170,8 +177,10 @@ function SortableTile({
     opacity: draggingThisTile ? 0 : undefined,
     zIndex: draggingThisTile ? 2 : undefined,
   }
+  // Composited slide: drive the independent `translate` property (y stays 0). CSS keeps the
+  // permanent `transform: translateZ(0)` layer so this never toggles layer promotion.
   const flyMotionStyle: CSSProperties = {
-    ['--rack-fly-tx' as string]: rackFlyTx,
+    translate: `${rackFlyTx} 0px`,
     transition: resolvedTransition,
   }
 
@@ -331,7 +340,7 @@ function CharlestonPassHandPhantomSortable({ tile }: { tile: TileInstance }) {
     animateLayoutChanges: () => false,
   })
   const flyMotionStyle: CSSProperties = {
-    ['--rack-fly-tx' as string]: rackSortableFlyTx(transform),
+    translate: `${rackSortableFlyTx(transform)} 0px`,
     transition: isDragging
       ? 'none'
       : active
