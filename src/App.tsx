@@ -4190,6 +4190,11 @@ export default function App() {
    */
   const deferredHand = useDeferredValue(hand)
   const deferredPendingEastDiscardTile = useDeferredValue(pendingEastDiscardTile)
+  // Charleston/discard moves shift a tile between `hand` and `passSlots` in one atomic commit.
+  // The pattern-match rack below reads the DEFERRED hand, so `passSlots` must be deferred in the
+  // same snapshot — otherwise a placed/removed tile is momentarily counted in both (or neither),
+  // and the greedy matcher lights the wrong tracker/rack tiles for a frame before snapping back.
+  const deferredPassSlots = useDeferredValue(passSlots)
 
   /**
    * Same ids as `rackForSuggestedHandsUi` (below), but jokers in open melds use the tile they represent
@@ -4202,13 +4207,13 @@ export default function App() {
         [
           ...deferredHand,
           ...(deferredPendingEastDiscardTile ? [deferredPendingEastDiscardTile] : []),
-          ...(passSlots.filter(Boolean) as TileInstance[]),
+          ...(deferredPassSlots.filter(Boolean) as TileInstance[]),
         ],
         eastExposures,
       )
       return [...rack].sort((a, b) => Number(exposureIds.has(b.id)) - Number(exposureIds.has(a.id)))
     },
-    [deferredHand, deferredPendingEastDiscardTile, passSlots, eastExposures],
+    [deferredHand, deferredPendingEastDiscardTile, deferredPassSlots, eastExposures],
   )
 
   const suggestedHandsExposureTileIds = useMemo((): ReadonlySet<string> | undefined => {

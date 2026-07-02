@@ -1385,8 +1385,8 @@
 .hands-sheet__away-trend {
   display: block;
   flex-shrink: 0;
-  width: 1.25em;
-  height: 1.25em;
+  width: 1em;
+  height: 1em;
 }
 
 .hands-sheet__away-trend-wrap {

@@ -271,19 +271,15 @@ const SuggestedHandValueDisplay = memo(function SuggestedHandValueDisplay({
 
 const SuggestedHandAwayTrendIndicator = memo(function SuggestedHandAwayTrendIndicator({
   trend,
-  delta,
 }: {
   trend: Exclude<SelectedHandAwayTrend, null>
-  /** Negative offset vs the best suggested hand (e.g. -3 when 9 away vs top at 6). */
-  delta?: number | null
 }) {
-  const deltaLabel =
-    trend === 'behind-best' && delta != null && delta < 0 ? `, ${delta} vs best` : ''
   const label =
     trend === 'improved'
       ? 'Selected hand is fewer tiles away'
-      : `Another suggested hand is fewer tiles away${deltaLabel}`
-  const points = trend === 'improved' ? '6 15 12 9 18 15' : '6 9 12 15 18 9'
+      : 'Another suggested hand is fewer tiles away'
+  // Solid triangles. Improved points up, behind-best points down.
+  const points = trend === 'improved' ? '12 5 19 18 5 18' : '5 6 19 6 12 19'
   return (
     <span className="hands-sheet__away-trend-wrap" role="img" aria-label={label}>
       <svg
@@ -292,20 +288,8 @@ const SuggestedHandAwayTrendIndicator = memo(function SuggestedHandAwayTrendIndi
         aria-hidden
       >
         <title>{label}</title>
-        <polyline
-          points={points}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.35"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
+        <polygon points={points} fill="currentColor" stroke="none" />
       </svg>
-      {trend === 'behind-best' && delta != null && delta < 0 ? (
-        <span className="hands-sheet__away-trend-delta" aria-hidden>
-          {delta}
-        </span>
-      ) : null}
     </span>
   )
 })
@@ -523,7 +507,6 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
   row,
   rowIsFocused,
   awayTrend,
-  awayTrendDelta,
   rowDeadCause,
   tilesGuideOn,
   isPinned,
@@ -534,7 +517,6 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
   row: ExpandedHandsRow
   rowIsFocused: boolean
   awayTrend: SelectedHandAwayTrend
-  awayTrendDelta: number | null
   rowDeadCause: DeadCauseHint | null
   tilesGuideOn: boolean
   isPinned: boolean
@@ -646,7 +628,7 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
           {h.tilesNeededRough}
           {!showDetailRow && awayTrend ? (
             <span className="hands-sheet__away-trend-overlay">
-              <SuggestedHandAwayTrendIndicator trend={awayTrend} delta={awayTrendDelta} />
+              <SuggestedHandAwayTrendIndicator trend={awayTrend} />
             </span>
           ) : null}
         </div>
@@ -670,7 +652,7 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
             >
               {awayTrend ? (
                 <span className="hands-sheet__away-trend-overlay">
-                  <SuggestedHandAwayTrendIndicator trend={awayTrend} delta={awayTrendDelta} />
+                  <SuggestedHandAwayTrendIndicator trend={awayTrend} />
                 </span>
               ) : null}
             </div>
@@ -1314,24 +1296,22 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
 
   const activeAwayTrendState = useMemo<{
     trend: SelectedHandAwayTrend
-    delta: number | null
   }>(() => {
     if (!effectiveFocusRowKey || selectedAwayBaseline?.focusKey !== effectiveFocusRowKey) {
-      return { trend: null, delta: null }
+      return { trend: null }
     }
     const activeRow = expandedHandsRows.find((row) => row.focusKey === effectiveFocusRowKey)
-    if (!activeRow || expandedHandsRows.length === 0) return { trend: null, delta: null }
+    if (!activeRow || expandedHandsRows.length === 0) return { trend: null }
 
+    // Only reflect how this hand's own tiles-away number changed since it was selected.
     const currentAway = activeRow.line.tilesNeededRough
     if (currentAway < selectedAwayBaseline.tilesAway) {
-      return { trend: 'improved', delta: null }
+      return { trend: 'improved' }
     }
-
-    const bestAway = Math.min(...expandedHandsRows.map((row) => row.line.tilesNeededRough))
-    if (bestAway < currentAway) {
-      return { trend: 'behind-best', delta: bestAway - currentAway }
+    if (currentAway > selectedAwayBaseline.tilesAway) {
+      return { trend: 'behind-best' }
     }
-    return { trend: null, delta: null }
+    return { trend: null }
   }, [effectiveFocusRowKey, expandedHandsRows, selectedAwayBaseline])
 
   useEffect(() => {
@@ -1522,7 +1502,6 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                           row={row}
                           rowIsFocused={rowIsFocused}
                           awayTrend={rowIsFocused ? activeAwayTrendState.trend : null}
-                          awayTrendDelta={rowIsFocused ? activeAwayTrendState.delta : null}
                           rowDeadCause={
                             rowIsFocused && activePatternId
                               ? deadCauseByFocusKey[activePatternId] ?? null
