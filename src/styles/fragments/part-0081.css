@@ -1264,6 +1264,8 @@
   align-content: start;
   min-height: 0;
   margin: 0;
+  /* Pull the body up one line so the first row's top border overlaps the header's bottom border. */
+  margin-block-start: calc(-1 * var(--hands-sheet-grid-line-w));
   padding: 0;
   list-style: none;
   overflow-y: auto;
@@ -1821,7 +1823,16 @@
   display: none;
 }
 
-.hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__row::after {
+/*
+ * Sheet bottom edge only. Inter-row separators are drawn as a real border-block-start on every
+ * row (below), so restricting this bottom overlay to the last row avoids a doubled line between
+ * rows while still closing off the sheet.
+ */
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__rows
+  > .hands-sheet__row:last-child::after {
   content: '';
   grid-column: 1 / -1;
   grid-row: 1 / -1;
@@ -1832,6 +1843,22 @@
   border-block-end: var(--hands-sheet-debug-grid-border);
   pointer-events: none;
   z-index: 7;
+}
+
+/*
+ * Inter-row separator: a REAL top border on every body row (grid-row-1 cells; detail-pad cells
+ * live on row 2, so skip them). Because each row permanently owns its own top line, resorting a
+ * hand above another never adds or removes a line from any row -> no squish. `.hands-sheet__rows`
+ * is pulled up one line width so the first row's top border overlaps the header's bottom border
+ * (single seam under the sticky header, which paints on top at z-index 3).
+ */
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__rows
+  > .hands-sheet__row
+  .hands-sheet__cell:not(.hands-sheet__cell--detail-pad) {
+  border-block-start: var(--hands-sheet-debug-grid-border);
 }
 
 .hands-panel__content

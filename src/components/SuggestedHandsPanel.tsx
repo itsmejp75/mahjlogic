@@ -192,11 +192,6 @@ type StripRowsEntry = {
 
 type SelectedHandAwayTrend = 'improved' | 'behind-best' | null
 
-type SelectedAwayBaseline = {
-  focusKey: string
-  tilesAway: number
-}
-
 /** A single concrete focus key per suggested-hand line. Tied flexible variants are split into
  * separate lines (sub-best `consecRanksTier` at line build, primary-tier flex via
  * {@link expandedHandsRows} at panel level), so this never returns a multi-combo key. */
@@ -895,9 +890,9 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
 }: Props) {
   const pinnedKeySet = useMemo(() => new Set(pinnedHandKeys), [pinnedHandKeys])
   const handsListScrollRef = useRef<HTMLDivElement>(null)
-  const selectedAwayBaselineKeyRef = useRef<string | null>(null)
-  const [selectedAwayBaseline, setSelectedAwayBaseline] =
-    useState<SelectedAwayBaseline | null>(null)
+  const selectedAwayKeyRef = useRef<string | null>(null)
+  const selectedAwayLastValueRef = useRef<number | null>(null)
+  const [activeAwayTrend, setActiveAwayTrend] = useState<SelectedHandAwayTrend>(null)
 
   const getTrayScrollTarget = useCallback((): HTMLElement | null => {
     const shell = handsListScrollRef.current
@@ -1275,44 +1270,33 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     [effectiveFocusRowKey, getTrayScrollTarget],
   )
 
+  // Trend arrow reflects the direction of the most recent tiles-away change while a row stays
+  // selected: blank on select, green up when it drops, orange down when it rises, held until the
+  // next change. Resets to blank when the row is deselected or a different row is selected.
   useEffect(() => {
     if (effectiveFocusRowKey == null) {
-      selectedAwayBaselineKeyRef.current = null
-      setSelectedAwayBaseline(null)
+      selectedAwayKeyRef.current = null
+      selectedAwayLastValueRef.current = null
+      setActiveAwayTrend(null)
       return
     }
 
-    if (selectedAwayBaselineKeyRef.current === effectiveFocusRowKey) return
-
     const activeRow = expandedHandsRows.find((row) => row.focusKey === effectiveFocusRowKey)
     if (!activeRow) return
-
-    selectedAwayBaselineKeyRef.current = effectiveFocusRowKey
-    setSelectedAwayBaseline({
-      focusKey: effectiveFocusRowKey,
-      tilesAway: activeRow.line.tilesNeededRough,
-    })
-  }, [effectiveFocusRowKey, expandedHandsRows])
-
-  const activeAwayTrendState = useMemo<{
-    trend: SelectedHandAwayTrend
-  }>(() => {
-    if (!effectiveFocusRowKey || selectedAwayBaseline?.focusKey !== effectiveFocusRowKey) {
-      return { trend: null }
-    }
-    const activeRow = expandedHandsRows.find((row) => row.focusKey === effectiveFocusRowKey)
-    if (!activeRow || expandedHandsRows.length === 0) return { trend: null }
-
-    // Only reflect how this hand's own tiles-away number changed since it was selected.
     const currentAway = activeRow.line.tilesNeededRough
-    if (currentAway < selectedAwayBaseline.tilesAway) {
-      return { trend: 'improved' }
+
+    if (selectedAwayKeyRef.current !== effectiveFocusRowKey) {
+      selectedAwayKeyRef.current = effectiveFocusRowKey
+      selectedAwayLastValueRef.current = currentAway
+      setActiveAwayTrend(null)
+      return
     }
-    if (currentAway > selectedAwayBaseline.tilesAway) {
-      return { trend: 'behind-best' }
-    }
-    return { trend: null }
-  }, [effectiveFocusRowKey, expandedHandsRows, selectedAwayBaseline])
+
+    const prevAway = selectedAwayLastValueRef.current
+    if (prevAway == null || currentAway === prevAway) return
+    selectedAwayLastValueRef.current = currentAway
+    setActiveAwayTrend(currentAway < prevAway ? 'improved' : 'behind-best')
+  }, [effectiveFocusRowKey, expandedHandsRows])
 
   useEffect(() => {
     const scrollEl = getTrayScrollTarget()
@@ -1501,7 +1485,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                           key={row.reactKey}
                           row={row}
                           rowIsFocused={rowIsFocused}
-                          awayTrend={rowIsFocused ? activeAwayTrendState.trend : null}
+                          awayTrend={rowIsFocused ? activeAwayTrend : null}
                           rowDeadCause={
                             rowIsFocused && activePatternId
                               ? deadCauseByFocusKey[activePatternId] ?? null
