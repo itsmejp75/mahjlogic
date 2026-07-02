@@ -96,10 +96,15 @@ function rowOffsetInScrollContainer(
 function firstVisibleRowByHitTest(scrollEl: HTMLElement, scrollRect: DOMRect): HTMLElement | null {
   if (typeof document === 'undefined') return null
   const x = scrollRect.left + Math.min(24, Math.max(1, scrollRect.width / 2))
-  const y = scrollRect.top + 1
-  const hit = document.elementFromPoint(x, y)
-  const row = hit instanceof Element ? hit.closest('[data-hands-row-key]') : null
-  return row instanceof HTMLElement && scrollEl.contains(row) ? row : null
+  // Probe a few points just below the top edge. The first body row is pulled up ~1px so its top
+  // border tucks under the sticky header, so a single top+1 hit-test can land on the header
+  // instead of the row; stepping down a little skips that overlap without leaving the first row.
+  for (const dy of [3, 6, 10]) {
+    const hit = document.elementFromPoint(x, scrollRect.top + dy)
+    const row = hit instanceof Element ? hit.closest('[data-hands-row-key]') : null
+    if (row instanceof HTMLElement && scrollEl.contains(row)) return row
+  }
+  return null
 }
 
 function escapedDataAttrValue(value: string): string {
@@ -1326,7 +1331,13 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     const rowKeys = rowKeysInOrder(expandedHandsRows)
     const prev = handsListScrollSnapshotRef.current
 
+    // At the very top with nothing selected, let the list re-rank from the top down (the "best"
+    // hands are what you're looking at). Otherwise keep the viewed rows visually pinned so a hand
+    // sorting in above/below doesn't push the rows you're reading up or down.
+    const atTopNoSelection = effectiveFocusRowKey == null && prev.scrollTop <= 1
+
     if (
+      !atTopNoSelection &&
       prev.rowKeys.length > 0 &&
       rowKeysOrderChanged(prev.rowKeys, rowKeys) &&
       prev.anchorKey &&
