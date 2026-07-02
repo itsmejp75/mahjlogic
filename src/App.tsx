@@ -3507,9 +3507,7 @@ export default function App() {
 
   // ── Game options (persisted) ──────────────────────────────────────────────
   const [botWinsEnabled, setBotWinsEnabled] = useState<boolean>(() => readBotWinsEnabledFromStorage())
-  // TEMP DIAGNOSTIC (perf bisection): set to false to disable animation machinery and the
-  // [data-animations='on'] :has() CSS rules that re-evaluate on every drag/resize. Revert to true.
-  const animationsEnabled = false
+  const animationsEnabled = true
   const [colorButtonsEnabled, setColorButtonsEnabled] = useState<boolean>(() => readColorButtonsFromStorage())
 
   const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>(() => readBotDifficultyFromStorage())
@@ -4559,6 +4557,19 @@ export default function App() {
     ],
     [hand, pendingEastDiscardTile, passSlots, eastExposures],
   )
+
+  /**
+   * Deferred rack snapshots that feed ONLY the per-hand suggested-tiles strip preview (the
+   * ~80-hand `stripSlotRowsByKey` loop in SuggestedHandsPanel). Dragging/reordering/discarding a
+   * tile mutates `hand`; reading the strip inputs through `useDeferredValue` keeps that heavy
+   * recompute off the urgent render, so the rack snaps into place (drop, reorder, discard) and
+   * paints immediately while the strip previews catch up a frame later at low priority. The live
+   * rack and its highlight rings still read `rackForSuggestedHandsUi` / `rackForSuggestedPatternMatch`
+   * directly (the ring pass is a single focused-hand greedy match — cheap), so only the multi-hand
+   * strip previews lag.
+   */
+  const deferredRackForSuggestedStrip = useDeferredValue(rackForSuggestedHandsUi)
+  const deferredRackForSuggestedPatternMatch = useDeferredValue(rackForSuggestedPatternMatch)
 
   /**
    * True when the focused suggested-hand line is concealed (NMJL "C") — drives the red CONCEALED
@@ -7849,8 +7860,8 @@ export default function App() {
           onPatternClick={onSuggestedPatternClick}
           onFocusKeyMigrate={onSuggestedFocusKeyMigrate}
           tilesGuideOn={deferredSuggestedPanelTilesOn}
-          rackTilesForSuggestedStrip={rackForSuggestedHandsUi}
-          rackTilesForPatternMatch={rackForSuggestedPatternMatch}
+          rackTilesForSuggestedStrip={deferredRackForSuggestedStrip}
+          rackTilesForPatternMatch={deferredRackForSuggestedPatternMatch}
           exposureTileIdsForSuggestedStrip={suggestedHandsExposureTileIds}
           uncheckedSections={suggestedHandsUncheckedSections}
           hideConcealedHands={suggestedHandsHideConcealed}
