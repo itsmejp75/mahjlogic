@@ -3507,7 +3507,9 @@ export default function App() {
 
   // ── Game options (persisted) ──────────────────────────────────────────────
   const [botWinsEnabled, setBotWinsEnabled] = useState<boolean>(() => readBotWinsEnabledFromStorage())
-  const animationsEnabled = true
+  // TEMP DIAGNOSTIC (perf bisection): set to false to disable animation machinery and the
+  // [data-animations='on'] :has() CSS rules that re-evaluate on every drag/resize. Revert to true.
+  const animationsEnabled = false
   const [colorButtonsEnabled, setColorButtonsEnabled] = useState<boolean>(() => readColorButtonsFromStorage())
 
   const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>(() => readBotDifficultyFromStorage())
