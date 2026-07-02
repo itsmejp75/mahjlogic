@@ -78,16 +78,28 @@ function rowKeysOrderChanged(prev: string[], next: string[]): boolean {
   return false
 }
 
-function rowOffsetInScrollContainer(row: HTMLElement, scrollEl: HTMLElement): number {
+function rowOffsetInScrollContainer(
+  row: HTMLElement,
+  scrollEl: HTMLElement,
+  scrollRect?: DOMRect,
+): number {
   const rowRect = row.getBoundingClientRect()
-  const scrollRect = scrollEl.getBoundingClientRect()
-  return rowRect.top - scrollRect.top + scrollEl.scrollTop
+  const sr = scrollRect ?? scrollEl.getBoundingClientRect()
+  return rowRect.top - sr.top + scrollEl.scrollTop
 }
 
-function isVisibleInScrollContainer(row: HTMLElement, scrollEl: HTMLElement): boolean {
-  const scrollRect = scrollEl.getBoundingClientRect()
-  const rect = row.getBoundingClientRect()
-  return rect.bottom > scrollRect.top + 1 && rect.top < scrollRect.bottom - 1
+/**
+ * First row currently intersecting the top of the scroll viewport. Uses a single
+ * `elementFromPoint` hit-test instead of scanning every row with `getBoundingClientRect`,
+ * so the per-scroll-frame cost stays O(1) instead of O(rows) forced layouts.
+ */
+function firstVisibleRowByHitTest(scrollEl: HTMLElement, scrollRect: DOMRect): HTMLElement | null {
+  if (typeof document === 'undefined') return null
+  const x = scrollRect.left + Math.min(24, Math.max(1, scrollRect.width / 2))
+  const y = scrollRect.top + 1
+  const hit = document.elementFromPoint(x, y)
+  const row = hit instanceof Element ? hit.closest('[data-hands-row-key]') : null
+  return row instanceof HTMLElement && scrollEl.contains(row) ? row : null
 }
 
 function escapedDataAttrValue(value: string): string {
@@ -115,12 +127,13 @@ function findScrollRowAnchor(
 ): { key: string; patternId: string | null; offset: number } | null {
   // Keep the selected/highlighted hand visually anchored through re-ranks. If a new
   // suggested row appears above it, the list should scroll upward instead of pushing it down.
+  const scrollRect = scrollEl.getBoundingClientRect()
   const preferredByKey = preferredKey ? findRowByKey(scrollEl, preferredKey) : null
   if (preferredByKey) {
     return {
       key: preferredByKey.dataset.handsRowKey!,
       patternId: preferredByKey.dataset.handsPatternId ?? null,
-      offset: rowOffsetInScrollContainer(preferredByKey, scrollEl),
+      offset: rowOffsetInScrollContainer(preferredByKey, scrollEl, scrollRect),
     }
   }
 
@@ -131,20 +144,16 @@ function findScrollRowAnchor(
     return {
       key: preferredByPattern.dataset.handsRowKey!,
       patternId: preferredByPattern.dataset.handsPatternId ?? null,
-      offset: rowOffsetInScrollContainer(preferredByPattern, scrollEl),
+      offset: rowOffsetInScrollContainer(preferredByPattern, scrollEl, scrollRect),
     }
   }
 
-  for (const el of scrollEl.querySelectorAll('[data-hands-row-key]')) {
-    if (!(el instanceof HTMLElement)) continue
-    const key = el.dataset.handsRowKey
-    if (!key) continue
-    if (isVisibleInScrollContainer(el, scrollEl)) {
-      return {
-        key,
-        patternId: el.dataset.handsPatternId ?? null,
-        offset: rowOffsetInScrollContainer(el, scrollEl),
-      }
+  const visibleRow = firstVisibleRowByHitTest(scrollEl, scrollRect)
+  if (visibleRow && visibleRow.dataset.handsRowKey) {
+    return {
+      key: visibleRow.dataset.handsRowKey,
+      patternId: visibleRow.dataset.handsPatternId ?? null,
+      offset: rowOffsetInScrollContainer(visibleRow, scrollEl, scrollRect),
     }
   }
   return null
@@ -1328,9 +1337,22 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   useEffect(() => {
     const scrollEl = getTrayScrollTarget()
     if (!scrollEl) return
-    const onScroll = () => refreshScrollSnapshot()
+    // Coalesce scroll events to one snapshot per animation frame. The snapshot does layout
+    // reads (getBoundingClientRect / elementFromPoint); running it on every raw scroll event
+    // saturates the main thread mid-scroll and causes the WebView to blank whole rows.
+    let rafId: number | null = null
+    const onScroll = () => {
+      if (rafId != null) return
+      rafId = requestAnimationFrame(() => {
+        rafId = null
+        refreshScrollSnapshot()
+      })
+    }
     scrollEl.addEventListener('scroll', onScroll, { passive: true })
-    return () => scrollEl.removeEventListener('scroll', onScroll)
+    return () => {
+      scrollEl.removeEventListener('scroll', onScroll)
+      if (rafId != null) cancelAnimationFrame(rafId)
+    }
   }, [getTrayScrollTarget, refreshScrollSnapshot, expandedHandsRows.length])
 
   useLayoutEffect(() => {
