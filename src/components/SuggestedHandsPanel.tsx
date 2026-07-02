@@ -62,7 +62,8 @@ type HandsListScrollSnapshot = {
   rowKeys: string[]
   anchorKey: string | null
   anchorPatternId: string | null
-  anchorOffset: number
+  /** Row top relative to the scroll viewport (excludes scrollTop). */
+  anchorViewportTop: number
   scrollTop: number
 }
 
@@ -78,14 +79,49 @@ function rowKeysOrderChanged(prev: string[], next: string[]): boolean {
   return false
 }
 
-function rowOffsetInScrollContainer(
+function rowViewportTopInScrollContainer(
   row: HTMLElement,
   scrollEl: HTMLElement,
   scrollRect?: DOMRect,
 ): number {
   const rowRect = row.getBoundingClientRect()
   const sr = scrollRect ?? scrollEl.getBoundingClientRect()
-  return rowRect.top - sr.top + scrollEl.scrollTop
+  return rowRect.top - sr.top
+}
+
+/** When re-sort inserts rows above a stable hand, pick that hand as the scroll anchor. */
+function findStableAnchorKeyFromReorder(prevKeys: string[], nextKeys: string[]): string | null {
+  for (const key of prevKeys) {
+    const prevIdx = prevKeys.indexOf(key)
+    const nextIdx = nextKeys.indexOf(key)
+    if (nextIdx === -1) continue
+    if (nextIdx > prevIdx) return key
+  }
+  for (const key of prevKeys) {
+    if (nextKeys.includes(key)) return key
+  }
+  return null
+}
+
+/** Scroll delta needed when rows are inserted above `anchorKey` during a re-sort. */
+function scrollDeltaForRowsInsertedAbove(
+  scrollEl: HTMLElement,
+  prevKeys: string[],
+  nextKeys: string[],
+  anchorKey: string,
+): number {
+  const prevIdx = prevKeys.indexOf(anchorKey)
+  const nextIdx = nextKeys.indexOf(anchorKey)
+  if (prevIdx === -1 || nextIdx === -1 || nextIdx <= prevIdx) return 0
+  const prevAbove = new Set(prevKeys.slice(0, prevIdx))
+  let delta = 0
+  for (let i = 0; i < nextIdx; i++) {
+    const key = nextKeys[i]!
+    if (prevAbove.has(key)) continue
+    const rowEl = findRowByKey(scrollEl, key)
+    if (rowEl) delta += rowEl.getBoundingClientRect().height
+  }
+  return delta
 }
 
 /**
@@ -96,15 +132,10 @@ function rowOffsetInScrollContainer(
 function firstVisibleRowByHitTest(scrollEl: HTMLElement, scrollRect: DOMRect): HTMLElement | null {
   if (typeof document === 'undefined') return null
   const x = scrollRect.left + Math.min(24, Math.max(1, scrollRect.width / 2))
-  // Probe a few points just below the top edge. The first body row is pulled up ~1px so its top
-  // border tucks under the sticky header, so a single top+1 hit-test can land on the header
-  // instead of the row; stepping down a little skips that overlap without leaving the first row.
-  for (const dy of [3, 6, 10]) {
-    const hit = document.elementFromPoint(x, scrollRect.top + dy)
-    const row = hit instanceof Element ? hit.closest('[data-hands-row-key]') : null
-    if (row instanceof HTMLElement && scrollEl.contains(row)) return row
-  }
-  return null
+  const y = scrollRect.top + 1
+  const hit = document.elementFromPoint(x, y)
+  const row = hit instanceof Element ? hit.closest('[data-hands-row-key]') : null
+  return row instanceof HTMLElement && scrollEl.contains(row) ? row : null
 }
 
 function escapedDataAttrValue(value: string): string {
@@ -129,7 +160,7 @@ function findScrollRowAnchor(
   scrollEl: HTMLElement,
   preferredKey: string | null,
   preferredPatternId: string | null,
-): { key: string; patternId: string | null; offset: number } | null {
+): { key: string; patternId: string | null; viewportTop: number } | null {
   // Keep the selected/highlighted hand visually anchored through re-ranks. If a new
   // suggested row appears above it, the list should scroll upward instead of pushing it down.
   const scrollRect = scrollEl.getBoundingClientRect()
@@ -138,7 +169,7 @@ function findScrollRowAnchor(
     return {
       key: preferredByKey.dataset.handsRowKey!,
       patternId: preferredByKey.dataset.handsPatternId ?? null,
-      offset: rowOffsetInScrollContainer(preferredByKey, scrollEl, scrollRect),
+      viewportTop: rowViewportTopInScrollContainer(preferredByKey, scrollEl, scrollRect),
     }
   }
 
@@ -149,7 +180,7 @@ function findScrollRowAnchor(
     return {
       key: preferredByPattern.dataset.handsRowKey!,
       patternId: preferredByPattern.dataset.handsPatternId ?? null,
-      offset: rowOffsetInScrollContainer(preferredByPattern, scrollEl, scrollRect),
+      viewportTop: rowViewportTopInScrollContainer(preferredByPattern, scrollEl, scrollRect),
     }
   }
 
@@ -158,7 +189,7 @@ function findScrollRowAnchor(
     return {
       key: visibleRow.dataset.handsRowKey,
       patternId: visibleRow.dataset.handsPatternId ?? null,
-      offset: rowOffsetInScrollContainer(visibleRow, scrollEl, scrollRect),
+      viewportTop: rowViewportTopInScrollContainer(visibleRow, scrollEl, scrollRect),
     }
   }
   return null
@@ -909,7 +940,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     rowKeys: [],
     anchorKey: null,
     anchorPatternId: null,
-    anchorOffset: 0,
+    anchorViewportTop: 0,
     scrollTop: 0,
   })
 
@@ -1268,7 +1299,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
         rowKeys: rowKeys ?? snap.rowKeys,
         anchorKey: anchor?.key ?? null,
         anchorPatternId: anchor?.patternId ?? null,
-        anchorOffset: anchor?.offset ?? 0,
+        anchorViewportTop: anchor?.viewportTop ?? 0,
         scrollTop: scrollEl.scrollTop,
       }
     },
@@ -1340,24 +1371,37 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
       !atTopNoSelection &&
       prev.rowKeys.length > 0 &&
       rowKeysOrderChanged(prev.rowKeys, rowKeys) &&
-      prev.anchorKey &&
       !dragScrollActiveRef.current
     ) {
-      const anchorRow =
-        findRowForSnapshotAnchor(scrollEl, prev.anchorKey, prev.anchorPatternId) ??
-        (effectiveFocusRowKey
-          ? findRowForSnapshotAnchor(
-              scrollEl,
-              effectiveFocusRowKey,
-              focusKeyPatternId(effectiveFocusRowKey),
-            )
-          : null)
-      if (anchorRow) {
-        const newOffset = rowOffsetInScrollContainer(anchorRow, scrollEl)
-        const delta = newOffset - prev.anchorOffset
-        if (delta !== 0) {
-          scrollEl.scrollTop += delta
+      const scrollRect = scrollEl.getBoundingClientRect()
+      const anchorKey =
+        effectiveFocusRowKey ??
+        prev.anchorKey ??
+        findStableAnchorKeyFromReorder(prev.rowKeys, rowKeys)
+      const anchorRow = anchorKey
+        ? findRowForSnapshotAnchor(
+            scrollEl,
+            anchorKey,
+            (effectiveFocusRowKey ? focusKeyPatternId(effectiveFocusRowKey) : null) ??
+              prev.anchorPatternId,
+          )
+        : null
+
+      let delta = 0
+      if (anchorKey) {
+        const prevIdx = prev.rowKeys.indexOf(anchorKey)
+        const nextIdx = rowKeys.indexOf(anchorKey)
+        if (prevIdx !== -1 && nextIdx !== -1 && nextIdx > prevIdx) {
+          // Rows inserted above the anchor: sum only genuinely new rows (not shifted neighbors).
+          delta = scrollDeltaForRowsInsertedAbove(scrollEl, prev.rowKeys, rowKeys, anchorKey)
+        } else if (anchorRow && prev.anchorKey === anchorKey) {
+          const currentViewportTop = rowViewportTopInScrollContainer(anchorRow, scrollEl, scrollRect)
+          delta = currentViewportTop - prev.anchorViewportTop
         }
+      }
+
+      if (delta !== 0) {
+        scrollEl.scrollTop += delta
       }
     }
 

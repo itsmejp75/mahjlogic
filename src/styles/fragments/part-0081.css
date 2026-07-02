@@ -1264,8 +1264,6 @@
   align-content: start;
   min-height: 0;
   margin: 0;
-  /* Pull the body up one line so the first row's top border overlaps the header's bottom border. */
-  margin-block-start: calc(-1 * var(--hands-sheet-grid-line-w));
   padding: 0;
   list-style: none;
   overflow-y: auto;
@@ -1805,13 +1803,17 @@
 
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__row::before {
   content: '';
+  /* Full-width grid line between the card-hand line (row 1) and the parenthesis line (row 2).
+     Placed at the bottom edge of row 1 (align-self:end) — the top-of-row-2 position does not
+     render reliably. Spans every column so all cells split into an upper and lower half. */
   grid-column: 1 / -1;
-  grid-row: 2;
-  align-self: start;
+  grid-row: 1;
+  align-self: end;
   justify-self: stretch;
   width: auto;
+  height: 0;
   min-height: 0;
-  border-block-start: var(--hands-sheet-debug-grid-border);
+  border-block-end: var(--hands-sheet-debug-grid-border);
   pointer-events: none;
   z-index: 7;
 }
@@ -1823,16 +1825,7 @@
   display: none;
 }
 
-/*
- * Sheet bottom edge only. Inter-row separators are drawn as a real border-block-start on every
- * row (below), so restricting this bottom overlay to the last row avoids a doubled line between
- * rows while still closing off the sheet.
- */
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__rows
-  > .hands-sheet__row:last-child::after {
+.hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__row::after {
   content: '';
   grid-column: 1 / -1;
   grid-row: 1 / -1;
@@ -1843,22 +1836,6 @@
   border-block-end: var(--hands-sheet-debug-grid-border);
   pointer-events: none;
   z-index: 7;
-}
-
-/*
- * Inter-row separator: a REAL top border on every body row (grid-row-1 cells; detail-pad cells
- * live on row 2, so skip them). Because each row permanently owns its own top line, resorting a
- * hand above another never adds or removes a line from any row -> no squish. `.hands-sheet__rows`
- * is pulled up one line width so the first row's top border overlaps the header's bottom border
- * (single seam under the sticky header, which paints on top at z-index 3).
- */
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__rows
-  > .hands-sheet__row
-  .hands-sheet__cell:not(.hands-sheet__cell--detail-pad) {
-  border-block-start: var(--hands-sheet-debug-grid-border);
 }
 
 .hands-panel__content
@@ -1873,6 +1850,8 @@
   padding: 0;
   padding-inline: 0;
   overflow: visible;
+  /* Mid-row grid line for this column. */
+  border-block-end: var(--hands-sheet-debug-grid-border);
 }
 
 .hands-panel__content
@@ -1925,6 +1904,8 @@
   text-align: center;
   overflow: visible;
   position: relative;
+  /* Mid-row grid line for this column (row overlay does not reach the metric columns). */
+  border-block-end: var(--hands-sheet-debug-grid-border);
 }
 
 .hands-panel__content
@@ -1961,6 +1942,8 @@
   padding-inline-start: var(--hands-sheet-metric-pad-x);
   text-align: center;
   overflow: visible;
+  /* Mid-row grid line for this column (row overlay does not reach the metric columns). */
+  border-block-end: var(--hands-sheet-debug-grid-border);
 }
 
 .hands-panel__content
@@ -2006,11 +1989,14 @@
   grid-column: 1;
   grid-row: 1;
   align-self: end;
-  justify-self: start;
+  /* Stretch across the category track so its mid-row border spans the full column width. */
+  justify-self: stretch;
   white-space: normal;
   flex-wrap: wrap;
   padding-block: 0;
   padding-inline: var(--hands-sheet-cell-pad-x);
+  /* Mid-row grid line for the category column. */
+  border-block-end: var(--hands-sheet-debug-grid-border);
 }
 
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__hand-stack {
@@ -2074,6 +2060,8 @@
   grid-column: 2;
   grid-row: 1;
   align-self: end;
+  /* Mid-row grid line for the hand column. */
+  border-block-end: var(--hands-sheet-debug-grid-border);
 }
 
 .hands-panel__content
@@ -2089,7 +2077,8 @@
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__hand-title-line {
   display: inline-flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  /* Center keeps the card hand, concealed C, and dead-cause icon on one vertical rhythm. */
+  align-items: center;
   gap: 0.18rem;
   min-width: 0;
   max-width: 100%;
@@ -2133,10 +2122,6 @@
   border: 1px solid currentColor;
   border-radius: 0.15em;
   color: var(--card-ink-red);
-}
-
-.hands-sheet__hand-title-line .hands-sheet__card-c {
-  align-self: center;
 }
 
 /* Tiles-only spreadsheet: tile strip | away | values. */
