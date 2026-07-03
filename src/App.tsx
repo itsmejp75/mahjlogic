@@ -122,6 +122,7 @@ import {
   computeBotExposureSuggestedBestIds,
   findInfeasibleBestIds,
   buildUnavailableTileDefCounts,
+  tileMultisetSignature,
   type RankSuggestedHandsInput,
 } from './analysis/suggestedHands'
 import { tileInstancesWithClaimMeldJokersResolved } from './analysis/eastExposurePatternFit'
@@ -4540,10 +4541,33 @@ export default function App() {
     cardPatterns,
   ])
 
+  /**
+   * Order-independent signature of the ranking rack. A pure rack reorder changes
+   * `suggestedRankInput`'s identity but not its tile multiset, and every ranking output
+   * (tiles-away, points, sort order) is order-independent — so key the heavy re-rank on this
+   * signature to reuse the cached result and skip the full suggested-list rebuild on rearrange.
+   */
+  const suggestedRankHandSignature = useMemo(
+    () => tileMultisetSignature(suggestedRankInput.hand),
+    [suggestedRankInput.hand],
+  )
+
   const eastSuggestedHands = useMemo(() => {
     if (mainPhase === 'mahjong-declared' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand' || mainPhase === 'wall-game') return []
     return rankSuggestedHands(suggestedRankInput)
-  }, [mainPhase, suggestedRankInput])
+    // Gate on the hand multiset signature (plus the other content-bearing, referentially-stable
+    // inputs) rather than `suggestedRankInput` identity so a reorder is a no-op here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    mainPhase,
+    suggestedRankHandSignature,
+    suggestedRankInput.wallRemaining,
+    suggestedRankInput.discards,
+    suggestedRankInput.exposures,
+    suggestedRankInput.playerClaimMelds,
+    suggestedRankInput.eastTableClaimMelds,
+    suggestedRankInput.patterns,
+  ])
 
   /** Menu category labels: still on, but muted when exposures rule out every hand in that section. */
   const suggestedHandsExposureAvailableSections = useMemo(

@@ -3736,8 +3736,8 @@
   border: none;
   width: 100%;
   min-width: 0;
-  background: var(--bg-elevated, var(--window-surface, var(--bg)));
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--border) 50%, transparent);
+  background: transparent;
+  box-shadow: none;
   color: inherit;
   cursor: default;
   text-align: center;
@@ -3752,9 +3752,9 @@
 
 .hands-list__freeze-header.hands-list__row-hit:focus-visible,
 .hands-list__freeze-header.hands-list__row-hit:focus {
-  background: var(--bg-elevated, var(--window-surface, var(--bg)));
+  background: transparent;
   outline: none;
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--border) 50%, transparent);
+  box-shadow: none;
 }
 
 /* Tiles on: row uses parent subgrid (see .hands-list--tiles-excel). */
@@ -4492,8 +4492,8 @@
   text-transform: capitalize;
   padding-block: 0.2em;
   color: #dcdce0;
-  background: var(--bg-elevated, var(--window-surface, var(--bg)));
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--border) 60%, transparent);
+  background: transparent;
+  box-shadow: none;
 }
 
 .app[data-color-buttons='off'] .panel--hands .hands-sheet__cell--header {
@@ -4941,7 +4941,7 @@
   align-self: stretch;
   position: sticky;
   top: 0;
-  background: var(--bg-elevated, var(--window-surface, var(--bg)));
+  background: transparent;
   border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
   box-sizing: border-box;
   z-index: 2;

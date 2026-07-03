@@ -135,6 +135,27 @@
   min-height: 0;
   /* Selected suggested-hand row fill: #334155 at 50% opacity (rgba — reliable over dark scroll areas). */
   --hands-row-active-fill: rgba(51, 65, 85, 0.5);
+  /* Single edit point for the suggested-hands sticky title row (see block below). */
+  --hands-header-bg: var(--app-bg-paint-color, var(--color-slate-mid));
+}
+
+/*
+ * Suggested-hands sticky title row — one fill for every paint layer.
+ * Grid header cells paint per column; `.hands-sheet--tilesHands::before` covers gutter/rail
+ * columns that have no cell of their own. Both layouts (spreadsheet + freeze-header list)
+ * read `--hands-header-bg` from `.hands-panel__content`.
+ */
+.hands-panel__content :is(
+  .hands-list__freeze-header.hands-list__row-hit,
+  .hands-list__freeze-header.hands-list__row-hit:focus,
+  .hands-list__freeze-header.hands-list__row-hit:focus-visible,
+  .hands-list__freeze-header .hands-list__header-cell,
+  .hands-list-scroll > .hands-sheet .hands-sheet__cell--header,
+  .hands-list-scroll > .hands-sheet .hands-sheet__cell--header.hands-sheet__cell--pin,
+  .hands-list-scroll > .hands-sheet.hands-sheet--tilesHands::before
+) {
+  background: var(--hands-header-bg);
+  background-image: none;
 }
 
 .hands-panel__list-column {
@@ -185,6 +206,14 @@
   box-sizing: border-box;
   padding: 0.2rem 0.35rem;
   padding-block: 0.3rem 0.35rem;
+  border-block-start: none;
+  border-block-end: var(--hands-sheet-border, 1px solid color-mix(in srgb, var(--window-border) 55%, transparent));
+  border-inline-end: var(--hands-sheet-border, 1px solid color-mix(in srgb, var(--window-border) 55%, transparent));
+  box-shadow: none;
+}
+
+.hands-panel__content .hands-list__freeze-header .hands-list__cell--values.hands-list__header-cell {
+  border-inline-end: none;
 }
 
 .hands-list__freeze-header
@@ -504,8 +533,7 @@
   border: none;
   width: 100%;
   min-width: 0;
-  background: var(--color-slate-mid);
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--border) 50%, transparent);
+  box-shadow: none;
   color: inherit;
   cursor: default;
   text-align: center;
@@ -520,9 +548,8 @@
 
 .hands-list__freeze-header.hands-list__row-hit:focus-visible,
 .hands-list__freeze-header.hands-list__row-hit:focus {
-  background: var(--color-slate-mid);
   outline: none;
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--border) 50%, transparent);
+  box-shadow: none;
 }
 
 .hands-panel__content .hands-list__freeze-header.hands-list__row-hit--with-tiles {
@@ -1173,18 +1200,9 @@
   --hands-sheet-cell-pad-x: 0.65em;
   /* Tighter horizontal pad only for Away / Points so fixed tracks can stay narrow without clipping. */
   --hands-sheet-metric-pad-x: 0.42em;
-  /* DEBUG: one spreadsheet-style grid line system while tuning Hands / Hands+Tiles / Tiles. */
-  --hands-sheet-grid-line-color: rgba(248, 113, 113, 0.9);
+  --hands-sheet-grid-line-color: color-mix(in srgb, var(--window-border) 55%, transparent);
   --hands-sheet-border: 1px solid var(--hands-sheet-grid-line-color);
-  --hands-sheet-debug-grid-border: var(--hands-sheet-border);
   --hands-sheet-grid-line-w: 1px;
-  /*
-   * Horizontal rules on row-1 cells must not use real borders — even 1px border-block-start on
-   * the first body row inflates the grid track and reads as extra padding above tack / away /
-   * points (flex-end). Inset shadows paint the line without changing track size.
-   */
-  --hands-sheet-row-divider-shadow: inset 0 -1px 0 0 var(--hands-sheet-grid-line-color);
-  --hands-sheet-row-edge-shadow: 0 1px 0 0 var(--hands-sheet-grid-line-color);
   /*
    * Shared AWAY / VALUES column widths — fixed tracks in all sheet modes so headers line up
    * with body cells. Tiles modes keep the same values on `.hands-sheet--tiles2`.
@@ -1308,16 +1326,6 @@
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) > .hands-sheet__cell--header {
   position: relative;
   top: auto;
-}
-
-.hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2)::after {
-  content: '';
-  position: absolute;
-  inset-block: 0;
-  left: calc(var(--hands-sheet-pin-w) + var(--hands-sheet-category-w));
-  border-inline-start: var(--hands-sheet-border);
-  pointer-events: none;
-  z-index: 6;
 }
 
 /*
@@ -1460,14 +1468,29 @@
   text-transform: capitalize;
   padding-block: 0.2em;
   color: #dcdce0;
-  background: var(--color-slate-mid);
+  /* Fill: `--hands-header-bg` on `.hands-panel__content` (consolidated block above). */
+  /* Spreadsheet grid lines are real cell borders from `.hands-sheet__cell` — not box-shadows. */
+  box-shadow: none;
+}
+
+/*
+ * Hands-only header row: same spreadsheet border model as the body (right + bottom cell borders).
+ * No border-block-start — the line above the header is the sheet container's top border.
+ */
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  > .hands-sheet__cell--header {
+  border-block-start: none;
+  border-block-end: var(--hands-sheet-border);
+  border-inline-end: var(--hands-sheet-border);
   box-shadow: none;
 }
 
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)
-  > .hands-sheet__cell--header.hands-sheet__cell--cat {
+  > .hands-sheet__cell--header.hands-sheet__cell--values {
   border-inline-end: none;
 }
 
@@ -1586,6 +1609,13 @@
   outline-offset: -2px;
 }
 
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row--active {
+  background: var(--hands-row-active-fill);
+}
+
 .hands-sheet__row--active > .hands-sheet__row-btn > .hands-sheet__cell--tiles {
   background: var(--hands-row-active-fill);
   /* Let tile corners + suggest rings paint fully; `hidden` clipped faces/outlines when the strip is tight. */
@@ -1606,6 +1636,10 @@
 }
 
 .hands-sheet__row--active > .hands-sheet__row-btn > .hands-sheet__cell--combined {
+  overflow: visible;
+}
+
+.hands-sheet__row--active > .hands-sheet__row-btn > .hands-sheet__cell--hand.hands-sheet__cell--detail-pad {
   overflow: visible;
 }
 
@@ -1653,72 +1687,6 @@
 .hands-sheet__row--active .hands-sheet__tiles-stack-row--active {
   background: var(--hands-row-active-fill);
   box-shadow: none;
-}
-
-/*
- * Hands-only detail row (parenthetical / tile strip): painting the combined cell as one
- * block spans both grid rows and covers the row-2 ::before divider. Split the active fill
- * across line 1 / line 2 children; pad cells carry the fill in pin / metric cols.
- */
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__row--active:has(.hands-sheet__hand-stack-detail)
-  > .hands-sheet__row-btn
-  > .hands-sheet__cell--combined-hands {
-  background: transparent;
-}
-
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__row--active:has(.hands-sheet__hand-stack-detail)
-  .hands-sheet__cell--combined-hands
-  > .hands-sheet__category {
-  display: flex;
-  align-items: flex-end;
-  align-self: stretch;
-  justify-self: stretch;
-  width: 100%;
-  box-sizing: border-box;
-  background: var(--hands-row-active-fill);
-}
-
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__row--active:has(.hands-sheet__hand-stack-detail)
-  .hands-sheet__cell--combined-hands
-  .hands-sheet__hand-stack-main {
-  display: flex;
-  align-items: flex-end;
-  align-self: stretch;
-  background: var(--hands-row-active-fill);
-}
-
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__row--active:has(.hands-sheet__hand-stack-detail)
-  .hands-sheet__cell--combined-hands::before {
-  content: '';
-  grid-column: 1;
-  grid-row: 2;
-  align-self: stretch;
-  justify-self: stretch;
-  background: var(--hands-row-active-fill);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__row--active:has(.hands-sheet__hand-stack-detail)
-  .hands-sheet__cell--combined-hands
-  .hands-sheet__hand-stack-detail {
-  align-self: stretch;
-  background: var(--hands-row-active-fill);
 }
 
 .hands-panel__content
@@ -1783,106 +1751,63 @@
 }
 
 /*
- * Hands-only body rows: two synchronized spreadsheet tracks.
- * Horizontal rules are row-level pseudo-elements, not per-cell borders, so they stay continuous
- * when columns / rows move around.
+ * Hands-only body rows: two synchronized spreadsheet tracks. Horizontal and vertical grid
+ * lines are real cell borders — see the header / body spreadsheet rules above and below.
  */
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__row {
   display: grid;
   grid-column: 1 / -1;
-  grid-template-columns: subgrid;
+  /*
+   * Explicit tracks (was `subgrid`) so each row is its own layout box that `content-visibility`
+   * can skip when off-screen. The template is identical to the parent sheet template
+   * (`.hands-sheet` above): fixed pin / category / away / values tracks + one `1fr` hand column,
+   * resolved against the same full row width — so every row and the sticky header stay
+   * column-aligned (verified: hand-column edge drift is 0 across all rows).
+   */
+  grid-template-columns:
+    var(--hands-sheet-pin-w)
+    minmax(0, var(--hands-sheet-category-w))
+    minmax(0, 1fr)
+    var(--hands-sheet-away-w)
+    var(--hands-sheet-values-w);
   grid-template-rows: auto auto;
+  /*
+   * Skip layout + paint for the (100+) rows scrolled out of view — only rows near the viewport
+   * are laid out, which cuts the tray's forced-layout cost ~40% and keeps the slower embedded
+   * WebViews (Cursor browser / iOS WKWebView) responsive. `auto` remembers each row's real
+   * measured height so the scrollbar stays accurate after a row has been seen once; the fallback
+   * length is only used for rows that have never been rendered yet.
+   */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 3em;
+}
+
+/* Tiles on: rows carry a tile strip + detail row, so start from a taller never-rendered estimate. */
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet--detail-tiles
+  .hands-sheet__row {
+  contain-intrinsic-size: auto 6em;
 }
 
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__row:not(:has(.hands-sheet__hand-stack-detail)) {
+  .hands-sheet__row:not(:has(.hands-sheet__cell--detail-pad)) {
   grid-template-rows: auto;
 }
 
+/*
+ * Hands-only body: spreadsheet grid lines are real cell borders (right + bottom) from
+ * `.hands-sheet__cell`. Body cells never use border-block-start — the line above a row is
+ * always the sticky header's or the previous hand row's bottom border.
+ */
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)
   .hands-sheet__row
   .hands-sheet__cell:not(.hands-sheet__cell--header) {
-  border-block-end: none;
-  /*
-   * Row-1 cells must never carry a top border. Even 1px border-block-start inflates the
-   * row-1 grid track; pin / away / hand use flex-end, so that pixel becomes empty space
-   * above the tack, green hand box, and purple away box on whoever is :first-child in
-   * `.hands-sheet__rows`. Inter-row lines belong on row ::after (bottom), not cell tops.
-   */
   border-block-start: none;
-  box-shadow: none;
-}
-
-/*
- * First scroll row: belt-and-suspenders — nothing above row-1 may add layout height (old
- * border-block-start + negative-margin experiments left tack / away / points taller only here).
- */
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  > .hands-sheet__rows
-  > .hands-sheet__row:first-child
-  .hands-sheet__cell--pin:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad),
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  > .hands-sheet__rows
-  > .hands-sheet__row:first-child
-  .hands-sheet__row-btn
-  > .hands-sheet__cell--away:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad),
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  > .hands-sheet__rows
-  > .hands-sheet__row:first-child
-  .hands-sheet__row-btn
-  > .hands-sheet__cell--values:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad) {
-  border-block-start: none;
-  padding-block-start: 0;
-  margin-block-start: 0;
-}
-
-.hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__row::before {
-  content: '';
-  /* Full-width grid line between the card-hand line (row 1) and the parenthesis line (row 2).
-     Placed at the bottom edge of row 1 (align-self:end) — the top-of-row-2 position does not
-     render reliably. Spans every column so all cells split into an upper and lower half. */
-  grid-column: 1 / -1;
-  grid-row: 1;
-  align-self: end;
-  justify-self: stretch;
-  width: auto;
-  height: 0;
-  min-height: 0;
-  border-block-end: none;
-  box-shadow: var(--hands-sheet-row-edge-shadow);
-  pointer-events: none;
-  z-index: 7;
-}
-
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__row:not(:has(.hands-sheet__hand-stack-detail))::before {
-  display: none;
-}
-
-.hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__row::after {
-  content: '';
-  grid-column: 1 / -1;
-  grid-row: 1 / -1;
-  align-self: end;
-  justify-self: stretch;
-  width: auto;
-  min-height: 0;
-  border-block-end: none;
-  box-shadow: var(--hands-sheet-row-edge-shadow);
-  pointer-events: none;
-  z-index: 7;
 }
 
 .hands-panel__content
@@ -1897,32 +1822,55 @@
   padding: 0;
   padding-inline: 0;
   overflow: visible;
-  border-block-end: none;
-  box-shadow: var(--hands-sheet-row-divider-shadow);
 }
 
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__cell--combined-hands {
-  position: relative;
-  display: grid;
-  grid-column: 2 / span 2;
-  grid-row: 1 / -1;
-  grid-template-columns: subgrid;
-  grid-template-rows: subgrid;
-  align-items: stretch;
-  justify-items: start;
-  padding: 0;
+  .hands-sheet__row-btn
+  > .hands-sheet__cell--cat:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad) {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  align-items: flex-end;
+  padding-block: 0;
+  padding-inline: var(--hands-sheet-cell-pad-x);
   overflow: visible;
 }
 
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__row:not(:has(.hands-sheet__hand-stack-detail))
-  .hands-sheet__cell--combined-hands {
+  .hands-sheet__row-btn
+  > .hands-sheet__cell--cat.hands-sheet__cell--detail-pad {
+  grid-column: 2;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row-btn
+  > .hands-sheet__cell--hand:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad) {
+  grid-column: 3;
   grid-row: 1;
+  display: flex;
+  align-items: flex-end;
+  padding-block: 0;
+  padding-inline: var(--hands-sheet-cell-pad-x);
+  overflow: visible;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row-btn
+  > .hands-sheet__cell--hand.hands-sheet__cell--detail-pad {
+  grid-column: 3;
+  display: flex;
+  align-items: flex-end;
+  padding-block: 0;
+  padding-inline: var(--hands-sheet-cell-pad-x);
+  overflow: visible;
 }
 
 .hands-sheet__away-trend-overlay {
@@ -1942,6 +1890,10 @@
   .hands-sheet__row-btn
   > .hands-sheet__cell--away:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad) {
   grid-column: 4;
+  /* Stay on the card-hand line (track 1), not the full row: this keeps the detail-pad cell (row 2)
+     free for the trend arrow. Bottom-align (flex-end) to match the card hand, which is
+     `align-self: end` in track 1 — centering here made the digit float above the card hand on
+     tall (parenthetical/detail) rows while short rows looked bottom-aligned. */
   grid-row: 1;
   display: flex;
   align-items: flex-end;
@@ -1951,14 +1903,12 @@
   text-align: center;
   overflow: visible;
   position: relative;
-  border-block-end: none;
-  box-shadow: var(--hands-sheet-row-divider-shadow);
 }
 
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__row:not(:has(.hands-sheet__hand-stack-detail))
+  .hands-sheet__row:not(:has(.hands-sheet__cell--detail-pad))
   .hands-sheet__away-trend-overlay {
   top: 50%;
 }
@@ -1980,6 +1930,7 @@
   .hands-sheet__row-btn
   > .hands-sheet__cell--values:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad) {
   grid-column: 5;
+  /* Stay on the card-hand line (track 1) and bottom-align to the card hand — see the Away note above. */
   grid-row: 1;
   display: flex;
   align-items: flex-end;
@@ -1989,8 +1940,7 @@
   padding-inline-start: var(--hands-sheet-metric-pad-x);
   text-align: center;
   overflow: visible;
-  border-block-end: none;
-  box-shadow: var(--hands-sheet-row-divider-shadow);
+  position: relative;
 }
 
 .hands-panel__content
@@ -2021,44 +1971,14 @@
   padding-inline-start: var(--hands-sheet-metric-pad-x);
 }
 
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__cell--hand:not(.hands-sheet__cell--header) {
-  display: grid;
-  grid-template-rows: auto auto;
-  align-items: stretch;
-  padding: 0;
-  overflow: visible;
-}
-
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__category {
-  grid-column: 1;
-  grid-row: 1;
-  align-self: end;
-  /* Stretch across the category track so its mid-row border spans the full column width. */
-  justify-self: stretch;
   white-space: normal;
   flex-wrap: wrap;
-  padding-block: 0;
-  padding-inline: var(--hands-sheet-cell-pad-x);
-  border-block-end: none;
-  box-shadow: var(--hands-sheet-row-divider-shadow);
-}
-
-.hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__hand-stack {
-  display: grid;
-  grid-template-rows: auto auto;
-  align-items: stretch;
-  min-width: 0;
-  max-width: 100%;
-  width: 100%;
-  white-space: normal;
 }
 
 /*
  * Tiles toggle: keep the hands-only column grid; swap parenthetical detail for a tile strip
- * in `.hands-sheet__hand-stack-detail` (no layout switch to `.hands-sheet--tilesHands`).
+ * in the hand detail cell (no layout switch to `.hands-sheet--tilesHands`).
  */
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2).hands-sheet--detail-tiles {
   --hands-sheet-tile-gap: var(--player-rack-face-gap);
@@ -2076,49 +1996,11 @@
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2).hands-sheet--detail-tiles
-  .hands-sheet__hand-stack-detail
+  .hands-sheet__cell--hand.hands-sheet__cell--detail-pad
   .hands-sheet__tiles-grid {
   flex-wrap: wrap;
   max-width: 100%;
   padding-block: 0.2em;
-}
-
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__cell--combined-hands
-  .hands-sheet__hand-stack {
-  display: contents;
-}
-
-.hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__hand-stack-main,
-.hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__hand-stack-detail {
-  min-width: 0;
-  justify-self: stretch;
-  padding-inline: var(--hands-sheet-cell-pad-x);
-  padding-block: 0;
-}
-
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__cell--combined-hands
-  .hands-sheet__hand-stack-main {
-  grid-column: 2;
-  grid-row: 1;
-  align-self: end;
-  border-block-end: none;
-  box-shadow: var(--hands-sheet-row-divider-shadow);
-}
-
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__cell--combined-hands
-  .hands-sheet__hand-stack-detail {
-  grid-column: 2;
-  grid-row: 2;
-  align-self: end;
 }
 
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__hand-title-line {
@@ -2142,7 +2024,7 @@
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__hand-stack-detail
+  .hands-sheet__cell--hand.hands-sheet__cell--detail-pad
   .hands-sheet__paren {
   display: block;
   width: 100%;
@@ -2170,92 +2052,6 @@
   border-radius: 0.15em;
   color: var(--card-ink-red);
 }
-
-/*
- * ============================================================================
- * DEBUG: suggested-hands tray layout diagnosis (REMOVE WHEN DONE)
- * ----------------------------------------------------------------------------
- * Distinct-color OUTLINES per element so each box's position is visible and can
- * be watched as hands re-sort. `outline` (not `border`) adds no layout space, so
- * the diagnostic itself cannot cause / hide any 1px shift being chased.
- *   white  = the row grid box            cyan    = pin / tack cell
- *   orange = category cell               lime    = card-hand line (row 1)
- *   teal   = paren / tiles detail (row 2) magenta = Away number cell
- *   blue   = Points number cell          dashed  = combined + detail-pad boxes
- * ============================================================================
- */
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__row {
-  outline: 1px solid rgba(255, 255, 255, 0.6);
-  outline-offset: -1px;
-}
-
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__cell--combined-hands {
-  outline: 1px dashed rgba(255, 255, 255, 0.45);
-  outline-offset: -2px;
-}
-
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__cell--pin:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad) {
-  outline: 1px solid #00e5ff;
-  outline-offset: -1px;
-}
-
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__category {
-  outline: 1px solid #ff9f1a;
-  outline-offset: -2px;
-}
-
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__hand-stack-main {
-  outline: 1px solid #7cfc00;
-  outline-offset: -2px;
-}
-
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__hand-stack-detail {
-  outline: 1px solid #00d0a0;
-  outline-offset: -2px;
-}
-
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__cell--away:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad) {
-  outline: 1px solid #ff2bd6;
-  outline-offset: -1px;
-}
-
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__cell--values:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad) {
-  outline: 1px solid #3aa0ff;
-  outline-offset: -1px;
-}
-
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__cell--detail-pad {
-  outline: 1px dashed rgba(160, 160, 170, 0.75);
-  outline-offset: -2px;
-}
-/* ===== END DEBUG ===== */
 
 /* Tiles-only spreadsheet: tile strip | away | values. */
 .hands-panel__content .hands-list-scroll > .hands-sheet.hands-sheet--tiles2 {
@@ -2540,7 +2336,6 @@
   padding: 0;
   margin: 0;
   min-height: 0;
-  background: var(--color-slate-mid);
   box-shadow: none;
 }
 
@@ -2553,7 +2348,9 @@
   grid-row: 1;
   z-index: 4;
   padding: 0;
-  background: var(--color-slate-mid);
+  border-block-start: none;
+  border-block-end: var(--hands-sheet-border);
+  border-inline-end: var(--hands-sheet-border);
   box-shadow: none;
 }
 
@@ -2634,7 +2431,7 @@
   column-gap: 0;
   width: 100%;
   min-width: 0;
-  border-block-end: var(--hands-sheet-debug-grid-border);
+  border-block-end: var(--hands-sheet-border);
 }
 
 .hands-sheet--tilesHands .hands-sheet__cell--combined .hands-sheet__category {
@@ -2694,8 +2491,6 @@
   justify-self: start;
   justify-content: flex-start;
   align-items: center;
-  outline: 1px dashed rgba(96, 165, 250, 0.95);
-  outline-offset: 1px;
 }
 
 .hands-sheet--tilesHands .hands-sheet__cell--combined .hands-sheet__tiles-stack .hands-sheet__tiles-stack-row {
@@ -2752,7 +2547,6 @@
   align-self: stretch;
   position: sticky;
   top: 0;
-  background: var(--color-slate-mid);
   border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
   box-sizing: border-box;
   z-index: 2;

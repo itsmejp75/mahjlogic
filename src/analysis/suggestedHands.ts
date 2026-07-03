@@ -1261,6 +1261,21 @@ function fullDefKey(def: TileDef): string {
   }
 }
 
+/**
+ * Order-independent signature of a tile collection keyed by tile identity that matters to ranking
+ * and strip layout (suit+rank, wind, dragon, flower/joker/blank category). Two racks holding the
+ * same tiles in a different order produce the same string. A pure rack reorder never changes
+ * tiles-away or the strip contents, so callers can use this to skip the (expensive) re-rank /
+ * strip rebuild + full list re-render that an array-identity change would otherwise trigger.
+ */
+export function tileMultisetSignature(tiles: readonly TileInstance[]): string {
+  if (tiles.length === 0) return ''
+  const keys = new Array<string>(tiles.length)
+  for (let i = 0; i < tiles.length; i++) keys[i] = fullDefKey(tiles[i]!.def)
+  keys.sort()
+  return keys.join(',')
+}
+
 function totalCopiesForDef(def: TileDef): number {
   if (def.cat === 'flower') return 8
   if (def.cat === 'joker') return 8

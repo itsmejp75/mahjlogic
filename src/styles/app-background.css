@@ -6,8 +6,9 @@
  * Everything on the main play screen that is NOT a button, tile, label text, or
  * empty slot well uses this recipe (shell, tray chrome, gaps between panels).
  *
- * Where it is applied: part-0123.css blocks “Main app background surfaces”,
- * “Suggested-hands tray shell”, and “Suggested-hands sticky header row”. Excluded on purpose: slot wells (`--app-bg-slot-well`).
+ * Where it is applied: part-0123.css blocks “Main app background surfaces” and
+ * “Suggested-hands tray shell”. Header fill is `--hands-header-bg` on `.hands-panel__content`
+ * (part-0081). Excluded on purpose: slot wells (`--app-bg-slot-well`).
  *
  * Quick tweaks:
  *   --app-bg-base       overall charcoal tone (also sync index.html first-paint color)

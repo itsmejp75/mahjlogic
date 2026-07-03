@@ -1217,34 +1217,6 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 }
 
 /*
- * Suggested-hands sticky header row — same paint as main app background.
- */
-.app .suggested-hands-popup :is(
-  .hands-list__freeze-header.hands-list__row-hit,
-  .hands-list__freeze-header.hands-list__row-hit:focus,
-  .hands-list__freeze-header.hands-list__row-hit:focus-visible,
-  .hands-list__freeze-header .hands-list__header-cell,
-  .hands-panel__content .hands-list-scroll > .hands-sheet .hands-sheet__cell--header,
-  .hands-panel__content .hands-list-scroll > .hands-sheet .hands-sheet__cell--header.hands-sheet__cell--pin
-) {
-  background-color: var(--app-bg-paint-color);
-  background-image: var(--app-bg-paint-image);
-  background-size: var(--app-bg-paint-size);
-  background-repeat: var(--app-bg-paint-repeat);
-  background-blend-mode: var(--app-bg-paint-blend);
-  background-attachment: var(--app-bg-paint-attachment);
-}
-
-.app .suggested-hands-popup .hands-sheet.hands-sheet--tilesHands::before {
-  background-color: var(--app-bg-paint-color);
-  background-image: var(--app-bg-paint-image);
-  background-size: var(--app-bg-paint-size);
-  background-repeat: var(--app-bg-paint-repeat);
-  background-blend-mode: var(--app-bg-paint-blend);
-  background-attachment: var(--app-bg-paint-attachment);
-}
-
-/*
  * Suggested-hands selected row — midpoint between app shell and unpinned pin ink.
  */
 .app .suggested-hands-popup .hands-panel__content {

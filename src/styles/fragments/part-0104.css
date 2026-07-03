@@ -214,21 +214,18 @@
   pointer-events: none;
 }
 
-/* Internal grid lines in the discard overlay (part-0081 DEBUG salmon borders stay elsewhere). */
+/* Tray spreadsheet grid line color — shared by `.hands-sheet` and `.hands-list__freeze-header`. */
+.suggested-hands-popup .hands-panel__content .hands-list-scroll {
+  --hands-sheet-grid-line-color: color-mix(in srgb, var(--window-border) 55%, transparent);
+  --hands-sheet-border: 1px solid var(--hands-sheet-grid-line-color);
+}
+
 .suggested-hands-popup .hands-panel__content .hands-list-scroll > .hands-sheet {
   --hands-sheet-grid-line-color: color-mix(in srgb, var(--window-border) 55%, transparent);
   --hands-sheet-border: 1px solid var(--hands-sheet-grid-line-color);
-  --hands-sheet-debug-grid-border: var(--hands-sheet-border);
 }
 
-/* Tray: hide the full-width divider between hand title and parenthesis/tiles detail row. */
-.suggested-hands-popup
-  .hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__row:has(.hands-sheet__hand-stack-detail)::before {
-  display: none;
-}
+/* Tray: spreadsheet grid lines are real cell borders — no row pseudo dividers to hide. */
 
 /*
  * Discard tray: drop the spreadsheet outer frame (side/top/bottom) so the sheet reads flush
@@ -245,13 +242,6 @@
 
 .suggested-hands-popup--discard-overlay .hands-sheet__rows > .hands-sheet__row:last-child .hands-sheet__cell {
   border-block-end: none;
-  box-shadow: none;
-}
-
-.suggested-hands-popup--discard-overlay
-  .hands-sheet__rows
-  > .hands-sheet__row:last-child::after {
-  box-shadow: none;
 }
 
 .suggested-hands-popup--discard-overlay.suggested-hands-popup--open .panel--hands,
@@ -356,8 +346,6 @@
 .suggested-hands-popup .hands-list__freeze-header .hands-list__cell--pin.hands-list__header-cell {
   border-top-left-radius: var(--suggested-popup-radius);
   border-top-right-radius: 0;
-  /* Match sticky header row so the bar is continuous above the pin column (no inner-surface gap). */
-  background: var(--color-slate-mid);
 }
 
 .suggested-hands-popup

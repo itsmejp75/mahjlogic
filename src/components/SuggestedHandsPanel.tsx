@@ -19,6 +19,7 @@ import {
   type SuggestedStripSlot,
   suggestedHandCardRefDisplay,
   suggestedHandCardRefOrder,
+  tileMultisetSignature,
 } from '../analysis/suggestedHands'
 import type { CardInk } from '../card/cardText'
 import type { PracticePattern } from '../card/practicePatterns'
@@ -600,7 +601,7 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
       >
         <div
           className={[
-            'hands-sheet__cell hands-sheet__cell--combined hands-sheet__cell--combined-hands',
+            'hands-sheet__cell hands-sheet__cell--cat',
             sheetRowLitEdge(rowLit, 'start'),
           ]
             .filter(Boolean)
@@ -611,42 +612,59 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
             {suggestedHandSectionMenuLabel(h.section)}
             <span className="hands-sheet__section-num"> - {cardRef}</span>
           </span>
-          <div className="hands-sheet__hand-stack" aria-label={h.title}>
-            <div className="hands-sheet__hand-stack-main">
-              <span className="hands-sheet__hand-title-line">
-                {h.titleSegments?.length ? (
-                  <>
-                    <CardColoredTextWithDeadCause
-                      segments={h.titleSegments}
-                      deadCause={rowDeadCause}
-                    />
-                    {h.closed ? <SuggestedHandConcealedMark variant="sheet" /> : null}
-                  </>
-                ) : (
-                  <>
-                    {parenText ? suggestedHandPlainTitleWithoutParen(h) : h.title}
-                    {h.closed ? <SuggestedHandConcealedMark variant="sheet" /> : null}
-                  </>
-                )}
-                {rowDeadCause ? <SuggestedHandDeadCauseIcon cause={rowDeadCause} /> : null}
-              </span>
-            </div>
-            {showTileDetail ? (
-              <div className="hands-sheet__hand-stack-detail">
-                <SuggestedHandSheetTileGrid
-                  slots={rowStripSlots}
-                  isActiveRow={rowLit}
-                  keyPrefix={rowKey}
+        </div>
+        {showDetailRow ? (
+          <div
+            className="hands-sheet__cell hands-sheet__cell--cat hands-sheet__cell--detail-pad"
+            role="cell"
+            aria-hidden="true"
+          />
+        ) : null}
+        <div
+          className={[
+            'hands-sheet__cell hands-sheet__cell--hand',
+            sheetRowLitEdge(rowLit, 'mid'),
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          role="cell"
+          aria-label={h.title}
+        >
+          <span className="hands-sheet__hand-title-line">
+            {h.titleSegments?.length ? (
+              <>
+                <CardColoredTextWithDeadCause
+                  segments={h.titleSegments}
                   deadCause={rowDeadCause}
                 />
-              </div>
-            ) : parenText ? (
-              <div className="hands-sheet__hand-stack-detail">
-                <span className="hands-sheet__paren">{parenText}</span>
-              </div>
-            ) : null}
-          </div>
+                {h.closed ? <SuggestedHandConcealedMark variant="sheet" /> : null}
+              </>
+            ) : (
+              <>
+                {parenText ? suggestedHandPlainTitleWithoutParen(h) : h.title}
+                {h.closed ? <SuggestedHandConcealedMark variant="sheet" /> : null}
+              </>
+            )}
+            {rowDeadCause ? <SuggestedHandDeadCauseIcon cause={rowDeadCause} /> : null}
+          </span>
         </div>
+        {showDetailRow ? (
+          <div
+            className="hands-sheet__cell hands-sheet__cell--hand hands-sheet__cell--detail-pad"
+            role="cell"
+          >
+            {showTileDetail ? (
+              <SuggestedHandSheetTileGrid
+                slots={rowStripSlots}
+                isActiveRow={rowLit}
+                keyPrefix={rowKey}
+                deadCause={rowDeadCause}
+              />
+            ) : (
+              <span className="hands-sheet__paren">{parenText}</span>
+            )}
+          </div>
+        ) : null}
         <div
           className={[
             'hands-sheet__cell hands-sheet__cell--away',
@@ -1147,6 +1165,22 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
 
   const handEntryKey = useCallback((h: (typeof filtered)[number]) => handEntryKeyForLine(h), [])
 
+  // Order-independent signatures of the strip racks. A pure rack reorder changes these arrays'
+  // identity but not their tile multiset, and the per-hand strip layout is order-independent — so
+  // gate the ~130-row strip rebuild (and the ~1800 tile-cell re-render it forces) on these
+  // signatures so rearranging tiles in the rack does no work here.
+  const stripRackSignature = useMemo(
+    () => (tilesGuideOn ? tileMultisetSignature(rackTilesForSuggestedStrip) : ''),
+    [tilesGuideOn, rackTilesForSuggestedStrip],
+  )
+  const stripPatternMatchRackSignature = useMemo(
+    () =>
+      tilesGuideOn && rackTilesForPatternMatch
+        ? tileMultisetSignature(rackTilesForPatternMatch)
+        : '',
+    [tilesGuideOn, rackTilesForPatternMatch],
+  )
+
   const stripSlotRowsByKey = useMemo(() => {
     if (!tilesGuideOn || rackTilesForSuggestedStrip.length === 0)
       return new Map<string, StripRowsEntry>()
@@ -1198,11 +1232,13 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
       })
     }
     return m
+    // Keyed on rack *signatures* (not array identity) so a pure reorder reuses the cached strips.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     tilesGuideOn,
     filtered,
-    rackTilesForSuggestedStrip,
-    rackTilesForPatternMatch,
+    stripRackSignature,
+    stripPatternMatchRackSignature,
     exposureTileIdsForSuggestedStrip,
     handEntryKey,
     cardPatterns,
@@ -1378,30 +1414,54 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
         effectiveFocusRowKey ??
         prev.anchorKey ??
         findStableAnchorKeyFromReorder(prev.rowKeys, rowKeys)
+      // Stable identity for the anchor: the pattern-line id survives focus-key churn. When "Tiles"
+      // is on, flexible-variant hands fan out into rows whose react/focus key carries a variant
+      // suffix (`::oc::…`, `::tier::…`); that suffix can change across a re-rank even though the
+      // hand is the same, so the exact key can't be relied on to relocate the anchor.
+      const anchorPatternId =
+        (effectiveFocusRowKey ? focusKeyPatternId(effectiveFocusRowKey) : null) ??
+        (anchorKey ? focusKeyPatternId(anchorKey) : null) ??
+        prev.anchorPatternId
       const anchorRow = anchorKey
-        ? findRowForSnapshotAnchor(
-            scrollEl,
-            anchorKey,
-            (effectiveFocusRowKey ? focusKeyPatternId(effectiveFocusRowKey) : null) ??
-              prev.anchorPatternId,
-          )
+        ? findRowForSnapshotAnchor(scrollEl, anchorKey, anchorPatternId)
         : null
 
       let delta = 0
-      if (anchorKey) {
-        const prevIdx = prev.rowKeys.indexOf(anchorKey)
-        const nextIdx = rowKeys.indexOf(anchorKey)
+      // Same hand as the previous snapshot (matched by stable pattern id): keep it pinned to the
+      // viewport position it held before the re-rank. This covers rows inserted above it, rows
+      // removed above it, and variant-suffix key changes — so the selected hand stays put with
+      // Tiles on just like it does with Tiles off.
+      const samePatternAsPrev =
+        anchorPatternId != null &&
+        prev.anchorPatternId != null &&
+        anchorPatternId === prev.anchorPatternId
+      if (anchorRow && samePatternAsPrev) {
+        const currentViewportTop = rowViewportTopInScrollContainer(anchorRow, scrollEl, scrollRect)
+        delta = currentViewportTop - prev.anchorViewportTop
+      } else if (anchorKey) {
+        // Anchor newly chosen this pass (e.g. a stable row picked out of the reorder) — no prior
+        // viewport sample exists, so estimate by summing the heights of rows inserted above it.
+        let prevIdx = prev.rowKeys.indexOf(anchorKey)
+        if (prevIdx === -1 && anchorPatternId != null) {
+          prevIdx = prev.rowKeys.findIndex((k) => focusKeyPatternId(k) === anchorPatternId)
+        }
+        let nextIdx = rowKeys.indexOf(anchorKey)
+        if (nextIdx === -1 && anchorPatternId != null) {
+          nextIdx = rowKeys.findIndex((k) => focusKeyPatternId(k) === anchorPatternId)
+        }
         if (prevIdx !== -1 && nextIdx !== -1 && nextIdx > prevIdx) {
           // Rows inserted above the anchor: sum only genuinely new rows (not shifted neighbors).
           delta = scrollDeltaForRowsInsertedAbove(scrollEl, prev.rowKeys, rowKeys, anchorKey)
-        } else if (anchorRow && prev.anchorKey === anchorKey) {
-          const currentViewportTop = rowViewportTopInScrollContainer(anchorRow, scrollEl, scrollRect)
-          delta = currentViewportTop - prev.anchorViewportTop
         }
       }
 
-      if (delta !== 0) {
-        scrollEl.scrollTop += delta
+      // Apply whole-pixel corrections only, and snap the result to an integer scrollTop. The delta
+      // is derived from getBoundingClientRect (sub-pixel), so tiny nudges — e.g. when the anchor
+      // didn't really move but a variant-suffix key changed — would otherwise fractionally scroll
+      // the list and clip the row at the top of the viewport, making it look like the top hand is
+      // shrinking/changing height on every re-rank.
+      if (Math.abs(delta) >= 0.5) {
+        scrollEl.scrollTop = Math.round(scrollEl.scrollTop + delta)
       }
     }
 

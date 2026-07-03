@@ -1,0 +1,12 @@
+import puppeteer from 'puppeteer'
+const b = await puppeteer.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless:'new', args:['--no-sandbox']})
+const p = await b.newPage()
+await p.setViewport({width:900,height:1200,deviceScaleFactor:2})
+await p.goto('http://localhost:5174/',{waitUntil:'domcontentloaded',timeout:60000})
+await new Promise(r=>setTimeout(r,2500))
+await p.screenshot({path:'probe1.png'})
+const texts = await p.evaluate(()=>Array.from(document.querySelectorAll('button')).slice(0,50).map(b=>b.textContent?.trim()).filter(Boolean))
+console.log('BUTTONS', JSON.stringify(texts))
+console.log('hasSheet', await p.evaluate(()=>!!document.querySelector('.hands-sheet')))
+console.log('hasPopup', await p.evaluate(()=>!!document.querySelector('.suggested-hands-popup')))
+await b.close()
