@@ -1202,7 +1202,7 @@
   --hands-sheet-metric-pad-x: 0.42em;
   --hands-sheet-grid-line-color: color-mix(in srgb, var(--window-border) 55%, transparent);
   --hands-sheet-border: 1px solid var(--hands-sheet-grid-line-color);
-  --hands-sheet-grid-line-w: 1px;
+  --hands-sheet-grid-line-w: 0.5px;
   /*
    * Shared AWAY / VALUES column widths — fixed tracks in all sheet modes so headers line up
    * with body cells. Tiles modes keep the same values on `.hands-sheet--tiles2`.
@@ -1219,22 +1219,27 @@
   --hands-sheet-rail: var(--hands-panel-pad-x, 1rem);
   --hands-sheet-pin-w: 1.65em;
   --hands-sheet-category-w: 7.2em;
+  /*
+   * SINGLE SOURCE OF TRUTH for the spreadsheet columns. Pin | category | hands (remaining width) |
+   * away | values — min 0 so lines wrap instead of forcing the sheet wider than the viewport.
+   * The sticky header (`.hands-sheet`, below) *and* every body row (`.hands-sheet__row`) apply this
+   * one variable, so the vertical grid lines are always the same line: edit widths here once and the
+   * header and the list move together. (Body rows can't use `subgrid` — their `content-visibility`
+   * size containment discards inherited subgrid tracks — so we share the template via this var.)
+   */
+  --hands-sheet-grid-cols:
+    var(--hands-sheet-pin-w)
+    minmax(0, var(--hands-sheet-category-w))
+    minmax(0, 1fr)
+    var(--hands-sheet-away-w)
+    var(--hands-sheet-values-w);
   margin-inline: calc(-1 * var(--hands-sheet-rail));
   width: calc(100% + 2 * var(--hands-sheet-rail));
   position: relative;
   display: grid;
   border-block-start: var(--hands-sheet-border);
   border-inline-start: var(--hands-sheet-border);
-  /*
-   * Pin | category | hands (remaining width) | away | values — min 0 so lines wrap instead of
-   * forcing the sheet wider than the viewport.
-   */
-  grid-template-columns:
-    var(--hands-sheet-pin-w)
-    minmax(0, var(--hands-sheet-category-w))
-    minmax(0, 1fr)
-    var(--hands-sheet-away-w)
-    var(--hands-sheet-values-w);
+  grid-template-columns: var(--hands-sheet-grid-cols);
   min-width: calc(100% + 2 * var(--hands-sheet-rail));
   box-sizing: border-box;
   /*
@@ -1300,27 +1305,28 @@
 }
 
 /*
- * Mobile / touch: `.hands-sheet__rows` spans all columns via subgrid, so iOS overlay
- * scrollbars paint in the middle of a metric column (often Points) instead of the panel
- * edge. Hide the thumb — touch scrolling is unchanged.
+ * Hide the scrollbar on the body track (all platforms). The sticky column header lives outside
+ * this scroll container at full sheet width, but a classic space-consuming scrollbar only narrows
+ * the body — so the flexible hand column shrinks and every column line to its right lands left of
+ * the matching header line, breaking the spreadsheet grid. Removing the scrollbar keeps the body
+ * the exact width of the header so the vertical grid lines stay continuous. Scrolling is unchanged
+ * (wheel + the tray's drag-scroll); iOS overlay scrollbars were also mispainting mid-column here.
  */
-@media (max-width: 932px), (pointer: coarse) {
-  .hands-panel__content
-    .hands-list-scroll
-    > .hands-sheet:not(.hands-sheet--tiles2)
-    > .hands-sheet__rows {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  > .hands-sheet__rows {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
 
-  .hands-panel__content
-    .hands-list-scroll
-    > .hands-sheet:not(.hands-sheet--tiles2)
-    > .hands-sheet__rows::-webkit-scrollbar {
-    display: none;
-    width: 0;
-    height: 0;
-  }
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  > .hands-sheet__rows::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) > .hands-sheet__cell--header {
@@ -1469,12 +1475,12 @@
   padding-block: 0.2em;
   color: #dcdce0;
   /* Fill: `--hands-header-bg` on `.hands-panel__content` (consolidated block above). */
-  /* Spreadsheet grid lines are real cell borders from `.hands-sheet__cell` — not box-shadows. */
   box-shadow: none;
 }
 
 /*
- * Hands-only header row: same spreadsheet border model as the body (right + bottom cell borders).
+ * Hands-only header row: horizontal border only. Vertical rules are drawn once by the sheet-level
+ * overlay below so the header band and row grid cannot paint slightly different x positions.
  * No border-block-start — the line above the header is the sheet container's top border.
  */
 .hands-panel__content
@@ -1483,15 +1489,34 @@
   > .hands-sheet__cell--header {
   border-block-start: none;
   border-block-end: var(--hands-sheet-border);
-  border-inline-end: var(--hands-sheet-border);
   box-shadow: none;
 }
 
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)
-  > .hands-sheet__cell--header.hands-sheet__cell--values {
+  .hands-sheet__cell {
   border-inline-end: none;
+}
+
+.hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--hands-sheet-grid-line-color), var(--hands-sheet-grid-line-color)),
+    linear-gradient(var(--hands-sheet-grid-line-color), var(--hands-sheet-grid-line-color)),
+    linear-gradient(var(--hands-sheet-grid-line-color), var(--hands-sheet-grid-line-color)),
+    linear-gradient(var(--hands-sheet-grid-line-color), var(--hands-sheet-grid-line-color));
+  background-repeat: no-repeat;
+  background-size: var(--hands-sheet-grid-line-w) 100%;
+  background-position:
+    calc(var(--hands-sheet-pin-w) - var(--hands-sheet-grid-line-w)) 0,
+    calc(var(--hands-sheet-pin-w) + var(--hands-sheet-category-w) - var(--hands-sheet-grid-line-w)) 0,
+    calc(100% - var(--hands-sheet-away-w) - var(--hands-sheet-values-w) - var(--hands-sheet-grid-line-w)) 0,
+    calc(100% - var(--hands-sheet-values-w) - var(--hands-sheet-grid-line-w)) 0;
 }
 
 .app[data-color-buttons='off'] .panel--hands .hands-sheet__cell--header {
@@ -1758,18 +1783,13 @@
   display: grid;
   grid-column: 1 / -1;
   /*
-   * Explicit tracks (was `subgrid`) so each row is its own layout box that `content-visibility`
-   * can skip when off-screen. The template is identical to the parent sheet template
-   * (`.hands-sheet` above): fixed pin / category / away / values tracks + one `1fr` hand column,
-   * resolved against the same full row width — so every row and the sticky header stay
-   * column-aligned (verified: hand-column edge drift is 0 across all rows).
+   * Explicit tracks (not `subgrid`) so each row is its own layout box that `content-visibility`
+   * can skip when off-screen — `subgrid` here is broken by that size containment. To stay perfectly
+   * column-aligned with the sticky header we reuse the sheet's ONE template variable
+   * (`--hands-sheet-grid-cols`, defined on `.hands-sheet`) instead of re-declaring the tracks, so a
+   * width edit updates the header and every row together and the grid lines can never drift apart.
    */
-  grid-template-columns:
-    var(--hands-sheet-pin-w)
-    minmax(0, var(--hands-sheet-category-w))
-    minmax(0, 1fr)
-    var(--hands-sheet-away-w)
-    var(--hands-sheet-values-w);
+  grid-template-columns: var(--hands-sheet-grid-cols);
   grid-template-rows: auto auto;
   /*
    * Skip layout + paint for the (100+) rows scrolled out of view — only rows near the viewport
@@ -1788,6 +1808,27 @@
   > .hands-sheet--detail-tiles
   .hands-sheet__row {
   contain-intrinsic-size: auto 6em;
+}
+
+/*
+ * Tiles off: pin every row to a whole-pixel height. The card line + parenthesis line come to a
+ * fractional ~55.3px, so each row started on a different sub-pixel. When the list re-ranks the
+ * selected row is held in place while the surrounding rows nudge by that leftover fraction, which
+ * dragged the 1px seam above the selected row onto a new sub-pixel and smeared it into a
+ * thicker / "doubled" line. `round(up, …)` snaps the row height to whole CSS pixels so the grid
+ * lines stay on the device-pixel grid and the seam stays a crisp, unchanging 1px through re-ranks.
+ * `min-block-size` (not a fixed height) still lets a rare wrapping title / parenthesis grow.
+ * `--_hands-row-h` models the natural height: card line (1.5em line box + 1px cell border) plus
+ * parenthesis line (1.173em box + 1px cell border); the 2px of borders are constant so this
+ * tracks the fluid sheet font correctly.
+ */
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2):not(.hands-sheet--detail-tiles)
+  .hands-sheet__row {
+  --_hands-row-h: round(up, calc(2.673em + 2px), 1px);
+  min-block-size: var(--_hands-row-h);
+  contain-intrinsic-size: auto var(--_hands-row-h);
 }
 
 .hands-panel__content
@@ -2350,7 +2391,7 @@
   padding: 0;
   border-block-start: none;
   border-block-end: var(--hands-sheet-border);
-  border-inline-end: var(--hands-sheet-border);
+  border-inline-end: none;
   box-shadow: none;
 }
 

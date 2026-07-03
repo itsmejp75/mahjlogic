@@ -565,7 +565,12 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
   const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}${h.closed ? ', concealed' : ''}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points)}`
   const parenText = !tilesGuideOn ? suggestedHandParenText(h) : null
   const showTileDetail = tilesGuideOn && rowStripSlots.length > 0
-  const showDetailRow = showTileDetail || Boolean(parenText)
+  // Hands-only rows always reserve the parenthesis line so every suggested hand has the same
+  // total height *and* keeps its card line at the same vertical position. Without this,
+  // paren-less rows collapse to a single track and their hand text + Away/Points jump ~1 line
+  // relative to paren'd rows whenever the list reorders.
+  const reserveParenRow = !tilesGuideOn
+  const showDetailRow = showTileDetail || reserveParenRow || Boolean(parenText)
 
   return (
     <li
@@ -661,7 +666,7 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
                 deadCause={rowDeadCause}
               />
             ) : (
-              <span className="hands-sheet__paren">{parenText}</span>
+              <span className="hands-sheet__paren">{parenText ?? '\u00A0'}</span>
             )}
           </div>
         ) : null}
