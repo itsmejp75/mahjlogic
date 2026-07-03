@@ -216,7 +216,8 @@
 
 /* Internal grid lines in the discard overlay (part-0081 DEBUG salmon borders stay elsewhere). */
 .suggested-hands-popup .hands-panel__content .hands-list-scroll > .hands-sheet {
-  --hands-sheet-border: 1px solid color-mix(in srgb, var(--window-border) 55%, transparent);
+  --hands-sheet-grid-line-color: color-mix(in srgb, var(--window-border) 55%, transparent);
+  --hands-sheet-border: 1px solid var(--hands-sheet-grid-line-color);
   --hands-sheet-debug-grid-border: var(--hands-sheet-border);
 }
 
@@ -244,6 +245,13 @@
 
 .suggested-hands-popup--discard-overlay .hands-sheet__rows > .hands-sheet__row:last-child .hands-sheet__cell {
   border-block-end: none;
+  box-shadow: none;
+}
+
+.suggested-hands-popup--discard-overlay
+  .hands-sheet__rows
+  > .hands-sheet__row:last-child::after {
+  box-shadow: none;
 }
 
 .suggested-hands-popup--discard-overlay.suggested-hands-popup--open .panel--hands,

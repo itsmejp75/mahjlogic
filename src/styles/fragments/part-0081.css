@@ -1174,9 +1174,17 @@
   /* Tighter horizontal pad only for Away / Points so fixed tracks can stay narrow without clipping. */
   --hands-sheet-metric-pad-x: 0.42em;
   /* DEBUG: one spreadsheet-style grid line system while tuning Hands / Hands+Tiles / Tiles. */
-  --hands-sheet-border: 1px solid rgba(248, 113, 113, 0.9);
+  --hands-sheet-grid-line-color: rgba(248, 113, 113, 0.9);
+  --hands-sheet-border: 1px solid var(--hands-sheet-grid-line-color);
   --hands-sheet-debug-grid-border: var(--hands-sheet-border);
   --hands-sheet-grid-line-w: 1px;
+  /*
+   * Horizontal rules on row-1 cells must not use real borders — even 1px border-block-start on
+   * the first body row inflates the grid track and reads as extra padding above tack / away /
+   * points (flex-end). Inset shadows paint the line without changing track size.
+   */
+  --hands-sheet-row-divider-shadow: inset 0 -1px 0 0 var(--hands-sheet-grid-line-color);
+  --hands-sheet-row-edge-shadow: 0 1px 0 0 var(--hands-sheet-grid-line-color);
   /*
    * Shared AWAY / VALUES column widths — fixed tracks in all sheet modes so headers line up
    * with body cells. Tiles modes keep the same values on `.hands-sheet--tiles2`.
@@ -1799,6 +1807,43 @@
   .hands-sheet__row
   .hands-sheet__cell:not(.hands-sheet__cell--header) {
   border-block-end: none;
+  /*
+   * Row-1 cells must never carry a top border. Even 1px border-block-start inflates the
+   * row-1 grid track; pin / away / hand use flex-end, so that pixel becomes empty space
+   * above the tack, green hand box, and purple away box on whoever is :first-child in
+   * `.hands-sheet__rows`. Inter-row lines belong on row ::after (bottom), not cell tops.
+   */
+  border-block-start: none;
+  box-shadow: none;
+}
+
+/*
+ * First scroll row: belt-and-suspenders — nothing above row-1 may add layout height (old
+ * border-block-start + negative-margin experiments left tack / away / points taller only here).
+ */
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  > .hands-sheet__rows
+  > .hands-sheet__row:first-child
+  .hands-sheet__cell--pin:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad),
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  > .hands-sheet__rows
+  > .hands-sheet__row:first-child
+  .hands-sheet__row-btn
+  > .hands-sheet__cell--away:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad),
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  > .hands-sheet__rows
+  > .hands-sheet__row:first-child
+  .hands-sheet__row-btn
+  > .hands-sheet__cell--values:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad) {
+  border-block-start: none;
+  padding-block-start: 0;
+  margin-block-start: 0;
 }
 
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__row::before {
@@ -1813,7 +1858,8 @@
   width: auto;
   height: 0;
   min-height: 0;
-  border-block-end: var(--hands-sheet-debug-grid-border);
+  border-block-end: none;
+  box-shadow: var(--hands-sheet-row-edge-shadow);
   pointer-events: none;
   z-index: 7;
 }
@@ -1833,7 +1879,8 @@
   justify-self: stretch;
   width: auto;
   min-height: 0;
-  border-block-end: var(--hands-sheet-debug-grid-border);
+  border-block-end: none;
+  box-shadow: var(--hands-sheet-row-edge-shadow);
   pointer-events: none;
   z-index: 7;
 }
@@ -1850,8 +1897,8 @@
   padding: 0;
   padding-inline: 0;
   overflow: visible;
-  /* Mid-row grid line for this column. */
-  border-block-end: var(--hands-sheet-debug-grid-border);
+  border-block-end: none;
+  box-shadow: var(--hands-sheet-row-divider-shadow);
 }
 
 .hands-panel__content
@@ -1904,8 +1951,8 @@
   text-align: center;
   overflow: visible;
   position: relative;
-  /* Mid-row grid line for this column (row overlay does not reach the metric columns). */
-  border-block-end: var(--hands-sheet-debug-grid-border);
+  border-block-end: none;
+  box-shadow: var(--hands-sheet-row-divider-shadow);
 }
 
 .hands-panel__content
@@ -1942,8 +1989,8 @@
   padding-inline-start: var(--hands-sheet-metric-pad-x);
   text-align: center;
   overflow: visible;
-  /* Mid-row grid line for this column (row overlay does not reach the metric columns). */
-  border-block-end: var(--hands-sheet-debug-grid-border);
+  border-block-end: none;
+  box-shadow: var(--hands-sheet-row-divider-shadow);
 }
 
 .hands-panel__content
@@ -1995,8 +2042,8 @@
   flex-wrap: wrap;
   padding-block: 0;
   padding-inline: var(--hands-sheet-cell-pad-x);
-  /* Mid-row grid line for the category column. */
-  border-block-end: var(--hands-sheet-debug-grid-border);
+  border-block-end: none;
+  box-shadow: var(--hands-sheet-row-divider-shadow);
 }
 
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__hand-stack {
@@ -2060,8 +2107,8 @@
   grid-column: 2;
   grid-row: 1;
   align-self: end;
-  /* Mid-row grid line for the hand column. */
-  border-block-end: var(--hands-sheet-debug-grid-border);
+  border-block-end: none;
+  box-shadow: var(--hands-sheet-row-divider-shadow);
 }
 
 .hands-panel__content
@@ -2123,6 +2170,92 @@
   border-radius: 0.15em;
   color: var(--card-ink-red);
 }
+
+/*
+ * ============================================================================
+ * DEBUG: suggested-hands tray layout diagnosis (REMOVE WHEN DONE)
+ * ----------------------------------------------------------------------------
+ * Distinct-color OUTLINES per element so each box's position is visible and can
+ * be watched as hands re-sort. `outline` (not `border`) adds no layout space, so
+ * the diagnostic itself cannot cause / hide any 1px shift being chased.
+ *   white  = the row grid box            cyan    = pin / tack cell
+ *   orange = category cell               lime    = card-hand line (row 1)
+ *   teal   = paren / tiles detail (row 2) magenta = Away number cell
+ *   blue   = Points number cell          dashed  = combined + detail-pad boxes
+ * ============================================================================
+ */
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row {
+  outline: 1px solid rgba(255, 255, 255, 0.6);
+  outline-offset: -1px;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__cell--combined-hands {
+  outline: 1px dashed rgba(255, 255, 255, 0.45);
+  outline-offset: -2px;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__cell--pin:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad) {
+  outline: 1px solid #00e5ff;
+  outline-offset: -1px;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__category {
+  outline: 1px solid #ff9f1a;
+  outline-offset: -2px;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__hand-stack-main {
+  outline: 1px solid #7cfc00;
+  outline-offset: -2px;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__hand-stack-detail {
+  outline: 1px solid #00d0a0;
+  outline-offset: -2px;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__cell--away:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad) {
+  outline: 1px solid #ff2bd6;
+  outline-offset: -1px;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__cell--values:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad) {
+  outline: 1px solid #3aa0ff;
+  outline-offset: -1px;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__cell--detail-pad {
+  outline: 1px dashed rgba(160, 160, 170, 0.75);
+  outline-offset: -2px;
+}
+/* ===== END DEBUG ===== */
 
 /* Tiles-only spreadsheet: tile strip | away | values. */
 .hands-panel__content .hands-list-scroll > .hands-sheet.hands-sheet--tiles2 {
