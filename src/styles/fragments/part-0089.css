@@ -22,6 +22,8 @@
 
 .panel--bot-exposures .exposure-rack .exposure-rack__slot--empty::before {
   border-radius: var(--tile-face-border-radius);
+  width: 100%;
+  height: 100%;
 }
 
 .panel--bot-exposures .exposure-rack__slot--suggest-best .tile-face,

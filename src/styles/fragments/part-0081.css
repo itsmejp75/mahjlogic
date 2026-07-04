@@ -1191,7 +1191,7 @@
 /*
  * Hands-only spreadsheet: one grid for the header row + body; only `.hands-sheet__rows` scrolls
  * so the scrollbar track starts below the Away / Points header (not through the title row).
- * Category + Hands may wrap; `minmax(0, …)` on text columns keeps the grid within the panel
+ * Category + Hands stay on one line each; `minmax(0, …)` on text columns keeps the grid within the panel
  * (no horizontal scroll). Tiles modes override columns on `.hands-sheet--tiles2`.
  */
 .hands-panel__content .hands-list-scroll > .hands-sheet {
@@ -1246,7 +1246,7 @@
    * Zoom-with-window: the whole sheet font scales with the panel inline-size (cqi),
    * so headers, category text, hand text, and the away count all grow/shrink together.
    */
-  font-size: clamp(0.78rem, 2.05cqi, 2.35rem);
+  font-size: clamp(0.5rem, 2.35cqi, 2.35rem);
   line-height: 1.2;
   /*
    * Away / Points header type: same pass-instruction scale as "Pass 3 Right", derived from a
@@ -1757,7 +1757,7 @@
   opacity: 0.7;
 }
 
-/* Hands-only (`:not(.hands-sheet--tiles2)`): wrap long lines; parenthetical on its own row (TSX). */
+/* Hands-only (`:not(.hands-sheet--tiles2)`): single-line cells; sheet `cqi` font scales text down instead of wrapping. */
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__cell--header {
   white-space: nowrap;
 }
@@ -1766,13 +1766,15 @@
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)
   .hands-sheet__cell:not(.hands-sheet__cell--header) {
-  white-space: normal;
+  white-space: nowrap;
   text-overflow: clip;
+  overflow: hidden;
 }
 
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__cell--cat,
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__cell--hand {
   align-items: flex-end;
+  container-type: inline-size;
 }
 
 /*
@@ -1862,7 +1864,7 @@
   justify-content: center;
   padding: 0;
   padding-inline: 0;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .hands-panel__content
@@ -1876,7 +1878,7 @@
   align-items: flex-end;
   padding-block: 0;
   padding-inline: var(--hands-sheet-cell-pad-x);
-  overflow: visible;
+  overflow: hidden;
 }
 
 .hands-panel__content
@@ -1898,7 +1900,7 @@
   align-items: flex-end;
   padding-block: 0;
   padding-inline: var(--hands-sheet-cell-pad-x);
-  overflow: visible;
+  overflow: hidden;
 }
 
 .hands-panel__content
@@ -1911,7 +1913,7 @@
   align-items: flex-end;
   padding-block: 0;
   padding-inline: var(--hands-sheet-cell-pad-x);
-  overflow: visible;
+  overflow: hidden;
 }
 
 .hands-sheet__away-trend-overlay {
@@ -1942,7 +1944,7 @@
   padding: 0;
   padding-inline: var(--hands-sheet-metric-pad-x);
   text-align: center;
-  overflow: visible;
+  overflow: hidden;
   position: relative;
 }
 
@@ -1962,7 +1964,7 @@
   grid-column: 4;
   padding: 0;
   position: relative;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .hands-panel__content
@@ -1980,7 +1982,7 @@
   padding-inline-end: calc(var(--hands-sheet-rail) + var(--hands-sheet-metric-pad-x));
   padding-inline-start: var(--hands-sheet-metric-pad-x);
   text-align: center;
-  overflow: visible;
+  overflow: hidden;
   position: relative;
 }
 
@@ -2013,8 +2015,11 @@
 }
 
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__category {
-  white-space: normal;
-  flex-wrap: wrap;
+  white-space: nowrap;
+  flex-wrap: nowrap;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 /*
@@ -2039,19 +2044,24 @@
   > .hands-sheet:not(.hands-sheet--tiles2).hands-sheet--detail-tiles
   .hands-sheet__cell--hand.hands-sheet__cell--detail-pad
   .hands-sheet__tiles-grid {
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   max-width: 100%;
+  overflow: hidden;
   padding-block: 0.2em;
 }
 
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__hand-title-line {
   display: inline-flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   /* Center keeps the card hand, concealed C, and dead-cause icon on one vertical rhythm. */
   align-items: center;
   gap: 0.18rem;
   min-width: 0;
   max-width: 100%;
+  width: 100%;
+  overflow: hidden;
+  /* Hand-column cqi: shrink long card lines before they cross the grid line. */
+  font-size: min(1em, max(0.55em, 11.5cqi));
 }
 
 .hands-panel__content
@@ -2070,14 +2080,15 @@
   display: block;
   width: 100%;
   margin-inline-start: 0;
-  padding-block-end: 0.38em;
+  padding-block-end: 0.28em;
   /* em: secondary note under the hand line — smaller than Away/Points headers. */
-  font-size: 0.68em;
+  font-size: min(0.68em, max(0.42em, 7.5cqi));
   line-height: 1;
   opacity: 0.72;
   text-align: left;
-  white-space: normal;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
 }
 
 .hands-sheet__card-c {

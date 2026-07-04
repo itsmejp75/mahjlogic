@@ -689,7 +689,16 @@ html
 }
 
 html .app-top-exposure-container .discard-tracker__overlay-grid .exposure-rack__slot .tile-face {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: var(--rack-tile-h);
+}
+
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot:not(.exposure-rack__slot--empty) {
+  overflow: hidden;
 }
 
 html
