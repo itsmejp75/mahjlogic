@@ -343,8 +343,8 @@ const SuggestedHandAwayTrendIndicator = memo(function SuggestedHandAwayTrendIndi
     trend === 'improved'
       ? 'Selected hand is fewer tiles away'
       : 'Another suggested hand is fewer tiles away'
-  // Solid triangles. Improved points up, behind-best points down.
-  const points = trend === 'improved' ? '12 5 19 18 5 18' : '5 6 19 6 12 19'
+  // Solid triangles, top-aligned in viewBox so the detail-row glyph sits flush to the cell top.
+  const points = trend === 'improved' ? '12 0 19 13 5 13' : '5 0 19 0 12 13'
   return (
     <span className="hands-sheet__away-trend-wrap" role="img" aria-label={label}>
       <svg
@@ -637,6 +637,7 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
       <button
         type="button"
         className="hands-sheet__row-btn"
+        style={{ ['--hand-title-ch' as string]: String(handTitleCharCount) }}
         {...bindPatternRowInteraction(focusKey)}
         aria-label={ariaLabel}
         aria-pressed={rowIsFocused}
@@ -672,10 +673,7 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
           role="cell"
           aria-label={h.title}
         >
-          <span
-            className="hands-sheet__hand-title-line"
-            style={{ ['--hand-title-ch' as string]: String(handTitleCharCount) }}
-          >
+          <span className="hands-sheet__hand-title-line">
             {h.titleSegments?.length ? (
               <>
                 <CardColoredTextWithDeadCause
@@ -706,14 +704,7 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
                 deadCause={rowDeadCause}
               />
             ) : (
-              <span
-                className="hands-sheet__paren"
-                style={
-                  parenText
-                    ? { ['--hand-paren-ch' as string]: String(Math.max(4, parenText.length)) }
-                    : undefined
-                }
-              >
+              <span className="hands-sheet__paren">
                 {parenText ?? '\u00A0'}
               </span>
             )}

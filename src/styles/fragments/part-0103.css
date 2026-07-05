@@ -286,7 +286,7 @@
  * (`.suggested-hands-popup__user-shift` on this node).
  */
 .suggested-hands-popup .panel--hands {
-  background: var(--window-inner-surface);
+  background: transparent;
   margin: 0;
   max-height: none;
   /* Positioning context for the right-slide filter tray */

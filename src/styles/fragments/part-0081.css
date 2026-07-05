@@ -135,8 +135,12 @@
   min-height: 0;
   /* Selected suggested-hand row fill: #334155 at 50% opacity (rgba — reliable over dark scroll areas). */
   --hands-row-active-fill: rgba(51, 65, 85, 0.5);
-  /* Single edit point for the suggested-hands sticky title row (see block below). */
-  --hands-header-bg: var(--app-bg-paint-color, var(--color-slate-mid));
+  --hands-pin-ink: color-mix(in srgb, var(--hands-row-active-fill) 72%, #161d26 28%);
+  /* Highlighted row: slightly lighter than shell bg for contrast on the selection fill. */
+  --hands-pin-ink-active: color-mix(in srgb, var(--app-bg-base) 80%, #ffffff 20%);
+  --hands-sheet-cell-bg: transparent;
+  /* Sticky title row: no shell paint — only the selected data row is filled. */
+  --hands-header-bg: transparent;
 }
 
 /*
@@ -1413,10 +1417,10 @@
 
 .hands-sheet__away-trend-wrap {
   display: inline-flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   gap: 0;
-  line-height: 1;
+  line-height: 0;
 }
 
 .hands-sheet__away-trend-delta {
@@ -1821,8 +1825,19 @@
 
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__cell--cat,
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__cell--hand {
-  align-items: flex-end;
+  align-items: center;
   container-type: inline-size;
+}
+
+/*
+ * Card-line shrink-to-fit (`--hand-title-ch` on `.hands-sheet__row-btn`). Parenthetical detail
+ * uses a fixed em size so every row reads at the same scale regardless of title length.
+ */
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__cell--hand {
+  --hand-line-fs: min(1em, max(0.45em, calc(92cqi / var(--hand-title-ch, 10))));
 }
 
 /*
@@ -1869,14 +1884,14 @@
  * lines stay on the device-pixel grid and the seam stays a crisp, unchanging 1px through re-ranks.
  * `min-block-size` (not a fixed height) still lets a rare wrapping title / parenthesis grow.
  * `--_hands-row-h` models the natural height: card line (1.5em line box + 1px cell border) plus
- * parenthesis line (1.173em box + 1px cell border); the 2px of borders are constant so this
+ * parenthesis line (1.115em box + 1px cell border); the 2px of borders are constant so this
  * tracks the fluid sheet font correctly.
  */
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2):not(.hands-sheet--detail-tiles)
   .hands-sheet__row {
-  --_hands-row-h: round(up, calc(2.673em + 2px), 1px);
+  --_hands-row-h: round(up, calc(2.615em + 2px), 1px);
   min-block-size: var(--_hands-row-h);
   contain-intrinsic-size: auto var(--_hands-row-h);
 }
@@ -1908,7 +1923,7 @@
   grid-column: 1;
   grid-row: 1;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
   padding: 0;
   padding-inline: 0;
@@ -1923,7 +1938,7 @@
   grid-column: 2;
   grid-row: 1;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   padding-block: 0;
   padding-inline: var(--hands-sheet-cell-pad-x);
   overflow: hidden;
@@ -1945,7 +1960,7 @@
   grid-column: 3;
   grid-row: 1;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   padding-block: 0;
   padding-inline: var(--hands-sheet-cell-pad-x);
   overflow: hidden;
@@ -1958,7 +1973,7 @@
   > .hands-sheet__cell--hand.hands-sheet__cell--detail-pad {
   grid-column: 3;
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   padding-block: 0;
   padding-inline: var(--hands-sheet-cell-pad-x);
   overflow: hidden;
@@ -1982,12 +1997,10 @@
   > .hands-sheet__cell--away:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad) {
   grid-column: 4;
   /* Stay on the card-hand line (track 1), not the full row: this keeps the detail-pad cell (row 2)
-     free for the trend arrow. Bottom-align (flex-end) to match the card hand, which is
-     `align-self: end` in track 1 — centering here made the digit float above the card hand on
-     tall (parenthetical/detail) rows while short rows looked bottom-aligned. */
+     free for the trend arrow. Center on track 1 so pin / hand / away share one vertical rhythm. */
   grid-row: 1;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
   padding: 0;
   padding-inline: var(--hands-sheet-metric-pad-x);
@@ -2015,16 +2028,94 @@
   overflow: hidden;
 }
 
+/* Detail row (parenthesis / trend arrow / tile strip): top-align content on track 2 only. */
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__cell--detail-pad {
+  grid-row: 2;
+  align-items: flex-start;
+  padding: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/*
+ * Internal card-hand / detail divider: keep the 1px border (layout + alignment) but paint it
+ * fully transparent so only the outer row seams stay visible.
+ */
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row:has(.hands-sheet__cell--detail-pad)
+  > .hands-sheet__cell--pin:not(.hands-sheet__cell--detail-pad),
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row:has(.hands-sheet__cell--detail-pad)
+  > .hands-sheet__row-btn
+  > .hands-sheet__cell:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad) {
+  border-block-end-color: transparent;
+}
+
+/*
+ * Detail-row trend arrow: anchor to the top of the away cell. Keep the cell stretched so grid
+ * borders stay straight; only the glyph position changes (not `inset: 0` centering).
+ */
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__cell--away.hands-sheet__cell--detail-pad
+  .hands-sheet__away-trend-overlay {
+  position: absolute;
+  inset: unset;
+  top: 0;
+  right: 0;
+  bottom: auto;
+  left: 0;
+  height: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  line-height: 0;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__cell--away.hands-sheet__cell--detail-pad
+  .hands-sheet__away-trend-wrap {
+  display: flex;
+  align-items: flex-start;
+  margin: 0;
+  padding: 0;
+  line-height: 0;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__cell--away.hands-sheet__cell--detail-pad
+  .hands-sheet__away-trend {
+  display: block;
+  width: 0.82em;
+  height: 0.82em;
+  margin: 0;
+  padding: 0;
+}
+
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)
   .hands-sheet__row-btn
   > .hands-sheet__cell--values:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad) {
   grid-column: 5;
-  /* Stay on the card-hand line (track 1) and bottom-align to the card hand — see the Away note above. */
+  /* Stay on the card-hand line (track 1) — see the Away note above. */
   grid-row: 1;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
   padding: 0;
   padding-inline-end: calc(var(--hands-sheet-rail) + var(--hands-sheet-metric-pad-x));
@@ -2032,16 +2123,6 @@
   text-align: center;
   overflow: hidden;
   position: relative;
-}
-
-.hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  .hands-sheet__cell--detail-pad {
-  grid-row: 2;
-  padding: 0;
-  min-height: 0;
-  overflow: hidden;
 }
 
 .hands-panel__content
@@ -2100,31 +2181,39 @@
 
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__hand-title-line {
   /*
-   * Block + nowrap (not inline-flex): WebKit flex children shrink/overlap long card-ink runs
-   * when the cell is narrower than the line. Inline flow keeps one glyph row; font-size scales
-   * down via the hand cell's inline-size container and `--hand-title-ch` from TSX.
+   * inline-flex keeps the card hand, boxed C, and dead-cause icon on one vertical rhythm.
+   * `--hand-title-ch` + cqi shrink long lines; card-ink runs must not flex-shrink (WebKit overlap).
    */
-  display: block;
-  white-space: nowrap;
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.18rem;
   min-width: 0;
   max-width: 100%;
   width: 100%;
   overflow: hidden;
-  line-height: 1.2;
-  font-size: min(1em, max(0.45em, calc(92cqi / var(--hand-title-ch, 10))));
+  line-height: 1;
+  font-size: var(--hand-line-fs);
 }
 
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)
   .hands-sheet__hand-title-line
-  .hands-list__dead-cause-icon,
+  .card-ink {
+  flex-shrink: 0;
+}
+
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)
   .hands-sheet__hand-title-line
   .hands-sheet__card-c {
-  vertical-align: middle;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: var(--font-concealed-c);
 }
 
 .hands-panel__content
@@ -2135,9 +2224,9 @@
   display: block;
   width: 100%;
   margin-inline-start: 0;
-  padding-block-end: 0.28em;
-  /* em: secondary note under the hand line — smaller than Away/Points headers. */
-  font-size: min(0.68em, max(0.42em, calc(58cqi / var(--hand-paren-ch, 14))));
+  padding-block-end: 0.18em;
+  /* Fixed cell-relative size — same on every row; not tied to per-hand title shrink. */
+  font-size: 0.58em;
   line-height: 1;
   opacity: 0.72;
   text-align: left;
@@ -2172,7 +2261,7 @@
   /* Match the main player rack gap between strip faces. */
   --hands-sheet-tile-gap: var(--player-rack-face-gap);
   --hands-sheet-cell-pad-y: clamp(0.22rem, 1cqi, 0.45rem);
-  --hands-sheet-cell-bg: #050608;
+  --hands-sheet-cell-bg: transparent;
   /* Tile column width = panel inline-size − away − values − cell horizontal padding. */
   --hands-sheet-tile-col: calc(
     100cqi - var(--hands-sheet-pin-w, 1.25em) - var(--hands-sheet-away-w) - var(--hands-sheet-values-w) -
@@ -2482,23 +2571,39 @@
   align-items: center;
   justify-content: center;
   width: auto;
-  max-width: 1.65rem;
-  min-width: 1.25rem;
-  min-height: 1.25rem;
+  min-width: 0;
+  min-height: 0;
   margin: 0 auto;
   padding: 0;
   border: none;
   background: transparent;
-  color: #161d26;
+  color: var(--hands-pin-ink);
   cursor: pointer;
   line-height: 0;
+  font-size: inherit;
   appearance: none;
   -webkit-appearance: none;
 }
 
 .hands-suggested-pin:hover {
-  color: #161d26;
+  color: var(--hands-pin-ink);
   background: transparent;
+}
+
+.hands-panel__content .hands-list__row--active > .hands-list__cell--pin .hands-suggested-pin:not(.hands-suggested-pin--pressed),
+.hands-panel__content
+  .hands-sheet__row--active
+  > .hands-sheet__cell--pin:not(.hands-sheet__cell--header)
+  .hands-suggested-pin:not(.hands-suggested-pin--pressed) {
+  color: var(--hands-pin-ink-active);
+}
+
+.hands-panel__content .hands-list__row--active > .hands-list__cell--pin .hands-suggested-pin:not(.hands-suggested-pin--pressed):hover,
+.hands-panel__content
+  .hands-sheet__row--active
+  > .hands-sheet__cell--pin:not(.hands-sheet__cell--header)
+  .hands-suggested-pin:not(.hands-suggested-pin--pressed):hover {
+  color: var(--hands-pin-ink-active);
 }
 
 .hands-suggested-pin--pressed {
@@ -2518,10 +2623,19 @@
 
 .hands-suggested-pin__svg {
   display: block;
-  width: 1.45rem;
-  height: 1.45rem;
+  width: 0.95em;
+  height: 0.95em;
   flex: 0 0 auto;
   overflow: visible;
+}
+
+/* Sheet + list: pin cell tracks the same body type scale as category / away / hand. */
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__cell--pin:not(.hands-sheet__cell--header),
+.hands-panel__content .hands-list__cell--pin:not(.hands-list__header-cell) {
+  font-size: 1.25em;
 }
 
 /*

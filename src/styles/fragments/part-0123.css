@@ -1208,21 +1208,20 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 }
 
 /*
- * Suggested-hands tray shell — same paint as main app background (app-background.css).
+ * Suggested-hands tray shell — transparent so main app background shows through;
+ * only the selected row paints `--hands-row-active-fill` (part-0081).
  */
 .app :is(
   .suggested-hands-popup,
   .suggested-hands-popup .panel--hands,
   .panel--hands.suggested-hands-popup__user-shift,
   .suggested-hands-popup__user-shift,
-  .suggested-hands-filter-tray
+  .suggested-hands-filter-tray,
+  .suggested-hands-popup .hands-panel__content,
+  .suggested-hands-popup .hands-list-scroll
 ) {
-  background-color: var(--app-bg-paint-color);
-  background-image: var(--app-bg-paint-image);
-  background-size: var(--app-bg-paint-size);
-  background-repeat: var(--app-bg-paint-repeat);
-  background-blend-mode: var(--app-bg-paint-blend);
-  background-attachment: var(--app-bg-paint-attachment);
+  background-color: transparent;
+  background-image: none;
 }
 
 /*
