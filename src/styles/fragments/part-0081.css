@@ -1438,6 +1438,54 @@
   color: #ff9f1a;
 }
 
+.hands-scroll-above-hint {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: var(--hands-sheet-cell-pad-x);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  pointer-events: none;
+  color: #dcdce0;
+  /* Body away trend is 1em at 1.25em cell font — ~0.92 of that here. */
+  font-size: 1.15em;
+  line-height: 0;
+}
+
+.hands-scroll-above-hint__icon {
+  display: block;
+  width: 1em;
+  height: 1em;
+}
+
+.suggested-hands-popup .panel--hands .hands-scroll-above-hint {
+  color: #c2c2c8;
+}
+
+.app[data-color-buttons='off'] .panel--hands .hands-scroll-above-hint {
+  color: var(--color-white);
+}
+
+.app[data-color-buttons='off'] .suggested-hands-popup .panel--hands .hands-scroll-above-hint {
+  color: #c2c2c8;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  > .hands-sheet__cell--header.hands-sheet__cell--hand {
+  overflow: visible;
+}
+
+.hands-list__freeze-header .hands-list__header-cell--scroll-above {
+  position: relative;
+  overflow: visible;
+}
+
+.hands-list__freeze-header .hands-list__header-cell--scroll-above .hands-scroll-above-hint {
+  inset-inline-end: 0.35rem;
+}
+
 .hands-sheet > .hands-sheet__cell--values,
 .hands-sheet > .hands-sheet__rows .hands-sheet__row > *:last-child > .hands-sheet__cell--values,
 .hands-sheet > .hands-sheet__rows .hands-sheet__row > .hands-sheet__cell--values {

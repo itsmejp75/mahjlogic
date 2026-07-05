@@ -130,6 +130,18 @@ function scrollDeltaForRowsInsertedAbove(
  * `elementFromPoint` hit-test instead of scanning every row with `getBoundingClientRect`,
  * so the per-scroll-frame cost stays O(1) instead of O(rows) forced layouts.
  */
+/** True when the first suggested row is scrolled entirely above the list viewport. */
+function isTopSuggestedHandHidden(scrollEl: HTMLElement): boolean {
+  if (scrollEl.scrollHeight <= scrollEl.clientHeight + 1) return false
+  const firstRow =
+    scrollEl.querySelector(':scope > .hands-sheet__row') ??
+    scrollEl.querySelector(':scope > .hands-list__row-hit')
+  if (!(firstRow instanceof HTMLElement)) return scrollEl.scrollTop > 1
+  const scrollRect = scrollEl.getBoundingClientRect()
+  const rowRect = firstRow.getBoundingClientRect()
+  return rowRect.bottom <= scrollRect.top + 1
+}
+
 function firstVisibleRowByHitTest(scrollEl: HTMLElement, scrollRect: DOMRect): HTMLElement | null {
   if (typeof document === 'undefined') return null
   const x = scrollRect.left + Math.min(24, Math.max(1, scrollRect.width / 2))
@@ -299,6 +311,16 @@ const SuggestedHandValueDisplay = memo(function SuggestedHandValueDisplay({
   points: number
 }) {
   return <>{points}</>
+})
+
+const SuggestedHandsScrollAboveHint = memo(function SuggestedHandsScrollAboveHint() {
+  return (
+    <span className="hands-scroll-above-hint" aria-hidden="true">
+      <svg className="hands-scroll-above-hint__icon" viewBox="0 0 24 24" aria-hidden>
+        <polygon points="12 5 19 18 5 18" fill="currentColor" stroke="none" />
+      </svg>
+    </span>
+  )
 })
 
 const SuggestedHandAwayTrendIndicator = memo(function SuggestedHandAwayTrendIndicator({
@@ -952,6 +974,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   const selectedAwayKeyRef = useRef<string | null>(null)
   const selectedAwayLastValueRef = useRef<number | null>(null)
   const [activeAwayTrend, setActiveAwayTrend] = useState<SelectedHandAwayTrend>(null)
+  const [hasHandsAboveView, setHasHandsAboveView] = useState(false)
 
   const getTrayScrollTarget = useCallback((): HTMLElement | null => {
     const shell = handsListScrollRef.current
@@ -1323,6 +1346,12 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     [activePatternId, expandedHandsRows, listRowsForHandsPanel],
   )
 
+  const refreshHandsAboveViewHint = useCallback(() => {
+    const scrollEl = getTrayScrollTarget()
+    const next = scrollEl ? isTopSuggestedHandHidden(scrollEl) : false
+    setHasHandsAboveView((prev) => (prev === next ? prev : next))
+  }, [getTrayScrollTarget])
+
   const refreshScrollSnapshot = useCallback(
     (rowKeys?: string[]) => {
       const scrollEl = getTrayScrollTarget()
@@ -1387,14 +1416,16 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
       rafId = requestAnimationFrame(() => {
         rafId = null
         refreshScrollSnapshot()
+        refreshHandsAboveViewHint()
       })
     }
     scrollEl.addEventListener('scroll', onScroll, { passive: true })
+    refreshHandsAboveViewHint()
     return () => {
       scrollEl.removeEventListener('scroll', onScroll)
       if (rafId != null) cancelAnimationFrame(rafId)
     }
-  }, [getTrayScrollTarget, refreshScrollSnapshot, expandedHandsRows.length])
+  }, [getTrayScrollTarget, refreshScrollSnapshot, refreshHandsAboveViewHint, expandedHandsRows.length])
 
   useLayoutEffect(() => {
     const scrollEl = getTrayScrollTarget()
@@ -1471,7 +1502,14 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     }
 
     refreshScrollSnapshot(rowKeys)
-  }, [expandedHandsRows, effectiveFocusRowKey, getTrayScrollTarget, refreshScrollSnapshot])
+    refreshHandsAboveViewHint()
+  }, [
+    expandedHandsRows,
+    effectiveFocusRowKey,
+    getTrayScrollTarget,
+    refreshScrollSnapshot,
+    refreshHandsAboveViewHint,
+  ])
 
   const emitRowPinToggle = useCallback(
     (pinKey: string) => {
@@ -1583,7 +1621,9 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                     className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--hand"
                     role="columnheader"
                     aria-hidden
-                  />
+                  >
+                    {hasHandsAboveView ? <SuggestedHandsScrollAboveHint /> : null}
+                  </div>
                   <div
                     className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--away"
                     role="columnheader"
@@ -1648,6 +1688,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                       'hands-list__cell',
                       'hands-list__cell--category',
                       'hands-list__header-cell',
+                      !tilesGuideOn && hasHandsAboveView ? 'hands-list__header-cell--scroll-above' : '',
                     ]
                       .filter(Boolean)
                       .join(' ')}
@@ -1666,6 +1707,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                         <span className="hands-list__header-meta">Hands</span>
                       </div>
                     )}
+                    {!tilesGuideOn && hasHandsAboveView ? <SuggestedHandsScrollAboveHint /> : null}
                   </div>
                 ) : null}
                 {tilesGuideOn ? (
@@ -1674,6 +1716,9 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                       'hands-list__cell',
                       'hands-list__cell--tiles',
                       'hands-list__header-cell',
+                      !showHandCategoryLabels && hasHandsAboveView
+                        ? 'hands-list__header-cell--scroll-above'
+                        : '',
                     ]
                       .filter(Boolean)
                       .join(' ')}
@@ -1681,14 +1726,26 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                     <div className="hands-list__header-meta">
                       {handsListOn ? 'Hands & Tiles' : 'Tiles'}
                     </div>
+                    {!showHandCategoryLabels && hasHandsAboveView ? (
+                      <SuggestedHandsScrollAboveHint />
+                    ) : null}
                   </div>
                 ) : null}
                 {showHandCategoryLabels && tilesGuideOn ? (
                   <>
                     <div
-                      className="hands-list__cell hands-list__cell--tiles-away-pad hands-list__header-cell"
+                      className={[
+                        'hands-list__cell',
+                        'hands-list__cell--tiles-away-pad',
+                        'hands-list__header-cell',
+                        hasHandsAboveView ? 'hands-list__header-cell--scroll-above' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
                       aria-hidden
-                    />
+                    >
+                      {hasHandsAboveView ? <SuggestedHandsScrollAboveHint /> : null}
+                    </div>
                     <div
                       className="hands-list__cell hands-list__cell--tiles-values-pad hands-list__header-cell"
                       aria-hidden

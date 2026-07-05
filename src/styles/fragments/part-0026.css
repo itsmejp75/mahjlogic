@@ -275,6 +275,16 @@
   color: var(--tg-ink, var(--color-black));
 }
 
+/* Simple: larger DOT / BAM / CRK band on stacked suit tiles (main rack, pass strip, exposures). */
+.app[data-tile-graphics='solid-color']
+  .tile-face.tile-face--rack-suit-stack
+  .tile-face__suit-text {
+  font-size: min(
+    calc(var(--rack-bottom-action-fs) * 1.08),
+    calc(var(--suit-tile-w) * 0.26)
+  );
+}
+
 /* Obsidian (data-tile-graphics `dark`): dark glass, suit-tinted — a step brighter so faces read in UI */
 .app[data-tile-graphics='dark'] {
   --tg-bam: #1a3d2a;
