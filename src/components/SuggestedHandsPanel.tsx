@@ -297,6 +297,17 @@ function suggestedHandPlainTitleWithoutParen(h: SuggestedHandLine): string {
   return h.title.replace(/\s*(\([^)]+\))\s*$/, '').trim() || h.title
 }
 
+/** Visible card-line length for sheet `cqi` shrink-to-fit (concealed C / dead icon reserve extra units). */
+function suggestedHandTitleCharCount(
+  h: SuggestedHandLine,
+  extraUnits: number,
+): number {
+  const baseLen = h.titleSegments?.length
+    ? h.titleSegments.reduce((sum, seg) => sum + seg.t.length, 0)
+    : suggestedHandPlainTitleWithoutParen(h).length
+  return Math.max(4, baseLen + extraUnits)
+}
+
 /** Tiles rack-guide “lit” row — matches `.hands-list__row--rack-guide` (tiles on + row selected). */
 function sheetRowLitEdge(lit: boolean, edge: 'start' | 'mid' | 'end'): string {
   if (!lit) return ''
@@ -586,6 +597,10 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
   const cardRef = suggestedHandCardRefDisplay(h)
   const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}${h.closed ? ', concealed' : ''}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points)}`
   const parenText = !tilesGuideOn ? suggestedHandParenText(h) : null
+  const handTitleCharCount = suggestedHandTitleCharCount(
+    h,
+    (h.closed ? 1 : 0) + (rowDeadCause ? 1 : 0),
+  )
   const showTileDetail = tilesGuideOn && rowStripSlots.length > 0
   // Hands-only rows always reserve the parenthesis line so every suggested hand has the same
   // total height *and* keeps its card line at the same vertical position. Without this,
@@ -657,7 +672,10 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
           role="cell"
           aria-label={h.title}
         >
-          <span className="hands-sheet__hand-title-line">
+          <span
+            className="hands-sheet__hand-title-line"
+            style={{ ['--hand-title-ch' as string]: String(handTitleCharCount) }}
+          >
             {h.titleSegments?.length ? (
               <>
                 <CardColoredTextWithDeadCause
@@ -688,7 +706,16 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
                 deadCause={rowDeadCause}
               />
             ) : (
-              <span className="hands-sheet__paren">{parenText ?? '\u00A0'}</span>
+              <span
+                className="hands-sheet__paren"
+                style={
+                  parenText
+                    ? { ['--hand-paren-ch' as string]: String(Math.max(4, parenText.length)) }
+                    : undefined
+                }
+              >
+                {parenText ?? '\u00A0'}
+              </span>
             )}
           </div>
         ) : null}

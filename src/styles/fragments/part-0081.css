@@ -2099,25 +2099,32 @@
 }
 
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__hand-title-line {
-  display: inline-flex;
-  flex-wrap: nowrap;
-  /* Center keeps the card hand, concealed C, and dead-cause icon on one vertical rhythm. */
-  align-items: center;
-  gap: 0.18rem;
+  /*
+   * Block + nowrap (not inline-flex): WebKit flex children shrink/overlap long card-ink runs
+   * when the cell is narrower than the line. Inline flow keeps one glyph row; font-size scales
+   * down via the hand cell's inline-size container and `--hand-title-ch` from TSX.
+   */
+  display: block;
+  white-space: nowrap;
   min-width: 0;
   max-width: 100%;
   width: 100%;
   overflow: hidden;
-  /* Hand-column cqi: shrink long card lines before they cross the grid line. */
-  font-size: min(1em, max(0.55em, 11.5cqi));
+  line-height: 1.2;
+  font-size: min(1em, max(0.45em, calc(92cqi / var(--hand-title-ch, 10))));
 }
 
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)
   .hands-sheet__hand-title-line
-  .hands-list__dead-cause-icon {
-  align-self: center;
+  .hands-list__dead-cause-icon,
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__hand-title-line
+  .hands-sheet__card-c {
+  vertical-align: middle;
 }
 
 .hands-panel__content
@@ -2130,7 +2137,7 @@
   margin-inline-start: 0;
   padding-block-end: 0.28em;
   /* em: secondary note under the hand line — smaller than Away/Points headers. */
-  font-size: min(0.68em, max(0.42em, 7.5cqi));
+  font-size: min(0.68em, max(0.42em, calc(58cqi / var(--hand-paren-ch, 14))));
   line-height: 1;
   opacity: 0.72;
   text-align: left;
