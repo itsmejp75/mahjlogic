@@ -55,14 +55,14 @@ export function tileDisplayName(def: TileDef): string {
 
 export type MahjongWinMethod =
   | { how: 'self-draw'; tile: TileDef }
-  | { how: 'called-discard'; tile: TileDef; discardFrom: 'east' | 'South' | 'West' | 'North' }
+  | { how: 'called-discard'; tile: TileDef; discardFrom: 'east' | 'East' | 'South' | 'West' | 'North' }
 
 export function formatMahjongWinDescription(winnerLabel: string, win: MahjongWinMethod): string {
   const tileName = tileDisplayName(win.tile)
   if (win.how === 'self-draw') {
     return `${winnerLabel} won with self-drawn tile (${tileName}).`
   }
-  const fromLabel = win.discardFrom === 'east' ? "East's" : `${win.discardFrom}'s`
+  const fromLabel = win.discardFrom === 'east' || win.discardFrom === 'East' ? "East's" : `${win.discardFrom}'s`
   return `${winnerLabel} won with ${fromLabel} discard (${tileName}).`
 }
 

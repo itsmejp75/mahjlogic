@@ -69,9 +69,25 @@
   white-space: nowrap;
 }
 
-/* Two- and three-slot hand controls (Hands, Sort, Menu, …) share one label scale. */
+/*
+ * Single-tile hand controls (Sort, Menu): cap label to one face width so both shrink together
+ * on resize (same formula as bot-toolbar one-tile actions above).
+ */
 .panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1,
-.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn,
+.panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn {
+  font-size: min(
+    var(--rack-hand-action-label-fs),
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.52),
+    calc(var(--hand-rack-tile-w) * 0.34)
+  );
+  line-height: 1.08;
+  text-transform: none;
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+/* Two- and three-slot hand controls share one label scale. */
 .panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c3-4,
 .panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c4-5,
 .panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c5-6,

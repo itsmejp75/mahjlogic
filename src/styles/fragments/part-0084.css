@@ -306,3 +306,62 @@
   position: relative;
   z-index: 4;
 }
+
+/* Player compass seat — same band as Charleston pass copy (left over tile 1). */
+.panel--hand .rack-stage__rack-top {
+  --rack-tile-w: var(--hand-top-rack-tile-w, var(--hand-rack-tile-w));
+  --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
+  --charleston-pass-strip-h: calc(var(--rack-tile-h) / 3);
+  --pass-strip-box-w: calc(3 * var(--rack-tile-w) + 2 * var(--player-rack-face-gap, var(--rack-tile-gap)));
+  --_pass-strip-fs-pref: clamp(
+    calc(var(--pass-strip-box-w) * 0.04),
+    calc(var(--pass-strip-box-w) * 0.109),
+    1.42rem
+  );
+  --pass-strip-header-fs: min(
+    var(--_pass-strip-fs-pref),
+    calc(var(--pass-strip-box-w) / 9.95),
+    calc(var(--rack-tile-h) / 5.02)
+  );
+}
+
+.panel--hand .panel-hand-rack__seat-label--pass-row {
+  position: absolute;
+  left: 0;
+  /* Match `.east-discard-staging__instruction` / pass-strip copy on the nudged inline row. */
+  bottom: calc(var(--charleston-pass-strip-h) / 2 - var(--pass-strip-header-fs) / 2);
+  transform: translateY(var(--rack-inline-slot-nudge-y, calc(var(--play-tray-h-divider) / 2)));
+  z-index: 4;
+  margin: 0;
+  pointer-events: none;
+  display: inline-flex;
+  align-items: flex-end;
+}
+
+.panel--hand .panel-hand-rack__hand-tray .rack-stage__rack-bottom {
+  --rack-tile-w: var(--hand-top-rack-tile-w, var(--hand-rack-tile-w));
+  --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
+  --pass-strip-box-w: calc(3 * var(--rack-tile-w) + 2 * var(--player-rack-face-gap, var(--rack-tile-gap)));
+  --_pass-strip-fs-pref: clamp(
+    calc(var(--pass-strip-box-w) * 0.04),
+    calc(var(--pass-strip-box-w) * 0.109),
+    1.42rem
+  );
+  --pass-strip-header-fs: min(
+    var(--_pass-strip-fs-pref),
+    calc(var(--pass-strip-box-w) / 9.95),
+    calc(var(--rack-tile-h) / 5.02)
+  );
+}
+
+/* After call/expose: lower rack, left edge — do not shift with hand-row inset. */
+.panel--hand .panel-hand-rack__seat-label--hand-row {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  z-index: 4;
+  margin: 0;
+  pointer-events: none;
+  display: inline-flex;
+  align-items: center;
+}

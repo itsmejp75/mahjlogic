@@ -1297,6 +1297,29 @@ html body .app .dead-hand-overlay
   box-shadow: none;
 }
 
+/* Sort + Menu (single-tile): identical label scale + padding — loaded last so resize stays matched. */
+.app .panel--hand .rack-bottom-bar--tile-grid :is(
+    .btn.rack-bottom-tile-cell--c1,
+    .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn
+  ) {
+  font-size: min(
+    var(--rack-hand-action-label-fs),
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.52),
+    calc(var(--hand-rack-tile-w) * 0.34)
+  );
+  line-height: 1.08;
+  padding: 0.14rem 0.05rem;
+  text-transform: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+/* Menu: slightly tighter track than Sort so the four-letter label fits one tile. */
+.app .panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn {
+  letter-spacing: max(0.014em, calc(0.024em + 0.012rem));
+}
+
 /* Inactive rack + menu action buttons: gray label, default cursor (beats part-0103 enabled+disabled pairs). */
 .app .panel--hand :is(.rack-bottom-bar--tile-grid, .hand-bank__mj-review-actions, .panel-hand-rack__review-new-game-row) :is(
     .btn.rack-bottom-tile-cell,
