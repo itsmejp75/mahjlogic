@@ -177,10 +177,6 @@
    * ancestor transforms are settling — card-hand text then overlaps until orientation change.
    */
   --suggest-hands-panel-cqw-resolved: var(--suggest-hands-panel-cqw, 100cqi);
-  --suggest-hands-hand-col-cqw-resolved: var(
-    --suggest-hands-hand-col-cqw,
-    var(--suggest-hands-panel-cqw-resolved)
-  );
   /*
    * Sheet uses negative margin-inline rails to extend the title row's background to the
    * panel edge — must NOT be clipped here. Panel itself (`overflow: hidden`) clips at the
@@ -1844,20 +1840,13 @@
 }
 
 /*
- * Card-line shrink-to-fit (`--hand-title-ch` on `.hands-sheet__row-btn`). Parenthetical detail
- * uses a fixed em size so every row reads at the same scale regardless of title length.
+ * Card hand line: one size for every row (sheet `em`). Long titles clip at the cell edge.
  */
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)
   .hands-sheet__cell--hand {
-  --hand-line-fs: min(
-    1em,
-    max(
-      0.45em,
-      calc(var(--suggest-hands-hand-col-cqw-resolved) * 0.92 / var(--hand-title-ch, 10))
-    )
-  );
+  --hand-line-fs: 1em;
 }
 
 /*
@@ -2202,7 +2191,7 @@
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__hand-title-line {
   /*
    * inline-flex keeps the card hand, boxed C, and dead-cause icon on one vertical rhythm.
-   * `--hand-title-ch` + cqi shrink long lines; card-ink runs must not flex-shrink (WebKit overlap).
+   * Card-ink runs must not flex-shrink (WebKit overlap).
    */
   display: inline-flex;
   flex-wrap: nowrap;
