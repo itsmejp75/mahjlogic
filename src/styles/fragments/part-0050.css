@@ -41,6 +41,7 @@
   /* flex-start + stretch: avoid sub-pixel centering gaps that expose the tray/slot fill on mobile. */
   justify-content: flex-start;
   align-items: stretch;
+  align-self: flex-start;
   box-sizing: border-box;
   overflow: hidden;
 }

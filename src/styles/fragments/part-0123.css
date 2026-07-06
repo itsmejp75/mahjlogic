@@ -554,6 +554,7 @@ html .app-top-exposure-container .discard-tracker__overlay-row > .app-opponents-
   max-width: none;
   margin-left: 0;
   margin-right: 0;
+  align-self: start;
 }
 
 html .app-top-exposure-container
@@ -589,8 +590,10 @@ html .app-top-exposure-container .exposure-rack--discard-tracker-sorted-row {
 html .app-top-exposure-container .exposure-rack--discard-tracker-bot-row {
   display: grid;
   grid-template-columns: repeat(14, var(--rack-tile-w));
+  grid-auto-rows: var(--rack-tile-h);
   gap: var(--player-rack-face-gap);
   justify-content: end;
+  align-items: start;
 }
 
 /*
@@ -607,8 +610,11 @@ html
   flex-wrap: nowrap;
   gap: var(--player-rack-face-gap);
   justify-content: flex-start;
-  align-items: flex-start;
+  align-items: stretch;
+  align-self: start;
   min-width: 0;
+  max-height: var(--rack-tile-h);
+  overflow: hidden;
 }
 
 html
@@ -620,6 +626,7 @@ html
   width: var(--rack-tile-w);
   min-width: var(--rack-tile-w);
   max-width: var(--rack-tile-w);
+  overflow: hidden;
 }
 
 html .app-top-exposure-container .exposure-rack--discard-tracker-bot-seat-label {
@@ -694,10 +701,10 @@ html .app-top-exposure-container .discard-tracker__overlay-grid .exposure-rack__
   min-height: var(--rack-tile-h);
 }
 
-html
-  .app-top-exposure-container
-  .exposure-rack--discard-tracker-bot-row
-  .exposure-rack__slot:not(.exposure-rack__slot--empty) {
+html .app-top-exposure-container .exposure-rack--discard-tracker-bot-row .exposure-rack__slot {
+  align-self: start;
+  justify-content: flex-start;
+  align-items: stretch;
   overflow: hidden;
 }
 

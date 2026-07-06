@@ -8103,6 +8103,10 @@ export default function App() {
     [charlestonDone, mainPhase, botTurnBanner],
   )
 
+  /** Call-initiate drop slot conflicts with the default above-rack seat label — hide until drag ends. */
+  const hidePlayerSeatLabelForCallSlot =
+    incomingBotDiscardCallDragActive && playerExposureMelds.length === 0
+
   /** Vertically center the player seat label between the top discard tracker and the main hand rack. */
   const updatePlayerSeatLabelPosition = useCallback(() => {
     const rackBottom = playerHandRackBottomRef.current
@@ -8203,6 +8207,7 @@ export default function App() {
     callMeldInsetCols,
     playerExposureMelds.length,
     hand.length,
+    incomingBotDiscardCallDragActive,
   ])
 
   /** Suggested-hands tab + popup shell: hidden only on dead hand / bot Mah Jongg (no rack action row). */
@@ -9799,7 +9804,7 @@ export default function App() {
                           <div className="panel-hand-rack__hand-tray">
                             {mainPhase !== 'bot-mahjong' && (
                             <div ref={playerHandRackBottomRef} className="rack-stage__rack-bottom">
-                              {mainPhase !== 'dead-hand' ? (
+                              {mainPhase !== 'dead-hand' && !hidePlayerSeatLabelForCallSlot ? (
                                 <PlayerRackSeatLabel
                                   seat={playerSeat}
                                   isActiveTurn={playerSeatLabelActiveTurn}

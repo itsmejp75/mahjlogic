@@ -426,6 +426,7 @@
   flex: 0 0 auto;
   align-items: flex-start;
   justify-content: flex-start;
+  align-self: start;
   padding: 0;
   min-height: 0;
   margin-left: auto;
@@ -477,20 +478,38 @@
   box-sizing: border-box;
 }
 
-/* Bot exposure band: fill the slot so the white watermark well cannot peek through at the bottom edge. */
-.discard-tracker__overlay-grid
-  .exposure-rack--discard-tracker-bot-row
-  .exposure-rack__slot:not(.exposure-rack__slot--empty) {
+/*
+ * Bot exposure band (top S/W/N + lower overlay): grid default `align-items: stretch`
+ * can make slots taller than `--rack-tile-h` when the overlay row is sub-pixel taller
+ * (common on row 1 / mobile). Tile faces stay at fixed height → white watermark sliver
+ * under the tiles. Pin row height, start-align grid items, and fill + clip every slot.
+ */
+.discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row {
+  grid-auto-rows: var(--rack-tile-h);
+  align-items: start;
+}
+
+.discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row .exposure-rack__slot {
+  align-self: start;
+  justify-content: flex-start;
+  align-items: stretch;
   overflow: hidden;
 }
 
 .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
-  .exposure-rack__slot:not(.exposure-rack__slot--empty)
+  .exposure-rack__slot
   .tile-face {
   flex: 1 1 auto;
   height: 100%;
   min-height: var(--rack-tile-h);
+}
+
+.discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  :is(.exposure-rack__meld-drop, .exposure-rack__meld-grid-span)
+  > .exposure-rack__slot {
+  overflow: hidden;
 }
 
 .panel--discard-tracker .discard-tracker__overlay-grid .exposure-rack__slot--empty::before {

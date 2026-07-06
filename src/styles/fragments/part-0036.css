@@ -39,9 +39,17 @@
 }
 
 .app-opponents-rail .exposure-rack__slot {
-  justify-content: center;
-  align-items: center;
+  /* flex-start + stretch: avoid sub-pixel centering gaps that expose the tray/slot fill on mobile. */
+  justify-content: flex-start;
+  align-items: stretch;
   box-sizing: border-box;
+  overflow: hidden;
+}
+
+.app-opponents-rail .exposure-rack__slot .tile-face {
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: var(--rack-tile-h);
 }
 
 /* DnD subtree: rack full width; below it, discard tracker (left) + suggested hands (right).
