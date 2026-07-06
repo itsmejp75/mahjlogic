@@ -323,23 +323,21 @@
     calc(var(--pass-strip-box-w) / 9.95),
     calc(var(--rack-tile-h) / 5.02)
   );
+  --player-seat-label-fs: calc(
+    min(
+      calc(var(--_pass-strip-fs-pref) * 1.2),
+      calc(var(--pass-strip-box-w) / 8.25),
+      calc(var(--rack-tile-h) / 4.15)
+    ) * 0.9
+  );
+  --rack-inline-slot-strip-h: calc(var(--rack-tile-h) / 3);
+  --rack-inline-slot-nudge-y: calc(var(--play-tray-h-divider) / 2);
 }
 
-.panel--hand .panel-hand-rack__seat-label--pass-row {
-  position: absolute;
-  left: 0;
-  /* Match `.east-discard-staging__instruction` / pass-strip copy on the nudged inline row. */
-  bottom: calc(var(--charleston-pass-strip-h) / 2 - var(--pass-strip-header-fs) / 2);
-  transform: translateY(var(--rack-inline-slot-nudge-y, calc(var(--play-tray-h-divider) / 2)));
-  z-index: 4;
-  margin: 0;
-  pointer-events: none;
-  display: inline-flex;
-  align-items: flex-end;
-}
-
+/* Player compass seat — centered in the well from discard-tracker bottom to main-rack top. */
 .panel--hand .panel-hand-rack__hand-tray .rack-stage__rack-bottom {
-  --rack-tile-w: var(--hand-top-rack-tile-w, var(--hand-rack-tile-w));
+  overflow: visible;
+  --rack-tile-w: var(--hand-rack-tile-w);
   --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
   --pass-strip-box-w: calc(3 * var(--rack-tile-w) + 2 * var(--player-rack-face-gap, var(--rack-tile-gap)));
   --_pass-strip-fs-pref: clamp(
@@ -352,16 +350,58 @@
     calc(var(--pass-strip-box-w) / 9.95),
     calc(var(--rack-tile-h) / 5.02)
   );
+  --player-seat-label-fs: calc(
+    min(
+      calc(var(--_pass-strip-fs-pref) * 1.2),
+      calc(var(--pass-strip-box-w) / 8.25),
+      calc(var(--rack-tile-h) / 4.15)
+    ) * 0.9
+  );
 }
 
-/* After call/expose: lower rack, left edge — do not shift with hand-row inset. */
-.panel--hand .panel-hand-rack__seat-label--hand-row {
+.panel--hand .panel-hand-rack__hand-tray .rack-stage__rack-bottom > .panel-hand-rack__seat-label {
   position: absolute;
   left: 0;
-  bottom: 0;
-  z-index: 4;
-  margin: 0;
+  top: var(--player-seat-label-top, -0.35rem);
+  transform: translateY(-50%);
+  z-index: 0;
   pointer-events: none;
   display: inline-flex;
   align-items: center;
+  gap: 0.18em;
+}
+
+.panel--hand .panel-hand-rack__seat-label {
+  color: #c2c2c8;
+  font-size: var(--player-seat-label-fs, calc(var(--pass-strip-header-fs) * 1.2));
+}
+
+.panel--hand .panel-hand-rack__seat-label__prefix {
+  display: inline-block;
+  line-height: 1;
+  vertical-align: baseline;
+}
+
+/* Player seat name chip — green fill/border only on the compass name (matches discard-tracker S/W/N). */
+.panel--hand .panel-hand-rack__seat-label__chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 0.22em;
+  border-radius: calc(0.06 * var(--rack-tile-w, var(--hand-top-rack-tile-w)));
+  color: var(--window-fg);
+  opacity: 0.92;
+  vertical-align: baseline;
+}
+
+.panel--hand .panel-hand-rack__seat-label__chip--turn {
+  background-color: var(--card-ink-green, #52b147);
+  color: #ffffff;
+  opacity: 1;
+}
+
+.panel--hand .panel-hand-rack__seat-label__chip--called {
+  box-shadow: inset 0 0 0 max(1px, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 0.035))
+    var(--card-ink-green, #52b147);
 }

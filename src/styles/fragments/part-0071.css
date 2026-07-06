@@ -145,10 +145,10 @@
   font-family: 'Figtree', var(--sans);
   font-weight: 600;
   font-variation-settings: 'wght' 600;
-  font-size: calc(var(--pass-strip-header-fs) * 0.82);
+  font-size: var(--pass-strip-header-fs);
   line-height: 1;
-  letter-spacing: clamp(0.035em, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 0.0058), 0.095em);
-  color: #b0b0b0;
+  letter-spacing: clamp(0.032em, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 0.0026), 0.072em);
+  color: #c2c2c8;
   margin: 0;
   padding: 0;
   min-width: 0;
@@ -165,12 +165,18 @@
   font-variation-settings: 'wght' 600;
 }
 
-/* Match pass copy to the same face as `1st CHARLESTON` (Figtree semibold). */
-.panel--hand .pass-strip-tail .pass-strip-tail__instruction,
 .panel--hand .panel-hand-rack__seat-label {
   font-family: 'Figtree', var(--sans);
   font-weight: 600;
   font-variation-settings: 'wght' 600;
+  line-height: 1;
+  letter-spacing: clamp(0.032em, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 0.0026), 0.072em);
+  margin: 0;
+  padding: 0;
+  text-shadow: none;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
 }
 
 .pass-strip-tail__copy:has(.pass-strip-tail__instruction) .pass-strip-tail__title {
@@ -195,20 +201,13 @@
   );
 }
 
-.pass-strip-tail__copy:has(.pass-strip-tail__instruction) .pass-strip-tail__instruction {
-  /* Bottom-align with round title text (0.82×); pipe divider stays centered in title. */
-  transform: translateY(calc((var(--pass-strip-header-fs) * 0.82 - var(--pass-strip-header-fs)) / 2));
-}
-
-.pass-strip-tail__instruction,
-.panel--hand .panel-hand-rack__seat-label {
+.pass-strip-tail__instruction {
   font-family: 'Figtree', var(--sans);
   font-weight: 600;
   font-variation-settings: 'wght' 600;
   font-size: var(--pass-strip-header-fs);
   line-height: 1;
   letter-spacing: clamp(0.032em, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 0.0026), 0.072em);
-  color: #c2c2c8;
   margin: 0;
   padding: 0;
   text-shadow: none;
@@ -224,6 +223,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
+  color: #c2c2c8;
 }
 
 .pass-strip-tail__instruction-copy {

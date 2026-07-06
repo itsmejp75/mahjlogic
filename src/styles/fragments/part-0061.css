@@ -251,6 +251,11 @@
   opacity: 0.04;
 }
 
+/* Suggested-hands tray is transparent — drop watermark from paint tree while open. */
+.panel--discard-tracker[data-suggested-hands-open='on'] .discard-tracker__watermark {
+  display: none;
+}
+
 /* Tile corner radius at this tray width — used by the container + hands overlay only (tiles unchanged). */
 @container discard-tray (min-width: 0px) {
   .discard-tracker__content {

@@ -763,25 +763,35 @@ function HandRackMenuAnchor({
   )
 }
 
-/** Player compass seat — pass band on exposure row, or hand row after call/expose. */
+/** Player compass seat — centered in the well from discard-tracker bottom to main-rack top. */
 function PlayerRackSeatLabel({
   seat,
-  variant,
+  isActiveTurn = false,
+  isCalledThrower = false,
 }: {
   seat: Seat
-  variant: 'pass-row' | 'hand-row'
+  /** Green fill — player's turn (discard / Charleston / call-staging). */
+  isActiveTurn?: boolean
+  /** Green inset border — someone called this seat's discard (mirrors discard-tracker bot seat labels). */
+  isCalledThrower?: boolean
 }) {
   return (
     <span
-      className={[
-        'panel-hand-rack__seat-label',
-        variant === 'pass-row'
-          ? 'panel-hand-rack__seat-label--pass-row'
-          : 'panel-hand-rack__seat-label--hand-row',
-      ].join(' ')}
+      className="panel-hand-rack__seat-label"
       aria-hidden
     >
-      {seatLabel(seat)}
+      <span className="panel-hand-rack__seat-label__prefix">Seat:</span>
+      <span
+        className={[
+          'panel-hand-rack__seat-label__chip',
+          isActiveTurn ? 'panel-hand-rack__seat-label__chip--turn' : '',
+          isCalledThrower && !isActiveTurn ? 'panel-hand-rack__seat-label__chip--called' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
+        {seatLabel(seat)}
+      </span>
     </span>
   )
 }
@@ -1670,12 +1680,12 @@ function EastDiscardStagingSlot({
   )
 }
 
-/** When a bot claimed another bot's discard after East skipped — drives call-prompt headline. */
+/** When a bot claimed a discard after East skipped, or called the player's discard — drives seat-label call state. */
 type BotTurnBanner = {
   callerBotIndex: 0 | 1 | 2
   calledDef: TileDef
-  /** Seat (0=South, 1=West, 2=North) that threw the tile the caller claimed. */
-  discarderBotIndex: 0 | 1 | 2
+  /** Bot seat (0=South, 1=West, 2=North) that threw the tile; null when the player threw. */
+  discarderBotIndex: 0 | 1 | 2 | null
 }
 
 type RoundState = {
@@ -2994,7 +3004,11 @@ function commitEastDiscardWithHand(
       mainPhase: 'bot-turn',
       activeBotIndex: botIndex,
       activeBotDiscard: pick,
-      botTurnBanner: null,
+      botTurnBanner: {
+        callerBotIndex: botIndex as 0 | 1 | 2,
+        calledDef: discardedTile.def,
+        discarderBotIndex: null,
+      },
       pendingEastDiscardTile: null,
       drawnTileId: null,
       selectedHandTileId: null,
@@ -3258,7 +3272,7 @@ function applySkipBotDiscard(
 /** Player decided to call — move called tile into staging exposure; player picks meld tiles. */
 function applyInitiateCall(r: RoundState): RoundState {
   if (r.mainPhase !== 'bot-turn' || !r.activeBotDiscard) return r
-  return { ...r, mainPhase: 'call-staging', stagedCallTileIds: [] }
+  return { ...r, mainPhase: 'call-staging', stagedCallTileIds: [], botTurnBanner: null }
 }
 
 /**
@@ -3759,6 +3773,8 @@ export default function App() {
   const [suggestedPanelHandsOn, setSuggestedPanelHandsOn] = useState(false)
   const suggestedHandsPopupRef = useRef<HTMLDivElement>(null)
   const eastExposureRackTopRef = useRef<HTMLDivElement>(null)
+  const playerHandRackBottomRef = useRef<HTMLDivElement>(null)
+  const topDiscardTrackerPanelRef = useRef<HTMLElement>(null)
   const handPanelRef = useRef<HTMLElement>(null)
   /** While true, ResizeObserver / visualViewport must not rewrite `--hand-panel-cqw` (mobile drag). */
   const handPanelCqwFrozenRef = useRef(false)
@@ -8064,6 +8080,131 @@ export default function App() {
   /** Discard tracker + suggested hands row below rack (always on so layout is visible during Charleston). */
   const showPlaySplitRow = true
 
+  const playerSeatLabelActiveTurn = useMemo(() => {
+    if (
+      mainPhase === 'wall-game' ||
+      mainPhase === 'mahjong-declared' ||
+      mainPhase === 'bot-mahjong' ||
+      mainPhase === 'dead-hand'
+    ) {
+      return false
+    }
+    if (!charlestonDone) return true
+    return mainPhase === 'east-discard' || mainPhase === 'call-staging'
+  }, [charlestonDone, mainPhase])
+
+  /** Player threw the discard another seat is calling (bot-on-bot uses discarderBotIndex; player uses null). */
+  const playerSeatLabelCalledThrower = useMemo(
+    () =>
+      charlestonDone &&
+      mainPhase === 'bot-turn' &&
+      botTurnBanner != null &&
+      botTurnBanner.discarderBotIndex === null,
+    [charlestonDone, mainPhase, botTurnBanner],
+  )
+
+  /** Vertically center the player seat label between the top discard tracker and the main hand rack. */
+  const updatePlayerSeatLabelPosition = useCallback(() => {
+    const rackBottom = playerHandRackBottomRef.current
+    if (!rackBottom) return
+
+    // Call meld pinned in the exposure area (staged during call-staging or committed): it sits at
+    // the rack's left column and spans the full rack height, so the label can't sit above the hand
+    // (it hides behind the meld). Drop it into the empty band below the meld — between the meld's
+    // bottom and the action-button row — as soon as the meld appears.
+    const rackTop = eastExposureRackTopRef.current
+    const meldFaces = rackTop?.querySelectorAll(
+      '.exposure-rack__call-meld-strip .tile-face',
+    )
+    if (meldFaces && meldFaces.length > 0) {
+      const rbRect = rackBottom.getBoundingClientRect()
+      let meldBottom = -Infinity
+      meldFaces.forEach((el) => {
+        meldBottom = Math.max(meldBottom, el.getBoundingClientRect().bottom)
+      })
+      const actionWell = rackBottom
+        .closest('.panel-hand-rack__hand-tray')
+        ?.querySelector('.panel-hand-rack__action-well') as HTMLElement | null
+      const bandBottom = actionWell
+        ? actionWell.getBoundingClientRect().top
+        : rbRect.bottom
+      const belowMeldMid = (meldBottom + bandBottom) / 2
+      rackBottom.style.setProperty(
+        '--player-seat-label-top',
+        `${belowMeldMid - rbRect.top}px`,
+      )
+      return
+    }
+
+    const handTop = rackBottom.getBoundingClientRect().top
+    const topTracker =
+      topDiscardTrackerPanelRef.current ??
+      (rackBottom.closest('.app-dnd-frame')?.querySelector(
+        '.app-top-exposure-container .panel--discard-tracker',
+      ) as HTMLElement | null)
+
+    const bandTop = topTracker
+      ? topTracker.getBoundingClientRect().bottom
+      : (rackBottom.closest('.panel-hand-rack') as HTMLElement | null)?.getBoundingClientRect().top ??
+        handTop
+    const bandH = Math.max(0, handTop - bandTop)
+    const centerOffset = bandH > 0 ? -bandH / 2 : -8
+
+    rackBottom.style.setProperty('--player-seat-label-top', `${centerOffset}px`)
+  }, [])
+
+  useLayoutEffect(() => {
+    updatePlayerSeatLabelPosition()
+
+    const rackBottom = playerHandRackBottomRef.current
+    if (!rackBottom) return
+
+    let raf = 0
+    const scheduleUpdate = () => {
+      window.cancelAnimationFrame(raf)
+      raf = window.requestAnimationFrame(updatePlayerSeatLabelPosition)
+    }
+
+    const topTracker =
+      topDiscardTrackerPanelRef.current ??
+      (rackBottom.closest('.app-dnd-frame')?.querySelector(
+        '.app-top-exposure-container .panel--discard-tracker',
+      ) as HTMLElement | null)
+    const rackTop = eastExposureRackTopRef.current
+    const panelHandRack = rackBottom.closest('.panel-hand-rack')
+
+    let ro: ResizeObserver | null = null
+    if (typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(scheduleUpdate)
+      ro.observe(rackBottom)
+      if (topTracker) ro.observe(topTracker)
+      if (rackTop) ro.observe(rackTop)
+      if (panelHandRack) ro.observe(panelHandRack)
+    } else {
+      window.addEventListener('resize', scheduleUpdate)
+    }
+    window.addEventListener('orientationchange', scheduleUpdate)
+    window.visualViewport?.addEventListener('resize', scheduleUpdate)
+    const settleTimers = [80, 180, 360].map((delay) => window.setTimeout(scheduleUpdate, delay))
+
+    return () => {
+      ro?.disconnect()
+      window.removeEventListener('resize', scheduleUpdate)
+      window.removeEventListener('orientationchange', scheduleUpdate)
+      window.visualViewport?.removeEventListener('resize', scheduleUpdate)
+      settleTimers.forEach((id) => window.clearTimeout(id))
+      window.cancelAnimationFrame(raf)
+    }
+  }, [
+    updatePlayerSeatLabelPosition,
+    charlestonDone,
+    mainPhase,
+    showPlaySplitRow,
+    callMeldInsetCols,
+    playerExposureMelds.length,
+    hand.length,
+  ])
+
   /** Suggested-hands tab + popup shell: hidden only on dead hand / bot Mah Jongg (no rack action row). */
   const showSuggestedHandsPanel =
     mainPhase !== 'dead-hand' && mainPhase !== 'bot-mahjong'
@@ -9271,6 +9412,7 @@ export default function App() {
                 <div className="app-play-split app-top-exposure-container">
                 <div className="app-play-split__left">
                   <section
+                    ref={topDiscardTrackerPanelRef}
                     className="panel panel--discard-tracker panel--discard-tracker--top"
                     aria-label="Discard tracker"
                   >
@@ -9320,7 +9462,6 @@ export default function App() {
                       <div className="rack-stage rack-stage--charleston" role="group">
                         <div className="rack-stage__rack-col">
                           <div ref={eastExposureRackTopRef} className="rack-stage__rack-top">
-                            <PlayerRackSeatLabel seat={playerSeat} variant="pass-row" />
                             <SortableContext items={charlestonPassSortableItems} strategy={rectSortingStrategy}>
                             <ExposureRack
                               className="exposure-rack--charleston-pass"
@@ -9332,6 +9473,7 @@ export default function App() {
                               suggestedTileGuide={suggestedTileGuideForRack}
                               slotCount={14}
                               reserveTrailingSlots={3}
+                              shiftPassStripLeftSlots={playerSeat === 'east' ? 0 : 1}
                               ariaLabel="Your exposures and Charleston pass"
                               trailingSuffix={
                                 <PassStrip
@@ -9356,7 +9498,12 @@ export default function App() {
                             </SortableContext>
                           </div>
                           <div className="panel-hand-rack__hand-tray">
-                            <div className="rack-stage__rack-bottom">
+                            <div ref={playerHandRackBottomRef} className="rack-stage__rack-bottom">
+                              <PlayerRackSeatLabel
+                                seat={playerSeat}
+                                isActiveTurn={playerSeatLabelActiveTurn}
+                                isCalledThrower={playerSeatLabelCalledThrower}
+                              />
                                 <HandBank>
                                   <SortableContext items={charlestonHandSortableIds} strategy={rectSortingStrategy}>
                                   <SortableHand
@@ -9522,9 +9669,6 @@ export default function App() {
                         >
                           <SortableContext items={sortableItems} strategy={rectSortingStrategy}>
                           <div ref={eastExposureRackTopRef} className="rack-stage__rack-top">
-                            {callMeldInsetCols === 0 ? (
-                              <PlayerRackSeatLabel seat={playerSeat} variant="pass-row" />
-                            ) : null}
                             <StagingMeldDropZone active={mainPhase === 'call-staging'}>
                             <EastOwnJokerSwapDropZone active={jokerSwapUiActive}>
                             <ExposureRack
@@ -9653,10 +9797,14 @@ export default function App() {
                           </div>
                           <div className="panel-hand-rack__hand-tray">
                             {mainPhase !== 'bot-mahjong' && (
-                            <div className="rack-stage__rack-bottom">
-                                {callMeldInsetCols > 0 ? (
-                                  <PlayerRackSeatLabel seat={playerSeat} variant="hand-row" />
-                                ) : null}
+                            <div ref={playerHandRackBottomRef} className="rack-stage__rack-bottom">
+                              {mainPhase !== 'dead-hand' ? (
+                                <PlayerRackSeatLabel
+                                  seat={playerSeat}
+                                  isActiveTurn={playerSeatLabelActiveTurn}
+                                  isCalledThrower={playerSeatLabelCalledThrower}
+                                />
+                              ) : null}
                                 <HandBank>
                                   <SortableHand
                                     tiles={

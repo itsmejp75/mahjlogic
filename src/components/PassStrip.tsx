@@ -165,7 +165,7 @@ type Props = {
    * hand never slides underneath them.
    */
   returningTileId?: string | null
-  /** `inlineTail` only: round label inside the teal pass box (e.g. `1st CHARLESTON`). */
+  /** `inlineTail` only: round label inside the teal pass box (e.g. `1st Charleston`). */
   inlineHeaderTitle?: string | null
   /** `inlineTail` only: instruction under the title, same box (string or custom layout). */
   inlineHeaderInstruction?: ReactNode

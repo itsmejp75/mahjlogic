@@ -901,6 +901,11 @@ type Props = {
   /** Leave this many slots empty at the right for e.g. Charleston pass tiles (same row). */
   reserveTrailingSlots?: number
   /**
+   * Non-East Charleston: 13-tile hands leave the pass strip one column left of East (cols 11–13
+   * vs 12–14). Shifts the pass strip left by this many tile columns and pads empties on the right.
+   */
+  shiftPassStripLeftSlots?: number
+  /**
    * When true, one extra rack column after empties is reserved for the active bot discard
    * (or left empty when none). Counts toward `slotCount` like `reserveTrailingSlots`.
    */
@@ -1025,6 +1030,7 @@ export function ExposureRack({
   watermark,
   watermarkPhase,
   reserveTrailingSlots = 0,
+  shiftPassStripLeftSlots = 0,
   reserveLastSlotForDiscard = false,
   lastSlotTile = null,
   incomingBotDiscardFlyFrom = null,
@@ -1054,8 +1060,12 @@ export function ExposureRack({
   gridMeldColumnSpans = false,
 }: Props) {
   const totalExposed = melds.reduce((n, m) => n + m.tiles.length, 0)
+  const passStripShift = Math.max(0, shiftPassStripLeftSlots)
   const tailReserved = reserveTrailingSlots + (reserveLastSlotForDiscard ? 1 : 0)
-  const emptyCount = Math.max(0, slotCount - totalExposed - suffixSlotCount - tailReserved)
+  const emptyCount = Math.max(
+    0,
+    slotCount - totalExposed - suffixSlotCount - tailReserved - passStripShift,
+  )
   const callInitiateShown = firstEmptyOverride != null
   const emptySlotCount = callInitiateShown ? Math.max(0, emptyCount - 1) : emptyCount
 
@@ -1353,6 +1363,13 @@ export function ExposureRack({
         />
       ))}
       {trailingSuffix}
+      {Array.from({ length: passStripShift }, (_, i) => (
+        <div
+          key={`pass-strip-shift-pad-${i}`}
+          className="exposure-rack__slot exposure-rack__slot--empty"
+          aria-hidden
+        />
+      ))}
       {reserveLastSlotForDiscard ? (
         lastSlotReplace != null ? (
           <div
