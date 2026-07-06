@@ -172,6 +172,16 @@
   container-type: inline-size;
   container-name: suggest-hands-panel;
   /*
+   * Frozen content-box inline size (ResizeObserver in SuggestedHandsPanel). On iOS WKWebView,
+   * live `cqi` on the first paint after opening the discard-tray overlay can collapse while
+   * ancestor transforms are settling — card-hand text then overlaps until orientation change.
+   */
+  --suggest-hands-panel-cqw-resolved: var(--suggest-hands-panel-cqw, 100cqi);
+  --suggest-hands-hand-col-cqw-resolved: var(
+    --suggest-hands-hand-col-cqw,
+    var(--suggest-hands-panel-cqw-resolved)
+  );
+  /*
    * Sheet uses negative margin-inline rails to extend the title row's background to the
    * panel edge — must NOT be clipped here. Panel itself (`overflow: hidden`) clips at the
    * outer panel border, so visual extension stays inside the panel.
@@ -1250,7 +1260,11 @@
    * Zoom-with-window: the whole sheet font scales with the panel inline-size (cqi),
    * so headers, category text, hand text, and the away count all grow/shrink together.
    */
-  font-size: clamp(0.5rem, 2.35cqi, 2.35rem);
+  font-size: clamp(
+    0.5rem,
+    calc(var(--suggest-hands-panel-cqw-resolved) * 0.0235),
+    2.35rem
+  );
   line-height: 1.2;
   /*
    * Away / Points header type: same pass-instruction scale as "Pass 3 Right", derived from a
@@ -1261,8 +1275,9 @@
     var(--hand-rack-tile-w),
     calc(
       (
-        100cqi - var(--hands-sheet-pin-w) - var(--hands-sheet-category-w) - var(--hands-sheet-away-w) -
-          var(--hands-sheet-values-w) - 4 * var(--hands-sheet-cell-pad-x) - 13 * var(--hands-sheet-tile-gap)
+        var(--suggest-hands-panel-cqw-resolved) - var(--hands-sheet-pin-w) - var(--hands-sheet-category-w) -
+          var(--hands-sheet-away-w) - var(--hands-sheet-values-w) - 4 * var(--hands-sheet-cell-pad-x) -
+          13 * var(--hands-sheet-tile-gap)
       ) / 14
     )
   );
@@ -1826,7 +1841,6 @@
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__cell--cat,
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__cell--hand {
   align-items: center;
-  container-type: inline-size;
 }
 
 /*
@@ -1837,7 +1851,13 @@
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)
   .hands-sheet__cell--hand {
-  --hand-line-fs: min(1em, max(0.45em, calc(92cqi / var(--hand-title-ch, 10))));
+  --hand-line-fs: min(
+    1em,
+    max(
+      0.45em,
+      calc(var(--suggest-hands-hand-col-cqw-resolved) * 0.92 / var(--hand-title-ch, 10))
+    )
+  );
 }
 
 /*
@@ -2158,8 +2178,8 @@
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2).hands-sheet--detail-tiles {
   --hands-sheet-tile-gap: var(--player-rack-face-gap);
   --hands-sheet-tile-col: calc(
-    100cqi - var(--hands-sheet-pin-w) - var(--hands-sheet-category-w) - var(--hands-sheet-away-w) -
-      var(--hands-sheet-values-w) - 4 * var(--hands-sheet-cell-pad-x)
+    var(--suggest-hands-panel-cqw-resolved) - var(--hands-sheet-pin-w) - var(--hands-sheet-category-w) -
+      var(--hands-sheet-away-w) - var(--hands-sheet-values-w) - 4 * var(--hands-sheet-cell-pad-x)
   );
   --hands-sheet-tile-w: max(
     0.85rem,
@@ -2260,12 +2280,16 @@
   --hands-sheet-pin-w: 1.65em;
   /* Match the main player rack gap between strip faces. */
   --hands-sheet-tile-gap: var(--player-rack-face-gap);
-  --hands-sheet-cell-pad-y: clamp(0.22rem, 1cqi, 0.45rem);
+  --hands-sheet-cell-pad-y: clamp(
+    0.22rem,
+    calc(var(--suggest-hands-panel-cqw-resolved) * 0.01),
+    0.45rem
+  );
   --hands-sheet-cell-bg: transparent;
   /* Tile column width = panel inline-size − away − values − cell horizontal padding. */
   --hands-sheet-tile-col: calc(
-    100cqi - var(--hands-sheet-pin-w, 1.25em) - var(--hands-sheet-away-w) - var(--hands-sheet-values-w) -
-      2 * var(--hands-sheet-cell-pad-x)
+    var(--suggest-hands-panel-cqw-resolved) - var(--hands-sheet-pin-w, 1.25em) -
+      var(--hands-sheet-away-w) - var(--hands-sheet-values-w) - 2 * var(--hands-sheet-cell-pad-x)
   );
   /* Fluid tile size from the actual tile column, spread across 14 tiles. */
   --hands-sheet-tile-w: max(
@@ -2487,7 +2511,11 @@
   justify-items: start;
   row-gap: 0.18rem;
   /* Tighter than generic `.hands-sheet__cell:not(.header)` 1.25em — category + card line share one band. */
-  font-size: clamp(0.64rem, 2cqi, 0.76rem);
+  font-size: clamp(
+    0.64rem,
+    calc(var(--suggest-hands-panel-cqw-resolved) * 0.02),
+    0.76rem
+  );
   /* No horizontal cell padding — fill the spanned tracks exactly so cat/strip share an edge. */
   padding-inline: 0;
   white-space: normal;
@@ -2501,7 +2529,10 @@
    */
   --hands-sheet-tile-w: max(
     0.65rem,
-    calc((100cqi - var(--hands-sheet-category-w) - 13 * var(--hands-sheet-tile-gap)) / 14)
+    calc(
+      (var(--suggest-hands-panel-cqw-resolved) - var(--hands-sheet-category-w) - 13 * var(--hands-sheet-tile-gap)) /
+        14
+    )
   );
   --hands-sheet-tile-h: calc(var(--hands-sheet-tile-w) * 4 / 3);
 }
@@ -2845,7 +2876,8 @@
   .hands-panel__list-column .hands-list-scroll {
     --hands-tiles-cell-pad-x: clamp(0.32rem, 1.2vw, 0.62rem);
     --hands-strip-col: calc(
-      100cqi - var(--hands-list-pin-w, 1.35rem) - var(--hands-grid-away-w) - var(--hands-grid-values-w)
+      var(--suggest-hands-panel-cqw-resolved) - var(--hands-list-pin-w, 1.35rem) -
+        var(--hands-grid-away-w) - var(--hands-grid-values-w)
     );
     /* Match ~0.2rem horizontal padding on `.hands-list__cell--tiles`. */
     --hands-strip-inner: calc(var(--hands-strip-col) - 0.4rem);

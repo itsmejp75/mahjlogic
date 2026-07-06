@@ -8375,6 +8375,7 @@ export default function App() {
       >
         <SuggestedHandsPanel
           discardTraySurface
+          trayOpen={suggestedPanelHandsOn}
           onPinnedPatternChange={toggleSuggestedPinnedHandKey}
           hands={eastSuggestedHands}
           activePatternId={suggestedFocusHandKey}

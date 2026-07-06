@@ -963,6 +963,8 @@ type Props = {
    * live on the parent `.suggested-hands-popup` wrapper in `App`.
    */
   discardTraySurface?: boolean
+  /** Discard-tray overlay open — remeasures frozen list-column width for card-hand layout. */
+  trayOpen?: boolean
   /** Toggle whether `handKey` is pinned (add/remove from {@link pinnedHandKeys}). */
   onPinnedPatternChange?: (handKey: string) => void
   /** Per focus key: why the line is no longer completable (dead tile hint). */
@@ -984,11 +986,13 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   cardPatterns,
   cardSectionOrder,
   discardTraySurface,
+  trayOpen = false,
   onPinnedPatternChange,
   deadCauseByFocusKey = {},
 }: Props) {
   const pinnedKeySet = useMemo(() => new Set(pinnedHandKeys), [pinnedHandKeys])
   const handsListScrollRef = useRef<HTMLDivElement>(null)
+  const listColumnRef = useRef<HTMLDivElement>(null)
   const selectedAwayKeyRef = useRef<string | null>(null)
   const selectedAwayLastValueRef = useRef<number | null>(null)
   const [activeAwayTrend, setActiveAwayTrend] = useState<SelectedHandAwayTrend>(null)
@@ -1067,6 +1071,90 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     },
     [detachDragScrollWindowListeners],
   )
+
+  /** Drop content-visibility size memory so row heights match the rewritten sheet font. */
+  const bustHandsSheetRowIntrinsicCache = useCallback((listColumn: HTMLElement) => {
+    const rows = listColumn.querySelectorAll('.hands-sheet__row')
+    if (rows.length === 0) return
+    for (const row of rows) {
+      if (row instanceof HTMLElement) row.style.contentVisibility = 'visible'
+    }
+    void listColumn.offsetHeight
+    for (const row of rows) {
+      if (row instanceof HTMLElement) row.style.removeProperty('content-visibility')
+    }
+  }, [])
+
+  const refreshSuggestHandsPanelCqw = useCallback(() => {
+    const el = listColumnRef.current
+    if (!el) return
+    const w = el.clientWidth
+    if (!Number.isFinite(w) || w < 1) return
+    const next = `${w}px`
+    const cqwChanged = el.style.getPropertyValue('--suggest-hands-panel-cqw') !== next
+    if (cqwChanged) {
+      el.style.setProperty('--suggest-hands-panel-cqw', next)
+      bustHandsSheetRowIntrinsicCache(el)
+      void el.offsetHeight
+    }
+    const handCell = el.querySelector(
+      '.hands-sheet__cell--hand:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad)',
+    )
+    if (handCell instanceof HTMLElement) {
+      const handW = handCell.clientWidth
+      if (Number.isFinite(handW) && handW >= 1) {
+        el.style.setProperty('--suggest-hands-hand-col-cqw', `${handW}px`)
+      }
+    }
+  }, [bustHandsSheetRowIntrinsicCache])
+
+  useLayoutEffect(() => {
+    const el = listColumnRef.current
+    if (!el) return
+
+    refreshSuggestHandsPanelCqw()
+
+    let raf = 0
+    const scheduleUpdate = () => {
+      window.cancelAnimationFrame(raf)
+      raf = window.requestAnimationFrame(refreshSuggestHandsPanelCqw)
+    }
+    const settleTimers: number[] = []
+    const scheduleSettledUpdate = () => {
+      scheduleUpdate()
+      for (const delay of [80, 180, 360, 400]) {
+        settleTimers.push(window.setTimeout(scheduleUpdate, delay))
+      }
+    }
+
+    let ro: ResizeObserver | null = null
+    if (typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(scheduleUpdate)
+      ro.observe(el)
+    } else {
+      window.addEventListener('resize', scheduleUpdate)
+    }
+    window.addEventListener('orientationchange', scheduleSettledUpdate)
+    window.visualViewport?.addEventListener('resize', scheduleUpdate)
+
+    const panel = el.closest('.panel--hands')
+    const onTransitionEnd = (ev: Event) => {
+      if (ev instanceof TransitionEvent && ev.propertyName === 'transform') scheduleSettledUpdate()
+    }
+    panel?.addEventListener('transitionend', onTransitionEnd)
+
+    if (trayOpen) scheduleSettledUpdate()
+
+    return () => {
+      window.cancelAnimationFrame(raf)
+      for (const t of settleTimers) window.clearTimeout(t)
+      ro?.disconnect()
+      window.removeEventListener('resize', scheduleUpdate)
+      window.removeEventListener('orientationchange', scheduleSettledUpdate)
+      window.visualViewport?.removeEventListener('resize', scheduleUpdate)
+      panel?.removeEventListener('transitionend', onTransitionEnd)
+    }
+  }, [refreshSuggestHandsPanelCqw, trayOpen])
 
   const handleListScrollPointerDown = useCallback(
     (e: PointerEvent<HTMLDivElement>) => {
@@ -1568,7 +1656,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   return (
     <section className={rootClassName} aria-label="Suggested hands">
       <div className="hands-panel__content">
-          <div className="hands-panel__list-column">
+          <div ref={listColumnRef} className="hands-panel__list-column">
             <div
               ref={handsListScrollRef}
               className="hands-list-scroll"
