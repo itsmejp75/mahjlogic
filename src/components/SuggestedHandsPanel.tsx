@@ -470,11 +470,11 @@ const SuggestedHandStripTileCell = memo(function SuggestedHandStripTileCell({
 function handsRowGridTemplateAreas(cat: boolean, tiles: boolean): string {
   if (cat) {
     if (tiles) {
-      return "'pin category category away values' 'pin tiles tiles awayPad valuesPad'"
+      return "'pin category category odds away values' 'pin tiles tiles oddsPad awayPad valuesPad'"
     }
-    return "'pin category category away values'"
+    return "'pin category category odds away values'"
   }
-  return "'pin tiles tiles away values'"
+  return "'pin tiles tiles odds away values'"
 }
 
 const SuggestedHandPinCell = memo(function SuggestedHandPinCell({
@@ -696,6 +696,16 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
         ) : null}
         <div
           className={[
+            'hands-sheet__cell hands-sheet__cell--odds',
+            sheetRowLitEdge(rowLit, 'mid'),
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          role="cell"
+          aria-hidden="true"
+        />
+        <div
+          className={[
             'hands-sheet__cell hands-sheet__cell--away',
             sheetRowLitEdge(rowLit, 'mid'),
           ]
@@ -723,6 +733,11 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
         </div>
         {showDetailRow ? (
           <>
+            <div
+              className="hands-sheet__cell hands-sheet__cell--odds hands-sheet__cell--detail-pad"
+              role="cell"
+              aria-hidden="true"
+            />
             <div
               className="hands-sheet__cell hands-sheet__cell--away hands-sheet__cell--detail-pad"
               role="cell"
@@ -886,6 +901,10 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
         {showHandCategoryLabels && tilesGuideOn ? (
           <>
             <div
+              className="hands-list__cell hands-list__cell--tiles-odds-pad"
+              aria-hidden="true"
+            />
+            <div
               className="hands-list__cell hands-list__cell--tiles-away-pad"
               aria-hidden="true"
             />
@@ -895,6 +914,7 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
             />
           </>
         ) : null}
+        <div className="hands-list__cell hands-list__cell--odds" aria-hidden="true" />
         <div className="hands-list__cell hands-list__cell--away">
           <span
             className="hands-list__tiles-away hands-list__tiles-away--with-tiles-col"
@@ -1615,7 +1635,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
 
   const rowHitGridStyle = useMemo((): CSSProperties => {
     if (handsListSpreadsheetHands) {
-      return { gridTemplateAreas: "'pin section hand away values'" }
+      return { gridTemplateAreas: "'pin section hand odds away values'" }
     }
     return { gridTemplateAreas: handsRowGridTemplateAreas(showHandCategoryLabels, tilesGuideOn) }
   }, [handsListSpreadsheetHands, showHandCategoryLabels, tilesGuideOn])
@@ -1665,6 +1685,11 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                   aria-hidden
                 />
                 <div
+                  className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--odds"
+                  role="columnheader"
+                  aria-hidden
+                />
+                <div
                   className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--away"
                   role="columnheader"
                   aria-hidden
@@ -1704,6 +1729,12 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                     aria-hidden
                   >
                     {hasHandsAboveView ? <SuggestedHandsScrollAboveHint /> : null}
+                  </div>
+                  <div
+                    className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--odds"
+                    role="columnheader"
+                  >
+                    Prob
                   </div>
                   <div
                     className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--away"
@@ -1817,6 +1848,19 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                     <div
                       className={[
                         'hands-list__cell',
+                        'hands-list__cell--tiles-odds-pad',
+                        'hands-list__header-cell',
+                        hasHandsAboveView ? 'hands-list__header-cell--scroll-above' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      aria-hidden
+                    >
+                      {hasHandsAboveView ? <SuggestedHandsScrollAboveHint /> : null}
+                    </div>
+                    <div
+                      className={[
+                        'hands-list__cell',
                         'hands-list__cell--tiles-away-pad',
                         'hands-list__header-cell',
                         hasHandsAboveView ? 'hands-list__header-cell--scroll-above' : '',
@@ -1833,6 +1877,17 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                     />
                   </>
                 ) : null}
+                <div
+                  className={[
+                    'hands-list__cell',
+                    'hands-list__cell--odds',
+                    'hands-list__header-cell',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                >
+                  <div className="hands-list__header-meta">Prob</div>
+                </div>
                 <div
                   className={[
                     'hands-list__cell',

@@ -298,7 +298,9 @@ const LS_KEY_BLANK_TILES = 'mahjlogic.blankTilesEnabled'
 const LS_KEY_BLANK_TILE_COUNT = 'mahjlogic.blankTileCount'
 const LS_KEY_TEN_JOKERS = 'mahjlogic.tenJokersEnabled'
 const LS_KEY_RANDOM_SEAT = 'mahjlogic.randomSeatEnabled'
+const LS_KEY_SUGGESTED_HANDS_TRAY = 'mahjlogic.suggestedHandsTrayDefaultOpen'
 const BLANK_TILES_LABEL = 'Blank tiles'
+const SUGGESTED_HANDS_TRAY_LABEL = 'Suggested hands tray'
 const TEN_JOKERS_LABEL = '10 Jokers'
 const RANDOM_SEAT_LABEL = 'Random seat'
 const CONCEALED_HAND_REMINDER_LABEL = 'Concealed hand reminder'
@@ -507,6 +509,16 @@ function readRandomSeatEnabledFromStorage(): boolean {
     return v === 'true' || v === '1'
   } catch {
     return false
+  }
+}
+
+function readSuggestedHandsTrayDefaultOpenFromStorage(): boolean {
+  try {
+    const v = localStorage.getItem(LS_KEY_SUGGESTED_HANDS_TRAY)
+    if (v === null) return true
+    return v === 'true' || v === '1'
+  } catch {
+    return true
   }
 }
 
@@ -3770,7 +3782,12 @@ export default function App() {
       }
     >
   >({})
-  const [suggestedPanelHandsOn, setSuggestedPanelHandsOn] = useState(false)
+  const [suggestedHandsTrayDefaultOpen, setSuggestedHandsTrayDefaultOpen] = useState(() =>
+    readSuggestedHandsTrayDefaultOpenFromStorage(),
+  )
+  const [suggestedPanelHandsOn, setSuggestedPanelHandsOn] = useState(() =>
+    readSuggestedHandsTrayDefaultOpenFromStorage(),
+  )
   const suggestedHandsPopupRef = useRef<HTMLDivElement>(null)
   const eastExposureRackTopRef = useRef<HTMLDivElement>(null)
   const playerHandRackBottomRef = useRef<HTMLDivElement>(null)
@@ -3812,6 +3829,18 @@ export default function App() {
   const deferredSuggestedPanelTilesOn = useDeferredValue(suggestedPanelTilesOn)
   const toggleSuggestedPanelTilesOn = useCallback(() => {
     setSuggestedPanelTilesOn((v) => !v)
+  }, [])
+  const toggleSuggestedHandsTrayDefaultOpen = useCallback(() => {
+    setSuggestedHandsTrayDefaultOpen((prev) => {
+      const next = !prev
+      setSuggestedPanelHandsOn(next)
+      try {
+        localStorage.setItem(LS_KEY_SUGGESTED_HANDS_TRAY, next ? 'true' : 'false')
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
   }, [])
   const [suggestedHandsUncheckedSections, setSuggestedHandsUncheckedSections] = useState<Set<string>>(
     () => readUncheckedSectionsFromStorage(),
@@ -4167,6 +4196,11 @@ export default function App() {
           setBlankTileCount(n)
           blankTileCountRef.current = n
         }
+      } else if (e.key === LS_KEY_SUGGESTED_HANDS_TRAY) {
+        if (e.newValue == null) return
+        const on = e.newValue === 'true' || e.newValue === '1'
+        setSuggestedHandsTrayDefaultOpen(on)
+        setSuggestedPanelHandsOn(on)
       }
     }
     window.addEventListener('storage', onStorage)
@@ -5582,14 +5616,14 @@ export default function App() {
     }
   }, [mainPhase])
 
-  const handsButtonLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const handsButtonLongPressFired = useRef(false)
+  const suggestedTilesButtonLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const suggestedTilesButtonLongPressFired = useRef(false)
 
-  const onHandsButtonPointerDown = useCallback(() => {
+  const onSuggestedTilesButtonPointerDown = useCallback(() => {
     if (mainPhase === 'mahjong-declared') return
-    handsButtonLongPressFired.current = false
-    handsButtonLongPressTimer.current = setTimeout(() => {
-      handsButtonLongPressFired.current = true
+    suggestedTilesButtonLongPressFired.current = false
+    suggestedTilesButtonLongPressTimer.current = setTimeout(() => {
+      suggestedTilesButtonLongPressFired.current = true
       setSuggestedFocusHandKey(null)
       setSuggestedPinnedHandKeys([])
       setSuggestedSuppressedHandKey(null)
@@ -5598,21 +5632,21 @@ export default function App() {
     }, 500)
   }, [mainPhase])
 
-  const onHandsButtonPointerUpOrLeave = useCallback(() => {
-    if (handsButtonLongPressTimer.current != null) {
-      clearTimeout(handsButtonLongPressTimer.current)
-      handsButtonLongPressTimer.current = null
+  const onSuggestedTilesButtonPointerUpOrLeave = useCallback(() => {
+    if (suggestedTilesButtonLongPressTimer.current != null) {
+      clearTimeout(suggestedTilesButtonLongPressTimer.current)
+      suggestedTilesButtonLongPressTimer.current = null
     }
   }, [])
 
-  const onHandsButtonClick = useCallback(() => {
+  const onSuggestedTilesButtonClick = useCallback(() => {
     if (mainPhase === 'mahjong-declared') return
-    if (handsButtonLongPressFired.current) {
-      handsButtonLongPressFired.current = false
+    if (suggestedTilesButtonLongPressFired.current) {
+      suggestedTilesButtonLongPressFired.current = false
       return
     }
-    setSuggestedPanelHandsOn((v) => !v)
-  }, [mainPhase])
+    toggleSuggestedPanelTilesOn()
+  }, [mainPhase, toggleSuggestedPanelTilesOn])
 
   const onSuggestedPatternClick = useCallback((handKey: string) => {
     const isDeselect = suggestedFocusHandKeyRef.current === handKey
@@ -6615,6 +6649,7 @@ export default function App() {
     const blankCount = readBlankTileCountFromStorage()
     setBlankTileCount((prev) => (prev === blankCount ? prev : blankCount))
     blankTileCountRef.current = blankCount
+    setSuggestedPanelHandsOn(readSuggestedHandsTrayDefaultOpenFromStorage())
     if (m !== c) {
       try {
         writePlayableCardToStorage(m)
@@ -8643,12 +8678,12 @@ export default function App() {
                 </div>
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
                   <AppMenuSettingSwitch
-                    labelId="app-menu-label-suggested-tiles"
-                    pressed={suggestedPanelTilesOn}
-                    onToggle={toggleSuggestedPanelTilesOn}
+                    labelId="app-menu-label-suggested-hands-tray"
+                    pressed={suggestedHandsTrayDefaultOpen}
+                    onToggle={toggleSuggestedHandsTrayDefaultOpen}
                   />
-                  <span className="app-menu-modal__label" id="app-menu-label-suggested-tiles">
-                    Show suggested tiles
+                  <span className="app-menu-modal__label" id="app-menu-label-suggested-hands-tray">
+                    {SUGGESTED_HANDS_TRAY_LABEL}
                   </span>
                 </div>
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
@@ -9573,22 +9608,21 @@ export default function App() {
                                     'suggested-hands-tab',
                                     'rack-bottom-tile-cell',
                                     'rack-bottom-tile-cell--c4-5',
-                                    suggestedPanelHandsOn && mainPhase !== 'mahjong-declared'
+                                    suggestedPanelTilesOn && mainPhase !== 'mahjong-declared'
                                       ? 'suggested-hands-tab--open'
                                       : '',
                                   ]
                                     .filter(Boolean)
                                     .join(' ')}
-                                  aria-label="Suggested hands"
-                                  onClick={onHandsButtonClick}
-                                  onPointerDown={onHandsButtonPointerDown}
-                                  onPointerUp={onHandsButtonPointerUpOrLeave}
-                                  onPointerLeave={onHandsButtonPointerUpOrLeave}
-                                  onPointerCancel={onHandsButtonPointerUpOrLeave}
-                                  aria-expanded={mainPhase !== 'mahjong-declared' && suggestedPanelHandsOn}
-                                  aria-controls="suggested-hands-popup"
+                                  aria-label="Suggested tiles"
+                                  aria-pressed={mainPhase !== 'mahjong-declared' && suggestedPanelTilesOn}
+                                  onClick={onSuggestedTilesButtonClick}
+                                  onPointerDown={onSuggestedTilesButtonPointerDown}
+                                  onPointerUp={onSuggestedTilesButtonPointerUpOrLeave}
+                                  onPointerLeave={onSuggestedTilesButtonPointerUpOrLeave}
+                                  onPointerCancel={onSuggestedTilesButtonPointerUpOrLeave}
                                 >
-                                  Hands
+                                  Tiles
                                 </button>
                               ) : null}
                               <button
@@ -9878,22 +9912,21 @@ export default function App() {
                                       'suggested-hands-tab',
                                       'rack-bottom-tile-cell',
                                       'rack-bottom-tile-cell--c4-5',
-                                      suggestedPanelHandsOn && mainPhase !== 'mahjong-declared'
+                                      suggestedPanelTilesOn && mainPhase !== 'mahjong-declared'
                                         ? 'suggested-hands-tab--open'
                                         : '',
                                     ]
                                       .filter(Boolean)
                                       .join(' ')}
-                                    aria-label="Suggested hands"
-                                    onClick={onHandsButtonClick}
-                                    onPointerDown={onHandsButtonPointerDown}
-                                    onPointerUp={onHandsButtonPointerUpOrLeave}
-                                    onPointerLeave={onHandsButtonPointerUpOrLeave}
-                                    onPointerCancel={onHandsButtonPointerUpOrLeave}
-                                    aria-expanded={mainPhase !== 'mahjong-declared' && suggestedPanelHandsOn}
-                                    aria-controls="suggested-hands-popup"
+                                    aria-label="Suggested tiles"
+                                    aria-pressed={mainPhase !== 'mahjong-declared' && suggestedPanelTilesOn}
+                                    onClick={onSuggestedTilesButtonClick}
+                                    onPointerDown={onSuggestedTilesButtonPointerDown}
+                                    onPointerUp={onSuggestedTilesButtonPointerUpOrLeave}
+                                    onPointerLeave={onSuggestedTilesButtonPointerUpOrLeave}
+                                    onPointerCancel={onSuggestedTilesButtonPointerUpOrLeave}
                                   >
-                                    Hands
+                                    Tiles
                                   </button>
                                 ) : null}
                                 <button
