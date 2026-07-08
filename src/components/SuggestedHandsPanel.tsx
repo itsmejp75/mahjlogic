@@ -1,6 +1,7 @@
 import {
   memo,
   useCallback,
+  useDeferredValue,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -293,11 +294,27 @@ type StripRowsEntry = {
   ocVariantSuffixes: string[]
 }
 
+/** When several suit variants tie, pick the strip row for the active focus key (if any). */
+function stripSlotsForPanelRow(
+  patternId: string,
+  activePatternId: string | null,
+  entry: StripRowsEntry | undefined,
+): SuggestedStripSlot[] | undefined {
+  if (!entry?.rows.length) return undefined
+  if (entry.rows.length === 1) return entry.rows[0]
+  if (entry.ocVariantSuffixes.length !== entry.rows.length) return entry.rows[0]
+  if (activePatternId != null) {
+    const i = entry.ocVariantSuffixes.findIndex(
+      (suf) => activePatternId === `${patternId}::${suf}` || activePatternId.endsWith(suf),
+    )
+    if (i >= 0) return entry.rows[i]
+  }
+  return entry.rows[0]
+}
+
 type SelectedHandAwayTrend = 'improved' | 'behind-best' | null
 
-/** A single concrete focus key per suggested-hand line. Tied flexible variants are split into
- * separate lines (sub-best `consecRanksTier` at line build, primary-tier flex via
- * {@link expandedHandsRows} at panel level), so this never returns a multi-combo key. */
+/** A single concrete focus key per suggested-hand line (sub-best `consecRanksTier` tiers get their own key at line build). */
 function handEntryKeyForLine(h: SuggestedHandLine): string {
   if (h.consecRanksTier && h.consecRanksTier.combos.length > 0) {
     const c = h.consecRanksTier.combos[0]!
@@ -306,8 +323,7 @@ function handEntryKeyForLine(h: SuggestedHandLine): string {
   return h.id
 }
 
-/** One concrete row in the rendered suggested-hands list. Multi-variant flex hands fan out to
- * one entry per tied variant; each entry owns its own focus key, strip, and pin key. */
+/** One concrete row in the rendered suggested-hands list (always one entry per card line). */
 type ExpandedHandsRow = {
   line: SuggestedHandLine
   focusKey: string
@@ -649,6 +665,7 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
   rowDeadCause,
   cardHandDeadCause,
   tilesGuideOn,
+  tilesDetailActive,
   isPinned,
   showPinColumn,
   bindPatternRowInteraction,
@@ -660,6 +677,8 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
   rowDeadCause: DeadCauseHint | null
   cardHandDeadCause: DeadCauseHint | null
   tilesGuideOn: boolean
+  /** Tile strip layout + tall row height — only after deferred strip slots are ready. */
+  tilesDetailActive: boolean
   isPinned: boolean
   showPinColumn: boolean
   bindPatternRowInteraction: (focusKey: string) => PatternRowInteractionProps
@@ -672,13 +691,13 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
   const rowLit = tilesGuideOn && rowIsFocused
   const cardRef = suggestedHandCardRefDisplay(h)
   const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}${h.closed ? ', concealed' : ''}, ${h.tilesNeededRough} tiles away, ${suggestedHandCompletionProbabilityLabel(h.completionProbability)}, ${formatSuggestedHandValue(h.points)}`
-  const parenText = !tilesGuideOn ? suggestedHandParenText(h) : null
-  const showTileDetail = tilesGuideOn && rowStripSlots.length > 0
+  const parenText = !tilesDetailActive ? suggestedHandParenText(h) : null
+  const showTileDetail = tilesDetailActive && rowStripSlots.length > 0
   // Hands-only rows always reserve the parenthesis line so every suggested hand has the same
   // total height *and* keeps its card line at the same vertical position. Without this,
   // paren-less rows collapse to a single track and their hand text + Away/Points jump ~1 line
   // relative to paren'd rows whenever the list reorders.
-  const reserveParenRow = !tilesGuideOn
+  const reserveParenRow = !tilesDetailActive
   const showDetailRow = showTileDetail || reserveParenRow || Boolean(parenText)
 
   return (
@@ -866,6 +885,7 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
   rowDeadCause,
   cardHandDeadCause,
   tilesGuideOn,
+  tilesDetailActive,
   handsListOn,
   showHandCategoryLabels,
   rowHitGridStyle,
@@ -879,6 +899,7 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
   rowDeadCause: DeadCauseHint | null
   cardHandDeadCause: DeadCauseHint | null
   tilesGuideOn: boolean
+  tilesDetailActive: boolean
   handsListOn: boolean
   showHandCategoryLabels: boolean
   rowHitGridStyle: CSSProperties
@@ -970,7 +991,7 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
             ) : null}
           </div>
         ) : null}
-        {tilesGuideOn ? (
+        {tilesDetailActive ? (
           <div className="hands-list__cell hands-list__cell--tiles">
             <div className="hands-list__pattern-tiles">
               {rowStripSlots.length > 0 ? (
@@ -999,7 +1020,7 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
             </div>
           </div>
         ) : null}
-        {showHandCategoryLabels && tilesGuideOn ? (
+        {showHandCategoryLabels && tilesDetailActive ? (
           <>
             <div
               className="hands-list__cell hands-list__cell--tiles-odds-pad"
@@ -1105,6 +1126,10 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   deadCauseByFocusKey = {},
   focusedHandDeadCause = null,
 }: Props) {
+  /** Strip slot rows are expensive — defer only the rebuild, not turning tiles off. */
+  const tilesStripSlotsOn = useDeferredValue(tilesGuideOn)
+  /** Tall tile rows + strip render only once deferred strip data is ready (avoids empty expanded rows). */
+  const tilesDetailActive = tilesGuideOn && tilesStripSlotsOn
   const pinnedKeySet = useMemo(() => new Set(pinnedHandKeys), [pinnedHandKeys])
   const handsListScrollRef = useRef<HTMLDivElement>(null)
   const listColumnRef = useRef<HTMLDivElement>(null)
@@ -1214,6 +1239,11 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
       void el.offsetHeight
     }
   }, [bustHandsSheetRowIntrinsicCache])
+
+  useLayoutEffect(() => {
+    const el = listColumnRef.current
+    if (el) bustHandsSheetRowIntrinsicCache(el)
+  }, [tilesDetailActive, bustHandsSheetRowIntrinsicCache])
 
   useLayoutEffect(() => {
     const el = listColumnRef.current
@@ -1411,19 +1441,19 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   // gate the ~130-row strip rebuild (and the ~1800 tile-cell re-render it forces) on these
   // signatures so rearranging tiles in the rack does no work here.
   const stripRackSignature = useMemo(
-    () => (tilesGuideOn ? tileMultisetSignature(rackTilesForSuggestedStrip) : ''),
-    [tilesGuideOn, rackTilesForSuggestedStrip],
+    () => (tilesStripSlotsOn ? tileMultisetSignature(rackTilesForSuggestedStrip) : ''),
+    [tilesStripSlotsOn, rackTilesForSuggestedStrip],
   )
   const stripPatternMatchRackSignature = useMemo(
     () =>
-      tilesGuideOn && rackTilesForPatternMatch
+      tilesStripSlotsOn && rackTilesForPatternMatch
         ? tileMultisetSignature(rackTilesForPatternMatch)
         : '',
-    [tilesGuideOn, rackTilesForPatternMatch],
+    [tilesStripSlotsOn, rackTilesForPatternMatch],
   )
 
   const stripSlotRowsByKey = useMemo(() => {
-    if (!tilesGuideOn || rackTilesForSuggestedStrip.length === 0)
+    if (!tilesStripSlotsOn || rackTilesForSuggestedStrip.length === 0)
       return new Map<string, StripRowsEntry>()
     const rackDisplay = rackTilesForSuggestedStrip
     const rackMatch = rackTilesForPatternMatch ?? rackDisplay
@@ -1476,7 +1506,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     // Keyed on rack *signatures* (not array identity) so a pure reorder reuses the cached strips.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    tilesGuideOn,
+    tilesStripSlotsOn,
     filtered,
     stripRackSignature,
     stripPatternMatchRackSignature,
@@ -1505,39 +1535,16 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
 
   const listRowsForHandsPanel = displayHands
 
-  /** Flat list of rows actually rendered in the panel. Lines with multiple tied flexible
-   * variants (suit-permute / opposing-consec) fan out to one entry per variant when the "Tiles"
-   * guide is on; otherwise one entry per line carrying the line's primary focus key. */
+  /** One panel row per card line — toggling Tiles only swaps parenthesis vs tile strip, never fans out suit variants. */
   const expandedHandsRows = useMemo<ExpandedHandsRow[]>(() => {
     const out: ExpandedHandsRow[] = []
     for (const h of listRowsForHandsPanel) {
       const baseKey = handEntryKeyForLine(h)
       const entry = stripSlotRowsByKey.get(baseKey)
-      const variantCount = entry?.rows.length ?? 0
-      const canExpand =
-        tilesGuideOn &&
-        !h.consecRanksTier &&
-        variantCount > 1 &&
-        entry !== undefined &&
-        entry.ocVariantSuffixes.length === variantCount
-      if (canExpand) {
-        for (let i = 0; i < variantCount; i++) {
-          const suf = entry!.ocVariantSuffixes[i]!
-          const fk = `${h.id}::${suf}`
-          out.push({
-            line: h,
-            focusKey: fk,
-            stripSlots: entry!.rows[i]!,
-            reactKey: fk,
-            pinKey: fk,
-          })
-        }
-        continue
-      }
       out.push({
         line: h,
         focusKey: baseKey,
-        stripSlots: entry?.rows[0],
+        stripSlots: stripSlotsForPanelRow(h.id, activePatternId, entry),
         reactKey: baseKey,
         pinKey: baseKey,
       })
@@ -1557,7 +1564,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
         return a.i - b.i
       })
       .map(({ row }) => row)
-  }, [listRowsForHandsPanel, stripSlotRowsByKey, tilesGuideOn, pinnedHandKeys])
+  }, [listRowsForHandsPanel, stripSlotRowsByKey, activePatternId, pinnedHandKeys])
 
   const effectiveFocusRowKey = useMemo(
     () => resolveEffectiveFocusRowKey(activePatternId, expandedHandsRows, listRowsForHandsPanel),
@@ -1847,7 +1854,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                 <div
                   className={[
                     'hands-sheet',
-                    tilesGuideOn ? 'hands-sheet--detail-tiles' : '',
+                    tilesDetailActive ? 'hands-sheet--detail-tiles' : '',
                   ]
                     .filter(Boolean)
                     .join(' ')}
@@ -1927,6 +1934,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                           rowDeadCause={rowDeadCause}
                           cardHandDeadCause={cardHandDeadCause}
                           tilesGuideOn={tilesGuideOn}
+                          tilesDetailActive={tilesDetailActive}
                           isPinned={pinnedKeySet.has(row.pinKey)}
                           showPinColumn={showPinColumn}
                           bindPatternRowInteraction={bindPatternRowInteraction}
@@ -2006,7 +2014,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                     ) : null}
                   </div>
                 ) : null}
-                {showHandCategoryLabels && tilesGuideOn ? (
+                {showHandCategoryLabels && tilesDetailActive ? (
                   <>
                     <div
                       className={[
@@ -2119,6 +2127,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                     rowDeadCause={rowDeadCause}
                     cardHandDeadCause={cardHandDeadCause}
                     tilesGuideOn={tilesGuideOn}
+                    tilesDetailActive={tilesDetailActive}
                     handsListOn={handsListOn}
                     showHandCategoryLabels={showHandCategoryLabels}
                     rowHitGridStyle={rowHitGridStyle}

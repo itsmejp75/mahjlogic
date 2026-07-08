@@ -3826,8 +3826,6 @@ export default function App() {
   const [mahjongWinReviewing, setMahjongWinReviewing] = useState(false)
   const [botMahjongWinReviewing, setBotMahjongWinReviewing] = useState(false)
   const [suggestedPanelTilesOn, setSuggestedPanelTilesOn] = useState(false)
-  /** Strip slot rows in the suggested-hands tray are expensive; defer so the menu toggle paints first. */
-  const deferredSuggestedPanelTilesOn = useDeferredValue(suggestedPanelTilesOn)
   const toggleSuggestedPanelTilesOn = useCallback(() => {
     setSuggestedPanelTilesOn((v) => !v)
   }, [])
@@ -4890,6 +4888,16 @@ export default function App() {
       totalJokersInGame: tenJokersEnabled ? TEN_JOKERS_COUNT : STANDARD_JOKER_COUNT,
       totalBlanksInGame: blankTilesEnabled ? blankTileCount : 0,
     }
+    const jokerSwapHintForProb =
+      jokerSwapHintEnabled && jokerSwapUiActive
+        ? {
+            enabled: true as const,
+            hand,
+            pendingDiscard: pendingEastDiscardTile,
+            botExposures,
+            eastExposures,
+          }
+        : undefined
 
     if (mainPhase === 'call-staging' && activeBotDiscard) {
       const stagingInput = rankInputDuringCallStaging({
@@ -4903,7 +4911,7 @@ export default function App() {
         stagedCallTileIds,
       })
       if (stagingInput) {
-        return { ...stagingInput, patterns: cardPatterns, deckSettings }
+        return { ...stagingInput, patterns: cardPatterns, deckSettings, jokerSwapHintForProb }
       }
     }
 
@@ -4920,6 +4928,7 @@ export default function App() {
       eastTableClaimMelds: eastExposures,
       patterns: cardPatterns,
       deckSettings,
+      jokerSwapHintForProb,
     }
   }, [
     mainPhase,
@@ -4937,6 +4946,9 @@ export default function App() {
     tenJokersEnabled,
     blankTilesEnabled,
     blankTileCount,
+    jokerSwapHintEnabled,
+    jokerSwapUiActive,
+    pendingEastDiscardTile,
   ])
 
   /**
@@ -4967,6 +4979,11 @@ export default function App() {
     suggestedRankInput.patterns,
     suggestedRankInput.deckSettings?.totalJokersInGame,
     suggestedRankInput.deckSettings?.totalBlanksInGame,
+    suggestedRankInput.jokerSwapHintForProb?.enabled,
+    suggestedRankInput.jokerSwapHintForProb?.hand,
+    suggestedRankInput.jokerSwapHintForProb?.pendingDiscard,
+    suggestedRankInput.jokerSwapHintForProb?.botExposures,
+    suggestedRankInput.jokerSwapHintForProb?.eastExposures,
   ])
 
   /** Menu category labels: still on, but muted when exposures rule out every hand in that section. */
@@ -8471,7 +8488,7 @@ export default function App() {
           pinnedHandKeys={suggestedPinnedHandKeys}
           onPatternClick={onSuggestedPatternClick}
           onFocusKeyMigrate={onSuggestedFocusKeyMigrate}
-          tilesGuideOn={deferredSuggestedPanelTilesOn}
+          tilesGuideOn={suggestedPanelTilesOn}
           rackTilesForSuggestedStrip={deferredRackForSuggestedStrip}
           rackTilesForPatternMatch={deferredRackForSuggestedPatternMatch}
           exposureTileIdsForSuggestedStrip={suggestedHandsExposureTileIds}

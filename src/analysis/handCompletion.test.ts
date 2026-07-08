@@ -11,6 +11,7 @@ import {
   hypergeometricAtLeast,
   isHandDeadByVisibleTiles,
   jokerBanRatio,
+  jokerSwapHintReliefForLine,
   maxCompletionMetricsOverSlotSets,
   type CompletionSlot,
   type HandInventoryContext,
@@ -497,6 +498,69 @@ describe('calculateWallCompletionProbability', () => {
       }),
     )
     expect(prob).toBeGreaterThan(0)
+  })
+
+  it('raises completion prob when joker-swap hint relief is available', () => {
+    const slots: CompletionSlot[] = [
+      { tileType: 'w:west', targetCount: 3 },
+      { tileType: 'w:south', targetCount: 4 },
+    ]
+    const ctx: HandInventoryContext = {
+      naturals: { 'w:west': 3, 'w:south': 1 },
+      jokersInHand: 0,
+      blanksInHand: 0,
+      discardCounts: {},
+      jokersDisallowed: false,
+    }
+    const completion = computeHandCompletionMetrics(slots, ctx)
+    const shared = {
+      slots,
+      ctx,
+      completion,
+      visibleNaturals: {},
+      visibleJokers: 2,
+      visibleBlanks: 0,
+      wallRemaining: 80,
+      isConcealed: false,
+      isSinglesAndPairs: false,
+      deck: DEFAULT_DECK_COMPOSITION,
+      playerRackTileCount: 14,
+      tilesNeededRough: 7,
+    }
+    const withoutHint = calculateWallCompletionProbability(shared)
+    const withHint = calculateWallCompletionProbability({
+      ...shared,
+      jokerReliefFromSwapHint: jokerSwapHintReliefForLine(
+        2,
+        slots,
+        ctx,
+        completion,
+        {},
+        DEFAULT_DECK_COMPOSITION,
+        false,
+        false,
+      ),
+    })
+    expect(jokerSwapHintReliefForLine(2, slots, ctx, completion, {}, DEFAULT_DECK_COMPOSITION, false, false)).toBe(2)
+    expect(withHint).toBeGreaterThan(withoutHint)
+  })
+
+  it('does not apply joker-swap hint relief for concealed or singles-and-pairs lines', () => {
+    const slots: CompletionSlot[] = [{ tileType: 'w:west', targetCount: 3 }]
+    const ctx: HandInventoryContext = {
+      naturals: { 'w:west': 1 },
+      jokersInHand: 0,
+      blanksInHand: 0,
+      discardCounts: {},
+      jokersDisallowed: false,
+    }
+    const completion = computeHandCompletionMetrics(slots, ctx)
+    expect(
+      jokerSwapHintReliefForLine(2, slots, ctx, completion, {}, DEFAULT_DECK_COMPOSITION, true, false),
+    ).toBe(0)
+    expect(
+      jokerSwapHintReliefForLine(2, slots, ctx, completion, {}, DEFAULT_DECK_COMPOSITION, false, true),
+    ).toBe(0)
   })
 
   it('returns non-zero scores on a fresh opening deal with a full wall', () => {

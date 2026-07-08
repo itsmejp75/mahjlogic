@@ -63,6 +63,11 @@ export type WallCompletionProbabilityInput = {
   playerRackTileCount: number
   /** Greedy tiles-away — pattern distance, not 14-tile inventory gap. */
   tilesNeededRough: number
+  /**
+   * Exposed jokers the player could redeem on this turn (joker-swap hint on). Counts toward
+   * supply / deficit relief but not rack proximity or tiles-away until the swap commits.
+   */
+  jokerReliefFromSwapHint?: number
 }
 
 export type HandCompletionMetrics = {
@@ -435,6 +440,47 @@ function aggregateSlotGaps(
   return { naturalGap, jokerGap, jokerGapFromDeadNaturals, naturalOuts }
 }
 
+/**
+ * Joker-eligible meld slots still unfilled after rack jokers are allocated (matches M_joker cap).
+ */
+export function jokerEligibleCapacityRemaining(
+  slots: readonly CompletionSlot[],
+  ctx: HandInventoryContext,
+  completion: HandCompletionMetrics,
+): number {
+  let capacity = 0
+  for (const slot of slots) {
+    const t = slot.targetCount
+    if (t <= 2 || slot.tileType === 'f') continue
+    const n = countNaturalsForSlot(slot.tileType, ctx.naturals)
+    if (n < t) capacity += t - n
+  }
+  return Math.max(0, capacity - completion.M_joker)
+}
+
+/**
+ * How many exposed jokers may count toward completion prob when joker-swap hints are on:
+ * capped by swappable meld jokers and this line's unfilled joker-eligible capacity.
+ */
+export function jokerSwapHintReliefForLine(
+  swappableExposedJokers: number,
+  slots: readonly CompletionSlot[],
+  ctx: HandInventoryContext,
+  completion: HandCompletionMetrics,
+  _visibleNaturals: TileCountMap,
+  _deck: DeckComposition,
+  isConcealed: boolean,
+  isSinglesAndPairs: boolean,
+): number {
+  if (swappableExposedJokers <= 0 || isConcealed || isSinglesAndPairs || ctx.jokersDisallowed) {
+    return 0
+  }
+  return Math.min(
+    swappableExposedJokers,
+    jokerEligibleCapacityRemaining(slots, ctx, completion),
+  )
+}
+
 /** Combine rack proximity, draw slack, live outs, and wildcard relief into a 0–99 score. */
 function viabilityCompletionScore(
   deficit: number,
@@ -482,6 +528,7 @@ export function calculateWallCompletionProbability(
     deck,
     playerRackTileCount,
     tilesNeededRough,
+    jokerReliefFromSwapHint = 0,
   } = input
 
   if (tilesNeededRough <= 0 || completion.D <= 0) return 100
@@ -535,7 +582,8 @@ export function calculateWallCompletionProbability(
         )
       : 0
   const jokerReliefFromHand = Math.min(gaps.jokerGap, completion.M_joker)
-  const jokerRemaining = Math.max(0, gaps.jokerGap - jokerReliefFromHand - jokerReliefFromWall)
+  const jokerCapacityRemaining = jokerEligibleCapacityRemaining(slots, ctx, completion)
+  const swapHintRelief = Math.min(jokerReliefFromSwapHint, jokerCapacityRemaining)
 
   const hiddenBlanks = Math.max(
     0,
@@ -543,17 +591,33 @@ export function calculateWallCompletionProbability(
   )
   const blankRelief = blankCushionForHand(slots, ctx, deck, hiddenBlanks, effectiveTrials, unknownPool)
 
-  const naturalRemaining = Math.max(0, gaps.naturalGap - blankRelief)
+  let swapReliefRemaining = swapHintRelief
+  const naturalShiftFromSwap = Math.min(
+    Math.max(0, gaps.naturalGap - blankRelief),
+    swapReliefRemaining,
+  )
+  swapReliefRemaining -= naturalShiftFromSwap
+  const jokerShiftFromSwap = Math.min(
+    Math.max(0, gaps.jokerGap - jokerReliefFromHand - jokerReliefFromWall),
+    swapReliefRemaining,
+  )
+  const jokerRemaining = Math.max(
+    0,
+    gaps.jokerGap - jokerReliefFromHand - jokerReliefFromWall - jokerShiftFromSwap,
+  )
+
+  const naturalRemaining = Math.max(0, gaps.naturalGap - blankRelief - naturalShiftFromSwap)
   const deficit = naturalRemaining + jokerRemaining
   if (deficit <= 0) return 100
   if (tilesNeededRough > wallRemaining || deficit > effectiveTrials) return 0
 
   const uncommittedHandJokers = Math.max(0, ctx.jokersInHand - completion.M_joker)
-  const jokerSupply = hiddenJokers + uncommittedHandJokers + jokerReliefFromWall
+  const jokerSupply = hiddenJokers + uncommittedHandJokers + jokerReliefFromWall + swapHintRelief
   if (gaps.naturalOuts < naturalRemaining) return 0
   if (jokerRemaining > jokerSupply) return 0
 
-  const supplyPool = gaps.naturalOuts + Math.min(hiddenJokers, gaps.jokerGap) + jokerReliefFromWall
+  const supplyPool =
+    gaps.naturalOuts + Math.min(hiddenJokers, gaps.jokerGap) + jokerReliefFromWall + swapHintRelief
 
   return viabilityCompletionScore(
     deficit,

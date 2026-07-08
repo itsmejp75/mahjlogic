@@ -37,6 +37,7 @@ import {
   calculateWallCompletionProbability,
   DEFAULT_DECK_COMPOSITION,
   estimateWallCompletionProbability,
+  jokerSwapHintReliefForLine,
   type DeckComposition,
   type HandCompletionMetrics,
   type HandInventoryContext,
@@ -103,11 +104,22 @@ function wallCompletionProbForLine(
   ctx: HandInventoryContext,
   completion: HandCompletionMetrics,
   tilesNeededRough: number,
+  swappableExposedJokers = 0,
 ): number {
   if (slots.length === 0) {
     return estimateWallCompletionProbability(tilesNeededRough, wallRemaining, completion.P)
   }
   const vis = countTableVisibility(visible)
+  const jokerReliefFromSwapHint = jokerSwapHintReliefForLine(
+    swappableExposedJokers,
+    slots,
+    ctx,
+    completion,
+    vis.naturals,
+    deck,
+    p.closed,
+    p.section === 'SINGLES AND PAIRS',
+  )
   return calculateWallCompletionProbability({
     slots,
     ctx,
@@ -121,6 +133,7 @@ function wallCompletionProbForLine(
     deck,
     playerRackTileCount: rackForPattern.length,
     tilesNeededRough,
+    jokerReliefFromSwapHint,
   })
 }
 
@@ -5073,6 +5086,18 @@ export type RankSuggestedHandsInput = {
     totalJokersInGame?: number
     totalBlanksInGame?: number
   }
+  /**
+   * When enabled, exposed jokers redeemable with a rack natural boost completion prob for lines
+   * that still have joker-eligible gaps (matches joker-swap hint UI — no change after swap until
+   * hint is off or the joker is on your rack).
+   */
+  jokerSwapHintForProb?: {
+    enabled: boolean
+    hand: TileInstance[]
+    pendingDiscard?: TileInstance | null
+    botExposures: BotExposure[]
+    eastExposures: EastExposure[]
+  }
 }
 
 function cardBookForRankInput(input: RankSuggestedHandsInput): PracticePattern[] {
@@ -5149,6 +5174,15 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
     exposureTileIds && exposureTileIds.size > 0 ? { exposureTileIds } : undefined
   const visible = tableVisibleTiles(discards, exposures, eastTableClaimMelds)
   const deck = deckCompositionFromInput(input)
+  const swappableExposedJokers =
+    input.jokerSwapHintForProb?.enabled === true
+      ? collectSwappableJokerTileIds(
+          input.jokerSwapHintForProb.hand,
+          input.jokerSwapHintForProb.pendingDiscard ?? null,
+          input.jokerSwapHintForProb.botExposures,
+          input.jokerSwapHintForProb.eastExposures,
+        ).size
+      : 0
   const resolvedByPatternId = new Map<string, ReturnType<typeof resolveBestPatternCompletion>>()
   const completionResolvedFor = (p: PracticePattern) => {
     let resolved = resolvedByPatternId.get(p.id)
@@ -5214,6 +5248,7 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
         resolved.ctx,
         completion,
         tilesNeededRough,
+        swappableExposedJokers,
       ),
       wallRemaining,
       visibleDeadMatches,
@@ -5374,6 +5409,7 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
             tierCtx,
             tierCompletion,
             tierAway,
+            swappableExposedJokers,
           ),
           wallRemaining,
           visibleDeadMatches,

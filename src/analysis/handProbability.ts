@@ -28,6 +28,7 @@ export {
   hypergeometricAtLeast,
   isHandDeadByVisibleTiles,
   jokerBanRatio,
+  jokerSwapHintReliefForLine,
   maxCompletionMetricsOverSlotSets,
   rankAnyKey,
   suitRankKey,
