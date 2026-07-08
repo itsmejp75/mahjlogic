@@ -40,6 +40,8 @@ export type SuggestedHandLine = {
   /** Tiles from your hand **and** your exposures that fill this pattern (14-tile hand total). */
   matchedInHand: number
   tilesNeededRough: number
+  /** Solo completion probability (0–100) of finishing this hand before the wall runs out. */
+  completionProbability: number
   wallRemaining: number
   visibleDeadMatches: number
   pressure: 'comfortable' | 'tight' | 'desperate'

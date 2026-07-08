@@ -13,8 +13,10 @@ import {
 import {
   buildConsecRanksTierStripRow,
   buildSuggestedStripSlotRowsWithVariants,
+  compareSuggestedHandsByProximity,
   focusKeyPatternId,
   greedyPatternMatchDetail,
+  suggestedHandShownInPanelList,
   type GreedyPatternMatchOpts,
   type SuggestedStripSlot,
   suggestedHandCardRefDisplay,
@@ -104,15 +106,22 @@ function findStableAnchorKeyFromReorder(prevKeys: string[], nextKeys: string[]):
   return null
 }
 
-/** Scroll delta needed when rows are inserted above `anchorKey` during a re-sort. */
+/** Scroll delta needed when rows are inserted above the anchor during a re-sort. */
 function scrollDeltaForRowsInsertedAbove(
   scrollEl: HTMLElement,
   prevKeys: string[],
   nextKeys: string[],
   anchorKey: string,
+  anchorPatternId?: string | null,
 ): number {
-  const prevIdx = prevKeys.indexOf(anchorKey)
-  const nextIdx = nextKeys.indexOf(anchorKey)
+  let prevIdx = prevKeys.indexOf(anchorKey)
+  let nextIdx = nextKeys.indexOf(anchorKey)
+  if (prevIdx === -1 && anchorPatternId) {
+    prevIdx = prevKeys.findIndex((k) => focusKeyPatternId(k) === anchorPatternId)
+  }
+  if (nextIdx === -1 && anchorPatternId) {
+    nextIdx = nextKeys.findIndex((k) => focusKeyPatternId(k) === anchorPatternId)
+  }
   if (prevIdx === -1 || nextIdx === -1 || nextIdx <= prevIdx) return 0
   const prevAbove = new Set(prevKeys.slice(0, prevIdx))
   let delta = 0
@@ -229,6 +238,51 @@ function resolveEffectiveFocusRowKey(
   return expandedHandsRows.find((r) => r.line.id === patternId)?.focusKey ?? activePatternId
 }
 
+/** Row highlight: honor the urgent tap key and the remapped list key (variant suffix churn). */
+function isSuggestedHandsRowFocused(
+  rowFocusKey: string,
+  activePatternId: string | null,
+  effectiveFocusRowKey: string | null,
+): boolean {
+  if (activePatternId == null) return false
+  if (rowFocusKey === activePatternId) return true
+  return effectiveFocusRowKey != null && rowFocusKey === effectiveFocusRowKey
+}
+
+/** Dead-cause hints may be keyed by tap key, remapped row key, or bare pattern id. */
+function resolveRowDeadCause(
+  deadCauseByFocusKey: Readonly<Record<string, DeadCauseHint>>,
+  ...candidateKeys: Array<string | null | undefined>
+): DeadCauseHint | null {
+  for (const key of candidateKeys) {
+    if (!key) continue
+    const hit = deadCauseByFocusKey[key]
+    if (hit) return hit
+  }
+  return null
+}
+
+/** Card-hand dead-cause chrome (boxed run + warning icon) for the active suggested line. */
+function cardHandDeadCauseForRow(
+  linePatternId: string,
+  rowFocusKey: string,
+  activePatternId: string | null,
+  effectiveFocusRowKey: string | null,
+  rowIsFocused: boolean,
+  tilesGuideOn: boolean,
+  focusedHandDeadCause: DeadCauseHint | null,
+  rowDeadCause: DeadCauseHint | null,
+): DeadCauseHint | null {
+  const cause = focusedHandDeadCause ?? rowDeadCause
+  if (!cause || activePatternId == null) return null
+  if (tilesGuideOn) {
+    return rowIsFocused ? cause : null
+  }
+  if (linePatternId === focusKeyPatternId(activePatternId)) return cause
+  if (effectiveFocusRowKey != null && rowFocusKey === effectiveFocusRowKey) return cause
+  return rowIsFocused ? cause : null
+}
+
 type StripRowsEntry = {
   rows: SuggestedStripSlot[][]
   /** Per-row variant focus-key suffix (parallel to {@link rows}). Format:
@@ -268,6 +322,14 @@ type ExpandedHandsRow = {
 /** Points column / aria value — number only (concealed C lives on the hand line). */
 function formatSuggestedHandValue(points: number): string {
   return `${points}`
+}
+
+function formatCompletionProbability(probability: number): string {
+  return `${probability}%`
+}
+
+function suggestedHandCompletionProbabilityLabel(probability: number): string {
+  return `${probability} percent completion probability`
 }
 
 const SuggestedHandConcealedMark = memo(function SuggestedHandConcealedMark({
@@ -395,6 +457,29 @@ const CardColoredTextWithDeadCause = memo(function CardColoredTextWithDeadCause(
   )
 })
 
+const PlainHandTitleWithDeadCause = memo(function PlainHandTitleWithDeadCause({
+  title,
+  deadCause,
+}: {
+  title: string
+  deadCause: DeadCauseHint | null
+}) {
+  if (!deadCause) return <>{title}</>
+  return (
+    <>
+      {splitTitleTextForDeadCause(title, deadCause.defs).map((part, j) =>
+        part.highlight ? (
+          <span key={j} className="hands-list__title-dead-cause-run">
+            {part.text}
+          </span>
+        ) : (
+          part.text
+        ),
+      )}
+    </>
+  )
+})
+
 const SuggestedHandDeadCauseIcon = memo(function SuggestedHandDeadCauseIcon({
   cause,
 }: {
@@ -470,11 +555,11 @@ const SuggestedHandStripTileCell = memo(function SuggestedHandStripTileCell({
 function handsRowGridTemplateAreas(cat: boolean, tiles: boolean): string {
   if (cat) {
     if (tiles) {
-      return "'pin category category odds away values' 'pin tiles tiles oddsPad awayPad valuesPad'"
+      return "'pin category category away odds values' 'pin tiles tiles awayPad oddsPad valuesPad'"
     }
-    return "'pin category category odds away values'"
+    return "'pin category category away odds values'"
   }
-  return "'pin tiles tiles odds away values'"
+  return "'pin tiles tiles away odds values'"
 }
 
 const SuggestedHandPinCell = memo(function SuggestedHandPinCell({
@@ -492,7 +577,7 @@ const SuggestedHandPinCell = memo(function SuggestedHandPinCell({
       className={['hands-suggested-pin', pressed ? 'hands-suggested-pin--pressed' : '']
         .filter(Boolean)
         .join(' ')}
-      aria-label={pressed ? 'Unpin this hand from top of list' : 'Pin this hand to top of list'}
+      aria-label={pressed ? 'Unpin this hand' : 'Pin this hand'}
       aria-pressed={pressed}
       onClick={(e) => {
         e.stopPropagation()
@@ -562,6 +647,7 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
   rowIsFocused,
   awayTrend,
   rowDeadCause,
+  cardHandDeadCause,
   tilesGuideOn,
   isPinned,
   showPinColumn,
@@ -572,6 +658,7 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
   rowIsFocused: boolean
   awayTrend: SelectedHandAwayTrend
   rowDeadCause: DeadCauseHint | null
+  cardHandDeadCause: DeadCauseHint | null
   tilesGuideOn: boolean
   isPinned: boolean
   showPinColumn: boolean
@@ -584,7 +671,7 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
   const rowStripSlots = row.stripSlots ?? []
   const rowLit = tilesGuideOn && rowIsFocused
   const cardRef = suggestedHandCardRefDisplay(h)
-  const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}${h.closed ? ', concealed' : ''}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points)}`
+  const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}${h.closed ? ', concealed' : ''}, ${h.tilesNeededRough} tiles away, ${suggestedHandCompletionProbabilityLabel(h.completionProbability)}, ${formatSuggestedHandValue(h.points)}`
   const parenText = !tilesGuideOn ? suggestedHandParenText(h) : null
   const showTileDetail = tilesGuideOn && rowStripSlots.length > 0
   // Hands-only rows always reserve the parenthesis line so every suggested hand has the same
@@ -657,22 +744,32 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
           role="cell"
           aria-label={h.title}
         >
-          <span className="hands-sheet__hand-title-line">
+          <span
+            className={[
+              'hands-sheet__hand-title-line',
+              cardHandDeadCause ? 'hands-sheet__hand-title-line--dead-cause' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
             {h.titleSegments?.length ? (
               <>
                 <CardColoredTextWithDeadCause
                   segments={h.titleSegments}
-                  deadCause={rowDeadCause}
+                  deadCause={cardHandDeadCause}
                 />
                 {h.closed ? <SuggestedHandConcealedMark variant="sheet" /> : null}
               </>
             ) : (
               <>
-                {parenText ? suggestedHandPlainTitleWithoutParen(h) : h.title}
+                <PlainHandTitleWithDeadCause
+                  title={parenText ? suggestedHandPlainTitleWithoutParen(h) : h.title}
+                  deadCause={cardHandDeadCause}
+                />
                 {h.closed ? <SuggestedHandConcealedMark variant="sheet" /> : null}
               </>
             )}
-            {rowDeadCause ? <SuggestedHandDeadCauseIcon cause={rowDeadCause} /> : null}
+            {cardHandDeadCause ? <SuggestedHandDeadCauseIcon cause={cardHandDeadCause} /> : null}
           </span>
         </div>
         {showDetailRow ? (
@@ -702,8 +799,10 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
             .filter(Boolean)
             .join(' ')}
           role="cell"
-          aria-hidden="true"
-        />
+          aria-label={suggestedHandCompletionProbabilityLabel(h.completionProbability)}
+        >
+          {formatCompletionProbability(h.completionProbability)}
+        </div>
         <div
           className={[
             'hands-sheet__cell hands-sheet__cell--away',
@@ -765,6 +864,7 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
   row,
   rowIsFocused,
   rowDeadCause,
+  cardHandDeadCause,
   tilesGuideOn,
   handsListOn,
   showHandCategoryLabels,
@@ -777,6 +877,7 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
   row: ExpandedHandsRow
   rowIsFocused: boolean
   rowDeadCause: DeadCauseHint | null
+  cardHandDeadCause: DeadCauseHint | null
   tilesGuideOn: boolean
   handsListOn: boolean
   showHandCategoryLabels: boolean
@@ -792,7 +893,7 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
   const cardRef = suggestedHandCardRefDisplay(h)
   const rowAriaLabel =
     !handsListOn || !showHandCategoryLabels
-      ? `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}${h.closed ? ', concealed' : ''}, ${h.tilesNeededRough} tiles away, ${formatSuggestedHandValue(h.points)}`
+      ? `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}${h.closed ? ', concealed' : ''}, ${h.tilesNeededRough} tiles away, ${suggestedHandCompletionProbabilityLabel(h.completionProbability)}, ${formatSuggestedHandValue(h.points)}`
       : undefined
   const outerClass = [
     'hands-list__row-hit',
@@ -846,7 +947,7 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
                   <>
                     <CardColoredTextWithDeadCause
                       segments={h.titleSegments}
-                      deadCause={rowDeadCause}
+                      deadCause={cardHandDeadCause}
                     />
                     {h.closed ? <SuggestedHandConcealedMark variant="list" /> : null}
                     {(() => {
@@ -860,11 +961,11 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
                   </>
                 ) : (
                   <>
-                    {h.title}
+                    <PlainHandTitleWithDeadCause title={h.title} deadCause={cardHandDeadCause} />
                     {h.closed ? <SuggestedHandConcealedMark variant="list" /> : null}
                   </>
                 )}
-                {rowDeadCause ? <SuggestedHandDeadCauseIcon cause={rowDeadCause} /> : null}
+                {cardHandDeadCause ? <SuggestedHandDeadCauseIcon cause={cardHandDeadCause} /> : null}
               </span>
             ) : null}
           </div>
@@ -914,7 +1015,14 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
             />
           </>
         ) : null}
-        <div className="hands-list__cell hands-list__cell--odds" aria-hidden="true" />
+        <div className="hands-list__cell hands-list__cell--odds">
+          <span
+            className="hands-list__pressure"
+            aria-label={suggestedHandCompletionProbabilityLabel(h.completionProbability)}
+          >
+            {formatCompletionProbability(h.completionProbability)}
+          </span>
+        </div>
         <div className="hands-list__cell hands-list__cell--away">
           <span
             className="hands-list__tiles-away hands-list__tiles-away--with-tiles-col"
@@ -942,7 +1050,7 @@ type Props = {
   /** Pinned suggested row keys (see {@link suggestedRowPinKey}). Toggle via {@link onPinnedPatternChange}. */
   pinnedHandKeys?: readonly string[]
   onPatternClick: (handKey: string) => void
-  /** Rerank changed variant keys — clear selection only when the pattern leaves the list. */
+  /** Rerank changed variant keys — migrate selection when the row key goes stale; clear when the pattern leaves the list. */
   onFocusKeyMigrate?: (nextKey: string | null) => void
   tilesGuideOn: boolean
   rackTilesForSuggestedStrip: TileInstance[]
@@ -973,6 +1081,8 @@ type Props = {
   onPinnedPatternChange?: (handKey: string) => void
   /** Per focus key: why the line is no longer completable (dead tile hint). */
   deadCauseByFocusKey?: Readonly<Record<string, DeadCauseHint>>
+  /** Live dead-cause hint for {@link activePatternId} — not gated on the Tiles toggle. */
+  focusedHandDeadCause?: DeadCauseHint | null
 }
 
 export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
@@ -993,6 +1103,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   trayOpen = false,
   onPinnedPatternChange,
   deadCauseByFocusKey = {},
+  focusedHandDeadCause = null,
 }: Props) {
   const pinnedKeySet = useMemo(() => new Set(pinnedHandKeys), [pinnedHandKeys])
   const handsListScrollRef = useRef<HTMLDivElement>(null)
@@ -1015,6 +1126,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     anchorViewportTop: 0,
     scrollTop: 0,
   })
+  const prevEffectiveFocusRowKeyRef = useRef<string | null>(null)
 
   const dragScrollRef = useRef<{
     pointerId: number
@@ -1375,9 +1487,12 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
 
   const displayHands = useMemo(() => {
     const base = hideConcealedHands ? filtered.filter((h) => !h.closed) : filtered
+    const focusedPatternId = activePatternId ? focusKeyPatternId(activePatternId) : null
+    const visible = base.filter((h) => suggestedHandShownInPanelList(h, focusedPatternId))
     const rank = new Map(cardSectionOrder.map((s, i) => [s, i]))
-    return [...base].sort((a, b) => {
-      if (a.tilesNeededRough !== b.tilesNeededRough) return a.tilesNeededRough - b.tilesNeededRough
+    return [...visible].sort((a, b) => {
+      const prox = compareSuggestedHandsByProximity(a, b)
+      if (prox !== 0) return prox
       const ra = rank.get(a.section) ?? 999
       const rb = rank.get(b.section) ?? 999
       if (ra !== rb) return ra - rb
@@ -1386,7 +1501,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
       if (oa !== ob) return oa - ob
       return a.id.localeCompare(b.id)
     })
-  }, [filtered, hideConcealedHands, cardSectionOrder])
+  }, [filtered, hideConcealedHands, cardSectionOrder, activePatternId])
 
   const listRowsForHandsPanel = displayHands
 
@@ -1432,6 +1547,8 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     return out
       .map((row, i) => ({ row, i }))
       .sort((a, b) => {
+        const prox = compareSuggestedHandsByProximity(a.row.line, b.row.line)
+        if (prox !== 0) return prox
         const ap = pinIndex.has(a.row.pinKey) ? pinIndex.get(a.row.pinKey)! : null
         const bp = pinIndex.has(b.row.pinKey) ? pinIndex.get(b.row.pinKey)! : null
         if (ap !== null && bp !== null) return ap - bp || a.i - b.i
@@ -1534,16 +1651,19 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
 
     const rowKeys = rowKeysInOrder(expandedHandsRows)
     const prev = handsListScrollSnapshotRef.current
+    const focusChanged = prevEffectiveFocusRowKeyRef.current !== effectiveFocusRowKey
+    prevEffectiveFocusRowKeyRef.current = effectiveFocusRowKey
 
     // At the very top with nothing selected, let the list re-rank from the top down (the "best"
     // hands are what you're looking at). Otherwise keep the viewed rows visually pinned so a hand
     // sorting in above/below doesn't push the rows you're reading up or down.
     const atTopNoSelection = effectiveFocusRowKey == null && prev.scrollTop <= 1
+    const keysChanged =
+      prev.rowKeys.length > 0 && rowKeysOrderChanged(prev.rowKeys, rowKeys)
 
     if (
       !atTopNoSelection &&
-      prev.rowKeys.length > 0 &&
-      rowKeysOrderChanged(prev.rowKeys, rowKeys) &&
+      keysChanged &&
       !dragScrollActiveRef.current
     ) {
       const scrollRect = scrollEl.getBoundingClientRect()
@@ -1564,15 +1684,18 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
         : null
 
       let delta = 0
-      // Same hand as the previous snapshot (matched by stable pattern id): keep it pinned to the
-      // viewport position it held before the re-rank. This covers rows inserted above it, rows
-      // removed above it, and variant-suffix key changes — so the selected hand stays put with
-      // Tiles on just like it does with Tiles off.
       const samePatternAsPrev =
         anchorPatternId != null &&
         prev.anchorPatternId != null &&
         anchorPatternId === prev.anchorPatternId
-      if (anchorRow && samePatternAsPrev) {
+      // Highlighted row: pin to the viewport position it held before the re-rank (Tiles on/off).
+      const pinHighlightedRow =
+        effectiveFocusRowKey != null &&
+        anchorRow != null &&
+        (samePatternAsPrev ||
+          prev.anchorKey === effectiveFocusRowKey ||
+          prev.anchorKey === anchorKey)
+      if (pinHighlightedRow) {
         const currentViewportTop = rowViewportTopInScrollContainer(anchorRow, scrollEl, scrollRect)
         delta = currentViewportTop - prev.anchorViewportTop
       } else if (anchorKey) {
@@ -1588,7 +1711,16 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
         }
         if (prevIdx !== -1 && nextIdx !== -1 && nextIdx > prevIdx) {
           // Rows inserted above the anchor: sum only genuinely new rows (not shifted neighbors).
-          delta = scrollDeltaForRowsInsertedAbove(scrollEl, prev.rowKeys, rowKeys, anchorKey)
+          delta = scrollDeltaForRowsInsertedAbove(
+            scrollEl,
+            prev.rowKeys,
+            rowKeys,
+            anchorKey,
+            anchorPatternId,
+          )
+        } else if (anchorRow && prev.anchorKey === anchorKey) {
+          const currentViewportTop = rowViewportTopInScrollContainer(anchorRow, scrollEl, scrollRect)
+          delta = currentViewportTop - prev.anchorViewportTop
         }
       }
 
@@ -1600,6 +1732,10 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
       if (Math.abs(delta) >= 0.5) {
         scrollEl.scrollTop = Math.round(scrollEl.scrollTop + delta)
       }
+    } else if (focusChanged && effectiveFocusRowKey != null && !keysChanged) {
+      refreshScrollSnapshot(rowKeys)
+      refreshHandsAboveViewHint()
+      return
     }
 
     refreshScrollSnapshot(rowKeys)
@@ -1622,10 +1758,17 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
 
   useEffect(() => {
     if (activePatternId == null || !onFocusKeyMigrate) return
+    if (expandedHandsRows.some((r) => r.focusKey === activePatternId)) return
     const patternId = focusKeyPatternId(activePatternId)
-    if (listRowsForHandsPanel.some((h) => h.id === patternId)) return
-    onFocusKeyMigrate(null)
-  }, [activePatternId, listRowsForHandsPanel, onFocusKeyMigrate])
+    const replacement = expandedHandsRows.find((r) => r.line.id === patternId)
+    if (replacement) {
+      onFocusKeyMigrate(replacement.focusKey)
+      return
+    }
+    if (!listRowsForHandsPanel.some((h) => h.id === patternId)) {
+      onFocusKeyMigrate(null)
+    }
+  }, [activePatternId, expandedHandsRows, listRowsForHandsPanel, onFocusKeyMigrate])
 
   const handsListOn = true
   const showHandCategoryLabels = handsListOn
@@ -1635,7 +1778,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
 
   const rowHitGridStyle = useMemo((): CSSProperties => {
     if (handsListSpreadsheetHands) {
-      return { gridTemplateAreas: "'pin section hand odds away values'" }
+      return { gridTemplateAreas: "'pin section hand away odds values'" }
     }
     return { gridTemplateAreas: handsRowGridTemplateAreas(showHandCategoryLabels, tilesGuideOn) }
   }, [handsListSpreadsheetHands, showHandCategoryLabels, tilesGuideOn])
@@ -1685,12 +1828,12 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                   aria-hidden
                 />
                 <div
-                  className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--odds"
+                  className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--away"
                   role="columnheader"
                   aria-hidden
                 />
                 <div
-                  className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--away"
+                  className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--odds"
                   role="columnheader"
                   aria-hidden
                 />
@@ -1731,16 +1874,16 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                     {hasHandsAboveView ? <SuggestedHandsScrollAboveHint /> : null}
                   </div>
                   <div
-                    className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--odds"
-                    role="columnheader"
-                  >
-                    Prob
-                  </div>
-                  <div
                     className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--away"
                     role="columnheader"
                   >
                     Away
+                  </div>
+                  <div
+                    className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--odds"
+                    role="columnheader"
+                  >
+                    Prob
                   </div>
                   <div
                     className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--values"
@@ -1751,18 +1894,38 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                   <ol className="hands-sheet__rows" aria-label="Suggested hand lines">
                     {expandedHandsRows.map((row) => {
                       const focusKey = row.focusKey
-                      const rowIsFocused = effectiveFocusRowKey === focusKey
+                      const rowIsFocused = isSuggestedHandsRowFocused(
+                        focusKey,
+                        activePatternId,
+                        effectiveFocusRowKey,
+                      )
+                      const rowDeadCause = rowIsFocused
+                        ? resolveRowDeadCause(
+                            deadCauseByFocusKey,
+                            activePatternId,
+                            effectiveFocusRowKey,
+                            focusKey,
+                            focusKeyPatternId(focusKey),
+                          )
+                        : null
+                      const cardHandDeadCause = cardHandDeadCauseForRow(
+                        row.line.id,
+                        focusKey,
+                        activePatternId,
+                        effectiveFocusRowKey,
+                        rowIsFocused,
+                        tilesGuideOn,
+                        focusedHandDeadCause,
+                        rowDeadCause,
+                      )
                       return (
                         <SuggestedHandsSheetRow
                           key={row.reactKey}
                           row={row}
                           rowIsFocused={rowIsFocused}
                           awayTrend={rowIsFocused ? activeAwayTrend : null}
-                          rowDeadCause={
-                            rowIsFocused && activePatternId
-                              ? deadCauseByFocusKey[activePatternId] ?? null
-                              : null
-                          }
+                          rowDeadCause={rowDeadCause}
+                          cardHandDeadCause={cardHandDeadCause}
                           tilesGuideOn={tilesGuideOn}
                           isPinned={pinnedKeySet.has(row.pinKey)}
                           showPinColumn={showPinColumn}
@@ -1880,17 +2043,6 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                 <div
                   className={[
                     'hands-list__cell',
-                    'hands-list__cell--odds',
-                    'hands-list__header-cell',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                >
-                  <div className="hands-list__header-meta">Prob</div>
-                </div>
-                <div
-                  className={[
-                    'hands-list__cell',
                     'hands-list__cell--away',
                     'hands-list__header-cell',
                   ]
@@ -1898,6 +2050,17 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                     .join(' ')}
                 >
                   <div className="hands-list__header-meta">Away</div>
+                </div>
+                <div
+                  className={[
+                    'hands-list__cell',
+                    'hands-list__cell--odds',
+                    'hands-list__header-cell',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                >
+                  <div className="hands-list__header-meta">Prob</div>
                 </div>
                 <div
                   className={[
@@ -1924,17 +2087,37 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
             >
               {expandedHandsRows.map((row) => {
                 const focusKey = row.focusKey
-                const rowIsFocused = effectiveFocusRowKey === focusKey
+                const rowIsFocused = isSuggestedHandsRowFocused(
+                  focusKey,
+                  activePatternId,
+                  effectiveFocusRowKey,
+                )
+                const rowDeadCause = rowIsFocused
+                  ? resolveRowDeadCause(
+                      deadCauseByFocusKey,
+                      activePatternId,
+                      effectiveFocusRowKey,
+                      focusKey,
+                      focusKeyPatternId(focusKey),
+                    )
+                  : null
+                const cardHandDeadCause = cardHandDeadCauseForRow(
+                  row.line.id,
+                  focusKey,
+                  activePatternId,
+                  effectiveFocusRowKey,
+                  rowIsFocused,
+                  tilesGuideOn,
+                  focusedHandDeadCause,
+                  rowDeadCause,
+                )
                 return (
                   <SuggestedHandsCompactListRow
                     key={row.reactKey}
                     row={row}
                     rowIsFocused={rowIsFocused}
-                    rowDeadCause={
-                      rowIsFocused && activePatternId
-                        ? deadCauseByFocusKey[activePatternId] ?? null
-                        : null
-                    }
+                    rowDeadCause={rowDeadCause}
+                    cardHandDeadCause={cardHandDeadCause}
                     tilesGuideOn={tilesGuideOn}
                     handsListOn={handsListOn}
                     showHandCategoryLabels={showHandCategoryLabels}

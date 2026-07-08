@@ -28,10 +28,26 @@ import {
 } from './eastExposurePatternFit'
 import {
   addDeadHintNeed,
+  deadHintDefKey,
   deadHintStandardDefsToProbe,
   meldDefIsJokerEligible,
   type DeadHintNeedMap,
 } from '../mahjong/deadHintVariants'
+import {
+  calculateWallCompletionProbability,
+  DEFAULT_DECK_COMPOSITION,
+  estimateWallCompletionProbability,
+  type DeckComposition,
+  type HandCompletionMetrics,
+  type HandInventoryContext,
+  type CompletionSlot,
+} from './handCompletion'
+import {
+  buildDeterministicCompletionSlots,
+  buildInventoryContext,
+  computeTierCompletionMetrics,
+  resolveBestPatternCompletion,
+} from './handCompletionSlots'
 
 /** Discards + all bot melds + East’s face-up claim melds (table visibility for dead-tile math). */
 function tableVisibleTiles(
@@ -44,6 +60,68 @@ function tableVisibleTiles(
     ...botExposures.flatMap((e) => e.tiles),
     ...eastTableClaimMelds.flatMap((e) => e.tiles),
   ]
+}
+
+function countTableVisibility(visible: TileInstance[]): {
+  naturals: Record<string, number>
+  jokers: number
+  blanks: number
+} {
+  const naturals: Record<string, number> = {}
+  let jokers = 0
+  let blanks = 0
+  for (const t of visible) {
+    if (t.def.cat === 'joker') {
+      jokers += 1
+      continue
+    }
+    if (t.def.cat === 'blank') {
+      blanks += 1
+      continue
+    }
+    const k = deadHintDefKey(t.def)
+    naturals[k] = (naturals[k] ?? 0) + 1
+  }
+  return { naturals, jokers, blanks }
+}
+
+function deckCompositionFromInput(input: RankSuggestedHandsInput): DeckComposition {
+  return {
+    totalJokersInGame:
+      input.deckSettings?.totalJokersInGame ?? DEFAULT_DECK_COMPOSITION.totalJokersInGame,
+    totalBlanksInGame: input.deckSettings?.totalBlanksInGame ?? 0,
+  }
+}
+
+function wallCompletionProbForLine(
+  p: PracticePattern,
+  rackForPattern: TileInstance[],
+  visible: TileInstance[],
+  wallRemaining: number,
+  deck: DeckComposition,
+  slots: readonly CompletionSlot[],
+  ctx: HandInventoryContext,
+  completion: HandCompletionMetrics,
+  tilesNeededRough: number,
+): number {
+  if (slots.length === 0) {
+    return estimateWallCompletionProbability(tilesNeededRough, wallRemaining, completion.P)
+  }
+  const vis = countTableVisibility(visible)
+  return calculateWallCompletionProbability({
+    slots,
+    ctx,
+    completion,
+    visibleNaturals: vis.naturals,
+    visibleJokers: vis.jokers,
+    visibleBlanks: vis.blanks,
+    wallRemaining,
+    isConcealed: p.closed,
+    isSinglesAndPairs: p.section === 'SINGLES AND PAIRS',
+    deck,
+    playerRackTileCount: rackForPattern.length,
+    tilesNeededRough,
+  })
 }
 
 /** Hand + claim melds for tiles-away: flower-meld jokers stay off the rack; other melds resolve jokers. */
@@ -4942,7 +5020,8 @@ export function suggestedHandsTiedAtBest(input: RankSuggestedHandsInput): {
   }
   const tied = lines.filter((l) => l.tilesNeededRough === minAway)
   tied.sort((a, b) => {
-    if (b.matchedInHand !== a.matchedInHand) return b.matchedInHand - a.matchedInHand
+    const prox = compareSuggestedHandsByProximity(a, b)
+    if (prox !== 0) return prox
     if (a.visibleDeadMatches !== b.visibleDeadMatches) return a.visibleDeadMatches - b.visibleDeadMatches
     if (a.section !== b.section) return a.section.localeCompare(b.section)
     if (suggestedHandCardRefOrder(a) !== suggestedHandCardRefOrder(b)) {
@@ -4989,6 +5068,11 @@ export type RankSuggestedHandsInput = {
    * Card book to rank against. Defaults to the session book ({@link getActiveCardPatterns}).
    */
   patterns?: PracticePattern[]
+  /** Deck composition for completion-probability math. */
+  deckSettings?: {
+    totalJokersInGame?: number
+    totalBlanksInGame?: number
+  }
 }
 
 function cardBookForRankInput(input: RankSuggestedHandsInput): PracticePattern[] {
@@ -5023,6 +5107,29 @@ function suitPermuteConsecSlotsAreReorderOnly(
   return true
 }
 
+/** Primary suggested-hand ordering: fewest tiles away, then highest completion %. */
+export function compareSuggestedHandsByProximity(a: SuggestedHandLine, b: SuggestedHandLine): number {
+  if (a.tilesNeededRough !== b.tilesNeededRough) {
+    return a.tilesNeededRough - b.tilesNeededRough
+  }
+  if (b.completionProbability !== a.completionProbability) {
+    return b.completionProbability - a.completionProbability
+  }
+  return 0
+}
+
+/**
+ * Suggested-hands panel: drop 0% lines unless that pattern is the active selection so the
+ * player can read the dead-tile warning; deselecting removes the row on the next render.
+ */
+export function suggestedHandShownInPanelList(
+  line: SuggestedHandLine,
+  focusedPatternId: string | null,
+): boolean {
+  if (line.completionProbability > 0) return true
+  return focusedPatternId != null && line.id === focusedPatternId
+}
+
 export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHandLine[] {
   const { hand, wallRemaining, discards, exposures } = input
   const playerClaimMelds = input.playerClaimMelds ?? []
@@ -5032,14 +5139,25 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
   const rackForPattern = rackForPatternWithClaimMelds(hand, playerClaimMelds)
   const exposureTileIds: ReadonlySet<string> | undefined =
     hasPlayerClaimMelds ? new Set(playerClaimMelds.flatMap((e) => e.tiles).map((t) => t.id)) : undefined
-  const groupMatchExposureOpts: Pick<GroupMatchOpts, 'exposureTileIds' | 'requireCompleteRunSingles'> =
-    {
-      requireCompleteRunSingles: true,
-      ...(exposureTileIds && exposureTileIds.size > 0 ? { exposureTileIds } : {}),
-    }
+  const groupMatchOpts: GroupMatchOpts = {
+    noJokers: false,
+    leftToRight: true,
+    requireCompleteRunSingles: true,
+    ...(exposureTileIds && exposureTileIds.size > 0 ? { exposureTileIds } : {}),
+  }
   const greedyExposureOpts: GreedyPatternMatchOpts | undefined =
     exposureTileIds && exposureTileIds.size > 0 ? { exposureTileIds } : undefined
   const visible = tableVisibleTiles(discards, exposures, eastTableClaimMelds)
+  const deck = deckCompositionFromInput(input)
+  const resolvedByPatternId = new Map<string, ReturnType<typeof resolveBestPatternCompletion>>()
+  const completionResolvedFor = (p: PracticePattern) => {
+    let resolved = resolvedByPatternId.get(p.id)
+    if (!resolved) {
+      resolved = resolveBestPatternCompletion(p, rackForPattern, discards)
+      resolvedByPatternId.set(p.id, resolved)
+    }
+    return resolved
+  }
 
   const book = cardBookForRankInput(input)
 
@@ -5060,16 +5178,19 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
   const drgForSuit = { bam: 'green' as const, dot: 'soap' as const, crak: 'red' as const }
 
   const rows: SuggestedHandLine[] = patternsToRank.flatMap((p) => {
-    const matchedInHand = p.groups?.length
+    const resolved = completionResolvedFor(p)
+    const completion = resolved.metrics
+    // Tiles-away follows the same greedy matcher as the suggested-tile strip (jokers fill
+    // kong/quint gaps, never flowers). Completion metrics still drive completion %.
+    const greedyMatched = p.groups?.length
       ? computeGroupMatch(rackForPattern, p.groups, {
+          ...groupMatchOpts,
           noJokers: p.section === 'SINGLES AND PAIRS',
-          leftToRight: true,
-          ...groupMatchExposureOpts,
         })
       : rackForPattern.filter((t) => p.matches(t.def)).length
-    const visibleDeadMatches = visible.filter((t) => p.matches(t.def)).length
-    // Blanks are not counted toward tiles-away — a blank is not the needed tile until redeemed.
+    const matchedInHand = greedyMatched
     const tilesNeededRough = Math.max(0, p.roughTarget - matchedInHand)
+    const visibleDeadMatches = visible.filter((t) => p.matches(t.def)).length
     const pressure = pressureLabel(tilesNeededRough, wallRemaining)
 
     const note =
@@ -5083,6 +5204,17 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
       titleSegments: p.titleSegments,
       matchedInHand,
       tilesNeededRough,
+      completionProbability: wallCompletionProbForLine(
+        p,
+        rackForPattern,
+        visible,
+        wallRemaining,
+        deck,
+        resolved.slots,
+        resolved.ctx,
+        completion,
+        tilesNeededRough,
+      ),
       wallRemaining,
       visibleDeadMatches,
       pressure,
@@ -5214,23 +5346,38 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
     }
 
     const tierEntries: SuggestedHandLine[] = []
-    for (const [total, tierCombos] of [...byTotal.entries()].sort((a, b) => b[0] - a[0])) {
-      const tierNeeded = Math.max(0, p.roughTarget - total)
+    for (const [, tierCombos] of [...byTotal.entries()].sort((a, b) => b[0] - a[0])) {
       // Sort within tier: by base ascending, then perm lexicographically.
       const sorted = maybeCollapseCombos(sortCombos(tierCombos))
       // Emit one suggested-hand line per tied tier combo so each tied variant has its own
       // clickable row in the panel (keeps click → sort → highlight wired to a single concrete
       // suit/base assignment). The panel groups identical-line metadata visually.
       for (const c of sorted) {
+        const tierCtx = buildInventoryContext(p, rackForPattern, discards)
+        const tierSlots = buildDeterministicCompletionSlots(p, { perm: c.perm, base: c.base })
+        const tierCompletion = computeTierCompletionMetrics(p, rackForPattern, discards, c.perm, c.base)
+        const tierMatched = c.total
+        const tierAway = Math.max(0, p.roughTarget - tierMatched)
         tierEntries.push({
           id: p.id,
           title: p.title,
           titleSegments: p.titleSegments,
-          matchedInHand: total,
-          tilesNeededRough: tierNeeded,
+          matchedInHand: tierMatched,
+          tilesNeededRough: tierAway,
+          completionProbability: wallCompletionProbForLine(
+            p,
+            rackForPattern,
+            visible,
+            wallRemaining,
+            deck,
+            tierSlots,
+            tierCtx,
+            tierCompletion,
+            tierAway,
+          ),
           wallRemaining,
           visibleDeadMatches,
-          pressure: pressureLabel(tierNeeded, wallRemaining),
+          pressure: pressureLabel(tierAway, wallRemaining),
           note,
           section: p.section,
           points: p.points,
@@ -5247,10 +5394,8 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
   })
 
   rows.sort((a, b) => {
-    if (b.matchedInHand !== a.matchedInHand) return b.matchedInHand - a.matchedInHand
-    if (a.tilesNeededRough !== b.tilesNeededRough) {
-      return a.tilesNeededRough - b.tilesNeededRough
-    }
+    const prox = compareSuggestedHandsByProximity(a, b)
+    if (prox !== 0) return prox
     return a.visibleDeadMatches - b.visibleDeadMatches
   })
 

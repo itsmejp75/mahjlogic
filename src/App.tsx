@@ -3354,6 +3354,52 @@ function buildRankInputAfterStagedCall(
   }
 }
 
+/**
+ * Rank input while call-staging: the exposure slot (called discard + staged hand tiles) counts
+ * toward tiles-away / prob exactly as after Done — without requiring a committable meld shape.
+ */
+function rankInputDuringCallStaging(
+  r: Pick<
+    RoundState,
+    | 'mainPhase'
+    | 'hand'
+    | 'wall'
+    | 'discardPile'
+    | 'botExposures'
+    | 'eastExposures'
+    | 'activeBotDiscard'
+    | 'stagedCallTileIds'
+  >,
+): RankSuggestedHandsInput | null {
+  if (r.mainPhase !== 'call-staging' || !r.activeBotDiscard) return null
+
+  const calledTile = r.activeBotDiscard
+  const stagedTiles = r.stagedCallTileIds
+    .map((id) => r.hand.find((t) => t.id === id))
+    .filter((t): t is TileInstance => !!t)
+  if (stagedTiles.length > 5) return null
+
+  const stagedIds = new Set(r.stagedCallTileIds)
+  const handNext = r.hand.filter((t) => !stagedIds.has(t.id))
+  const pileNext = r.discardPile.filter((e) => e.tile.id !== calledTile.id)
+  const claimType = claimTypeForHandTilesFromDiscard(stagedTiles.length) ?? 'pung'
+  const exposure: EastExposure = {
+    tiles: [calledTile, ...stagedTiles],
+    claimType,
+    calledTileId: calledTile.id,
+  }
+  let nextEast: EastExposure[] = [...r.eastExposures, exposure]
+  if (stagedTiles.length >= 2) {
+    nextEast = orderEastExposuresForClosestCardLine(
+      r as RoundState,
+      handNext,
+      pileNext,
+      nextEast,
+    )
+  }
+  return buildRankInputAfterStagedCall(r as RoundState, handNext, pileNext, nextEast)
+}
+
 /** Rank input after committing the currently staged call tiles, or `null` if not a committable meld. */
 function previewStagedCallRankInput(r: RoundState): RankSuggestedHandsInput | null {
   if (r.mainPhase !== 'call-staging' || !r.activeBotDiscard) return null
@@ -3368,36 +3414,14 @@ function previewStagedCallRankInput(r: RoundState): RankSuggestedHandsInput | nu
       (t) => t.def.cat === 'joker' || tileDefsEqual(t.def, calledTile.def),
     )
     if (!meldOk) return null
-    const stagedIds = new Set(r.stagedCallTileIds)
-    const handNext = r.hand.filter((t) => !stagedIds.has(t.id))
-    const pileNext = r.discardPile.filter((e) => e.tile.id !== calledTile.id)
-    const exposure: EastExposure = {
-      tiles: [calledTile, ...stagedTiles],
-      claimType: 'pung',
-      calledTileId: calledTile.id,
-    }
-    return buildRankInputAfterStagedCall(r, handNext, pileNext, [...r.eastExposures, exposure])
+    return rankInputDuringCallStaging(r)
   }
-  if (stagedTiles.length < 2) return null
   const meldIsValid = stagedTiles.every(
     (t) => t.def.cat === 'joker' || tileDefsEqual(t.def, calledTile.def),
   )
   if (!meldIsValid) return null
-  const claimType = claimTypeForHandTilesFromDiscard(stagedTiles.length)
-  if (!claimType) return null
-  const stagedIds = new Set(r.stagedCallTileIds)
-  const handNext = r.hand.filter((t) => !stagedIds.has(t.id))
-  const pileNext = r.discardPile.filter((e) => e.tile.id !== calledTile.id)
-  const exposure: EastExposure = {
-    tiles: [calledTile, ...stagedTiles],
-    claimType,
-    calledTileId: calledTile.id,
-  }
-  const nextEast = orderEastExposuresForClosestCardLine(r, handNext, pileNext, [
-    ...r.eastExposures,
-    exposure,
-  ])
-  return buildRankInputAfterStagedCall(r, handNext, pileNext, nextEast)
+  if (!claimTypeForHandTilesFromDiscard(stagedTiles.length)) return null
+  return rankInputDuringCallStaging(r)
 }
 
 /**
@@ -3405,29 +3429,6 @@ function previewStagedCallRankInput(r: RoundState): RankSuggestedHandsInput | nu
  * does not form a committable shape (invalid or incomplete mapping).
  */
 function previewStagedCallBestTilesAway(r: RoundState): number | null {
-  if (r.mainPhase !== 'call-staging' || !r.activeBotDiscard) return null
-  const calledTile = r.activeBotDiscard
-  const stagedTiles = r.stagedCallTileIds
-    .map((id) => r.hand.find((t) => t.id === id))
-    .filter((t): t is TileInstance => !!t)
-  if (stagedTiles.length === 0) return null
-  if (stagedTiles.length > 5) return null
-  if (stagedTiles.length === 1) {
-    const meldOk = stagedTiles.every(
-      (t) => t.def.cat === 'joker' || tileDefsEqual(t.def, calledTile.def),
-    )
-    if (!meldOk) return null
-    const stagedIds = new Set(r.stagedCallTileIds)
-    const handNext = r.hand.filter((t) => !stagedIds.has(t.id))
-    const pileNext = r.discardPile.filter((e) => e.tile.id !== calledTile.id)
-    const exposure: EastExposure = {
-      tiles: [calledTile, ...stagedTiles],
-      claimType: 'pung',
-      calledTileId: calledTile.id,
-    }
-    const input = buildRankInputAfterStagedCall(r, handNext, pileNext, [...r.eastExposures, exposure])
-    return summarizeRackTowardWin(input).bestTilesAway
-  }
   const input = previewStagedCallRankInput(r)
   if (!input) return null
   return summarizeRackTowardWin(input).bestTilesAway
@@ -4313,7 +4314,7 @@ export default function App() {
   const [charlestonPassError, setCharlestonPassError] = useState<string | null>(null)
   /** Charleston pass button: exit animation on pass-strip before `sendCharlestonPass` runs. */
   const [passStripFlyOut, setPassStripFlyOut] = useState<PassStripFlyOutFrom | null>(null)
-  const passStripFlyoutTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null)
+  const passStripFlyoutTimerRef = useRef<number | null>(null)
   /** Hand tile id last returned from pass box — invisible fallback target for pass-box click. */
   const lastPassReturnTileIdRef = useRef<string | null>(null)
   const [callRuleError, setCallRuleError] = useState<string | null>(null)
@@ -4885,16 +4886,30 @@ export default function App() {
   const showCallStagingDoneButton = canCommitStagedCallDone && !shouldHideCallStagingDoneButton
 
   const suggestedRankInput = useMemo((): RankSuggestedHandsInput => {
+    const deckSettings = {
+      totalJokersInGame: tenJokersEnabled ? TEN_JOKERS_COUNT : STANDARD_JOKER_COUNT,
+      totalBlanksInGame: blankTilesEnabled ? blankTileCount : 0,
+    }
+
+    if (mainPhase === 'call-staging' && activeBotDiscard) {
+      const stagingInput = rankInputDuringCallStaging({
+        mainPhase,
+        hand,
+        wall,
+        discardPile,
+        botExposures,
+        eastExposures,
+        activeBotDiscard,
+        stagedCallTileIds,
+      })
+      if (stagingInput) {
+        return { ...stagingInput, patterns: cardPatterns, deckSettings }
+      }
+    }
+
     let handForRank = deferredHand
-    if (mainPhase === 'call-staging' || mainPhase === 'bot-turn') {
-      if (stagedCallTileIds.length > 0) {
-        const staged = new Set(stagedCallTileIds)
-        handForRank = handForRank.filter((t) => !staged.has(t.id))
-      }
-      // Hand jokers bound for an open claim must not reduce tiles-away until the exposure commits.
-      if (activeBotDiscard) {
-        handForRank = handForRank.filter((t) => t.def.cat !== 'joker')
-      }
+    if (deferredPendingEastDiscardTile) {
+      handForRank = [...handForRank, deferredPendingEastDiscardTile]
     }
     return {
       hand: handForRank,
@@ -4904,17 +4919,24 @@ export default function App() {
       playerClaimMelds: eastExposures,
       eastTableClaimMelds: eastExposures,
       patterns: cardPatterns,
+      deckSettings,
     }
   }, [
-    deferredHand,
     mainPhase,
-    stagedCallTileIds,
+    hand,
     activeBotDiscard,
-    wall.length,
+    stagedCallTileIds,
+    deferredHand,
+    deferredPendingEastDiscardTile,
+    wall,
+    discardPile,
     discardTiles,
     botExposures,
     eastExposures,
     cardPatterns,
+    tenJokersEnabled,
+    blankTilesEnabled,
+    blankTileCount,
   ])
 
   /**
@@ -4943,6 +4965,8 @@ export default function App() {
     suggestedRankInput.playerClaimMelds,
     suggestedRankInput.eastTableClaimMelds,
     suggestedRankInput.patterns,
+    suggestedRankInput.deckSettings?.totalJokersInGame,
+    suggestedRankInput.deckSettings?.totalBlanksInGame,
   ])
 
   /** Menu category labels: still on, but muted when exposures rule out every hand in that section. */
@@ -5579,6 +5603,7 @@ export default function App() {
       ...(suggestedFocusHandKey ? [suggestedFocusHandKey] : []),
     ])
     for (const key of keysToProbe) {
+      const guideCause = suggestedDeadTileGuidesByKey[key]?.deadCause ?? null
       const live = findFocusedPatternDeadCause(
         key,
         unavailableByKey,
@@ -5590,6 +5615,11 @@ export default function App() {
         },
       )
       if (live) out[key] = live
+      else if (guideCause) out[key] = guideCause
+    }
+    for (const [key, cause] of Object.entries(out)) {
+      const patternId = focusKeyPatternId(key)
+      if (!(patternId in out)) out[patternId] = cause
     }
     return out
   }, [
@@ -5603,6 +5633,25 @@ export default function App() {
     cardPatterns,
     rackForSuggestedPatternMatch,
     suggestedHandsExposureTileIds,
+  ])
+
+  /** Dead-cause hint for the focused line — independent of the Tiles panel toggle. */
+  const suggestedFocusedHandDeadCause = useMemo((): DeadCauseHint | null => {
+    if (!deadTileHintEnabled || !suggestedFocusHandKey) return null
+    const direct = suggestedDeadCauseByFocusKey[suggestedFocusHandKey]
+    if (direct) return direct
+    const patternId = focusKeyPatternId(suggestedFocusHandKey)
+    const byPattern = suggestedDeadCauseByFocusKey[patternId]
+    if (byPattern) return byPattern
+    for (const [key, cause] of Object.entries(suggestedDeadCauseByFocusKey)) {
+      if (focusKeyPatternId(key) === patternId) return cause
+    }
+    return suggestedDeadTileGuidesByKey[suggestedFocusHandKey]?.deadCause ?? null
+  }, [
+    deadTileHintEnabled,
+    suggestedFocusHandKey,
+    suggestedDeadCauseByFocusKey,
+    suggestedDeadTileGuidesByKey,
   ])
 
   useEffect(() => {
@@ -8431,6 +8480,7 @@ export default function App() {
           cardPatterns={cardPatterns}
           cardSectionOrder={cardSectionOrder}
           deadCauseByFocusKey={suggestedDeadCauseByFocusKey}
+          focusedHandDeadCause={suggestedFocusedHandDeadCause}
         />
       </div>
     )

@@ -423,8 +423,8 @@
     var(--hands-list-pin-w)
     calc(var(--hands-preview-strip-w) + 2 * var(--hands-tiles-cell-pad-x))
     minmax(max-content, 1fr)
-    var(--hands-grid-odds-w)
     var(--hands-grid-away-w)
+    var(--hands-grid-odds-w)
     var(--hands-grid-values-w);
   width: max-content;
   min-width: 100%;
@@ -442,8 +442,8 @@
     var(--hands-list-pin-w)
     calc(var(--hands-preview-strip-w) + 2 * var(--hands-tiles-cell-pad-x))
     minmax(0, 1fr)
-    var(--hands-grid-odds-w)
     var(--hands-grid-away-w)
+    var(--hands-grid-odds-w)
     var(--hands-grid-values-w);
 }
 
@@ -458,12 +458,12 @@
 }
 
 .hands-list--tiles-excel .hands-list__row-hit--with-tiles > .hands-list__cell--odds {
-  grid-column: -4 / -3;
+  grid-column: -3 / -2;
   justify-self: stretch;
 }
 
 .hands-list--tiles-excel .hands-list__row-hit--with-tiles > .hands-list__cell--away {
-  grid-column: -3 / -2;
+  grid-column: -4 / -3;
   justify-self: stretch;
 }
 
@@ -560,7 +560,7 @@
 .hands-list__freeze-header.hands-list__row-hit {
   display: grid;
   /* Match the panel list’s main grid (see `.hands-panel__content .hands-list.hands-list--tiles-excel`). */
-  grid-template-columns: minmax(0, 1fr) var(--hands-grid-odds-w) var(--hands-grid-away-w) var(--hands-grid-values-w);
+  grid-template-columns: minmax(0, 1fr) var(--hands-grid-away-w) var(--hands-grid-odds-w) var(--hands-grid-values-w);
   padding: 0;
   margin: 0;
   border: none;
@@ -590,8 +590,8 @@
     var(--hands-list-pin-w, 1.35rem)
     calc(var(--hands-preview-strip-w) + 2 * var(--hands-tiles-cell-pad-x))
     minmax(0, 1fr)
-    var(--hands-grid-odds-w)
     var(--hands-grid-away-w)
+    var(--hands-grid-odds-w)
     var(--hands-grid-values-w);
 }
 
@@ -627,11 +627,11 @@
   grid-template-columns:
     minmax(var(--hands-preview-strip-w), 1fr)
     minmax(0, 1fr)
-    var(--hands-grid-odds-w)
     var(--hands-grid-away-w)
+    var(--hands-grid-odds-w)
     var(--hands-grid-values-w);
   grid-template-rows: auto;
-  grid-template-areas: 'tiles tiles odds away values';
+  grid-template-areas: 'tiles tiles away odds values';
   align-items: center;
   column-gap: 0;
   --hands-row-pad-block: 0.06rem;
@@ -646,7 +646,7 @@
 
 .hands-list__row-hit--with-tiles {
   grid-template-rows: auto;
-  grid-template-areas: 'tiles tiles odds away values';
+  grid-template-areas: 'tiles tiles away odds values';
   align-items: center;
   column-gap: 0;
   --hands-row-pad-block: 0.06rem;
@@ -669,8 +669,8 @@
 .hands-list__row-hit--with-tiles.hands-list__row-hit--with-category {
   grid-template-rows: auto auto;
   grid-template-areas:
-    'category odds away values'
-    'tiles    oddsPad awayPad valuesPad';
+    'category away odds values'
+    'tiles    awayPad oddsPad valuesPad';
 }
 
 .hands-list__row-hit--with-tiles > .hands-list__cell--category {
@@ -976,14 +976,14 @@
 
   /* Compact tiles-only: tile strip spans wide col, odds/away in narrow cols. */
   .hands-list--tiles-excel .hands-list__row-hit--with-tiles {
-    grid-template-areas: 'pin tiles odds away values';
+    grid-template-areas: 'pin tiles away odds values';
   }
 
   /* Compact with-category: same two-column strip + odds/away pad as wide mode. */
   .hands-list--tiles-excel .hands-list__row-hit--with-tiles.hands-list__row-hit--with-category {
     grid-template-areas:
-      'pin category odds away values'
-      'pin tiles    oddsPad awayPad valuesPad';
+      'pin category away odds values'
+      'pin tiles    awayPad oddsPad valuesPad';
   }
 
   .hands-list--tiles-excel .hands-list__row-hit--with-tiles > .hands-list__cell--hand,
@@ -1241,8 +1241,8 @@
     var(--hands-list-pin-w, 1.35rem)
     calc(var(--hands-preview-strip-w) + 2 * var(--hands-tiles-cell-pad-x))
     minmax(0, 1fr)
-    var(--hands-grid-odds-w)
     var(--hands-grid-away-w)
+    var(--hands-grid-odds-w)
     var(--hands-grid-values-w);
   width: 100%;
   min-width: 0;
@@ -1291,8 +1291,8 @@
     var(--hands-sheet-pin-w)
     minmax(0, var(--hands-sheet-category-w))
     minmax(0, 1fr)
-    var(--hands-sheet-odds-w)
     var(--hands-sheet-away-w)
+    var(--hands-sheet-odds-w)
     var(--hands-sheet-values-w);
   margin-inline: calc(-1 * var(--hands-sheet-rail));
   width: calc(100% + 2 * var(--hands-sheet-rail));
@@ -1785,6 +1785,8 @@
   > .hands-sheet:not(.hands-sheet--tiles2)
   .hands-sheet__row--active {
   background: var(--hands-row-active-fill);
+  /* Selected rows must always paint — `content-visibility: auto` can keep a stale skip snapshot. */
+  content-visibility: visible;
 }
 
 .hands-sheet__row--active > .hands-sheet__row-btn > .hands-sheet__cell--tiles {
@@ -1959,12 +1961,14 @@
   contain-intrinsic-size: auto 3em;
 }
 
-/* Tiles on: rows carry a tile strip + detail row, so start from a taller never-rendered estimate. */
+/* Tiles on: card line + tile strip — whole-pixel row height (same re-rank stability as hands-only). */
 .hands-panel__content
   .hands-list-scroll
-  > .hands-sheet--detail-tiles
+  > .hands-sheet:not(.hands-sheet--tiles2).hands-sheet--detail-tiles
   .hands-sheet__row {
-  contain-intrinsic-size: auto 6em;
+  --_hands-row-h: round(up, calc(1.5em + 0.4em + var(--hands-sheet-tile-h) + 2px), 1px);
+  min-block-size: var(--_hands-row-h);
+  contain-intrinsic-size: auto var(--_hands-row-h);
 }
 
 /*
@@ -2087,7 +2091,7 @@
   > .hands-sheet:not(.hands-sheet--tiles2)
   .hands-sheet__row-btn
   > .hands-sheet__cell--odds:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad) {
-  grid-column: 4;
+  grid-column: 5;
   grid-row: 1;
   display: flex;
   align-items: center;
@@ -2103,7 +2107,7 @@
   > .hands-sheet:not(.hands-sheet--tiles2)
   .hands-sheet__row-btn
   > .hands-sheet__cell--away:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad) {
-  grid-column: 5;
+  grid-column: 4;
   /* Stay on the card-hand line (track 1), not the full row: this keeps the detail-pad cell (row 2)
      free for the trend arrow. Center on track 1 so pin / hand / away share one vertical rhythm. */
   grid-row: 1;
@@ -2130,7 +2134,7 @@
   > .hands-sheet:not(.hands-sheet--tiles2)
   .hands-sheet__row-btn
   > .hands-sheet__cell--away.hands-sheet__cell--detail-pad {
-  grid-column: 5;
+  grid-column: 4;
   padding: 0;
   position: relative;
   overflow: hidden;
@@ -2141,7 +2145,7 @@
   > .hands-sheet:not(.hands-sheet--tiles2)
   .hands-sheet__row-btn
   > .hands-sheet__cell--odds.hands-sheet__cell--detail-pad {
-  grid-column: 4;
+  grid-column: 5;
   padding: 0;
   overflow: hidden;
 }
@@ -2322,6 +2326,40 @@
   flex-shrink: 0;
 }
 
+/* Hands-only (Tiles off): keep card-hand text + warning triangle on one line. */
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2):not(.hands-sheet--detail-tiles)
+  .hands-sheet__hand-title-line--dead-cause {
+  overflow: visible;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2):not(.hands-sheet--detail-tiles)
+  .hands-sheet__hand-title-line--dead-cause
+  .card-ink {
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2):not(.hands-sheet--detail-tiles)
+  .hands-sheet__hand-title-line--dead-cause
+  .hands-list__dead-cause-icon {
+  flex-shrink: 0;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2):not(.hands-sheet--detail-tiles)
+  .hands-sheet__row--active
+  > .hands-sheet__row-btn
+  > .hands-sheet__cell--hand:not(.hands-sheet__cell--detail-pad):has(.hands-sheet__hand-title-line--dead-cause) {
+  overflow: visible;
+}
+
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)
@@ -2398,8 +2436,8 @@
     var(--hands-sheet-pin-w, 1.25em)
     minmax(0, 1fr)
     var(--hands-sheet-grid-line-w)
-    var(--hands-sheet-odds-w)
     var(--hands-sheet-away-w)
+    var(--hands-sheet-odds-w)
     var(--hands-sheet-values-w);
 }
 
@@ -2432,7 +2470,7 @@
   > .hands-sheet.hands-sheet--tiles2:not(.hands-sheet--tilesHands)
   > .hands-sheet__rows
   .hands-sheet__cell--odds {
-  grid-column: 4 / 5;
+  grid-column: 5 / 6;
 }
 
 .hands-panel__content
@@ -2444,7 +2482,7 @@
   > .hands-sheet.hands-sheet--tiles2:not(.hands-sheet--tilesHands)
   > .hands-sheet__rows
   .hands-sheet__cell--away {
-  grid-column: 5 / 6;
+  grid-column: 4 / 5;
 }
 
 .hands-panel__content
@@ -2558,8 +2596,8 @@
     var(--hands-sheet-pin-w)
     minmax(0, var(--hands-sheet-category-w))
     minmax(0, 1fr)
-    var(--hands-sheet-odds-w)
     var(--hands-sheet-away-w)
+    var(--hands-sheet-odds-w)
     var(--hands-sheet-values-w);
 }
 
@@ -2649,12 +2687,12 @@
 
 .hands-sheet--tilesHands > .hands-sheet__rows .hands-sheet__row > * > .hands-sheet__cell--odds,
 .hands-sheet--tilesHands > .hands-sheet__rows .hands-sheet__row > .hands-sheet__cell--odds {
-  grid-column: 4 / 5;
+  grid-column: 5 / 6;
 }
 
 .hands-sheet--tilesHands > .hands-sheet__rows .hands-sheet__row > * > .hands-sheet__cell--away,
 .hands-sheet--tilesHands > .hands-sheet__rows .hands-sheet__row > .hands-sheet__cell--away {
-  grid-column: 5 / 6;
+  grid-column: 4 / 5;
 }
 
 .hands-sheet--tilesHands > .hands-sheet__rows .hands-sheet__row > * > .hands-sheet__cell--values,
@@ -2886,13 +2924,13 @@
 }
 
 .hands-sheet--tilesHands > .hands-sheet__cell--header.hands-sheet__cell--odds {
-  grid-column: 4 / 5;
+  grid-column: 5 / 6;
   grid-row: 1;
   padding-inline: 0;
 }
 
 .hands-sheet--tilesHands > .hands-sheet__cell--header.hands-sheet__cell--away {
-  grid-column: 5 / 6;
+  grid-column: 4 / 5;
   grid-row: 1;
   padding-inline: 0;
 }
