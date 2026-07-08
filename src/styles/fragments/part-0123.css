@@ -1100,6 +1100,68 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   --tile-face-highlight-shadow: 0 0 0 0 transparent;
 }
 
+/* Highlighted rack tiles: lift with a cast shadow (like a picked-up tile) so they stand out
+   without a border. The shadow is drawn on a pseudo-element behind the face, then clipped with
+   `clip-path` (which clips box-shadow) exactly at the tile edge on any side that faces another
+   highlighted tile — so the seam between adjacent highlighted tiles stays shadow-free instead of
+   the blur bleeding onto the neighbor. Raise the slot above its neighbors so the shadow paints on
+   top of them (fixes "only left side", where the next tile painted over this tile's shadow). */
+.app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--suggest-best {
+  z-index: 3;
+}
+
+.app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap--suggest-best
+  .sortable-tile-wrap__fly::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--tile-face-border-radius);
+  box-shadow: var(--tile-highlight-lift-shadow, 0 6px 18px rgba(0, 0, 0, 0.55));
+  /* Extend the clip well past the blur on every side by default (nothing to hide). */
+  clip-path: inset(-32px -32px -32px -32px);
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Highlighted tile with a highlighted tile to its RIGHT: clip the shadow to the center of the gap
+   (not the tile edge) so its shadow meets the left neighbour's and the bottom shadow stays joined. */
+.app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap--suggest-best:has(+ .sortable-tile-wrap--suggest-best)
+  .sortable-tile-wrap__fly::after {
+  clip-path: inset(-32px calc(var(--player-rack-face-gap, 1px) / -2) -32px -32px);
+}
+
+/* Highlighted tile with a highlighted tile to its LEFT: clip the shadow to the center of the gap. */
+.app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap--suggest-best
+  + .sortable-tile-wrap--suggest-best
+  .sortable-tile-wrap__fly::after {
+  clip-path: inset(-32px -32px -32px calc(var(--player-rack-face-gap, 1px) / -2));
+}
+
+/* Highlighted tile flanked by highlighted tiles on BOTH sides: clip both sides to the gap centers. */
+.app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap--suggest-best
+  + .sortable-tile-wrap--suggest-best:has(+ .sortable-tile-wrap--suggest-best)
+  .sortable-tile-wrap__fly::after {
+  clip-path: inset(
+    -32px calc(var(--player-rack-face-gap, 1px) / -2) -32px calc(var(--player-rack-face-gap, 1px) / -2)
+  );
+}
+
 .app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--blank-exchange-hint .tile-face:not(.tile--joker) {
   filter: none;
   --tile-face-highlight-shadow: 0 0 0 0 transparent;

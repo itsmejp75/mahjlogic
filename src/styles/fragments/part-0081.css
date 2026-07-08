@@ -1212,6 +1212,101 @@
   --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
 }
 
+/*
+ * Suggested-hands tray: same lift-shadow design as the main rack (see part-0123). The cast shadow
+ * is drawn on a pseudo behind the face, clipped with `clip-path` (which clips box-shadow) to the
+ * center of the inter-tile gap on any side facing another highlighted tile — so a run of highlighted
+ * tiles reads as one group with a joined bottom shadow and no shadow between them.
+ * Shadow scaled to the small preview tiles. Cells clip by default (rounded face art); open the clip
+ * only on highlighted cells and lift them above neighbours so the shadow paints on top.
+ */
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-best,
+.hands-sheet__tile-cell--suggest-best {
+  overflow: visible;
+  z-index: 3;
+}
+
+/* A higher-specificity panel rule (see `.hands-panel__content .hands-list--tiles-excel ...
+   .hands-list__pattern-tiles`) sets `overflow: hidden`, which clips the lift shadow that the
+   suggest-best cell casts. Re-open overflow only for the focused row that actually has a
+   highlighted tile — the strip still fits its column, so only the shadow escapes. */
+.hands-panel__content
+  .hands-list--tiles-excel
+  .hands-list__row-hit--with-tiles:has(.hands-list__pattern-tile-cell--suggest-best)
+  .hands-list__pattern-tiles {
+  overflow: visible;
+}
+
+/* Sheet variant: `.hands-sheet__cell` sets `overflow: hidden`, which clips the lift shadow of a
+   highlighted tile. Re-open the wrapping cell only when it contains a highlighted tile. */
+.hands-sheet__cell:has(.hands-sheet__tile-cell--suggest-best) {
+  overflow: visible;
+}
+
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-best::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: var(--hands-strip-tile-radius);
+  box-shadow:
+    0 calc(var(--hands-preview-tile-w) * 0.2) calc(var(--hands-preview-tile-w) * 0.46)
+      calc(var(--hands-preview-tile-w) * 0.06) rgba(0, 0, 0, 0.9),
+    0 calc(var(--hands-preview-tile-w) * 0.46) calc(var(--hands-preview-tile-w) * 0.92)
+      calc(var(--hands-preview-tile-w) * 0.13) rgba(0, 0, 0, 0.55);
+  clip-path: inset(-34px -34px -34px -34px);
+}
+
+.hands-sheet__tile-cell--suggest-best::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: var(--hands-sheet-tile-radius);
+  box-shadow:
+    0 calc(var(--hands-sheet-tile-w) * 0.2) calc(var(--hands-sheet-tile-w) * 0.46)
+      calc(var(--hands-sheet-tile-w) * 0.06) rgba(0, 0, 0, 0.9),
+    0 calc(var(--hands-sheet-tile-w) * 0.46) calc(var(--hands-sheet-tile-w) * 0.92)
+      calc(var(--hands-sheet-tile-w) * 0.13) rgba(0, 0, 0, 0.55);
+  clip-path: inset(-34px -34px -34px -34px);
+}
+
+/* Highlighted tile with a highlighted tile to its RIGHT: clip shadow to the gap center. */
+.hands-list__row-hit--with-tiles
+  .hands-list__pattern-tile-cell--suggest-best:has(+ .hands-list__pattern-tile-cell--suggest-best)::after {
+  clip-path: inset(-34px calc(var(--hands-row-pattern-gap, 1px) / -2) -34px -34px);
+}
+.hands-sheet__tile-cell--suggest-best:has(+ .hands-sheet__tile-cell--suggest-best)::after {
+  clip-path: inset(-34px calc(var(--hands-sheet-tile-gap, 1px) / -2) -34px -34px);
+}
+
+/* Highlighted tile with a highlighted tile to its LEFT: clip shadow to the gap center. */
+.hands-list__row-hit--with-tiles
+  .hands-list__pattern-tile-cell--suggest-best
+  + .hands-list__pattern-tile-cell--suggest-best::after {
+  clip-path: inset(-34px -34px -34px calc(var(--hands-row-pattern-gap, 1px) / -2));
+}
+.hands-sheet__tile-cell--suggest-best + .hands-sheet__tile-cell--suggest-best::after {
+  clip-path: inset(-34px -34px -34px calc(var(--hands-sheet-tile-gap, 1px) / -2));
+}
+
+/* Highlighted tile flanked on BOTH sides: clip both sides to the gap centers. */
+.hands-list__row-hit--with-tiles
+  .hands-list__pattern-tile-cell--suggest-best
+  + .hands-list__pattern-tile-cell--suggest-best:has(+ .hands-list__pattern-tile-cell--suggest-best)::after {
+  clip-path: inset(
+    -34px calc(var(--hands-row-pattern-gap, 1px) / -2) -34px calc(var(--hands-row-pattern-gap, 1px) / -2)
+  );
+}
+.hands-sheet__tile-cell--suggest-best
+  + .hands-sheet__tile-cell--suggest-best:has(+ .hands-sheet__tile-cell--suggest-best)::after {
+  clip-path: inset(
+    -34px calc(var(--hands-sheet-tile-gap, 1px) / -2) -34px calc(var(--hands-sheet-tile-gap, 1px) / -2)
+  );
+}
+
 .hands-list__section-num {
   font-weight: 400;
   letter-spacing: 0;

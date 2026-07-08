@@ -421,11 +421,12 @@
   background: transparent;
 }
 
+/* Joker slot: no ring / overlay (yellow joker ring removed). */
 :is(
   .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
   .hands-sheet__tile-cell--suggest-joker
 ) .tile-face::after {
-  box-shadow: var(--hands-coaching-ring-joker-front);
+  box-shadow: none;
   background: transparent;
 }
 
@@ -499,7 +500,7 @@
   .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
   .hands-sheet__tile-cell--suggest-joker
 ) .tile-face.tile--joker::after {
-  box-shadow: var(--hands-coaching-ring-joker-front);
+  box-shadow: none;
   background: transparent;
 }
 

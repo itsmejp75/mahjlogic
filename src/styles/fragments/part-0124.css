@@ -86,9 +86,10 @@
 }
 
 /* Ivory + illustrative classic: green coaching ring (not the default white rack ring). */
+/* TEMP: green suggest-best ring removed to preview highlighted rack tiles with no border. */
 .app[data-tile-graphics='classic'],
 .app[data-tile-graphics='illustrative-classic'] {
-  --illustrative-suggest-best-border: inset 0 0 0 2px var(--tile-highlight-border);
+  --illustrative-suggest-best-border: 0 0 0 0 transparent;
 }
 
 /*
@@ -451,6 +452,20 @@
       rgba(28, 25, 22, 0.38),
     inset calc(var(--rack-tile-w) * -0.045) calc(var(--rack-tile-w) * -0.045) calc(var(--rack-tile-w) * 0.1)
       calc(var(--rack-tile-w) * -0.3) rgba(28, 25, 22, 0.4);
+}
+
+/*
+ * Suggested-hands tray dim: the rim `::before` catch-light (z-index 2) sits above the tray's dark
+ * dim `::after` overlay (z-index 1), so a dimmed tile kept a bright top highlight — unlike the main
+ * rack, which dims the whole face via `filter`. Fade the rim on dimmed tray tiles so the highlight
+ * dims with the rest of the tile. (Lit `--suggest-best` cells excluded.)
+ */
+:is(
+  .hands-list__row-hit--with-tiles
+    .hands-list__pattern-tile-cell--suggest-dim:not(.hands-list__pattern-tile-cell--suggest-best),
+  .hands-sheet__tile-cell--suggest-dim:not(.hands-sheet__tile-cell--suggest-best)
+) .tile-face:not(.tile-face--illustrative-art)::before {
+  opacity: 0.4;
 }
 
 /* Lift glyph above rim `::before`; stacked suit rank/band keep absolute layout from part-0075. */

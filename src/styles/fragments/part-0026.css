@@ -121,7 +121,8 @@
   --hands-coaching-ring-green-inset: inset 0 0 0 1px var(--hands-coaching-ring-green);
   --hands-coaching-ring-joker-inset: inset 0 0 0 1px var(--hands-coaching-ring-joker);
   /* Front rings: inset shadow on face `::after` (z-index 5) — tracks corner radius; `border` reads square inside on mini tiles. */
-  --hands-coaching-ring-green-front: inset 0 0 0 var(--hands-coaching-ring-w) var(--hands-coaching-ring-green);
+  /* TEMP: green suggest-best ring removed to preview highlighted rack tiles with no border. */
+  --hands-coaching-ring-green-front: 0 0 0 0 transparent;
   --hands-coaching-ring-joker-front: inset 0 0 0 var(--hands-coaching-ring-w) var(--hands-coaching-ring-joker);
   --hands-coaching-ring-dead-cause-inset: inset 0 0 0 1px var(--dead-cause-warning);
   --tile-highlight-lift-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
