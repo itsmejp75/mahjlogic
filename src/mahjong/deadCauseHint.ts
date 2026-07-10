@@ -32,13 +32,59 @@ export function availableCopiesForDeadHintDef(
 export type FindFocusedPatternDeadCauseOpts = {
   rack?: TileInstance[]
   exposureTileIds?: ReadonlySet<string>
+  /** Exposed jokers redeemable with a natural currently in hand (or staged). */
+  redeemableExposedJokers?: number
+}
+
+function focusedPatternCandidates(
+  focusKey: string,
+  patterns: PracticePattern[],
+): PracticePattern[] {
+  const variantSep = ['::tier::', '::oc::', '::ocall::']
+    .map((s) => focusKey.indexOf(s))
+    .filter((i) => i >= 0)
+    .reduce((m, i) => (m < 0 ? i : Math.min(m, i)), -1)
+  const patternId = variantSep >= 0 ? focusKey.slice(0, variantSep) : focusKey
+  const pattern = patterns.find((p) => p.id === patternId)
+  if (!pattern) return []
+  const pinnedPatterns = buildPinnedPatternsFromFocusKey(pattern, focusKey)
+  return pinnedPatterns.length > 0 ? pinnedPatterns : [pattern]
 }
 
 /**
- * When every legal suit/color variant of the focused line is short on copies, return the first
- * shortfall; otherwise null (hand still possible — e.g. 44 as craks even if 4 dots are scarce).
- * Jokers count toward kong/pung slots marked `canUseJoker`. When a rack is provided, the warning
- * text follows the same suit assignment the highlight matcher chose (not a different permutation).
+ * For the focused line's current rack assignment, how many copies of `def` are still needed in a
+ * **single or pair** slot (jokers not allowed)? Returns null when the matcher uses `def` only in
+ * pung/kong/quint slots or not at all — those gaps are not dead-tile warnings.
+ */
+export function focusedLineJokerIneligibleNeedForDef(
+  focusKey: string | null,
+  def: TileDef,
+  patterns: PracticePattern[],
+  rack?: readonly TileInstance[],
+  exposureTileIds?: ReadonlySet<string>,
+): number | null {
+  if (!focusKey || !rack?.length) return null
+  const candidates = focusedPatternCandidates(focusKey, patterns)
+  if (!candidates.length) return null
+  const greedyUiOpts =
+    exposureTileIds && exposureTileIds.size > 0 ? { exposureTileIds } : undefined
+  let need: number | null = null
+  for (const candidate of candidates) {
+    const needs = buildGreedyAlignedDeadHintNeeds(candidate, [...rack], greedyUiOpts)
+    for (const entry of needs.values()) {
+      if (!tileDefsEqual(entry.def, def)) continue
+      if (entry.canUseJoker || entry.need > 2) continue
+      need = need == null ? entry.need : Math.min(need, entry.need)
+    }
+  }
+  return need
+}
+
+/**
+ * When every legal suit/color variant of the focused line is short on **single/pair** naturals,
+ * return the first such shortfall; otherwise null (hand still possible — e.g. 44 as craks even if
+ * 4 dots are scarce, or a kong still fillable with jokers). Pung/kong/quint gaps never surface a
+ * dead-cause warning here — jokers, calls, and joker swaps may still complete those melds.
  */
 export function findFocusedPatternDeadCause(
   focusKey: string | null,
@@ -48,21 +94,15 @@ export function findFocusedPatternDeadCause(
   opts?: FindFocusedPatternDeadCauseOpts,
 ): DeadCauseHint | null {
   if (!focusKey) return null
-  const variantSep = ['::tier::', '::oc::', '::ocall::']
-    .map((s) => focusKey.indexOf(s))
-    .filter((i) => i >= 0)
-    .reduce((m, i) => (m < 0 ? i : Math.min(m, i)), -1)
-  const patternId = variantSep >= 0 ? focusKey.slice(0, variantSep) : focusKey
-  const pattern = patterns.find((p) => p.id === patternId)
-  if (!pattern) return null
-
-  const pinnedPatterns = buildPinnedPatternsFromFocusKey(pattern, focusKey)
-  const candidates = pinnedPatterns.length > 0 ? pinnedPatterns : [pattern]
+  const candidates = focusedPatternCandidates(focusKey, patterns)
+  if (!candidates.length) return null
 
   const greedyUiOpts =
     opts?.exposureTileIds && opts.exposureTileIds.size > 0
       ? { exposureTileIds: opts.exposureTileIds }
       : undefined
+
+  const redeemableExposedJokers = opts?.redeemableExposedJokers ?? 0
 
   for (const candidate of candidates) {
     const variants = buildPatternNeedVariants(candidate)
@@ -71,7 +111,14 @@ export function findFocusedPatternDeadCause(
 
     for (const needs of variants) {
       if (needs.size === 0) continue
-      if (patternNeedVariantIsSatisfiable(needs, unavailableByKey, totalCopiesForDef)) {
+      if (
+        patternNeedVariantIsSatisfiable(
+          needs,
+          unavailableByKey,
+          totalCopiesForDef,
+          redeemableExposedJokers,
+        )
+      ) {
         anyViable = true
         break
       }

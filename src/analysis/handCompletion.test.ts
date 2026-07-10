@@ -500,7 +500,124 @@ describe('calculateWallCompletionProbability', () => {
     expect(prob).toBeGreaterThan(0)
   })
 
+  it('gives 13-tile discard racks the pre-draw trial bonus that a staged 14th tile removes', () => {
+    const slots: CompletionSlot[] = [
+      { tileType: 's:bam:2', targetCount: 2 },
+      { tileType: 'd:soap', targetCount: 2 },
+      { tileType: 's:crak:2', targetCount: 3 },
+      { tileType: 's:crak:6', targetCount: 3 },
+      { tileType: 'w:N', targetCount: 1 },
+      { tileType: 'w:E', targetCount: 1 },
+      { tileType: 'w:W', targetCount: 1 },
+      { tileType: 'w:S', targetCount: 1 },
+    ]
+    const ctx: HandInventoryContext = {
+      naturals: { 's:bam:2': 2, 's:crak:2': 2, 'w:E': 1, 'w:S': 2 },
+      jokersInHand: 0,
+      blanksInHand: 0,
+      discardCounts: {},
+      jokersDisallowed: false,
+    }
+    const completion = { M_nat: 7, M_joker: 0, D: 7, P_base: 50, P: 50 }
+    const shared = {
+      slots,
+      ctx,
+      completion,
+      visibleNaturals: {},
+      visibleJokers: 0,
+      visibleBlanks: 0,
+      wallRemaining: 38,
+      isConcealed: false,
+      isSinglesAndPairs: false,
+      deck: DEFAULT_DECK_COMPOSITION,
+      tilesNeededRough: 10,
+    }
+    const at13 = calculateWallCompletionProbability({ ...shared, playerRackTileCount: 13 })
+    const at14 = calculateWallCompletionProbability({ ...shared, playerRackTileCount: 14 })
+    expect(at13).toBeGreaterThan(0)
+    expect(at14).toBe(0)
+  })
+
+  it('returns 0% when 7 away with only 8 wall tiles (W&D #5 endgame)', () => {
+    const slots: CompletionSlot[] = [
+      { tileType: 'f', targetCount: 3 },
+      { tileType: 'w:N', targetCount: 4 },
+      { tileType: 'f', targetCount: 3 },
+      { tileType: 'd:red', targetCount: 4 },
+    ]
+    const ctx: HandInventoryContext = {
+      naturals: { f: 3, 'd:green': 2 },
+      jokersInHand: 2,
+      blanksInHand: 0,
+      discardCounts: {},
+      jokersDisallowed: false,
+    }
+    const completion = { M_nat: 6, M_joker: 2, D: 6, P_base: 57, P: 57 }
+    expect(
+      calculateWallCompletionProbability({
+        slots,
+        ctx,
+        completion,
+        visibleNaturals: {},
+        visibleJokers: 1,
+        visibleBlanks: 0,
+        wallRemaining: 8,
+        isConcealed: false,
+        isSinglesAndPairs: false,
+        deck: DEFAULT_DECK_COMPOSITION,
+        playerRackTileCount: 13,
+        tilesNeededRough: 7,
+        jokerReliefFromSwapHint: 2,
+      }),
+    ).toBe(0)
+  })
+
   it('raises completion prob when joker-swap hint relief is available', () => {
+    const slots: CompletionSlot[] = [
+      { tileType: 'w:west', targetCount: 3 },
+      { tileType: 'w:south', targetCount: 4 },
+    ]
+    const ctx: HandInventoryContext = {
+      naturals: { 'w:west': 3, 'w:south': 1 },
+      jokersInHand: 0,
+      blanksInHand: 0,
+      discardCounts: {},
+      jokersDisallowed: false,
+    }
+    const completion = computeHandCompletionMetrics(slots, ctx)
+    const shared = {
+      slots,
+      ctx,
+      completion,
+      visibleNaturals: {},
+      visibleJokers: 2,
+      visibleBlanks: 0,
+      wallRemaining: 80,
+      isConcealed: false,
+      isSinglesAndPairs: false,
+      deck: DEFAULT_DECK_COMPOSITION,
+      playerRackTileCount: 14,
+      tilesNeededRough: 4,
+    }
+    const withoutHint = calculateWallCompletionProbability(shared)
+    const withHint = calculateWallCompletionProbability({
+      ...shared,
+      jokerReliefFromSwapHint: jokerSwapHintReliefForLine(
+        2,
+        slots,
+        ctx,
+        completion,
+        {},
+        DEFAULT_DECK_COMPOSITION,
+        false,
+        false,
+      ),
+    })
+    expect(jokerSwapHintReliefForLine(2, slots, ctx, completion, {}, DEFAULT_DECK_COMPOSITION, false, false)).toBe(2)
+    expect(withHint).toBeGreaterThan(withoutHint)
+  })
+
+  it('ignores joker-swap hint relief when more than 4 tiles away', () => {
     const slots: CompletionSlot[] = [
       { tileType: 'w:west', targetCount: 3 },
       { tileType: 'w:south', targetCount: 4 },
@@ -530,19 +647,9 @@ describe('calculateWallCompletionProbability', () => {
     const withoutHint = calculateWallCompletionProbability(shared)
     const withHint = calculateWallCompletionProbability({
       ...shared,
-      jokerReliefFromSwapHint: jokerSwapHintReliefForLine(
-        2,
-        slots,
-        ctx,
-        completion,
-        {},
-        DEFAULT_DECK_COMPOSITION,
-        false,
-        false,
-      ),
+      jokerReliefFromSwapHint: 2,
     })
-    expect(jokerSwapHintReliefForLine(2, slots, ctx, completion, {}, DEFAULT_DECK_COMPOSITION, false, false)).toBe(2)
-    expect(withHint).toBeGreaterThan(withoutHint)
+    expect(withHint).toBe(withoutHint)
   })
 
   it('does not apply joker-swap hint relief for concealed or singles-and-pairs lines', () => {

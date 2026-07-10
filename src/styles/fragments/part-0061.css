@@ -415,6 +415,9 @@
   max-width: 100%;
   gap: var(--player-rack-face-gap);
   pointer-events: none;
+  /* Lit lift in lower S/W/N rows must paint over dim tiles in the row above — see part-0124. */
+  isolation: auto;
+  overflow: visible;
 }
 
 .discard-tracker__overlay-row > * {
@@ -1147,13 +1150,13 @@
   --suggest-dim-inset-shadow: none;
 }
 
-/* Bot exposure row: suggest-best ring on usable tiles (incl. swappable jokers). */
+/* Bot exposure row: lift-only lit tiles — no inset highlight ring on the face. */
 .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot--suggest-best
   .tile-face {
   --tile-face-highlight-inset: 0 0 0 0 transparent;
-  --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
 }
 
 .discard-tracker__overlay-grid

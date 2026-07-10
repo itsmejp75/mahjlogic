@@ -306,11 +306,11 @@
 }
 
 .suggested-hands-popup .hands-list__freeze-header.hands-list__row-hit {
+  position: relative;
   border-top-left-radius: var(--suggested-popup-radius);
   border-top-right-radius: var(--suggested-popup-radius);
-  /* Base part-0081 sets `overflow: visible` — clip the row to the shell radius so discard
-   * does not show as a square wedge behind rounded header cells. */
-  overflow: hidden;
+  /* Bleed paint uses `::before` (part-0123) — keep overflow open so it can reach viewport edges. */
+  overflow: visible;
 }
 
 .suggested-hands-popup .hands-sheet > .hands-sheet__cell--header.hands-sheet__cell--cat,

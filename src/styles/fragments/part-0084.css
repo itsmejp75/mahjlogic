@@ -153,9 +153,13 @@
   box-shadow: none;
 }
 
-/* Border overlay sits above tiles (z-index 4) so the meld group ring stays visible. */
-.panel--hand .exposure-rack__call-meld-strip--staging .exposure-rack__call-meld-strip__inner::after,
+/* Committed call melds: group ring removed — per-tile vignette via `--owned-meld` (part-0123). */
 .panel--hand .exposure-rack__call-meld-strip--locked .exposure-rack__call-meld-strip__inner::after {
+  content: none;
+  display: none;
+}
+
+.panel--hand .exposure-rack__call-meld-strip--staging .exposure-rack__call-meld-strip__inner::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -275,13 +279,8 @@
   .rack-stage__rack-top
   .exposure-rack:not(.exposure-rack--charleston-pass)
   :is(.exposure-rack__meld-group, .exposure-rack__meld-sortable, .exposure-rack__meld-drop)::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: inset 0 0 0 var(--call-meld-group-border-w) var(--call-meld-group-border);
-  pointer-events: none;
-  z-index: 5;
+  content: none;
+  display: none;
 }
 
 /* Call melds already ring via `.call-meld-strip__inner::after` (full tile height). The joker-swap
@@ -364,7 +363,7 @@
   left: 0;
   top: var(--player-seat-label-top, -0.35rem);
   transform: translateY(-50%);
-  z-index: 0;
+  z-index: 5;
   pointer-events: none;
   display: inline-flex;
   align-items: center;

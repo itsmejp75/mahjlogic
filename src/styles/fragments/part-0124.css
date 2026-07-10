@@ -100,7 +100,7 @@
 .app[data-tile-graphics='illustrative-classic']
   .panel--discard-tracker
   :is(.discard-tracker__overlay-grid, .discard-pile) {
-  --illustrative-suggest-best-border: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
+  --illustrative-suggest-best-border: inset 0 0 0 1px rgba(255, 255, 255, 0.68);
 }
 
 .app[data-tile-graphics='illustrative-classic']
@@ -304,7 +304,29 @@
   opacity: 1;
 }
 
-/* Bot exposure tracker: usable tiles (incl. swappable jokers) get the same ring as other tracker highlights. */
+/* Bot exposures panel: lift-only lit tiles — no illustrative coaching ring on the face. */
+.app[data-tile-graphics='illustrative-classic']
+  .panel--bot-exposures
+  .exposure-rack__slot--suggest-best
+  .tile-face.tile-face--illustrative-art::after,
+.app[data-tile-graphics='illustrative-classic']
+  .panel--bot-exposures
+  .exposure-rack__slot--suggest-best
+  .tile-face.tile--joker.tile-face--illustrative-art::after {
+  content: none;
+  display: none;
+  box-shadow: none;
+}
+
+.app[data-tile-graphics='illustrative-classic']
+  .panel--bot-exposures
+  .exposure-rack__slot--suggest-best
+  .tile-face.tile-face--illustrative-art {
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
+}
+
+/* Discard-tracker bot row: lift-only lit tiles — no illustrative coaching ring on the face. */
 .app[data-tile-graphics='illustrative-classic']
   .panel--discard-tracker
   .discard-tracker__overlay-grid
@@ -323,26 +345,9 @@
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot--suggest-dim.exposure-rack__slot--suggest-best
   .tile-face.tile--joker.tile-face--illustrative-art::after {
-  content: '';
-  display: block;
-  position: absolute;
-  inset: 0;
-  left: 0;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  transform: none;
-  width: auto;
-  height: auto;
-  padding-bottom: 0;
-  z-index: 5;
-  box-sizing: border-box;
-  border: none;
-  box-shadow: var(--illustrative-suggest-best-border);
-  border-radius: inherit;
-  pointer-events: none;
-  background: transparent;
-  opacity: 1;
+  content: none;
+  display: none;
+  box-shadow: none;
 }
 
 .app[data-tile-graphics='illustrative-classic']
@@ -455,17 +460,506 @@
 }
 
 /*
- * Suggested-hands tray dim: the rim `::before` catch-light (z-index 2) sits above the tray's dark
- * dim `::after` overlay (z-index 1), so a dimmed tile kept a bright top highlight — unlike the main
- * rack, which dims the whole face via `filter`. Fade the rim on dimmed tray tiles so the highlight
- * dims with the rest of the tile. (Lit `--suggest-best` cells excluded.)
+ * Coach vignette — main rack hand row + suggested-hands strip: one nudge softer than the default rim.
+ * Bottom rim fade matches discard tracker (`--coach-discard-bottom-shadow-fade`).
+ */
+.panel--hands {
+  --coach-discard-bottom-shadow-fade: calc(var(--tile-shadow-fade, 6.5%) * 0.92);
+}
+
+.app[data-tile-graphics='classic']
+  :is(
+    .hands-list__row-hit--with-tiles
+      .hands-list__pattern-tile-cell:is(
+        .hands-list__pattern-tile-cell--suggest-best,
+        .hands-list__pattern-tile-cell--suggest-joker,
+        .hands-list__pattern-tile-cell--suggest-dim
+      ),
+    .hands-sheet__tile-cell:is(
+      .hands-sheet__tile-cell--suggest-best,
+      .hands-sheet__tile-cell--suggest-joker,
+      .hands-sheet__tile-cell--suggest-dim
+    ),
+    .panel--hand .panel-hand-rack__hand-tray .hand-row
+      > .sortable-tile-wrap:is(.sortable-tile-wrap--suggest-best, .sortable-tile-wrap--suggest-dim),
+    .panel--hand
+      .rack-stage__rack-top
+      .pass-strip__tile-wrap:is(.pass-strip__tile-wrap--suggest-best, .pass-strip__tile-wrap--suggest-dim),
+    .panel--hand
+      .rack-stage__rack-top
+      .east-discard-staging__tile:is(
+        .east-discard-staging__tile--suggest-best,
+        .east-discard-staging__tile--suggest-dim
+      ),
+    .panel--bot-exposures
+      .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim),
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .exposure-rack--discard-tracker-bot-row
+      .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
+  )
+  .tile-face:not(.tile-face--illustrative-art)::before,
+.app[data-tile-graphics='solid-color']
+  :is(
+    .hands-list__row-hit--with-tiles
+      .hands-list__pattern-tile-cell:is(
+        .hands-list__pattern-tile-cell--suggest-best,
+        .hands-list__pattern-tile-cell--suggest-joker,
+        .hands-list__pattern-tile-cell--suggest-dim
+      ),
+    .hands-sheet__tile-cell:is(
+      .hands-sheet__tile-cell--suggest-best,
+      .hands-sheet__tile-cell--suggest-joker,
+      .hands-sheet__tile-cell--suggest-dim
+    ),
+    .panel--hand .panel-hand-rack__hand-tray .hand-row
+      > .sortable-tile-wrap:is(.sortable-tile-wrap--suggest-best, .sortable-tile-wrap--suggest-dim),
+    .panel--hand
+      .rack-stage__rack-top
+      .pass-strip__tile-wrap:is(.pass-strip__tile-wrap--suggest-best, .pass-strip__tile-wrap--suggest-dim),
+    .panel--hand
+      .rack-stage__rack-top
+      .east-discard-staging__tile:is(
+        .east-discard-staging__tile--suggest-best,
+        .east-discard-staging__tile--suggest-dim
+      ),
+    .panel--bot-exposures
+      .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim),
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .exposure-rack--discard-tracker-bot-row
+      .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
+  )
+  .tile-face:not(.tile-face--illustrative-art)::before,
+.app[data-tile-graphics='light']
+  :is(
+    .hands-list__row-hit--with-tiles
+      .hands-list__pattern-tile-cell:is(
+        .hands-list__pattern-tile-cell--suggest-best,
+        .hands-list__pattern-tile-cell--suggest-joker,
+        .hands-list__pattern-tile-cell--suggest-dim
+      ),
+    .hands-sheet__tile-cell:is(
+      .hands-sheet__tile-cell--suggest-best,
+      .hands-sheet__tile-cell--suggest-joker,
+      .hands-sheet__tile-cell--suggest-dim
+    ),
+    .panel--hand .panel-hand-rack__hand-tray .hand-row
+      > .sortable-tile-wrap:is(.sortable-tile-wrap--suggest-best, .sortable-tile-wrap--suggest-dim),
+    .panel--hand
+      .rack-stage__rack-top
+      .pass-strip__tile-wrap:is(.pass-strip__tile-wrap--suggest-best, .pass-strip__tile-wrap--suggest-dim),
+    .panel--hand
+      .rack-stage__rack-top
+      .east-discard-staging__tile:is(
+        .east-discard-staging__tile--suggest-best,
+        .east-discard-staging__tile--suggest-dim
+      ),
+    .panel--bot-exposures
+      .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim),
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .exposure-rack--discard-tracker-bot-row
+      .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
+  )
+  .tile-face:not(.tile-face--illustrative-art)::before,
+.app[data-tile-graphics='dark']
+  :is(
+    .hands-list__row-hit--with-tiles
+      .hands-list__pattern-tile-cell:is(
+        .hands-list__pattern-tile-cell--suggest-best,
+        .hands-list__pattern-tile-cell--suggest-joker,
+        .hands-list__pattern-tile-cell--suggest-dim
+      ),
+    .hands-sheet__tile-cell:is(
+      .hands-sheet__tile-cell--suggest-best,
+      .hands-sheet__tile-cell--suggest-joker,
+      .hands-sheet__tile-cell--suggest-dim
+    ),
+    .panel--hand .panel-hand-rack__hand-tray .hand-row
+      > .sortable-tile-wrap:is(.sortable-tile-wrap--suggest-best, .sortable-tile-wrap--suggest-dim),
+    .panel--hand
+      .rack-stage__rack-top
+      .pass-strip__tile-wrap:is(.pass-strip__tile-wrap--suggest-best, .pass-strip__tile-wrap--suggest-dim),
+    .panel--hand
+      .rack-stage__rack-top
+      .east-discard-staging__tile:is(
+        .east-discard-staging__tile--suggest-best,
+        .east-discard-staging__tile--suggest-dim
+      ),
+    .panel--bot-exposures
+      .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim),
+    .panel--discard-tracker
+      .discard-tracker__overlay-grid
+      .exposure-rack--discard-tracker-bot-row
+      .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
+  )
+  .tile-face:not(.tile-face--illustrative-art)::before {
+  --tile-rim-fade: 8%;
+  --tile-shadow-fade: 6.5%;
+  background:
+    linear-gradient(
+      to bottom,
+      var(--tile-rim-top-peak) 0%,
+      var(--tile-rim-top-mid) calc(var(--tile-rim-fade) * 0.4),
+      var(--tile-rim-top-tail) calc(var(--tile-rim-fade) * 0.75),
+      transparent var(--tile-rim-fade)
+    ),
+    linear-gradient(
+      to top,
+      rgba(28, 25, 22, 0.48) 0%,
+      rgba(28, 25, 22, 0.17) calc(var(--coach-discard-bottom-shadow-fade, var(--tile-shadow-fade)) * 0.4),
+      rgba(28, 25, 22, 0.04) calc(var(--coach-discard-bottom-shadow-fade, var(--tile-shadow-fade)) * 0.75),
+      transparent var(--coach-discard-bottom-shadow-fade, var(--tile-shadow-fade))
+    ),
+    linear-gradient(
+      to right,
+      rgba(28, 25, 22, 0.4) 0%,
+      rgba(28, 25, 22, 0.12) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.025) calc(var(--tile-shadow-fade) * 0.75),
+      transparent calc(var(--tile-shadow-fade) * 0.92)
+    ),
+    linear-gradient(
+      to left,
+      rgba(28, 25, 22, 0.4) 0%,
+      rgba(28, 25, 22, 0.12) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.025) calc(var(--tile-shadow-fade) * 0.75),
+      transparent calc(var(--tile-shadow-fade) * 0.92)
+    );
+  box-shadow:
+    inset calc(var(--rack-tile-w) * 0.04) 0 calc(var(--rack-tile-w) * 0.09) calc(var(--rack-tile-w) * -0.3)
+      rgba(28, 25, 22, 0.32),
+    inset calc(var(--rack-tile-w) * -0.04) calc(var(--rack-tile-w) * -0.04) calc(var(--rack-tile-w) * 0.09)
+      calc(var(--rack-tile-w) * -0.3) rgba(28, 25, 22, 0.34);
+}
+
+:is(
+  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim,
+  .hands-sheet__tile-cell--suggest-dim,
+  .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--suggest-dim,
+  .panel--bot-exposures .exposure-rack__slot--suggest-dim,
+  .panel--discard-tracker
+    .discard-tracker__overlay-grid
+    .exposure-rack--discard-tracker-bot-row
+    .exposure-rack__slot--suggest-dim
+) {
+  --suggest-dim-overlay: rgba(0, 0, 0, 0.34);
+}
+
+/*
+ * Coach dim: the rim `::before` catch-light (z-index 2) sits above the dark dim `::after` overlay
+ * (z-index 1), so a dimmed tile keeps a bright top highlight unless the rim is faded. Lit
+ * `--suggest-best` cells excluded.
  */
 :is(
   .hands-list__row-hit--with-tiles
     .hands-list__pattern-tile-cell--suggest-dim:not(.hands-list__pattern-tile-cell--suggest-best),
-  .hands-sheet__tile-cell--suggest-dim:not(.hands-sheet__tile-cell--suggest-best)
+  .hands-sheet__tile-cell--suggest-dim:not(.hands-sheet__tile-cell--suggest-best),
+  .app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--suggest-dim:not(.sortable-tile-wrap--suggest-best),
+  .panel--bot-exposures
+    .exposure-rack__slot--suggest-dim:not(.exposure-rack__slot--suggest-best),
+  .panel--discard-tracker
+    .discard-tracker__overlay-grid
+    .exposure-rack--discard-tracker-bot-row
+    .exposure-rack__slot--suggest-dim:not(.exposure-rack__slot--suggest-best)
+) .tile-face:not(.tile-face--illustrative-art)::before {
+  opacity: 0.48;
+}
+
+:is(
+  .panel--hand .rack-stage__rack-top .exposure-rack__slot--suggest-dim:not(.exposure-rack__slot--suggest-best),
+  .panel--hand .rack-stage__rack-top .pass-strip__tile-wrap--suggest-dim:not(.pass-strip__tile-wrap--suggest-best),
+  .panel--hand .rack-stage__rack-top .east-discard-staging__tile--suggest-dim:not(.east-discard-staging__tile--suggest-best)
 ) .tile-face:not(.tile-face--illustrative-art)::before {
   opacity: 0.4;
+}
+
+/*
+ * Bot exposure coach rows (side panel + discard-tracker S/W/N): vignette + lit/dim parity with
+ * main rack / hands strip. Lit tiles use slot lift shadow only — no highlight inset rings.
+ *
+ * Side panel: size container + `100cqw` on the face (same as hands strip).
+ * Tracker bot row: meld wrappers are flex — keep overlay-grid `--rack-tile-w` (no `100cqw`;
+ * invalid `cqw` was dropping rim inset metrics on illustrative `::before`).
+ */
+.panel--bot-exposures
+  .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim) {
+  container-type: size;
+}
+
+.panel--bot-exposures
+  .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
+  .tile-face {
+  --rack-tile-w: 100cqw;
+  --rack-tile-h: 100cqh;
+}
+
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
+  .tile-face {
+  --rack-tile-w: var(--discard-tray-rack-tile-w);
+  --rack-tile-h: var(--rack-tile-h);
+}
+
+:is(
+  .panel--bot-exposures .exposure-rack__slot--suggest-dim,
+  .panel--discard-tracker
+    .discard-tracker__overlay-grid
+    .exposure-rack--discard-tracker-bot-row
+    .exposure-rack__slot--suggest-dim
+) .tile-face:not(.tile--joker) {
+  filter: none;
+}
+
+:is(
+  .panel--bot-exposures .exposure-rack__slot--suggest-dim,
+  .panel--discard-tracker
+    .discard-tracker__overlay-grid
+    .exposure-rack--discard-tracker-bot-row
+    .exposure-rack__slot--suggest-dim
+) .tile-face:not(.tile--joker)::after {
+  box-shadow: none;
+}
+
+:is(
+  .panel--bot-exposures .exposure-rack__slot--suggest-dim,
+  .panel--discard-tracker
+    .discard-tracker__overlay-grid
+    .exposure-rack--discard-tracker-bot-row
+    .exposure-rack__slot--suggest-dim
+) .tile-face.tile--joker {
+  filter: none;
+  opacity: 0.48;
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+}
+
+:is(
+  .panel--bot-exposures .exposure-rack__slot--suggest-best,
+  .panel--discard-tracker
+    .discard-tracker__overlay-grid
+    .exposure-rack--discard-tracker-bot-row
+    .exposure-rack__slot--suggest-best,
+  .panel--discard-tracker
+    .discard-tracker__overlay-grid
+    .sorted-discard-tray__slot--suggest-need
+) {
+  overflow: visible;
+  z-index: 3;
+}
+
+.panel--bot-exposures .exposure-rack__slot--suggest-best .tile-face,
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-best
+  .tile-face {
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+  position: relative;
+  z-index: 1;
+  filter: none;
+}
+
+:is(
+  .panel--bot-exposures .exposure-rack__slot--suggest-best,
+  .panel--discard-tracker
+    .discard-tracker__overlay-grid
+    .exposure-rack--discard-tracker-bot-row
+    .exposure-rack__slot--suggest-best
+) .tile-face.tile--joker {
+  filter: none;
+  opacity: 1;
+  animation: none;
+}
+
+:is(
+  .panel--bot-exposures .exposure-rack__slot--suggest-best,
+  .panel--discard-tracker
+    .discard-tracker__overlay-grid
+    .exposure-rack--discard-tracker-bot-row
+    .exposure-rack__slot--suggest-best
+) .tile-face::after,
+:is(
+  .panel--bot-exposures .exposure-rack__slot--suggest-best,
+  .panel--discard-tracker
+    .discard-tracker__overlay-grid
+    .exposure-rack--discard-tracker-bot-row
+    .exposure-rack__slot--suggest-best
+) .tile-face.tile--joker::after {
+  content: none;
+  display: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.panel--bot-exposures .exposure-rack__slot--suggest-best:not(.exposure-rack__slot--suggest-dying)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: var(--tile-face-border-radius);
+  box-shadow:
+    0 calc(var(--rack-tile-w) * -0.12) calc(var(--rack-tile-w) * 0.3) calc(var(--rack-tile-w) * 0.04)
+      rgba(0, 0, 0, 0.42),
+    0 calc(var(--rack-tile-w) * 0.2) calc(var(--rack-tile-w) * 0.46) calc(var(--rack-tile-w) * 0.06)
+      rgba(0, 0, 0, 0.9),
+    0 calc(var(--rack-tile-w) * 0.46) calc(var(--rack-tile-w) * 0.92) calc(var(--rack-tile-w) * 0.13)
+      rgba(0, 0, 0, 0.55);
+  clip-path: inset(
+    var(--coach-lift-clip-top, calc(var(--rack-tile-w) * -2.4))
+    var(--coach-lift-clip-right, calc(var(--rack-tile-w) * -2.4))
+    var(--coach-lift-clip-bottom, calc(var(--rack-tile-w) * -2.4))
+    var(--coach-lift-clip-left, calc(var(--rack-tile-w) * -2.4))
+  );
+}
+
+:is(
+  .panel--bot-exposures .exposure-rack__slot--suggest-best,
+  .panel--discard-tracker
+    .discard-tracker__overlay-grid
+    .exposure-rack--discard-tracker-bot-row
+    .exposure-rack__slot--suggest-best
+):not(:has(+ .exposure-rack__slot--suggest-best)):not(.exposure-rack__slot--suggest-dying) {
+  z-index: 4;
+}
+
+/* Illustrative classic: coach vignette on full-bleed art faces (bot exposure + suggested-hands strip). */
+:is(
+  .panel--bot-exposures
+    .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim),
+  .panel--discard-tracker
+    .discard-tracker__overlay-grid
+    .exposure-rack--discard-tracker-bot-row
+    .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim),
+  .panel--hand
+    .rack-stage__rack-top
+    .pass-strip__tile-wrap:is(.pass-strip__tile-wrap--suggest-best, .pass-strip__tile-wrap--suggest-dim),
+  .panel--hand
+    .rack-stage__rack-top
+    .east-discard-staging__tile:is(
+      .east-discard-staging__tile--suggest-best,
+      .east-discard-staging__tile--suggest-dim
+    ),
+  .hands-list__row-hit--with-tiles
+    .hands-list__pattern-tile-cell:is(
+      .hands-list__pattern-tile-cell--suggest-best,
+      .hands-list__pattern-tile-cell--suggest-joker
+    ),
+  .hands-sheet__tile-cell:is(.hands-sheet__tile-cell--suggest-best, .hands-sheet__tile-cell--suggest-joker)
+)
+  .tile-face.tile-face--illustrative-art::before {
+  --tile-rim-fade: 8%;
+  --tile-shadow-fade: 6.5%;
+  background:
+    linear-gradient(
+      to bottom,
+      var(--tile-rim-top-peak) 0%,
+      var(--tile-rim-top-mid) calc(var(--tile-rim-fade) * 0.4),
+      var(--tile-rim-top-tail) calc(var(--tile-rim-fade) * 0.75),
+      transparent var(--tile-rim-fade)
+    ),
+    linear-gradient(
+      to top,
+      rgba(28, 25, 22, 0.48) 0%,
+      rgba(28, 25, 22, 0.17) calc(var(--coach-discard-bottom-shadow-fade, var(--tile-shadow-fade)) * 0.4),
+      rgba(28, 25, 22, 0.04) calc(var(--coach-discard-bottom-shadow-fade, var(--tile-shadow-fade)) * 0.75),
+      transparent var(--coach-discard-bottom-shadow-fade, var(--tile-shadow-fade))
+    ),
+    linear-gradient(
+      to right,
+      rgba(28, 25, 22, 0.4) 0%,
+      rgba(28, 25, 22, 0.12) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
+      transparent calc(var(--tile-shadow-fade) * 0.92)
+    ),
+    linear-gradient(
+      to left,
+      rgba(28, 25, 22, 0.4) 0%,
+      rgba(28, 25, 22, 0.12) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
+      transparent calc(var(--tile-shadow-fade) * 0.92)
+    );
+  box-shadow:
+    inset calc(var(--rack-tile-w) * 0.04) 0 calc(var(--rack-tile-w) * 0.09) calc(var(--rack-tile-w) * -0.3)
+      rgba(28, 25, 22, 0.32),
+    inset calc(var(--rack-tile-w) * -0.04) calc(var(--rack-tile-w) * -0.04) calc(var(--rack-tile-w) * 0.09)
+      calc(var(--rack-tile-w) * -0.3) rgba(28, 25, 22, 0.34);
+}
+
+:is(
+  .panel--bot-exposures
+    .exposure-rack__slot--suggest-dim:not(.exposure-rack__slot--suggest-best),
+  .panel--discard-tracker
+    .discard-tracker__overlay-grid
+    .exposure-rack--discard-tracker-bot-row
+    .exposure-rack__slot--suggest-dim:not(.exposure-rack__slot--suggest-best),
+  .panel--hand
+    .rack-stage__rack-top
+    .pass-strip__tile-wrap--suggest-dim:not(.pass-strip__tile-wrap--suggest-best),
+  .panel--hand
+    .rack-stage__rack-top
+    .east-discard-staging__tile--suggest-dim:not(.east-discard-staging__tile--suggest-best),
+  .hands-list__row-hit--with-tiles
+    .hands-list__pattern-tile-cell--suggest-dim:not(
+      :is(.hands-list__pattern-tile-cell--suggest-best, .hands-list__pattern-tile-cell--suggest-joker)
+    ),
+  .hands-sheet__tile-cell--suggest-dim:not(
+    :is(.hands-sheet__tile-cell--suggest-best, .hands-sheet__tile-cell--suggest-joker)
+  )
+) .tile-face.tile-face--illustrative-art::before {
+  opacity: 0.48;
+}
+
+/*
+ * Coach lit→lit seams (all directions): rim `::before` + slot lift `::after`.
+ * Edge classes from `coachLitNeighborClip.ts` — clip at gap center, not tile edge.
+ */
+.discard-tracker__overlay-grid
+  :is(.exposure-rack__slot--suggest-best, .sorted-discard-tray__slot--suggest-need).coach-lit-clip-top,
+.panel--bot-exposures .exposure-rack__slot--suggest-best.coach-lit-clip-top {
+  --coach-vignette-clip-top: 0;
+  --coach-lift-clip-top: var(--coach-lit-seam-inset-y);
+}
+
+.discard-tracker__overlay-grid
+  :is(.exposure-rack__slot--suggest-best, .sorted-discard-tray__slot--suggest-need).coach-lit-clip-bottom,
+.panel--bot-exposures .exposure-rack__slot--suggest-best.coach-lit-clip-bottom {
+  --coach-vignette-clip-bottom: 0;
+  --coach-lift-clip-bottom: var(--coach-lit-seam-inset-y);
+}
+
+.discard-tracker__overlay-grid
+  :is(.exposure-rack__slot--suggest-best, .sorted-discard-tray__slot--suggest-need).coach-lit-clip-left,
+.panel--bot-exposures .exposure-rack__slot--suggest-best.coach-lit-clip-left {
+  --coach-vignette-clip-left: 0;
+  --coach-lift-clip-left: var(--coach-lit-seam-inset-x);
+}
+
+.discard-tracker__overlay-grid
+  :is(.exposure-rack__slot--suggest-best, .sorted-discard-tray__slot--suggest-need).coach-lit-clip-right,
+.panel--bot-exposures .exposure-rack__slot--suggest-best.coach-lit-clip-right {
+  --coach-vignette-clip-right: 0;
+  --coach-lift-clip-right: var(--coach-lit-seam-inset-x);
+}
+
+:is(
+  .panel--bot-exposures .exposure-rack,
+  .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row
+) .exposure-rack__slot--suggest-best .tile-face::before,
+.discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-sorted-row
+  .sorted-discard-tray__slot--suggest-need
+  .tile-face::before {
+  clip-path: inset(
+    var(--coach-vignette-clip-top, 0)
+    var(--coach-vignette-clip-right, 0)
+    var(--coach-vignette-clip-bottom, 0)
+    var(--coach-vignette-clip-left, 0)
+  );
 }
 
 /* Lift glyph above rim `::before`; stacked suit rank/band keep absolute layout from part-0075. */
@@ -872,8 +1366,7 @@
 
 /*
  * Discard tracker — flat dim / lit tiles (sorted prism band, discard pile, bot exposures).
- * No drop shadow, rim lustre, or dim vignette overlays; coach focus keeps the white ring only
- * (--suggest-need on sorted / pile slots, --suggest-best on bot row — part-0061 / above).
+ * Coach focus uses lift shadow on the slot/entry `::after` (not white border rings).
  * B/C/D suit-label chips are excluded — they use main-rack rim material (part-0061).
  */
 .panel--discard-tracker
@@ -886,11 +1379,6 @@
   .discard-tracker__content
   .discard-pile
   .discard-entry--suggest-dim
-  .tile-face,
-.panel--discard-tracker
-  .discard-tracker__overlay-grid
-  .exposure-rack--discard-tracker-bot-row
-  .exposure-rack__slot--suggest-dim
   .tile-face {
   --tile-face-base-shadow: 0 0 0 0 transparent;
   --tile-face-highlight-inset: 0 0 0 0 transparent;
@@ -902,30 +1390,12 @@
 .app[data-tile-graphics]
   .panel--discard-tracker
   .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot:is(
-    .sorted-discard-tray__slot--discarded:not(.sorted-discard-tray__slot--suggest-need):not(
-      .sorted-discard-tray__slot--suit-label
-    ),
-    .sorted-discard-tray__slot--suggest-need
-  )
-  .tile-face.tile-face--sorted-discard-glyph::before,
-.panel--discard-tracker
-  .discard-tracker__overlay-grid
-  .exposure-rack--discard-tracker-bot-row
-  .exposure-rack__slot--suggest-dim
-  .tile-face::before {
+  .sorted-discard-tray__slot--discarded:not(.sorted-discard-tray__slot--suggest-need):not(
+    .sorted-discard-tray__slot--suggest-dim
+  ):not(.sorted-discard-tray__slot--suit-label)
+  .tile-face.tile-face--sorted-discard-glyph::before {
   content: none;
   display: none;
-}
-
-/* Coach dim on tracker bot row: naturals use the flat `::after` overlay; jokers use face inset + filter. */
-.panel--discard-tracker
-  .discard-tracker__overlay-grid
-  .exposure-rack--discard-tracker-bot-row
-  .exposure-rack__slot--suggest-dim
-  .tile-face.tile--joker:not(.tile-face--illustrative-art) {
-  --tile-face-suggest-dim-inset: var(--suggest-dim-inset-shadow);
-  box-shadow: var(--tile-face-suggest-dim-inset);
 }
 
 /*
@@ -934,66 +1404,211 @@
  */
 
 /*
- * Coach `--suggest-need`: inner border on top of dim overlay (z-index 4, part-0061) + flat prism faces.
+ * Sorted discard coach `--suggest-need`: lit + lifted (slot `::after` cast shadow — same as
+ * hands tray / bot exposures). No white border ring on the face.
  */
 .panel--discard-tracker
   .discard-tracker__overlay-grid
   .sorted-discard-tray__slot--suggest-need
   .tile-face.tile-face--sorted-discard-glyph {
-  --tile-face-base-shadow: 0 0 0 0 transparent;
-  --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
-  --tile-face-highlight-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.68);
-  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
-  box-shadow: var(--tile-face-highlight-inset), var(--tile-face-highlight-shadow);
-}
-
-.panel--discard-tracker
-  .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot--suggest-need
-  .tile-face.tile-face--sorted-discard-glyph::after,
-.panel--discard-tracker
-  .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot--suggest-need
-  .tile-face.tile-face--sorted-discard-glyph.tile--joker::after {
-  content: '';
-  display: block;
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  box-sizing: border-box;
-  border: 1.5px solid rgba(255, 255, 255, 0.68);
-  border-radius: inherit;
-  pointer-events: none;
-  background: transparent;
-  opacity: 1;
-}
-
-.panel--discard-tracker .discard-tracker__content .discard-entry--suggest-need .tile-face {
-  --tile-face-highlight-inset: var(--suggest-highlight-inset-shadow);
-  --tile-face-highlight-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.68);
-  box-shadow: var(--tile-face-highlight-inset), var(--tile-face-highlight-shadow);
-}
-
-.panel--discard-tracker
-  .discard-tracker__overlay-grid
-  .exposure-rack--discard-tracker-bot-row
-  .exposure-rack__slot--suggest-best
-  .tile-face {
+  --sorted-discard-rim-inset-w: var(--rack-tile-w);
   --tile-face-base-shadow: 0 0 0 0 transparent;
   --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
   --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
-  --tile-face-highlight-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
-  box-shadow: var(--tile-face-highlight-shadow);
+  box-shadow: none;
+  position: relative;
+  z-index: 1;
 }
 
-.app[data-tile-graphics]
+/* Sorted discard coach `--suggest-need`: rim vignette on the glyph face (same coach nudge as bot row). */
+.app[data-tile-graphics='classic']
   .panel--discard-tracker
   .discard-tracker__overlay-grid
-  .exposure-rack--discard-tracker-bot-row
-  .exposure-rack__slot--suggest-best
-  .tile-face::before {
+  .sorted-discard-tray__slot--suggest-need
+  .tile-face.tile-face--sorted-discard-glyph::before,
+.app[data-tile-graphics='solid-color']
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suggest-need
+  .tile-face.tile-face--sorted-discard-glyph::before,
+.app[data-tile-graphics='light']
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suggest-need
+  .tile-face.tile-face--sorted-discard-glyph::before,
+.app[data-tile-graphics='dark']
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suggest-need
+  .tile-face.tile-face--sorted-discard-glyph::before,
+.app[data-tile-graphics='illustrative-classic']
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suggest-need
+  .tile-face.tile-face--sorted-discard-glyph::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  pointer-events: none;
+  --tile-rim-fade: 8%;
+  --tile-shadow-fade: 6.5%;
+  background:
+    linear-gradient(
+      to bottom,
+      var(--tile-rim-top-peak) 0%,
+      var(--tile-rim-top-mid) calc(var(--tile-rim-fade) * 0.4),
+      var(--tile-rim-top-tail) calc(var(--tile-rim-fade) * 0.75),
+      transparent var(--tile-rim-fade)
+    ),
+    linear-gradient(
+      to top,
+      rgba(28, 25, 22, 0.48) 0%,
+      rgba(28, 25, 22, 0.17) calc(var(--coach-discard-bottom-shadow-fade, var(--tile-shadow-fade)) * 0.4),
+      rgba(28, 25, 22, 0.04) calc(var(--coach-discard-bottom-shadow-fade, var(--tile-shadow-fade)) * 0.75),
+      transparent var(--coach-discard-bottom-shadow-fade, var(--tile-shadow-fade))
+    ),
+    linear-gradient(
+      to right,
+      rgba(28, 25, 22, 0.4) 0%,
+      rgba(28, 25, 22, 0.12) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
+      transparent calc(var(--tile-shadow-fade) * 0.92)
+    ),
+    linear-gradient(
+      to left,
+      rgba(28, 25, 22, 0.4) 0%,
+      rgba(28, 25, 22, 0.12) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
+      transparent calc(var(--tile-shadow-fade) * 0.92)
+    );
+  box-shadow:
+    inset calc(var(--sorted-discard-rim-inset-w) * 0.04) 0 calc(var(--sorted-discard-rim-inset-w) * 0.09)
+      calc(var(--sorted-discard-rim-inset-w) * -0.3) rgba(28, 25, 22, 0.32),
+    inset calc(var(--sorted-discard-rim-inset-w) * -0.04) calc(var(--sorted-discard-rim-inset-w) * -0.04)
+      calc(var(--sorted-discard-rim-inset-w) * 0.09) calc(var(--sorted-discard-rim-inset-w) * -0.3)
+      rgba(28, 25, 22, 0.34);
+}
+
+html
+  .app-top-exposure-container
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suggest-need:not(.sorted-discard-tray__slot--suggest-dying)
+  .tile-face::after,
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suggest-need:not(.sorted-discard-tray__slot--suggest-dying)
+  .tile-face::after {
   content: none;
   display: none;
+  box-shadow: none;
+}
+
+html
+  .app-top-exposure-container
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suggest-need,
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-sorted-row:has(.sorted-discard-tray__slot--suggest-need),
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suggest-need,
+.panel--discard-tracker
+  .exposure-rack--discard-tracker-sorted-row:has(.sorted-discard-tray__slot--suggest-need) {
+  overflow: visible;
+}
+
+html
+  .app-top-exposure-container
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suggest-need,
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suggest-need {
+  position: relative;
+  z-index: 5;
+}
+
+/* Discard pile coach `--suggest-need`: same lift shadow on the entry wrapper. */
+.panel--discard-tracker
+  .discard-tracker__content
+  .discard-entry--suggest-need
+  .tile-face {
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
+  position: relative;
+  z-index: 1;
+}
+
+.panel--discard-tracker
+  .discard-tracker__content
+  .discard-entry--suggest-need:not(.discard-entry--suggest-dying)
+  .tile-face::after {
+  content: none;
+  display: none;
+  box-shadow: none;
+}
+
+.panel--discard-tracker
+  .discard-tracker__content
+  .discard-entry--suggest-need::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: var(--tile-face-border-radius);
+  box-shadow: 0 max(2px, calc(var(--rack-tile-w) * 0.18))
+    max(6px, calc(var(--rack-tile-w) * 0.55)) rgba(0, 0, 0, 0.55);
+  clip-path: inset(-40px -40px -40px -40px);
+}
+
+.panel--discard-tracker
+  .discard-tracker__content
+  .discard-entry--suggest-need:has(+ .discard-entry--suggest-need)::after {
+  clip-path: inset(-40px var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2)) -40px -40px);
+}
+
+.panel--discard-tracker
+  .discard-tracker__content
+  .discard-entry--suggest-need
+  + .discard-entry--suggest-need::after {
+  clip-path: inset(-40px -40px -40px var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2)));
+}
+
+.panel--discard-tracker
+  .discard-tracker__content
+  .discard-entry--suggest-need
+  + .discard-entry--suggest-need:has(+ .discard-entry--suggest-need)::after {
+  clip-path: inset(
+    -40px var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2)) -40px
+      var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2))
+  );
+}
+
+.panel--discard-tracker .discard-tracker__content .discard-entry--suggest-need {
+  overflow: visible;
+  z-index: 5;
+}
+
+/* Lift-only: no illustrative border ring on tracker coach highlights. */
+.app[data-tile-graphics='illustrative-classic']
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suggest-need
+  .tile-face::after,
+.app[data-tile-graphics='illustrative-classic']
+  .panel--discard-tracker
+  .discard-tracker__content
+  .discard-entry--suggest-need
+  .tile-face::after {
+  content: none;
+  display: none;
+  box-shadow: none;
+  border: none;
 }
 
 /*
@@ -1552,4 +2167,364 @@ html body .app .dead-hand-overlay .dead-hand-dialog .charleston-error-dialog__ra
   letter-spacing: 0.02em;
   text-transform: none;
   border-radius: var(--rack-tile-btn-border-radius);
+}
+
+/*
+ * Discard-tracker bot row (top S/W/N): coach vignette + lift must win over overlay-grid
+ * overflow/metric rules (part-0123) and the global exposure highlight inset wash.
+ *
+ * Lift shadow must also paint over dim tiles in adjacent overlay rows. part-0061 sets
+ * `isolation: isolate` on each `.discard-tracker__overlay-row`, which trapped z-index
+ * inside the row — middle-row lit tiles only showed side vignettes because the row below
+ * painted on top of their top/bottom lift. Use overlay-grid stacking instead; lit→lit seams
+ * stay scoped per exposure rack in `coachLitNeighborClip.ts`.
+ */
+html .app-top-exposure-container .discard-tracker__overlay-row,
+.panel--discard-tracker .discard-tracker__overlay-grid .discard-tracker__overlay-row {
+  isolation: auto;
+  overflow: visible;
+}
+
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .discard-tracker__overlay-row:has(
+    .exposure-rack__slot--suggest-best,
+    .sorted-discard-tray__slot--suggest-need
+  ) {
+  position: relative;
+  z-index: 0;
+}
+
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .discard-tracker__overlay-row
+  + .discard-tracker__overlay-row:has(
+    .exposure-rack__slot--suggest-best,
+    .sorted-discard-tray__slot--suggest-need
+  ) {
+  z-index: 1;
+}
+
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .discard-tracker__overlay-row
+  + .discard-tracker__overlay-row
+  + .discard-tracker__overlay-row:has(
+    .exposure-rack__slot--suggest-best,
+    .sorted-discard-tray__slot--suggest-need
+  ) {
+  z-index: 2;
+}
+
+html
+  .app-top-exposure-container
+  .discard-tracker__overlay-row
+  > .app-opponents-rail__cell:has(.exposure-rack__slot--suggest-best) {
+  overflow: visible;
+}
+
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row:has(.exposure-rack__slot--suggest-best) {
+  overflow: visible;
+}
+
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row
+  :is(.exposure-rack__meld-drop, .exposure-rack__meld-grid-span):has(
+    .exposure-rack__slot--suggest-best
+  ) {
+  overflow: visible;
+}
+
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row
+  :is(.exposure-rack__meld-drop, .exposure-rack__meld-grid-span)
+  > .exposure-rack__slot--suggest-best {
+  overflow: visible;
+}
+
+html
+  .app-top-exposure-container
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim),
+html
+  .app-top-exposure-container
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suggest-need {
+  overflow: visible;
+}
+
+html
+  .app-top-exposure-container
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-best {
+  z-index: 3;
+}
+
+html
+  .app-top-exposure-container
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-best
+  .tile-face,
+html
+  .app-top-exposure-container
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-best
+  .tile-face.tile-face--illustrative-art,
+html
+  .app-top-exposure-container
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
+  .tile-face.tile-face--illustrative-art {
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+  --rack-tile-w: var(--discard-tray-rack-tile-w);
+  --rack-tile-h: var(--rack-tile-h);
+  filter: none;
+}
+
+html
+  .app-top-exposure-container
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-best
+  .tile-face::after,
+html
+  .app-top-exposure-container
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-best
+  .tile-face.tile--joker::after {
+  content: none;
+  display: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+html
+  .app-top-exposure-container
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
+  .tile-face.tile-face--illustrative-art::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  display: block;
+  opacity: 1;
+  z-index: 2;
+  --tile-rim-fade: 8%;
+  --tile-shadow-fade: 6.5%;
+  background:
+    linear-gradient(
+      to bottom,
+      var(--tile-rim-top-peak) 0%,
+      var(--tile-rim-top-mid) calc(var(--tile-rim-fade) * 0.4),
+      var(--tile-rim-top-tail) calc(var(--tile-rim-fade) * 0.75),
+      transparent var(--tile-rim-fade)
+    ),
+    linear-gradient(
+      to top,
+      rgba(28, 25, 22, 0.48) 0%,
+      rgba(28, 25, 22, 0.17) calc(var(--coach-discard-bottom-shadow-fade, var(--tile-shadow-fade)) * 0.4),
+      rgba(28, 25, 22, 0.04) calc(var(--coach-discard-bottom-shadow-fade, var(--tile-shadow-fade)) * 0.75),
+      transparent var(--coach-discard-bottom-shadow-fade, var(--tile-shadow-fade))
+    ),
+    linear-gradient(
+      to right,
+      rgba(28, 25, 22, 0.4) 0%,
+      rgba(28, 25, 22, 0.12) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
+      transparent calc(var(--tile-shadow-fade) * 0.92)
+    ),
+    linear-gradient(
+      to left,
+      rgba(28, 25, 22, 0.4) 0%,
+      rgba(28, 25, 22, 0.12) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
+      transparent calc(var(--tile-shadow-fade) * 0.92)
+    );
+  box-shadow:
+    inset calc(var(--rack-tile-w) * 0.04) 0 calc(var(--rack-tile-w) * 0.09) calc(var(--rack-tile-w) * -0.3)
+      rgba(28, 25, 22, 0.32),
+    inset calc(var(--rack-tile-w) * -0.04) calc(var(--rack-tile-w) * -0.04) calc(var(--rack-tile-w) * 0.09)
+      calc(var(--rack-tile-w) * -0.3) rgba(28, 25, 22, 0.34);
+}
+
+html
+  .app-top-exposure-container
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-dim:not(.exposure-rack__slot--suggest-best)
+  .tile-face.tile-face--illustrative-art::before {
+  opacity: 0.48;
+}
+
+html
+  .app-top-exposure-container
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-best:not(:has(+ .exposure-rack__slot--suggest-best)):not(
+    .exposure-rack__slot--suggest-dying
+  ) {
+  z-index: 4;
+}
+
+/*
+ * Discard-tracker overlay: centered lift glow (no downward cast) + rim bottom matches sides.
+ */
+.app {
+  --coach-centered-lift-shadow:
+    0 0 calc(var(--coach-lift-tile-w, var(--rack-tile-w)) * 0.16)
+      calc(var(--coach-lift-tile-w, var(--rack-tile-w)) * 0.03) rgba(0, 0, 0, 0.68),
+    0 0 calc(var(--coach-lift-tile-w, var(--rack-tile-w)) * 0.28)
+      calc(var(--coach-lift-tile-w, var(--rack-tile-w)) * 0.052) rgba(0, 0, 0, 0.5),
+    0 0 calc(var(--coach-lift-tile-w, var(--rack-tile-w)) * 0.42)
+      calc(var(--coach-lift-tile-w, var(--rack-tile-w)) * 0.072) rgba(0, 0, 0, 0.3);
+  --coach-centered-lift-clip-outset: calc(var(--coach-lift-tile-w, var(--rack-tile-w)) * -0.92);
+  /* Lit→lit seams: extend glow/rim to gap center (negative inset expands clip outward). */
+  --coach-lit-seam-inset-x: calc(var(--player-rack-face-gap, 1px) / -2);
+  --coach-lit-seam-inset-y: calc(var(--discard-bot-row-gap-y, var(--player-rack-face-gap, 1px)) / -2);
+}
+
+:is(.panel--discard-tracker, html .app-top-exposure-container) .discard-tracker__overlay-grid {
+  --coach-lift-tile-w: var(--rack-tile-w);
+  --coach-discard-bottom-shadow-fade: calc(var(--tile-shadow-fade, 6.5%) * 0.92);
+}
+
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  :is(
+    .exposure-rack--discard-tracker-bot-row .exposure-rack__slot--suggest-best,
+    .sorted-discard-tray__slot--suggest-need
+  ):not(.exposure-rack__slot--suggest-dying):not(.sorted-discard-tray__slot--suggest-dying)::after,
+html
+  .app-top-exposure-container
+  .discard-tracker__overlay-grid
+  :is(
+    .exposure-rack--discard-tracker-bot-row .exposure-rack__slot--suggest-best,
+    .sorted-discard-tray__slot--suggest-need
+  ):not(.exposure-rack__slot--suggest-dying):not(.sorted-discard-tray__slot--suggest-dying)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: var(--tile-face-border-radius);
+  box-shadow: var(--coach-centered-lift-shadow);
+  clip-path: inset(
+    var(--coach-lift-clip-top, var(--coach-centered-lift-clip-outset))
+    var(--coach-lift-clip-right, var(--coach-centered-lift-clip-outset))
+    var(--coach-lift-clip-bottom, var(--coach-centered-lift-clip-outset))
+    var(--coach-lift-clip-left, var(--coach-centered-lift-clip-outset))
+  );
+}
+
+/*
+ * Small-tile coach vignette — discard tracker + side-panel bot exposures: thin rim with
+ * corner radials + symmetric edge fades on all four sides. Lift glow unchanged.
+ */
+html body .app
+  :is(.panel--discard-tracker, html .app-top-exposure-container)
+  .discard-tracker__overlay-grid
+  :is(
+    .exposure-rack--discard-tracker-bot-row
+      .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim),
+    .sorted-discard-tray__slot--suggest-need
+  )
+  .tile-face::before,
+html body .app[data-tile-graphics]
+  .panel--bot-exposures
+  .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
+  .tile-face:not(.tile-face--illustrative-art)::before,
+html body .app[data-tile-graphics]
+  .panel--bot-exposures
+  .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
+  .tile-face.tile-face--illustrative-art::before {
+  border-radius: inherit;
+  --coach-discard-corner-r: var(
+    --discard-tray-tile-corner-r,
+    var(--tile-face-border-radius, calc(0.132 * var(--rack-tile-w, var(--sorted-discard-rim-inset-w))))
+  );
+  --coach-discard-corner-vignette-size: calc(var(--coach-discard-corner-r) * 1);
+  --tile-shadow-fade: 1%;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(28, 25, 22, 0.22) 0%,
+      rgba(28, 25, 22, 0.07) calc(var(--tile-shadow-fade) * 0.2),
+      rgba(28, 25, 22, 0.015) calc(var(--tile-shadow-fade) * 0.5),
+      transparent calc(var(--tile-shadow-fade) * 0.68)
+    ),
+    linear-gradient(
+      to top,
+      rgba(28, 25, 22, 0.22) 0%,
+      rgba(28, 25, 22, 0.07) calc(var(--tile-shadow-fade) * 0.2),
+      rgba(28, 25, 22, 0.015) calc(var(--tile-shadow-fade) * 0.5),
+      transparent calc(var(--tile-shadow-fade) * 0.68)
+    ),
+    linear-gradient(
+      to right,
+      rgba(28, 25, 22, 0.22) 0%,
+      rgba(28, 25, 22, 0.07) calc(var(--tile-shadow-fade) * 0.2),
+      rgba(28, 25, 22, 0.015) calc(var(--tile-shadow-fade) * 0.5),
+      transparent calc(var(--tile-shadow-fade) * 0.68)
+    ),
+    linear-gradient(
+      to left,
+      rgba(28, 25, 22, 0.22) 0%,
+      rgba(28, 25, 22, 0.07) calc(var(--tile-shadow-fade) * 0.2),
+      rgba(28, 25, 22, 0.015) calc(var(--tile-shadow-fade) * 0.5),
+      transparent calc(var(--tile-shadow-fade) * 0.68)
+    ),
+    radial-gradient(
+      ellipse var(--coach-discard-corner-vignette-size) var(--coach-discard-corner-vignette-size) at 0 0,
+      rgba(28, 25, 22, 0.24) 0%,
+      rgba(28, 25, 22, 0.08) 22%,
+      transparent 36%
+    ),
+    radial-gradient(
+      ellipse var(--coach-discard-corner-vignette-size) var(--coach-discard-corner-vignette-size) at 100% 0,
+      rgba(28, 25, 22, 0.24) 0%,
+      rgba(28, 25, 22, 0.08) 22%,
+      transparent 36%
+    ),
+    radial-gradient(
+      ellipse var(--coach-discard-corner-vignette-size) var(--coach-discard-corner-vignette-size) at 100% 100%,
+      rgba(28, 25, 22, 0.24) 0%,
+      rgba(28, 25, 22, 0.08) 22%,
+      transparent 36%
+    ),
+    radial-gradient(
+      ellipse var(--coach-discard-corner-vignette-size) var(--coach-discard-corner-vignette-size) at 0 100%,
+      rgba(28, 25, 22, 0.24) 0%,
+      rgba(28, 25, 22, 0.08) 22%,
+      transparent 36%
+    );
+  box-shadow:
+    inset 0 0 calc(var(--rack-tile-w, var(--sorted-discard-rim-inset-w)) * 0.02)
+      calc(var(--rack-tile-w, var(--sorted-discard-rim-inset-w)) * 0.001) rgba(28, 25, 22, 0.12),
+    inset 0 calc(var(--rack-tile-w, var(--sorted-discard-rim-inset-w)) * 0.011)
+      calc(var(--rack-tile-w, var(--sorted-discard-rim-inset-w)) * 0.016)
+      calc(var(--rack-tile-w, var(--sorted-discard-rim-inset-w)) * -0.42) rgba(28, 25, 22, 0.1),
+    inset 0 calc(var(--rack-tile-w, var(--sorted-discard-rim-inset-w)) * -0.011)
+      calc(var(--rack-tile-w, var(--sorted-discard-rim-inset-w)) * 0.016)
+      calc(var(--rack-tile-w, var(--sorted-discard-rim-inset-w)) * -0.42) rgba(28, 25, 22, 0.1),
+    inset calc(var(--rack-tile-w, var(--sorted-discard-rim-inset-w)) * 0.011) 0
+      calc(var(--rack-tile-w, var(--sorted-discard-rim-inset-w)) * 0.016)
+      calc(var(--rack-tile-w, var(--sorted-discard-rim-inset-w)) * -0.42) rgba(28, 25, 22, 0.1),
+    inset calc(var(--rack-tile-w, var(--sorted-discard-rim-inset-w)) * -0.011) 0
+      calc(var(--rack-tile-w, var(--sorted-discard-rim-inset-w)) * 0.016)
+      calc(var(--rack-tile-w, var(--sorted-discard-rim-inset-w)) * -0.42) rgba(28, 25, 22, 0.1);
 }

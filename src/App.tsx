@@ -46,6 +46,7 @@ import type { ClaimType, DiscardEntry, EastExposure, Seat, TileDef, TileInstance
 import { formatMahjongWinDescription, tileAriaLabel, tileSuitRackWord } from './mahjong/labels'
 import {
   findFocusedPatternDeadCause,
+  focusedLineJokerIneligibleNeedForDef,
   type DeadCauseHint,
 } from './mahjong/deadCauseHint'
 import {
@@ -109,6 +110,7 @@ import { PassStrip, type PassStripFlyOutFrom } from './components/PassStrip'
 import { HandBank, HAND_BANK_ID } from './components/HandBank'
 import { TileFace } from './components/TileFace'
 import { ExposureRack } from './components/ExposureRack'
+import { useCoachLitNeighborClip } from './useCoachLitNeighborClip'
 import {
   PLAYABLE_CARD_IDS,
   PLAYABLE_CARD_LABEL,
@@ -1443,9 +1445,25 @@ function DiscardTrackerSlotGrid({
   const botExposureSeats = botSlotSeats.map((s) => seatLabel(s) as BotSeat)
   const botBandSlots =
     DISCARD_TRACKER_BOT_PREFIX_SLOTS + DISCARD_TRACKER_BOT_ROW_SLOTS
+  const overlayGridRef = useRef<HTMLDivElement>(null)
+  const coachGuideActive =
+    !!botExposureSuggestedTileGuide?.bestIds?.size ||
+    !!suggestedDiscardTrackerNeedDefs?.length
+  useCoachLitNeighborClip(overlayGridRef, coachGuideActive, [
+    botExposures,
+    botExposureSuggestedTileGuide,
+    botExposureDeadIds,
+    suggestedDiscardTrackerNeedDefs,
+    mainPhase,
+    jokerSwapUiActive,
+    animationsEnabled,
+    botExposureFlyInTileIds,
+    exposureJokerSwapFlyInTileIds,
+  ])
 
   return (
     <div
+      ref={overlayGridRef}
       className="discard-tracker__overlay-grid"
       aria-label="Discard tracker slot grid"
       style={
@@ -1526,7 +1544,6 @@ function DiscardTrackerSlotGrid({
                 flyInFromBelowTileIds={animationsEnabled ? exposureJokerSwapFlyInTileIds : null}
                 suggestedTileGuide={botExposureSuggestedTileGuide}
                 suggestedDeadTileIds={botExposureDeadIds}
-                suppressDim
                 botJokerBorderMenuOn={false}
                 jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
                 jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
@@ -1566,6 +1583,7 @@ function EastDiscardStagingSortableFace({
   tile,
   suggestBest,
   suggestBlankExchange,
+  suggestDim,
   jokerSwapHintBounce = false,
   jokerSwapHintBounceEpoch = 0,
   onTileClickReturn,
@@ -1574,6 +1592,7 @@ function EastDiscardStagingSortableFace({
   suggestBest?: boolean
   /** Blank could be redeemed for a discard this line still needs — Simple joker yellow ring. */
   suggestBlankExchange?: boolean
+  suggestDim?: boolean
   jokerSwapHintBounce?: boolean
   jokerSwapHintBounceEpoch?: number
   onTileClickReturn: () => void
@@ -1602,6 +1621,7 @@ function EastDiscardStagingSortableFace({
         isDragging ? 'east-discard-staging__tile--dragging' : '',
         suggestBest ? 'east-discard-staging__tile--suggest-best' : '',
         suggestBlankExchange ? 'east-discard-staging__tile--blank-exchange-hint' : '',
+        suggestDim ? 'east-discard-staging__tile--suggest-dim' : '',
         jokerSwapHintBounce ? 'east-discard-staging__tile--joker-swap-hint-bounce' : '',
       ]
         .filter(Boolean)
@@ -1638,6 +1658,7 @@ function EastDiscardStagingSlot({
   onTileClickReturn,
   suggestBest,
   suggestBlankExchange,
+  suggestDim,
   jokerSwapHintBounce = false,
   jokerSwapHintBounceEpoch = 0,
 }: {
@@ -1655,6 +1676,8 @@ function EastDiscardStagingSlot({
   suggestBest?: boolean
   /** Blank could be redeemed for a discard this line still needs — Simple joker yellow ring. */
   suggestBlankExchange?: boolean
+  /** Tile is not needed for the focused suggested hand — dim like other unneeded rack tiles. */
+  suggestDim?: boolean
   /** Joker swap hint: dock-bounce the staged tile when it can redeem an exposed joker. */
   jokerSwapHintBounce?: boolean
   jokerSwapHintBounceEpoch?: number
@@ -1681,6 +1704,7 @@ function EastDiscardStagingSlot({
           tile={tile}
           suggestBest={suggestBest}
           suggestBlankExchange={suggestBlankExchange}
+          suggestDim={suggestDim}
           jokerSwapHintBounce={jokerSwapHintBounce}
           jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
           onTileClickReturn={onTileClickReturn}
@@ -1817,6 +1841,7 @@ function focusedPatternHasAvailableDeadHintVariant(
   triggerDef: TileDef,
   unavailableTiles: readonly TileInstance[],
   patterns: PracticePattern[],
+  redeemableExposedJokers = 0,
 ): boolean {
   if (!focusKey) return false
   const variantSep = ['::tier::', '::oc::', '::ocall::']
@@ -1853,102 +1878,20 @@ function focusedPatternHasAvailableDeadHintVariant(
     }
 
     for (const needs of variants) {
-      if (patternNeedVariantIsSatisfiable(needs, unavailableByKey, totalCopiesForDeadHintDef)) {
+      if (
+        patternNeedVariantIsSatisfiable(
+          needs,
+          unavailableByKey,
+          totalCopiesForDeadHintDef,
+          redeemableExposedJokers,
+        )
+      ) {
         return true
       }
     }
   }
 
   return false
-}
-
-function minPositiveNeed(...counts: Array<number | null | undefined>): number | null {
-  let min: number | null = null
-  for (const count of counts) {
-    if (count == null || count <= 0) continue
-    min = min == null ? count : Math.min(min, count)
-  }
-  return min
-}
-
-function groupNeedForDeadHintDef(group: PatternGroup, def: TileDef): number | null {
-  switch (group.kind) {
-    case 'fixed':
-    case 'rank':
-    case 'suit-locked-rank':
-      return group.test(def) ? group.need : null
-    case 'consec':
-      return group.test(def) ? Math.min(group.need1, group.need2) : null
-    case 'shared-rank':
-    case 'shared-rank-suits':
-    case 'consec-multi':
-    case 'suit-locked-consec-multi':
-      return group.test(def) ? minPositiveNeed(...group.needs) : null
-    case 'suit-locked':
-      if (def.cat === 'suit') {
-        return group.rankNeeds.find((n) => n.rank === def.rank)?.need ?? null
-      }
-      if (def.cat === 'dragon') {
-        return minPositiveNeed(group.dragonCount, group.opposingDragons?.need ?? null)
-      }
-      return null
-    case 'suit-locked-consec':
-      if (def.cat === 'suit') return group.rankCount
-      if (def.cat === 'dragon') return group.dragonCount || null
-      return null
-    case 'suit-permute':
-      if (def.cat === 'suit') {
-        let need: number | null = null
-        for (const colorGroup of group.colorGroups) {
-          for (const part of colorGroup) {
-            if (part.rank !== def.rank || part.need <= 0) continue
-            need = need == null ? part.need : Math.min(need, part.need)
-          }
-        }
-        return need
-      }
-      if (def.cat === 'dragon') {
-        return minPositiveNeed(...(group.colorGroupDragonCounts ?? []), group.trailingDragonCount ?? null)
-      }
-      return null
-    case 'dragon-meld-permute':
-      if (def.cat !== 'dragon') return null
-      for (let i = 0; i < group.needs.length; i++) {
-        if (group.cardDragons[i] === def.dragon) return group.needs[i]
-      }
-      return null
-    case 'odd-pair-kongs-triple':
-      if (def.cat !== 'suit' || !group.odds.includes(def.rank)) return null
-      return 4
-    default:
-      return null
-  }
-}
-
-function focusedPatternNeedForDeadHintDef(
-  focusKey: string | null,
-  def: TileDef,
-  patterns: PracticePattern[],
-): number | null {
-  if (!focusKey) return null
-  const variantSep = ['::tier::', '::oc::', '::ocall::']
-    .map((s) => focusKey.indexOf(s))
-    .filter((i) => i >= 0)
-    .reduce((m, i) => (m < 0 ? i : Math.min(m, i)), -1)
-  const patternId = variantSep >= 0 ? focusKey.slice(0, variantSep) : focusKey
-  const pattern = patterns.find((p) => p.id === patternId)
-  if (!pattern) return null
-  const pinnedPatterns = buildPinnedPatternsFromFocusKey(pattern, focusKey)
-  const candidates = pinnedPatterns.length > 0 ? pinnedPatterns : [pattern]
-  let need: number | null = null
-  for (const candidate of candidates) {
-    for (const group of candidate.groups ?? []) {
-      const groupNeed = groupNeedForDeadHintDef(group, def)
-      if (groupNeed == null || groupNeed > 2) continue
-      need = need == null ? groupNeed : Math.min(need, groupNeed)
-    }
-  }
-  return need
 }
 
 /** Pre-Charleston wall order: East 14, South/West/North 13 each, then wall — matches `dealOpeningFour` on the shuffled deck. */
@@ -3354,6 +3297,38 @@ function buildRankInputAfterStagedCall(
   }
 }
 
+/** Hand + exposures after modeling the in-progress call meld (called discard + staged hand tiles). */
+function buildCallStagingPreview(
+  r: Pick<
+    RoundState,
+    'hand' | 'discardPile' | 'eastExposures' | 'activeBotDiscard' | 'stagedCallTileIds'
+  >,
+  orderRound?: RoundState,
+): { handNext: TileInstance[]; eastMelds: EastExposure[] } | null {
+  if (!r.activeBotDiscard) return null
+
+  const calledTile = r.activeBotDiscard
+  const stagedTiles = r.stagedCallTileIds
+    .map((id) => r.hand.find((t) => t.id === id))
+    .filter((t): t is TileInstance => !!t)
+  if (stagedTiles.length > 5) return null
+
+  const stagedIds = new Set(r.stagedCallTileIds)
+  const handNext = r.hand.filter((t) => !stagedIds.has(t.id))
+  const pileNext = r.discardPile.filter((e) => e.tile.id !== calledTile.id)
+  const claimType = claimTypeForHandTilesFromDiscard(stagedTiles.length) ?? 'pung'
+  const exposure: EastExposure = {
+    tiles: [calledTile, ...stagedTiles],
+    claimType,
+    calledTileId: calledTile.id,
+  }
+  let eastMelds: EastExposure[] = [...r.eastExposures, exposure]
+  if (stagedTiles.length >= 2 && orderRound) {
+    eastMelds = orderEastExposuresForClosestCardLine(orderRound, handNext, pileNext, eastMelds)
+  }
+  return { handNext, eastMelds }
+}
+
 /**
  * Rank input while call-staging: the exposure slot (called discard + staged hand tiles) counts
  * toward tiles-away / prob exactly as after Done — without requiring a committable meld shape.
@@ -3373,31 +3348,10 @@ function rankInputDuringCallStaging(
 ): RankSuggestedHandsInput | null {
   if (r.mainPhase !== 'call-staging' || !r.activeBotDiscard) return null
 
-  const calledTile = r.activeBotDiscard
-  const stagedTiles = r.stagedCallTileIds
-    .map((id) => r.hand.find((t) => t.id === id))
-    .filter((t): t is TileInstance => !!t)
-  if (stagedTiles.length > 5) return null
-
-  const stagedIds = new Set(r.stagedCallTileIds)
-  const handNext = r.hand.filter((t) => !stagedIds.has(t.id))
-  const pileNext = r.discardPile.filter((e) => e.tile.id !== calledTile.id)
-  const claimType = claimTypeForHandTilesFromDiscard(stagedTiles.length) ?? 'pung'
-  const exposure: EastExposure = {
-    tiles: [calledTile, ...stagedTiles],
-    claimType,
-    calledTileId: calledTile.id,
-  }
-  let nextEast: EastExposure[] = [...r.eastExposures, exposure]
-  if (stagedTiles.length >= 2) {
-    nextEast = orderEastExposuresForClosestCardLine(
-      r as RoundState,
-      handNext,
-      pileNext,
-      nextEast,
-    )
-  }
-  return buildRankInputAfterStagedCall(r as RoundState, handNext, pileNext, nextEast)
+  const preview = buildCallStagingPreview(r, r as RoundState)
+  if (!preview) return null
+  const pileNext = r.discardPile.filter((e) => e.tile.id !== r.activeBotDiscard!.id)
+  return buildRankInputAfterStagedCall(r as RoundState, preview.handNext, pileNext, preview.eastMelds)
 }
 
 /** Rank input after committing the currently staged call tiles, or `null` if not a committable meld. */
@@ -4572,30 +4526,50 @@ export default function App() {
   // and the greedy matcher lights the wrong tracker/rack tiles for a frame before snapping back.
   const deferredPassSlots = useDeferredValue(passSlots)
 
+  const callStagingSuggestedPreview = useMemo(() => {
+    if (mainPhase !== 'call-staging' || !activeBotDiscard) return null
+    return buildCallStagingPreview({
+      hand,
+      discardPile,
+      eastExposures,
+      activeBotDiscard,
+      stagedCallTileIds,
+    }, round)
+  }, [mainPhase, hand, discardPile, eastExposures, activeBotDiscard, stagedCallTileIds, round])
+
   /**
    * Same ids as `rackForSuggestedHandsUi` (below), but jokers in open melds use the tile they represent
    * for distance / strip matching (NMJL) — declared early for joker-swap hint bounce timing.
    */
   const rackForSuggestedPatternMatch = useMemo(
     () => {
-      const exposureIds = new Set(eastExposures.flatMap((e) => e.tiles).map((t) => t.id))
+      const exposuresForMatch = callStagingSuggestedPreview?.eastMelds ?? eastExposures
+      const exposureIds = new Set(exposuresForMatch.flatMap((e) => e.tiles).map((t) => t.id))
+      const handForMatch = callStagingSuggestedPreview?.handNext ?? deferredHand
       const rack = tileInstancesWithClaimMeldJokersResolved(
         [
-          ...deferredHand,
+          ...handForMatch,
           ...(deferredPendingEastDiscardTile ? [deferredPendingEastDiscardTile] : []),
           ...(deferredPassSlots.filter(Boolean) as TileInstance[]),
         ],
-        eastExposures,
+        exposuresForMatch,
       )
       return [...rack].sort((a, b) => Number(exposureIds.has(b.id)) - Number(exposureIds.has(a.id)))
     },
-    [deferredHand, deferredPendingEastDiscardTile, deferredPassSlots, eastExposures],
+    [
+      callStagingSuggestedPreview,
+      deferredHand,
+      deferredPendingEastDiscardTile,
+      deferredPassSlots,
+      eastExposures,
+    ],
   )
 
   const suggestedHandsExposureTileIds = useMemo((): ReadonlySet<string> | undefined => {
-    const ids = eastExposures.flatMap((e) => e.tiles).map((t) => t.id)
+    const exposuresForUi = callStagingSuggestedPreview?.eastMelds ?? eastExposures
+    const ids = exposuresForUi.flatMap((e) => e.tiles).map((t) => t.id)
     return ids.length > 0 ? new Set(ids) : undefined
-  }, [eastExposures])
+  }, [callStagingSuggestedPreview, eastExposures])
 
   /**
    * Discarded tile defs (with multiplicity — one entry per copy) a blank in hand could be redeemed
@@ -4888,16 +4862,16 @@ export default function App() {
       totalJokersInGame: tenJokersEnabled ? TEN_JOKERS_COUNT : STANDARD_JOKER_COUNT,
       totalBlanksInGame: blankTilesEnabled ? blankTileCount : 0,
     }
-    const jokerSwapHintForProb =
-      jokerSwapHintEnabled && jokerSwapUiActive
-        ? {
-            enabled: true as const,
-            hand,
-            pendingDiscard: pendingEastDiscardTile,
-            botExposures,
-            eastExposures,
-          }
-        : undefined
+    // Swap availability for prob — independent of the hint toggle (hints are UI only).
+    const jokerSwapHintForProb = jokerSwapUiActive
+      ? {
+          enabled: true as const,
+          hand,
+          pendingDiscard: pendingEastDiscardTile,
+          botExposures,
+          eastExposures,
+        }
+      : undefined
 
     if (mainPhase === 'call-staging' && activeBotDiscard) {
       const stagingInput = rankInputDuringCallStaging({
@@ -4915,10 +4889,9 @@ export default function App() {
       }
     }
 
-    let handForRank = deferredHand
-    if (deferredPendingEastDiscardTile) {
-      handForRank = [...handForRank, deferredPendingEastDiscardTile]
-    }
+    const handForRank = deferredHand
+    // Pending discard is leaving the rack — do not count it toward suggested-hand distance or
+    // completion % (it wrongly sets playerRackTileCount to 14 and drops the pre-draw bonus).
     return {
       hand: handForRank,
       wallRemaining: wall.length,
@@ -4936,7 +4909,6 @@ export default function App() {
     activeBotDiscard,
     stagedCallTileIds,
     deferredHand,
-    deferredPendingEastDiscardTile,
     wall,
     discardPile,
     discardTiles,
@@ -4946,7 +4918,6 @@ export default function App() {
     tenJokersEnabled,
     blankTilesEnabled,
     blankTileCount,
-    jokerSwapHintEnabled,
     jokerSwapUiActive,
     pendingEastDiscardTile,
   ])
@@ -4995,13 +4966,17 @@ export default function App() {
 
   /** Hand + staged tiles + East exposures — tile faces on the rack and strip (jokers stay jokers). */
   const rackForSuggestedHandsUi = useMemo(
-    () => [
-      ...hand,
-      ...(pendingEastDiscardTile ? [pendingEastDiscardTile] : []),
-      ...(passSlots.filter(Boolean) as TileInstance[]),
-      ...eastExposures.flatMap((e) => e.tiles),
-    ],
-    [hand, pendingEastDiscardTile, passSlots, eastExposures],
+    () => {
+      const exposuresForUi = callStagingSuggestedPreview?.eastMelds ?? eastExposures
+      const handForUi = callStagingSuggestedPreview?.handNext ?? hand
+      return [
+        ...handForUi,
+        ...(pendingEastDiscardTile ? [pendingEastDiscardTile] : []),
+        ...(passSlots.filter(Boolean) as TileInstance[]),
+        ...exposuresForUi.flatMap((e) => e.tiles),
+      ]
+    },
+    [callStagingSuggestedPreview, hand, pendingEastDiscardTile, passSlots, eastExposures],
   )
 
   /**
@@ -5146,7 +5121,8 @@ export default function App() {
 
   /**
    * Bot exposure rings for the focused line: naturals that match strip “need” slots (dead tiles you
-   * want), plus exposed jokers you can redeem with a matching natural in hand (joker swap).
+   * want), swappable jokers you can redeem with a natural in hand, and — while the line can still
+   * use jokers — every bot meld joker (see shouldHighlightBotExposureJokers).
    */
   const botExposureSuggestedTileGuide = useMemo(() => {
     if (!deferredSuggestedFocusHandKey || mainPhase === 'mahjong-declared' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand' || mainPhase === 'wall-game') return null
@@ -5161,7 +5137,7 @@ export default function App() {
       suggestedHandsExposureTileIds,
       cardPatterns,
     )
-    // Belt-and-suspenders: keep bot joker rings in sync with joker-swap eligibility on your rack.
+    // Belt-and-suspenders: swappable jokers always get suggest-best (swap path + strip-wanted path).
     for (const id of collectSwappableJokerTileIds(
       deferredHand,
       deferredPendingEastDiscardTile,
@@ -5353,12 +5329,24 @@ export default function App() {
       !deadTileHintEnabled || !suggestedFocusHandKey || !currentBestIds || focusChanged
     const lastDiscardNeed =
       lastDiscard
-        ? focusedPatternNeedForDeadHintDef(suggestedFocusHandKey, lastDiscard.def, cardPatterns)
+        ? focusedLineJokerIneligibleNeedForDef(
+            suggestedFocusHandKey,
+            lastDiscard.def,
+            cardPatterns,
+            rackForSuggestedHandsUi,
+            suggestedHandsExposureTileIds,
+          )
         : null
     const unavailableDeadHintTiles = [
       ...discardPile.map((e) => e.tile),
       ...botExposures.flatMap((e) => e.tiles),
     ]
+    const redeemableExposedJokers = collectSwappableJokerTileIds(
+      hand,
+      pendingEastDiscardTile,
+      botExposures,
+      eastExposures,
+    ).size
     const unavailableLastDiscardCopies =
       lastDiscard
         ? unavailableDeadHintTiles.filter((tile) => tileDefsEqual(tile.def, lastDiscard.def)).length
@@ -5376,6 +5364,7 @@ export default function App() {
         lastDiscard.def,
         unavailableDeadHintTiles,
         cardPatterns,
+        redeemableExposedJokers,
       )
     const discardExhaustedNeededDef =
       !!lastDiscard &&
@@ -5386,7 +5375,13 @@ export default function App() {
       ownedLastDiscardCopies < lastDiscardNeed &&
       totalCopiesForDeadHintDef(lastDiscard.def) - unavailableLastDiscardCopies < lastDiscardNeed
     const deadHintAppliesToDef = (def: TileDef) =>
-      focusedPatternNeedForDeadHintDef(suggestedFocusHandKey, def, cardPatterns) != null
+      focusedLineJokerIneligibleNeedForDef(
+        suggestedFocusHandKey,
+        def,
+        cardPatterns,
+        rackForSuggestedHandsUi,
+        suggestedHandsExposureTileIds,
+      ) != null
 
     if (!shouldSkipDeadDetection && discardAdvanced && prevBestIds.size > 0) {
       const rackById = new Map(rackForSuggestedHandsUi.map((t) => [t.id, t] as const))
@@ -5398,6 +5393,7 @@ export default function App() {
               lastDiscard.def,
               unavailableDeadHintTiles,
               cardPatterns,
+              redeemableExposedJokers,
             )
           : currentBestIds.size > 0
       if (discardExhaustedNeededDef) {
@@ -5431,6 +5427,7 @@ export default function App() {
           discardExhaustedNeededDef &&
           lastDiscard &&
           lastDiscardNeed != null &&
+          lastDiscardNeed <= 2 &&
           !stillHasUsablePivot
             ? {
                 defs: [lastDiscard.def],
@@ -5558,8 +5555,12 @@ export default function App() {
     suggestedDiscardNeedIds,
     discardPile,
     botExposures,
+    hand,
+    pendingEastDiscardTile,
+    eastExposures,
     rackForSuggestedHandsUi,
     cardPatterns,
+    suggestedHandsExposureTileIds,
     mainPhase,
     clearSuggestedDeadGuidesForHandKey,
   ])
@@ -5614,6 +5615,12 @@ export default function App() {
       const key = deadHintDefKey(tile.def)
       unavailableByKey.set(key, (unavailableByKey.get(key) ?? 0) + 1)
     }
+    const redeemableExposedJokers = collectSwappableJokerTileIds(
+      deferredHand,
+      deferredPendingEastDiscardTile,
+      botExposures,
+      eastExposures,
+    ).size
     const out: Record<string, DeadCauseHint> = {}
     const keysToProbe = new Set<string>([
       ...Object.keys(suggestedDeadTileGuidesByKey),
@@ -5629,10 +5636,11 @@ export default function App() {
         {
           rack: rackForSuggestedPatternMatch,
           exposureTileIds: suggestedHandsExposureTileIds,
+          redeemableExposedJokers,
         },
       )
       if (live) out[key] = live
-      else if (guideCause) out[key] = guideCause
+      else if (guideCause && guideCause.need <= 2) out[key] = guideCause
     }
     for (const [key, cause] of Object.entries(out)) {
       const patternId = focusKeyPatternId(key)
@@ -5650,6 +5658,9 @@ export default function App() {
     cardPatterns,
     rackForSuggestedPatternMatch,
     suggestedHandsExposureTileIds,
+    deferredHand,
+    deferredPendingEastDiscardTile,
+    eastExposures,
   ])
 
   /** Dead-cause hint for the focused line — independent of the Tiles panel toggle. */
@@ -5663,7 +5674,10 @@ export default function App() {
     for (const [key, cause] of Object.entries(suggestedDeadCauseByFocusKey)) {
       if (focusKeyPatternId(key) === patternId) return cause
     }
-    return suggestedDeadTileGuidesByKey[suggestedFocusHandKey]?.deadCause ?? null
+    return (() => {
+      const guide = suggestedDeadTileGuidesByKey[suggestedFocusHandKey]?.deadCause ?? null
+      return guide && guide.need <= 2 ? guide : null
+    })()
   }, [
     deadTileHintEnabled,
     suggestedFocusHandKey,
@@ -9590,6 +9604,7 @@ export default function App() {
                                   onPassBoxClick={onPassBoxClick}
                                   onPassTileClickReturn={onPassTileClickReturn}
                                   suggestedBestIds={suggestedTileGuideForRack?.bestIds}
+                                  suggestedBlankExchangeIds={suggestedTileGuideForRack?.blankExchangeIds}
                                   flyOutFrom={passStripFlyOut}
                                   hiddenSortableTileId={null}
                                   returningTileId={charlestonPassIntoHandPreview?.tileId ?? null}
@@ -9780,6 +9795,7 @@ export default function App() {
                             <EastOwnJokerSwapDropZone active={jokerSwapUiActive}>
                             <ExposureRack
                               stackSuitTiles
+                              ownedMeldHighlight
                               callStagingWaveFlyIn={
                                 animationsEnabled ? eastCallStagedWaveFlyIn : null
                               }
@@ -9880,6 +9896,12 @@ export default function App() {
                                       suggestBlankExchange={
                                         !!pendingEastDiscardTile &&
                                         !!suggestedTileGuideForRack?.blankExchangeIds?.has(pendingEastDiscardTile.id)
+                                      }
+                                      suggestDim={
+                                        !!pendingEastDiscardTile &&
+                                        !!suggestedTileGuideForRack &&
+                                        !suggestedTileGuideForRack.bestIds.has(pendingEastDiscardTile.id) &&
+                                        !suggestedTileGuideForRack.blankExchangeIds?.has(pendingEastDiscardTile.id)
                                       }
                                       jokerSwapHintBounce={
                                         !!pendingEastDiscardTile &&

@@ -100,7 +100,7 @@
   position: absolute;
   right: 100%;
   top: 50%;
-  z-index: 3;
+  z-index: 5;
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;

@@ -1004,6 +1004,12 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   right: calc(-1 * var(--hand-rack-tray-bleed-inline));
   pointer-events: none;
   border-radius: 0;
+  background-color: var(--app-bg-paint-color);
+  background-image: var(--app-bg-paint-image);
+  background-size: var(--app-bg-paint-size);
+  background-repeat: var(--app-bg-paint-repeat);
+  background-blend-mode: var(--app-bg-paint-blend);
+  background-attachment: var(--app-bg-paint-attachment);
 }
 
 .app-dnd-frame .app-play-split.app-top-exposure-container :is(
@@ -1024,15 +1030,59 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   overflow: visible;
 }
 
-/* Action row container: tray surface comes from .panel-hand-rack::before. */
+/* Action row container: dedicated darker tray behind the button pills. */
 .panel--hand .panel-hand-rack__action-well,
 .panel--hand .panel-hand-rack__charleston-actions-well {
   position: relative;
   z-index: 1;
   overflow: visible;
-  border-radius: 0;
+  border-radius: var(--rack-tile-btn-border-radius);
   background-color: transparent;
   background-image: none;
+}
+
+.panel--hand :is(.panel-hand-rack__action-well, .panel-hand-rack__charleston-actions-well)::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  bottom: 0;
+  left: var(--app-action-row-surface-bleed-left);
+  width: var(--app-action-row-surface-bleed-width);
+  background-color: var(--app-bg-action-row-surface);
+  pointer-events: none;
+}
+
+/* Hand↔action seam: same darker tray as the button well. */
+.panel--hand .panel-hand-rack__action-well::before,
+.panel--hand .panel-hand-rack__charleston-actions-well::before {
+  content: '';
+  position: absolute;
+  left: var(--app-action-row-surface-bleed-left);
+  width: var(--app-action-row-surface-bleed-width);
+  right: auto;
+  bottom: 100%;
+  height: var(--play-tray-h-divider);
+  background-color: var(--app-bg-action-row-surface);
+  pointer-events: none;
+}
+
+/* Seat band above main rack: same darker tray behind Seat:position. */
+.panel--hand .panel-hand-rack__hand-tray .rack-stage__rack-bottom::before {
+  content: '';
+  position: absolute;
+  left: var(--app-action-row-surface-bleed-left);
+  width: var(--app-action-row-surface-bleed-width);
+  right: auto;
+  top: min(0px, calc(2 * var(--player-seat-label-top, -0.35rem)));
+  bottom: 100%;
+  background-color: transparent;
+  background-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    var(--app-bg-action-row-surface) 58%
+  );
+  pointer-events: none;
 }
 
 /* Tile rows sit above the unified tray backdrop; keep interiors transparent. */
@@ -1041,15 +1091,18 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   overflow: visible;
 }
 
-.panel--hand .rack-stage__rack-top,
+.panel--hand .rack-stage__rack-top {
+  position: relative;
+  z-index: 2;
+}
+
 .panel--hand .panel-hand-rack__hand-tray .rack-stage__rack-bottom {
   position: relative;
   z-index: 1;
 }
 
 .panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass),
-.panel--hand .rack-stage__rack-top .exposure-rack.exposure-rack--charleston-pass,
-.panel--hand .panel-hand-rack__hand-tray .hand-bank {
+.panel--hand .rack-stage__rack-top .exposure-rack.exposure-rack--charleston-pass {
   background: transparent;
   background-image: none;
   border: none;
@@ -1058,15 +1111,36 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   padding-block: 0;
 }
 
+.panel--hand .panel-hand-rack__hand-tray .hand-bank {
+  position: relative;
+  background-color: transparent;
+  background-image: none;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  padding-block: 0;
+}
+
+.panel--hand .panel-hand-rack__hand-tray .hand-bank::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  left: var(--app-action-row-surface-bleed-left);
+  width: var(--app-action-row-surface-bleed-width);
+  background-color: var(--app-bg-action-row-surface);
+  pointer-events: none;
+}
+
 /*
  * Main hand row: no outer cast shadow on resting tiles. DragOverlay keeps
  * `.drag-overlay-tile { filter: drop-shadow(...) }` while a tile is dragged.
  *
- * Mobile WKWebView (PWA): the global suggest-dim `::after` overlay (part-0075) reparents every
- * non-joker face when the guide toggles — the whole rack jogs. Jokers never jog because they use
- * `filter` only. Main rack naturals match jokers: filter dim + the same coaching ring as jokers
- * (`--suggest-best-ring` on classic ivory; illustrative / blank-exchange `::after` from part-0124 / part-0075).
- * Suppress dim `::after` on naturals only while not suggest-best.
+ * Coach dim on naturals uses the same flat `::after` wash as the suggested-hands tray
+ * (part-0075) — not whole-face `filter`, which reads flat and hides the rim vignette.
+ * Keep `::after` absent on resting (non-dim) naturals only so the layer is not created/destroyed
+ * when the guide toggles (avoids mobile WKWebView rack jog). Jokers still dim via face inset +
+ * faded rim because the inscribed ring owns `::after`.
  */
 .app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap .tile-face {
   --tile-face-base-shadow: 0 0 0 0 transparent;
@@ -1083,16 +1157,54 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .panel--hand
   .panel-hand-rack__hand-tray
   .hand-row
-  > .sortable-tile-wrap:not(.sortable-tile-wrap--suggest-best):not(.sortable-tile-wrap--blank-exchange-hint):not(
-    .sortable-tile-wrap--suggest-dead-cause
-  )
+  > .sortable-tile-wrap:not(.sortable-tile-wrap--suggest-best):not(.sortable-tile-wrap--suggest-dim):not(
+    .sortable-tile-wrap--blank-exchange-hint
+  ):not(.sortable-tile-wrap--suggest-dead-cause)
   .tile-face:not(.tile--joker)::after {
   content: none !important;
   display: none !important;
 }
 
 .app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--suggest-dim .tile-face:not(.tile--joker) {
+  filter: none;
+}
+
+.app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--suggest-dim .tile-face:not(.tile--joker)::after {
+  box-shadow: none;
+}
+
+/*
+ * Coach tiles (Logic on): pin rim vignette to the painted face — same container pattern as the
+ * suggested-hands strip (cell = size container, face reads `100cqw`). Only on coach slots so
+ * resting tiles keep the hand-row `--hand-top-rack-tile-w` token (avoids the prior bug where
+ * setting `100cqw` on the wrap itself blew up rim metrics).
+ */
+.app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap:is(.sortable-tile-wrap--suggest-best, .sortable-tile-wrap--suggest-dim) {
+  container-type: size;
+  /* Lift glow + edge bleed track the painted face, not panel tokens that drift from 1fr cells. */
+  --coach-lift-tile-w: 100cqw;
+  --coach-rack-edge-vignette-x: calc(
+    var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2)) - 50cqw
+  );
+}
+
+.app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap:is(.sortable-tile-wrap--suggest-best, .sortable-tile-wrap--suggest-dim)
+  .tile-face {
+  --rack-tile-w: 100cqw;
+  --rack-tile-h: 100cqh;
+}
+
+.app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--suggest-dim .tile-face.tile--joker {
   filter: brightness(var(--suggest-dim-joker-brightness));
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
 }
 
 .app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--suggest-best .tile-face:not(.tile--joker) {
@@ -1100,14 +1212,43 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   --tile-face-highlight-shadow: 0 0 0 0 transparent;
 }
 
-/* Highlighted rack tiles: lift with a cast shadow (like a picked-up tile) so they stand out
-   without a border. The shadow is drawn on a pseudo-element behind the face, then clipped with
-   `clip-path` (which clips box-shadow) exactly at the tile edge on any side that faces another
-   highlighted tile — so the seam between adjacent highlighted tiles stays shadow-free instead of
-   the blur bleeding onto the neighbor. Raise the slot above its neighbors so the shadow paints on
-   top of them (fixes "only left side", where the next tile painted over this tile's shadow). */
+/* Lit hand tiles: lift shadow on the fly wrapper; keep face `::after` clear so rim vignette reads. */
+.app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--suggest-best .tile-face::after {
+  box-shadow: none;
+}
+
+.app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--suggest-best .tile-face {
+  position: relative;
+  z-index: 1;
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+}
+
+/* Highlighted rack tiles: centered lift glow on the fly wrapper. At lit→lit seams, clip each
+   facing edge to the gap center so adjacent glows meet without a dead band between tiles.
+   `--coach-lift-tile-w` / `--coach-rack-edge-vignette-x` live on each coach wrap (100cqw). */
+
+/*
+ * Coach rack outer edges: hand-row clips overflow-x by default (part-0008). Reopen when Logic
+ * paints vignettes so column 1 / the last occupied column can bleed into the tray margin.
+ */
+.app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row:has(> .sortable-tile-wrap:is(.sortable-tile-wrap--suggest-best, .sortable-tile-wrap--suggest-dim)),
+.app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-bank:has(.hand-row > .sortable-tile-wrap:is(.sortable-tile-wrap--suggest-best, .sortable-tile-wrap--suggest-dim)) {
+  overflow: visible;
+}
+
 .app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--suggest-best {
   z-index: 3;
+  overflow: visible;
+}
+
+.app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--suggest-dim {
+  overflow: visible;
 }
 
 .app
@@ -1120,22 +1261,28 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   position: absolute;
   inset: 0;
   border-radius: var(--tile-face-border-radius);
-  box-shadow: var(--tile-highlight-lift-shadow, 0 6px 18px rgba(0, 0, 0, 0.55));
-  /* Extend the clip well past the blur on every side by default (nothing to hide). */
-  clip-path: inset(-32px -32px -32px -32px);
+  box-shadow: var(--coach-centered-lift-shadow);
+  clip-path: inset(
+    var(--coach-centered-lift-clip-outset) var(--coach-centered-lift-clip-outset)
+      var(--coach-centered-lift-clip-outset) var(--coach-centered-lift-clip-outset)
+  );
   z-index: -1;
   pointer-events: none;
 }
 
 /* Highlighted tile with a highlighted tile to its RIGHT: clip the shadow to the center of the gap
-   (not the tile edge) so its shadow meets the left neighbour's and the bottom shadow stays joined. */
+   (not the tile edge) so its shadow meets the left neighbour's and the bottom shadow stays joined.
+   Skip the seam when the neighbour is lifted — let glow + rim extend into the empty slot. */
 .app
   .panel--hand
   .panel-hand-rack__hand-tray
   .hand-row
-  > .sortable-tile-wrap--suggest-best:has(+ .sortable-tile-wrap--suggest-best)
+  > .sortable-tile-wrap--suggest-best:has(+ .sortable-tile-wrap--suggest-best:not(.sortable-tile-wrap--dragging))
   .sortable-tile-wrap__fly::after {
-  clip-path: inset(-32px calc(var(--player-rack-face-gap, 1px) / -2) -32px -32px);
+  clip-path: inset(
+    var(--coach-centered-lift-clip-outset) var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2))
+      var(--coach-centered-lift-clip-outset) var(--coach-centered-lift-clip-outset)
+  );
 }
 
 /* Highlighted tile with a highlighted tile to its LEFT: clip the shadow to the center of the gap. */
@@ -1143,10 +1290,13 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .panel--hand
   .panel-hand-rack__hand-tray
   .hand-row
-  > .sortable-tile-wrap--suggest-best
+  > .sortable-tile-wrap--suggest-best:not(.sortable-tile-wrap--dragging)
   + .sortable-tile-wrap--suggest-best
   .sortable-tile-wrap__fly::after {
-  clip-path: inset(-32px -32px -32px calc(var(--player-rack-face-gap, 1px) / -2));
+  clip-path: inset(
+    var(--coach-centered-lift-clip-outset) var(--coach-centered-lift-clip-outset)
+      var(--coach-centered-lift-clip-outset) var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2))
+  );
 }
 
 /* Highlighted tile flanked by highlighted tiles on BOTH sides: clip both sides to the gap centers. */
@@ -1154,12 +1304,100 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .panel--hand
   .panel-hand-rack__hand-tray
   .hand-row
-  > .sortable-tile-wrap--suggest-best
-  + .sortable-tile-wrap--suggest-best:has(+ .sortable-tile-wrap--suggest-best)
+  > .sortable-tile-wrap--suggest-best:not(.sortable-tile-wrap--dragging)
+  + .sortable-tile-wrap--suggest-best:has(+ .sortable-tile-wrap--suggest-best:not(.sortable-tile-wrap--dragging))
   .sortable-tile-wrap__fly::after {
   clip-path: inset(
-    -32px calc(var(--player-rack-face-gap, 1px) / -2) -32px calc(var(--player-rack-face-gap, 1px) / -2)
+    var(--coach-centered-lift-clip-outset) var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2))
+      var(--coach-centered-lift-clip-outset) var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2))
   );
+}
+
+/*
+ * Lifted tile: source slot stays in the grid (opacity 0) — suppress its rack glow so only the
+ * DragOverlay vignette reads while neighbours extend into the gap.
+ */
+.app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap--suggest-best.sortable-tile-wrap--dragging
+  .sortable-tile-wrap__fly::after {
+  content: none;
+  box-shadow: none;
+}
+
+/*
+ * Neighbour of a lifted tile: extend rim vignette on the facing edge into the empty slot
+ * (coach cells are size containers — `50cqw` reaches roughly half a tile into the gap).
+ */
+.app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap--suggest-best:has(+ .sortable-tile-wrap--dragging)
+  .tile-face:not(.tile-face--illustrative-art)::before {
+  right: var(--coach-rack-edge-vignette-x);
+}
+
+.app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap--dragging + .sortable-tile-wrap--suggest-best
+  .tile-face:not(.tile-face--illustrative-art)::before {
+  left: var(--coach-rack-edge-vignette-x);
+}
+
+/*
+ * Rack outer edge: extend rim vignette past column 1 (left) and the last occupied column (right).
+ */
+.app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap:is(.sortable-tile-wrap--suggest-best, .sortable-tile-wrap--suggest-dim):first-child
+  .tile-face:not(.tile-face--illustrative-art)::before {
+  left: var(--coach-rack-edge-vignette-x);
+}
+
+.app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap:is(.sortable-tile-wrap--suggest-best, .sortable-tile-wrap--suggest-dim):not(
+    :has(~ .sortable-tile-wrap)
+  )
+  .tile-face:not(.tile-face--illustrative-art)::before {
+  right: var(--coach-rack-edge-vignette-x);
+}
+
+/*
+ * Lit→dim boundary: last highlighted tile in a run stacks above the next cell so rim vignette +
+ * cast shadow paint on dim neighbours (same as suggested-hands tray, part-0081).
+ */
+.app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap--suggest-dim {
+  z-index: 1;
+}
+
+.app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap--suggest-best:not(
+    :has(+ .sortable-tile-wrap--suggest-best:not(.sortable-tile-wrap--dragging))
+  ),
+.app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap--suggest-dim
+  + .sortable-tile-wrap--suggest-best {
+  z-index: 4;
 }
 
 .app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--blank-exchange-hint .tile-face:not(.tile--joker) {
@@ -1182,11 +1420,15 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
     .pass-strip__tile-wrap--suggest-best
   ):not(:has(.east-discard-staging__tile--suggest-best)):not(
     :has(.east-discard-staging__tile--blank-exchange-hint)
+  ):not(.exposure-rack__slot--suggest-dim):not(.pass-strip__tile-wrap--suggest-dim):not(
+    :has(.east-discard-staging__tile--suggest-dim)
   )
   .tile-face:not(.tile--joker)::after,
 .panel--hand
   .rack-stage__rack-top
-  .exposure-rack__call-meld-strip__tile:not(.exposure-rack__slot--suggest-best)
+  .exposure-rack__call-meld-strip__tile:not(.exposure-rack__slot--suggest-best):not(
+    .exposure-rack__slot--suggest-dim
+  )
   .tile-face:not(.tile--joker)::after {
   content: none !important;
   display: none !important;
@@ -1194,8 +1436,31 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 .panel--hand .rack-stage__rack-top .exposure-rack__slot--suggest-dim .tile-face:not(.tile--joker),
 .panel--hand .rack-stage__rack-top .exposure-rack__call-meld-strip__tile.exposure-rack__slot--suggest-dim
-  .tile-face:not(.tile--joker) {
+  .tile-face:not(.tile--joker),
+.panel--hand .rack-stage__rack-top .pass-strip__tile-wrap--suggest-dim .tile-face:not(.tile--joker),
+.panel--hand .rack-stage__rack-top .east-discard-staging__tile--suggest-dim .tile-face:not(.tile--joker) {
+  filter: none;
+}
+
+.panel--hand .rack-stage__rack-top .exposure-rack__slot--suggest-dim .tile-face:not(.tile--joker)::after,
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__call-meld-strip__tile.exposure-rack__slot--suggest-dim
+  .tile-face:not(.tile--joker)::after,
+.panel--hand .rack-stage__rack-top .pass-strip__tile-wrap--suggest-dim .tile-face:not(.tile--joker)::after,
+.panel--hand .rack-stage__rack-top .east-discard-staging__tile--suggest-dim .tile-face:not(.tile--joker)::after {
+  box-shadow: none;
+}
+
+.panel--hand .rack-stage__rack-top .exposure-rack__slot--suggest-dim .tile-face.tile--joker,
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__call-meld-strip__tile.exposure-rack__slot--suggest-dim
+  .tile-face.tile--joker,
+.panel--hand .rack-stage__rack-top .pass-strip__tile-wrap--suggest-dim .tile-face.tile--joker,
+.panel--hand .rack-stage__rack-top .east-discard-staging__tile--suggest-dim .tile-face.tile--joker {
   filter: brightness(var(--suggest-dim-joker-brightness));
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
 }
 
 .panel--hand .rack-stage__rack-top .exposure-rack__slot--suggest-best .tile-face:not(.tile--joker),
@@ -1215,6 +1480,320 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 .panel--hand .rack-stage__rack-top .east-discard-staging__tile--blank-exchange-hint .tile-face:not(.tile--joker) {
   filter: none;
   --tile-face-highlight-shadow: 0 0 0 0 transparent;
+}
+
+/*
+ * Pass / discard staging: keep the same coach lift as hand `--suggest-best` when a focused-line
+ * tile is staged there. Pass strip is `row-reverse`, so lit→lit seam clips are mirrored vs hand.
+ */
+.panel--hand .rack-stage__rack-top .pass-strip__tile-wrap--suggest-best,
+.panel--hand .rack-stage__rack-top .east-discard-staging__tile--suggest-best {
+  container-type: size;
+  --coach-lift-tile-w: 100cqw;
+  position: relative;
+  overflow: visible;
+  z-index: 3;
+}
+
+.panel--hand .rack-stage__rack-top .pass-strip__tile-wrap--suggest-best .tile-face,
+.panel--hand .rack-stage__rack-top .east-discard-staging__tile--suggest-best .tile-face {
+  --rack-tile-w: 100cqw;
+  --rack-tile-h: 100cqh;
+  position: relative;
+  z-index: 1;
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+}
+
+.panel--hand .rack-stage__rack-top .pass-strip__tile-wrap--suggest-best .tile-face::after,
+.panel--hand .rack-stage__rack-top .east-discard-staging__tile--suggest-best .tile-face::after {
+  box-shadow: none;
+}
+
+.panel--hand .rack-stage__rack-top .pass-strip__tile-wrap--suggest-best::after,
+.panel--hand .rack-stage__rack-top .east-discard-staging__tile--suggest-best::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--tile-face-border-radius);
+  box-shadow: var(--coach-centered-lift-shadow);
+  clip-path: inset(
+    var(--coach-centered-lift-clip-outset) var(--coach-centered-lift-clip-outset)
+      var(--coach-centered-lift-clip-outset) var(--coach-centered-lift-clip-outset)
+  );
+  z-index: -1;
+  pointer-events: none;
+}
+
+/*
+ * Lit→dim in the Charleston pass strip: every pass tile defaults to z-index 4 (part-0072), so a
+ * dim neighbour painted later covers the lit tile’s lift glow. Keep dim below lit so the halo
+ * reads in the gap — same paint-order idea as hand-row lit→dim (z-index 4 on the lit end).
+ */
+.panel--hand
+  .pass-strip-tail
+  .pass-strip__tile-wrap.exposure-rack__slot--pass-tail.pass-strip__tile-wrap--suggest-dim:not(
+    .pass-strip__tile-wrap--dragging
+  ) {
+  z-index: 2;
+}
+
+.panel--hand
+  .pass-strip-tail
+  .pass-strip__tile-wrap.exposure-rack__slot--pass-tail.pass-strip__tile-wrap--suggest-best:not(
+    .pass-strip__tile-wrap--dragging
+  ) {
+  z-index: 5;
+}
+
+.panel--hand
+  .rack-stage__rack-top
+  .pass-strip__tile-wrap--suggest-best:has(+ .pass-strip__tile-wrap--suggest-best)::after {
+  clip-path: inset(
+    var(--coach-centered-lift-clip-outset) var(--coach-centered-lift-clip-outset)
+      var(--coach-centered-lift-clip-outset) var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2))
+  );
+}
+
+.panel--hand
+  .rack-stage__rack-top
+  .pass-strip__tile-wrap--suggest-best
+  + .pass-strip__tile-wrap--suggest-best::after {
+  clip-path: inset(
+    var(--coach-centered-lift-clip-outset) var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2))
+      var(--coach-centered-lift-clip-outset) var(--coach-centered-lift-clip-outset)
+  );
+}
+
+.panel--hand
+  .rack-stage__rack-top
+  .pass-strip__tile-wrap--suggest-best:has(+ .pass-strip__tile-wrap--suggest-best)
+  + .pass-strip__tile-wrap--suggest-best:has(+ .pass-strip__tile-wrap--suggest-best)::after {
+  clip-path: inset(
+    var(--coach-centered-lift-clip-outset) var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2))
+      var(--coach-centered-lift-clip-outset) var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2))
+  );
+}
+
+.panel--hand
+  .rack-stage__rack-top
+  .east-discard-staging:has(.east-discard-staging__tile--suggest-best),
+.panel--hand
+  .rack-stage__rack-top
+  .pass-strip-tail:has(.pass-strip__tile-wrap--suggest-best)
+  .pass-strip-tail__inner {
+  overflow: visible;
+}
+
+/*
+ * Player committed exposures: always-on coach vignette per tile (replaces meld group green ring).
+ * Coach dim/suggest-best still stack when a hand is focused.
+ */
+.panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass):has(
+    .exposure-rack__slot--owned-meld
+  ) {
+  overflow: visible;
+}
+
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim),
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim) {
+  container-type: size;
+  --coach-lift-tile-w: 100cqw;
+  overflow: visible;
+  z-index: 3;
+  position: relative;
+}
+
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim)
+  .tile-face,
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim)
+  .tile-face {
+  --rack-tile-w: 100cqw;
+  --rack-tile-h: 100cqh;
+  --tile-face-base-shadow: 0 0 0 0 transparent;
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+  position: relative;
+  z-index: 1;
+  filter: none;
+  box-shadow: var(--tile-face-base-shadow), var(--tile-face-highlight-inset), var(--tile-face-highlight-shadow),
+    var(--tile-face-suggest-dim-inset);
+}
+
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim):not(.exposure-rack__slot--suggest-best)
+  .tile-face::after,
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim):not(
+    .exposure-rack__slot--suggest-best
+  )
+  .tile-face::after {
+  content: none;
+  display: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim):not(.exposure-rack__slot--suggest-dying)::after,
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim):not(
+    .exposure-rack__slot--suggest-dying
+  )::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: var(--tile-face-border-radius);
+  box-shadow: var(--coach-centered-lift-shadow);
+  clip-path: inset(
+    var(--coach-lift-clip-top, var(--coach-centered-lift-clip-outset))
+    var(--coach-lift-clip-right, var(--coach-centered-lift-clip-outset))
+    var(--coach-lift-clip-bottom, var(--coach-centered-lift-clip-outset))
+    var(--coach-lift-clip-left, var(--coach-centered-lift-clip-outset))
+  );
+}
+
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim):has(
+    + .exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim)
+  ):not(.exposure-rack__slot--suggest-dying)::after,
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim):has(
+    + .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim)
+  ):not(.exposure-rack__slot--suggest-dying)::after {
+  clip-path: inset(
+    var(--coach-lift-clip-top, var(--coach-centered-lift-clip-outset))
+    var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2))
+    var(--coach-lift-clip-bottom, var(--coach-centered-lift-clip-outset))
+    var(--coach-lift-clip-left, var(--coach-centered-lift-clip-outset))
+  );
+}
+
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim)
+  + .exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim):not(.exposure-rack__slot--suggest-dying)::after,
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim)
+  + .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim):not(
+    .exposure-rack__slot--suggest-dying
+  )::after {
+  clip-path: inset(
+    var(--coach-lift-clip-top, var(--coach-centered-lift-clip-outset))
+    var(--coach-lift-clip-right, var(--coach-centered-lift-clip-outset))
+    var(--coach-lift-clip-bottom, var(--coach-centered-lift-clip-outset))
+    var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2))
+  );
+}
+
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim)
+  + .exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim):has(
+    + .exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim)
+  ):not(.exposure-rack__slot--suggest-dying)::after,
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim)
+  + .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim):has(
+    + .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim)
+  ):not(.exposure-rack__slot--suggest-dying)::after {
+  clip-path: inset(
+    var(--coach-lift-clip-top, var(--coach-centered-lift-clip-outset))
+    var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2))
+    var(--coach-lift-clip-bottom, var(--coach-centered-lift-clip-outset))
+    var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2))
+  );
+}
+
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim):not(
+    :has(+ .exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim))
+  ):not(.exposure-rack__slot--suggest-dying),
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim):not(
+    :has(+ .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim))
+  ):not(.exposure-rack__slot--suggest-dying) {
+  z-index: 4;
+}
+
+.app[data-tile-graphics='illustrative-classic']
+  .panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim)
+  .tile-face.tile-face--illustrative-art::before,
+.app[data-tile-graphics='illustrative-classic']
+  .panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim)
+  .tile-face.tile-face--illustrative-art::before {
+  --tile-rim-fade: 8%;
+  --tile-shadow-fade: 8%;
+  --coach-discard-bottom-shadow-fade: var(--tile-rim-fade);
+  background:
+    linear-gradient(
+      to bottom,
+      var(--tile-rim-top-peak) 0%,
+      var(--tile-rim-top-mid) calc(var(--tile-rim-fade) * 0.4),
+      var(--tile-rim-top-tail) calc(var(--tile-rim-fade) * 0.75),
+      transparent var(--tile-rim-fade)
+    ),
+    linear-gradient(
+      to top,
+      rgba(28, 25, 22, 0.48) 0%,
+      rgba(28, 25, 22, 0.17) calc(var(--coach-discard-bottom-shadow-fade, var(--tile-shadow-fade)) * 0.4),
+      rgba(28, 25, 22, 0.04) calc(var(--coach-discard-bottom-shadow-fade, var(--tile-shadow-fade)) * 0.75),
+      transparent var(--coach-discard-bottom-shadow-fade, var(--tile-shadow-fade))
+    ),
+    linear-gradient(
+      to right,
+      rgba(28, 25, 22, 0.4) 0%,
+      rgba(28, 25, 22, 0.12) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
+      transparent calc(var(--tile-shadow-fade) * 0.92)
+    ),
+    linear-gradient(
+      to left,
+      rgba(28, 25, 22, 0.4) 0%,
+      rgba(28, 25, 22, 0.12) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
+      transparent calc(var(--tile-shadow-fade) * 0.92)
+    );
+  box-shadow:
+    inset calc(var(--rack-tile-w) * 0.04) 0 calc(var(--rack-tile-w) * 0.09) calc(var(--rack-tile-w) * -0.3)
+      rgba(28, 25, 22, 0.32),
+    inset calc(var(--rack-tile-w) * -0.04) calc(var(--rack-tile-w) * -0.04) calc(var(--rack-tile-w) * 0.09)
+      calc(var(--rack-tile-w) * -0.3) rgba(28, 25, 22, 0.34);
+}
+
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__slot--owned-meld.exposure-rack__slot--suggest-dim
+  .tile-face.tile-face--illustrative-art::before,
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld.exposure-rack__slot--suggest-dim
+  .tile-face.tile-face--illustrative-art::before {
+  opacity: 0.48;
 }
 
 /* Bakelite / designer: keep inset edge highlights; drop only the outer depth on the hand row. */
@@ -1297,7 +1876,145 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
  * Suggested-hands selected row — midpoint between app shell and unpinned pin ink.
  */
 .app .suggested-hands-popup .hands-panel__content {
-  --hands-row-active-fill: color-mix(in srgb, var(--app-bg-base) 50%, #161d26 50%);
+  --hands-row-active-fill: color-mix(in srgb, var(--app-bg-base) 40%, #161d26 60%);
+  /* Backdrop is the sheet/row ::before gradient — keep cells transparent. */
+  --hands-header-bg: transparent;
+}
+
+/*
+ * Suggested-hands title row: viewport edge bleed + soft bottom feather.
+ * Scroll stays on `.hands-sheet__rows`; lift overflow on ancestors so background paint can
+ * reach the page side edges (same pattern as the action row container).
+ */
+.panel--discard-tracker[data-suggested-hands-open='on'],
+.panel--discard-tracker[data-suggested-hands-open='on'] > .discard-tracker__shell,
+.panel--discard-tracker[data-suggested-hands-open='on'] .discard-tracker__content,
+.app .suggested-hands-popup.suggested-hands-popup--open,
+.app .suggested-hands-popup.suggested-hands-popup--open .panel--hands.suggested-hands-popup__user-shift {
+  overflow: visible;
+}
+
+.app
+  .suggested-hands-popup.suggested-hands-popup--open
+  .hands-panel__content
+  .hands-list-scroll:has(> .hands-sheet:not(.hands-sheet--tiles2)) {
+  overflow: visible;
+}
+
+.app .suggested-hands-popup .hands-panel__content :is(
+  .hands-list__freeze-header.hands-list__row-hit,
+  .hands-list__freeze-header.hands-list__row-hit:focus,
+  .hands-list__freeze-header.hands-list__row-hit:focus-visible,
+  .hands-list__freeze-header .hands-list__header-cell,
+  .hands-list-scroll > .hands-sheet .hands-sheet__cell--header,
+  .hands-list-scroll > .hands-sheet .hands-sheet__cell--header.hands-sheet__cell--pin
+) {
+  background-color: transparent;
+  background-image: linear-gradient(
+    to bottom,
+    var(--app-bg-action-row-surface) 0%,
+    var(--app-bg-action-row-surface) 8%,
+    color-mix(in srgb, var(--app-bg-action-row-surface) 50%, transparent 50%) 55%,
+    transparent 100%
+  );
+}
+
+/*
+ * One shared title-row backdrop below every header cell (not per-column).
+ * Per-column ::after bleed cannot cover sibling columns — transparent metric headers
+ * would show the scrolling list through instead of the gradient.
+ */
+.app .suggested-hands-popup .hands-panel__content .hands-list__freeze-header.hands-list__row-hit::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  left: var(--app-action-row-surface-bleed-left);
+  width: var(--app-action-row-surface-bleed-width);
+  border-top-left-radius: var(--suggested-popup-radius);
+  border-top-right-radius: var(--suggested-popup-radius);
+  background-image: linear-gradient(
+    to bottom,
+    var(--app-bg-action-row-surface) 0%,
+    var(--app-bg-action-row-surface) 8%,
+    color-mix(in srgb, var(--app-bg-action-row-surface) 50%, transparent 50%) 55%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.app .suggested-hands-popup .hands-panel__content .hands-list__freeze-header .hands-list__header-cell {
+  position: relative;
+  z-index: 1;
+}
+
+.app
+  .suggested-hands-popup
+  .hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: var(--app-action-row-surface-bleed-left);
+  width: var(--app-action-row-surface-bleed-width);
+  /* Match the tallest header cell (Away / Prob % / Points metric track). */
+  font-size: var(--hands-metric-column-header-fs, var(--app-ui-control-fs-sm));
+  height: calc(
+    2 * 0.2em + 1em + var(--hands-sheet-grid-line-w, 0.5px)
+  );
+  z-index: 2;
+  box-sizing: border-box;
+  pointer-events: none;
+  background-color: transparent;
+  background-image: linear-gradient(
+    to bottom,
+    var(--app-bg-action-row-surface) 0%,
+    var(--app-bg-action-row-surface) 8%,
+    color-mix(in srgb, var(--app-bg-action-row-surface) 50%, transparent 50%) 55%,
+    transparent 100%
+  );
+}
+
+.app
+  .suggested-hands-popup
+  .hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  > .hands-sheet__rows {
+  position: relative;
+  z-index: 0;
+}
+
+.app
+  .suggested-hands-popup
+  .hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  > .hands-sheet__cell--header {
+  z-index: 3;
+}
+
+.app
+  .suggested-hands-popup
+  .hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet
+  .hands-sheet__cell--header
+  > *:not(.hands-scroll-above-hint) {
+  position: relative;
+  z-index: 1;
+}
+
+.app
+  .suggested-hands-popup
+  .hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet
+  .hands-sheet__cell--header
+  > .hands-scroll-above-hint {
+  position: absolute;
+  z-index: 1;
 }
 
 /*
@@ -1326,6 +2043,16 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   background-repeat: var(--app-bg-paint-repeat);
   background-blend-mode: var(--app-bg-paint-blend);
   background-attachment: var(--app-bg-paint-attachment);
+}
+
+/* Bottom discard tray sits entirely below the action row — use the lower-band paint. */
+:is(
+  .app-discard-bottom-container .discard-tracker__content,
+  .app-discard-bottom-container .discard-tracker__shell,
+  .panel--discard-tracker.panel--discard-tracker--bottom .discard-tracker__content,
+  .panel--discard-tracker.panel--discard-tracker--bottom .discard-tracker__shell
+) {
+  background-image: var(--app-bg-lower-band-paint-image);
 }
 
 .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row .exposure-rack__slot--empty::before {
@@ -1507,6 +2234,30 @@ html[data-home-screen-app]:not([data-native-app])
   .exposure-rack__slot:has(.exposure-rack__incoming-discard-drag):not(.exposure-rack__slot--incoming-discard) {
   height: var(--rack-tile-h);
   min-height: var(--rack-tile-h);
+}
+
+/*
+ * Illustrative art is absolutely positioned inside `.tile-face`, so the face must explicitly
+ * fill the slot — otherwise the owned-meld lift glow (slot `::after`, inset 0) centers on a
+ * taller box than the painted tile and reads heavy above the face.
+ */
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack
+  .exposure-rack__slot:has(.tile-face):not(.exposure-rack__slot--east-discard-slot):not(
+    .exposure-rack__slot--incoming-discard
+  )
+  .tile-face,
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack
+  .exposure-rack__call-meld-strip__tile:has(.tile-face)
+  .tile-face {
+  width: 100%;
+  height: 100%;
+  flex: 1 1 auto;
+  min-height: var(--rack-tile-h);
+  box-sizing: border-box;
 }
 
 /* Inline discard staging: compact strip at rack bottom; tile face extends downward when filled. */
@@ -1740,7 +2491,7 @@ html[data-home-screen-app]:not([data-native-app])
   --rack-action-shadow-rest: var(--app-action-btn-shadow-rest);
   --rack-action-border-rest: var(--app-action-btn-border-rest);
   --rack-action-border-hold: var(--app-action-btn-border-hold);
-  --rack-action-well-surface: var(--hand-rack-tray-surface);
+  --rack-action-well-surface: var(--app-bg-action-row-surface);
   --rack-action-flat-surface: var(--app-action-btn-bottom);
   --rack-action-border-color: var(--app-action-btn-border);
   --rack-action-press-shadow-dark: var(--app-action-btn-press-shadow-dark);

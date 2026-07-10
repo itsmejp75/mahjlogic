@@ -64,8 +64,8 @@ export type WallCompletionProbabilityInput = {
   /** Greedy tiles-away — pattern distance, not 14-tile inventory gap. */
   tilesNeededRough: number
   /**
-   * Exposed jokers the player could redeem on this turn (joker-swap hint on). Counts toward
-   * supply / deficit relief but not rack proximity or tiles-away until the swap commits.
+   * Exposed jokers redeemable via joker swap this turn. Counts toward supply / deficit relief
+   * but not rack proximity or tiles-away until the swap commits.
    */
   jokerReliefFromSwapHint?: number
 }
@@ -459,7 +459,7 @@ export function jokerEligibleCapacityRemaining(
 }
 
 /**
- * How many exposed jokers may count toward completion prob when joker-swap hints are on:
+ * How many exposed jokers may count toward completion prob when a joker swap is legal:
  * capped by swappable meld jokers and this line's unfilled joker-eligible capacity.
  */
 export function jokerSwapHintReliefForLine(
@@ -479,6 +479,39 @@ export function jokerSwapHintReliefForLine(
     swappableExposedJokers,
     jokerEligibleCapacityRemaining(slots, ctx, completion),
   )
+}
+
+function capCompletionTrials(
+  estimatedTrials: number,
+  wallRemaining: number,
+  pendingDrawBonus: number,
+  tilesNeededRough: number,
+  isConcealed: boolean,
+  isSinglesAndPairs: boolean,
+): number {
+  const wallDraws = Math.floor(wallRemaining / 4)
+  const physicalPickCap = wallDraws + pendingDrawBonus
+  const rawTrials = estimatedTrials + pendingDrawBonus
+
+  // Near Mah Jongg on open hands: opponent discard windows can complete a pair/single declare.
+  if (
+    !isConcealed &&
+    !isSinglesAndPairs &&
+    tilesNeededRough > 0 &&
+    tilesNeededRough <= 2
+  ) {
+    return Math.max(
+      physicalPickCap,
+      Math.min(rawTrials, wallRemaining),
+    )
+  }
+
+  // Endgame: need exceeds realistic wall draws — don't treat every opponent discard as a pickup.
+  if (tilesNeededRough > physicalPickCap) {
+    return physicalPickCap
+  }
+
+  return rawTrials
 }
 
 /** Combine rack proximity, draw slack, live outs, and wildcard relief into a 0–99 score. */
@@ -545,7 +578,14 @@ export function calculateWallCompletionProbability(
   )
   // Pre-draw discard phase: East at 13 commits a discard then draws before needing pattern tiles.
   const pendingDrawBonus = playerRackTileCount < 14 ? 1 : 0
-  const effectiveTrials = trials + pendingDrawBonus
+  const effectiveTrials = capCompletionTrials(
+    trials,
+    wallRemaining,
+    pendingDrawBonus,
+    tilesNeededRough,
+    isConcealed,
+    isSinglesAndPairs,
+  )
 
   if (
     effectiveTrials <= 0 ||
@@ -583,7 +623,10 @@ export function calculateWallCompletionProbability(
       : 0
   const jokerReliefFromHand = Math.min(gaps.jokerGap, completion.M_joker)
   const jokerCapacityRemaining = jokerEligibleCapacityRemaining(slots, ctx, completion)
-  const swapHintRelief = Math.min(jokerReliefFromSwapHint, jokerCapacityRemaining)
+  const swapHintRelief =
+    tilesNeededRough > 4
+      ? 0
+      : Math.min(jokerReliefFromSwapHint, jokerCapacityRemaining)
 
   const hiddenBlanks = Math.max(
     0,

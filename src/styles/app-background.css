@@ -14,6 +14,8 @@
  *   --app-bg-base       overall charcoal tone (also sync index.html first-paint color)
  *   --app-bg-highlight  center of vignette (lighter)
  *   --app-bg-shadow     edge of vignette (darker)
+ *   --app-bg-lower-darken-end  deepest tone at the page bottom (discard / hands tray)
+ *   --app-bg-action-row-surface  tray behind main rack, action row, and suggested-hands title row
  *   --app-bg-noise-*    grain strength / fineness (see composed --app-bg-noise URL)
  *
  * Legacy names (--app-carpet-*, --app-tray-flat) alias these tokens for older rules.
@@ -21,9 +23,9 @@
 
 :root {
   /* --- Color --- */
-  --app-bg-base: #3a444d;
-  --app-bg-highlight: #3f4952;
-  --app-bg-shadow: #343d45;
+  --app-bg-base: #343e47;
+  --app-bg-highlight: #39434c;
+  --app-bg-shadow: #2e373f;
 
   /* Surfaces that intentionally stay flat (not the textured main background). */
   --app-bg-flat: #5c6066;
@@ -37,6 +39,21 @@
     var(--app-bg-base) 58%,
     var(--app-bg-shadow) 100%
   );
+
+  /* Lower play band (discard tray + suggested-hands sheet — not the action button row). */
+  --app-bg-lower-darken-end: color-mix(in srgb, var(--app-bg-shadow) 42%, #141a20 58%);
+  --app-bg-lower-band-gradient: linear-gradient(
+    to bottom,
+    var(--app-bg-base) 0%,
+    var(--app-bg-lower-darken-end) 100%
+  );
+  --app-bg-lower-band-paint-image: var(--app-bg-lower-band-gradient), var(--app-bg-vignette), var(--app-bg-noise);
+
+  /* Action row tray (container behind the gray pills — not the pills themselves). */
+  --app-bg-action-row-surface: color-mix(in srgb, var(--app-bg-shadow) 68%, #1a2229 32%);
+  /* Background-only bleed to viewport side edges (controls stay aligned). */
+  --app-action-row-surface-bleed-left: calc(50% - 50vw);
+  --app-action-row-surface-bleed-width: 100vw;
 
   /*
    * --- Grain (SVG noise tile) ---

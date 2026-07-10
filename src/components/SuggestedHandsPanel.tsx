@@ -341,7 +341,7 @@ function formatSuggestedHandValue(points: number): string {
 }
 
 function formatCompletionProbability(probability: number): string {
-  return `${probability}%`
+  return `${probability}`
 }
 
 function suggestedHandCompletionProbabilityLabel(probability: number): string {
@@ -1877,20 +1877,26 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                     className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--hand"
                     role="columnheader"
                     aria-hidden
-                  >
-                    {hasHandsAboveView ? <SuggestedHandsScrollAboveHint /> : null}
-                  </div>
+                  />
                   <div
-                    className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--away"
+                    className={[
+                      'hands-sheet__cell',
+                      'hands-sheet__cell--header',
+                      'hands-sheet__cell--away',
+                      hasHandsAboveView ? 'hands-sheet__cell--scroll-above' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
                     role="columnheader"
                   >
+                    {hasHandsAboveView ? <SuggestedHandsScrollAboveHint /> : null}
                     Away
                   </div>
                   <div
                     className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--odds"
                     role="columnheader"
                   >
-                    Prob
+                    Prob %
                   </div>
                   <div
                     className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--values"
@@ -2068,7 +2074,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                     .filter(Boolean)
                     .join(' ')}
                 >
-                  <div className="hands-list__header-meta">Prob</div>
+                  <div className="hands-list__header-meta">Prob %</div>
                 </div>
                 <div
                   className={[

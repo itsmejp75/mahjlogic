@@ -318,12 +318,11 @@ export function patternNeedVariantIsSatisfiable(
   needs: ReadonlyMap<string, DeadHintNeedEntry>,
   unavailableByKey: ReadonlyMap<string, number>,
   totalCopiesForDef: (def: TileDef) => number,
+  redeemableExposedJokers = 0,
 ): boolean {
-  let jokersLeft = availableCopiesForDeadHint(
-    { cat: 'joker' },
-    unavailableByKey,
-    totalCopiesForDef,
-  )
+  let jokersLeft =
+    availableCopiesForDeadHint({ cat: 'joker' }, unavailableByKey, totalCopiesForDef) +
+    Math.max(0, redeemableExposedJokers)
 
   const jokerEligible: DeadHintNeedEntry[] = []
   for (const entry of needs.values()) {
@@ -353,35 +352,18 @@ export type DeadCauseShortfall = {
   available: number
 }
 
-/** First shortfall in a need map (stable iteration order). */
+/** First single/pair shortfall in a need map (stable iteration order). */
 export function firstShortfallInNeedMap(
   needs: ReadonlyMap<string, DeadHintNeedEntry>,
   unavailableByKey: ReadonlyMap<string, number>,
   totalCopiesForDef: (def: TileDef) => number,
 ): DeadCauseShortfall | null {
-  let jokersLeft = availableCopiesForDeadHint(
-    { cat: 'joker' },
-    unavailableByKey,
-    totalCopiesForDef,
-  )
-
   for (const { def, need, canUseJoker } of needs.values()) {
     if (canUseJoker) continue
     const available = availableCopiesForDeadHint(def, unavailableByKey, totalCopiesForDef)
     if (available < need) {
       return { defs: [def], need, available }
     }
-  }
-
-  for (const { def, need, canUseJoker } of needs.values()) {
-    if (!canUseJoker) continue
-    const available = availableCopiesForDeadHint(def, unavailableByKey, totalCopiesForDef)
-    const shortfall = Math.max(0, need - available)
-    if (shortfall === 0) continue
-    if (shortfall > jokersLeft) {
-      return { defs: [def], need, available: available + jokersLeft }
-    }
-    jokersLeft -= shortfall
   }
   return null
 }

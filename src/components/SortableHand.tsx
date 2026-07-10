@@ -291,6 +291,7 @@ function SortableTile({
       data-hand-tile-id={tile.id}
       className={[
         'sortable-tile-wrap',
+        draggingThisTile ? 'sortable-tile-wrap--dragging' : '',
         isJustDrawn && drawInFromRackBottom ? 'sortable-tile-wrap--joker-swap-fly-clip' : '',
         selected ? 'sortable-tile-wrap--selected' : '',
         charlestonGlow ? 'sortable-tile-wrap--charleston-new' : '',
@@ -367,9 +368,9 @@ type Props = {
   selectedTileId: string | null
   /** First tries quick actions (e.g. fill pass); otherwise toggles selection. */
   onTileActivate: (id: string) => void
-  /** Last drawn tile id — keeps that tile full brightness with suggested-hand dimming until discard/pass. */
+  /** Last drawn tile id — triggers fly-in animation on wall draw / claim receive. */
   highlightedTileId?: string | null
-  /** Charleston: tiles just received on the last pass (thin white edge line until next pass). */
+  /** Charleston: tiles just received on the last pass (tracked until next pass). */
   charlestonGlowTileIds?: ReadonlySet<string>
   /** Fly-in from table direction (Charleston receive, wall draw, Mah Jongg on discard). */
   handTileFlyIn?: HandTileFlyIn | null
@@ -590,9 +591,6 @@ export function SortableHand({
         if (tile) {
           const isBest = !!g && g.bestIds.has(tile.id)
           const isBlankExchange = !!g?.blankExchangeIds?.has(tile.id)
-          const isNewlyReceived =
-            tile.id === highlightedTileId ||
-            (charlestonGlowTileIds?.has(tile.id) ?? false)
           const isDeadSuggested = !!deadGuide?.deadIds.has(tile.id)
           const isDeadCause = !!deadGuide?.skullIds.has(tile.id)
           const isHandFlyIn = !!handTileFlyIn?.ids.includes(tile.id)
@@ -621,7 +619,7 @@ export function SortableHand({
               selected={selectedTileId === tile.id}
               charlestonGlow={charlestonGlowTileIds?.has(tile.id) ?? false}
               discardMode={discardMode}
-              suggestDim={isDeadSuggested || (!!g && !isBest && !isBlankExchange && !isNewlyReceived)}
+              suggestDim={isDeadSuggested || (!!g && !isBest && !isBlankExchange)}
               suggestBest={isBest}
               suggestBlankExchange={isBlankExchange}
               suggestDying={isDeadSuggested}

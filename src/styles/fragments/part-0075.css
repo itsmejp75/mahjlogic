@@ -184,9 +184,8 @@
   outline-offset: 2px;
 }
 
-/* Charleston receives: “lit” = no suggest-dim only — no highlight ring here (it read as an extra
-   border). The focused suggested-hand ring comes solely from `.sortable-tile-wrap--suggest-best`
-   below (2px inset; wins when both classes are present). */
+/* Charleston receives: no extra highlight ring (it read as a border). Needed tiles still get the
+   focused suggested-hand ring from `.sortable-tile-wrap--suggest-best`; unneeded receives dim. */
 .sortable-tile-wrap--charleston-new .tile-face {
   --tile-face-highlight-inset: 0 0 0 0 transparent;
   --tile-face-highlight-shadow: 0 0 0 0 transparent;
@@ -196,6 +195,7 @@
    dim on/off cross-fades instead of snapping when the parent class toggles. */
 .sortable-tile-wrap .tile-face,
 .pass-strip__tile-wrap .tile-face,
+.east-discard-staging__tile .tile-face,
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face,
 .hands-sheet__tile-cell .tile-face,
 .exposure-rack__slot .tile-face,
@@ -211,6 +211,7 @@
    for lustre). */
 .sortable-tile-wrap .tile-face:not(.tile--joker)::after,
 .pass-strip__tile-wrap .tile-face:not(.tile--joker)::after,
+.east-discard-staging__tile .tile-face:not(.tile--joker)::after,
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face:not(.tile--joker)::after,
 .hands-sheet__tile-cell .tile-face:not(.tile--joker)::after,
 .exposure-rack__slot .tile-face:not(.tile--joker)::after,
@@ -235,6 +236,7 @@
 
 .sortable-tile-wrap .tile-face.tile--joker,
 .pass-strip__tile-wrap .tile-face.tile--joker,
+.east-discard-staging__tile .tile-face.tile--joker,
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face.tile--joker,
 .hands-sheet__tile-cell .tile-face.tile--joker,
 .exposure-rack__slot .tile-face.tile--joker,
@@ -248,6 +250,7 @@
 
 .sortable-tile-wrap--suggest-dim .tile-face:not(.tile--joker)::after,
 .pass-strip__tile-wrap--suggest-dim .tile-face:not(.tile--joker)::after,
+.east-discard-staging__tile--suggest-dim .tile-face:not(.tile--joker)::after,
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim .tile-face:not(.tile--joker)::after,
 .hands-sheet__tile-cell--suggest-dim .tile-face:not(.tile--joker)::after,
 .exposure-rack__slot--suggest-dim .tile-face:not(.tile--joker)::after,
@@ -262,6 +265,7 @@
 
 .sortable-tile-wrap--suggest-dim .tile-face.tile--joker,
 .pass-strip__tile-wrap--suggest-dim .tile-face.tile--joker,
+.east-discard-staging__tile--suggest-dim .tile-face.tile--joker,
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-dim .tile-face.tile--joker,
 .hands-sheet__tile-cell--suggest-dim .tile-face.tile--joker,
 .exposure-rack__slot--suggest-dim .tile-face.tile--joker,

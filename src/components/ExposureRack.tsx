@@ -169,11 +169,13 @@ function IncomingBotDiscardDraggable({
   stackSuitTiles,
   incomingBotDiscardFlyFrom,
   suggestBest = false,
+  suggestDim = false,
 }: {
   tile: TileInstance
   stackSuitTiles: boolean
   incomingBotDiscardFlyFrom: HandTileFlyInFrom | null
   suggestBest?: boolean
+  suggestDim?: boolean
 }) {
   const { active } = useDndContext()
   const dragId = incomingBotDiscardDragId(tile.id)
@@ -198,6 +200,7 @@ function IncomingBotDiscardDraggable({
         'exposure-rack__incoming-discard-drag',
         isDragging ? 'exposure-rack__incoming-discard-drag--dragging' : '',
         suggestBest ? 'east-discard-staging__tile--suggest-best' : '',
+        suggestDim ? 'east-discard-staging__tile--suggest-dim' : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -331,6 +334,7 @@ type CallMeldStripTileGuideProps = {
   botJokerBorderMenuOn: boolean | undefined
   suppressDim: boolean
   highlightCalled: boolean
+  ownedMeld?: boolean
   jokerSwapHintBounceTileIds?: ReadonlySet<string> | null
   amendable?: boolean
   flyIn?: boolean
@@ -352,6 +356,7 @@ function callMeldStripTileClasses({
   botJokerBorderMenuOn,
   suppressDim,
   highlightCalled,
+  ownedMeld = false,
   jokerSwapHintBounceTileIds,
   amendable,
   dragging,
@@ -373,6 +378,7 @@ function callMeldStripTileClasses({
     amendable ? 'exposure-rack__slot--call-amendable' : '',
     dragging ? 'exposure-rack__slot--dragging' : '',
     isJoker ? 'exposure-rack__slot--joker' : '',
+    ownedMeld ? 'exposure-rack__slot--owned-meld' : '',
     isBest ? 'exposure-rack__slot--suggest-best' : '',
     isDeadSuggested ? 'exposure-rack__slot--suggest-dying' : '',
     suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
@@ -440,6 +446,7 @@ function SortableStagedSlot({
   jokerSwapHintBounceTileIds = null,
   callStagingWave = null,
   tileWrapClass = 'exposure-rack__slot',
+  ownedMeld = false,
 }: {
   tile: TileInstance
   gi: number
@@ -459,6 +466,7 @@ function SortableStagedSlot({
     waveIndex: number
   } | null
   tileWrapClass?: string
+  ownedMeld?: boolean
 }) {
   const { active } = useDndContext()
   const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({
@@ -563,6 +571,7 @@ function CallMeldStrip({
   jokerSwapHintBounceEpoch = 0,
   callStagingWaveFlyIn = null,
   dropZoneId,
+  ownedMeldHighlight = false,
 }: {
   meld: MeldGroup
   gi: number
@@ -585,11 +594,14 @@ function CallMeldStrip({
     baseDelayMs: number
   } | null
   dropZoneId?: string
+  /** Committed player melds: per-tile vignette instead of a group ring. */
+  ownedMeldHighlight?: boolean
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: dropZoneId ?? '', disabled: !dropZoneId })
   const ordered = orderMeldForRack(meld)
   const onAmend = meld.onAmendCallMeld
   const onTileClick = meld.onTileClick
+  const ownedMeldTile = ownedMeldHighlight && locked && !staging
   let stagedWaveSlotIndex = 0
 
   const strip = (
@@ -625,6 +637,7 @@ function CallMeldStrip({
             botJokerBorderMenuOn,
             suppressDim,
             highlightCalled,
+            ownedMeld: ownedMeldTile,
             jokerSwapHintBounceTileIds,
             amendable: !!onAmend,
             flyIn: !!flyInTileIds?.has(tile.id),
@@ -741,6 +754,7 @@ function DroppableMeldSlots({
   flyInFromBelowTileIds = null,
   jokerSwapHintBounceTileIds = null,
   jokerSwapHintBounceEpoch = 0,
+  ownedMeldHighlight = false,
 }: {
   meld: MeldGroup
   gi: number
@@ -756,6 +770,7 @@ function DroppableMeldSlots({
   flyInFromBelowTileIds?: ReadonlySet<string> | null
   jokerSwapHintBounceTileIds?: ReadonlySet<string> | null
   jokerSwapHintBounceEpoch?: number
+  ownedMeldHighlight?: boolean
 }) {
   if (meld.calledTileId) {
     return (
@@ -777,6 +792,7 @@ function DroppableMeldSlots({
         jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
         jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
         dropZoneId={meld.dropZoneId}
+        ownedMeldHighlight={ownedMeldHighlight}
       />
     )
   }
@@ -830,6 +846,7 @@ function DroppableMeldSlots({
               'exposure-rack__slot',
               isCalled ? 'exposure-rack__slot--called' : '',
               isJoker ? 'exposure-rack__slot--joker' : '',
+              ownedMeldHighlight ? 'exposure-rack__slot--owned-meld' : '',
               isBest ? 'exposure-rack__slot--suggest-best' : '',
               isDeadSuggested ? 'exposure-rack__slot--suggest-dying' : '',
               suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
@@ -868,6 +885,7 @@ function DroppableMeldSlots({
 
 export type ExposureSuggestedTileGuide = {
   bestIds: ReadonlySet<string>
+  blankExchangeIds?: ReadonlySet<string>
 }
 
 /**
@@ -1021,6 +1039,10 @@ type Props = {
    * so layout stays stable when joker-swap droppables toggle on during the player’s turn.
    */
   gridMeldColumnSpans?: boolean
+  /**
+   * Player’s committed exposures: per-tile coach vignette always on; no meld group ring.
+   */
+  ownedMeldHighlight?: boolean
 }
 
 export function ExposureRack({
@@ -1058,6 +1080,7 @@ export function ExposureRack({
   callStagingWaveFlyIn = null,
   hideWatermark = false,
   gridMeldColumnSpans = false,
+  ownedMeldHighlight = false,
 }: Props) {
   const totalExposed = melds.reduce((n, m) => n + m.tiles.length, 0)
   const passStripShift = Math.max(0, shiftPassStripLeftSlots)
@@ -1080,9 +1103,13 @@ export function ExposureRack({
       )
     : false
   const lastSlotJoker = lastSlotTile?.def.cat === 'joker'
-  // Bot’s incoming discard always stays lit in this slot — player needs full visibility while
-  // deciding to call or ignore (matches the “Ignore / Call” affordance on the action row).
-  const lastSlotSuggestDim = false
+  const lastSlotBlankExchange =
+    !!lastSlotTile && !!gLast?.blankExchangeIds?.has(lastSlotTile.id)
+  const lastSlotIsDeadSuggested =
+    !!lastSlotTile && !!suggestedDeadTileIds?.has(lastSlotTile.id) && !lastSlotIsBest
+  const lastSlotSuggestDim =
+    lastSlotIsDeadSuggested ||
+    (!!gLast && !!lastSlotTile && !lastSlotIsBest && !lastSlotBlankExchange)
   const callMelds = melds.filter((meld) => meld.calledTileId)
   const flowMelds = melds.filter((meld) => !meld.calledTileId)
   // DOM order is call anchor first, then flow melds — ids must match for dnd-kit reorder previews.
@@ -1120,6 +1147,7 @@ export function ExposureRack({
       jokerSwapHintBounceTileIds,
       jokerSwapHintBounceEpoch,
       callStagingWaveFlyIn,
+      ownedMeldHighlight,
     }
     if (meld.dropZoneId) {
       return wrapMeldContent(
@@ -1138,6 +1166,7 @@ export function ExposureRack({
           flyInFromBelowTileIds={flyInFromBelowTileIds}
           jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
           jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
+          ownedMeldHighlight={ownedMeldHighlight}
         />,
         Math.max(1, ordered.length),
       )
@@ -1229,6 +1258,7 @@ export function ExposureRack({
           flyInFromBelowTileIds={flyInFromBelowTileIds}
           jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
           jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
+          ownedMeldHighlight={ownedMeldHighlight}
         />,
         dropSpan,
       )
@@ -1276,6 +1306,7 @@ export function ExposureRack({
             gi > 0 && ordered[0]?.id === tile.id ? 'exposure-rack__slot--meld-start' : '',
             isCalled ? 'exposure-rack__slot--called' : '',
             isJoker ? 'exposure-rack__slot--joker' : '',
+            ownedMeldHighlight ? 'exposure-rack__slot--owned-meld' : '',
             isBest ? 'exposure-rack__slot--suggest-best' : '',
             isDeadSuggested ? 'exposure-rack__slot--suggest-dying' : '',
             suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
@@ -1419,6 +1450,7 @@ export function ExposureRack({
                     stackSuitTiles={stackSuitTiles}
                     incomingBotDiscardFlyFrom={incomingBotDiscardFlyFrom}
                     suggestBest={lastSlotIsBest}
+                    suggestDim={lastSlotSuggestDim}
                   />
                 </>
               ) : (
@@ -1428,6 +1460,7 @@ export function ExposureRack({
                     className={[
                       'east-discard-staging__tile',
                       lastSlotIsBest ? 'east-discard-staging__tile--suggest-best' : '',
+                      lastSlotSuggestDim ? 'east-discard-staging__tile--suggest-dim' : '',
                     ]
                       .filter(Boolean)
                       .join(' ')}

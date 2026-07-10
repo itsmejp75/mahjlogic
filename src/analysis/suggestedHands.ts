@@ -1551,26 +1551,39 @@ function redistributeJokerPreviewMarksToFirstMeld(
   nMarks: number,
   slotTileIdByStripIndex?: (string | null)[],
   jokerTileIds?: readonly string[],
+  exposureTileIds?: ReadonlySet<string>,
 ): void {
   if (nMarks <= 0) return
-  // Clear ALL existing joker marks (both real-rack and suggestion markers) so we can re-anchor them.
+  const preservedIndices = new Set<number>()
+  if (exposureTileIds && slotTileIdByStripIndex) {
+    for (let i = 0; i < kinds.length; i++) {
+      const id = slotTileIdByStripIndex[i]
+      if (kinds[i] === 'joker' && id && exposureTileIds.has(id)) {
+        preservedIndices.add(i)
+      }
+    }
+  }
+  // Clear concealed joker marks only — exposure jokers stay on their committed meld.
   for (let i = 0; i < kinds.length; i++) {
-    if (kinds[i] === 'joker') {
+    if (kinds[i] === 'joker' && !preservedIndices.has(i)) {
       kinds[i] = null
       if (slotTileIdByStripIndex) slotTileIdByStripIndex[i] = null
     }
   }
   let left = nMarks
   let idIdx = 0
+  const concealedJokerIds =
+    jokerTileIds?.filter((id) => !exposureTileIds?.has(id)) ?? jokerTileIds
   const placeJoker = (i: number) => {
     kinds[i] = 'joker'
-    if (slotTileIdByStripIndex && jokerTileIds && idIdx < jokerTileIds.length) {
-      slotTileIdByStripIndex[i] = jokerTileIds[idIdx++]
+    if (slotTileIdByStripIndex && concealedJokerIds && idIdx < concealedJokerIds.length) {
+      slotTileIdByStripIndex[i] = concealedJokerIds[idIdx++]
     }
     left--
   }
   for (const [a, b] of jokerMeldPreviewIndexRanges(defs, jokerEligible)) {
     for (let i = a; i < b && left > 0; i++) {
+      if (preservedIndices.has(i)) continue
       if (!jokerEligible[i]) continue
       if (kinds[i] !== null) continue
       placeJoker(i)
@@ -1578,8 +1591,25 @@ function redistributeJokerPreviewMarksToFirstMeld(
     if (left === 0) return
   }
   for (let i = 0; i < kinds.length && left > 0; i++) {
+    if (preservedIndices.has(i)) continue
     if (!jokerEligible[i] || kinds[i] !== null) continue
     placeJoker(i)
+  }
+}
+
+function concealedRackJokers(
+  rack: TileInstance[],
+  bestIds: ReadonlySet<string>,
+  exposureTileIds?: ReadonlySet<string>,
+): { usedIds: string[]; suggestionMarks: number } {
+  const concealed = rack.filter(
+    (t) => t.def.cat === 'joker' && (!exposureTileIds || !exposureTileIds.has(t.id)),
+  )
+  const usedIds = concealed.filter((t) => bestIds.has(t.id)).map((t) => t.id)
+  const unplacedCount = concealed.length - usedIds.length
+  return {
+    usedIds,
+    suggestionMarks: usedIds.length + (unplacedCount > 0 ? 1 : 0),
   }
 }
 
@@ -1676,6 +1706,13 @@ function buildPreviewSlotKindsFromGroups(
           usedNatIds.add(m.id)
           break
         }
+        // Exposure jokers are resolved to naturals for greedy match but stay jokers on the display rack.
+        if (t.def.cat === 'joker' && bestIds.has(m.id)) {
+          kinds[si] = 'joker'
+          slotTileIdByStripIndex[si] = m.id
+          usedNatIds.add(m.id)
+          break
+        }
       }
     }
     let jr = 0
@@ -1733,6 +1770,7 @@ function buildPreviewKindsByCategoryPartition(
   usedMeta: readonly GroupUsedMeta[],
   bestIds: ReadonlySet<string>,
   jokerEligible: boolean[],
+  exposureTileIds?: ReadonlySet<string>,
 ): PreviewStripAssignment {
   const kinds: PreviewSlotSuggestKind[] = defs.map(() => null)
   const slotTileIdByStripIndex = defs.map<string | null>(() => null)
@@ -1821,19 +1859,16 @@ function buildPreviewKindsByCategoryPartition(
     }
   }
 
-  const rackJokerTileIdsBcp = rack
-    .filter((t) => t.def.cat === 'joker' && bestIds.has(t.id))
-    .map((t) => t.id)
-  const rackJokerCountBcp = rack.filter((t) => t.def.cat === 'joker').length
-  const nMarksBcp = rackJokerTileIdsBcp.length + (rackJokerCountBcp > rackJokerTileIdsBcp.length ? 1 : 0)
-  if (nMarksBcp > 0) {
+  const jokerMarksBcp = concealedRackJokers(rack, bestIds, exposureTileIds)
+  if (jokerMarksBcp.suggestionMarks > 0) {
     redistributeJokerPreviewMarksToFirstMeld(
       kinds,
       defs,
       jokerEligible,
-      nMarksBcp,
+      jokerMarksBcp.suggestionMarks,
       slotTileIdByStripIndex,
-      rackJokerTileIdsBcp,
+      jokerMarksBcp.usedIds,
+      exposureTileIds,
     )
   }
 
@@ -1864,20 +1899,30 @@ export function computePreviewStripAssignment(
 
   if (p.groups && spans && usedMeta.length > 0) {
     const r = buildPreviewSlotKindsFromGroups(p, rackForPattern, defs, spans, usedMeta, bestIds, jokerEligible)
-    // Redistribute ALL joker marks to leftmost joker-eligible meld, regardless of where they were placed.
-    const rackJokerTileIds = rackForPattern
-      .filter((t) => t.def.cat === 'joker' && bestIds.has(t.id))
-      .map((t) => t.id)
-    const rackJokerCount = rackForPattern.filter((t) => t.def.cat === 'joker').length
-    // +1 suggestion marker if there are unplaced jokers (rack has more jokers than bestIds used)
-    const nMarks = rackJokerTileIds.length + (rackJokerCount > rackJokerTileIds.length ? 1 : 0)
-    if (nMarks > 0) {
-      redistributeJokerPreviewMarksToFirstMeld(r.kinds, defs, jokerEligible, nMarks, r.slotTileIdByStripIndex, rackJokerTileIds)
+    const jokerMarks = concealedRackJokers(rackForPattern, bestIds, greedyOpts?.exposureTileIds)
+    if (jokerMarks.suggestionMarks > 0) {
+      redistributeJokerPreviewMarksToFirstMeld(
+        r.kinds,
+        defs,
+        jokerEligible,
+        jokerMarks.suggestionMarks,
+        r.slotTileIdByStripIndex,
+        jokerMarks.usedIds,
+        greedyOpts?.exposureTileIds,
+      )
     }
     return maybePermuteAssignmentToCardLine(p, r)
   }
   if (usedMeta.length > 0) {
-    const r = buildPreviewKindsByCategoryPartition(p, rackForPattern, defs, usedMeta, bestIds, jokerEligible)
+    const r = buildPreviewKindsByCategoryPartition(
+      p,
+      rackForPattern,
+      defs,
+      usedMeta,
+      bestIds,
+      jokerEligible,
+      greedyOpts?.exposureTileIds,
+    )
     return maybePermuteAssignmentToCardLine(p, r)
   }
 
@@ -1918,18 +1963,15 @@ export function computePreviewStripAssignment(
     slotTileIdByStripIndex[i] = t.id
   }
 
-  const rackJokerTileIdsFb = rackForPattern
-    .filter((t) => t.def.cat === 'joker' && bestIds.has(t.id))
-    .map((t) => t.id)
-  const rackJokerCountFb = rackForPattern.filter((t) => t.def.cat === 'joker').length
-  const nMarksFb = rackJokerTileIdsFb.length + (rackJokerCountFb > rackJokerTileIdsFb.length ? 1 : 0)
+  const jokerMarksFb = concealedRackJokers(rackForPattern, bestIds, greedyOpts?.exposureTileIds)
   redistributeJokerPreviewMarksToFirstMeld(
     kinds,
     defs,
     jokerEligible,
-    nMarksFb,
+    jokerMarksFb.suggestionMarks,
     slotTileIdByStripIndex,
-    rackJokerTileIdsFb,
+    jokerMarksFb.usedIds,
+    greedyOpts?.exposureTileIds,
   )
 
   const r = { kinds, slotTileIdByStripIndex }
@@ -2098,6 +2140,70 @@ function pickBestDragonMeldPermuteTypes(
     }
   }
   return bestTypes
+}
+
+/** Fill a `dragon-meld-permute` span in card meld order (3+3+4), placing held tiles in their assigned melds. */
+function fillDragonMeldPermuteSpan(
+  out: TileDef[],
+  a: number,
+  b: number,
+  g: Extract<PatternGroup, { kind: 'dragon-meld-permute' }>,
+  rem: readonly TileInstance[],
+  rack: TileInstance[],
+  usedMeta: readonly GroupUsedMeta[],
+  gi: number,
+): void {
+  if (g.needs.length !== 3 || g.cardDragons.length !== 3) return
+  const bestTypes = pickBestDragonMeldPermuteTypes(rem, g.needs)
+  if (!bestTypes) return
+
+  const taken = metaNatTilesForGroup(rack, usedMeta, gi)
+  const takenByAssignedType = new Map<Dragon, TileInstance[]>()
+  for (const t of taken) {
+    if (t.def.cat !== 'dragon') continue
+    const dr = t.def.dragon
+    const arr = takenByAssignedType.get(dr) ?? []
+    arr.push(t)
+    takenByAssignedType.set(dr, arr)
+  }
+
+  let idx = a
+  for (let i = 0; i < g.needs.length; i++) {
+    const assignedType = bestTypes[i]!
+    const cardType = g.cardDragons[i] ?? assignedType
+    const pool = [...(takenByAssignedType.get(assignedType) ?? [])]
+    for (let k = 0; k < g.needs[i]! && idx < b; k++) {
+      const held = pool.shift()
+      out[idx++] = held?.def ?? { cat: 'dragon', dragon: cardType }
+    }
+  }
+}
+
+/** When the greedy matcher already assigned suit tiles, keep the same suit + consecutive base for the strip. */
+function inferConsecSuitPermutePlanFromMeta(
+  rack: TileInstance[],
+  usedMeta: readonly GroupUsedMeta[],
+  gi: number,
+  g: Extract<PatternGroup, { kind: 'suit-permute' }>,
+): { perm: Suit[]; base: number } | null {
+  if (!g.consecRanks || g.colorGroups.length !== 1) return null
+  const groupTiles = metaNatTilesForGroup(rack, usedMeta, gi)
+  const suitTiles = groupTiles.filter((t) => t.def.cat === 'suit')
+  if (suitTiles.length === 0) return null
+  const suit = majoritySuitAmongSuitTiles(suitTiles)
+  if (!suit) return null
+  if (suitTiles.some((t) => t.def.cat === 'suit' && t.def.suit !== suit)) return null
+  const heldRanks = suitTiles
+    .filter((t): t is TileInstance & { def: { cat: 'suit'; suit: Suit; rank: number } } => t.def.cat === 'suit')
+    .map((t) => t.def.rank)
+  const maxRankOff = Math.max(...g.colorGroups[0]!.map((sg) => sg.rank)) - 1
+  for (let base = 1; base <= 9 - maxRankOff; base++) {
+    const runRanks = g.colorGroups[0]!.map((sg) => sg.rank - 1 + base)
+    if (heldRanks.every((r) => runRanks.includes(r))) {
+      return { perm: [suit], base }
+    }
+  }
+  return null
 }
 
 /**
@@ -2434,20 +2540,7 @@ function resolveStripTargetDefsForGreedyMatch(
         break
       }
       case 'dragon-meld-permute': {
-        const taken = metaNatTilesForGroup(rack, usedMeta, gi)
-        if (taken.length > 0) {
-          fillSpanTileDefs(out, a, taken)
-          break
-        }
-        const bestTypes = pickBestDragonMeldPermuteTypes(rem, g.needs)
-        if (!bestTypes) break
-        let idx = a
-        for (let i = 0; i < g.needs.length; i++) {
-          const dr = bestTypes[i]!
-          for (let k = 0; k < g.needs[i]! && idx < b; k++) {
-            out[idx++] = { cat: 'dragon', dragon: dr }
-          }
-        }
+        fillDragonMeldPermuteSpan(out, a, b, g, rem, rack, usedMeta, gi)
         break
       }
       case 'odd-pair-kongs-triple': {
@@ -2484,15 +2577,21 @@ function resolveStripTargetDefsForGreedyMatch(
         let bestScore = { fill: -1, exposureFill: -1, maxSlotFill: -1, slotSquareFill: -1 }
         let bestPerm: Suit[] = []
         let bestBase = 1
-        for (const base of searchBases) {
-          for (const perm of suitPermutations(n)) {
-            // Skip permutations that reuse a suit already committed by a suit-locked group.
-            if (lockedSuits.size > 0 && perm.some((s) => lockedSuits.has(s))) continue
-            const score = scoreSuitPermuteCombo(rem, g, perm, base, exposureTileIds)
-            if (suitPermuteComboScoreBetter(score, bestScore, !!exposureTileIds)) {
-              bestScore = score
-              bestPerm = [...perm]
-              bestBase = base
+        const metaPlan = inferConsecSuitPermutePlanFromMeta(rack, usedMeta, gi, g)
+        if (metaPlan) {
+          bestPerm = metaPlan.perm
+          bestBase = metaPlan.base
+        } else {
+          for (const base of searchBases) {
+            for (const perm of suitPermutations(n)) {
+              // Skip permutations that reuse a suit already committed by a suit-locked group.
+              if (lockedSuits.size > 0 && perm.some((s) => lockedSuits.has(s))) continue
+              const score = scoreSuitPermuteCombo(rem, g, perm, base, exposureTileIds)
+              if (suitPermuteComboScoreBetter(score, bestScore, !!exposureTileIds)) {
+                bestScore = score
+                bestPerm = [...perm]
+                bestBase = base
+              }
             }
           }
         }
@@ -2847,10 +2946,39 @@ function patternForCardLineStrip(
   return { ...p, cardLineFromGroupSlotMap: cardLineMap }
 }
 
+export function finalizeExposureMeldStripHighlights(
+  slots: SuggestedStripSlot[],
+  usedMeta: readonly GroupUsedMeta[],
+  exposureTileIds: ReadonlySet<string>,
+  p: PracticePattern,
+): SuggestedStripSlot[] {
+  if (!exposureTileIds.size || !p.groups) return slots
+  const spans = groupPreviewIndexSpans(p)
+  const cardLineMap = p.cardLineFromGroupSlotMap ?? inferCardLineFromGroupSlotMap(p)
+  if (!spans || !cardLineMap) return slots
+  const out = slots.map((s) => ({ ...s }))
+  for (let gi = 0; gi < p.groups.length; gi++) {
+    const span = spans[gi]
+    if (!span) continue
+    const [a, b] = span
+    const meldLen = b - a
+    const expInGroup = usedMeta.filter(
+      (m) => m.groupIdx === gi && exposureTileIds.has(m.id),
+    ).length
+    if (expInGroup < meldLen) continue
+    for (let d = 0; d < cardLineMap.length; d++) {
+      const g = cardLineMap[d]!
+      if (g < a || g >= b || d >= out.length) continue
+      out[d] = { ...out[d]!, highlight: true, jokerSuggested: false }
+    }
+  }
+  return out
+}
+
 /**
  * Builds strip cells for a **full** winning hand (`roughTarget` tiles, usually 14): rack naturals
  * where assigned, otherwise the completed-hand target tile (joker placeholders → that meld’s natural).
- * `highlight` only for naturals you hold (no joker faces).
+ * `highlight` for naturals you hold and for exposure meld tiles (including jokers in open melds).
  */
 function buildSuggestedStripSlotsFromStripDefs(
   p: PracticePattern,
@@ -2866,6 +2994,7 @@ function buildSuggestedStripSlotsFromStripDefs(
   skipTitleReorder = false,
   /** Base-pattern card line map when `p` is a pinned variant without `cardLineFromGroupSlotMap`. */
   cardLineFromGroupSlotMapOverride?: readonly number[],
+  exposureTileIds?: ReadonlySet<string>,
 ): SuggestedStripSlot[] {
   const cardLineMap = resolveCardLineFromGroupSlotMap(p, cardLineFromGroupSlotMapOverride)
   const pForStrip = patternForCardLineStrip(p, cardLineMap)
@@ -2873,6 +3002,8 @@ function buildSuggestedStripSlotsFromStripDefs(
   const defs = normalizeSuggestedStripTargetDefs(rawDefs).slice(0, p.roughTarget)
   const cardInks = patternLinePreviewCardInks(p)
   if (defs.length === 0) return []
+  const greedyOpts: GreedyPatternMatchOpts | undefined =
+    exposureTileIds?.size ? { exposureTileIds } : undefined
   const assign = computePreviewStripAssignment(
     pForStrip,
     rack,
@@ -2880,6 +3011,7 @@ function buildSuggestedStripSlotsFromStripDefs(
     bestIdsForAssignment,
     usedMeta,
     stripDefsGroup,
+    greedyOpts,
   )
   const byId = new Map(rack.map((t) => [t.id, t] as const))
   const naturalUsed = new Set(
@@ -2896,30 +3028,92 @@ function buildSuggestedStripSlotsFromStripDefs(
     let jokerSuggested = false
     if (tid) {
       const t = byId.get(tid)
+      const isExposure = exposureTileIds?.has(tid) ?? false
       if (t && t.def.cat === 'joker') {
         // Real rack joker filling this slot: keep the target tile's color/identifier;
         // the JOKER badge renders on top so the meld type stays readable.
         displayDef = targetDef
-        jokerSuggested = true
+        if (isExposure) {
+          highlight = true
+        } else {
+          jokerSuggested = true
+        }
       } else if (t && t.def.cat !== 'joker') {
         const compatible = strictSuitMatching
           ? tileDefsEqual(targetDef, t.def)
           : stripSlotAcceptsNatural(p, targetDef, t.def)
         displayDef = compatible ? t.def : targetDef
-        highlight = compatible && naturalUsed.has(tid)
+        highlight = compatible && (naturalUsed.has(tid) || isExposure)
       }
     } else if (assign.kinds[i] === 'joker') {
-      // No rack joker assigned yet but slot is marked as the next legal joker target.
-      jokerSuggested = true
+      const expId = assign.slotTileIdByStripIndex[i]
+      if (expId && exposureTileIds?.has(expId)) {
+        displayDef = targetDef
+        highlight = true
+      } else {
+        jokerSuggested = true
+      }
     }
 
     return { displayDef, cardInk, highlight, jokerSuggested }
   })
+  for (let i = 0; i < provisional.length; i++) {
+    const tid = assign.slotTileIdByStripIndex[i]
+    if (assign.kinds[i] === 'joker' && tid && exposureTileIds?.has(tid)) {
+      provisional[i] = {
+        ...provisional[i]!,
+        displayDef: defs[i]!,
+        highlight: true,
+        jokerSuggested: false,
+      }
+    }
+  }
+  if (exposureTileIds?.size && usedMeta && p.groups) {
+    const spans = groupPreviewIndexSpans(p)
+    if (spans) {
+      for (let gi = 0; gi < p.groups.length; gi++) {
+        const span = spans[gi]
+        if (!span) continue
+        const [a, b] = span
+        const meldLen = b - a
+        const expInGroup = usedMeta.filter(
+          (m) => m.groupIdx === gi && exposureTileIds.has(m.id),
+        ).length
+        if (expInGroup < meldLen) continue
+        const cardIndices: number[] = []
+        if (cardLineMap) {
+          for (let d = 0; d < cardLineMap.length; d++) {
+            const g = cardLineMap[d]!
+            if (g >= a && g < b) cardIndices.push(d)
+          }
+        } else {
+          for (let si = a; si < b; si++) cardIndices.push(si)
+        }
+        for (const si of cardIndices) {
+          if (si >= provisional.length) continue
+          provisional[si] = {
+            ...provisional[si]!,
+            displayDef: defs[si]!,
+            highlight: true,
+            jokerSuggested: false,
+          }
+        }
+      }
+    }
+  }
   if (!skipTitleReorder) {
     const reordered = reorderStripToTitleOrder(provisional, defs, p)
-    if (reordered) return leftAnchorNaturalsByMeldRun(reordered.defs, reordered.slots)
+    if (reordered) {
+      const anchored = leftAnchorNaturalsByMeldRun(reordered.defs, reordered.slots)
+      return usedMeta && exposureTileIds?.size
+        ? finalizeExposureMeldStripHighlights(anchored, usedMeta, exposureTileIds, pForStrip)
+        : anchored
+    }
   }
-  return leftAnchorNaturalsByMeldRun(defs, provisional)
+  const anchored = leftAnchorNaturalsByMeldRun(defs, provisional)
+  return usedMeta && exposureTileIds?.size
+    ? finalizeExposureMeldStripHighlights(anchored, usedMeta, exposureTileIds, pForStrip)
+    : anchored
 }
 
 /**
@@ -3653,6 +3847,7 @@ function buildSuitPermuteStripVariantRows(
       true,
       true,
       cardLineMap,
+      exposureTileIds,
     )
     return reorderStripSlotsToCardTitleOrder(
       slots,
@@ -3798,6 +3993,10 @@ export function buildSuggestedStripSlotRowsWithVariants(
   exposureTileIds?: ReadonlySet<string>,
 ): SuggestedStripRowsResult {
   const um = usedMeta ?? []
+  const finalizeRows = (rows: SuggestedStripSlot[][]): SuggestedStripSlot[][] =>
+    usedMeta && exposureTileIds?.size
+      ? rows.map((row) => finalizeExposureMeldStripHighlights(row, usedMeta, exposureTileIds, p))
+      : rows
   const stripResolved = resolveStripTargetDefsForGreedyMatch(p, rack, um, exposureTileIds)
   const altConsec = buildConsecOpposingSuitStripVariantRows(
     p,
@@ -3812,7 +4011,7 @@ export function buildSuggestedStripSlotRowsWithVariants(
     if (altConsec.maxFill > 0) {
       const suffixes = altConsec.combos.map(({ r, s1, s2 }) => `oc::${r}-${s1}-${s2}`)
       return {
-        rows: altConsec.rows,
+        rows: finalizeRows(altConsec.rows),
         ocVariantSuffixes: suffixes,
         ocAllSuffix:
           altConsec.combos.length > 0
@@ -3820,7 +4019,7 @@ export function buildSuggestedStripSlotRowsWithVariants(
             : '',
       }
     }
-    return { rows: [altConsec.rows[0]!], ocVariantSuffixes: [], ocAllSuffix: '' }
+    return { rows: finalizeRows([altConsec.rows[0]!]), ocVariantSuffixes: [], ocAllSuffix: '' }
   }
   const altPerm = buildSuitPermuteStripVariantRows(
     p,
@@ -3835,7 +4034,7 @@ export function buildSuggestedStripSlotRowsWithVariants(
     if (altPerm.rows.length > 1) {
       const suffixes = altPerm.combos.map(({ base, perm }) => suitPermuteVariantSuffix(base, perm))
       return {
-        rows: altPerm.rows,
+        rows: finalizeRows(altPerm.rows),
         ocVariantSuffixes: suffixes,
         ocAllSuffix:
           altPerm.combos.length > 0
@@ -3843,10 +4042,10 @@ export function buildSuggestedStripSlotRowsWithVariants(
             : '',
       }
     }
-    return { rows: altPerm.rows, ocVariantSuffixes: [], ocAllSuffix: '' }
+    return { rows: finalizeRows(altPerm.rows), ocVariantSuffixes: [], ocAllSuffix: '' }
   }
   return {
-    rows: [
+    rows: finalizeRows([
       buildSuggestedStripSlotsFromStripDefs(
         p,
         rack,
@@ -3856,8 +4055,10 @@ export function buildSuggestedStripSlotRowsWithVariants(
         stripResolved,
         true,
         p.skipStripTitleReorder === true,
+        undefined,
+        exposureTileIds,
       ),
-    ],
+    ]),
     ocVariantSuffixes: [],
     ocAllSuffix: '',
   }
@@ -4044,23 +4245,44 @@ function botExposureTileIdsMatchingNeededDefs(
 function stripRowsStillWantJoker(rows: SuggestedStripSlot[][]): boolean {
   for (const row of rows) {
     for (const s of row) {
-      if (!s.highlight && s.jokerSuggested) return true
+      if (s.jokerSuggested) return true
     }
   }
   return false
 }
 
-/** Jokers in hand or staged for discard (same pool as joker-swap / pattern match). */
-function playerHeldJokerTileIds(
-  hand: TileInstance[],
-  pendingEastDiscard: TileInstance | null,
-): Set<string> {
-  const ids = new Set<string>()
-  for (const t of hand) {
-    if (t.def.cat === 'joker') ids.add(t.id)
+/**
+ * Bot exposure jokers get coach `--suggest-best` (full lift + vignette) when the focused line can
+ * still use them — default on for joker-eligible patterns, off only when melds are complete on the
+ * strip or the only open cells left are singles/pairs (non-joker-eligible).
+ */
+export function shouldHighlightBotExposureJokers(
+  p: PracticePattern,
+  rows: SuggestedStripSlot[][],
+): boolean {
+  if (p.section === 'SINGLES AND PAIRS') return false
+
+  const jokerEligible = patternPreviewJokerEligibleBySlot(p)
+  if (!jokerEligible.some(Boolean)) return false
+
+  if (stripRowsStillWantJoker(rows)) return true
+
+  const slots = rows.flat()
+  if (slots.length !== jokerEligible.length) {
+    return stripRowsStillWantJoker(rows)
   }
-  if (pendingEastDiscard?.def.cat === 'joker') ids.add(pendingEastDiscard.id)
-  return ids
+
+  const hasOpenNaturalNeed = slots.some(
+    (s) => !s.highlight && s.displayDef.cat !== 'joker',
+  )
+  if (!hasOpenNaturalNeed) return false
+
+  for (let i = 0; i < slots.length; i++) {
+    const s = slots[i]!
+    if (s.highlight) continue
+    if (jokerEligible[i]) return true
+  }
+  return false
 }
 
 function addBotExposureJokerIds(
@@ -4077,8 +4299,8 @@ function addBotExposureJokerIds(
 /**
  * Bot exposure tile ids for the focused suggested line: naturals that match strip “need” defs
  * (same basis as discard dead-tile highlights), exposed jokers you may redeem with a natural in
- * hand (joker swap — always when legally swappable on your rack), and — while the strip still
- * needs a joker — every bot meld joker when you hold a joker for the line.
+ * hand (joker swap — always when legally swappable on your rack), and while the focused line can
+ * still use jokers (see {@link shouldHighlightBotExposureJokers}).
  */
 export function computeBotExposureSuggestedBestIds(
   focusKey: string | null,
@@ -4131,10 +4353,8 @@ export function computeBotExposureSuggestedBestIds(
     )) {
       out.add(id)
     }
-    if (stripRowsStillWantJoker(rows)) {
-      if (playerHeldJokerTileIds(hand, pendingEastDiscard).size > 0) {
-        addBotExposureJokerIds(botExposures, out)
-      }
+    if (shouldHighlightBotExposureJokers(pinnedP, rows)) {
+      addBotExposureJokerIds(botExposures, out)
     }
     return out
   }
@@ -5087,9 +5307,8 @@ export type RankSuggestedHandsInput = {
     totalBlanksInGame?: number
   }
   /**
-   * When enabled, exposed jokers redeemable with a rack natural boost completion prob for lines
-   * that still have joker-eligible gaps (matches joker-swap hint UI — no change after swap until
-   * hint is off or the joker is on your rack).
+   * When a joker swap is legal this turn, exposed redeemable jokers boost completion prob for lines
+   * with joker-eligible gaps. Not tied to the hint setting — hints are visual only.
    */
   jokerSwapHintForProb?: {
     enabled: boolean

@@ -1060,6 +1060,25 @@
   z-index: 5;
 }
 
+/*
+ * Hand tray lifts to z-index 5 during bounce (above rack-top) but that also sends lit-tile
+ * lift/vignette shadows over the action row (z-index 1). Keep buttons on top — only the
+ * tray shadow should tuck behind them, not the controls.
+ */
+.app-layout[data-joker-swap-hint='on'][data-animations='on']
+  .panel--hand
+  .panel-hand-rack__hand-tray:has(.sortable-tile-wrap__fly--joker-swap-hint-bounce)
+  > :is(.panel-hand-rack__action-well, .panel-hand-rack__charleston-actions-well) {
+  z-index: 6;
+}
+
+.app-layout[data-animations='on']
+  .panel--hand
+  .panel-hand-rack__hand-tray:has(.sortable-tile-wrap--just-drawn)
+  > :is(.panel-hand-rack__action-well, .panel-hand-rack__charleston-actions-well) {
+  z-index: 6;
+}
+
 /* Bot exposure cells + grid use `overflow: hidden`. Open them up only while a
    redeemable joker is mid-bounce so the tile can poke above the tray edge, and
    raise the cell above its row neighbors. */
@@ -2520,9 +2539,8 @@
   outline-offset: 2px;
 }
 
-/* Charleston receives: “lit” = no suggest-dim only — no highlight ring here (it read as an extra
-   border). The focused suggested-hand ring comes solely from `.sortable-tile-wrap--suggest-best`
-   below (2px inset; wins when both classes are present). */
+/* Charleston receives: no extra highlight ring (it read as a border). Needed tiles still get the
+   focused suggested-hand ring from `.sortable-tile-wrap--suggest-best`; unneeded receives dim. */
 .sortable-tile-wrap--charleston-new .tile-face {
   --tile-face-highlight-inset: 0 0 0 0 transparent;
   --tile-face-highlight-shadow: 0 0 0 0 transparent;
