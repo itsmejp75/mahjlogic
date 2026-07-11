@@ -1067,14 +1067,19 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   pointer-events: none;
 }
 
-/* Seat band above main rack: same darker tray behind Seat:position. */
+/* Seat band above main rack: same darker tray behind Seat:position.
+ * Height comes from `--player-seat-band-top` (tracker→hand gap), not the label offset — so the
+ * gradient stays when a call meld moves the label below the exposure. */
 .panel--hand .panel-hand-rack__hand-tray .rack-stage__rack-bottom::before {
   content: '';
   position: absolute;
   left: var(--app-action-row-surface-bleed-left);
   width: var(--app-action-row-surface-bleed-width);
   right: auto;
-  top: min(0px, calc(2 * var(--player-seat-label-top, -0.35rem)));
+  top: var(
+    --player-seat-band-top,
+    min(0px, calc(2 * var(--player-seat-label-top, -0.35rem)))
+  );
   bottom: 100%;
   background-color: transparent;
   background-image: linear-gradient(
@@ -1093,6 +1098,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 .panel--hand .rack-stage__rack-top {
   position: relative;
+  /* Stay above hand-tray gray (`hand-bank::after` / seat band) — including during opening-deal wave. */
   z-index: 2;
 }
 
@@ -1586,7 +1592,8 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 /*
  * Player committed exposures: always-on coach vignette per tile (replaces meld group green ring).
- * Coach dim/suggest-best still stack when a hand is focused.
+ * Owned-meld tiles never receive coach dim/suggest-best classes — they stay lit whether or not a
+ * hand is focused.
  */
 .panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass):has(
     .exposure-rack__slot--owned-meld
@@ -1890,7 +1897,9 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 .panel--discard-tracker[data-suggested-hands-open='on'] > .discard-tracker__shell,
 .panel--discard-tracker[data-suggested-hands-open='on'] .discard-tracker__content,
 .app .suggested-hands-popup.suggested-hands-popup--open,
+.app .suggested-hands-popup.suggested-hands-popup--open .suggested-hands-popup__user-shift,
 .app .suggested-hands-popup.suggested-hands-popup--open .panel--hands.suggested-hands-popup__user-shift {
+  /* Beat part-0104 `overflow: hidden` on `__user-shift` so the title-row bleed can escape. */
   overflow: visible;
 }
 
@@ -1901,6 +1910,10 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   overflow: visible;
 }
 
+/*
+ * Header cells stay transparent — only the shared full-bleed ::before paints the band.
+ * Per-cell gradients stop at the panel edge and read as a hard side seam.
+ */
 .app .suggested-hands-popup .hands-panel__content :is(
   .hands-list__freeze-header.hands-list__row-hit,
   .hands-list__freeze-header.hands-list__row-hit:focus,
@@ -1910,19 +1923,12 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .hands-list-scroll > .hands-sheet .hands-sheet__cell--header.hands-sheet__cell--pin
 ) {
   background-color: transparent;
-  background-image: linear-gradient(
-    to bottom,
-    var(--app-bg-action-row-surface) 0%,
-    var(--app-bg-action-row-surface) 8%,
-    color-mix(in srgb, var(--app-bg-action-row-surface) 50%, transparent 50%) 55%,
-    transparent 100%
-  );
+  background-image: none;
 }
 
 /*
  * One shared title-row backdrop below every header cell (not per-column).
- * Per-column ::after bleed cannot cover sibling columns — transparent metric headers
- * would show the scrolling list through instead of the gradient.
+ * No corner radius — radius on this layer stopped the color short of the viewport sides.
  */
 .app .suggested-hands-popup .hands-panel__content .hands-list__freeze-header.hands-list__row-hit::before {
   content: '';
@@ -1931,8 +1937,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   inset: 0;
   left: var(--app-action-row-surface-bleed-left);
   width: var(--app-action-row-surface-bleed-width);
-  border-top-left-radius: var(--suggested-popup-radius);
-  border-top-right-radius: var(--suggested-popup-radius);
+  border-radius: 0;
   background-image: linear-gradient(
     to bottom,
     var(--app-bg-action-row-surface) 0%,
@@ -1966,6 +1971,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   z-index: 2;
   box-sizing: border-box;
   pointer-events: none;
+  border-radius: 0;
   background-color: transparent;
   background-image: linear-gradient(
     to bottom,

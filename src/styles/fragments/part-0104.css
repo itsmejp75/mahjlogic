@@ -300,9 +300,9 @@
  * Hands + Tiles paints the sticky title band with a full-width `::before` (part-0081). Match
  * the discard-tray shell radius so toggling Tiles does not change the upper corners.
  */
+/* Title-row bleed is square to the viewport edges (part-0123); do not round this layer. */
 .suggested-hands-popup .hands-sheet.hands-sheet--tilesHands::before {
-  border-top-left-radius: var(--suggested-popup-radius);
-  border-top-right-radius: var(--suggested-popup-radius);
+  border-radius: 0;
 }
 
 .suggested-hands-popup .hands-list__freeze-header.hands-list__row-hit {

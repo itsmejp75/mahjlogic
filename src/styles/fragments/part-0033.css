@@ -21,8 +21,9 @@
   in hand) so it doesn't fight DnD `transform`s on the outer drag wrappers.
 
   Stacking: hand row sits inside `.rack-stage__rack-bottom` (z-index: 1) which is below
-  `.rack-stage__rack-top` (z-index: 2 during Charleston) — fly-in / bounce would otherwise
-  paint behind the exposure rack, pass copy, and green strip slots. See part-0035.css.
+  `.rack-stage__rack-top` (z-index: 2 during Charleston). Opening-deal fly-in opens the
+  rack-bottom stacking context (part-0035) so tile `z-index: 10` clears pass copy while the
+  darker tray paint stays under Charleston. Joker-swap bounce still lifts rack-bottom.
   Bot exposure cells use `overflow: hidden` and would clip the upward bounce; part-0035
   opens them while a bounce is active.
 */

@@ -358,12 +358,18 @@
   );
 }
 
-.panel--hand .panel-hand-rack__hand-tray .rack-stage__rack-bottom > .panel-hand-rack__seat-label {
+.panel--hand .panel-hand-rack__hand-tray {
+  position: relative;
+}
+
+.panel--hand .panel-hand-rack__hand-tray > .panel-hand-rack__seat-label {
   position: absolute;
   left: 0;
   top: var(--player-seat-label-top, -0.35rem);
   transform: translateY(-50%);
-  z-index: 5;
+  /* Above exposure rack-top (z-index 2) + owned-meld lift (≤4) so the chip stays readable
+   * when the label sits under a committed call meld — same as when it sits in the seat band. */
+  z-index: 10;
   pointer-events: none;
   display: inline-flex;
   align-items: center;

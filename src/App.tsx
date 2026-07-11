@@ -8226,36 +8226,10 @@ export default function App() {
   const updatePlayerSeatLabelPosition = useCallback(() => {
     const rackBottom = playerHandRackBottomRef.current
     if (!rackBottom) return
+    const handTray = rackBottom.closest('.panel-hand-rack__hand-tray') as HTMLElement | null
 
-    // Call meld pinned in the exposure area (staged during call-staging or committed): it sits at
-    // the rack's left column and spans the full rack height, so the label can't sit above the hand
-    // (it hides behind the meld). Drop it into the empty band below the meld — between the meld's
-    // bottom and the action-button row — as soon as the meld appears.
-    const rackTop = eastExposureRackTopRef.current
-    const meldFaces = rackTop?.querySelectorAll(
-      '.exposure-rack__call-meld-strip .tile-face',
-    )
-    if (meldFaces && meldFaces.length > 0) {
-      const rbRect = rackBottom.getBoundingClientRect()
-      let meldBottom = -Infinity
-      meldFaces.forEach((el) => {
-        meldBottom = Math.max(meldBottom, el.getBoundingClientRect().bottom)
-      })
-      const actionWell = rackBottom
-        .closest('.panel-hand-rack__hand-tray')
-        ?.querySelector('.panel-hand-rack__action-well') as HTMLElement | null
-      const bandBottom = actionWell
-        ? actionWell.getBoundingClientRect().top
-        : rbRect.bottom
-      const belowMeldMid = (meldBottom + bandBottom) / 2
-      rackBottom.style.setProperty(
-        '--player-seat-label-top',
-        `${belowMeldMid - rbRect.top}px`,
-      )
-      return
-    }
-
-    const handTop = rackBottom.getBoundingClientRect().top
+    const rbRect = rackBottom.getBoundingClientRect()
+    const handTop = rbRect.top
     const topTracker =
       topDiscardTrackerPanelRef.current ??
       (rackBottom.closest('.app-dnd-frame')?.querySelector(
@@ -8267,9 +8241,49 @@ export default function App() {
       : (rackBottom.closest('.panel-hand-rack') as HTMLElement | null)?.getBoundingClientRect().top ??
         handTop
     const bandH = Math.max(0, handTop - bandTop)
-    const centerOffset = bandH > 0 ? -bandH / 2 : -8
 
-    rackBottom.style.setProperty('--player-seat-label-top', `${centerOffset}px`)
+    // Dark seat-band gradient always spans the tracker→hand gap — independent of label position.
+    // (When a call meld is present the label moves below the meld; without a separate band token
+    // the old `2 * label-top` math collapsed the gradient to zero height.)
+    rackBottom.style.setProperty(
+      '--player-seat-band-top',
+      bandH > 0 ? `${-bandH}px` : '0px',
+    )
+
+    const setLabelTop = (topPx: string) => {
+      // Label lives on the hand-tray (above rack-top stacking); keep the token there.
+      ;(handTray ?? rackBottom).style.setProperty('--player-seat-label-top', topPx)
+    }
+
+    // Call meld pinned in the exposure area (staged during call-staging or committed): it sits at
+    // the rack's left column and spans the full rack height, so the label can't sit above the hand
+    // (it hides behind the meld). Drop it into the empty band below the meld — between the meld's
+    // bottom and the action-button row — as soon as the meld appears.
+    const rackTop = eastExposureRackTopRef.current
+    const meldFaces = rackTop?.querySelectorAll(
+      '.exposure-rack__call-meld-strip .tile-face',
+    )
+    if (meldFaces && meldFaces.length > 0) {
+      let meldBottom = -Infinity
+      meldFaces.forEach((el) => {
+        meldBottom = Math.max(meldBottom, el.getBoundingClientRect().bottom)
+      })
+      const actionWell = handTray?.querySelector(
+        '.panel-hand-rack__action-well',
+      ) as HTMLElement | null
+      const bandBottom = actionWell
+        ? actionWell.getBoundingClientRect().top
+        : rbRect.bottom
+      const belowMeldMid = (meldBottom + bandBottom) / 2
+      // Offset from hand-tray top (label is absolutely positioned on the tray).
+      const trayTop = (handTray ?? rackBottom).getBoundingClientRect().top
+      setLabelTop(`${belowMeldMid - trayTop}px`)
+      return
+    }
+
+    const centerOffset = bandH > 0 ? -bandH / 2 : -8
+    // Same visual as before: offset from rack-bottom top ≈ hand-tray top (label is out of flow).
+    setLabelTop(`${centerOffset}px`)
   }, [])
 
   useLayoutEffect(() => {
@@ -9621,12 +9635,12 @@ export default function App() {
                             </SortableContext>
                           </div>
                           <div className="panel-hand-rack__hand-tray">
+                            <PlayerRackSeatLabel
+                              seat={playerSeat}
+                              isActiveTurn={playerSeatLabelActiveTurn}
+                              isCalledThrower={playerSeatLabelCalledThrower}
+                            />
                             <div ref={playerHandRackBottomRef} className="rack-stage__rack-bottom">
-                              <PlayerRackSeatLabel
-                                seat={playerSeat}
-                                isActiveTurn={playerSeatLabelActiveTurn}
-                                isCalledThrower={playerSeatLabelCalledThrower}
-                              />
                                 <HandBank>
                                   <SortableContext items={charlestonHandSortableIds} strategy={rectSortingStrategy}>
                                   <SortableHand
@@ -9925,15 +9939,17 @@ export default function App() {
                             </StagingMeldDropZone>
                           </div>
                           <div className="panel-hand-rack__hand-tray">
+                            {mainPhase !== 'bot-mahjong' &&
+                            mainPhase !== 'dead-hand' &&
+                            !hidePlayerSeatLabelForCallSlot ? (
+                              <PlayerRackSeatLabel
+                                seat={playerSeat}
+                                isActiveTurn={playerSeatLabelActiveTurn}
+                                isCalledThrower={playerSeatLabelCalledThrower}
+                              />
+                            ) : null}
                             {mainPhase !== 'bot-mahjong' && (
                             <div ref={playerHandRackBottomRef} className="rack-stage__rack-bottom">
-                              {mainPhase !== 'dead-hand' && !hidePlayerSeatLabelForCallSlot ? (
-                                <PlayerRackSeatLabel
-                                  seat={playerSeat}
-                                  isActiveTurn={playerSeatLabelActiveTurn}
-                                  isCalledThrower={playerSeatLabelCalledThrower}
-                                />
-                              ) : null}
                                 <HandBank>
                                   <SortableHand
                                     tiles={

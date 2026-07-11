@@ -348,6 +348,32 @@ type CallMeldStripTileGuideProps = {
   elevated?: boolean
 }
 
+/**
+ * Committed player exposures stay lit with the owned-meld vignette even when Logic is
+ * focusing a hand — no coach dim / suggest-best ring on those locked tiles.
+ */
+function ownedMeldCoachClasses(
+  ownedMeld: boolean,
+  isBest: boolean,
+  isDeadSuggested: boolean,
+  suggestDim: boolean,
+): { isBest: boolean; isDeadSuggested: boolean; suggestDim: boolean; ownedClass: string } {
+  if (ownedMeld) {
+    return {
+      isBest: false,
+      isDeadSuggested: false,
+      suggestDim: false,
+      ownedClass: 'exposure-rack__slot--owned-meld',
+    }
+  }
+  return {
+    isBest,
+    isDeadSuggested,
+    suggestDim,
+    ownedClass: '',
+  }
+}
+
 function callMeldStripTileClasses({
   tile,
   suggestBestIds,
@@ -362,15 +388,21 @@ function callMeldStripTileClasses({
   dragging,
 }: CallMeldStripTileGuideProps & { dragging?: boolean }): string {
   const isJoker = tile.def.cat === 'joker'
-  const isBest = slotIsSuggestBest(
+  const rawBest = slotIsSuggestBest(
     isJoker,
     tile.id,
     suggestBestIds,
     suggestedTileGuide,
     botJokerBorderMenuOn,
   )
-  const isDeadSuggested = !!suggestedDeadTileIds?.has(tile.id) && !isBest
-  const suggestDim = isDeadSuggested || (!suppressDim && !!suggestBestIds && !isBest)
+  const rawDead = !!suggestedDeadTileIds?.has(tile.id) && !rawBest
+  const rawDim = rawDead || (!suppressDim && !!suggestBestIds && !rawBest)
+  const { isBest, isDeadSuggested, suggestDim, ownedClass } = ownedMeldCoachClasses(
+    ownedMeld,
+    rawBest,
+    rawDead,
+    rawDim,
+  )
   return [
     'exposure-rack__call-meld-strip__tile',
     highlightCalled ? 'exposure-rack__call-meld-strip__tile--called' : '',
@@ -378,7 +410,7 @@ function callMeldStripTileClasses({
     amendable ? 'exposure-rack__slot--call-amendable' : '',
     dragging ? 'exposure-rack__slot--dragging' : '',
     isJoker ? 'exposure-rack__slot--joker' : '',
-    ownedMeld ? 'exposure-rack__slot--owned-meld' : '',
+    ownedClass,
     isBest ? 'exposure-rack__slot--suggest-best' : '',
     isDeadSuggested ? 'exposure-rack__slot--suggest-dying' : '',
     suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
@@ -501,15 +533,21 @@ function SortableStagedSlot({
     elevated: isDragging,
   }
   const isJoker = tile.def.cat === 'joker'
-  const isBest = slotIsSuggestBest(
+  const rawBest = slotIsSuggestBest(
     isJoker,
     tile.id,
     suggestBestIds,
     suggestedTileGuide,
     botJokerBorderMenuOn,
   )
-  const isDeadSuggested = !!suggestedDeadTileIds?.has(tile.id) && !isBest
-  const suggestDim = isDeadSuggested || (!suppressDim && !!suggestBestIds && !isBest)
+  const rawDead = !!suggestedDeadTileIds?.has(tile.id) && !rawBest
+  const rawDim = rawDead || (!suppressDim && !!suggestBestIds && !rawBest)
+  const { isBest, isDeadSuggested, suggestDim, ownedClass } = ownedMeldCoachClasses(
+    ownedMeld,
+    rawBest,
+    rawDead,
+    rawDim,
+  )
   const stripTile = tileWrapClass === 'exposure-rack__call-meld-strip__tile'
   return (
     <div
@@ -533,7 +571,7 @@ function SortableStagedSlot({
               isBest ? 'exposure-rack__slot--suggest-best' : '',
               isDeadSuggested ? 'exposure-rack__slot--suggest-dying' : '',
               suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
-              ownedMeld ? 'exposure-rack__slot--owned-meld' : '',
+              ownedClass,
               jokerSwapHintBounceClass(jokerSwapHintBounceTileIds, tile.id),
             ]
               .filter(Boolean)
@@ -596,7 +634,7 @@ function CallMeldStrip({
     baseDelayMs: number
   } | null
   dropZoneId?: string
-  /** Committed player melds: per-tile vignette instead of a group ring. */
+  /** Committed player melds: per-tile vignette instead of a group ring (always lit). */
   ownedMeldHighlight?: boolean
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: dropZoneId ?? '', disabled: !dropZoneId })
@@ -824,15 +862,21 @@ function DroppableMeldSlots({
       {ordered.map((tile) => {
         const isCalled = highlightCalledTile && meld.calledTileId === tile.id
         const isJoker = tile.def.cat === 'joker'
-        const isBest = slotIsSuggestBest(
+        const rawBest = slotIsSuggestBest(
           isJoker,
           tile.id,
           suggestBestIds,
           suggestedTileGuide,
           botJokerBorderMenuOn,
         )
-        const isDeadSuggested = !!suggestedDeadTileIds?.has(tile.id) && !isBest
-        const suggestDim = isDeadSuggested || (!suppressDim && !!suggestBestIds && !isBest)
+        const rawDead = !!suggestedDeadTileIds?.has(tile.id) && !rawBest
+        const rawDim = rawDead || (!suppressDim && !!suggestBestIds && !rawBest)
+        const { isBest, isDeadSuggested, suggestDim, ownedClass } = ownedMeldCoachClasses(
+          ownedMeldHighlight,
+          rawBest,
+          rawDead,
+          rawDim,
+        )
         const flyIn = !!flyInTileIds?.has(tile.id)
         const flyFromRight = !!flyInFromRightTileIds?.has(tile.id)
         return (
@@ -848,7 +892,7 @@ function DroppableMeldSlots({
               'exposure-rack__slot',
               isCalled ? 'exposure-rack__slot--called' : '',
               isJoker ? 'exposure-rack__slot--joker' : '',
-              ownedMeldHighlight ? 'exposure-rack__slot--owned-meld' : '',
+              ownedClass,
               isBest ? 'exposure-rack__slot--suggest-best' : '',
               isDeadSuggested ? 'exposure-rack__slot--suggest-dying' : '',
               suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
@@ -1042,7 +1086,8 @@ type Props = {
    */
   gridMeldColumnSpans?: boolean
   /**
-   * Player’s committed exposures: per-tile coach vignette always on; no meld group ring.
+   * Player’s committed exposures: per-tile coach vignette always on (no coach dim / suggest-best
+   * ring when a hand is focused); no meld group ring.
    */
   ownedMeldHighlight?: boolean
 }
@@ -1289,9 +1334,15 @@ export function ExposureRack({
       const isCalled = highlightCalledTile && meld.calledTileId === tile.id
       const isJoker = tile.def.cat === 'joker'
       const g = suggestedTileGuide
-      const isBest = slotIsSuggestBest(isJoker, tile.id, g?.bestIds, g, botJokerBorderMenuOn)
-      const isDeadSuggested = !!suggestedDeadTileIds?.has(tile.id) && !isBest
-      const suggestDim = isDeadSuggested || (!suppressDim && !!g && !isBest)
+      const rawBest = slotIsSuggestBest(isJoker, tile.id, g?.bestIds, g, botJokerBorderMenuOn)
+      const rawDead = !!suggestedDeadTileIds?.has(tile.id) && !rawBest
+      const rawDim = rawDead || (!suppressDim && !!g && !rawBest)
+      const { isBest, isDeadSuggested, suggestDim, ownedClass } = ownedMeldCoachClasses(
+        ownedMeldHighlight,
+        rawBest,
+        rawDead,
+        rawDim,
+      )
       const flyIn = !!flyInTileIds?.has(tile.id)
       const flyFromRight = !!flyInFromRightTileIds?.has(tile.id)
       return (
@@ -1308,7 +1359,7 @@ export function ExposureRack({
             gi > 0 && ordered[0]?.id === tile.id ? 'exposure-rack__slot--meld-start' : '',
             isCalled ? 'exposure-rack__slot--called' : '',
             isJoker ? 'exposure-rack__slot--joker' : '',
-            ownedMeldHighlight ? 'exposure-rack__slot--owned-meld' : '',
+            ownedClass,
             isBest ? 'exposure-rack__slot--suggest-best' : '',
             isDeadSuggested ? 'exposure-rack__slot--suggest-dying' : '',
             suggestDim ? 'exposure-rack__slot--suggest-dim' : '',

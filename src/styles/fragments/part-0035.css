@@ -8,13 +8,56 @@
 
 
 
-/* Hand row lives in `.rack-stage__rack-bottom` (z-index: 1), painted under
-   `.rack-stage__rack-top` (z-index: 2 during Charleston). Lift the hand tray
-   while tiles fly in or joker-swap bounce so motion paints over pass copy + green slots. */
+/*
+ * Opening-deal wave: tiles must paint over Charleston text/slots, but the darker tray
+ * (`hand-bank::after` + seat-band `::before`) must stay underneath.
+ *
+ * `.rack-stage__rack-bottom` normally uses z-index: 1, which traps tile `z-index: 10`
+ * under `.rack-stage__rack-top` (z-index: 2). Opening that context lets just-drawn tiles
+ * compete in the column stack above Charleston, while gray pseudos stay at z-index 0.
+ *
+ * Joker-swap bounce still lifts the whole rack-bottom so the arc clears the exposure row.
+ */
 .app-layout[data-animations='on']
-  .panel--hand .panel-hand-rack__hand-tray:has(.sortable-tile-wrap--just-drawn) {
-  position: relative;
-  z-index: 5;
+  .panel--hand
+  .panel-hand-rack__hand-tray:has(.sortable-tile-wrap--just-drawn)
+  .rack-stage__rack-bottom {
+  z-index: auto;
+}
+
+.app-layout[data-animations='on']
+  .panel--hand
+  .panel-hand-rack__hand-tray:has(.sortable-tile-wrap--just-drawn)
+  .hand-row {
+  /* part-0008 isolates + clips the row; open both so tile z-index:10 clears Charleston. */
+  isolation: auto;
+  overflow: visible;
+}
+
+.app-layout[data-animations='on']
+  .panel--hand
+  .panel-hand-rack__hand-tray:has(.sortable-tile-wrap--just-drawn)
+  .hand-bank {
+  overflow: visible;
+}
+
+.app-layout[data-animations='on']
+  .panel--hand
+  .panel-hand-rack__hand-tray:has(.sortable-tile-wrap--just-drawn)
+  .rack-stage__rack-bottom::before,
+.app-layout[data-animations='on']
+  .panel--hand
+  .panel-hand-rack__hand-tray:has(.sortable-tile-wrap--just-drawn)
+  .hand-bank::after {
+  z-index: 0;
+}
+
+.app-layout[data-animations='on']
+  .panel--hand
+  .panel-hand-rack__hand-tray:has(.sortable-tile-wrap--just-drawn)
+  > .panel-hand-rack__seat-label {
+  /* Seat chip is z-index 10 in part-0084 — keep it under Charleston (2) and flying tiles (10). */
+  z-index: 1;
 }
 
 .app-layout[data-joker-swap-hint='on'][data-animations='on']
@@ -23,20 +66,12 @@
 }
 
 /*
- * Hand tray lifts to z-index 5 during bounce (above rack-top) but that also sends lit-tile
- * lift/vignette shadows over the action row (z-index 1). Keep buttons on top — only the
- * tray shadow should tuck behind them, not the controls.
+ * Hand tray / rack-bottom lifts to z-index 5 during bounce (above rack-top) but that also
+ * sends lit-tile lift/vignette shadows over the action row (z-index 1). Keep buttons on top.
  */
 .app-layout[data-joker-swap-hint='on'][data-animations='on']
   .panel--hand
   .panel-hand-rack__hand-tray:has(.sortable-tile-wrap__fly--joker-swap-hint-bounce)
-  > :is(.panel-hand-rack__action-well, .panel-hand-rack__charleston-actions-well) {
-  z-index: 6;
-}
-
-.app-layout[data-animations='on']
-  .panel--hand
-  .panel-hand-rack__hand-tray:has(.sortable-tile-wrap--just-drawn)
   > :is(.panel-hand-rack__action-well, .panel-hand-rack__charleston-actions-well) {
   z-index: 6;
 }

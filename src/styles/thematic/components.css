@@ -1072,13 +1072,6 @@
   z-index: 6;
 }
 
-.app-layout[data-animations='on']
-  .panel--hand
-  .panel-hand-rack__hand-tray:has(.sortable-tile-wrap--just-drawn)
-  > :is(.panel-hand-rack__action-well, .panel-hand-rack__charleston-actions-well) {
-  z-index: 6;
-}
-
 /* Bot exposure cells + grid use `overflow: hidden`. Open them up only while a
    redeemable joker is mid-bounce so the tile can poke above the tray edge, and
    raise the cell above its row neighbors. */
