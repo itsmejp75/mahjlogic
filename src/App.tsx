@@ -4902,6 +4902,9 @@ export default function App() {
       patterns: cardPatterns,
       deckSettings,
       jokerSwapHintForProb,
+      // Boost Prob % when this unreclaimed discard already wins a line (Away stays pre-call).
+      liveClaimableDiscard:
+        mainPhase === 'bot-turn' && activeBotDiscard ? activeBotDiscard : null,
     }
   }, [
     mainPhase,
@@ -4955,6 +4958,7 @@ export default function App() {
     suggestedRankInput.jokerSwapHintForProb?.pendingDiscard,
     suggestedRankInput.jokerSwapHintForProb?.botExposures,
     suggestedRankInput.jokerSwapHintForProb?.eastExposures,
+    suggestedRankInput.liveClaimableDiscard,
   ])
 
   /** Menu category labels: still on, but muted when exposures rule out every hand in that section. */
@@ -8241,14 +8245,6 @@ export default function App() {
       : (rackBottom.closest('.panel-hand-rack') as HTMLElement | null)?.getBoundingClientRect().top ??
         handTop
     const bandH = Math.max(0, handTop - bandTop)
-
-    // Dark seat-band gradient always spans the tracker→hand gap — independent of label position.
-    // (When a call meld is present the label moves below the meld; without a separate band token
-    // the old `2 * label-top` math collapsed the gradient to zero height.)
-    rackBottom.style.setProperty(
-      '--player-seat-band-top',
-      bandH > 0 ? `${-bandH}px` : '0px',
-    )
 
     const setLabelTop = (topPx: string) => {
       // Label lives on the hand-tray (above rack-top stacking); keep the token there.

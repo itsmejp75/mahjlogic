@@ -6,26 +6,29 @@
  * Everything on the main play screen that is NOT a button, tile, label text, or
  * empty slot well uses this recipe (shell, tray chrome, gaps between panels).
  *
- * Where it is applied: part-0123.css blocks “Main app background surfaces” and
- * “Suggested-hands tray shell”. Header fill is `--hands-header-bg` on `.hands-panel__content`
- * (part-0081). Excluded on purpose: slot wells (`--app-bg-slot-well`).
+ * Where it is applied: part-0123.css block “Main app background surfaces”.
+ * Suggested-hands shell stays transparent so this paint shows through.
+ * Hands header keeps `--app-bg-base`; from below that row the lower-band paint is used.
+ * Excluded on purpose: slot wells (`--app-bg-slot-well`).
  *
  * Quick tweaks:
- *   --app-bg-base       overall charcoal tone (also sync index.html first-paint color)
+ *   --app-bg-base       overall charcoal tone through the hands header (also sync index.html)
  *   --app-bg-highlight  center of vignette (lighter)
  *   --app-bg-shadow     edge of vignette (darker)
- *   --app-bg-lower-darken-end  deepest tone at the page bottom (discard / hands tray)
- *   --app-bg-action-row-surface  tray behind main rack, action row, and suggested-hands title row
+ *   --app-bg-lower-*    lighter band from below the hands header down (discard / hand rows)
+ *   --hands-row-active-fill / --app-bg-row-active / --app-bg-top-band-*
+ *                       selected hands row + top B/C/D·S/W/N band
  *   --app-bg-noise-*    grain strength / fineness (see composed --app-bg-noise URL)
  *
- * Legacy names (--app-carpet-*, --app-tray-flat) alias these tokens for older rules.
+ * Legacy names (--app-carpet-*, --app-tray-flat, --app-bg-action-row-surface) alias these tokens.
  */
 
 :root {
   /* --- Color --- */
-  --app-bg-base: #343e47;
-  --app-bg-highlight: #39434c;
-  --app-bg-shadow: #2e373f;
+  /* Page + hands header — unified dark charcoal. */
+  --app-bg-base: #283038;
+  --app-bg-highlight: #2d353d;
+  --app-bg-shadow: #22292f;
 
   /* Surfaces that intentionally stay flat (not the textured main background). */
   --app-bg-flat: #5c6066;
@@ -40,20 +43,58 @@
     var(--app-bg-shadow) 100%
   );
 
-  /* Lower play band (discard tray + suggested-hands sheet — not the action button row). */
-  --app-bg-lower-darken-end: color-mix(in srgb, var(--app-bg-shadow) 42%, #141a20 58%);
-  --app-bg-lower-band-gradient: linear-gradient(
-    to bottom,
-    var(--app-bg-base) 0%,
-    var(--app-bg-lower-darken-end) 100%
+  /*
+   * Lower play band — from below the hands header down (discard tray + hand rows).
+   * Lighter than `--app-bg-base`. Use scroll attachment (not fixed) so the light tone
+   * lands in the tray itself rather than mapping to the top of the viewport.
+   */
+  --app-bg-lower-band-base: #343e47;
+  --app-bg-lower-band-highlight: #39434c;
+  --app-bg-lower-band-shadow: #2e373f;
+  --app-bg-lower-band-vignette: radial-gradient(
+    var(--app-bg-vignette-shape),
+    var(--app-bg-lower-band-highlight) 0%,
+    var(--app-bg-lower-band-base) 58%,
+    var(--app-bg-lower-band-shadow) 100%
   );
-  --app-bg-lower-band-paint-image: var(--app-bg-lower-band-gradient), var(--app-bg-vignette), var(--app-bg-noise);
+  /* Legacy alias */
+  --app-bg-lower-darken-end: var(--app-bg-lower-band-shadow);
+  --app-bg-lower-band-paint-color: var(--app-bg-lower-band-base);
+  --app-bg-lower-band-paint-image: var(--app-bg-lower-band-vignette), var(--app-bg-noise);
+  --app-bg-lower-band-paint-size: auto, 128px 128px;
+  --app-bg-lower-band-paint-repeat: no-repeat, repeat;
+  --app-bg-lower-band-paint-blend: normal, soft-light;
+  --app-bg-lower-band-paint-attachment: scroll;
 
-  /* Action row tray (container behind the gray pills — not the pills themselves). */
-  --app-bg-action-row-surface: color-mix(in srgb, var(--app-bg-shadow) 68%, #1a2229 32%);
-  /* Background-only bleed to viewport side edges (controls stay aligned). */
-  --app-action-row-surface-bleed-left: calc(50% - 50vw);
-  --app-action-row-surface-bleed-width: 100vw;
+  /* Full-bleed side paint (escapes inset tray / sheet rails to the viewport edges). */
+  --app-bg-side-bleed-left: calc(50% - 50vw);
+  --app-bg-side-bleed-width: 100vw;
+  /* Legacy aliases used by older tray/header bleed rules. */
+  --app-action-row-surface-bleed-left: var(--app-bg-side-bleed-left);
+  --app-action-row-surface-bleed-width: var(--app-bg-side-bleed-width);
+
+  /* Legacy alias — same as base (no separate tray bands). */
+  --app-bg-action-row-surface: var(--app-bg-base);
+
+  /*
+   * Selected hands-tray row + top discard/bot band (B/C/D + S/W/N).
+   * Tracker: full-bleed on `.app-top-exposure-container::before`. Soft join: hand-rack
+   * `::before` gradient behind Seat / Charleston. Top app-main pad uses the same fill.
+   */
+  --app-bg-row-active: color-mix(in srgb, var(--app-bg-base) 40%, #161d26 60%);
+  --hands-row-active-fill: var(--app-bg-row-active);
+  --app-bg-top-band-fill: var(--app-bg-row-active);
+  --app-bg-top-band-fade: 1.5rem;
+  /*
+   * How far the top-band dark continues into the East rack (Seat: / Charleston / pass slots)
+   * before the bottom feather. Tuned to the compact exposure / pass-strip row.
+   */
+  --app-bg-top-band-seat-end: calc(
+    var(--play-tray-h-divider, 0.25rem)
+    + max(1.75rem, calc(var(--hand-rack-tile-h, 3.2rem) * 0.42))
+  );
+  /* Flat paint for tracker top-band (matches row boxes). */
+  --app-bg-top-band-paint-color: var(--app-bg-top-band-fill);
 
   /*
    * --- Grain (SVG noise tile) ---

@@ -9,12 +9,11 @@
 
 
 /*
- * Opening-deal wave: tiles must paint over Charleston text/slots, but the darker tray
- * (`hand-bank::after` + seat-band `::before`) must stay underneath.
+ * Opening-deal wave: tiles must paint over Charleston text/slots.
  *
  * `.rack-stage__rack-bottom` normally uses z-index: 1, which traps tile `z-index: 10`
  * under `.rack-stage__rack-top` (z-index: 2). Opening that context lets just-drawn tiles
- * compete in the column stack above Charleston, while gray pseudos stay at z-index 0.
+ * compete in the column stack above Charleston.
  *
  * Joker-swap bounce still lifts the whole rack-bottom so the arc clears the exposure row.
  */
@@ -39,17 +38,6 @@
   .panel-hand-rack__hand-tray:has(.sortable-tile-wrap--just-drawn)
   .hand-bank {
   overflow: visible;
-}
-
-.app-layout[data-animations='on']
-  .panel--hand
-  .panel-hand-rack__hand-tray:has(.sortable-tile-wrap--just-drawn)
-  .rack-stage__rack-bottom::before,
-.app-layout[data-animations='on']
-  .panel--hand
-  .panel-hand-rack__hand-tray:has(.sortable-tile-wrap--just-drawn)
-  .hand-bank::after {
-  z-index: 0;
 }
 
 .app-layout[data-animations='on']
@@ -92,6 +80,50 @@
   > .app-opponents-rail__cell:has(.exposure-rack__slot--joker-swap-hint-bounce) {
   overflow: visible;
   z-index: 5;
+}
+
+/*
+ * Top-band bot exposures: meld wraps + slots clip to tile height (`overflow: hidden` /
+ * `max-height` in part-0123). Open the chain and lift the bouncing slot above neighbors
+ * (and the row above sibling overlay rows) so the dock-bounce is not cut off.
+ */
+.app-layout[data-joker-swap-hint='on'][data-animations='on']
+  .app-top-exposure-container
+  .discard-tracker__overlay-row:has(.exposure-rack__slot--joker-swap-hint-bounce) {
+  overflow: visible;
+  position: relative;
+  z-index: 6;
+}
+
+.app-layout[data-joker-swap-hint='on'][data-animations='on']
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row:has(.exposure-rack__slot--joker-swap-hint-bounce) {
+  overflow: visible;
+}
+
+.app-layout[data-joker-swap-hint='on'][data-animations='on']
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row
+  :is(.exposure-rack__meld-drop, .exposure-rack__meld-grid-span):has(
+    .exposure-rack__slot--joker-swap-hint-bounce
+  ) {
+  position: relative;
+  z-index: 50;
+  overflow: visible;
+  max-height: none;
+}
+
+.app-layout[data-joker-swap-hint='on'][data-animations='on']
+  .app-top-exposure-container
+  .exposure-rack__slot--joker-swap-hint-bounce,
+.app-layout[data-joker-swap-hint='on'][data-animations='on']
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row
+  :is(.exposure-rack__meld-drop, .exposure-rack__meld-grid-span)
+  > .exposure-rack__slot--joker-swap-hint-bounce {
+  position: relative;
+  z-index: 50;
+  overflow: visible;
 }
 
 .app-layout[data-joker-swap-hint='on'][data-animations='on']

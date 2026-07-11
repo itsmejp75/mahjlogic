@@ -740,13 +740,16 @@
   font-size: var(--tile-face-glyph-fs);
 }
 
-/* Sorted discard joker: show “J” only — no inscribed ring. */
+/* Sorted discard joker: show “J” only — no inscribed ring. Lit faces keep near-black ink. */
 .discard-tracker__overlay-grid .sorted-discard-tray__slot .tile-face.tile--joker::after {
   content: none;
   display: none;
 }
 
-.discard-tracker__overlay-grid .sorted-discard-tray__slot .tile-face.tile--joker .tile-face__glyph {
+.discard-tracker__overlay-grid
+  .sorted-discard-tray__slot:is(.sorted-discard-tray__slot--discarded, .sorted-discard-tray__slot--suggest-need)
+  .tile-face.tile--joker
+  .tile-face__glyph {
   color: #080808;
 }
 
@@ -1065,7 +1068,8 @@
 
 /*
  * Undiscarded slots: glyph-only on the tray unless --suggest-need (coach lit fill).
- * Undiscarded --suggest-dim keeps transparent face; glyph fades via opacity below.
+ * Awaiting / inactive / undiscarded suggest-dim ranks share muted gray + weight 500
+ * (including while a suggested hand is focused — do not fall back to dark ink).
  */
 .panel--discard-tracker .discard-tracker__overlay-grid
   :is(
@@ -1075,7 +1079,9 @@
   ):not(.sorted-discard-tray__slot--discarded)
   .tile-face
   :is(.tile-face__glyph, .tile-face__glyph-num, .tile-face__glyph-letter) {
-  opacity: 0.8;
+  color: var(--sorted-discard-inactive-glyph);
+  font-weight: 500;
+  opacity: 1;
   position: relative;
   z-index: 1;
 }
@@ -1271,6 +1277,48 @@
   .tile-face.tile--joker.tile-face--sorted-discard-glyph
   .tile-face__glyph {
   color: var(--tg-ink, var(--color-black));
+}
+
+/* Undiscarded ranks: muted gray on the dark tray (beats --tg-ink above). */
+.app[data-tile-graphics] .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  :is(.exposure-rack--discard-tracker-sorted-row, .exposure-rack--discard-tracker-prefix)
+  :is(
+    .sorted-discard-tray__slot--awaiting-discard,
+    .sorted-discard-tray__slot--inactive,
+    .sorted-discard-tray__slot--suggest-dim
+  ):not(.sorted-discard-tray__slot--discarded)
+  .tile-face.tile-face--sorted-discard-glyph
+  :is(.tile-face__glyph, .tile-face__glyph-num, .tile-face__glyph-letter, .tile-face__rank, .tile-face__suit-text) {
+  color: var(--sorted-discard-inactive-glyph);
+  font-weight: 500;
+}
+
+.app[data-tile-graphics] .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  :is(.exposure-rack--discard-tracker-sorted-row, .exposure-rack--discard-tracker-prefix)
+  :is(
+    .sorted-discard-tray__slot--awaiting-discard,
+    .sorted-discard-tray__slot--inactive,
+    .sorted-discard-tray__slot--suggest-dim
+  ):not(.sorted-discard-tray__slot--discarded)
+  .tile-face.tile--joker.tile-face--sorted-discard-glyph
+  .tile-face__glyph {
+  color: var(--sorted-discard-inactive-glyph);
+  font-weight: 500;
+}
+
+/* Undiscarded J: no brightness dim — same muted gray as inactive ranks. */
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  :is(
+    .sorted-discard-tray__slot--awaiting-discard,
+    .sorted-discard-tray__slot--inactive,
+    .sorted-discard-tray__slot--suggest-dim
+  ):not(.sorted-discard-tray__slot--discarded)
+  .tile-face.tile--joker {
+  filter: none;
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
 }
 
 /* Bot exposure row: same corner radius + face material stack as main-rack tiles. */

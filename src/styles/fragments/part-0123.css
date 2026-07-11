@@ -367,11 +367,48 @@ html .app-dnd-frame > .app-play-split.app-top-exposure-container {
   max-height: none;
   align-self: stretch;
   overflow: visible;
+  position: relative;
+  z-index: 0;
+  /* One continuous dark band (not --window-surface / transparent). */
+  background: var(--app-bg-top-band-paint-color, var(--app-bg-top-band-fill));
 }
 
 /*
- * Top band: mirror East hand rack inset — symmetric panel padding, no __left join gutter,
- * tray painted on `.discard-tracker__shell::before` (same role as `.panel-hand-rack::before`).
+ * Full-bleed top-band for the tracker only (height-clipped). Soft join into Seat /
+ * Charleston is painted by `.panel-hand-rack::before` behind rack content — do not
+ * extend this pseudo into the hand or it stacks over tiles / Seat text.
+ */
+html .app-dnd-frame > .app-play-split.app-top-exposure-container::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  bottom: 0;
+  left: var(--app-bg-side-bleed-left);
+  width: var(--app-bg-side-bleed-width);
+  pointer-events: none;
+  background-color: var(--app-bg-top-band-paint-color, var(--app-bg-top-band-fill));
+  background-image: none;
+}
+
+html .app-dnd-frame > .app-play-split.app-top-exposure-container::after {
+  content: none;
+  display: none;
+}
+
+/*
+ * Row boxes match the band fill so B/C/D·S/W/N read as one surface (no lighter gaps).
+ */
+html .app-dnd-frame > .app-play-split.app-top-exposure-container .discard-tracker__overlay-row {
+  position: relative;
+  z-index: 1;
+  background-color: var(--app-bg-top-band-fill, var(--hands-row-active-fill));
+  background-image: none;
+  border-radius: calc(var(--tile-face-border-radius, 0.35rem) + 2px);
+}
+
+/*
+ * Top band: mirror East hand rack inset — symmetric panel padding, no __left join gutter.
  */
 html .app-dnd-frame > .app-play-split.app-top-exposure-container > .app-play-split__left {
   padding-inline: 0;
@@ -379,42 +416,28 @@ html .app-dnd-frame > .app-play-split.app-top-exposure-container > .app-play-spl
 
 html .app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard-tracker {
   position: relative;
-  isolation: isolate;
+  z-index: 1;
   overflow: visible;
   padding-bottom: 0;
   padding-inline: var(--hand-window-pad-inline);
 }
 
 html .app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard-tracker::before,
-html .app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard-tracker::after {
+html .app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard-tracker::after,
+html .app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard-tracker > .discard-tracker__shell::before,
+html .app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard-tracker > .discard-tracker__shell::after {
   content: none;
   display: none;
 }
 
 html .app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard-tracker > .discard-tracker__shell {
   position: relative;
-  isolation: isolate;
+  z-index: 1;
   overflow: visible;
   box-sizing: border-box;
   padding-top: var(--hand-rack-tray-bleed-inline);
-}
-
-html .app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard-tracker > .discard-tracker__shell::before {
-  content: '';
-  position: absolute;
-  z-index: 0;
-  top: 0;
-  /* 1px overlap into the hand rack padding band — avoids a hairline at the tray join. */
-  bottom: -1px;
-  left: calc(-1 * var(--hand-rack-tray-bleed-inline));
-  right: calc(-1 * var(--hand-rack-tray-bleed-inline));
-  pointer-events: none;
-  border-radius: 0;
-}
-
-html .app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard-tracker > .discard-tracker__shell::after {
-  content: none;
-  display: none;
+  background-color: transparent;
+  background-image: none;
 }
 
 html .app-dnd-frame > .app-play-split.app-top-exposure-container > .app-play-split__left,
@@ -1030,7 +1053,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   overflow: visible;
 }
 
-/* Action row container: dedicated darker tray behind the button pills. */
+/* Action / Charleston wells: transparent — page `--app-bg-base` shows through. */
 .panel--hand .panel-hand-rack__action-well,
 .panel--hand .panel-hand-rack__charleston-actions-well {
   position: relative;
@@ -1041,56 +1064,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   background-image: none;
 }
 
-.panel--hand :is(.panel-hand-rack__action-well, .panel-hand-rack__charleston-actions-well)::after {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  top: 0;
-  bottom: 0;
-  left: var(--app-action-row-surface-bleed-left);
-  width: var(--app-action-row-surface-bleed-width);
-  background-color: var(--app-bg-action-row-surface);
-  pointer-events: none;
-}
-
-/* Hand↔action seam: same darker tray as the button well. */
-.panel--hand .panel-hand-rack__action-well::before,
-.panel--hand .panel-hand-rack__charleston-actions-well::before {
-  content: '';
-  position: absolute;
-  left: var(--app-action-row-surface-bleed-left);
-  width: var(--app-action-row-surface-bleed-width);
-  right: auto;
-  bottom: 100%;
-  height: var(--play-tray-h-divider);
-  background-color: var(--app-bg-action-row-surface);
-  pointer-events: none;
-}
-
-/* Seat band above main rack: same darker tray behind Seat:position.
- * Height comes from `--player-seat-band-top` (tracker→hand gap), not the label offset — so the
- * gradient stays when a call meld moves the label below the exposure. */
-.panel--hand .panel-hand-rack__hand-tray .rack-stage__rack-bottom::before {
-  content: '';
-  position: absolute;
-  left: var(--app-action-row-surface-bleed-left);
-  width: var(--app-action-row-surface-bleed-width);
-  right: auto;
-  top: var(
-    --player-seat-band-top,
-    min(0px, calc(2 * var(--player-seat-label-top, -0.35rem)))
-  );
-  bottom: 100%;
-  background-color: transparent;
-  background-image: linear-gradient(
-    to bottom,
-    transparent 0%,
-    var(--app-bg-action-row-surface) 58%
-  );
-  pointer-events: none;
-}
-
-/* Tile rows sit above the unified tray backdrop; keep interiors transparent. */
+/* Tile rows sit above the page background; keep interiors transparent. */
 .panel--hand .rack-stage__rack-col {
   position: relative;
   overflow: visible;
@@ -1098,7 +1072,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 .panel--hand .rack-stage__rack-top {
   position: relative;
-  /* Stay above hand-tray gray (`hand-bank::after` / seat band) — including during opening-deal wave. */
+  /* Above hand tray during opening-deal wave. */
   z-index: 2;
 }
 
@@ -1125,17 +1099,6 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   box-shadow: none;
   border-radius: 0;
   padding-block: 0;
-}
-
-.panel--hand .panel-hand-rack__hand-tray .hand-bank::after {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  inset: 0;
-  left: var(--app-action-row-surface-bleed-left);
-  width: var(--app-action-row-surface-bleed-width);
-  background-color: var(--app-bg-action-row-surface);
-  pointer-events: none;
 }
 
 /*
@@ -1883,69 +1846,58 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
  * Suggested-hands selected row — midpoint between app shell and unpinned pin ink.
  */
 .app .suggested-hands-popup .hands-panel__content {
-  --hands-row-active-fill: color-mix(in srgb, var(--app-bg-base) 40%, #161d26 60%);
-  /* Backdrop is the sheet/row ::before gradient — keep cells transparent. */
-  --hands-header-bg: transparent;
+  /* Beat part-0081 rgba fallback — same dark fill as the top discard/bot band. */
+  --hands-row-active-fill: var(--app-bg-row-active);
+  /* Title row stays page-dark; body below uses the lighter lower-band paint. */
+  --hands-header-bg: var(--app-bg-base);
 }
 
 /*
- * Suggested-hands title row: viewport edge bleed + soft bottom feather.
- * Scroll stays on `.hands-sheet__rows`; lift overflow on ancestors so background paint can
- * reach the page side edges (same pattern as the action row container).
+ * Let lower-band / top-band side bleed reach the viewport edges (beats part-0103/0104 overflow:hidden).
+ * Discard tray always; hands popup only while open so the closed slide still clips cleanly.
  */
-.panel--discard-tracker[data-suggested-hands-open='on'],
-.panel--discard-tracker[data-suggested-hands-open='on'] > .discard-tracker__shell,
-.panel--discard-tracker[data-suggested-hands-open='on'] .discard-tracker__content,
-.app .suggested-hands-popup.suggested-hands-popup--open,
-.app .suggested-hands-popup.suggested-hands-popup--open .suggested-hands-popup__user-shift,
-.app .suggested-hands-popup.suggested-hands-popup--open .panel--hands.suggested-hands-popup__user-shift {
-  /* Beat part-0104 `overflow: hidden` on `__user-shift` so the title-row bleed can escape. */
+.panel--discard-tracker.panel--discard-tracker--bottom,
+.panel--discard-tracker.panel--discard-tracker--bottom > .discard-tracker__shell,
+.panel--discard-tracker.panel--discard-tracker--bottom .discard-tracker__content,
+.app-discard-bottom-container,
+.app-dnd-frame:has(> .app-play-split.app-top-exposure-container),
+.app-dnd-frame > .app-play-split.app-top-exposure-container,
+.app-dnd-frame > .app-play-split.app-top-exposure-container > .app-play-split__left,
+.app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard-tracker,
+.app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard-tracker > .discard-tracker__shell {
   overflow: visible;
 }
 
+.app .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open,
+.app .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open .suggested-hands-popup__user-shift,
+.app .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open .panel--hands.suggested-hands-popup__user-shift,
 .app
-  .suggested-hands-popup.suggested-hands-popup--open
+  .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
   .hands-panel__content
   .hands-list-scroll:has(> .hands-sheet:not(.hands-sheet--tiles2)) {
   overflow: visible;
 }
 
 /*
- * Header cells stay transparent — only the shared full-bleed ::before paints the band.
- * Per-cell gradients stop at the panel edge and read as a hard side seam.
+ * Dark full-bleed band for the hands header only — covers side gutters through the title row
+ * so the lighter lower-band reads from the bottom of the header down (not from its top).
  */
-.app .suggested-hands-popup .hands-panel__content :is(
-  .hands-list__freeze-header.hands-list__row-hit,
-  .hands-list__freeze-header.hands-list__row-hit:focus,
-  .hands-list__freeze-header.hands-list__row-hit:focus-visible,
-  .hands-list__freeze-header .hands-list__header-cell,
-  .hands-list-scroll > .hands-sheet .hands-sheet__cell--header,
-  .hands-list-scroll > .hands-sheet .hands-sheet__cell--header.hands-sheet__cell--pin
-) {
-  background-color: transparent;
-  background-image: none;
+.app .suggested-hands-popup .hands-panel__content .hands-list__freeze-header.hands-list__row-hit {
+  position: relative;
+  z-index: 3;
 }
 
-/*
- * One shared title-row backdrop below every header cell (not per-column).
- * No corner radius — radius on this layer stopped the color short of the viewport sides.
- */
 .app .suggested-hands-popup .hands-panel__content .hands-list__freeze-header.hands-list__row-hit::before {
   content: '';
   position: absolute;
   z-index: 0;
   inset: 0;
-  left: var(--app-action-row-surface-bleed-left);
-  width: var(--app-action-row-surface-bleed-width);
+  left: var(--app-bg-side-bleed-left);
+  width: var(--app-bg-side-bleed-width);
   border-radius: 0;
-  background-image: linear-gradient(
-    to bottom,
-    var(--app-bg-action-row-surface) 0%,
-    var(--app-bg-action-row-surface) 8%,
-    color-mix(in srgb, var(--app-bg-action-row-surface) 50%, transparent 50%) 55%,
-    transparent 100%
-  );
   pointer-events: none;
+  background-color: var(--app-bg-base);
+  background-image: none;
 }
 
 .app .suggested-hands-popup .hands-panel__content .hands-list__freeze-header .hands-list__header-cell {
@@ -1957,39 +1909,29 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .suggested-hands-popup
   .hands-panel__content
   .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: var(--app-action-row-surface-bleed-left);
-  width: var(--app-action-row-surface-bleed-width);
-  /* Match the tallest header cell (Away / Prob % / Points metric track). */
-  font-size: var(--hands-metric-column-header-fs, var(--app-ui-control-fs-sm));
-  height: calc(
-    2 * 0.2em + 1em + var(--hands-sheet-grid-line-w, 0.5px)
-  );
-  z-index: 2;
-  box-sizing: border-box;
-  pointer-events: none;
-  border-radius: 0;
-  background-color: transparent;
-  background-image: linear-gradient(
-    to bottom,
-    var(--app-bg-action-row-surface) 0%,
-    var(--app-bg-action-row-surface) 8%,
-    color-mix(in srgb, var(--app-bg-action-row-surface) 50%, transparent 50%) 55%,
-    transparent 100%
-  );
+  > .hands-sheet:not(.hands-sheet--tiles2) {
+  position: relative;
 }
 
 .app
   .suggested-hands-popup
   .hands-panel__content
   .hands-list-scroll
-  > .hands-sheet:not(.hands-sheet--tiles2)
-  > .hands-sheet__rows {
-  position: relative;
-  z-index: 0;
+  > .hands-sheet:not(.hands-sheet--tiles2)::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: var(--app-bg-side-bleed-left);
+  width: var(--app-bg-side-bleed-width);
+  /* Match the tallest header cell (Away / Prob % / Points metric track). */
+  font-size: var(--hands-metric-column-header-fs, var(--app-ui-control-fs-sm));
+  height: calc(2 * 0.2em + 1em + var(--hands-sheet-grid-line-w, 0.5px));
+  z-index: 2;
+  box-sizing: border-box;
+  pointer-events: none;
+  border-radius: 0;
+  background-color: var(--app-bg-base);
+  background-image: none;
 }
 
 .app
@@ -2012,28 +1954,75 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   z-index: 1;
 }
 
-.app
-  .suggested-hands-popup
-  .hands-panel__content
-  .hands-list-scroll
-  > .hands-sheet
-  .hands-sheet__cell--header
-  > .hands-scroll-above-hint {
+/*
+ * Below the hands header: lighter gray, full-bleed to the page sides via ::before.
+ */
+.app .suggested-hands-popup .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) > .hands-sheet__rows,
+.app .suggested-hands-popup .hands-panel__content .hands-list-scroll > .hands-list {
+  position: relative;
+  z-index: 0;
+  background-color: transparent;
+  background-image: none;
+}
+
+.app .suggested-hands-popup .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) > .hands-sheet__rows::before,
+.app .suggested-hands-popup .hands-panel__content .hands-list-scroll > .hands-list::before {
+  content: '';
   position: absolute;
-  z-index: 1;
+  z-index: -1;
+  top: 0;
+  bottom: 0;
+  left: var(--app-bg-side-bleed-left);
+  width: var(--app-bg-side-bleed-width);
+  border-radius: 0;
+  pointer-events: none;
+  background-color: var(--app-bg-lower-band-paint-color);
+  background-image: var(--app-bg-lower-band-paint-image);
+  background-size: var(--app-bg-lower-band-paint-size);
+  background-repeat: var(--app-bg-lower-band-paint-repeat);
+  background-blend-mode: var(--app-bg-lower-band-paint-blend);
+  background-attachment: var(--app-bg-lower-band-paint-attachment);
 }
 
 /*
  * Main app background surfaces — paint recipe lives in src/styles/app-background.css.
- * Edit --app-bg-* there; this block only lists WHERE the background is applied.
- * Excludes buttons, tiles, text, and slot wells (suggested-hands tray uses the rule above).
+ * Page chrome stays base charcoal. Top B/C/D·S/W/N is one full-bleed band on
+ * `.app-top-exposure-container` (with a soft feather into Seat / Charleston).
+ * `.app-main` top pad (above the tracker) uses the same top-band so it isn’t a light gap.
  */
+:is(html, body, #root) {
+  background-color: var(--app-bg-paint-color, var(--app-bg-base));
+  background-image: none;
+}
+
+/*
+ * Fill `.app-main`’s top padding with top-band dark (matches tracker). Height-limited to the
+ * pad / safe-area so the dark does not run down the page sides. Child overflow cannot paint
+ * this strip — `.app-main` uses `overflow: hidden`.
+ */
+.app .app-main:has(.app-play-split.app-top-exposure-container) {
+  background-color: transparent;
+  background-image: linear-gradient(
+    to bottom,
+    var(--app-bg-top-band-paint-color, var(--app-bg-top-band-fill)) 0%,
+    var(--app-bg-top-band-paint-color, var(--app-bg-top-band-fill))
+      calc(
+        var(--app-v-pad, 0px)
+        + env(safe-area-inset-top, 0px)
+        + var(--pwa-pad-top-extra, 0px)
+      ),
+    transparent
+      calc(
+        var(--app-v-pad, 0px)
+        + env(safe-area-inset-top, 0px)
+        + var(--pwa-pad-top-extra, 0px)
+      )
+  );
+  background-repeat: no-repeat;
+}
+
 :is(
-  html,
-  body,
-  #root,
   .app .panel.panel--hand > .panel-hand-rack::before,
-  html .app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard-tracker > .discard-tracker__shell::before,
   .panel--bot-exposures .app-opponents-rail__cell,
   .panel--bot-exposures__toolbar-well,
   .app-dnd-frame .app-play-split .panel--bot-exposures .panel--bot-exposures__toolbar-well,
@@ -2051,14 +2040,50 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   background-attachment: var(--app-bg-paint-attachment);
 }
 
-/* Bottom discard tray sits entirely below the action row — use the lower-band paint. */
+/*
+ * Top B/C/D + S/W/N band — row boxes + container share `--app-bg-top-band-fill`.
+ */
+html .app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard-tracker > .discard-tracker__shell,
+html .app-dnd-frame > .app-play-split.app-top-exposure-container .discard-tracker__tile-groups-container,
+html .app-dnd-frame > .app-play-split.app-top-exposure-container .discard-tracker__content {
+  background-color: transparent;
+  background-image: none;
+}
+
+/*
+ * Bottom discard tray — lighter band, full-bleed to the page sides.
+ * Element stays transparent; ::before paints edge-to-edge so inset padding / max-width
+ * does not leave dark gutters.
+ */
 :is(
   .app-discard-bottom-container .discard-tracker__content,
   .app-discard-bottom-container .discard-tracker__shell,
   .panel--discard-tracker.panel--discard-tracker--bottom .discard-tracker__content,
   .panel--discard-tracker.panel--discard-tracker--bottom .discard-tracker__shell
 ) {
+  position: relative;
+  z-index: 0;
+  background-color: transparent;
+  background-image: none;
+}
+
+.app-discard-bottom-container .discard-tracker__content::before,
+.panel--discard-tracker.panel--discard-tracker--bottom .discard-tracker__content::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  bottom: 0;
+  left: var(--app-bg-side-bleed-left);
+  width: var(--app-bg-side-bleed-width);
+  border-radius: 0;
+  pointer-events: none;
+  background-color: var(--app-bg-lower-band-paint-color);
   background-image: var(--app-bg-lower-band-paint-image);
+  background-size: var(--app-bg-lower-band-paint-size);
+  background-repeat: var(--app-bg-lower-band-paint-repeat);
+  background-blend-mode: var(--app-bg-lower-band-paint-blend);
+  background-attachment: var(--app-bg-lower-band-paint-attachment);
 }
 
 .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row .exposure-rack__slot--empty::before {
@@ -2187,11 +2212,16 @@ html[data-home-screen-app]:not([data-native-app])
   justify-content: flex-start;
   margin-top: 0;
   background: transparent;
+  position: relative;
+  /* Above the tracker band so hand tiles / Seat / Charleston are never under its paint. */
+  z-index: 2;
+  overflow: visible;
 }
 
 .app-dnd-frame:has(> .app-play-split.app-top-exposure-container) .panel.panel--hand {
   padding-top: 0;
   padding-bottom: 0;
+  background: transparent;
 }
 
 .app-dnd-frame:has(> .app-play-split.app-top-exposure-container)
@@ -2203,6 +2233,35 @@ html[data-home-screen-app]:not([data-native-app])
   padding-top: var(--play-tray-h-divider);
   margin-bottom: 0;
   padding-bottom: 0;
+}
+
+/*
+ * Continue the top-band behind Seat: / Charleston, then feather into the hand.
+ * Full side-bleed + z-index 0 so this is backdrop only (tiles / labels paint above).
+ */
+.app-dnd-frame:has(> .app-play-split.app-top-exposure-container)
+  .panel.panel--hand
+  > .panel-hand-rack::before {
+  z-index: 0;
+  top: 0;
+  left: var(--app-bg-side-bleed-left);
+  right: auto;
+  width: var(--app-bg-side-bleed-width);
+  background-color: var(--app-bg-paint-color);
+  background-image:
+    linear-gradient(
+      to bottom,
+      var(--app-bg-top-band-fill, var(--hands-row-active-fill)) 0%,
+      var(--app-bg-top-band-fill, var(--hands-row-active-fill)) var(--app-bg-top-band-seat-end, 2.75rem),
+      transparent calc(var(--app-bg-top-band-seat-end, 2.75rem) + var(--app-bg-top-band-fade, 1.5rem))
+    ),
+    var(--app-bg-paint-image);
+  background-size: auto, var(--app-bg-paint-size);
+  background-repeat: no-repeat, var(--app-bg-paint-repeat);
+  background-blend-mode: normal, var(--app-bg-paint-blend);
+  background-attachment: scroll, var(--app-bg-paint-attachment);
+  -webkit-mask-image: none;
+  mask-image: none;
 }
 
 .app-dnd-frame:has(> .app-play-split.app-top-exposure-container) .panel-hand-rack__column {
@@ -2497,7 +2556,7 @@ html[data-home-screen-app]:not([data-native-app])
   --rack-action-shadow-rest: var(--app-action-btn-shadow-rest);
   --rack-action-border-rest: var(--app-action-btn-border-rest);
   --rack-action-border-hold: var(--app-action-btn-border-hold);
-  --rack-action-well-surface: var(--app-bg-action-row-surface);
+  --rack-action-well-surface: var(--app-bg-base);
   --rack-action-flat-surface: var(--app-action-btn-bottom);
   --rack-action-border-color: var(--app-action-btn-border);
   --rack-action-press-shadow-dark: var(--app-action-btn-press-shadow-dark);

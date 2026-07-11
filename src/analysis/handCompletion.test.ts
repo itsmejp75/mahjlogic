@@ -825,3 +825,57 @@ describe('computePatternCompletionMetrics', () => {
     expect(m.P).toBeLessThan(100)
   })
 })
+
+describe('liveClaimableDiscard completion probability', () => {
+  it('sets Prob % to 100 when a live discard wins the line, without changing Away', () => {
+    // 369-1a: 333 666 6666 9999 — one 6-dot away; West just discarded that 6-dot.
+    const pattern = NMJL_2026_PATTERNS.find(
+      (p) => p.section === '369' && p.cardHandCode === '1a',
+    )!
+    const hand = [
+      { id: 'b3a', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 3 } },
+      { id: 'b3b', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 3 } },
+      { id: 'b3c', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 3 } },
+      { id: 'b6a', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 6 } },
+      { id: 'b6b', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 6 } },
+      { id: 'd6a', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 6 } },
+      { id: 'd6b', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 6 } },
+      { id: 'd6c', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 6 } },
+      { id: 'd9a', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 9 } },
+      { id: 'd9b', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 9 } },
+      { id: 'j1', def: { cat: 'joker' as const } },
+      { id: 'j2', def: { cat: 'joker' as const } },
+      { id: 'j3', def: { cat: 'joker' as const } },
+    ]
+    const live = {
+      id: 'd6-live',
+      def: { cat: 'suit' as const, suit: 'dot' as const, rank: 6 },
+    }
+
+    const withoutLive = rankSuggestedHands({
+      hand,
+      wallRemaining: 60,
+      discards: [],
+      exposures: [],
+      patterns: [pattern],
+      deckSettings: { totalJokersInGame: 8, totalBlanksInGame: 0 },
+    })
+    const withLive = rankSuggestedHands({
+      hand,
+      wallRemaining: 60,
+      discards: [],
+      exposures: [],
+      patterns: [pattern],
+      deckSettings: { totalJokersInGame: 8, totalBlanksInGame: 0 },
+      liveClaimableDiscard: live,
+    })
+
+    const base = withoutLive.find((l) => l.id === pattern.id)!
+    const boosted = withLive.find((l) => l.id === pattern.id)!
+    expect(base.tilesNeededRough).toBe(1)
+    expect(base.completionProbability).toBeGreaterThan(0)
+    expect(base.completionProbability).toBeLessThan(100)
+    expect(boosted.tilesNeededRough).toBe(1)
+    expect(boosted.completionProbability).toBe(100)
+  })
+})

@@ -272,8 +272,6 @@
 .discard-entry--suggest-dim .tile-face.tile--joker,
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded.sorted-discard-tray__slot--suggest-dim
   .tile-face.tile--joker,
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--awaiting-discard .tile-face.tile--joker,
-.discard-tracker__overlay-grid .sorted-discard-tray__slot--inactive .tile-face.tile--joker,
 .mahjong-win__bots-review-tile--dim .tile-face.tile--joker {
   /* ~ match other tiles’ dim overlay in luminance (ring + J included). */
   --tile-face-suggest-dim-inset: var(--suggest-dim-inset-shadow);

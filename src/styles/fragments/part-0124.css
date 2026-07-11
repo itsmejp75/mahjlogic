@@ -493,10 +493,11 @@
       ),
     .panel--bot-exposures
       .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim),
+    /* Discard tracker: dim only — highlighted tiles stay flat (lift glow only). */
     .panel--discard-tracker
       .discard-tracker__overlay-grid
       .exposure-rack--discard-tracker-bot-row
-      .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
+      .exposure-rack__slot--suggest-dim:not(.exposure-rack__slot--suggest-best)
   )
   .tile-face:not(.tile-face--illustrative-art)::before,
 .app[data-tile-graphics='solid-color']
@@ -528,7 +529,7 @@
     .panel--discard-tracker
       .discard-tracker__overlay-grid
       .exposure-rack--discard-tracker-bot-row
-      .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
+      .exposure-rack__slot--suggest-dim:not(.exposure-rack__slot--suggest-best)
   )
   .tile-face:not(.tile-face--illustrative-art)::before,
 .app[data-tile-graphics='light']
@@ -560,7 +561,7 @@
     .panel--discard-tracker
       .discard-tracker__overlay-grid
       .exposure-rack--discard-tracker-bot-row
-      .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
+      .exposure-rack__slot--suggest-dim:not(.exposure-rack__slot--suggest-best)
   )
   .tile-face:not(.tile-face--illustrative-art)::before,
 .app[data-tile-graphics='dark']
@@ -592,7 +593,7 @@
     .panel--discard-tracker
       .discard-tracker__overlay-grid
       .exposure-rack--discard-tracker-bot-row
-      .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
+      .exposure-rack__slot--suggest-dim:not(.exposure-rack__slot--suggest-best)
   )
   .tile-face:not(.tile-face--illustrative-art)::before {
   --tile-rim-fade: 8%;
@@ -675,8 +676,9 @@
 }
 
 /*
- * Bot exposure coach rows (side panel + discard-tracker S/W/N): vignette + lit/dim parity with
- * main rack / hands strip. Lit tiles use slot lift shadow only — no highlight inset rings.
+ * Bot exposure coach rows (side panel + discard-tracker S/W/N): lit/dim parity with main rack /
+ * hands strip. Side-panel lit tiles keep rim vignette; discard-tracker lit tiles are lift-only.
+ * Lit tiles use slot lift shadow — no highlight inset rings.
  *
  * Side panel: size container + `100cqw` on the face (same as hands strip).
  * Tracker bot row: meld wrappers are flex — keep overlay-grid `--rack-tile-w` (no `100cqw`;
@@ -827,14 +829,15 @@
   z-index: 4;
 }
 
-/* Illustrative classic: coach vignette on full-bleed art faces (bot exposure + suggested-hands strip). */
+/* Illustrative classic: coach vignette on full-bleed art faces (bot exposure + suggested-hands strip).
+ * Discard tracker: dim only — highlighted tiles stay flat. */
 :is(
   .panel--bot-exposures
     .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim),
   .panel--discard-tracker
     .discard-tracker__overlay-grid
     .exposure-rack--discard-tracker-bot-row
-    .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim),
+    .exposure-rack__slot--suggest-dim:not(.exposure-rack__slot--suggest-best),
   .panel--hand
     .rack-stage__rack-top
     .pass-strip__tile-wrap:is(.pass-strip__tile-wrap--suggest-best, .pass-strip__tile-wrap--suggest-dim),
@@ -1404,8 +1407,8 @@
  */
 
 /*
- * Sorted discard coach `--suggest-need`: lit + lifted (slot `::after` cast shadow — same as
- * hands tray / bot exposures). No white border ring on the face.
+ * Sorted discard coach `--suggest-need`: lit fill, no rim vignette / lift halo —
+ * thin white outer edge only.
  */
 .panel--discard-tracker
   .discard-tracker__overlay-grid
@@ -1416,80 +1419,10 @@
   --tile-face-highlight-inset: 0 0 0 0 transparent;
   --tile-face-highlight-shadow: 0 0 0 0 transparent;
   --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+  border: 1px solid #fff;
   box-shadow: none;
   position: relative;
   z-index: 1;
-}
-
-/* Sorted discard coach `--suggest-need`: rim vignette on the glyph face (same coach nudge as bot row). */
-.app[data-tile-graphics='classic']
-  .panel--discard-tracker
-  .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot--suggest-need
-  .tile-face.tile-face--sorted-discard-glyph::before,
-.app[data-tile-graphics='solid-color']
-  .panel--discard-tracker
-  .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot--suggest-need
-  .tile-face.tile-face--sorted-discard-glyph::before,
-.app[data-tile-graphics='light']
-  .panel--discard-tracker
-  .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot--suggest-need
-  .tile-face.tile-face--sorted-discard-glyph::before,
-.app[data-tile-graphics='dark']
-  .panel--discard-tracker
-  .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot--suggest-need
-  .tile-face.tile-face--sorted-discard-glyph::before,
-.app[data-tile-graphics='illustrative-classic']
-  .panel--discard-tracker
-  .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot--suggest-need
-  .tile-face.tile-face--sorted-discard-glyph::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  border-radius: inherit;
-  pointer-events: none;
-  --tile-rim-fade: 8%;
-  --tile-shadow-fade: 6.5%;
-  background:
-    linear-gradient(
-      to bottom,
-      var(--tile-rim-top-peak) 0%,
-      var(--tile-rim-top-mid) calc(var(--tile-rim-fade) * 0.4),
-      var(--tile-rim-top-tail) calc(var(--tile-rim-fade) * 0.75),
-      transparent var(--tile-rim-fade)
-    ),
-    linear-gradient(
-      to top,
-      rgba(28, 25, 22, 0.48) 0%,
-      rgba(28, 25, 22, 0.17) calc(var(--coach-discard-bottom-shadow-fade, var(--tile-shadow-fade)) * 0.4),
-      rgba(28, 25, 22, 0.04) calc(var(--coach-discard-bottom-shadow-fade, var(--tile-shadow-fade)) * 0.75),
-      transparent var(--coach-discard-bottom-shadow-fade, var(--tile-shadow-fade))
-    ),
-    linear-gradient(
-      to right,
-      rgba(28, 25, 22, 0.4) 0%,
-      rgba(28, 25, 22, 0.12) calc(var(--tile-shadow-fade) * 0.4),
-      rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
-      transparent calc(var(--tile-shadow-fade) * 0.92)
-    ),
-    linear-gradient(
-      to left,
-      rgba(28, 25, 22, 0.4) 0%,
-      rgba(28, 25, 22, 0.12) calc(var(--tile-shadow-fade) * 0.4),
-      rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
-      transparent calc(var(--tile-shadow-fade) * 0.92)
-    );
-  box-shadow:
-    inset calc(var(--sorted-discard-rim-inset-w) * 0.04) 0 calc(var(--sorted-discard-rim-inset-w) * 0.09)
-      calc(var(--sorted-discard-rim-inset-w) * -0.3) rgba(28, 25, 22, 0.32),
-    inset calc(var(--sorted-discard-rim-inset-w) * -0.04) calc(var(--sorted-discard-rim-inset-w) * -0.04)
-      calc(var(--sorted-discard-rim-inset-w) * 0.09) calc(var(--sorted-discard-rim-inset-w) * -0.3)
-      rgba(28, 25, 22, 0.34);
 }
 
 html
@@ -1500,7 +1433,14 @@ html
 .panel--discard-tracker
   .discard-tracker__overlay-grid
   .sorted-discard-tray__slot--suggest-need:not(.sorted-discard-tray__slot--suggest-dying)
-  .tile-face::after {
+  .tile-face::after,
+html
+  .app-top-exposure-container
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suggest-need:not(.sorted-discard-tray__slot--suggest-dying)::after,
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suggest-need:not(.sorted-discard-tray__slot--suggest-dying)::after {
   content: none;
   display: none;
   box-shadow: none;
@@ -2017,7 +1957,7 @@ html body .app .panel--hand .rack-bottom-bar--tile-grid :is(
 
 /*
  * Rack action hints: bright purple border on MAHJ (legal win) and Swap (joker swap available).
- * Rest / hover only — pressed-in toggles and :active keep their own chrome.
+ * Soft outer glow (blurred halo) — rest / hover only; pressed-in / :active keep their own chrome.
  */
 html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-tile-cell.btn--mahjong-hint:not(:disabled):not(:active):not(
     .btn--mahjong-rack-pressed-in
@@ -2030,7 +1970,8 @@ html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-t
   border: 1px solid var(--rack-action-hint-border, #b56fd0) !important;
   box-shadow:
     var(--rack-action-shadow-rest),
-    0 0 0 2px color-mix(in srgb, var(--rack-action-hint-border, #b56fd0) 92%, transparent) !important;
+    0 0 0 1px color-mix(in srgb, var(--rack-action-hint-border, #b56fd0) 85%, transparent),
+    0 0 10px 3px color-mix(in srgb, var(--rack-action-hint-border, #b56fd0) 55%, transparent) !important;
   overflow: visible;
 }
 
@@ -2246,6 +2187,60 @@ html
   overflow: visible;
 }
 
+/*
+ * Joker-swap dock-bounce in top-band bot exposures: part-0123 clips melds/slots to
+ * `--rack-tile-h` with `overflow: hidden`, and opaque overlay rows (z-index 1) cover
+ * an upward bounce from the row below. Mirror the suggest-best openers and lift the
+ * bouncing row / meld above neighbors (also gated in part-0035 while the hint runs).
+ */
+html
+  .app-top-exposure-container
+  .discard-tracker__overlay-row:has(.exposure-rack__slot--joker-swap-hint-bounce) {
+  position: relative;
+  z-index: 6;
+  overflow: visible;
+}
+
+html
+  .app-top-exposure-container
+  .discard-tracker__overlay-row
+  > .app-opponents-rail__cell:has(.exposure-rack__slot--joker-swap-hint-bounce) {
+  overflow: visible;
+  z-index: 5;
+}
+
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row:has(.exposure-rack__slot--joker-swap-hint-bounce) {
+  overflow: visible;
+}
+
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row
+  :is(.exposure-rack__meld-drop, .exposure-rack__meld-grid-span):has(
+    .exposure-rack__slot--joker-swap-hint-bounce
+  ) {
+  position: relative;
+  z-index: 50;
+  overflow: visible;
+  max-height: none;
+}
+
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--joker-swap-hint-bounce,
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row
+  :is(.exposure-rack__meld-drop, .exposure-rack__meld-grid-span)
+  > .exposure-rack__slot--joker-swap-hint-bounce {
+  position: relative;
+  z-index: 50;
+  overflow: visible;
+}
+
 html
   .app-top-exposure-container
   .discard-tracker__overlay-grid
@@ -2405,17 +2400,13 @@ html
 
 .panel--discard-tracker
   .discard-tracker__overlay-grid
-  :is(
-    .exposure-rack--discard-tracker-bot-row .exposure-rack__slot--suggest-best,
-    .sorted-discard-tray__slot--suggest-need
-  ):not(.exposure-rack__slot--suggest-dying):not(.sorted-discard-tray__slot--suggest-dying)::after,
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-best:not(.exposure-rack__slot--suggest-dying)::after,
 html
   .app-top-exposure-container
   .discard-tracker__overlay-grid
-  :is(
-    .exposure-rack--discard-tracker-bot-row .exposure-rack__slot--suggest-best,
-    .sorted-discard-tray__slot--suggest-need
-  ):not(.exposure-rack__slot--suggest-dying):not(.sorted-discard-tray__slot--suggest-dying)::after {
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-best:not(.exposure-rack__slot--suggest-dying)::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -2432,17 +2423,15 @@ html
 }
 
 /*
- * Small-tile coach vignette — discard tracker + side-panel bot exposures: thin rim with
- * corner radials + symmetric edge fades on all four sides. Lift glow unchanged.
+ * Small-tile coach vignette — discard-tracker dim tiles + side-panel bot exposures: thin rim
+ * with corner radials + symmetric edge fades. Highlighted discard-tracker tiles stay flat
+ * (lift glow only). Side-panel lit+dim unchanged.
  */
 html body .app
   :is(.panel--discard-tracker, html .app-top-exposure-container)
   .discard-tracker__overlay-grid
-  :is(
-    .exposure-rack--discard-tracker-bot-row
-      .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim),
-    .sorted-discard-tray__slot--suggest-need
-  )
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-dim:not(.exposure-rack__slot--suggest-best)
   .tile-face::before,
 html body .app[data-tile-graphics]
   .panel--bot-exposures

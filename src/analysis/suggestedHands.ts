@@ -1,5 +1,5 @@
 import type { Dragon, EastExposure, Suit, TileDef, TileInstance } from '../mahjong/types'
-import { tileDefsEqual } from '../mahjong/tileUtils'
+import { findExactMatches, tileDefsEqual } from '../mahjong/tileUtils'
 import { collectSwappableJokerTileIds } from '../mahjong/jokerSwapTarget'
 import type { CardInk } from '../card/cardText'
 import {
@@ -135,6 +135,128 @@ function wallCompletionProbForLine(
     tilesNeededRough,
     jokerReliefFromSwapHint,
   })
+}
+
+/** Tiles-away for one practice line with a specific concealed hand + claim melds. */
+function tilesAwayForPracticePattern(
+  p: PracticePattern,
+  hand: TileInstance[],
+  claimMelds: ReadonlyArray<{ tiles: TileInstance[] }>,
+): number {
+  const rack = rackForPatternWithClaimMelds(hand, claimMelds)
+  const exposureTileIds =
+    claimMelds.length > 0
+      ? new Set(claimMelds.flatMap((e) => e.tiles).map((t) => t.id))
+      : undefined
+  const opts: GroupMatchOpts = {
+    noJokers: p.section === 'SINGLES AND PAIRS',
+    leftToRight: true,
+    requireCompleteRunSingles: true,
+    ...(exposureTileIds && exposureTileIds.size > 0 ? { exposureTileIds } : {}),
+  }
+  const matched = p.groups?.length
+    ? computeGroupMatch(rack, p.groups, opts)
+    : rack.filter((t) => p.matches(t.def)).length
+  return Math.max(0, p.roughTarget - matched)
+}
+
+function pickHandTilesForLiveClaim(
+  hand: TileInstance[],
+  calledDef: TileDef,
+  needed: number,
+): TileInstance[] | null {
+  const realMatches = findExactMatches(hand, calledDef)
+  const handJokers = hand.filter((t) => t.def.cat === 'joker')
+  const realsToUse = realMatches.slice(0, Math.min(needed, realMatches.length))
+  const jokersToUse = handJokers.slice(0, needed - realsToUse.length)
+  const usedTiles = [...realsToUse, ...jokersToUse]
+  if (usedTiles.length < needed) return null
+  return usedTiles
+}
+
+/**
+ * True when claiming the live unreclaimed discard completes this practice line (0 away),
+ * using the same concealed / pair-exposure / pung–sextet paths as Call → Mah Jongg.
+ * Does not change Away — only used to lift Prob % while Call/Ignore are offered.
+ */
+function liveClaimableDiscardCompletesPattern(
+  p: PracticePattern,
+  hand: TileInstance[],
+  existingMelds: ReadonlyArray<{ tiles: TileInstance[] }>,
+  called: TileInstance,
+): boolean {
+  if (called.def.cat === 'joker') return false
+
+  // (a) 14th tile into the concealed rack (no new exposure).
+  if (tilesAwayForPracticePattern(p, [...hand, called], existingMelds) === 0) return true
+
+  // Concealed (C) lines cannot open a new exposure to win on a discard.
+  if (p.closed) return false
+
+  // (b) Two-tile claim exposure (pair / single-style groups).
+  const oneFromHand = findExactMatches(hand, called.def)
+  for (const t of oneFromHand) {
+    const handNext = hand.filter((x) => x.id !== t.id)
+    const melds = [...existingMelds, { tiles: [called, t] }]
+    if (!claimMeldsFitPracticePattern(p, melds)) continue
+    if (tilesAwayForPracticePattern(p, handNext, melds) === 0) return true
+  }
+
+  // (c–d) Pung / kong / quint / sextet (2–5 tiles from hand + discard).
+  for (const needed of [2, 3, 4, 5] as const) {
+    const used = pickHandTilesForLiveClaim(hand, called.def, needed)
+    if (!used) continue
+    const usedIds = new Set(used.map((t) => t.id))
+    const handNext = hand.filter((t) => !usedIds.has(t.id))
+    const melds = [...existingMelds, { tiles: [called, ...used] }]
+    if (!claimMeldsFitPracticePattern(p, melds)) continue
+    if (tilesAwayForPracticePattern(p, handNext, melds) === 0) return true
+  }
+
+  return false
+}
+
+/**
+ * Wall-completion % unless a live claimable discard already wins this line — then 100.
+ * Rows farther than 1 away keep the wall estimate even when another assignment of the
+ * same pattern would win (consecRanks tier rows).
+ */
+function completionProbabilityForLine(
+  p: PracticePattern,
+  rackForPattern: TileInstance[],
+  visible: TileInstance[],
+  wallRemaining: number,
+  deck: DeckComposition,
+  slots: readonly CompletionSlot[],
+  ctx: HandInventoryContext,
+  completion: HandCompletionMetrics,
+  tilesNeededRough: number,
+  swappableExposedJokers: number,
+  hand: TileInstance[],
+  playerClaimMelds: ReadonlyArray<{ tiles: TileInstance[] }>,
+  liveClaimableDiscard: TileInstance | null | undefined,
+): number {
+  const wallProb = wallCompletionProbForLine(
+    p,
+    rackForPattern,
+    visible,
+    wallRemaining,
+    deck,
+    slots,
+    ctx,
+    completion,
+    tilesNeededRough,
+    swappableExposedJokers,
+  )
+  if (
+    liveClaimableDiscard &&
+    tilesNeededRough > 0 &&
+    tilesNeededRough <= 1 &&
+    liveClaimableDiscardCompletesPattern(p, hand, playerClaimMelds, liveClaimableDiscard)
+  ) {
+    return 100
+  }
+  return wallProb
 }
 
 /** Hand + claim melds for tiles-away: flower-meld jokers stay off the rack; other melds resolve jokers. */
@@ -5317,6 +5439,11 @@ export type RankSuggestedHandsInput = {
     botExposures: BotExposure[]
     eastExposures: EastExposure[]
   }
+  /**
+   * Live unreclaimed opponent discard (bot-turn Call/Ignore). Still omitted from {@link discards}
+   * and from Away, but lines this tile completes for Mah Jongg show Prob % 100.
+   */
+  liveClaimableDiscard?: TileInstance | null
 }
 
 function cardBookForRankInput(input: RankSuggestedHandsInput): PracticePattern[] {
@@ -5378,6 +5505,7 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
   const { hand, wallRemaining, discards, exposures } = input
   const playerClaimMelds = input.playerClaimMelds ?? []
   const eastTableClaimMelds = input.eastTableClaimMelds ?? input.playerClaimMelds ?? []
+  const liveClaimableDiscard = input.liveClaimableDiscard ?? null
   const hasPlayerClaimMelds = playerClaimMelds.length > 0
   /** Concealed hand + this seat’s exposed claim melds — all count toward the 14. */
   const rackForPattern = rackForPatternWithClaimMelds(hand, playerClaimMelds)
@@ -5457,7 +5585,7 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
       titleSegments: p.titleSegments,
       matchedInHand,
       tilesNeededRough,
-      completionProbability: wallCompletionProbForLine(
+      completionProbability: completionProbabilityForLine(
         p,
         rackForPattern,
         visible,
@@ -5468,6 +5596,9 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
         completion,
         tilesNeededRough,
         swappableExposedJokers,
+        hand,
+        playerClaimMelds,
+        liveClaimableDiscard,
       ),
       wallRemaining,
       visibleDeadMatches,
@@ -5618,7 +5749,7 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
           titleSegments: p.titleSegments,
           matchedInHand: tierMatched,
           tilesNeededRough: tierAway,
-          completionProbability: wallCompletionProbForLine(
+          completionProbability: completionProbabilityForLine(
             p,
             rackForPattern,
             visible,
@@ -5629,6 +5760,9 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
             tierCompletion,
             tierAway,
             swappableExposedJokers,
+            hand,
+            playerClaimMelds,
+            liveClaimableDiscard,
           ),
           wallRemaining,
           visibleDeadMatches,

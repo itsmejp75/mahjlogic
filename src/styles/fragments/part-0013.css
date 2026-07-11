@@ -5,6 +5,8 @@
   --table-watermark-text-color: #fff;
   /* Empty bot exposure slots — same luminance as the Mahj Logic tray watermark. */
   --table-watermark-slot-fill: rgb(255 255 255 / var(--table-watermark-opacity));
+  /* Undiscarded discard-tracker ranks — readable muted gray on the dark tray (brighter than wells). */
+  --sorted-discard-inactive-glyph: rgb(255 255 255 / 0.32);
 }
 
 /* ---- part-0014.css (from base.css, layout.css, components.css, animations.css) ---- */
