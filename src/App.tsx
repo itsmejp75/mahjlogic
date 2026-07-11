@@ -121,7 +121,7 @@ import {
   readPlayableCardFromStorage,
   writePlayableCardToStorage,
 } from './card/cardCatalog'
-import type { PatternGroup, PracticePattern } from './card/practicePatterns'
+import type { PracticePattern } from './card/practicePatterns'
 import { getActiveCardPatterns, setActiveCardPatterns } from './card/activeCardPatternsScope'
 import {
   buildPinnedPatternsFromFocusKey,

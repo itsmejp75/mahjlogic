@@ -495,6 +495,7 @@ function SortableStagedSlot({
     botJokerBorderMenuOn,
     suppressDim,
     highlightCalled: false,
+    ownedMeld,
     jokerSwapHintBounceTileIds,
     callStagingWave,
     elevated: isDragging,
@@ -532,6 +533,7 @@ function SortableStagedSlot({
               isBest ? 'exposure-rack__slot--suggest-best' : '',
               isDeadSuggested ? 'exposure-rack__slot--suggest-dying' : '',
               suggestDim ? 'exposure-rack__slot--suggest-dim' : '',
+              ownedMeld ? 'exposure-rack__slot--owned-meld' : '',
               jokerSwapHintBounceClass(jokerSwapHintBounceTileIds, tile.id),
             ]
               .filter(Boolean)

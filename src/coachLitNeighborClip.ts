@@ -150,7 +150,7 @@ function readMaxCoachGapPx(scope: ParentNode): number {
 
 /** Exposure racks under `root` that each get their own lit→lit clip pass. */
 export function findCoachLitClipScopes(root: ParentNode): HTMLElement[] {
-  if (root instanceof Element && root.matches(COACH_LIT_CLIP_SCOPE)) {
+  if (root instanceof HTMLElement && root.matches(COACH_LIT_CLIP_SCOPE)) {
     return [root]
   }
   return [...root.querySelectorAll<HTMLElement>(COACH_LIT_CLIP_SCOPE)]
