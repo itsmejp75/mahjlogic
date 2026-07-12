@@ -129,7 +129,6 @@ import {
   computeBlankExchangeFills,
   greedyPatternMatchDetail,
   jokerSwapHandHintUsesSingleBounceIteration,
-  rankSuggestedHands,
   focusKeyForSuggestedHandLine,
   focusKeyPatternId,
   sortHandForSuggestedPattern,
@@ -145,6 +144,7 @@ import {
   type RankSuggestedHandsInput,
 } from './analysis/suggestedHands'
 import { tileInstancesWithClaimMeldJokersResolved } from './analysis/eastExposurePatternFit'
+import { useRankSuggestedHandsWorker } from './analysis/rankSuggestedHandsAsync'
 import { CharlestonPassStripInstructionMain } from './components/CharlestonPassStripInstructionLabel'
 import { PostGameLoserRackRow } from './components/PostGameLoserRackRow'
 import { IllegalMahjongDialog } from './components/IllegalMahjongDialog'
@@ -237,6 +237,18 @@ import {
   type TileGraphics,
 } from './tiles/tileGraphics'
 import { TileGraphicsProvider } from './tiles/TileGraphicsContext'
+import {
+  AppMenuOpenGate,
+  AppMenuOpenProvider,
+  appMenuOpenApiRef,
+  useAppMenuOpen,
+} from './app/AppMenuOpenContext'
+import {
+  SuggestedHandsDndFrame,
+  SuggestedHandsTrayProvider,
+  suggestedHandsTrayApiRef,
+  useSuggestedHandsTray,
+} from './app/SuggestedHandsTrayContext'
 import './styles/style.css'
 
 /** Conservative floor used while the suggested-hands sheet is remeasured during orientation changes. */
@@ -742,16 +754,123 @@ function OpponentExposureDropZone({
   )
 }
 
-/** Hand / Charleston action bar: column 2 menu. */
+/** Logic tray toggle — context consumer so the play surface does not re-render on open/close. */
+function LogicTrayToggleButton() {
+  const { trayOpen, toggleTray } = useSuggestedHandsTray()
+  return (
+    <button
+      type="button"
+      className={[
+        'btn btn--rack-neutral btn--logic rack-bottom-tile-cell rack-bottom-tile-cell--c7-8',
+        trayOpen ? 'btn--logic--open' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      aria-label="Logic"
+      aria-pressed={trayOpen}
+      onClick={toggleTray}
+    >
+      <img className="btn--logic__img" src={logicLogoSrc} alt="Logic" draggable={false} />
+    </button>
+  )
+}
+
+/** Pins the focused hand when the Logic tray closes — context consumer so App does not subscribe. */
+function SuggestedHandsPinOnTrayClose({
+  focusKeyRef,
+  onClosedWithFocus,
+}: {
+  focusKeyRef: RefObject<string | null>
+  onClosedWithFocus: (focusKey: string) => void
+}) {
+  const { trayOpen } = useSuggestedHandsTray()
+  const prevRef = useRef(trayOpen)
+  useEffect(() => {
+    if (prevRef.current && !trayOpen) {
+      const k = focusKeyRef.current
+      if (k) onClosedWithFocus(k)
+    }
+    prevRef.current = trayOpen
+  }, [trayOpen, focusKeyRef, onClosedWithFocus])
+  return null
+}
+
+/** Re-run overlay bounds when the tray opens/closes without App subscribing to trayOpen. */
+function SuggestedHandsBoundsOnTrayChange({ onChange }: { onChange: () => void }) {
+  const { trayOpen } = useSuggestedHandsTray()
+  useLayoutEffect(() => {
+    onChange()
+  }, [trayOpen, onChange])
+  return null
+}
+
+/** Bottom discard tray `data-suggested-hands-open` without App re-rendering on tray toggle. */
+function SuggestedHandsOpenDataAttr({
+  elRef,
+}: {
+  elRef: RefObject<HTMLElement | null>
+}) {
+  const { trayOpen } = useSuggestedHandsTray()
+  useLayoutEffect(() => {
+    const el = elRef.current
+    if (!el) return
+    el.dataset.suggestedHandsOpen = trayOpen ? 'on' : 'off'
+  }, [trayOpen, elRef])
+  return null
+}
+
+/** Suggested-hands popup chrome — tray open class from context so App does not re-render on toggle. */
+function SuggestedHandsPopupChrome({
+  popupRef,
+  overlayStyle,
+  children,
+}: {
+  popupRef: RefObject<HTMLDivElement | null>
+  overlayStyle: CSSProperties
+  children: (trayOpen: boolean) => ReactNode
+}) {
+  const { trayOpen } = useSuggestedHandsTray()
+  return (
+    <div
+      ref={popupRef}
+      id="suggested-hands-popup"
+      className={[
+        'suggested-hands-popup',
+        'suggested-hands-popup--discard-overlay',
+        trayOpen ? 'suggested-hands-popup--open' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      role="dialog"
+      aria-label="Suggested Hands"
+      aria-modal="false"
+      aria-hidden={!trayOpen}
+      style={overlayStyle}
+    >
+      {children(trayOpen)}
+    </div>
+  )
+}
+
+/** Resets the menu’s draft card id when the menu closes — must be a context consumer so `App` does not. */
+function MenuCardDraftOnClose({ onClosed }: { onClosed: () => void }) {
+  const { menuOpen } = useAppMenuOpen()
+  const prevRef = useRef(false)
+  useEffect(() => {
+    if (prevRef.current && !menuOpen) onClosed()
+    prevRef.current = menuOpen
+  }, [menuOpen, onClosed])
+  return null
+}
+
+/** Hand / Charleston action bar: column 2 menu. Reads open state from context so toggling
+ *  the menu does not re-render the surrounding play surface. */
 function HandRackMenuAnchor({
-  menuOpen,
-  onToggle,
   menuContainerRef,
 }: {
-  menuOpen: boolean
-  onToggle: () => void
   menuContainerRef: RefObject<HTMLDivElement | null>
 }) {
+  const { menuOpen, toggleMenu } = useAppMenuOpen()
   return (
     <div
       ref={menuContainerRef}
@@ -769,7 +888,7 @@ function HandRackMenuAnchor({
         aria-haspopup="dialog"
         aria-expanded={menuOpen}
         aria-controls={menuOpen ? 'app-menu-modal' : undefined}
-        onClick={onToggle}
+        onClick={toggleMenu}
       >
         Menu
       </button>
@@ -3742,9 +3861,6 @@ export default function App() {
   const [suggestedHandsTrayDefaultOpen, setSuggestedHandsTrayDefaultOpen] = useState(() =>
     readSuggestedHandsTrayDefaultOpenFromStorage(),
   )
-  const [suggestedPanelHandsOn, setSuggestedPanelHandsOn] = useState(() =>
-    readSuggestedHandsTrayDefaultOpenFromStorage(),
-  )
   const suggestedHandsPopupRef = useRef<HTMLDivElement>(null)
   const eastExposureRackTopRef = useRef<HTMLDivElement>(null)
   const playerHandRackBottomRef = useRef<HTMLDivElement>(null)
@@ -3769,8 +3885,6 @@ export default function App() {
     )
   }, [])
   const [suggestedSuppressedHandKey, setSuggestedSuppressedHandKey] = useState<string | null>(null)
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuOpenPrevRef = useRef(false)
   const menuContainerRef = useRef<HTMLDivElement>(null)
   const [blankTilesEnabled, setBlankTilesEnabled] = useState(() => readBlankTilesEnabledFromStorage())
   const [blankTileCount, setBlankTileCount] = useState<BlankTileCount>(() =>
@@ -3788,7 +3902,7 @@ export default function App() {
   const toggleSuggestedHandsTrayDefaultOpen = useCallback(() => {
     setSuggestedHandsTrayDefaultOpen((prev) => {
       const next = !prev
-      setSuggestedPanelHandsOn(next)
+      suggestedHandsTrayApiRef.current.setTrayOpen(next)
       try {
         localStorage.setItem(LS_KEY_SUGGESTED_HANDS_TRAY, next ? 'true' : 'false')
       } catch {
@@ -4155,7 +4269,7 @@ export default function App() {
         if (e.newValue == null) return
         const on = e.newValue === 'true' || e.newValue === '1'
         setSuggestedHandsTrayDefaultOpen(on)
-        setSuggestedPanelHandsOn(on)
+        suggestedHandsTrayApiRef.current.setTrayOpen(on)
       }
     }
     window.addEventListener('storage', onStorage)
@@ -4164,33 +4278,9 @@ export default function App() {
 
   const discardTrackerPanelRef = useRef<HTMLElement>(null)
 
-  const lastSuggestedPanelOpenRef = useRef(suggestedPanelHandsOn)
-  useEffect(() => {
-    const wasOpen = lastSuggestedPanelOpenRef.current
-    if (wasOpen && !suggestedPanelHandsOn) {
-      if (suggestedFocusHandKeyRef.current) {
-        const k = suggestedFocusHandKeyRef.current
-        setSuggestedPinnedHandKeys((prev) => (prev.includes(k) ? prev : [...prev, k]))
-      }
-    }
-    lastSuggestedPanelOpenRef.current = suggestedPanelHandsOn
-  }, [suggestedPanelHandsOn])
-
-  useEffect(() => {
-    if (!menuOpen) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMenuOpen(false)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [menuOpen])
-
-  useEffect(() => {
-    if (menuOpenPrevRef.current && !menuOpen) {
-      setMenuCardId(committedCardIdRef.current)
-    }
-    menuOpenPrevRef.current = menuOpen
-  }, [menuOpen])
+  const resetMenuCardDraftOnClose = useCallback(() => {
+    setMenuCardId(committedCardIdRef.current)
+  }, [])
 
   const {
     hand,
@@ -4513,12 +4603,10 @@ export default function App() {
   }, [pendingJokerSwapTileId, pendingEastDiscardTile, hand, botExposures, eastExposures])
 
   /**
-   * Deferred snapshots of the rack inputs that feed the heavy suggested-hands analysis
-   * (`rankSuggestedHands` over the whole card book, plus the per-pattern greedy rack-highlight
-   * passes). Tile clicks — staging a discard, returning it, skipping a bot discard — mutate `hand`
-   * and `pendingEastDiscardTile`; reading them through `useDeferredValue` lets the tile movement
-   * paint immediately on the urgent render while the analysis recomputes a frame later at low
-   * priority. The rack itself still renders from the live `hand`, so only the panel/highlights lag.
+   * Deferred snapshots of the rack inputs that feed suggested-hands analysis and highlights.
+   * Full-card ranking runs in a Web Worker ({@link useRankSuggestedHandsWorker}); these deferred
+   * values still keep greedy rack-highlight / strip inputs off the urgent path so tile clicks
+   * paint immediately while coaching catches up a frame later.
    */
   const deferredHand = useDeferredValue(hand)
   const deferredPendingEastDiscardTile = useDeferredValue(pendingEastDiscardTile)
@@ -4938,30 +5026,21 @@ export default function App() {
     [suggestedRankInput.hand],
   )
 
-  const eastSuggestedHands = useMemo(() => {
-    if (mainPhase === 'mahjong-declared' || mainPhase === 'bot-mahjong' || mainPhase === 'dead-hand' || mainPhase === 'wall-game') return []
-    return rankSuggestedHands(suggestedRankInput)
-    // Gate on the hand multiset signature (plus the other content-bearing, referentially-stable
-    // inputs) rather than `suggestedRankInput` identity so a reorder is a no-op here.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    mainPhase,
-    suggestedRankHandSignature,
-    suggestedRankInput.wallRemaining,
-    suggestedRankInput.discards,
-    suggestedRankInput.exposures,
-    suggestedRankInput.playerClaimMelds,
-    suggestedRankInput.eastTableClaimMelds,
-    suggestedRankInput.patterns,
-    suggestedRankInput.deckSettings?.totalJokersInGame,
-    suggestedRankInput.deckSettings?.totalBlanksInGame,
-    suggestedRankInput.jokerSwapHintForProb?.enabled,
-    suggestedRankInput.jokerSwapHintForProb?.hand,
-    suggestedRankInput.jokerSwapHintForProb?.pendingDiscard,
-    suggestedRankInput.jokerSwapHintForProb?.botExposures,
-    suggestedRankInput.jokerSwapHintForProb?.eastExposures,
-    suggestedRankInput.liveClaimableDiscard,
-  ])
+  /**
+   * Full-card ranking runs in a Web Worker so rack interactions stay on the urgent path.
+   * Same content gates as the former sync `useMemo` (hand multiset signature, not array identity).
+   * Stale-while-revalidate: the panel keeps the previous lines until the worker replies.
+   */
+  const eastSuggestedHands = useRankSuggestedHandsWorker({
+    input: suggestedRankInput,
+    enabled:
+      mainPhase !== 'mahjong-declared' &&
+      mainPhase !== 'bot-mahjong' &&
+      mainPhase !== 'dead-hand' &&
+      mainPhase !== 'wall-game',
+    cardId: committedCardId,
+    handSignature: suggestedRankHandSignature,
+  })
 
   /** Menu category labels: still on, but muted when exposures rule out every hand in that section. */
   const suggestedHandsExposureAvailableSections = useMemo(
@@ -5698,7 +5777,7 @@ export default function App() {
       setSuggestedSuppressedHandKey(null)
       setSuggestedDeadTileGuidesByKey({})
       setSuggestedDeadTableGuidesByKey({})
-      setSuggestedPanelHandsOn(false)
+      suggestedHandsTrayApiRef.current.setTrayOpen(false)
     }
   }, [mainPhase])
 
@@ -6735,7 +6814,7 @@ export default function App() {
     const blankCount = readBlankTileCountFromStorage()
     setBlankTileCount((prev) => (prev === blankCount ? prev : blankCount))
     blankTileCountRef.current = blankCount
-    setSuggestedPanelHandsOn(readSuggestedHandsTrayDefaultOpenFromStorage())
+    suggestedHandsTrayApiRef.current.setTrayOpen(readSuggestedHandsTrayDefaultOpenFromStorage())
     if (m !== c) {
       try {
         writePlayableCardToStorage(m)
@@ -6811,7 +6890,7 @@ export default function App() {
         playerWinMethod: null,
       }
     })
-    setMenuOpen(false)
+    appMenuOpenApiRef.current.setMenuOpen(false)
   }, [charlestonDone])
 
   /** Same shuffled deck + opening deal as before Charleston on the last fresh deal (reshuffle only via New Game). */
@@ -8466,7 +8545,6 @@ export default function App() {
     showPlaySplitRow,
     showSuggestedHandsPanel,
     mainPhase,
-    suggestedPanelHandsOn,
   ])
 
   /** Post-game rack review: New Game sits on a second row under Pass / Discard (cols 12–14). */
@@ -8489,55 +8567,55 @@ export default function App() {
     }
 
     return (
-      <div
-        ref={suggestedHandsPopupRef}
-        id="suggested-hands-popup"
-        className={[
-          'suggested-hands-popup',
-          'suggested-hands-popup--discard-overlay',
-          suggestedPanelHandsOn ? 'suggested-hands-popup--open' : '',
-        ]
-          .filter(Boolean)
-          .join(' ')}
-        role="dialog"
-        aria-label="Suggested Hands"
-        aria-modal="false"
-        aria-hidden={!suggestedPanelHandsOn}
-        style={overlayStyle}
+      <SuggestedHandsPopupChrome
+        popupRef={suggestedHandsPopupRef}
+        overlayStyle={overlayStyle}
       >
-        <SuggestedHandsPanel
-          discardTraySurface
-          trayOpen={suggestedPanelHandsOn}
-          onPinnedPatternChange={toggleSuggestedPinnedHandKey}
-          hands={eastSuggestedHands}
-          activePatternId={suggestedFocusHandKey}
-          pinnedHandKeys={suggestedPinnedHandKeys}
-          onPatternClick={onSuggestedPatternClick}
-          onFocusKeyMigrate={onSuggestedFocusKeyMigrate}
-          tilesGuideOn={suggestedPanelTilesOn}
-          rackTilesForSuggestedStrip={deferredRackForSuggestedStrip}
-          rackTilesForPatternMatch={deferredRackForSuggestedPatternMatch}
-          exposureTileIdsForSuggestedStrip={suggestedHandsExposureTileIds}
-          uncheckedSections={suggestedHandsUncheckedSections}
-          hideConcealedHands={suggestedHandsHideConcealed}
-          cardPatterns={cardPatterns}
-          cardSectionOrder={cardSectionOrder}
-          deadCauseByFocusKey={suggestedDeadCauseByFocusKey}
-          focusedHandDeadCause={suggestedFocusedHandDeadCause}
-        />
-      </div>
+        {(trayOpen) => (
+          <SuggestedHandsPanel
+            discardTraySurface
+            trayOpen={trayOpen}
+            onPinnedPatternChange={toggleSuggestedPinnedHandKey}
+            hands={eastSuggestedHands}
+            activePatternId={suggestedFocusHandKey}
+            pinnedHandKeys={suggestedPinnedHandKeys}
+            onPatternClick={onSuggestedPatternClick}
+            onFocusKeyMigrate={onSuggestedFocusKeyMigrate}
+            tilesGuideOn={suggestedPanelTilesOn}
+            rackTilesForSuggestedStrip={deferredRackForSuggestedStrip}
+            rackTilesForPatternMatch={deferredRackForSuggestedPatternMatch}
+            exposureTileIdsForSuggestedStrip={suggestedHandsExposureTileIds}
+            uncheckedSections={suggestedHandsUncheckedSections}
+            hideConcealedHands={suggestedHandsHideConcealed}
+            cardPatterns={cardPatterns}
+            cardSectionOrder={cardSectionOrder}
+            deadCauseByFocusKey={suggestedDeadCauseByFocusKey}
+            focusedHandDeadCause={suggestedFocusedHandDeadCause}
+          />
+        )}
+      </SuggestedHandsPopupChrome>
     )
   }
 
   return (
+    <AppMenuOpenProvider>
     <TileGraphicsProvider tileGraphics={tileGraphics}>
+    <SuggestedHandsTrayProvider initialOpen={suggestedHandsTrayDefaultOpen}>
+    <MenuCardDraftOnClose onClosed={resetMenuCardDraftOnClose} />
+    <SuggestedHandsPinOnTrayClose
+      focusKeyRef={suggestedFocusHandKeyRef}
+      onClosedWithFocus={(k) => {
+        setSuggestedPinnedHandKeys((prev) => (prev.includes(k) ? prev : [...prev, k]))
+      }}
+    />
+    <SuggestedHandsBoundsOnTrayChange onChange={updateSuggestedDiscardOverlayBounds} />
     <div
       className="app"
       data-tile-graphics={tileGraphics}
       data-color-buttons={colorButtonsEnabled ? 'on' : 'off'}
       data-animations={animationsEnabled ? 'on' : 'off'}
     >
-      {menuOpen ? (
+      <AppMenuOpenGate>
         <div
           className="app-menu-modal-layer"
           role="presentation"
@@ -8547,7 +8625,7 @@ export default function App() {
             className="app-menu-modal__backdrop"
             tabIndex={-1}
             aria-label="Close menu"
-            onClick={() => setMenuOpen(false)}
+            onClick={() => appMenuOpenApiRef.current.setMenuOpen(false)}
           />
           <div
             id="app-menu-modal"
@@ -8561,7 +8639,7 @@ export default function App() {
                 type="button"
                 className="app-menu-modal__close"
                 aria-label="Close"
-                onClick={() => setMenuOpen(false)}
+                onClick={() => appMenuOpenApiRef.current.setMenuOpen(false)}
               >
                 ✕
               </button>
@@ -8610,7 +8688,7 @@ export default function App() {
                     type="button"
                     className="btn app-menu-tray__diff-btn app-menu-modal__new-game"
                     onClick={() => {
-                      if (newHand()) setMenuOpen(false)
+                      if (newHand()) appMenuOpenApiRef.current.setMenuOpen(false)
                     }}
                   >
                     New Game
@@ -8900,7 +8978,7 @@ export default function App() {
             </div>
           </div>
         </div>
-      ) : null}
+      </AppMenuOpenGate>
       {charlestonPassError || callRuleError || blockingDialog ? (
         <div
           className="charleston-error-overlay"
@@ -9346,7 +9424,7 @@ export default function App() {
               <button
                 type="button"
                 className="btn btn--primary rack-bottom-tile-cell wall-game-dialog__action-btn"
-                onClick={() => { setWallGameReviewing(true); setMenuOpen(true) }}
+                onClick={() => { setWallGameReviewing(true); appMenuOpenApiRef.current.setMenuOpen(true) }}
               >
                 Menu
               </button>
@@ -9418,7 +9496,7 @@ export default function App() {
               <button
                 type="button"
                 className="btn btn--primary rack-bottom-tile-cell wall-game-dialog__action-btn"
-                onClick={() => { setMahjongWinReviewing(true); setMenuOpen(true) }}
+                onClick={() => { setMahjongWinReviewing(true); appMenuOpenApiRef.current.setMenuOpen(true) }}
               >
                 Menu
               </button>
@@ -9486,7 +9564,7 @@ export default function App() {
               <button
                 type="button"
                 className="btn btn--primary rack-bottom-tile-cell wall-game-dialog__action-btn"
-                onClick={() => { setBotMahjongWinReviewing(true); setMenuOpen(true) }}
+                onClick={() => { setBotMahjongWinReviewing(true); appMenuOpenApiRef.current.setMenuOpen(true) }}
               >
                 Menu
               </button>
@@ -9534,14 +9612,7 @@ export default function App() {
           >
           </div>
 
-            <div
-              className={[
-                'app-dnd-frame',
-                suggestedPanelHandsOn ? 'app-dnd-frame--suggested-hands-open' : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-            >
+            <SuggestedHandsDndFrame>
             {showPlaySplitRow ? (
                 <div className="app-play-split app-top-exposure-container">
                 <div className="app-play-split__left">
@@ -9681,8 +9752,6 @@ export default function App() {
                                 Sort
                               </button>
                               <HandRackMenuAnchor
-                                menuOpen={menuOpen}
-                                onToggle={() => setMenuOpen((v) => !v)}
                                 menuContainerRef={menuContainerRef}
                               />
                               <WallTilesRemainCell
@@ -9736,14 +9805,7 @@ export default function App() {
                                   <img className="btn--mahj__img" src={mahjLogoSrc} alt="" draggable={false} />
                                 </span>
                               </button>
-                              <button
-                                type="button"
-                                className="btn btn--rack-neutral btn--logic rack-bottom-tile-cell rack-bottom-tile-cell--c7-8"
-                                aria-label="Logic"
-                                onClick={() => {}}
-                              >
-                                <img className="btn--logic__img" src={logicLogoSrc} alt="Logic" draggable={false} />
-                              </button>
+                              <LogicTrayToggleButton />
                               <button
                                 type="button"
                                 className="btn btn--joker-swap-action rack-bottom-tile-cell rack-bottom-tile-cell--c9-10"
@@ -9994,8 +10056,6 @@ export default function App() {
                                   Sort
                                 </button>
                                 <HandRackMenuAnchor
-                                  menuOpen={menuOpen}
-                                  onToggle={() => setMenuOpen((v) => !v)}
                                   menuContainerRef={menuContainerRef}
                                 />
                                 <WallTilesRemainCell
@@ -10052,14 +10112,7 @@ export default function App() {
                                     <img className="btn--mahj__img" src={mahjLogoSrc} alt="" draggable={false} />
                                   </span>
                                 </button>
-                                <button
-                                  type="button"
-                                  className="btn btn--rack-neutral btn--logic rack-bottom-tile-cell rack-bottom-tile-cell--c7-8"
-                                  aria-label="Logic"
-                                  onClick={() => {}}
-                                >
-                                  <img className="btn--logic__img" src={logicLogoSrc} alt="Logic" draggable={false} />
-                                </button>
+                                <LogicTrayToggleButton />
                                 {mainBarSharedSlotIsSwap ? (
                                   <button
                                     type="button"
@@ -10182,8 +10235,8 @@ export default function App() {
                   className="panel panel--discard-tracker panel--discard-tracker--bottom"
                   aria-label="Discard tray"
                   data-joker-swap-dnd={jokerSwapUiActive ? 'on' : 'off'}
-                  data-suggested-hands-open={suggestedPanelHandsOn ? 'on' : 'off'}
                 >
+                  <SuggestedHandsOpenDataAttr elRef={discardTrackerPanelRef} />
                   <div className="discard-tracker__shell">
                     <div className="discard-tracker__content">
                       <div className="discard-tracker__watermark" aria-hidden>
@@ -10260,11 +10313,13 @@ export default function App() {
                   </div>
                 ) : null}
               </DragOverlay>
-            </div>
+            </SuggestedHandsDndFrame>
         </div>
       </div>
     </DndContext>
     </div>
+    </SuggestedHandsTrayProvider>
     </TileGraphicsProvider>
+    </AppMenuOpenProvider>
   )
 }

@@ -1614,6 +1614,22 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* Virtual list spacers — preserve scrollHeight without mounting off-screen hand rows. */
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  > .hands-sheet__rows
+  > .hands-sheet__virtual-spacer {
+  grid-column: 1 / -1;
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  list-style: none;
+  pointer-events: none;
+  visibility: hidden;
+}
+
 /*
  * Hide the scrollbar on the body track (all platforms). The sticky column header lives outside
  * this scroll container at full sheet width, but a classic space-consuming scrollbar only narrows

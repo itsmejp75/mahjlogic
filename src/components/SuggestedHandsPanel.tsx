@@ -47,6 +47,14 @@ const ROW_TOUCH_SLOP_PX = 10
 const DRAG_SCROLL_SLOP_PX = 4
 const DRAG_SCROLL_CLICK_SUPPRESS_MS = 280
 const DRAG_SCROLL_CLASS = 'hands-list-scroll--drag-scrolling'
+/** Extra rows mounted above/below the viewport so fast flings do not flash empty gaps. */
+const HANDS_LIST_VIRTUAL_OVERSCAN = 8
+/** Minimum mounted window before scroll metrics are known. */
+const HANDS_LIST_VIRTUAL_MIN_WINDOW = 28
+/** Hands-only fallback until the first real row is measured (matches ~2.615em + borders). */
+const HANDS_LIST_ROW_H_FALLBACK = 42
+/** Tiles-mode fallback until measured (card line + tile strip). */
+const HANDS_LIST_ROW_H_TILES_FALLBACK = 56
 
 function isTrayHeaderTarget(el: Element): boolean {
   return (
@@ -114,6 +122,8 @@ function scrollDeltaForRowsInsertedAbove(
   nextKeys: string[],
   anchorKey: string,
   anchorPatternId?: string | null,
+  /** Used when a newly inserted row is outside the virtualized DOM window. */
+  fallbackRowHeight = HANDS_LIST_ROW_H_FALLBACK,
 ): number {
   let prevIdx = prevKeys.indexOf(anchorKey)
   let nextIdx = nextKeys.indexOf(anchorKey)
@@ -130,26 +140,47 @@ function scrollDeltaForRowsInsertedAbove(
     const key = nextKeys[i]!
     if (prevAbove.has(key)) continue
     const rowEl = findRowByKey(scrollEl, key)
-    if (rowEl) delta += rowEl.getBoundingClientRect().height
+    delta += rowEl ? rowEl.getBoundingClientRect().height : fallbackRowHeight
   }
   return delta
 }
 
 /**
- * First row currently intersecting the top of the scroll viewport. Uses a single
- * `elementFromPoint` hit-test instead of scanning every row with `getBoundingClientRect`,
- * so the per-scroll-frame cost stays O(1) instead of O(rows) forced layouts.
+ * True when the list is scrolled past the first hand. Uses `scrollTop` (not the first mounted
+ * `.hands-sheet__row`) so virtualization spacers cannot hide the “hands above” hint.
  */
-/** True when the first suggested row is scrolled entirely above the list viewport. */
 function isTopSuggestedHandHidden(scrollEl: HTMLElement): boolean {
   if (scrollEl.scrollHeight <= scrollEl.clientHeight + 1) return false
-  const firstRow =
-    scrollEl.querySelector(':scope > .hands-sheet__row') ??
-    scrollEl.querySelector(':scope > .hands-list__row-hit')
-  if (!(firstRow instanceof HTMLElement)) return scrollEl.scrollTop > 1
-  const scrollRect = scrollEl.getBoundingClientRect()
-  const rowRect = firstRow.getBoundingClientRect()
-  return rowRect.bottom <= scrollRect.top + 1
+  return scrollEl.scrollTop > 1
+}
+
+function computeHandsListVirtualRange(args: {
+  scrollTop: number
+  viewportHeight: number
+  rowHeight: number
+  totalRows: number
+  focusedIndex: number
+}): { start: number; end: number } {
+  const { scrollTop, viewportHeight, rowHeight, totalRows, focusedIndex } = args
+  if (totalRows <= 0) return { start: 0, end: 0 }
+  const rh = Math.max(1, rowHeight)
+  const vh = Math.max(rh, viewportHeight)
+  let start = Math.max(0, Math.floor(scrollTop / rh) - HANDS_LIST_VIRTUAL_OVERSCAN)
+  let end = Math.min(
+    totalRows,
+    Math.ceil((scrollTop + vh) / rh) + HANDS_LIST_VIRTUAL_OVERSCAN,
+  )
+  if (focusedIndex >= 0 && focusedIndex < totalRows) {
+    start = Math.min(start, Math.max(0, focusedIndex - 1))
+    end = Math.max(end, Math.min(totalRows, focusedIndex + 2))
+  }
+  if (end - start < HANDS_LIST_VIRTUAL_MIN_WINDOW) {
+    end = Math.min(totalRows, start + HANDS_LIST_VIRTUAL_MIN_WINDOW)
+    if (end - start < HANDS_LIST_VIRTUAL_MIN_WINDOW) {
+      start = Math.max(0, end - HANDS_LIST_VIRTUAL_MIN_WINDOW)
+    }
+  }
+  return { start, end }
 }
 
 function firstVisibleRowByHitTest(scrollEl: HTMLElement, scrollRect: DOMRect): HTMLElement | null {
@@ -334,6 +365,9 @@ type ExpandedHandsRow = {
   /** Pin toggle key — same as {@link focusKey} so each variant pins independently. */
   pinKey: string
 }
+
+/** Row identity for the list before tile-strip slots are attached (windowed + lazy strips). */
+type ExpandedHandsRowMeta = Omit<ExpandedHandsRow, 'stripSlots'>
 
 /** Points column / aria value — number only (concealed C lives on the hand line). */
 function formatSuggestedHandValue(points: number): string {
@@ -1452,69 +1486,6 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     [tilesStripSlotsOn, rackTilesForPatternMatch],
   )
 
-  const stripSlotRowsByKey = useMemo(() => {
-    if (!tilesStripSlotsOn || rackTilesForSuggestedStrip.length === 0)
-      return new Map<string, StripRowsEntry>()
-    const rackDisplay = rackTilesForSuggestedStrip
-    const rackMatch = rackTilesForPatternMatch ?? rackDisplay
-    const greedyOpts: GreedyPatternMatchOpts | undefined =
-      exposureTileIdsForSuggestedStrip?.size
-        ? { exposureTileIds: exposureTileIdsForSuggestedStrip }
-        : undefined
-    const rackIdSet = new Set(rackMatch.map((t) => t.id))
-    const m = new Map<string, StripRowsEntry>()
-    const patternCache = new Map<string, PracticePattern | undefined>()
-    for (const h of filtered) {
-      const key = handEntryKey(h)
-      const p = patternCache.get(h.id) ?? cardPatterns.find((x) => x.id === h.id)
-      patternCache.set(h.id, p)
-      if (!p) {
-        m.set(key, { rows: [], ocVariantSuffixes: [] })
-        continue
-      }
-      if (h.consecRanksTier) {
-        // After the line-build split, each tier line has exactly one combo — render its single row.
-        const rows: SuggestedStripSlot[][] = []
-        for (const { perm, base } of h.consecRanksTier.combos) {
-          const row = buildConsecRanksTierStripRow(p, rackMatch, perm, base, rackDisplay)
-          if (row) rows.push(row)
-        }
-        m.set(key, { rows, ocVariantSuffixes: [] })
-        continue
-      }
-      const detail = greedyPatternMatchDetail(rackMatch, p, greedyOpts)
-      const bestIdsForAssign = new Set(detail.usedOrder.filter((id) => rackIdSet.has(id)))
-      if (bestIdsForAssign.size === 0) {
-        for (const t of rackMatch) {
-          if (p.matches(t.def)) bestIdsForAssign.add(t.id)
-        }
-      }
-      const result = buildSuggestedStripSlotRowsWithVariants(
-        p,
-        rackDisplay,
-        detail.usedOrder,
-        bestIdsForAssign,
-        detail.usedMeta,
-        exposureTileIdsForSuggestedStrip,
-      )
-      m.set(key, {
-        rows: result.rows,
-        ocVariantSuffixes: result.ocVariantSuffixes,
-      })
-    }
-    return m
-    // Keyed on rack *signatures* (not array identity) so a pure reorder reuses the cached strips.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    tilesStripSlotsOn,
-    filtered,
-    stripRackSignature,
-    stripPatternMatchRackSignature,
-    exposureTileIdsForSuggestedStrip,
-    handEntryKey,
-    cardPatterns,
-  ])
-
   const displayHands = useMemo(() => {
     const base = hideConcealedHands ? filtered.filter((h) => !h.closed) : filtered
     const focusedPatternId = activePatternId ? focusKeyPatternId(activePatternId) : null
@@ -1535,16 +1506,17 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
 
   const listRowsForHandsPanel = displayHands
 
-  /** One panel row per card line — toggling Tiles only swaps parenthesis vs tile strip, never fans out suit variants. */
-  const expandedHandsRows = useMemo<ExpandedHandsRow[]>(() => {
-    const out: ExpandedHandsRow[] = []
+  /**
+   * Full ordered list identity (no tile strips yet). Strips are built only for the virtualized
+   * window below — that used to recompute ~130 greedy matches on every rack change.
+   */
+  const expandedHandsMeta = useMemo<ExpandedHandsRowMeta[]>(() => {
+    const out: ExpandedHandsRowMeta[] = []
     for (const h of listRowsForHandsPanel) {
       const baseKey = handEntryKeyForLine(h)
-      const entry = stripSlotRowsByKey.get(baseKey)
       out.push({
         line: h,
         focusKey: baseKey,
-        stripSlots: stripSlotsForPanelRow(h.id, activePatternId, entry),
         reactKey: baseKey,
         pinKey: baseKey,
       })
@@ -1564,12 +1536,228 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
         return a.i - b.i
       })
       .map(({ row }) => row)
-  }, [listRowsForHandsPanel, stripSlotRowsByKey, activePatternId, pinnedHandKeys])
+  }, [listRowsForHandsPanel, pinnedHandKeys])
+
+  /** Alias for scroll-anchor / focus helpers that expect the historical name. */
+  const expandedHandsRows = expandedHandsMeta
 
   const effectiveFocusRowKey = useMemo(
-    () => resolveEffectiveFocusRowKey(activePatternId, expandedHandsRows, listRowsForHandsPanel),
-    [activePatternId, expandedHandsRows, listRowsForHandsPanel],
+    () => resolveEffectiveFocusRowKey(activePatternId, expandedHandsMeta, listRowsForHandsPanel),
+    [activePatternId, expandedHandsMeta, listRowsForHandsPanel],
   )
+
+  const focusedRowIndex = useMemo(() => {
+    if (effectiveFocusRowKey == null) return -1
+    return expandedHandsMeta.findIndex((row) => row.focusKey === effectiveFocusRowKey)
+  }, [expandedHandsMeta, effectiveFocusRowKey])
+
+  const [virtualRange, setVirtualRange] = useState({ start: 0, end: HANDS_LIST_VIRTUAL_MIN_WINDOW })
+  const measuredRowHeightRef = useRef(HANDS_LIST_ROW_H_FALLBACK)
+  const [measuredRowHeight, setMeasuredRowHeight] = useState(HANDS_LIST_ROW_H_FALLBACK)
+  const stripCacheRef = useRef<{
+    rackSig: string
+    matchSig: string
+    exposureKey: string
+    map: Map<string, StripRowsEntry>
+  }>({ rackSig: '', matchSig: '', exposureKey: '', map: new Map() })
+
+  const rowHeightForVirtual =
+    measuredRowHeight > 0
+      ? measuredRowHeight
+      : tilesDetailActive
+        ? HANDS_LIST_ROW_H_TILES_FALLBACK
+        : HANDS_LIST_ROW_H_FALLBACK
+
+  const syncVirtualRange = useCallback(
+    (scrollEl: HTMLElement) => {
+      const next = computeHandsListVirtualRange({
+        scrollTop: scrollEl.scrollTop,
+        viewportHeight: scrollEl.clientHeight,
+        rowHeight: measuredRowHeightRef.current || rowHeightForVirtual,
+        totalRows: expandedHandsMeta.length,
+        focusedIndex: focusedRowIndex,
+      })
+      setVirtualRange((prev) =>
+        prev.start === next.start && prev.end === next.end ? prev : next,
+      )
+    },
+    [expandedHandsMeta.length, focusedRowIndex, rowHeightForVirtual],
+  )
+
+  // Reset estimated row height when Tiles mode changes; a follow-up measure replaces it.
+  useLayoutEffect(() => {
+    const fallback = tilesDetailActive
+      ? HANDS_LIST_ROW_H_TILES_FALLBACK
+      : HANDS_LIST_ROW_H_FALLBACK
+    measuredRowHeightRef.current = fallback
+    setMeasuredRowHeight(fallback)
+  }, [tilesDetailActive])
+
+  // Keep the focused row mounted and tighten the window when the list length changes.
+  useLayoutEffect(() => {
+    const scrollEl = getTrayScrollTarget()
+    if (scrollEl) {
+      syncVirtualRange(scrollEl)
+      return
+    }
+    const next = computeHandsListVirtualRange({
+      scrollTop: 0,
+      viewportHeight: HANDS_LIST_VIRTUAL_MIN_WINDOW * rowHeightForVirtual,
+      rowHeight: rowHeightForVirtual,
+      totalRows: expandedHandsMeta.length,
+      focusedIndex: focusedRowIndex,
+    })
+    setVirtualRange((prev) =>
+      prev.start === next.start && prev.end === next.end ? prev : next,
+    )
+  }, [
+    expandedHandsMeta.length,
+    focusedRowIndex,
+    getTrayScrollTarget,
+    rowHeightForVirtual,
+    syncVirtualRange,
+    tilesDetailActive,
+    trayOpen,
+  ])
+
+  const virtualStart = Math.min(virtualRange.start, expandedHandsMeta.length)
+  const virtualEnd = Math.min(
+    Math.max(virtualRange.end, virtualStart),
+    expandedHandsMeta.length,
+  )
+
+  /** Keys that need strip slots: virtual window + focused hand. */
+  const stripKeysNeeded = useMemo(() => {
+    if (!tilesStripSlotsOn) return null as Set<string> | null
+    const keys = new Set<string>()
+    for (let i = virtualStart; i < virtualEnd; i++) {
+      const row = expandedHandsMeta[i]
+      if (row) keys.add(row.reactKey)
+    }
+    if (effectiveFocusRowKey) keys.add(effectiveFocusRowKey)
+    return keys
+  }, [
+    tilesStripSlotsOn,
+    expandedHandsMeta,
+    virtualStart,
+    virtualEnd,
+    effectiveFocusRowKey,
+  ])
+
+  const stripSlotRowsByKey = useMemo(() => {
+    if (!tilesStripSlotsOn || !stripKeysNeeded || rackTilesForSuggestedStrip.length === 0) {
+      return new Map<string, StripRowsEntry>()
+    }
+    const exposureKey = exposureTileIdsForSuggestedStrip
+      ? [...exposureTileIdsForSuggestedStrip].join('\0')
+      : ''
+    const cache = stripCacheRef.current
+    if (
+      cache.rackSig !== stripRackSignature ||
+      cache.matchSig !== stripPatternMatchRackSignature ||
+      cache.exposureKey !== exposureKey
+    ) {
+      cache.rackSig = stripRackSignature
+      cache.matchSig = stripPatternMatchRackSignature
+      cache.exposureKey = exposureKey
+      cache.map = new Map()
+    }
+
+    const rackDisplay = rackTilesForSuggestedStrip
+    const rackMatch = rackTilesForPatternMatch ?? rackDisplay
+    const greedyOpts: GreedyPatternMatchOpts | undefined =
+      exposureTileIdsForSuggestedStrip?.size
+        ? { exposureTileIds: exposureTileIdsForSuggestedStrip }
+        : undefined
+    const rackIdSet = new Set(rackMatch.map((t) => t.id))
+    const patternCache = new Map<string, PracticePattern | undefined>()
+    const lineByKey = new Map<string, SuggestedHandLine>()
+    for (const h of filtered) {
+      lineByKey.set(handEntryKey(h), h)
+    }
+
+    for (const key of stripKeysNeeded) {
+      if (cache.map.has(key)) continue
+      const h = lineByKey.get(key)
+      if (!h) {
+        cache.map.set(key, { rows: [], ocVariantSuffixes: [] })
+        continue
+      }
+      const p = patternCache.get(h.id) ?? cardPatterns.find((x) => x.id === h.id)
+      patternCache.set(h.id, p)
+      if (!p) {
+        cache.map.set(key, { rows: [], ocVariantSuffixes: [] })
+        continue
+      }
+      if (h.consecRanksTier) {
+        const rows: SuggestedStripSlot[][] = []
+        for (const { perm, base } of h.consecRanksTier.combos) {
+          const row = buildConsecRanksTierStripRow(p, rackMatch, perm, base, rackDisplay)
+          if (row) rows.push(row)
+        }
+        cache.map.set(key, { rows, ocVariantSuffixes: [] })
+        continue
+      }
+      const detail = greedyPatternMatchDetail(rackMatch, p, greedyOpts)
+      const bestIdsForAssign = new Set(detail.usedOrder.filter((id) => rackIdSet.has(id)))
+      if (bestIdsForAssign.size === 0) {
+        for (const t of rackMatch) {
+          if (p.matches(t.def)) bestIdsForAssign.add(t.id)
+        }
+      }
+      const result = buildSuggestedStripSlotRowsWithVariants(
+        p,
+        rackDisplay,
+        detail.usedOrder,
+        bestIdsForAssign,
+        detail.usedMeta,
+        exposureTileIdsForSuggestedStrip,
+      )
+      cache.map.set(key, {
+        rows: result.rows,
+        ocVariantSuffixes: result.ocVariantSuffixes,
+      })
+    }
+
+    const m = new Map<string, StripRowsEntry>()
+    for (const key of stripKeysNeeded) {
+      const entry = cache.map.get(key)
+      if (entry) m.set(key, entry)
+    }
+    return m
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    tilesStripSlotsOn,
+    stripKeysNeeded,
+    filtered,
+    stripRackSignature,
+    stripPatternMatchRackSignature,
+    exposureTileIdsForSuggestedStrip,
+    handEntryKey,
+    cardPatterns,
+    rackTilesForSuggestedStrip,
+    rackTilesForPatternMatch,
+  ])
+
+  const windowedHandsRows = useMemo<ExpandedHandsRow[]>(() => {
+    const slice = expandedHandsMeta.slice(virtualStart, virtualEnd)
+    return slice.map((row) => ({
+      ...row,
+      stripSlots: tilesStripSlotsOn
+        ? stripSlotsForPanelRow(row.line.id, activePatternId, stripSlotRowsByKey.get(row.reactKey))
+        : undefined,
+    }))
+  }, [
+    expandedHandsMeta,
+    virtualStart,
+    virtualEnd,
+    tilesStripSlotsOn,
+    stripSlotRowsByKey,
+    activePatternId,
+  ])
+
+  const virtualTopPadPx = virtualStart * rowHeightForVirtual
+  const virtualBottomPadPx = Math.max(0, (expandedHandsMeta.length - virtualEnd) * rowHeightForVirtual)
 
   const refreshHandsAboveViewHint = useCallback(() => {
     const scrollEl = getTrayScrollTarget()
@@ -1589,16 +1777,28 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
         effectiveFocusRowKey,
         anchorPatternLineId,
       )
+      // When the anchor is outside the virtual window, estimate viewport top from index * rowH.
+      let viewportTop = anchor?.viewportTop ?? 0
+      let anchorKey = anchor?.key ?? null
+      let anchorPatternId = anchor?.patternId ?? null
+      if (!anchor && effectiveFocusRowKey) {
+        const idx = expandedHandsMeta.findIndex((r) => r.focusKey === effectiveFocusRowKey)
+        if (idx >= 0) {
+          viewportTop = idx * rowHeightForVirtual - scrollEl.scrollTop
+          anchorKey = effectiveFocusRowKey
+          anchorPatternId = anchorPatternLineId
+        }
+      }
       const snap = handsListScrollSnapshotRef.current
       handsListScrollSnapshotRef.current = {
         rowKeys: rowKeys ?? snap.rowKeys,
-        anchorKey: anchor?.key ?? null,
-        anchorPatternId: anchor?.patternId ?? null,
-        anchorViewportTop: anchor?.viewportTop ?? 0,
+        anchorKey,
+        anchorPatternId,
+        anchorViewportTop: viewportTop,
         scrollTop: scrollEl.scrollTop,
       }
     },
-    [effectiveFocusRowKey, getTrayScrollTarget],
+    [effectiveFocusRowKey, getTrayScrollTarget, expandedHandsMeta, rowHeightForVirtual],
   )
 
   // Trend arrow reflects the direction of the most recent tiles-away change while a row stays
@@ -1627,7 +1827,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     if (prevAway == null || currentAway === prevAway) return
     selectedAwayLastValueRef.current = currentAway
     setActiveAwayTrend(currentAway < prevAway ? 'improved' : 'behind-best')
-  }, [effectiveFocusRowKey, expandedHandsRows])
+  }, [effectiveFocusRowKey, expandedHandsMeta])
 
   useEffect(() => {
     const scrollEl = getTrayScrollTarget()
@@ -1641,26 +1841,35 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
       if (rafId != null) return
       rafId = requestAnimationFrame(() => {
         rafId = null
+        syncVirtualRange(scrollEl)
         refreshScrollSnapshot()
         refreshHandsAboveViewHint()
       })
     }
     scrollEl.addEventListener('scroll', onScroll, { passive: true })
+    syncVirtualRange(scrollEl)
     refreshHandsAboveViewHint()
     return () => {
       scrollEl.removeEventListener('scroll', onScroll)
       if (rafId != null) cancelAnimationFrame(rafId)
     }
-  }, [getTrayScrollTarget, refreshScrollSnapshot, refreshHandsAboveViewHint, expandedHandsRows.length])
+  }, [
+    getTrayScrollTarget,
+    refreshScrollSnapshot,
+    refreshHandsAboveViewHint,
+    syncVirtualRange,
+    expandedHandsMeta.length,
+  ])
 
   useLayoutEffect(() => {
     const scrollEl = getTrayScrollTarget()
     if (!scrollEl) return
 
-    const rowKeys = rowKeysInOrder(expandedHandsRows)
+    const rowKeys = rowKeysInOrder(expandedHandsMeta)
     const prev = handsListScrollSnapshotRef.current
     const focusChanged = prevEffectiveFocusRowKeyRef.current !== effectiveFocusRowKey
     prevEffectiveFocusRowKeyRef.current = effectiveFocusRowKey
+    const fallbackH = rowHeightForVirtual
 
     // At the very top with nothing selected, let the list re-rank from the top down (the "best"
     // hands are what you're looking at). Otherwise keep the viewed rows visually pinned so a hand
@@ -1699,13 +1908,22 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
       // Highlighted row: pin to the viewport position it held before the re-rank (Tiles on/off).
       const pinHighlightedRow =
         effectiveFocusRowKey != null &&
-        anchorRow != null &&
         (samePatternAsPrev ||
           prev.anchorKey === effectiveFocusRowKey ||
           prev.anchorKey === anchorKey)
-      if (pinHighlightedRow) {
+      if (pinHighlightedRow && anchorRow) {
         const currentViewportTop = rowViewportTopInScrollContainer(anchorRow, scrollEl, scrollRect)
         delta = currentViewportTop - prev.anchorViewportTop
+      } else if (pinHighlightedRow && !anchorRow && anchorKey) {
+        // Anchor outside the virtual window — estimate from index × measured row height.
+        let nextIdx = rowKeys.indexOf(anchorKey)
+        if (nextIdx === -1 && anchorPatternId != null) {
+          nextIdx = rowKeys.findIndex((k) => focusKeyPatternId(k) === anchorPatternId)
+        }
+        if (nextIdx !== -1) {
+          const expectedViewportTop = nextIdx * fallbackH - scrollEl.scrollTop
+          delta = expectedViewportTop - prev.anchorViewportTop
+        }
       } else if (anchorKey) {
         // Anchor newly chosen this pass (e.g. a stable row picked out of the reorder) — no prior
         // viewport sample exists, so estimate by summing the heights of rows inserted above it.
@@ -1725,6 +1943,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
             rowKeys,
             anchorKey,
             anchorPatternId,
+            fallbackH,
           )
         } else if (anchorRow && prev.anchorKey === anchorKey) {
           const currentViewportTop = rowViewportTopInScrollContainer(anchorRow, scrollEl, scrollRect)
@@ -1748,13 +1967,27 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
 
     refreshScrollSnapshot(rowKeys)
     refreshHandsAboveViewHint()
+    syncVirtualRange(scrollEl)
   }, [
-    expandedHandsRows,
+    expandedHandsMeta,
     effectiveFocusRowKey,
     getTrayScrollTarget,
     refreshScrollSnapshot,
     refreshHandsAboveViewHint,
+    rowHeightForVirtual,
+    syncVirtualRange,
   ])
+
+  // Measure a real mounted row so spacers match live height (font scales with panel cqi).
+  useLayoutEffect(() => {
+    const scrollEl = getTrayScrollTarget()
+    const row = scrollEl?.querySelector(':scope > .hands-sheet__row')
+    if (!(row instanceof HTMLElement)) return
+    const h = row.getBoundingClientRect().height
+    if (!(h > 0)) return
+    measuredRowHeightRef.current = h
+    setMeasuredRowHeight((prev) => (Math.abs(prev - h) < 0.5 ? prev : h))
+  }, [getTrayScrollTarget, windowedHandsRows, tilesDetailActive])
 
   const emitRowPinToggle = useCallback(
     (pinKey: string) => {
@@ -1906,7 +2139,14 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                     Points
                   </div>
                   <ol className="hands-sheet__rows" aria-label="Suggested hand lines">
-                    {expandedHandsRows.map((row) => {
+                    {virtualTopPadPx > 0 ? (
+                      <li
+                        className="hands-sheet__virtual-spacer"
+                        style={{ height: virtualTopPadPx }}
+                        aria-hidden
+                      />
+                    ) : null}
+                    {windowedHandsRows.map((row) => {
                       const focusKey = row.focusKey
                       const rowIsFocused = isSuggestedHandsRowFocused(
                         focusKey,
@@ -1949,6 +2189,13 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                         />
                       )
                     })}
+                    {virtualBottomPadPx > 0 ? (
+                      <li
+                        className="hands-sheet__virtual-spacer"
+                        style={{ height: virtualBottomPadPx }}
+                        aria-hidden
+                      />
+                    ) : null}
                   </ol>
                 </div>
               ) : (
@@ -2100,7 +2347,15 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                 .join(' ')}
               id="hands-list"
             >
-              {expandedHandsRows.map((row) => {
+              {expandedHandsMeta.map((meta) => {
+                const row: ExpandedHandsRow = {
+                  ...meta,
+                  stripSlots: stripSlotsForPanelRow(
+                    meta.line.id,
+                    activePatternId,
+                    stripSlotRowsByKey.get(meta.reactKey),
+                  ),
+                }
                 const focusKey = row.focusKey
                 const rowIsFocused = isSuggestedHandsRowFocused(
                   focusKey,
