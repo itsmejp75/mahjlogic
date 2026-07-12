@@ -1,13 +1,1 @@
-
-
-/* ---- part-0109.css (from base.css, layout.css, components.css, animations.css) ---- */
-
-
-
-/* ---- part-0113.css (from base.css, layout.css, components.css, animations.css) ---- */
-
-
-
-.app-layout[data-animations='off'] .suggested-hands-popup__top-edge::after {
-  transition: none;
-}
+/* (Hands panel edge/corner resize grips removed — unused.) */

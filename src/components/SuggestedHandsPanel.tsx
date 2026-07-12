@@ -25,6 +25,7 @@ import {
   tileMultisetSignature,
 } from '../analysis/suggestedHands'
 import type { CardInk } from '../card/cardText'
+import { patternByIdLookup } from '../card/activeCardPatternsScope'
 import type { PracticePattern } from '../card/practicePatterns'
 import type { TileDef, TileInstance } from '../mahjong/types'
 import {
@@ -1164,6 +1165,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   const tilesStripSlotsOn = useDeferredValue(tilesGuideOn)
   /** Tall tile rows + strip render only once deferred strip data is ready (avoids empty expanded rows). */
   const tilesDetailActive = tilesGuideOn && tilesStripSlotsOn
+  const cardPatternsById = useMemo(() => patternByIdLookup(cardPatterns), [cardPatterns])
   const pinnedKeySet = useMemo(() => new Set(pinnedHandKeys), [pinnedHandKeys])
   const handsListScrollRef = useRef<HTMLDivElement>(null)
   const listColumnRef = useRef<HTMLDivElement>(null)
@@ -1670,7 +1672,6 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
         ? { exposureTileIds: exposureTileIdsForSuggestedStrip }
         : undefined
     const rackIdSet = new Set(rackMatch.map((t) => t.id))
-    const patternCache = new Map<string, PracticePattern | undefined>()
     const lineByKey = new Map<string, SuggestedHandLine>()
     for (const h of filtered) {
       lineByKey.set(handEntryKey(h), h)
@@ -1683,8 +1684,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
         cache.map.set(key, { rows: [], ocVariantSuffixes: [] })
         continue
       }
-      const p = patternCache.get(h.id) ?? cardPatterns.find((x) => x.id === h.id)
-      patternCache.set(h.id, p)
+      const p = cardPatternsById.get(h.id)
       if (!p) {
         cache.map.set(key, { rows: [], ocVariantSuffixes: [] })
         continue
@@ -1734,7 +1734,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     stripPatternMatchRackSignature,
     exposureTileIdsForSuggestedStrip,
     handEntryKey,
-    cardPatterns,
+    cardPatternsById,
     rackTilesForSuggestedStrip,
     rackTilesForPatternMatch,
   ])

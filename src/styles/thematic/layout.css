@@ -2680,9 +2680,6 @@
 
 
 
-.app-layout[data-animations='off'] .suggested-hands-popup__right-edge::after {
-  transition: none;
-}
 
 /* ---- part-0109.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -2692,9 +2689,6 @@
 
 
 
-.app-layout[data-animations='off'] .suggested-hands-popup__top-edge::after {
-  transition: none;
-}
 
 /* ---- part-0111.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -2704,9 +2698,6 @@
 
 
 
-.app-layout[data-animations='off'] .suggested-hands-popup__bottom-edge::after {
-  transition: none;
-}
 
 /* ---- part-0113.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -2716,9 +2707,6 @@
 
 
 
-.app-layout[data-animations='off'] .suggested-hands-popup__left-edge::after {
-  transition: none;
-}
 
 /* ---- part-0115.css (from base.css, layout.css, components.css, animations.css) ---- */
 
@@ -2728,9 +2716,6 @@
 
 
 
-.app-layout[data-animations='off'] .suggested-hands-popup__resize-corner::after {
-  transition: none;
-}
 
 /* ---- part-0117.css (from base.css, layout.css, components.css, animations.css) ---- */
 

@@ -1,4 +1,6 @@
 import {
+  lazy,
+  Suspense,
   useCallback,
   useDeferredValue,
   useEffect,
@@ -122,7 +124,7 @@ import {
   writePlayableCardToStorage,
 } from './card/cardCatalog'
 import type { PracticePattern } from './card/practicePatterns'
-import { getActiveCardPatterns, setActiveCardPatterns } from './card/activeCardPatternsScope'
+import { getActiveCardPatternById, getActiveCardPatterns, patternByIdLookup, setActiveCardPatterns } from './card/activeCardPatternsScope'
 import {
   buildPinnedPatternsFromFocusKey,
   computeRackPatternHighlightIds,
@@ -146,11 +148,17 @@ import {
 import { tileInstancesWithClaimMeldJokersResolved } from './analysis/eastExposurePatternFit'
 import { useRankSuggestedHandsWorker } from './analysis/rankSuggestedHandsAsync'
 import { CharlestonPassStripInstructionMain } from './components/CharlestonPassStripInstructionLabel'
-import { PostGameLoserRackRow } from './components/PostGameLoserRackRow'
-import { IllegalMahjongDialog } from './components/IllegalMahjongDialog'
 import { SuggestedHandsPanel } from './components/SuggestedHandsPanel'
 import { WallTilesRemainCell } from './components/WallTilesRemainCell'
 import { RackLogoWatermark } from './components/RackLogoWatermark'
+
+/** Rare overlays — keep analysis-heavy dialogs out of the initial play bundle. */
+const IllegalMahjongDialog = lazy(() =>
+  import('./components/IllegalMahjongDialog').then((m) => ({ default: m.IllegalMahjongDialog })),
+)
+const PostGameLoserRackRow = lazy(() =>
+  import('./components/PostGameLoserRackRow').then((m) => ({ default: m.PostGameLoserRackRow })),
+)
 import {
   HIDE_CONCEALED_HANDS_STORAGE_KEY,
   readHideConcealedHandsFromStorage,
@@ -171,6 +179,7 @@ import {
   chooseBotCharlestonPass,
   chooseBotDiscard,
   botCallStrategicProbability,
+  botBestTilesAway,
   tryBotBlankExchange,
   DEFAULT_BOT_DIFFICULTY,
   isBotDifficulty,
@@ -299,6 +308,8 @@ const JOKER_SWAP_HINT_LABEL = 'Joker swap hint'
 /** Training / practice: confirm before dead hand from bad call, bad Mah Jongg, or hopeless discard. */
 const LS_KEY_UNDO = 'mahjlogic.undoEnabled'
 const UNDO_LABEL = 'Undo'
+const LS_KEY_ANIMATIONS = 'mahjlogic.animationsEnabled'
+const ANIMATIONS_LABEL = 'Animations'
 const LS_KEY_DEAD_HAND_WARNINGS = 'mahjlogic.deadHandWarningsEnabled'
 const DEAD_HAND_WARNINGS_LABEL = 'Dead hand warnings'
 /** Highlight the Mah Jongg rack button when a declaration would succeed (self-draw or on a live discard). */
@@ -467,6 +478,22 @@ function readUndoFromStorage(): boolean {
   try {
     const v = localStorage.getItem(LS_KEY_UNDO)
     if (v === null) return true
+    return v === 'true' || v === '1'
+  } catch {
+    return true
+  }
+}
+
+function readAnimationsFromStorage(): boolean {
+  try {
+    const v = localStorage.getItem(LS_KEY_ANIMATIONS)
+    if (v === null) {
+      // Honor OS “reduce motion” until the user picks an explicit preference.
+      if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        return false
+      }
+      return true
+    }
     return v === 'true' || v === '1'
   } catch {
     return true
@@ -1561,7 +1588,10 @@ function DiscardTrackerSlotGrid({
   suggestedDiscardTrackerNeedDefs: readonly TileDef[] | null
   botSlotSeats: BotSlotSeats
 }) {
-  const botExposureSeats = botSlotSeats.map((s) => seatLabel(s) as BotSeat)
+  const botExposureSeats = useMemo(
+    () => botSlotSeats.map((s) => seatLabel(s) as BotSeat),
+    [botSlotSeats],
+  )
   const botBandSlots =
     DISCARD_TRACKER_BOT_PREFIX_SLOTS + DISCARD_TRACKER_BOT_ROW_SLOTS
   const overlayGridRef = useRef<HTMLDivElement>(null)
@@ -1582,6 +1612,28 @@ function DiscardTrackerSlotGrid({
     jokerSwapHintBounceEpoch,
   ])
 
+  const botRowMelds = useMemo(
+    () =>
+      botExposureSeats.map((seat) =>
+        botExposures
+          .map((exp, globalIdx) => ({ exp, globalIdx }))
+          .filter(({ exp }) => exp.seat === seat)
+          .filter(
+            ({ exp }) =>
+              mainPhase !== 'wall-game' ||
+              exp.tiles.length <= WALL_GAME_MAX_EXPOSURE_MELD_TILES,
+          )
+          .map(({ exp, globalIdx }) => ({
+            tiles: exp.tiles,
+            dropZoneId:
+              jokerSwapUiActive && exp.tiles.some((t) => t.def.cat === 'joker')
+                ? botExposureSwapDropId(globalIdx)
+                : undefined,
+          })),
+      ),
+    [botExposureSeats, botExposures, mainPhase, jokerSwapUiActive],
+  )
+
   return (
     <div
       ref={overlayGridRef}
@@ -1595,20 +1647,7 @@ function DiscardTrackerSlotGrid({
       }
     >
       {botExposureSeats.map((seat, rowIdx) => {
-        const melds = botExposures
-          .map((exp, globalIdx) => ({ exp, globalIdx }))
-          .filter(({ exp }) => exp.seat === seat)
-          .filter(
-            ({ exp }) =>
-              mainPhase !== 'wall-game' || exp.tiles.length <= WALL_GAME_MAX_EXPOSURE_MELD_TILES,
-          )
-          .map(({ exp, globalIdx }) => ({
-            tiles: exp.tiles,
-            dropZoneId:
-              jokerSwapUiActive && exp.tiles.some((t) => t.def.cat === 'joker')
-                ? botExposureSwapDropId(globalIdx)
-                : undefined,
-          }))
+        const melds = botRowMelds[rowIdx] ?? []
         return (
           <div key={seat} className="discard-tracker__overlay-row">
             {rowIdx === 0 ? (
@@ -1970,6 +2009,7 @@ function focusedPatternHasAvailableDeadHintVariant(
     .filter((i) => i >= 0)
     .reduce((m, i) => (m < 0 ? i : Math.min(m, i)), -1)
   const patternId = variantSep >= 0 ? focusKey.slice(0, variantSep) : focusKey
+  // Single lookup — linear find is cheaper than building a Map for one id.
   const pattern = patterns.find((p) => p.id === patternId)
   if (!pattern?.groups?.length) return false
   const pinnedPatterns = buildPinnedPatternsFromFocusKey(pattern, focusKey)
@@ -2211,6 +2251,8 @@ function charlestonIncomingHandTileIds(
 
 /** Bot exposures with this many tiles in one meld are treated as wall-game hand dumps, not real calls. */
 const WALL_GAME_MAX_EXPOSURE_MELD_TILES = 10
+/** Stable empty melds for memo(ExposureRack) during mahjong-declared. */
+const EMPTY_EXPOSURE_RACK_MELDS: { tiles: TileInstance[] }[] = []
 
 type BotTurnResult = {
   botHand: TileInstance[]
@@ -2295,7 +2337,7 @@ function performBotPreDiscardSwaps(
 }
 
 /** Joker redemptions then blank-for-discard exchange — both on this bot's own turn only. */
-function applyBotTurnSwapsAndBlankExchange(
+async function applyBotTurnSwapsAndBlankExchange(
   hand: TileInstance[],
   discardPile: DiscardEntry[],
   seat: Seat,
@@ -2304,12 +2346,13 @@ function applyBotTurnSwapsAndBlankExchange(
   eastExposures: EastExposure[],
   botExposures: BotExposure[],
   difficulty: BotDifficulty,
-): {
+  cardId: PlayableCardId,
+): Promise<{
   hand: TileInstance[]
   discardPile: DiscardEntry[]
   eastExposures: EastExposure[]
   botExposures: BotExposure[]
-} {
+}> {
   const swapped = performBotPreDiscardSwaps(hand, eastExposures, botExposures, difficulty)
   const ctx: BotRankContext = {
     hand: swapped.hand,
@@ -2319,7 +2362,7 @@ function applyBotTurnSwapsAndBlankExchange(
     eastExposures: swapped.eastExposures,
     botExposures: swapped.botExposures,
   }
-  const exchanged = tryBotBlankExchange(ctx, seat, difficulty)
+  const exchanged = await tryBotBlankExchange(ctx, seat, difficulty, cardId)
   return {
     hand: exchanged.hand,
     discardPile: exchanged.discardPile,
@@ -2337,7 +2380,7 @@ function applyBotTurnSwapsAndBlankExchange(
 const BOT_DEFENSIVE_JOKER_WALL_THRESHOLD = 10
 
 /** One bot draws from the wall, redeems any available jokers, then discards intelligently. */
-function runOneBotTurn(
+async function runOneBotTurn(
   botHand: TileInstance[],
   wall: TileInstance[],
   discardPile: DiscardEntry[],
@@ -2347,14 +2390,15 @@ function runOneBotTurn(
   botDifficulty: BotDifficulty,
   /** When false, a bot that could win on the draw does not self-declare Mah Jongg and discards instead (practice). */
   botWinsEnabled: boolean,
-): BotTurnResult {
+  cardId: PlayableCardId,
+): Promise<BotTurnResult> {
   if (wall.length === 0) {
     return { botHand, wall, discardPile, discarded: null, eastExposuresOut: eastExposures, botExposuresOut: botExposures, botMahjong: false, mahjongTile: null }
   }
   const [drawn, ...wallNext] = wall
   const handWithDraw = [...botHand, drawn]
   const botSeat = (seat.charAt(0).toUpperCase() + seat.slice(1)) as BotSeat
-  const swapped = applyBotTurnSwapsAndBlankExchange(
+  const swapped = await applyBotTurnSwapsAndBlankExchange(
     handWithDraw,
     discardPile,
     seat,
@@ -2363,6 +2407,7 @@ function runOneBotTurn(
     eastExposures,
     botExposures,
     botDifficulty,
+    cardId,
   )
   const handAfterSwaps = swapped.hand
   const discardPileAfterSwaps = swapped.discardPile
@@ -2371,17 +2416,18 @@ function runOneBotTurn(
 
   // ── Self-draw Mah Jongg check ───────────────────────────────────────────────
   const botSeatLabel = botSeat as BotSeat
-  const thisBotExposures = swapped.botExposures.filter((e) => e.seat === botSeatLabel)
-  const mjRankInput: RankSuggestedHandsInput = {
-    hand: handAfterSwaps,
-    wallRemaining: wallNext.length,
-    discards: discardPileAfterSwaps.map((e) => e.tile),
-    exposures: swapped.botExposures,
-    playerClaimMelds: thisBotExposures,
-    eastTableClaimMelds: swapped.eastExposures,
-    patterns: getActiveCardPatterns(),
-  }
-  if (summarizeRackTowardWin(mjRankInput).bestTilesAway === 0) {
+  const mjAway = await botBestTilesAway(
+    {
+      hand: handAfterSwaps,
+      botSeat: botSeatLabel,
+      wall: wallNext,
+      discardPile: discardPileAfterSwaps,
+      eastExposures: swapped.eastExposures,
+      botExposures: swapped.botExposures,
+    },
+    cardId,
+  )
+  if (mjAway === 0) {
     if (botWinsEnabled) {
       return {
         botHand: handAfterSwaps,
@@ -2418,7 +2464,7 @@ function runOneBotTurn(
       eastExposures: swapped.eastExposures,
       botExposures: swapped.botExposures,
     }
-    pick = chooseBotDiscard(ctx, botDifficulty)
+    pick = await chooseBotDiscard(ctx, botDifficulty, cardId)
   }
   const handNext = handAfterSwaps.filter((t) => t.id !== pick.id)
   return {
@@ -2444,7 +2490,7 @@ function autoDrawFromWall(
 }
 
 /** East (or any bot) opening discard from a full concealed rack — no wall draw. */
-function runBotOpeningDiscard(
+async function runBotOpeningDiscard(
   botHand: TileInstance[],
   discardPile: DiscardEntry[],
   seat: Seat,
@@ -2453,8 +2499,9 @@ function runBotOpeningDiscard(
   eastExposures: EastExposure[],
   botExposures: BotExposure[],
   botDifficulty: BotDifficulty,
-): BotTurnResult {
-  const swapped = applyBotTurnSwapsAndBlankExchange(
+  cardId: PlayableCardId,
+): Promise<BotTurnResult> {
+  const swapped = await applyBotTurnSwapsAndBlankExchange(
     botHand,
     discardPile,
     seat,
@@ -2463,6 +2510,7 @@ function runBotOpeningDiscard(
     eastExposures,
     botExposures,
     botDifficulty,
+    cardId,
   )
   const handAfterSwaps = swapped.hand
   const nonJokers = handAfterSwaps.filter((t) => t.def.cat !== 'joker')
@@ -2479,7 +2527,7 @@ function runBotOpeningDiscard(
       eastExposures: swapped.eastExposures,
       botExposures: swapped.botExposures,
     }
-    pick = chooseBotDiscard(ctx, botDifficulty)
+    pick = await chooseBotDiscard(ctx, botDifficulty, cardId)
   }
   const handNext = handAfterSwaps.filter((t) => t.id !== pick.id)
   return {
@@ -2512,13 +2560,14 @@ function startPlayerTurnDraw(r: RoundState): RoundState {
 }
 
 /** After `afterSeat` acted, run the next compass seat (player draw or bot turn). */
-function advanceToNextActorAfter(
+async function advanceToNextActorAfter(
   r: RoundState,
   afterSeat: Seat,
   botsNext: [TileInstance[], TileInstance[], TileInstance[]],
   botWinsEnabled: boolean,
   botDifficulty: BotDifficulty,
-): RoundState {
+  cardId: PlayableCardId,
+): Promise<RoundState> {
   let nextSeat = nextCompassSeat(afterSeat)
   for (let step = 0; step < 4; step++) {
     if (nextSeat === r.playerSeat) {
@@ -2526,7 +2575,7 @@ function advanceToNextActorAfter(
     }
     const bi = botIndexForCompassSeat(r.botSlotSeats, nextSeat)
     if (bi != null) {
-      const result = runOneBotTurn(
+      const result = await runOneBotTurn(
         botsNext[bi]!,
         r.wall,
         r.discardPile,
@@ -2535,6 +2584,7 @@ function advanceToNextActorAfter(
         r.botExposures,
         botDifficulty,
         botWinsEnabled,
+        cardId,
       )
       const botsAfter: [TileInstance[], TileInstance[], TileInstance[]] = [
         [...botsNext[0]],
@@ -2592,11 +2642,12 @@ function advanceToNextActorAfter(
 }
 
 /** Charleston complete: East discards first; if the player is not East, bots act until the player can call or draw. */
-function beginMainPlayAfterCharleston(
+async function beginMainPlayAfterCharleston(
   r: RoundState,
   _botWinsEnabled: boolean,
   botDifficulty: BotDifficulty,
-): RoundState {
+  cardId: PlayableCardId,
+): Promise<RoundState> {
   if (r.playerSeat === 'east') {
     return { ...r, mainPhase: 'east-discard' }
   }
@@ -2604,7 +2655,7 @@ function beginMainPlayAfterCharleston(
   if (eastIdx == null) {
     return { ...r, mainPhase: 'east-discard' }
   }
-  const result = runBotOpeningDiscard(
+  const result = await runBotOpeningDiscard(
     r.bots[eastIdx]!,
     r.discardPile,
     'east',
@@ -2613,6 +2664,7 @@ function beginMainPlayAfterCharleston(
     r.eastExposures,
     r.botExposures,
     botDifficulty,
+    cardId,
   )
   const botsNext: [TileInstance[], TileInstance[], TileInstance[]] = [
     [...r.bots[0]],
@@ -2647,14 +2699,15 @@ function beginMainPlayAfterCharleston(
   })
 }
 
-function applyCharlestonDoneIfNeeded(
+async function applyCharlestonDoneIfNeeded(
   r: RoundState,
   nextPhase: CharlestonPhase,
   botWinsEnabled: boolean,
   botDifficulty: BotDifficulty,
-): RoundState {
+  cardId: PlayableCardId,
+): Promise<RoundState> {
   if (nextPhase !== 'done') return r
-  return beginMainPlayAfterCharleston(r, botWinsEnabled, botDifficulty)
+  return beginMainPlayAfterCharleston(r, botWinsEnabled, botDifficulty, cardId)
 }
 
 /**
@@ -2726,16 +2779,17 @@ function buildBotContext(
   }
 }
 
-function findBotCallOnDiscard(
+async function findBotCallOnDiscard(
   bots: [TileInstance[], TileInstance[], TileInstance[]],
   discard: TileInstance,
   r: RoundState,
   botDifficulty: BotDifficulty,
-): { botIndex: 0 | 1 | 2; claimType: ClaimType; matches: TileInstance[] } | null {
+  cardId: PlayableCardId,
+): Promise<{ botIndex: 0 | 1 | 2; claimType: ClaimType; matches: TileInstance[] } | null> {
   const order = botIndicesInCompassPlayOrder(r.playerSeat, r.botSlotSeats)
   for (const i of order) {
     const ctx = buildBotContext(r, bots[i]!, i)
-    const prob = botCallStrategicProbability(ctx, discard, botDifficulty)
+    const prob = await botCallStrategicProbability(ctx, discard, botDifficulty, cardId)
     const hit = trySingleBotCall(bots[i]!, discard.def, prob)
     if (!hit) continue
     const seat = botLabelAt(r, i)
@@ -2754,18 +2808,19 @@ function findBotCallOnDiscard(
 /**
  * After East skipped `discarderIndex`'s discard, only the next two bots (in turn) may claim.
  */
-function findBotCallAfterEastSkipped(
+async function findBotCallAfterEastSkipped(
   bots: [TileInstance[], TileInstance[], TileInstance[]],
   discard: TileInstance,
   discarderIndex: number,
   r: RoundState,
   botDifficulty: BotDifficulty,
-): { botIndex: 0 | 1 | 2; claimType: ClaimType; matches: TileInstance[] } | null {
+  cardId: PlayableCardId,
+): Promise<{ botIndex: 0 | 1 | 2; claimType: ClaimType; matches: TileInstance[] } | null> {
   const discarderSeat = botSeatAt(r, discarderIndex as 0 | 1 | 2)
   const candidates = botIndicesAfterCompassSeat(discarderSeat, r.playerSeat, r.botSlotSeats)
   for (const bi of candidates) {
     const ctx = buildBotContext(r, bots[bi]!, bi)
-    const prob = botCallStrategicProbability(ctx, discard, botDifficulty)
+    const prob = await botCallStrategicProbability(ctx, discard, botDifficulty, cardId)
     const hit = trySingleBotCall(bots[bi]!, discard.def, prob)
     if (!hit) continue
     const seat = botLabelAt(r, bi)
@@ -2782,38 +2837,40 @@ function findBotCallAfterEastSkipped(
 }
 
 /** `bestTilesAway` for `botHand` + `calledTile` as the claimed discard (14th tile), same rack model as self-draw. */
-function botTilesAwayWithCalledDiscard(
+async function botTilesAwayWithCalledDiscard(
   botHand: TileInstance[],
   calledTile: TileInstance,
   botIndex: 0 | 1 | 2,
   r: Pick<RoundState, 'wall' | 'discardPile' | 'eastExposures' | 'botExposures' | 'botSlotSeats'>,
-): number {
+  cardId: PlayableCardId,
+): Promise<number> {
   if (calledTile.def.cat === 'joker') return 99
   const botSeatLabel = botLabelAt(r, botIndex)
-  const thisBotExposures = r.botExposures.filter((e) => e.seat === botSeatLabel)
-  const handWithCalled = [...botHand, calledTile]
-  return summarizeRackTowardWin({
-    hand: handWithCalled,
-    wallRemaining: r.wall.length,
-    discards: r.discardPile.map((e) => e.tile),
-    exposures: r.botExposures,
-    playerClaimMelds: thisBotExposures,
-    eastTableClaimMelds: r.eastExposures,
-    patterns: getActiveCardPatterns(),
-  }).bestTilesAway
+  return botBestTilesAway(
+    {
+      hand: [...botHand, calledTile],
+      botSeat: botSeatLabel,
+      wall: r.wall,
+      discardPile: r.discardPile,
+      eastExposures: r.eastExposures,
+      botExposures: r.botExposures,
+    },
+    cardId,
+  )
 }
 
 /** South → West → North: first bot who wins on this discard (including pair/single 14th tile). */
-function findFirstBotMahjongOnDiscard(
+async function findFirstBotMahjongOnDiscard(
   bots: [TileInstance[], TileInstance[], TileInstance[]],
   calledTile: TileInstance,
   r: Pick<RoundState, 'wall' | 'discardPile' | 'eastExposures' | 'botExposures' | 'botSlotSeats'>,
+  cardId: PlayableCardId,
   /** If set, only these indices in order (e.g. next two after a skip). */
   candidateIndices?: readonly (0 | 1 | 2)[],
-): 0 | 1 | 2 | null {
+): Promise<0 | 1 | 2 | null> {
   const order = candidateIndices ?? ([0, 1, 2] as const)
   for (const bi of order) {
-    if (botTilesAwayWithCalledDiscard(bots[bi]!, calledTile, bi, r) === 0) return bi
+    if ((await botTilesAwayWithCalledDiscard(bots[bi]!, calledTile, bi, r, cardId)) === 0) return bi
   }
   return null
 }
@@ -2922,13 +2979,14 @@ function applyBotsJokerSwapsFromEast(r: RoundState): RoundState {
 /**
  * East commits a discard already taken out of the hand (`pendingEastDiscardTile` or staging flow).
  */
-function commitEastDiscardWithHand(
+async function commitEastDiscardWithHand(
   r: RoundState,
   discardedTile: TileInstance,
   handNext: TileInstance[],
   botWinsEnabled = false,
   botDifficulty: BotDifficulty = 'normal',
-): RoundState {
+  cardId: PlayableCardId,
+): Promise<RoundState> {
   if (r.mainPhase !== 'east-discard') return r
 
   const clearCallAmend: Pick<RoundState, 'callAmendableAfterClaimTileId' | 'callAmendFromBotIndex'> = {
@@ -2937,7 +2995,9 @@ function commitEastDiscardWithHand(
   }
 
   // ── Mah Jongg on East's discard (pair / single 14th tile — no exposure) ──
-  const mjBot = botWinsEnabled ? findFirstBotMahjongOnDiscard(r.bots, discardedTile, r) : null
+  const mjBot = botWinsEnabled
+    ? await findFirstBotMahjongOnDiscard(r.bots, discardedTile, r, cardId)
+    : null
   if (mjBot !== null) {
     const botsNext: [TileInstance[], TileInstance[], TileInstance[]] = [
       [...r.bots[0]],
@@ -2990,7 +3050,7 @@ function commitEastDiscardWithHand(
   }
 
   // ── Check if a bot wants to call East's discard ──────────────────────────
-  const botCall = findBotCallOnDiscard(r.bots, discardedTile, r, botDifficulty)
+  const botCall = await findBotCallOnDiscard(r.bots, discardedTile, r, botDifficulty, cardId)
   if (botCall) {
     const { botIndex, claimType, matches } = botCall
     const botsNext: [TileInstance[], TileInstance[], TileInstance[]] = [
@@ -3010,7 +3070,7 @@ function commitEastDiscardWithHand(
     // Before discarding, let the bot redeem any available jokers from exposures.
     // The called tile is already locked in the newExposure — only hand tiles are eligible for swaps.
     const allBotExposuresWithNew = [...r.botExposures, newExposure]
-    const postCallPrep = applyBotTurnSwapsAndBlankExchange(
+    const postCallPrep = await applyBotTurnSwapsAndBlankExchange(
       botsNext[botIndex]!,
       r.discardPile,
       botSeatAt(r, botIndex),
@@ -3019,6 +3079,7 @@ function commitEastDiscardWithHand(
       r.eastExposures,
       allBotExposuresWithNew,
       botDifficulty,
+      cardId,
     )
     botsNext[botIndex] = postCallPrep.hand
     const eastExposuresAfterCallSwap = postCallPrep.eastExposures
@@ -3034,7 +3095,7 @@ function commitEastDiscardWithHand(
     afterCallCtx.discardPile = discardPileAfterCallPrep
     const nonJokersAfterCall = botsNext[botIndex]!.filter((t) => t.def.cat !== 'joker')
     const pick = nonJokersAfterCall.length > 0
-      ? chooseBotDiscard(afterCallCtx, botDifficulty)
+      ? await chooseBotDiscard(afterCallCtx, botDifficulty, cardId)
       : botsNext[botIndex]![0]! // fallback: all jokers, shouldn't happen
 
     if (!pick) {
@@ -3100,7 +3161,7 @@ function commitEastDiscardWithHand(
   ]
   const playOrder = botIndicesAfterPlayerDiscard(r.playerSeat, r.botSlotSeats)
   const firstBotIdx = playOrder[0]!
-  const result = runOneBotTurn(
+  const result = await runOneBotTurn(
     botsNext[firstBotIdx],
     r.wall,
     pileAfterPlayer,
@@ -3109,6 +3170,7 @@ function commitEastDiscardWithHand(
     r.botExposures,
     botDifficulty,
     botWinsEnabled,
+    cardId,
   )
   botsNext[firstBotIdx] = result.botHand
 
@@ -3174,15 +3236,16 @@ function commitEastDiscardWithHand(
   })
 }
 
-function commitEastDiscardAfterStaged(
+async function commitEastDiscardAfterStaged(
   r: RoundState,
   botWinsEnabled = false,
   botDifficulty: BotDifficulty = 'normal',
-): RoundState {
+  cardId: PlayableCardId,
+): Promise<RoundState> {
   const staged = r.pendingEastDiscardTile
   if (!staged || r.mainPhase !== 'east-discard') return r
   if (r.hand.some((t) => t.id === staged.id)) return { ...r, pendingEastDiscardTile: null }
-  return commitEastDiscardWithHand(r, staged, r.hand, botWinsEnabled, botDifficulty)
+  return commitEastDiscardWithHand(r, staged, r.hand, botWinsEnabled, botDifficulty, cardId)
 }
 
 /**
@@ -3190,11 +3253,12 @@ function commitEastDiscardAfterStaged(
  * Remaining bots (in turn) may claim that discard; otherwise the next bot draws and discards,
  * or East draws when all have passed.
  */
-function applySkipBotDiscard(
+async function applySkipBotDiscard(
   r: RoundState,
   botWinsEnabled = false,
   botDifficulty: BotDifficulty = 'normal',
-): RoundState {
+  cardId: PlayableCardId,
+): Promise<RoundState> {
   if (r.mainPhase !== 'bot-turn' || r.activeBotIndex === null || !r.activeBotDiscard) return r
 
   const fromIdx = r.activeBotIndex as 0 | 1 | 2
@@ -3208,7 +3272,9 @@ function applySkipBotDiscard(
   ]
 
   const skipOrder = botIndicesAfterCompassSeat(fromSeat, r.playerSeat, r.botSlotSeats)
-  const mjCaller = botWinsEnabled ? findFirstBotMahjongOnDiscard(botsNext, calledTile, r, skipOrder) : null
+  const mjCaller = botWinsEnabled
+    ? await findFirstBotMahjongOnDiscard(botsNext, calledTile, r, cardId, skipOrder)
+    : null
   if (mjCaller !== null) {
     botsNext[mjCaller] = [...botsNext[mjCaller]!, calledTile]
     const pileWithoutClaimed = r.discardPile.filter((e) => e.tile.id !== calledTile.id)
@@ -3254,7 +3320,14 @@ function applySkipBotDiscard(
     })
   }
 
-  const botClaim = findBotCallAfterEastSkipped(botsNext, calledTile, fromIdx, r, botDifficulty)
+  const botClaim = await findBotCallAfterEastSkipped(
+    botsNext,
+    calledTile,
+    fromIdx,
+    r,
+    botDifficulty,
+    cardId,
+  )
 
   if (botClaim) {
     const { botIndex: callerIdx, claimType, matches } = botClaim
@@ -3272,7 +3345,7 @@ function applySkipBotDiscard(
     // Before discarding, let the calling bot redeem any available jokers.
     // The called tile is locked in newExposure — only remaining hand tiles are eligible.
     const allBotExposuresSkip = [...r.botExposures, newExposure]
-    const postCallPrepSkip = applyBotTurnSwapsAndBlankExchange(
+    const postCallPrepSkip = await applyBotTurnSwapsAndBlankExchange(
       botsNext[callerIdx]!,
       pileWithoutClaimed,
       botSeatAt(r, callerIdx as 0 | 1 | 2),
@@ -3281,6 +3354,7 @@ function applySkipBotDiscard(
       r.eastExposures,
       allBotExposuresSkip,
       botDifficulty,
+      cardId,
     )
     botsNext[callerIdx] = postCallPrepSkip.hand
     const eastExposuresAfterSkipSwap = postCallPrepSkip.eastExposures
@@ -3297,7 +3371,7 @@ function applySkipBotDiscard(
     const nonJokersSkip = botsNext[callerIdx]!.filter((t) => t.def.cat !== 'joker')
     const pick =
       nonJokersSkip.length > 0
-        ? chooseBotDiscard(afterSkipCtx, botDifficulty)
+        ? await chooseBotDiscard(afterSkipCtx, botDifficulty, cardId)
         : botsNext[callerIdx]![0]!
 
     if (!pick) {
@@ -3313,6 +3387,7 @@ function applySkipBotDiscard(
         botsNext,
         botWinsEnabled,
         botDifficulty,
+        cardId,
       )
     }
 
@@ -3342,7 +3417,7 @@ function applySkipBotDiscard(
     })
   }
 
-  return advanceToNextActorAfter(r, fromSeat, botsNext, botWinsEnabled, botDifficulty)
+  return advanceToNextActorAfter(r, fromSeat, botsNext, botWinsEnabled, botDifficulty, cardId)
 }
 
 /** Player decided to call — move called tile into staging exposure; player picks meld tiles. */
@@ -3394,7 +3469,7 @@ function orderEastExposuresForClosestCardLine(
     patterns: getActiveCardPatterns(),
   })
   if (!closestLine) return nextEast
-  const pat = getActiveCardPatterns().find((p) => p.id === closestLine.id)
+  const pat = getActiveCardPatternById(closestLine.id)
   if (!pat) return nextEast
   const reordered = reorderEastExposuresToPatternGroupOrder(nextEast, pat)
   if (!reordered) return nextEast
@@ -3920,7 +3995,7 @@ export default function App() {
 
   // ── Game options (persisted) ──────────────────────────────────────────────
   const [botWinsEnabled, setBotWinsEnabled] = useState<boolean>(() => readBotWinsEnabledFromStorage())
-  const animationsEnabled = true
+  const [animationsEnabled, setAnimationsEnabled] = useState<boolean>(() => readAnimationsFromStorage())
   const [colorButtonsEnabled, setColorButtonsEnabled] = useState<boolean>(() => readColorButtonsFromStorage())
 
   const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>(() => readBotDifficultyFromStorage())
@@ -3937,6 +4012,7 @@ export default function App() {
   committedCardIdRef.current = committedCardId
   menuCardIdRef.current = menuCardId
   const cardPatterns = useMemo(() => patternsForCard(committedCardId), [committedCardId])
+  const cardPatternsById = useMemo(() => patternByIdLookup(cardPatterns), [cardPatterns])
   const cardSectionOrder = useMemo(() => [...cardSectionOrderFromPatterns(cardPatterns)], [cardPatterns])
 
   const suggestedHandsFilterColumns = useMemo(
@@ -4108,6 +4184,18 @@ export default function App() {
     })
   }, [])
 
+  const toggleAnimations = useCallback(() => {
+    setAnimationsEnabled((v) => {
+      const next = !v
+      try {
+        localStorage.setItem(LS_KEY_ANIMATIONS, next ? 'true' : 'false')
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }, [])
+
   // Keep a ref so pure-function callbacks always see the current setting value.
   const botWinsEnabledRef = useRef(botWinsEnabled)
   const blankTilesEnabledRef = useRef(blankTilesEnabled)
@@ -4183,6 +4271,10 @@ export default function App() {
       const u = readUndoFromStorage()
       return prev === u ? prev : u
     })
+    setAnimationsEnabled((prev) => {
+      const a = readAnimationsFromStorage()
+      return prev === a ? prev : a
+    })
     setSuggestedHandsUncheckedSections(() => readUncheckedSectionsFromStorage())
     setSuggestedHandsHideConcealed((prev) => {
       const h = readHideConcealedHandsFromStorage()
@@ -4237,6 +4329,9 @@ export default function App() {
       } else if (e.key === LS_KEY_UNDO) {
         if (e.newValue == null) return
         setUndoEnabled(e.newValue === 'true' || e.newValue === '1')
+      } else if (e.key === LS_KEY_ANIMATIONS) {
+        if (e.newValue == null) return
+        setAnimationsEnabled(e.newValue === 'true' || e.newValue === '1')
       } else if (e.key === SUGGESTED_HANDS_UNCHECKED_SECTIONS_KEY) {
         if (e.newValue == null) return
         setSuggestedHandsUncheckedSections(readUncheckedSectionsFromStorage())
@@ -4385,6 +4480,17 @@ export default function App() {
     [],
   )
 
+  /** Await bot ranking (worker) then commit — drops the result if the round changed meanwhile. */
+  const pushRoundAsync = useCallback(
+    async (compute: (r: RoundState) => Promise<RoundState>) => {
+      const base = roundRef.current
+      const next = await compute(base)
+      if (roundRef.current !== base) return
+      pushRound(next)
+    },
+    [pushRound],
+  )
+
   const undoAction = useCallback(() => {
     if (passStripFlyoutTimerRef.current) {
       clearTimeout(passStripFlyoutTimerRef.current)
@@ -4435,8 +4541,10 @@ export default function App() {
     const stagger = handTileFlyInStaggerMs
     const n = handTileFlyInCount
     const waveTailMs = n > 0 && stagger > 0 ? (n - 1) * stagger : 0
+    /** Multi-tile receive waits ~2 frames before starting `tile-drop-in`. */
+    const measureDeferMs = n > 1 ? 40 : 0
     /** ~one `tile-drop-in` duration (340ms) after the last tile’s delay, plus buffer. */
-    const clearMs = 340 + waveTailMs + 90
+    const clearMs = 340 + waveTailMs + measureDeferMs + 90
     const t = window.setTimeout(() => {
       setRound((r) => (r.handTileFlyIn ? { ...r, handTileFlyIn: null } : r))
     }, clearMs)
@@ -5096,9 +5204,9 @@ export default function App() {
       .reduce((m, i) => (m < 0 ? i : Math.min(m, i)), -1)
     const patternId =
       variantSep >= 0 ? suggestedFocusHandKey.slice(0, variantSep) : suggestedFocusHandKey
-    const p = cardPatterns.find((x) => x.id === patternId)
+    const p = cardPatternsById.get(patternId)
     return !!p?.closed
-  }, [suggestedFocusHandKey, mainPhase, cardPatterns])
+  }, [suggestedFocusHandKey, mainPhase, cardPatternsById])
   focusedHandIsConcealedRef.current = focusedHandIsConcealed
 
   const suggestedTileGuide = useMemo(() => {
@@ -5121,7 +5229,7 @@ export default function App() {
       .filter((i) => i >= 0)
       .reduce((m, i) => (m < 0 ? i : Math.min(m, i)), -1)
     const patternId = variantSep >= 0 ? deferredSuggestedFocusHandKey.slice(0, variantSep) : deferredSuggestedFocusHandKey
-    const p = cardPatterns.find((x) => x.id === patternId)
+    const p = cardPatternsById.get(patternId)
     if (!p) return null
 
     // Variant key: pin the pattern per combo so highlights match the selected variant row.
@@ -5202,7 +5310,7 @@ export default function App() {
       bestIds: computeAvailableRackHighlightIds(p),
       blankExchangeIds: computeBlankExchangeIds(p),
     }
-  }, [deferredSuggestedFocusHandKey, suggestedSuppressedHandKey, mainPhase, rackForSuggestedPatternMatch, suggestedHandsExposureTileIds, cardPatterns, deadTileHintEnabled, discardTiles, botExposures, blankExchangeEligibleDiscardDefs])
+  }, [deferredSuggestedFocusHandKey, suggestedSuppressedHandKey, mainPhase, rackForSuggestedPatternMatch, suggestedHandsExposureTileIds, cardPatternsById, deadTileHintEnabled, discardTiles, botExposures, blankExchangeEligibleDiscardDefs])
 
   /**
    * Bot exposure rings for the focused line: naturals that match strip “need” slots (dead tiles you
@@ -5332,10 +5440,8 @@ export default function App() {
       merged.add(activeBotDiscard.id)
       return { bestIds: merged, blankExchangeIds: suggestedTileGuide.blankExchangeIds }
     }
-    return {
-      bestIds: suggestedTileGuide.bestIds,
-      blankExchangeIds: suggestedTileGuide.blankExchangeIds,
-    }
+    // Keep the upstream object identity so memoized racks can bail across App re-renders.
+    return suggestedTileGuide
   }, [
     suggestedTileGuide,
     mainPhase,
@@ -5370,7 +5476,7 @@ export default function App() {
     const focusKey = suggestedFocusHandKeyRef.current
     if (focusKey) {
       const patternId = focusKeyPatternId(focusKey)
-      const focusedPattern = cardPatterns.find((p) => p.id === patternId)
+      const focusedPattern = cardPatternsById.get(patternId)
       if (
         focusedPattern &&
         !isSuggestedHandSectionFilterEnabled(focusedPattern.section, suggestedHandsUncheckedSections)
@@ -5384,12 +5490,12 @@ export default function App() {
       if (prev.length === 0) return prev
       const next = prev.filter((key) => {
         const patternId = focusKeyPatternId(key)
-        const p = cardPatterns.find((x) => x.id === patternId)
+        const p = cardPatternsById.get(patternId)
         return !p || isSuggestedHandSectionFilterEnabled(p.section, suggestedHandsUncheckedSections)
       })
       return next.length === prev.length ? prev : next
     })
-  }, [suggestedHandsUncheckedSections, cardPatterns, clearSuggestedDeadGuidesForHandKey])
+  }, [suggestedHandsUncheckedSections, cardPatternsById, clearSuggestedDeadGuidesForHandKey])
 
   useEffect(() => {
     const prevFocus = prevSuggestedFocusForDeadGuideRef.current
@@ -6900,42 +7006,68 @@ export default function App() {
   }, [performNewHandDeal])
 
   const sendCharlestonPass = useCallback(() => {
-    const charlestonBotPassOpts = {
-      pickBotPass: (hand: TileInstance[], n: number, botIndex: 0 | 1 | 2) =>
-        chooseBotCharlestonPass(
-          hand,
-          n,
-          seatLabel(botSlotSeats[botIndex]) as BotSeat,
-          botDifficultyRef.current,
-        ),
-    }
-    let passBlockedCat: 'joker' | 'blank' | null = null
-    pushRound((r) => {
-      if (r.charlestonPhase === 'done') return r
-      const phase = r.charlestonPhase
-      const eastRack = r.passSlots.filter(Boolean) as TileInstance[]
+    void (async () => {
+      const base = roundRef.current
+      if (base.charlestonPhase === 'done') return
+      const phase = base.charlestonPhase
+      const eastRack = base.passSlots.filter(Boolean) as TileInstance[]
       const blocked = eastRack.find((t) => !charlestonPassEligible(t.def))
       if (blocked) {
-        passBlockedCat = blocked.def.cat === 'blank' ? 'blank' : 'joker'
-        return r
+        setCharlestonPassError(
+          charlestonPassBlockedMessage(blocked.def.cat === 'blank' ? 'blank' : 'joker'),
+        )
+        return
+      }
+
+      const cardId = committedCardIdRef.current
+      const difficulty = botDifficultyRef.current
+      const absolute = toFourHands(base)
+      const rotated = fourHandsWithPlayerAsEast(absolute, base.playerSeat)
+      const passCount = phase === 'courtesy' ? eastRack.length : 3
+      // Sync bot picks — await would leave a post–fly-out gap before hand + receive fly-in commit.
+      const southPass = chooseBotCharlestonPass(
+        rotated.south,
+        passCount,
+        seatLabel(base.botSlotSeats[0]) as BotSeat,
+        difficulty,
+        cardId,
+      )
+      const westPass = chooseBotCharlestonPass(
+        rotated.west,
+        passCount,
+        seatLabel(base.botSlotSeats[1]) as BotSeat,
+        difficulty,
+        cardId,
+      )
+      const northPass = chooseBotCharlestonPass(
+        rotated.north,
+        passCount,
+        seatLabel(base.botSlotSeats[2]) as BotSeat,
+        difficulty,
+        cardId,
+      )
+
+      const charlestonBotPassOpts: { pickBotPass: CharlestonBotPassPicker } = {
+        pickBotPass: (_hand, _n, botIndex) =>
+          botIndex === 0 ? southPass : botIndex === 1 ? westPass : northPass,
       }
 
       const flyDir = handTileFlyInFromCharlestonPhase(phase)
 
+      let next: RoundState
       if (phase === 'courtesy') {
-        if (eastRack.length > 3) return r
-        const nextHands = applyCharlestonPassForRound(r, phase, eastRack, 0, charlestonBotPassOpts)
+        if (eastRack.length > 3) return
+        const nextHands = applyCharlestonPassForRound(base, phase, eastRack, 0, charlestonBotPassOpts)
         const nextPhase = nextCharlestonPhase(phase)
-        // Courtesy always advances to `done`; still compute incoming so receive fly-in matches other across passes.
-        const incoming = charlestonIncomingHandTileIds(r.hand, nextHands[r.playerSeat])
+        const incoming = charlestonIncomingHandTileIds(base.hand, nextHands[base.playerSeat])
         const incomingFly =
           incoming.length > 0 && flyDir != null
             ? { ids: [...incoming], from: flyDir }
             : null
-        return applyCharlestonDoneIfNeeded(
+        next = await applyCharlestonDoneIfNeeded(
           {
-            ...r,
-            ...handsFromFourHands(nextHands, r.playerSeat, r.botSlotSeats),
+            ...base,
+            ...handsFromFourHands(nextHands, base.playerSeat, base.botSlotSeats),
             passSlots: [null, null, null],
             passSlotOrigins: [null, null, null],
             selectedHandTileId: null,
@@ -6946,65 +7078,76 @@ export default function App() {
           },
           nextPhase,
           botWinsEnabledRef.current,
-          botDifficultyRef.current,
+          difficulty,
+          cardId,
         )
+      } else {
+        const blindOk = charlestonAllowsBlind(phase)
+        if (blindOk) {
+          const blindCount = 3 - eastRack.length
+          if (blindCount < 0 || blindCount > 3) return
+          const nextHands = applyCharlestonPassForRound(
+            base,
+            phase,
+            eastRack,
+            blindCount,
+            charlestonBotPassOpts,
+          )
+          const nextPhase = nextCharlestonPhase(phase)
+          const incoming =
+            nextPhase === 'done'
+              ? []
+              : charlestonIncomingHandTileIds(base.hand, nextHands[base.playerSeat])
+          next = await applyCharlestonDoneIfNeeded(
+            {
+              ...base,
+              ...handsFromFourHands(nextHands, base.playerSeat, base.botSlotSeats),
+              passSlots: [null, null, null],
+              passSlotOrigins: [null, null, null],
+              selectedHandTileId: null,
+              charlestonPhase: nextPhase,
+              awaitingSecondCharlestonChoice: nextPhase === 'left2',
+              charlestonNewTileIds: incoming,
+              handTileFlyIn:
+                incoming.length > 0 && flyDir != null ? { ids: [...incoming], from: flyDir } : null,
+            },
+            nextPhase,
+            botWinsEnabledRef.current,
+            difficulty,
+            cardId,
+          )
+        } else {
+          if (eastRack.length !== 3) return
+          const nextHands = applyCharlestonPassForRound(base, phase, eastRack, 0, charlestonBotPassOpts)
+          const nextPhase = nextCharlestonPhase(phase)
+          const incoming =
+            nextPhase === 'done'
+              ? []
+              : charlestonIncomingHandTileIds(base.hand, nextHands[base.playerSeat])
+          next = await applyCharlestonDoneIfNeeded(
+            {
+              ...base,
+              ...handsFromFourHands(nextHands, base.playerSeat, base.botSlotSeats),
+              passSlots: [null, null, null],
+              passSlotOrigins: [null, null, null],
+              selectedHandTileId: null,
+              charlestonPhase: nextPhase,
+              awaitingSecondCharlestonChoice: nextPhase === 'left2',
+              charlestonNewTileIds: incoming,
+              handTileFlyIn:
+                incoming.length > 0 && flyDir != null ? { ids: [...incoming], from: flyDir } : null,
+            },
+            nextPhase,
+            botWinsEnabledRef.current,
+            difficulty,
+            cardId,
+          )
+        }
       }
 
-      const blindOk = charlestonAllowsBlind(phase)
-      if (blindOk) {
-        const blindCount = 3 - eastRack.length
-        if (blindCount < 0 || blindCount > 3) return r
-        const nextHands = applyCharlestonPassForRound(r, phase, eastRack, blindCount, charlestonBotPassOpts)
-        const nextPhase = nextCharlestonPhase(phase)
-        const incoming =
-          nextPhase === 'done'
-            ? []
-            : charlestonIncomingHandTileIds(r.hand, nextHands[r.playerSeat])
-        return applyCharlestonDoneIfNeeded(
-          {
-            ...r,
-            ...handsFromFourHands(nextHands, r.playerSeat, r.botSlotSeats),
-            passSlots: [null, null, null],
-            passSlotOrigins: [null, null, null],
-            selectedHandTileId: null,
-            charlestonPhase: nextPhase,
-            awaitingSecondCharlestonChoice: nextPhase === 'left2',
-            charlestonNewTileIds: incoming,
-            handTileFlyIn:
-              incoming.length > 0 && flyDir != null ? { ids: [...incoming], from: flyDir } : null,
-          },
-          nextPhase,
-          botWinsEnabledRef.current,
-          botDifficultyRef.current,
-        )
-      }
-
-      if (eastRack.length !== 3) return r
-      const nextHands = applyCharlestonPassForRound(r, phase, eastRack, 0, charlestonBotPassOpts)
-      const nextPhase = nextCharlestonPhase(phase)
-      const incoming =
-        nextPhase === 'done' ? [] : charlestonIncomingHandTileIds(r.hand, nextHands[r.playerSeat])
-      return applyCharlestonDoneIfNeeded(
-        {
-          ...r,
-          ...handsFromFourHands(nextHands, r.playerSeat, r.botSlotSeats),
-          passSlots: [null, null, null],
-          passSlotOrigins: [null, null, null],
-          selectedHandTileId: null,
-          charlestonPhase: nextPhase,
-          awaitingSecondCharlestonChoice: nextPhase === 'left2',
-          charlestonNewTileIds: incoming,
-          handTileFlyIn:
-            incoming.length > 0 && flyDir != null ? { ids: [...incoming], from: flyDir } : null,
-        },
-        nextPhase,
-        botWinsEnabledRef.current,
-        botDifficultyRef.current,
-      )
-    })
-    if (passBlockedCat) {
-      setCharlestonPassError(charlestonPassBlockedMessage(passBlockedCat))
-    }
+      if (roundRef.current !== base) return
+      pushRound(next)
+    })()
   }, [pushRound])
 
   const skipToCourtesyPass = useCallback(() => {
@@ -7074,11 +7217,16 @@ export default function App() {
     }, 350)
   }, [passSlots, charlestonPhase, charlestonDone, sendCharlestonPass, skipToCourtesyPass])
 
-  const skipBotDiscard = useCallback(
-    () =>
-      pushRound((r) => applySkipBotDiscard(r, botWinsEnabledRef.current, botDifficultyRef.current)),
-    [pushRound],
-  )
+  const skipBotDiscard = useCallback(() => {
+    void pushRoundAsync((r) =>
+      applySkipBotDiscard(
+        r,
+        botWinsEnabledRef.current,
+        botDifficultyRef.current,
+        committedCardIdRef.current,
+      ),
+    )
+  }, [pushRoundAsync])
   const commitEastDiscard = useCallback(() => {
     const cur = roundRef.current
     const pendingTile = cur.pendingEastDiscardTile
@@ -7127,10 +7275,15 @@ export default function App() {
         }
       }
     }
-    pushRound((r) =>
-      commitEastDiscardAfterStaged(r, botWinsEnabledRef.current, botDifficultyRef.current),
+    void pushRoundAsync((r) =>
+      commitEastDiscardAfterStaged(
+        r,
+        botWinsEnabledRef.current,
+        botDifficultyRef.current,
+        committedCardIdRef.current,
+      ),
     )
-  }, [pushRound])
+  }, [pushRoundAsync])
   const returnStagedEastDiscard = useCallback(() => {
     pushRound((r) => {
       if (!r.pendingEastDiscardTile) return r
@@ -7691,6 +7844,13 @@ export default function App() {
     }
   }, [setCharlestonPassError, pushRound])
 
+  const onToggleStagedCallTile = useCallback(
+    (id: string) => {
+      pushRound((r) => applyToggleStagedCallTile(r, id))
+    },
+    [pushRound],
+  )
+
   const onDragEnd = useCallback(
     (e: DragEndEvent) => {
       const { active, over } = e
@@ -8165,19 +8325,21 @@ export default function App() {
   }, [charlestonDone, mainPhase])
 
   // During call-staging, staged tiles are shown in the exposure rack — hide them from the hand.
-  const visibleHandTiles =
-    mainPhase === 'call-staging' && stagedCallTileIds.length > 0
-      ? hand.filter((t) => !stagedCallTileIds.includes(t.id))
-      : hand
-  const handIds = visibleHandTiles.map((t) => t.id)
+  // Keep array identity stable when nothing is filtered so memo(SortableHand) can bail.
+  const visibleHandTiles = useMemo(() => {
+    if (mainPhase === 'call-staging' && stagedCallTileIds.length > 0) {
+      const staged = new Set(stagedCallTileIds)
+      return hand.filter((t) => !staged.has(t.id))
+    }
+    return hand
+  }, [mainPhase, stagedCallTileIds, hand])
+  const handIds = useMemo(() => visibleHandTiles.map((t) => t.id), [visibleHandTiles])
   /** Pass strip and hand are separate sortable contexts (same DndContext) so rectSortingStrategy does not treat them as one row. */
   const charlestonPassSortableItems = useMemo(() => {
     return passSlots.map((s) => s?.id).filter((id): id is string => id != null)
   }, [passSlots])
   /** Keep Charleston hand sortables stable; cross-zone preview gap is a visual transform in `SortableHand`. */
-  const charlestonHandSortableIds = useMemo(() => {
-    return handIds
-  }, [handIds])
+  const charlestonHandSortableIds = handIds
   const charlestonPassPhantomTile = useMemo(() => {
     if (!charlestonPassIntoHandPreview) return null
     return passSlots.find((s) => s?.id === charlestonPassIntoHandPreview.tileId) ?? null
@@ -8190,11 +8352,173 @@ export default function App() {
     return [pid, ...handIds]
   }, [mainPhase, pendingEastDiscardTile, handIds])
   // Staged tiles share the same SortableContext as hand tiles so dragging animates both zones.
-  const sortableItems = mainPhase === 'call-staging'
-    ? [...stagedCallTileIds, ...handIds]
-    : mainPhase === 'bot-turn' && activeBotDiscard
-      ? [incomingBotDiscardDragId(activeBotDiscard.id), ...handIds]
-      : eastMainSortableIds ?? handIds
+  const sortableItems = useMemo(() => {
+    if (mainPhase === 'call-staging') return [...stagedCallTileIds, ...handIds]
+    if (mainPhase === 'bot-turn' && activeBotDiscard) {
+      return [incomingBotDiscardDragId(activeBotDiscard.id), ...handIds]
+    }
+    return eastMainSortableIds ?? handIds
+  }, [mainPhase, stagedCallTileIds, handIds, activeBotDiscard, eastMainSortableIds])
+
+  /** Stable meld props for memo(ExposureRack) — avoid new array/object identity every App render. */
+  const charlestonEastExposureMelds = useMemo(
+    () =>
+      eastExposures.map((exp) => ({
+        tiles: exp.tiles,
+        calledTileId: exp.calledTileId,
+      })),
+    [eastExposures],
+  )
+
+  const eastPlayerExposureRackMelds = useMemo(() => {
+    if (mainPhase === 'mahjong-declared') return EMPTY_EXPOSURE_RACK_MELDS
+    if (mainPhase === 'bot-mahjong') return [{ tiles: hand }]
+    const allowSort =
+      (mainPhase === 'east-discard' || mainPhase === 'bot-turn') &&
+      playerExposureMelds.length > 1
+    const committed = playerExposureMelds
+      .map((exp, exposureIdx) => ({ exp, exposureIdx }))
+      .filter(
+        ({ exp }) =>
+          mainPhase !== 'wall-game' ||
+          exp.tiles.length <= WALL_GAME_MAX_EXPOSURE_MELD_TILES,
+      )
+      .map(({ exp, exposureIdx }) => ({
+        tiles: exp.tiles,
+        calledTileId: exp.calledTileId,
+        sortableMeldId: allowSort ? eastExposureMeldSortId(exposureIdx) : undefined,
+        dropZoneId:
+          jokerSwapUiActive && exp.tiles.some((t) => t.def.cat === 'joker')
+            ? eastExposureSwapDropId(exposureIdx)
+            : undefined,
+      }))
+    if (mainPhase === 'call-staging' && activeBotDiscard) {
+      const staged = new Set(stagedCallTileIds)
+      return [
+        ...committed,
+        {
+          tiles: [activeBotDiscard, ...hand.filter((t) => staged.has(t.id))],
+          calledTileId: activeBotDiscard.id,
+          onTileClick: onToggleStagedCallTile,
+        },
+      ]
+    }
+    return committed
+  }, [
+    mainPhase,
+    hand,
+    playerExposureMelds,
+    activeBotDiscard,
+    stagedCallTileIds,
+    jokerSwapUiActive,
+    onToggleStagedCallTile,
+  ])
+
+  const charlestonExposureTrailingSuffix = useMemo(
+    () => (
+      <PassStrip
+        variant="inlineTail"
+        slots={passSlots}
+        onPassBoxClick={onPassBoxClick}
+        onPassTileClickReturn={onPassTileClickReturn}
+        suggestedBestIds={suggestedTileGuideForRack?.bestIds}
+        suggestedBlankExchangeIds={suggestedTileGuideForRack?.blankExchangeIds}
+        flyOutFrom={passStripFlyOut}
+        hiddenSortableTileId={null}
+        returningTileId={charlestonPassIntoHandPreview?.tileId ?? null}
+        inlineHeaderTitle={charlestonRackRoundTitleText}
+        inlineHeaderInstruction={<CharlestonPassStripInstructionMain phase={charlestonPhase} />}
+        inlineHeaderInstructionAria={charlestonPassStripInstructionAria(charlestonPhase)}
+      />
+    ),
+    [
+      passSlots,
+      onPassBoxClick,
+      onPassTileClickReturn,
+      suggestedTileGuideForRack,
+      passStripFlyOut,
+      charlestonPassIntoHandPreview?.tileId,
+      charlestonRackRoundTitleText,
+      charlestonPhase,
+    ],
+  )
+
+  const eastExposureLastSlotLabel =
+    mainPhase === 'bot-turn' && activeBotDiscard != null && activeBotIndex != null
+      ? `${seatLabel(botSlotSeats[activeBotIndex as 0 | 1 | 2]!).charAt(0)} >`
+      : undefined
+
+  const eastExposureLastSlotClassName = useMemo(() => {
+    return (
+      [
+        mainPhase === 'east-discard' ? 'exposure-rack__slot--east-discard-instructed' : '',
+        pendingEastDiscardTile &&
+        suggestedTileGuideForRack?.bestIds.has(pendingEastDiscardTile.id)
+          ? 'exposure-rack__slot--suggest-best'
+          : '',
+      ]
+        .filter(Boolean)
+        .join(' ') || undefined
+    )
+  }, [mainPhase, pendingEastDiscardTile, suggestedTileGuideForRack])
+
+  const eastDiscardLastSlotReplace = useMemo(() => {
+    if (mainPhase !== 'east-discard') return null
+    return (
+      <>
+        <p className="east-discard-staging__instruction" aria-hidden="true">
+          Discard &gt;
+        </p>
+        <EastDiscardStagingSlot
+          enabled={charlestonDone}
+          compact
+          tile={pendingEastDiscardTile}
+          onTileClickReturn={returnStagedEastDiscard}
+          suggestBest={
+            !!pendingEastDiscardTile &&
+            !!suggestedTileGuideForRack?.bestIds.has(pendingEastDiscardTile.id)
+          }
+          suggestBlankExchange={
+            !!pendingEastDiscardTile &&
+            !!suggestedTileGuideForRack?.blankExchangeIds?.has(pendingEastDiscardTile.id)
+          }
+          suggestDim={
+            !!pendingEastDiscardTile &&
+            !!suggestedTileGuideForRack &&
+            !suggestedTileGuideForRack.bestIds.has(pendingEastDiscardTile.id) &&
+            !suggestedTileGuideForRack.blankExchangeIds?.has(pendingEastDiscardTile.id)
+          }
+          jokerSwapHintBounce={
+            !!pendingEastDiscardTile &&
+            !!jokerSwapHintBounceIds?.hand.has(pendingEastDiscardTile.id)
+          }
+          jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
+        />
+      </>
+    )
+  }, [
+    mainPhase,
+    charlestonDone,
+    pendingEastDiscardTile,
+    returnStagedEastDiscard,
+    suggestedTileGuideForRack,
+    jokerSwapHintBounceIds,
+    jokerSwapHintBounceEpoch,
+  ])
+
+  const callInitiateFirstEmptyOverride = useMemo(() => {
+    if (
+      !(
+        charlestonDone &&
+        mainPhase === 'bot-turn' &&
+        activeBotDiscard &&
+        incomingBotDiscardCallDragActive
+      )
+    ) {
+      return undefined
+    }
+    return <CallInitiateFirstEmptyTarget />
+  }, [charlestonDone, mainPhase, activeBotDiscard, incomingBotDiscardCallDragActive])
 
   const mainGameCallDisabled = mainPhase !== 'bot-turn' || !activeBotDiscard
   /**
@@ -8836,6 +9160,16 @@ export default function App() {
                 </div>
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
                   <AppMenuSettingSwitch
+                    labelId="app-menu-label-animations"
+                    pressed={animationsEnabled}
+                    onToggle={toggleAnimations}
+                  />
+                  <span className="app-menu-modal__label" id="app-menu-label-animations">
+                    {ANIMATIONS_LABEL}
+                  </span>
+                </div>
+                <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                  <AppMenuSettingSwitch
                     labelId="app-menu-label-bot-wins"
                     pressed={botWinsEnabled}
                     onToggle={toggleBotWins}
@@ -9301,14 +9635,16 @@ export default function App() {
                 </div>
               </>
             ) : blockingDialog?.variant === 'mahjong-blocked' ? (
-              <IllegalMahjongDialog
-                rankInput={blockingDialog.rankInput}
-                onDismiss={() => {
-                  setCharlestonPassError(null)
-                  setCallRuleError(null)
-                  setBlockingDialog(null)
-                }}
-              />
+              <Suspense fallback={null}>
+                <IllegalMahjongDialog
+                  rankInput={blockingDialog.rankInput}
+                  onDismiss={() => {
+                    setCharlestonPassError(null)
+                    setCallRuleError(null)
+                    setBlockingDialog(null)
+                  }}
+                />
+              </Suspense>
             ) : charlestonPassError ? (
               <>
                 <p id="game-blocking-error-msg" className="charleston-error-dialog__body">
@@ -9387,37 +9723,39 @@ export default function App() {
             </p>
             {postGameWallGameReview ? (
               <div className="wall-game-dialog__review mahjong-win__bots-review" aria-labelledby="wall-game-title">
-                <ul className="mahjong-win__bots-review-list">
-                  {postGameWallGameReview.rows[0] ? (
-                    <li key={postGameWallGameReview.rows[0].label} className="mahjong-win__bots-review-card">
-                      <PostGameLoserRackRow
-                        rowId={`wall-${postGameWallGameReview.rows[0].label}`}
-                        label={postGameWallGameReview.rows[0].label}
-                        bestTilesAway={postGameWallGameReview.rows[0].bestTilesAway}
-                        linesAtMin={postGameWallGameReview.rows[0].linesAtMin}
-                        rankInput={postGameWallGameReview.rows[0].rankInput}
-                        showTiedLinePicker={postGameWallGameReview.rows[0].linesAtMin.length > 1}
-                        cardVariant="wrapped"
-                        trailingLabel="none"
-                        playerSeatFocus
-                      />
-                    </li>
-                  ) : null}
-                  {postGameWallGameReview.rows.slice(1).map((row) => (
-                    <li key={row.label} className="mahjong-win__bots-review-card">
-                      <PostGameLoserRackRow
-                        rowId={`wall-${row.label}`}
-                        label={row.label}
-                        bestTilesAway={row.bestTilesAway}
-                        linesAtMin={row.linesAtMin}
-                        rankInput={row.rankInput}
-                        showTiedLinePicker={row.linesAtMin.length > 1}
-                        cardVariant="wrapped"
-                        trailingLabel="none"
-                      />
-                    </li>
-                  ))}
-                </ul>
+                <Suspense fallback={null}>
+                  <ul className="mahjong-win__bots-review-list">
+                    {postGameWallGameReview.rows[0] ? (
+                      <li key={postGameWallGameReview.rows[0].label} className="mahjong-win__bots-review-card">
+                        <PostGameLoserRackRow
+                          rowId={`wall-${postGameWallGameReview.rows[0].label}`}
+                          label={postGameWallGameReview.rows[0].label}
+                          bestTilesAway={postGameWallGameReview.rows[0].bestTilesAway}
+                          linesAtMin={postGameWallGameReview.rows[0].linesAtMin}
+                          rankInput={postGameWallGameReview.rows[0].rankInput}
+                          showTiedLinePicker={postGameWallGameReview.rows[0].linesAtMin.length > 1}
+                          cardVariant="wrapped"
+                          trailingLabel="none"
+                          playerSeatFocus
+                        />
+                      </li>
+                    ) : null}
+                    {postGameWallGameReview.rows.slice(1).map((row) => (
+                      <li key={row.label} className="mahjong-win__bots-review-card">
+                        <PostGameLoserRackRow
+                          rowId={`wall-${row.label}`}
+                          label={row.label}
+                          bestTilesAway={row.bestTilesAway}
+                          linesAtMin={row.linesAtMin}
+                          rankInput={row.rankInput}
+                          showTiedLinePicker={row.linesAtMin.length > 1}
+                          cardVariant="wrapped"
+                          trailingLabel="none"
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </Suspense>
               </div>
             ) : null}
             <div className="wall-game-dialog__actions">
@@ -9459,37 +9797,39 @@ export default function App() {
             </p>
             {postGameBotReview ? (
               <div className="wall-game-dialog__review mahjong-win__bots-review" aria-labelledby="mj-win-title">
-                <ul className="mahjong-win__bots-review-list">
-                  {postGameBotReview[0] ? (
-                    <li key={postGameBotReview[0].label} className="mahjong-win__bots-review-card">
-                      <PostGameLoserRackRow
-                        rowId={`mj-win-${postGameBotReview[0].label}`}
-                        label={postGameBotReview[0].label}
-                        bestTilesAway={postGameBotReview[0].bestTilesAway}
-                        linesAtMin={postGameBotReview[0].linesAtMin}
-                        rankInput={postGameBotReview[0].rankInput}
-                        showTiedLinePicker={postGameBotReview[0].linesAtMin.length > 1}
-                        cardVariant="wrapped"
-                        trailingLabel="none"
-                        playerSeatFocus
-                      />
-                    </li>
-                  ) : null}
-                  {postGameBotReview.slice(1).map((row) => (
-                    <li key={row.label} className="mahjong-win__bots-review-card">
-                      <PostGameLoserRackRow
-                        rowId={`mj-win-${row.label}`}
-                        label={row.label}
-                        bestTilesAway={row.bestTilesAway}
-                        linesAtMin={row.linesAtMin}
-                        rankInput={row.rankInput}
-                        showTiedLinePicker={row.linesAtMin.length > 1}
-                        cardVariant="wrapped"
-                        trailingLabel="none"
-                      />
-                    </li>
-                  ))}
-                </ul>
+                <Suspense fallback={null}>
+                  <ul className="mahjong-win__bots-review-list">
+                    {postGameBotReview[0] ? (
+                      <li key={postGameBotReview[0].label} className="mahjong-win__bots-review-card">
+                        <PostGameLoserRackRow
+                          rowId={`mj-win-${postGameBotReview[0].label}`}
+                          label={postGameBotReview[0].label}
+                          bestTilesAway={postGameBotReview[0].bestTilesAway}
+                          linesAtMin={postGameBotReview[0].linesAtMin}
+                          rankInput={postGameBotReview[0].rankInput}
+                          showTiedLinePicker={postGameBotReview[0].linesAtMin.length > 1}
+                          cardVariant="wrapped"
+                          trailingLabel="none"
+                          playerSeatFocus
+                        />
+                      </li>
+                    ) : null}
+                    {postGameBotReview.slice(1).map((row) => (
+                      <li key={row.label} className="mahjong-win__bots-review-card">
+                        <PostGameLoserRackRow
+                          rowId={`mj-win-${row.label}`}
+                          label={row.label}
+                          bestTilesAway={row.bestTilesAway}
+                          linesAtMin={row.linesAtMin}
+                          rankInput={row.rankInput}
+                          showTiedLinePicker={row.linesAtMin.length > 1}
+                          cardVariant="wrapped"
+                          trailingLabel="none"
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </Suspense>
               </div>
             ) : null}
             <div className="wall-game-dialog__actions">
@@ -9530,35 +9870,37 @@ export default function App() {
               {postGameBotMahjongReview.winDescription}
             </p>
             <div className="wall-game-dialog__review mahjong-win__bots-review" aria-labelledby="bot-mj-win-title">
-              <ul className="mahjong-win__bots-review-list">
-                <li key={postGameBotMahjongReview.winnerRow.label} className="mahjong-win__bots-review-card">
-                  <PostGameLoserRackRow
-                    rowId={`bot-mj-${postGameBotMahjongReview.winnerRow.label}`}
-                    label={postGameBotMahjongReview.winnerRow.label}
-                    bestTilesAway={postGameBotMahjongReview.winnerRow.bestTilesAway}
-                    linesAtMin={postGameBotMahjongReview.winnerRow.linesAtMin}
-                    rankInput={postGameBotMahjongReview.winnerRow.rankInput}
-                    showTiedLinePicker={postGameBotMahjongReview.winnerRow.linesAtMin.length > 1}
-                    cardVariant="wrapped"
-                    trailingLabel="none"
-                    playerSeatFocus
-                  />
-                </li>
-                {postGameBotMahjongReview.loserRows.map((row) => (
-                  <li key={row.label} className="mahjong-win__bots-review-card">
+              <Suspense fallback={null}>
+                <ul className="mahjong-win__bots-review-list">
+                  <li key={postGameBotMahjongReview.winnerRow.label} className="mahjong-win__bots-review-card">
                     <PostGameLoserRackRow
-                      rowId={`bot-mj-${row.label}`}
-                      label={row.label}
-                      bestTilesAway={row.bestTilesAway}
-                      linesAtMin={row.linesAtMin}
-                      rankInput={row.rankInput}
-                      showTiedLinePicker={row.linesAtMin.length > 1}
+                      rowId={`bot-mj-${postGameBotMahjongReview.winnerRow.label}`}
+                      label={postGameBotMahjongReview.winnerRow.label}
+                      bestTilesAway={postGameBotMahjongReview.winnerRow.bestTilesAway}
+                      linesAtMin={postGameBotMahjongReview.winnerRow.linesAtMin}
+                      rankInput={postGameBotMahjongReview.winnerRow.rankInput}
+                      showTiedLinePicker={postGameBotMahjongReview.winnerRow.linesAtMin.length > 1}
                       cardVariant="wrapped"
                       trailingLabel="none"
+                      playerSeatFocus
                     />
                   </li>
-                ))}
-              </ul>
+                  {postGameBotMahjongReview.loserRows.map((row) => (
+                    <li key={row.label} className="mahjong-win__bots-review-card">
+                      <PostGameLoserRackRow
+                        rowId={`bot-mj-${row.label}`}
+                        label={row.label}
+                        bestTilesAway={row.bestTilesAway}
+                        linesAtMin={row.linesAtMin}
+                        rankInput={row.rankInput}
+                        showTiedLinePicker={row.linesAtMin.length > 1}
+                        cardVariant="wrapped"
+                        trailingLabel="none"
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </Suspense>
             </div>
             <div className="wall-game-dialog__actions">
               <button
@@ -9671,35 +10013,13 @@ export default function App() {
                             <ExposureRack
                               className="exposure-rack--charleston-pass"
                               stackSuitTiles
-                              melds={eastExposures.map((exp) => ({
-                                tiles: exp.tiles,
-                                calledTileId: exp.calledTileId,
-                              }))}
+                              melds={charlestonEastExposureMelds}
                               suggestedTileGuide={suggestedTileGuideForRack}
                               slotCount={14}
                               reserveTrailingSlots={3}
                               shiftPassStripLeftSlots={playerSeat === 'east' ? 0 : 1}
                               ariaLabel="Your exposures and Charleston pass"
-                              trailingSuffix={
-                                <PassStrip
-                                  variant="inlineTail"
-                                  slots={passSlots}
-                                  onPassBoxClick={onPassBoxClick}
-                                  onPassTileClickReturn={onPassTileClickReturn}
-                                  suggestedBestIds={suggestedTileGuideForRack?.bestIds}
-                                  suggestedBlankExchangeIds={suggestedTileGuideForRack?.blankExchangeIds}
-                                  flyOutFrom={passStripFlyOut}
-                                  hiddenSortableTileId={null}
-                                  returningTileId={charlestonPassIntoHandPreview?.tileId ?? null}
-                                  inlineHeaderTitle={charlestonRackRoundTitleText}
-                                  inlineHeaderInstruction={
-                                    <CharlestonPassStripInstructionMain phase={charlestonPhase} />
-                                  }
-                                  inlineHeaderInstructionAria={charlestonPassStripInstructionAria(
-                                    charlestonPhase,
-                                  )}
-                                />
-                              }
+                              trailingSuffix={charlestonExposureTrailingSuffix}
                             />
                             </SortableContext>
                           </div>
@@ -9877,46 +10197,7 @@ export default function App() {
                               flyInFromBelowTileIds={exposureJokerSwapFlyInTileIds}
                               jokerSwapHintBounceTileIds={jokerSwapHintBounceIds?.jokers ?? null}
                               jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
-                              melds={
-                                mainPhase === 'mahjong-declared'
-                                  ? []
-                                  : mainPhase === 'bot-mahjong'
-                                    ? [{ tiles: hand }]
-                                  : [
-                                ...playerExposureMelds
-                                  .map((exp, exposureIdx) => ({ exp, exposureIdx }))
-                                  .filter(
-                                    ({ exp }) =>
-                                      mainPhase !== 'wall-game' ||
-                                      exp.tiles.length <= WALL_GAME_MAX_EXPOSURE_MELD_TILES,
-                                  )
-                                  .map(({ exp, exposureIdx }) => ({
-                                    tiles: exp.tiles,
-                                    calledTileId: exp.calledTileId,
-                                    sortableMeldId:
-                                      (mainPhase === 'east-discard' || mainPhase === 'bot-turn') &&
-                                      playerExposureMelds.length > 1
-                                        ? eastExposureMeldSortId(exposureIdx)
-                                        : undefined,
-                                    dropZoneId:
-                                      jokerSwapUiActive &&
-                                      exp.tiles.some((t) => t.def.cat === 'joker')
-                                        ? eastExposureSwapDropId(exposureIdx)
-                                        : undefined,
-                                  })),
-                                ...(mainPhase === 'call-staging' && activeBotDiscard
-                                  ? [{
-                                      tiles: [
-                                        activeBotDiscard,
-                                        ...hand.filter((t) => stagedCallTileIds.includes(t.id)),
-                                      ],
-                                      calledTileId: activeBotDiscard.id,
-                                      onTileClick: (id: string) =>
-                                        pushRound((r) => applyToggleStagedCallTile(r, id)),
-                                    }]
-                                  : []),
-                                  ]
-                              }
+                              melds={eastPlayerExposureRackMelds}
                               suggestedTileGuide={suggestedTileGuideForRack}
                               highlightCalledTile={mainPhase === 'call-staging'}
                               ariaLabel="Your exposures"
@@ -9932,68 +10213,10 @@ export default function App() {
                               lastSlotDraggableForCallInit={
                                 mainPhase === 'bot-turn' && activeBotDiscard != null
                               }
-                              lastSlotLabel={
-                                mainPhase === 'bot-turn' &&
-                                activeBotDiscard != null &&
-                                activeBotIndex != null
-                                  ? `${seatLabel(botSlotSeats[activeBotIndex as 0 | 1 | 2]!).charAt(0)} >`
-                                  : undefined
-                              }
-                              lastSlotClassName={
-                                [
-                                  mainPhase === 'east-discard'
-                                    ? 'exposure-rack__slot--east-discard-instructed'
-                                    : '',
-                                  pendingEastDiscardTile &&
-                                  suggestedTileGuideForRack?.bestIds.has(pendingEastDiscardTile.id)
-                                    ? 'exposure-rack__slot--suggest-best'
-                                    : '',
-                                ]
-                                  .filter(Boolean)
-                                  .join(' ') || undefined
-                              }
-                              lastSlotReplace={
-                                mainPhase === 'east-discard' ? (
-                                  <>
-                                    <p className="east-discard-staging__instruction" aria-hidden="true">
-                                      Discard &gt;
-                                    </p>
-                                    <EastDiscardStagingSlot
-                                      enabled={charlestonDone}
-                                      compact
-                                      tile={pendingEastDiscardTile}
-                                      onTileClickReturn={returnStagedEastDiscard}
-                                      suggestBest={
-                                        !!pendingEastDiscardTile &&
-                                        !!suggestedTileGuideForRack?.bestIds.has(pendingEastDiscardTile.id)
-                                      }
-                                      suggestBlankExchange={
-                                        !!pendingEastDiscardTile &&
-                                        !!suggestedTileGuideForRack?.blankExchangeIds?.has(pendingEastDiscardTile.id)
-                                      }
-                                      suggestDim={
-                                        !!pendingEastDiscardTile &&
-                                        !!suggestedTileGuideForRack &&
-                                        !suggestedTileGuideForRack.bestIds.has(pendingEastDiscardTile.id) &&
-                                        !suggestedTileGuideForRack.blankExchangeIds?.has(pendingEastDiscardTile.id)
-                                      }
-                                      jokerSwapHintBounce={
-                                        !!pendingEastDiscardTile &&
-                                        !!jokerSwapHintBounceIds?.hand.has(pendingEastDiscardTile.id)
-                                      }
-                                      jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
-                                    />
-                                  </>
-                                ) : null
-                              }
-                              firstEmptyOverride={
-                                charlestonDone &&
-                                mainPhase === 'bot-turn' &&
-                                activeBotDiscard &&
-                                incomingBotDiscardCallDragActive ? (
-                                  <CallInitiateFirstEmptyTarget />
-                                ) : undefined
-                              }
+                              lastSlotLabel={eastExposureLastSlotLabel}
+                              lastSlotClassName={eastExposureLastSlotClassName}
+                              lastSlotReplace={eastDiscardLastSlotReplace}
+                              firstEmptyOverride={callInitiateFirstEmptyOverride}
                             />
                             </EastOwnJokerSwapDropZone>
                             </StagingMeldDropZone>

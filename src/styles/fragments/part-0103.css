@@ -124,12 +124,6 @@
   --panel-lower-header-fade-h: clamp(3rem, 11vw, 4.5rem);
   /* Match `.discard-tracker__content` (`--tile-tray-shell-radius` from `.app-dnd-frame`). */
   --suggested-popup-radius: var(--tile-tray-shell-radius, 0.75rem);
-  --suggested-popup-resize-stroke: 2px;
-  --suggested-popup-edge-inset: 0.14rem;
-  --suggested-popup-fillet-r: calc(
-    var(--suggested-popup-radius) - var(--suggested-popup-edge-inset)
-  );
-  --suggested-popup-resize-inset: 0.12rem;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;

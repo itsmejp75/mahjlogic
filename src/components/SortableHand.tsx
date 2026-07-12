@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { useRef, useLayoutEffect, useEffect, useState, useMemo } from 'react'
+import { memo, useRef, useLayoutEffect, useEffect, useState, useMemo } from 'react'
 import { useDndContext } from '@dnd-kit/core'
 import { useSortable } from '@dnd-kit/sortable'
 import type { Transform } from '@dnd-kit/utilities'
@@ -30,6 +30,38 @@ const RACK_REORDER_DURATION = '0.16s'
  * `transform: translateZ(0)` stays permanent in CSS, so the layer never toggles (iOS jog guard).
  */
 const RACK_FLY_MOTION_TRANSITION = `translate ${RACK_REORDER_DURATION} ${RACK_REORDER_EASING}`
+
+function sameReadonlySet(
+  a: ReadonlySet<string> | null | undefined,
+  b: ReadonlySet<string> | null | undefined,
+): boolean {
+  if (a === b) return true
+  if (a == null || b == null) return a == null && b == null
+  if (a.size !== b.size) return false
+  for (const id of a) {
+    if (!b.has(id)) return false
+  }
+  return true
+}
+
+function sameTileIdOrder(a: readonly TileInstance[], b: readonly TileInstance[]): boolean {
+  if (a === b) return true
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    if (a[i]!.id !== b[i]!.id) return false
+  }
+  return true
+}
+
+function sameStringIdOrder(a: readonly string[] | undefined, b: readonly string[] | undefined): boolean {
+  if (a === b) return true
+  if (a == null || b == null) return a == null && b == null
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false
+  }
+  return true
+}
 
 /**
  * Horizontal slide only — never scale. rectSortingStrategy compares full rects; when the dragged
@@ -100,7 +132,10 @@ function SortableTile({
   externalShift?: boolean
   /** Ignore dnd-kit transforms while a non-hand tile previews insertion into the rack. */
   externalPreviewActive?: boolean
-  /** After the first `--draw-anim-*` measure, re-measure on the next two frames (opening deal / WebKit PWA hand grid). */
+  /**
+   * Multi-tile hand fly-in: wait two frames for the rack grid to settle, then measure and start
+   * the animation (Charleston receive / opening deal). Avoids rewriting `--draw-anim-*` mid-flight.
+   */
   deferHandFlyMeasure?: boolean
   /**
    * Post-removal slide animation:
@@ -195,6 +230,17 @@ function SortableTile({
   const runFlyLayout = isJustDrawn || isHandFlyIn
   const handFlyInFrom = handTileFlyIn?.from
   const handFlyInIdsKey = handTileFlyIn?.ids.join('\u0001') ?? ''
+  // Hold `just-drawn` until remasure finishes — updating --draw-anim-* mid-flight looks like a skip.
+  const [flyAnimReady, setFlyAnimReady] = useState(!deferHandFlyMeasure)
+  useLayoutEffect(() => {
+    if (!runFlyLayout) {
+      setFlyAnimReady(true)
+      return
+    }
+    if (deferHandFlyMeasure) setFlyAnimReady(false)
+    else setFlyAnimReady(true)
+  }, [runFlyLayout, deferHandFlyMeasure, handFlyInIdsKey, tile.id])
+
   useLayoutEffect(() => {
     if (!runFlyLayout) return
 
@@ -246,20 +292,25 @@ function SortableTile({
       flyEl.style.setProperty('--draw-anim-dy', `${oy - tileCy}px`)
     }
 
-    apply()
-
     if (deferHandFlyMeasure) {
+      // Measure only after the rack grid settles, then start the animation (no mid-flight var rewrite).
       raf1 = requestAnimationFrame(() => {
-        raf2 = requestAnimationFrame(apply)
+        raf2 = requestAnimationFrame(() => {
+          apply()
+          setFlyAnimReady(true)
+        })
       })
-    } else if (isHandFlyIn) {
-      const el = wrapRef.current
-      if (el) {
-        const r = el.getBoundingClientRect()
-        if (r.width < 6 || r.height < 6) {
-          raf1 = requestAnimationFrame(() => {
-            raf2 = requestAnimationFrame(apply)
-          })
+    } else {
+      apply()
+      if (isHandFlyIn) {
+        const el = wrapRef.current
+        if (el) {
+          const r = el.getBoundingClientRect()
+          if (r.width < 6 || r.height < 6) {
+            raf1 = requestAnimationFrame(() => {
+              raf2 = requestAnimationFrame(apply)
+            })
+          }
         }
       }
     }
@@ -282,6 +333,8 @@ function SortableTile({
   const flyStyle: CSSProperties = {
     ...flyMotionStyle,
     ...(handFlyInWaveDelayMs != null ? { animationDelay: `${handFlyInWaveDelayMs}ms` } : {}),
+    // Keep pending tiles invisible at rest so they don't flash before the measured fly-in starts.
+    ...(runFlyLayout && !flyAnimReady ? { opacity: 0 } : {}),
   }
 
   return (
@@ -317,9 +370,13 @@ function SortableTile({
         }
         ref={flyInRef}
         className={[
-          runFlyLayout ? 'sortable-tile-wrap__fly sortable-tile-wrap--just-drawn' : 'sortable-tile-wrap__fly',
+          runFlyLayout && flyAnimReady
+            ? 'sortable-tile-wrap__fly sortable-tile-wrap--just-drawn'
+            : 'sortable-tile-wrap__fly',
           handFlyInWaveDelayMs != null ? 'sortable-tile-wrap--opening-deal-wave' : '',
-          runFlyLayout && isJustDrawn && drawInFromRackBottom ? 'exposure-rack__call-staging-fly-up' : '',
+          runFlyLayout && flyAnimReady && isJustDrawn && drawInFromRackBottom
+            ? 'exposure-rack__call-staging-fly-up'
+            : '',
           jokerSwapHintBounce && !runFlyLayout ? 'sortable-tile-wrap__fly--joker-swap-hint-bounce' : '',
         ]
           .filter(Boolean)
@@ -434,7 +491,8 @@ function externalShiftForInsertPreview(
 }
 
 /** Must sit inside `DndContext` + `SortableContext`. */
-export function SortableHand({
+export const SortableHand = memo(
+  function SortableHand({
   tiles,
   selectedTileId,
   onTileActivate,
@@ -458,9 +516,7 @@ export function SortableHand({
   const renderIds = sortableOrder ?? tiles.map((t) => t.id)
   const passStageIndex = passStageTileId != null ? renderIds.indexOf(passStageTileId) : -1
   const deferHandFlyMeasure =
-    handTileFlyIn != null &&
-    handTileFlyIn.ids.length > 1 &&
-    handTileFlyIn.staggerWaveDelayMs != null
+    handTileFlyIn != null && handTileFlyIn.ids.length > 1
   const handFlyInVisualWaveIndexById = useMemo(() => {
     if (!handTileFlyIn?.staggerWaveDelayMs) return null
     const idSet = new Set(handTileFlyIn.ids)
@@ -660,4 +716,33 @@ export function SortableHand({
       ))}
     </div>
   )
-}
+  },
+  function sortableHandPropsAreEqual(prev: Props, next: Props) {
+    return (
+      sameTileIdOrder(prev.tiles, next.tiles) &&
+      prev.selectedTileId === next.selectedTileId &&
+      prev.onTileActivate === next.onTileActivate &&
+      prev.highlightedTileId === next.highlightedTileId &&
+      sameReadonlySet(prev.charlestonGlowTileIds, next.charlestonGlowTileIds) &&
+      prev.handTileFlyIn === next.handTileFlyIn &&
+      prev.handJokerSwapFlyInFromBelowId === next.handJokerSwapFlyInFromBelowId &&
+      sameReadonlySet(prev.suggestedTileGuide?.bestIds, next.suggestedTileGuide?.bestIds) &&
+      sameReadonlySet(
+        prev.suggestedTileGuide?.blankExchangeIds,
+        next.suggestedTileGuide?.blankExchangeIds,
+      ) &&
+      sameReadonlySet(prev.suggestedDeadTileGuide?.deadIds, next.suggestedDeadTileGuide?.deadIds) &&
+      sameReadonlySet(prev.suggestedDeadTileGuide?.skullIds, next.suggestedDeadTileGuide?.skullIds) &&
+      prev.discardMode === next.discardMode &&
+      prev.slotCount === next.slotCount &&
+      sameReadonlySet(prev.stagedForMeldIds, next.stagedForMeldIds) &&
+      prev.animationsEnabled === next.animationsEnabled &&
+      sameReadonlySet(prev.jokerSwapHintBounceTileIds, next.jokerSwapHintBounceTileIds) &&
+      prev.jokerSwapHintBounceEpoch === next.jokerSwapHintBounceEpoch &&
+      sameStringIdOrder(prev.sortableOrder, next.sortableOrder) &&
+      prev.charlestonPassPhantomTile === next.charlestonPassPhantomTile &&
+      prev.externalInsertPreviewIndex === next.externalInsertPreviewIndex &&
+      prev.passStageTileId === next.passStageTileId
+    )
+  },
+)

@@ -16,7 +16,7 @@ import {
   reorderTileDefsByCardLineFromGroupMap,
   srsDragonCoupledColumn,
 } from '../card/patternLinePreview'
-import { getActiveCardPatterns } from '../card/activeCardPatternsScope'
+import { getActiveCardPatterns, patternByIdLookup } from '../card/activeCardPatternsScope'
 import { suitPermutations } from '../card/nmjlSuitSlots'
 import type { PatternGroup, PracticePattern } from '../card/practicePatterns'
 import type { SuggestedHandLine } from '../training/types'
@@ -4440,7 +4440,7 @@ export function computeBotExposureSuggestedBestIds(
     .filter((i) => i >= 0)
     .reduce((m, i) => (m < 0 ? i : Math.min(m, i)), -1)
   const patternId = variantSep >= 0 ? focusKey.slice(0, variantSep) : focusKey
-  const p = patternBook.find((x) => x.id === patternId)
+  const p = patternByIdLookup(patternBook).get(patternId)
   if (!p) return new Set()
   const greedyUiOpts: GreedyPatternMatchOpts | undefined =
     exposureTileIds && exposureTileIds.size > 0 ? { exposureTileIds } : undefined
@@ -4513,7 +4513,7 @@ export function computeSuggestedDiscardTrackerNeedDefs(
     .filter((i) => i >= 0)
     .reduce((m, i) => (m < 0 ? i : Math.min(m, i)), -1)
   const patternId = variantSep >= 0 ? focusKey.slice(0, variantSep) : focusKey
-  const p = patternBook.find((x) => x.id === patternId)
+  const p = patternByIdLookup(patternBook).get(patternId)
   if (!p) return []
   const greedyUiOpts: GreedyPatternMatchOpts | undefined =
     exposureTileIds && exposureTileIds.size > 0
@@ -4600,11 +4600,12 @@ export function contestedFlexibleHandTileIds(
   if (!fl) return new Set()
   const usedF = new Set(greedyUsedTileOrderForPattern(rack, focus))
   const out = new Set<string>()
+  const byId = patternByIdLookup(patternBook)
   for (const line of lines) {
     if (line.id === focus.id) continue
     if (line.tilesNeededRough !== fl.tilesNeededRough || line.matchedInHand !== fl.matchedInHand)
       continue
-    const q = patternBook.find((x) => x.id === line.id)
+    const q = byId.get(line.id)
     if (!q) continue
     const usedQ = new Set(greedyUsedTileOrderForPattern(rack, q))
     for (const id of usedF) {
@@ -4729,7 +4730,7 @@ export function jokerSwapHandHintUsesSingleBounceIteration(args: {
 
   const variantSep = focusKeyVariantSeparator(focusKey)
   const patternId = variantSep >= 0 ? focusKey.slice(0, variantSep) : focusKey
-  const p = patterns.find((x) => x.id === patternId)
+  const p = patternByIdLookup(patterns).get(patternId)
   if (!p) return false
 
   const pinnedPatterns =
@@ -5173,7 +5174,7 @@ export function sortHandForSuggestedPattern(
    *  produces a single coherent variant ordering instead of interleaving suits/colors. */
   focusKey?: string,
 ): TileInstance[] {
-  const basePattern = cardBookForRankInput(input).find((x) => x.id === patternId)
+  const basePattern = patternByIdLookup(cardBookForRankInput(input)).get(patternId)
   if (!basePattern) return [...hand]
   const playerClaimMelds = input.playerClaimMelds ?? []
   const rackForPattern = rackForPatternWithClaimMelds(hand, playerClaimMelds)
@@ -5229,7 +5230,7 @@ export function sortFullRackTilesForPattern(
   input: RankSuggestedHandsInput,
   focusKey?: string,
 ): TileInstance[] {
-  const basePattern = cardBookForRankInput(input).find((x) => x.id === patternId)
+  const basePattern = patternByIdLookup(cardBookForRankInput(input)).get(patternId)
   const playerClaimMelds = input.playerClaimMelds ?? []
   const rackRaw = [...input.hand, ...playerClaimMelds.flatMap((e) => e.tiles)]
   const rackForPattern = rackForPatternWithClaimMelds(input.hand, playerClaimMelds)
@@ -5303,7 +5304,7 @@ export function postGameRackAndHighlights(
 ): { fullRack: TileInstance[]; bestIds: Set<string> } {
   const fk = focusKeyForSuggestedHandLine(line)
   const fullRack = sortFullRackTilesForPattern(line.id, rankInput, fk)
-  const base = cardBookForRankInput(rankInput).find((x) => x.id === line.id)
+  const base = patternByIdLookup(cardBookForRankInput(rankInput)).get(line.id)
   if (!base) return { fullRack, bestIds: new Set() }
   const playerClaimMelds = rankInput.playerClaimMelds ?? []
   const rack = rackForPatternWithClaimMelds(rankInput.hand, playerClaimMelds)

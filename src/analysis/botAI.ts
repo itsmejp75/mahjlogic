@@ -5,6 +5,10 @@
  * the practice card against the current hand so they flex as Charleston and
  * wall draws change their rack.
  *
+ * Ranking runs off the main thread via {@link rankSuggestedHandsAsync} (same worker as the
+ * East suggested-hands panel). Callers must `await` these APIs — do not invoke them inside
+ * synchronous React state updaters.
+ *
  * **Difficulty (behavioral design)**
  * - **Novice** (`easy`) — Weaker at pattern work: more random / wasteful discards, weaker
  *   call discipline, joker-swap and Charleston passes are noisier (more mistakes).
@@ -25,21 +29,22 @@
  * when that type is still needed for its best line — otherwise it holds the blank.
  */
 
-import {
-  computeSuggestedDiscardTrackerNeedDefs,
-  focusKeyForSuggestedHandLine,
-  getRackTilesNotHelpingPattern,
-  rankSuggestedHands,
-  suggestedHandsTiedAtBest,
-  summarizeRackTowardWin,
-  type RankSuggestedHandsInput,
-} from './suggestedHands'
-import { getActiveCardPatterns } from '../card/activeCardPatternsScope'
+import type { PlayableCardId } from '../card/cardCatalog'
+import { getActiveCardPatternById, getActiveCardPatterns } from '../card/activeCardPatternsScope'
 import { applyBlankExchange, discardedDefsForBlankExchange } from '../mahjong/blankExchange'
 import { charlestonPassEligible, pickRandomPass } from '../mahjong/charleston'
 import { shuffle } from '../mahjong/deck'
 import type { DiscardEntry, Seat, TileDef, TileInstance } from '../mahjong/types'
 import { tileDefsEqual } from '../mahjong/tileUtils'
+import { rankSuggestedHandsAsync } from './rankSuggestedHandsAsync'
+import {
+  computeSuggestedDiscardTrackerNeedDefs,
+  focusKeyForSuggestedHandLine,
+  getRackTilesNotHelpingPattern,
+  rankSuggestedHands,
+  type RankSuggestedHandsInput,
+} from './suggestedHands'
+import type { SuggestedHandLine } from '../training/types'
 import type { BotExposure, BotSeat } from './types'
 
 /** Tuning for discard heuristics and call eagerness. */
@@ -78,16 +83,40 @@ function buildInput(ctx: BotRankContext): RankSuggestedHandsInput {
     exposures: ctx.botExposures,
     playerClaimMelds: ctx.botExposures.filter((e) => e.seat === ctx.botSeat),
     eastTableClaimMelds: ctx.eastExposures,
+    // Sync fallback inside the async client still needs patterns; the worker ignores them.
     patterns: getActiveCardPatterns(),
   }
 }
 
-// ── Discard selection ─────────────────────────────────────────────────────────
-
-/** Blanks are exchanged for discards, not thrown away — unless the rack is already dead. */
-function rackIsHopelesslyDead(ctx: BotRankContext): boolean {
-  return summarizeRackTowardWin(buildInput(ctx)).bestTilesAway >= 14
+async function rankBotHands(
+  ctx: BotRankContext,
+  cardId: PlayableCardId,
+): Promise<SuggestedHandLine[]> {
+  return rankSuggestedHandsAsync(cardId, buildInput(ctx))
 }
+
+function bestTilesAwayFromRanked(ranked: SuggestedHandLine[]): number {
+  if (ranked.length === 0) return 14
+  let min = 14
+  for (const line of ranked) {
+    if (line.tilesNeededRough < min) min = line.tilesNeededRough
+  }
+  return min
+}
+
+function tiedAtBestFromRanked(ranked: SuggestedHandLine[]): {
+  bestTilesAway: number
+  linesAtMin: SuggestedHandLine[]
+} {
+  if (ranked.length === 0) return { bestTilesAway: 14, linesAtMin: [] }
+  const bestTilesAway = bestTilesAwayFromRanked(ranked)
+  return {
+    bestTilesAway,
+    linesAtMin: ranked.filter((l) => l.tilesNeededRough === bestTilesAway),
+  }
+}
+
+// ── Discard selection ─────────────────────────────────────────────────────────
 
 function discardEligibleFromHand(hand: TileInstance[], allowBlankDiscards: boolean): TileInstance[] {
   return hand.filter(
@@ -111,12 +140,17 @@ const CHARLESTON_WALL_REMAINING_GUESS = 88
 /**
  * Pick `n` tiles for a bot’s Charleston pass (South / West / North).
  * Blends book-aware discards with random passes based on difficulty.
+ *
+ * Uses **sync** ranking on purpose: Charleston receive fly-in must commit in the same turn as the
+ * hand exchange. Awaiting the shared worker here left a post–fly-out gap and a half-laid-out rack
+ * on first paint (glitchy skip). Discard/call/blank-exchange still use the async worker.
  */
 export function chooseBotCharlestonPass(
   hand: TileInstance[],
   n: number,
   seat: BotSeat,
   difficulty: BotDifficulty = 'normal',
+  _cardId?: PlayableCardId,
 ): TileInstance[] {
   if (n <= 0) return []
   const eligible = hand.filter((t) => charlestonPassEligible(t.def))
@@ -145,7 +179,7 @@ export function chooseBotCharlestonPass(
   const ranked = rankSuggestedHands(buildInput(ctx))
   if (ranked.length === 0) return pickRandomPass(hand, n)
   const bestLine = ranked[0]!
-  const p = getActiveCardPatterns().find((x) => x.id === bestLine.id)
+  const p = getActiveCardPatternById(bestLine.id)
   if (!p) return pickRandomPass(hand, n)
 
   const rack = [...hand]
@@ -177,12 +211,18 @@ export function chooseBotCharlestonPass(
   return out.slice(0, n)
 }
 
-export function chooseBotDiscard(
+export async function chooseBotDiscard(
   ctx: BotRankContext,
   difficulty: BotDifficulty = 'normal',
-): TileInstance {
+  cardId: PlayableCardId,
+): Promise<TileInstance> {
   const { hand } = ctx
-  const allowBlankDiscards = rackIsHopelesslyDead(ctx)
+
+  // Weaker play: more random, wasteful discards at easy; occasional slip at normal.
+  // Rank first only when we may need hopeless/blank or strategic pick — random paths
+  // still need eligible tiles; blanks require a hopeless check.
+  const rankedEarly = await rankBotHands(ctx, cardId)
+  const allowBlankDiscards = bestTilesAwayFromRanked(rankedEarly) >= 14
   const eligible = discardEligibleFromHand(hand, allowBlankDiscards)
   if (eligible.length === 0) {
     const jokers = hand.filter((t) => t.def.cat === 'joker')
@@ -190,7 +230,6 @@ export function chooseBotDiscard(
     return hand[0]! // edge case: all jokers
   }
 
-  // Weaker play: more random, wasteful discards at easy; occasional slip at normal.
   if (difficulty === 'easy' && Math.random() < 0.52) {
     return eligible[Math.floor(Math.random() * eligible.length)]!
   }
@@ -198,13 +237,13 @@ export function chooseBotDiscard(
     return eligible[Math.floor(Math.random() * eligible.length)]!
   }
 
-  const ranked = rankSuggestedHands(buildInput(ctx))
+  const ranked = rankedEarly
   if (ranked.length === 0) {
     return eligible[Math.floor(Math.random() * eligible.length)]!
   }
 
   const bestLine = ranked[0]!
-  const p = getActiveCardPatterns().find((x) => x.id === bestLine.id)
+  const p = getActiveCardPatternById(bestLine.id)
   if (!p) return eligible[Math.floor(Math.random() * eligible.length)]!
 
   // Rack = concealed hand + own exposed tiles (both count toward the 14).
@@ -232,8 +271,12 @@ export function chooseBotDiscard(
 // ── Blank exchange ────────────────────────────────────────────────────────────
 
 /** Natural tile types the bot's best line is still short — same basis as the discard-tracker need rings. */
-function neededDefsForBotBestLine(ctx: BotRankContext): TileDef[] {
-  const { linesAtMin, bestTilesAway } = suggestedHandsTiedAtBest(buildInput(ctx))
+async function neededDefsForBotBestLine(
+  ctx: BotRankContext,
+  cardId: PlayableCardId,
+): Promise<TileDef[]> {
+  const ranked = await rankBotHands(ctx, cardId)
+  const { linesAtMin, bestTilesAway } = tiedAtBestFromRanked(ranked)
   const best = linesAtMin[0]
   if (!best || bestTilesAway >= 14) return []
 
@@ -254,37 +297,52 @@ function defMatchesAny(def: TileDef, defs: readonly TileDef[]): boolean {
 }
 
 /**
+ * How many tiles away from the bot's best hand, without/with the candidate tile.
+ */
+async function tilesAway(ctx: BotRankContext, cardId: PlayableCardId): Promise<number> {
+  const ranked = await rankBotHands(ctx, cardId)
+  return bestTilesAwayFromRanked(ranked)
+}
+
+/**
  * Pick a discarded tile type to redeem a blank for. Returns null when nothing in the
  * pile matches a need on the bot's promising hand, or when the swap would not help.
  */
-export function chooseBotBlankExchangeDef(
+export async function chooseBotBlankExchangeDef(
   ctx: BotRankContext,
   eligibleDefs: readonly TileDef[],
   difficulty: BotDifficulty = 'normal',
-): TileDef | null {
+  cardId: PlayableCardId,
+): Promise<TileDef | null> {
   if (eligibleDefs.length === 0) return null
   if (!ctx.hand.some((t) => t.def.cat === 'blank')) return null
 
   if (difficulty === 'easy' && Math.random() < 0.42) return null
   if (difficulty === 'normal' && Math.random() < 0.07) return null
 
-  const neededDefs = neededDefsForBotBestLine(ctx)
+  const neededDefs = await neededDefsForBotBestLine(ctx, cardId)
   if (neededDefs.length === 0) return null
 
   const candidates = eligibleDefs.filter((d) => defMatchesAny(d, neededDefs))
   if (candidates.length === 0) return null
 
   const blank = ctx.hand.find((t) => t.def.cat === 'blank')!
-  const before = tilesAway(ctx)
+  const before = await tilesAway(ctx, cardId)
+
+  const afterByDef = await Promise.all(
+    candidates.map(async (def) => {
+      const blankIdx = ctx.hand.findIndex((t) => t.id === blank.id)
+      if (blankIdx < 0) return { def, after: before }
+      const handAfter = [...ctx.hand]
+      handAfter[blankIdx] = { ...handAfter[blankIdx]!, def }
+      const after = await tilesAway({ ...ctx, hand: handAfter }, cardId)
+      return { def, after }
+    }),
+  )
+
   let bestAfter = before
   const bestDefs: TileDef[] = []
-
-  for (const def of candidates) {
-    const blankIdx = ctx.hand.findIndex((t) => t.id === blank.id)
-    if (blankIdx < 0) break
-    const handAfter = [...ctx.hand]
-    handAfter[blankIdx] = { ...handAfter[blankIdx]!, def }
-    const after = tilesAway({ ...ctx, hand: handAfter })
+  for (const { def, after } of afterByDef) {
     if (after < bestAfter) {
       bestAfter = after
       bestDefs.length = 0
@@ -305,16 +363,17 @@ export function chooseBotBlankExchangeDef(
 /**
  * On this bot's turn, exchange a blank for a discarded tile the best line still needs.
  */
-export function tryBotBlankExchange(
+export async function tryBotBlankExchange(
   ctx: BotRankContext,
   seat: Seat,
   difficulty: BotDifficulty = 'normal',
-): { hand: TileInstance[]; discardPile: DiscardEntry[] } {
+  cardId: PlayableCardId,
+): Promise<{ hand: TileInstance[]; discardPile: DiscardEntry[] }> {
   const blank = ctx.hand.find((t) => t.def.cat === 'blank')
   if (!blank) return { hand: ctx.hand, discardPile: ctx.discardPile }
 
   const eligible = discardedDefsForBlankExchange(ctx.discardPile)
-  const chosen = chooseBotBlankExchangeDef(ctx, eligible, difficulty)
+  const chosen = await chooseBotBlankExchangeDef(ctx, eligible, difficulty, cardId)
   if (!chosen) return { hand: ctx.hand, discardPile: ctx.discardPile }
 
   const applied = applyBlankExchange(ctx.hand, ctx.discardPile, blank.id, chosen, seat)
@@ -322,14 +381,6 @@ export function tryBotBlankExchange(
 }
 
 // ── Call decisions ────────────────────────────────────────────────────────────
-
-/**
- * How many tiles away from the bot's best hand, without/with the candidate tile.
- */
-function tilesAway(ctx: BotRankContext): number {
-  const ranked = rankSuggestedHands(buildInput(ctx))
-  return ranked[0]?.tilesNeededRough ?? 14
-}
 
 /**
  * Strategic probability that a bot should call `discard`.
@@ -348,16 +399,27 @@ const CALL_P_BY_DIFFICULTY: Record<BotDifficulty, readonly [number, number, numb
   hard: [0.9, 0.15, 0.04],
 }
 
-export function botCallStrategicProbability(
+export async function botCallStrategicProbability(
   ctx: BotRankContext,
   discard: TileInstance,
   difficulty: BotDifficulty = 'normal',
-): number {
+  cardId: PlayableCardId,
+): Promise<number> {
   if (discard.def.cat === 'joker') return 0
   const [pg, pn, pw] = CALL_P_BY_DIFFICULTY[difficulty]
-  const before = tilesAway(ctx)
-  const after = tilesAway({ ...ctx, hand: [...ctx.hand, discard] })
+  const [before, after] = await Promise.all([
+    tilesAway(ctx, cardId),
+    tilesAway({ ...ctx, hand: [...ctx.hand, discard] }, cardId),
+  ])
   if (after < before) return pg
   if (after === before) return pn
   return pw
+}
+
+/** Best tiles-away for a bot rack — off-main-thread ranking. */
+export async function botBestTilesAway(
+  ctx: BotRankContext,
+  cardId: PlayableCardId,
+): Promise<number> {
+  return tilesAway(ctx, cardId)
 }

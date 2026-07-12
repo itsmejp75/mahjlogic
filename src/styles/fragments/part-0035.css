@@ -48,6 +48,18 @@
   z-index: 1;
 }
 
+/*
+ * Opening the hand-row stacking context for fly-in also lets lit-tile lift vignettes
+ * (suggest-best z-index 3 / just-drawn z-index 10) paint over the action row (z-index 1).
+ * Keep Pass / Sort / etc. above those glows for the whole fly-in — above tile z-index 10.
+ */
+.app-layout[data-animations='on']
+  .panel--hand
+  .panel-hand-rack__hand-tray:has(.sortable-tile-wrap--just-drawn)
+  > :is(.panel-hand-rack__action-well, .panel-hand-rack__charleston-actions-well) {
+  z-index: 20;
+}
+
 .app-layout[data-joker-swap-hint='on'][data-animations='on']
   .rack-stage__rack-bottom:has(.sortable-tile-wrap__fly--joker-swap-hint-bounce) {
   z-index: 5;

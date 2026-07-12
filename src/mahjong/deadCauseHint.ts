@@ -1,4 +1,5 @@
 import type { PracticePattern } from '../card/practicePatterns'
+import { patternByIdLookup } from '../card/activeCardPatternsScope'
 import {
   buildGreedyAlignedDeadHintNeeds,
   buildPinnedPatternsFromFocusKey,
@@ -45,7 +46,7 @@ function focusedPatternCandidates(
     .filter((i) => i >= 0)
     .reduce((m, i) => (m < 0 ? i : Math.min(m, i)), -1)
   const patternId = variantSep >= 0 ? focusKey.slice(0, variantSep) : focusKey
-  const pattern = patterns.find((p) => p.id === patternId)
+  const pattern = patternByIdLookup(patterns).get(patternId)
   if (!pattern) return []
   const pinnedPatterns = buildPinnedPatternsFromFocusKey(pattern, focusKey)
   return pinnedPatterns.length > 0 ? pinnedPatterns : [pattern]

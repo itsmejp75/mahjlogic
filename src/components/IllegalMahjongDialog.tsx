@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { getActiveCardPatterns } from '../card/activeCardPatternsScope'
+import { getActiveCardPatterns, patternByIdLookup } from '../card/activeCardPatternsScope'
 import type { PracticePattern } from '../card/practicePatterns'
 import {
   getRackTilesNotHelpingPattern,
@@ -84,7 +84,7 @@ export function IllegalMahjongDialog({ rankInput, onDismiss }: Props) {
 
   const patternBook = rankInput.patterns ?? getActiveCardPatterns()
   const pattern: PracticePattern | undefined = selected
-    ? patternBook.find((p) => p.id === selected.id)
+    ? patternByIdLookup(patternBook).get(selected.id)
     : undefined
 
   const unusedTiles = useMemo(() => {

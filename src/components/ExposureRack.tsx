@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
-import { Fragment, useLayoutEffect, useRef } from 'react'
+import { Fragment, memo, useLayoutEffect, useRef } from 'react'
 import { useDndContext, useDroppable } from '@dnd-kit/core'
 import { SortableContext, rectSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -56,6 +56,43 @@ function exposureFlyOriginForTile(
   if (flyFromRight) return 'right'
   if (flyInFromBelowTileIds?.has(tileId)) return 'below'
   return 'above'
+}
+
+function sameReadonlySet(
+  a: ReadonlySet<string> | null | undefined,
+  b: ReadonlySet<string> | null | undefined,
+): boolean {
+  if (a === b) return true
+  if (a == null || b == null) return a == null && b == null
+  if (a.size !== b.size) return false
+  for (const id of a) {
+    if (!b.has(id)) return false
+  }
+  return true
+}
+
+function sameMeldGroups(a: readonly MeldGroup[], b: readonly MeldGroup[]): boolean {
+  if (a === b) return true
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    const ma = a[i]!
+    const mb = b[i]!
+    if (ma === mb) continue
+    if (
+      ma.calledTileId !== mb.calledTileId ||
+      ma.sortableMeldId !== mb.sortableMeldId ||
+      ma.dropZoneId !== mb.dropZoneId ||
+      ma.onTileClick !== mb.onTileClick ||
+      ma.onAmendCallMeld !== mb.onAmendCallMeld ||
+      ma.tiles.length !== mb.tiles.length
+    ) {
+      return false
+    }
+    for (let j = 0; j < ma.tiles.length; j++) {
+      if (ma.tiles[j]!.id !== mb.tiles[j]!.id) return false
+    }
+  }
+  return true
 }
 
 /** Same drop-in as wall draw (`above`), slide from discard tray (`right`), or wave up from below (`below`). */
@@ -1094,7 +1131,8 @@ type Props = {
   ownedMeldHighlight?: boolean
 }
 
-export function ExposureRack({
+export const ExposureRack = memo(
+  function ExposureRack({
   melds,
   slotCount = 14,
   ariaLabel = 'Exposures',
@@ -1541,4 +1579,48 @@ export function ExposureRack({
       ) : null}
     </div>
   )
-}
+  },
+  function exposureRackPropsAreEqual(prev: Props, next: Props) {
+    return (
+      sameMeldGroups(prev.melds, next.melds) &&
+      prev.slotCount === next.slotCount &&
+      prev.ariaLabel === next.ariaLabel &&
+      prev.watermark === next.watermark &&
+      prev.watermarkPhase === next.watermarkPhase &&
+      prev.reserveTrailingSlots === next.reserveTrailingSlots &&
+      prev.shiftPassStripLeftSlots === next.shiftPassStripLeftSlots &&
+      prev.reserveLastSlotForDiscard === next.reserveLastSlotForDiscard &&
+      prev.lastSlotTile === next.lastSlotTile &&
+      prev.incomingBotDiscardFlyFrom === next.incomingBotDiscardFlyFrom &&
+      prev.lastSlotDraggableForCallInit === next.lastSlotDraggableForCallInit &&
+      prev.lastSlotReplace === next.lastSlotReplace &&
+      prev.lastSlotClassName === next.lastSlotClassName &&
+      prev.lastSlotAriaLabel === next.lastSlotAriaLabel &&
+      prev.lastSlotLabel === next.lastSlotLabel &&
+      prev.suffix === next.suffix &&
+      prev.suffixSlotCount === next.suffixSlotCount &&
+      prev.firstEmptyOverride === next.firstEmptyOverride &&
+      prev.trailingSuffix === next.trailingSuffix &&
+      prev.className === next.className &&
+      sameReadonlySet(prev.flyInTileIds, next.flyInTileIds) &&
+      sameReadonlySet(prev.flyInFromRightTileIds, next.flyInFromRightTileIds) &&
+      sameReadonlySet(prev.flyInFromBelowTileIds, next.flyInFromBelowTileIds) &&
+      sameReadonlySet(prev.suggestedTileGuide?.bestIds, next.suggestedTileGuide?.bestIds) &&
+      sameReadonlySet(
+        prev.suggestedTileGuide?.blankExchangeIds,
+        next.suggestedTileGuide?.blankExchangeIds,
+      ) &&
+      sameReadonlySet(prev.suggestedDeadTileIds, next.suggestedDeadTileIds) &&
+      prev.suppressDim === next.suppressDim &&
+      prev.highlightCalledTile === next.highlightCalledTile &&
+      prev.stackSuitTiles === next.stackSuitTiles &&
+      prev.botJokerBorderMenuOn === next.botJokerBorderMenuOn &&
+      sameReadonlySet(prev.jokerSwapHintBounceTileIds, next.jokerSwapHintBounceTileIds) &&
+      prev.jokerSwapHintBounceEpoch === next.jokerSwapHintBounceEpoch &&
+      prev.callStagingWaveFlyIn === next.callStagingWaveFlyIn &&
+      prev.hideWatermark === next.hideWatermark &&
+      prev.gridMeldColumnSpans === next.gridMeldColumnSpans &&
+      prev.ownedMeldHighlight === next.ownedMeldHighlight
+    )
+  },
+)

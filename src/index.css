@@ -1,6 +1,8 @@
-/* Local Noto Serif (assets/fonts/Noto_Serif): Black (900) upright for rack watermark "Mahj". */
+/* Local fonts used at runtime — Roboto / DM Mono / Sometype stay in assets/fonts for design
+   work but are not loaded (they were unused or fallback-only). */
 @import './styles/app-background.css';
 
+/* Noto Serif Black (900) — rack watermark "Mahj". */
 @font-face {
   font-family: 'Noto Serif';
   font-style: normal;
@@ -9,8 +11,7 @@
   src: url('../assets/fonts/Noto_Serif/static/NotoSerif-Black.ttf') format('truetype');
 }
 
-/* Local Figtree (assets/fonts/Figtree): variable font covering weights 100–900.
-   Rack watermark "Logic" uses 500 (Medium); UI buttons use weights from this family. */
+/* Figtree variable (100–900) — primary UI + watermark "Logic". */
 @font-face {
   font-family: 'Figtree';
   font-style: normal;
@@ -26,24 +27,7 @@
   src: url('../assets/fonts/Figtree/Figtree-Italic-VariableFont_wght.ttf') format('truetype-variations');
 }
 
-/* Local Roboto (assets/fonts/Roboto): variable font covering weights 100–900.
-   Available via `--sans` fallback; not required for Charleston pass copy (Figtree). */
-@font-face {
-  font-family: 'Roboto';
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url('../assets/fonts/Roboto/Roboto-VariableFont_wdth,wght.ttf') format('truetype-variations');
-}
-@font-face {
-  font-family: 'Roboto';
-  font-style: italic;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url('../assets/fonts/Roboto/Roboto-Italic-VariableFont_wdth,wght.ttf') format('truetype-variations');
-}
-
-/* Local Roboto Mono (assets/fonts/Roboto_Mono): variable font covering weights 100–700. */
+/* Roboto Mono — metrics / code-style UI (`--mono`). */
 @font-face {
   font-family: 'Roboto Mono';
   font-style: normal;
@@ -51,76 +35,8 @@
   font-display: swap;
   src: url('../assets/fonts/Roboto_Mono/RobotoMono-VariableFont_wght.ttf') format('truetype-variations');
 }
-@font-face {
-  font-family: 'Roboto Mono';
-  font-style: italic;
-  font-weight: 100 700;
-  font-display: swap;
-  src: url('../assets/fonts/Roboto_Mono/RobotoMono-Italic-VariableFont_wght.ttf') format('truetype-variations');
-}
 
-/* Local DM Mono (assets/fonts/DM_Mono): Light 300, Regular 400, Medium 500 + italics. */
-@font-face {
-  font-family: 'DM Mono';
-  font-style: normal;
-  font-weight: 300;
-  font-display: swap;
-  src: url('../assets/fonts/DM_Mono/DMMono-Light.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'DM Mono';
-  font-style: italic;
-  font-weight: 300;
-  font-display: swap;
-  src: url('../assets/fonts/DM_Mono/DMMono-LightItalic.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'DM Mono';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('../assets/fonts/DM_Mono/DMMono-Regular.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'DM Mono';
-  font-style: italic;
-  font-weight: 400;
-  font-display: swap;
-  src: url('../assets/fonts/DM_Mono/DMMono-Italic.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'DM Mono';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('../assets/fonts/DM_Mono/DMMono-Medium.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'DM Mono';
-  font-style: italic;
-  font-weight: 500;
-  font-display: swap;
-  src: url('../assets/fonts/DM_Mono/DMMono-MediumItalic.ttf') format('truetype');
-}
-
-/* Local Sometype Mono (assets/fonts/Sometype_Mono): variable font covering weights 400–700. */
-@font-face {
-  font-family: 'Sometype Mono';
-  font-style: normal;
-  font-weight: 400 700;
-  font-display: swap;
-  src: url('../assets/fonts/Sometype_Mono/SometypeMono-VariableFont_wght.ttf') format('truetype-variations');
-}
-@font-face {
-  font-family: 'Sometype Mono';
-  font-style: italic;
-  font-weight: 400 700;
-  font-display: swap;
-  src: url('../assets/fonts/Sometype_Mono/SometypeMono-Italic-VariableFont_wght.ttf') format('truetype-variations');
-}
-
-/* Local Noto Sans Arabic (assets/fonts/Noto_Sans_Arabic): variable font covering weights 100–900.
-   Used for numeric glyphs on tile faces (suit ranks + digit-bearing labels). */
+/* Noto Sans Arabic — numeric glyphs on tile faces. */
 @font-face {
   font-family: 'Noto Sans Arabic';
   font-style: normal;
@@ -153,11 +69,12 @@
   --shadow:
     rgba(20, 17, 15, 0.12) 0 10px 24px -6px, rgba(20, 17, 15, 0.06) 0 4px 10px -4px;
 
-  --sans: 'Figtree', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --sans: 'Figtree', system-ui, 'Segoe UI', sans-serif;
   --heading: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
   --mono: 'Roboto Mono', ui-monospace, Consolas, monospace;
-  --mono-dm: 'DM Mono', 'Roboto Mono', ui-monospace, Consolas, monospace;
-  --mono-sometype: 'Sometype Mono', 'Roboto Mono', ui-monospace, Consolas, monospace;
+  /* Former DM Mono / Sometype stacks — keep aliases pointing at the loaded mono face. */
+  --mono-dm: var(--mono);
+  --mono-sometype: var(--mono);
   /* Concealed-hand “C” badge: rounder, wider glyph than UI mono. */
   --font-concealed-c: var(--sans);
 
