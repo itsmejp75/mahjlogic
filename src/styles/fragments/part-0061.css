@@ -1084,7 +1084,7 @@
 
 /*
  * Undiscarded slots: glyph-only on the tray unless --suggest-need (coach lit fill).
- * Awaiting / inactive / undiscarded suggest-dim ranks share muted gray + weight 500
+ * Awaiting / inactive / undiscarded suggest-dim ranks share muted gray + weight 400
  * (including while a suggested hand is focused — do not fall back to dark ink).
  */
 .panel--discard-tracker .discard-tracker__overlay-grid
@@ -1096,7 +1096,7 @@
   .tile-face
   :is(.tile-face__glyph, .tile-face__glyph-num, .tile-face__glyph-letter) {
   color: var(--sorted-discard-inactive-glyph);
-  font-weight: 500;
+  font-weight: 400;
   opacity: 1;
   position: relative;
   z-index: 1;
@@ -1307,7 +1307,7 @@
   .tile-face.tile-face--sorted-discard-glyph
   :is(.tile-face__glyph, .tile-face__glyph-num, .tile-face__glyph-letter, .tile-face__rank, .tile-face__suit-text) {
   color: var(--sorted-discard-inactive-glyph);
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .app[data-tile-graphics] .panel--discard-tracker
@@ -1321,7 +1321,7 @@
   .tile-face.tile--joker.tile-face--sorted-discard-glyph
   .tile-face__glyph {
   color: var(--sorted-discard-inactive-glyph);
-  font-weight: 500;
+  font-weight: 400;
 }
 
 /* Undiscarded J: no brightness dim — same muted gray as inactive ranks. */

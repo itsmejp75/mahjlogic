@@ -41,7 +41,7 @@ export function readPlayableCardFromStorage(): PlayableCardId {
   } catch {
     /* ignore */
   }
-  return 'mock'
+  return '2026'
 }
 
 export function writePlayableCardToStorage(id: PlayableCardId): void {

@@ -1637,6 +1637,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     // saturates the main thread mid-scroll and causes the WebView to blank whole rows.
     let rafId: number | null = null
     const onScroll = () => {
+      if (scrollEl.scrollLeft !== 0) scrollEl.scrollLeft = 0
       if (rafId != null) return
       rafId = requestAnimationFrame(() => {
         rafId = null

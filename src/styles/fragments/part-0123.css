@@ -1129,9 +1129,9 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
  *
  * Coach dim on naturals uses the same flat `::after` wash as the suggested-hands tray
  * (part-0075) — not whole-face `filter`, which reads flat and hides the rim vignette.
- * Keep `::after` absent on resting (non-dim) naturals only so the layer is not created/destroyed
- * when the guide toggles (avoids mobile WKWebView rack jog). Jokers still dim via face inset +
- * faded rim because the inscribed ring owns `::after`.
+ * The dim `::after` stays mounted at opacity 0 on resting naturals (see below) so highlight
+ * only cross-fades opacity — creating/destroying that layer on focus jogs the rack on iOS.
+ * Jokers still dim via face inset + faded rim because the inscribed ring owns `::after`.
  */
 .app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap .tile-face {
   --tile-face-base-shadow: 0 0 0 0 transparent;
@@ -1144,17 +1144,11 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   --tile-face-highlight-inset: 0 0 0 0 transparent;
 }
 
-.app
-  .panel--hand
-  .panel-hand-rack__hand-tray
-  .hand-row
-  > .sortable-tile-wrap:not(.sortable-tile-wrap--suggest-best):not(.sortable-tile-wrap--suggest-dim):not(
-    .sortable-tile-wrap--blank-exchange-hint
-  ):not(.sortable-tile-wrap--suggest-dead-cause)
-  .tile-face:not(.tile--joker)::after {
-  content: none !important;
-  display: none !important;
-}
+/*
+ * Do NOT force `content: none` on resting naturals. The dim `::after` (thematic/components)
+ * stays mounted at opacity 0 so focus only toggles opacity — creating/destroying the pseudo
+ * on every tile when a suggested hand highlights re-snaps Y on iOS WKWebView (rack jog).
+ */
 
 .app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--suggest-dim .tile-face:not(.tile--joker) {
   filter: none;
@@ -1165,32 +1159,20 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 }
 
 /*
- * Coach tiles (Logic on): pin rim vignette to the painted face — same container pattern as the
- * suggested-hands strip (cell = size container, face reads `100cqw`). Only on coach slots so
- * resting tiles keep the hand-row `--hand-top-rack-tile-w` token (avoids the prior bug where
- * setting `100cqw` on the wrap itself blew up rim metrics).
+ * Coach tiles (Logic on): lift/vignette metrics use the hand-row’s frozen `--rack-tile-w`
+ * (part-0118 / `--hand-panel-cqw`). Do NOT set `container-type` here — toggling size containment
+ * on every wrap when a suggested hand focuses re-lays out the row on iOS WKWebView and jogs all
+ * tiles upward (same class of bug as part-0117’s hand-row container removal).
  */
 .app
   .panel--hand
   .panel-hand-rack__hand-tray
   .hand-row
   > .sortable-tile-wrap:is(.sortable-tile-wrap--suggest-best, .sortable-tile-wrap--suggest-dim) {
-  container-type: size;
-  /* Lift glow + edge bleed track the painted face, not panel tokens that drift from 1fr cells. */
-  --coach-lift-tile-w: 100cqw;
+  --coach-lift-tile-w: var(--rack-tile-w);
   --coach-rack-edge-vignette-x: calc(
-    var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2)) - 50cqw
+    var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2)) - (var(--rack-tile-w) * 0.5)
   );
-}
-
-.app
-  .panel--hand
-  .panel-hand-rack__hand-tray
-  .hand-row
-  > .sortable-tile-wrap:is(.sortable-tile-wrap--suggest-best, .sortable-tile-wrap--suggest-dim)
-  .tile-face {
-  --rack-tile-w: 100cqw;
-  --rack-tile-h: 100cqh;
 }
 
 .app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--suggest-dim .tile-face.tile--joker {
@@ -1216,22 +1198,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 /* Highlighted rack tiles: centered lift glow on the fly wrapper. At lit→lit seams, clip each
    facing edge to the gap center so adjacent glows meet without a dead band between tiles.
-   `--coach-lift-tile-w` / `--coach-rack-edge-vignette-x` live on each coach wrap (100cqw). */
-
-/*
- * Coach rack outer edges: hand-row clips overflow-x by default (part-0008). Reopen when Logic
- * paints vignettes so column 1 / the last occupied column can bleed into the tray margin.
- */
-.app
-  .panel--hand
-  .panel-hand-rack__hand-tray
-  .hand-row:has(> .sortable-tile-wrap:is(.sortable-tile-wrap--suggest-best, .sortable-tile-wrap--suggest-dim)),
-.app
-  .panel--hand
-  .panel-hand-rack__hand-tray
-  .hand-bank:has(.hand-row > .sortable-tile-wrap:is(.sortable-tile-wrap--suggest-best, .sortable-tile-wrap--suggest-dim)) {
-  overflow: visible;
-}
+   `--coach-lift-tile-w` / `--coach-rack-edge-vignette-x` use frozen `--rack-tile-w` (no cqw). */
 
 .app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--suggest-best {
   z-index: 3;
@@ -1320,7 +1287,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 /*
  * Neighbour of a lifted tile: extend rim vignette on the facing edge into the empty slot
- * (coach cells are size containers — `50cqw` reaches roughly half a tile into the gap).
+ * (`--coach-rack-edge-vignette-x` reaches roughly half a tile into the gap).
  */
 .app
   .panel--hand
@@ -1479,8 +1446,8 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
  */
 .panel--hand .rack-stage__rack-top .pass-strip__tile-wrap--suggest-best,
 .panel--hand .rack-stage__rack-top .east-discard-staging__tile--suggest-best {
-  container-type: size;
-  --coach-lift-tile-w: 100cqw;
+  /* Frozen rack tokens — no `container-type` (iOS highlight jog; see hand-row coach block). */
+  --coach-lift-tile-w: var(--rack-tile-w);
   position: relative;
   overflow: visible;
   z-index: 3;
@@ -1488,8 +1455,6 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 .panel--hand .rack-stage__rack-top .pass-strip__tile-wrap--suggest-best .tile-face,
 .panel--hand .rack-stage__rack-top .east-discard-staging__tile--suggest-best .tile-face {
-  --rack-tile-w: 100cqw;
-  --rack-tile-h: 100cqh;
   position: relative;
   z-index: 1;
   --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
@@ -1592,8 +1557,8 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 .panel--hand
   .rack-stage__rack-top
   .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim) {
-  container-type: size;
-  --coach-lift-tile-w: 100cqw;
+  /* Frozen rack tokens — no `container-type` (iOS highlight jog; see hand-row coach block). */
+  --coach-lift-tile-w: var(--rack-tile-w);
   overflow: visible;
   z-index: 3;
   position: relative;
@@ -1607,8 +1572,6 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .rack-stage__rack-top
   .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim)
   .tile-face {
-  --rack-tile-w: 100cqw;
-  --rack-tile-h: 100cqh;
   --tile-face-base-shadow: 0 0 0 0 transparent;
   --tile-face-highlight-inset: 0 0 0 0 transparent;
   --tile-face-highlight-shadow: 0 0 0 0 transparent;
@@ -1977,7 +1940,9 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 }
 
 /*
- * Below the hands header: lighter gray, full-bleed to the page sides via ::before.
+ * Below the hands header: lighter gray, full-bleed to the page sides.
+ * Paint on non-scrolling ancestors — never on `.hands-sheet__rows` / `.hands-list` (those are
+ * overflow-y scrollers; a 100vw absolute ::before there creates horizontal pan of the sheet).
  */
 .app .suggested-hands-popup .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) > .hands-sheet__rows,
 .app .suggested-hands-popup .hands-panel__content .hands-list-scroll > .hands-list {
@@ -1987,11 +1952,18 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   background-image: none;
 }
 
-.app .suggested-hands-popup .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) > .hands-sheet__rows::before,
-.app .suggested-hands-popup .hands-panel__content .hands-list-scroll > .hands-list::before {
+.app
+  .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
+  .hands-panel__content {
+  position: relative;
+}
+
+.app
+  .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
+  .hands-panel__content::before {
   content: '';
   position: absolute;
-  z-index: -1;
+  z-index: 0;
   top: 0;
   bottom: 0;
   left: var(--app-bg-side-bleed-left);
@@ -2004,6 +1976,14 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   background-repeat: var(--app-bg-lower-band-paint-repeat);
   background-blend-mode: var(--app-bg-lower-band-paint-blend);
   background-attachment: var(--app-bg-lower-band-paint-attachment);
+}
+
+.app
+  .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
+  .hands-panel__content
+  .hands-list-scroll {
+  position: relative;
+  z-index: 1;
 }
 
 /*

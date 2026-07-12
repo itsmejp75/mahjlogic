@@ -90,8 +90,11 @@
 .suggested-hands-popup .hands-list-scroll {
   margin-top: 0;
   flex: 1 1 0;
+  min-width: 0;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
   -webkit-overflow-scrolling: touch;
   cursor: grab;
   touch-action: pan-y;
@@ -143,6 +146,8 @@
   > .hands-sheet__rows {
   cursor: grab;
   touch-action: pan-y;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
 }
 
 .suggested-hands-popup .hands-list-scroll > .hands-list {

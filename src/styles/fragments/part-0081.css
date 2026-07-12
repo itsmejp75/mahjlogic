@@ -198,8 +198,10 @@
   min-height: 0;
   margin-top: 0.12rem;
   overflow-y: auto;
-  overflow-x: visible;
+  /* Explicit hidden — `visible` with overflow-y:auto computes to `auto` (CSS overflow quirk). */
+  overflow-x: hidden;
   overscroll-behavior-y: contain;
+  overscroll-behavior-x: none;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -1604,9 +1606,11 @@
   padding: 0;
   list-style: none;
   overflow-y: auto;
-  overflow-x: visible;
+  /* Explicit hidden — `visible` with overflow-y:auto computes to `auto` and lets columns pan sideways. */
+  overflow-x: hidden;
   overflow-anchor: none;
   overscroll-behavior-y: contain;
+  overscroll-behavior-x: none;
   -webkit-overflow-scrolling: touch;
 }
 

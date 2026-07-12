@@ -57,7 +57,9 @@
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  overflow-x: clip;
+  /* Always visible (not toggled on coach highlight): overflow clip↔visible on focus jogs every
+   * tile upward on iOS WKWebView. Lift glow + edge vignettes need to bleed into the tray margin. */
+  overflow: visible;
   position: relative;
   isolation: isolate;
 }
