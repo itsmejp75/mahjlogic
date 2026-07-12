@@ -1,156 +1,27 @@
-import {
-  lazy,
-  Suspense,
-  useCallback,
-  useDeferredValue,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-  type ReactNode,
-  type RefObject,
-} from 'react'
+import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { flushSync } from 'react-dom'
-import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  closestCenter,
-  pointerWithin,
-  rectIntersection,
-  type CollisionDetection,
-  type DragEndEvent,
-  type DragOverEvent,
-  type DragStartEvent,
-  useDndContext,
-  useDroppable,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core'
-import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-import {
-  americanDeckTileCount,
-  BLANK_TILE_COUNT_OPTIONS,
-  BLANK_TILE_DEF,
-  buildAmericanDeck,
-  dealOpeningFour,
-  DEFAULT_BLANK_TILE_COUNT,
-  isBlankTileCount,
-  shuffle,
-  STANDARD_JOKER_COUNT,
-  TEN_JOKERS_COUNT,
-} from './mahjong/deck'
+import { americanDeckTileCount, BLANK_TILE_COUNT_OPTIONS, buildAmericanDeck, dealOpeningFour, DEFAULT_BLANK_TILE_COUNT, isBlankTileCount, shuffle, STANDARD_JOKER_COUNT, TEN_JOKERS_COUNT } from './mahjong/deck'
 import type { BlankTileCount } from './mahjong/deck'
 import type { ClaimType, DiscardEntry, EastExposure, Seat, TileDef, TileInstance } from './mahjong/types'
-import { formatMahjongWinDescription, tileAriaLabel, tileSuitRackWord } from './mahjong/labels'
-import {
-  findFocusedPatternDeadCause,
-  focusedLineJokerIneligibleNeedForDef,
-  type DeadCauseHint,
-} from './mahjong/deadCauseHint'
-import {
-  addDeadHintNeed,
-  copyDeadHintNeeds,
-  deadHintDefKey,
-  deadHintGroupNeedVariants,
-  patternNeedVariantIsSatisfiable,
-  type DeadHintNeedMap,
-} from './mahjong/deadHintVariants'
-import {
-  countDiscardEntriesMatchingDef,
-  findExactMatches,
-  sortTiles,
-  tileDefsEqual,
-  type SortMode,
-} from './mahjong/tileUtils'
-import {
-  PASS_BOX_ID,
-  compactPassSlotsToRight,
-  firstEmptyPassSlotIndex,
-  passDropIndex,
-  reorderPassSlots,
-  type PassSlots,
-} from './mahjong/passTargets'
-import {
-  applyCharlestonExchange,
-  charlestonAllowsBlind,
-  charlestonMahjongButtonPhase,
-  charlestonPassBlockedMessage,
-  charlestonPassDirections,
-  charlestonPassEligible,
-  charlestonPassButtonLabel,
-  charlestonPassStripInstructionAria,
-  charlestonRackRoundTitle,
-  nextCharlestonPhase,
-  type CharlestonBotPassPicker,
-  type CharlestonPhase,
-  type FourHands,
-} from './mahjong/charleston'
-import type { HandTileFlyIn, HandTileFlyInFrom } from './mahjong/handTileFlyIn'
+import { formatMahjongWinDescription } from './mahjong/labels'
+import { findFocusedPatternDeadCause, focusedLineJokerIneligibleNeedForDef, type DeadCauseHint } from './mahjong/deadCauseHint'
+import { addDeadHintNeed, copyDeadHintNeeds, deadHintDefKey, deadHintGroupNeedVariants, patternNeedVariantIsSatisfiable, type DeadHintNeedMap } from './mahjong/deadHintVariants'
+import { findExactMatches, sortTiles, tileDefsEqual, type SortMode } from './mahjong/tileUtils'
+import { compactPassSlotsToRight, firstEmptyPassSlotIndex, type PassSlots } from './mahjong/passTargets'
+import { applyCharlestonExchange, charlestonAllowsBlind, charlestonMahjongButtonPhase, charlestonPassBlockedMessage, charlestonPassEligible, charlestonPassStripInstructionAria, charlestonRackRoundTitle, nextCharlestonPhase, type CharlestonBotPassPicker, type CharlestonPhase, type FourHands } from './mahjong/charleston'
+import type { HandTileFlyInFrom } from './mahjong/handTileFlyIn'
 import { handTileFlyInFromBotSeat, handTileFlyInFromCharlestonPhase } from './mahjong/handTileFlyIn'
-import {
-  assignOpeningHands,
-  botIndicesAfterCompassSeat,
-  botIndicesAfterPlayerDiscard,
-  botIndicesInCompassPlayOrder,
-  botIndexForCompassSeat,
-  DEFAULT_BOT_SLOT_SEATS,
-  fourHandsFromPlayerAsEast,
-  fourHandsWithPlayerAsEast,
-  handsFromFourHands,
-  nextCompassSeat,
-  playerYouLabel,
-  seatLabel,
-  toFourHands as fourHandsFromRound,
-  type BotSlotSeats,
-} from './mahjong/seats'
-import { SortableHand } from './components/SortableHand'
-import { PassStrip, type PassStripFlyOutFrom } from './components/PassStrip'
-import { HandBank, HAND_BANK_ID } from './components/HandBank'
+import { assignOpeningHands, botIndicesAfterCompassSeat, botIndicesAfterPlayerDiscard, botIndicesInCompassPlayOrder, botIndexForCompassSeat, DEFAULT_BOT_SLOT_SEATS, fourHandsFromPlayerAsEast, fourHandsWithPlayerAsEast, handsFromFourHands, nextCompassSeat, playerYouLabel, seatLabel, toFourHands as fourHandsFromRound, type BotSlotSeats } from './mahjong/seats'
+import { type PassStripFlyOutFrom } from './components/PassStrip'
 import { TileFace } from './components/TileFace'
-import { ExposureRack } from './components/ExposureRack'
-import { useCoachLitNeighborClip } from './useCoachLitNeighborClip'
-import {
-  PLAYABLE_CARD_IDS,
-  PLAYABLE_CARD_LABEL,
-  type PlayableCardId,
-  cardSectionOrderFromPatterns,
-  patternsForCard,
-  playableCardShortLabel,
-  readPlayableCardFromStorage,
-  writePlayableCardToStorage,
-} from './card/cardCatalog'
+import { PLAYABLE_CARD_IDS, PLAYABLE_CARD_LABEL, type PlayableCardId, cardSectionOrderFromPatterns, patternsForCard, playableCardShortLabel, readPlayableCardFromStorage, writePlayableCardToStorage } from './card/cardCatalog'
 import type { PracticePattern } from './card/practicePatterns'
 import { getActiveCardPatternById, getActiveCardPatterns, patternByIdLookup, setActiveCardPatterns } from './card/activeCardPatternsScope'
-import {
-  buildPinnedPatternsFromFocusKey,
-  computeRackPatternHighlightIds,
-  computeBlankExchangeFills,
-  greedyPatternMatchDetail,
-  jokerSwapHandHintUsesSingleBounceIteration,
-  focusKeyForSuggestedHandLine,
-  focusKeyPatternId,
-  sortHandForSuggestedPattern,
-  sortFullRackTilesForPattern,
-  suggestedHandsTiedAtBest,
-  summarizeRackTowardWin,
-  computeSuggestedDiscardNeedHighlightIds,
-  computeSuggestedDiscardTrackerNeedDefs,
-  computeBotExposureSuggestedBestIds,
-  findInfeasibleBestIds,
-  buildUnavailableTileDefCounts,
-  tileMultisetSignature,
-  type RankSuggestedHandsInput,
-} from './analysis/suggestedHands'
+import { buildPinnedPatternsFromFocusKey, computeRackPatternHighlightIds, computeBlankExchangeFills, greedyPatternMatchDetail, jokerSwapHandHintUsesSingleBounceIteration, focusKeyForSuggestedHandLine, focusKeyPatternId, sortHandForSuggestedPattern, sortFullRackTilesForPattern, suggestedHandsTiedAtBest, summarizeRackTowardWin, computeSuggestedDiscardNeedHighlightIds, computeSuggestedDiscardTrackerNeedDefs, computeBotExposureSuggestedBestIds, findInfeasibleBestIds, buildUnavailableTileDefCounts, tileMultisetSignature, type RankSuggestedHandsInput } from './analysis/suggestedHands'
 import { tileInstancesWithClaimMeldJokersResolved } from './analysis/eastExposurePatternFit'
 import { useRankSuggestedHandsWorker } from './analysis/rankSuggestedHandsAsync'
 import { CharlestonPassStripInstructionMain } from './components/CharlestonPassStripInstructionLabel'
 import { SuggestedHandsPanel } from './components/SuggestedHandsPanel'
-import { WallTilesRemainCell } from './components/WallTilesRemainCell'
-import { RackLogoWatermark } from './components/RackLogoWatermark'
 
 /** Rare overlays — keep analysis-heavy dialogs out of the initial play bundle. */
 const IllegalMahjongDialog = lazy(() =>
@@ -159,105 +30,60 @@ const IllegalMahjongDialog = lazy(() =>
 const PostGameLoserRackRow = lazy(() =>
   import('./components/PostGameLoserRackRow').then((m) => ({ default: m.PostGameLoserRackRow })),
 )
-import {
-  HIDE_CONCEALED_HANDS_STORAGE_KEY,
-  readHideConcealedHandsFromStorage,
-  writeHideConcealedHandsToStorage,
-  readUncheckedSectionsFromStorage,
-  writeUncheckedSectionsToStorage,
-  suggestedHandsFilterMenuColumns,
-  SUGGESTED_HANDS_UNCHECKED_SECTIONS_KEY,
-  suggestedHandSectionMenuLabel,
-  suggestedHandSectionsAvailableWithClaimMelds,
-  isSuggestedHandSectionFilterEnabled,
-  toggledSuggestedHandSectionFilter,
-} from './suggestedHands/filterSettings'
+import { HIDE_CONCEALED_HANDS_STORAGE_KEY, readHideConcealedHandsFromStorage, writeHideConcealedHandsToStorage, readUncheckedSectionsFromStorage, writeUncheckedSectionsToStorage, suggestedHandsFilterMenuColumns, SUGGESTED_HANDS_UNCHECKED_SECTIONS_KEY, suggestedHandSectionMenuLabel, suggestedHandSectionsAvailableWithClaimMelds, isSuggestedHandSectionFilterEnabled, toggledSuggestedHandSectionFilter } from './suggestedHands/filterSettings'
 import type { BotExposure, BotSeat } from './analysis/types'
-import {
-  BOT_DIFFICULTIES,
-  type BotDifficulty,
-  chooseBotCharlestonPass,
-  chooseBotDiscard,
-  botCallStrategicProbability,
-  botBestTilesAway,
-  tryBotBlankExchange,
-  DEFAULT_BOT_DIFFICULTY,
-  isBotDifficulty,
-  type BotRankContext,
-} from './analysis/botAI'
-import {
-  getCallInitiateBlockMessage,
-  getCallCapacityFlags,
-  maxOpenClaimHandTiles,
-  claimTypeForHandTilesFromDiscard,
-  BLOCKING_TITLE_SWAP_ERROR,
-  hasLegalMahjongOnBotDiscard,
-  isMahjongWinOnLiveBotDiscard,
-  isSelfDrawMahjongWin,
-  MSG_CALL_DEAD_JOKER,
-  MSG_CALL_INSUFFICIENT_TILES,
-  MSG_MAHJONG_DURING_CHARLESTON,
-  MSG_DISCARD_BLANK_USE_SWAP,
-  MSG_SWAP_BLANK_NO_DISCARDS,
-  MSG_SWAP_NO_EXPOSED_JOKERS,
-  MSG_SWAP_NO_LEGAL_FOR_TILE,
-  MSG_SWAP_NOTHING_AVAILABLE,
-  MSG_SWAP_PICK_TILE_FIRST,
-  type CallValidationRoundSlice,
-} from './mahjong/callValidation'
+import { BOT_DIFFICULTIES, type BotDifficulty, chooseBotCharlestonPass, chooseBotDiscard, botCallStrategicProbability, botBestTilesAway, tryBotBlankExchange, DEFAULT_BOT_DIFFICULTY, isBotDifficulty, type BotRankContext } from './analysis/botAI'
+import { getCallInitiateBlockMessage, getCallCapacityFlags, maxOpenClaimHandTiles, claimTypeForHandTilesFromDiscard, BLOCKING_TITLE_SWAP_ERROR, hasLegalMahjongOnBotDiscard, isMahjongWinOnLiveBotDiscard, isSelfDrawMahjongWin, MSG_CALL_DEAD_JOKER, MSG_CALL_INSUFFICIENT_TILES, MSG_MAHJONG_DURING_CHARLESTON, MSG_DISCARD_BLANK_USE_SWAP, MSG_SWAP_BLANK_NO_DISCARDS, MSG_SWAP_NO_EXPOSED_JOKERS, MSG_SWAP_NO_LEGAL_FOR_TILE, MSG_SWAP_NOTHING_AVAILABLE, MSG_SWAP_PICK_TILE_FIRST, type CallValidationRoundSlice } from './mahjong/callValidation'
 import { deadHandExplanation, type DeadHandReason } from './mahjong/deadHandReason'
-import {
-  BLANK_EXCHANGE_DROP_ID,
-  CALL_INITIATE_FIRST_SLOT_ID,
-  EAST_DISCARD_STAGING_ID,
-  incomingBotDiscardDragId,
-  JOKER_SWAP_STAGING_ID,
-  parseIncomingBotDiscardDragId,
-} from './mahjong/jokerSwapIds'
+import { incomingBotDiscardDragId } from './mahjong/jokerSwapIds'
 import { discardedDefsForBlankExchange } from './mahjong/blankExchange'
-import {
-  botExposureSwapDropId,
-  botSeatSwapDropId,
-  eastExposureSwapDropId,
-  EAST_SEAT_SWAP_ID,
-  findJokerSwapTargetAtEastExposure,
-  findJokerSwapTargetInEastRack,
-  findNextBotJokerSwapTarget,
-  findNextJokerSwapTarget,
-  collectHandTileIdsSwappableForJokers,
-  collectSwappableJokerTileIds,
-  representativeDefInExposedMeld,
-  parseBotSeatSwapDropId,
-  parseBotExposureSwapDropId,
-  parseEastExposureSwapDropId,
-  type JokerSwapTargetPick,
-} from './mahjong/jokerSwapTarget'
-import {
-  openClaimMeldsFitSomePracticeLine,
-  reorderEastExposuresToPatternGroupOrder,
-} from './analysis/eastExposurePatternFit'
-import logicLogoSrc from './assets/logic-logo.svg?url'
-import mahjLogoSrc from './assets/mahj-logo.svg?url'
-import {
-  DEFAULT_TILE_GRAPHICS,
-  isTileGraphics,
-  MENU_TILE_GRAPHICS,
-  TILE_GRAPHICS_LABEL,
-  type TileGraphics,
-} from './tiles/tileGraphics'
+import { eastExposureSwapDropId, findNextJokerSwapTarget, collectHandTileIdsSwappableForJokers, collectSwappableJokerTileIds, representativeDefInExposedMeld } from './mahjong/jokerSwapTarget'
+import { openClaimMeldsFitSomePracticeLine, reorderEastExposuresToPatternGroupOrder } from './analysis/eastExposurePatternFit'
+import { DEFAULT_TILE_GRAPHICS, isTileGraphics, MENU_TILE_GRAPHICS, TILE_GRAPHICS_LABEL, type TileGraphics } from './tiles/tileGraphics'
 import { TileGraphicsProvider } from './tiles/TileGraphicsContext'
+import { AppMenuOpenGate, AppMenuOpenProvider, appMenuOpenApiRef, useAppMenuOpen } from './app/AppMenuOpenContext'
+import { SuggestedHandsTrayProvider, suggestedHandsTrayApiRef } from './app/SuggestedHandsTrayContext'
+import { EastDiscardStagingSlot, SuggestedHandsBoundsOnTrayChange, SuggestedHandsPinOnTrayClose, SuggestedHandsPopupChrome, WALL_GAME_MAX_EXPOSURE_MELD_TILES, type MainPhase } from './app/playSurfaceUi'
+import type { RoundState } from './app/roundState'
+import { eastExposureMeldSortId } from './app/playSurfaceDnDHelpers'
+import { PlaySurface, type PlaySurfaceDnDApi } from './app/PlaySurface'
 import {
-  AppMenuOpenGate,
-  AppMenuOpenProvider,
-  appMenuOpenApiRef,
-  useAppMenuOpen,
-} from './app/AppMenuOpenContext'
+  buildPlaySurfaceActionBarProps,
+  buildPlayerSeatLabelProps,
+  type PlaySurfaceCoachProps,
+  type PlaySurfaceRackChromeProps,
+} from './app/playSurfaceViewProps'
+import type { GameBlockingDialog } from './app/gameDialog'
 import {
-  SuggestedHandsDndFrame,
-  SuggestedHandsTrayProvider,
-  suggestedHandsTrayApiRef,
-  useSuggestedHandsTray,
-} from './app/SuggestedHandsTrayContext'
+  applyBotsJokerSwapsFromEast,
+  applyCharlestonPassForRound,
+  applyCommitStagedCall,
+  applyDeadHand,
+  applyDeclareMahjong,
+  applyDeclareMahjongSelfDraw,
+  applyEastNaturalForExposedJoker,
+  applyInitiateCall,
+  applyAutoSelectCallTiles,
+  applyToggleStagedCallTile,
+  botLabelAt,
+  botSeatAt,
+  buildCallStagingPreview,
+  buildRankInputAfterStagedCall,
+  charlestonIncomingHandTileIds,
+  commitPlayerExposureOrdered,
+  deadDiscardTilesForRanking,
+  discardPileCommittedForDisplay,
+  orderEastExposuresForClosestCardLine,
+  playerClaimMeldsForRound,
+  playerExposureMeldsForRound,
+  previewAutoSelectedCallRankInput,
+  previewStagedCallBestTilesAway,
+  previewStagedCallRankInput,
+  rankInputDuringCallStaging,
+  replacePlayerExposures,
+  toFourHands,
+} from './app/roundMutations'
+import { useRoundActions } from './app/useRoundActions'
 import './styles/style.css'
 
 /** Conservative floor used while the suggested-hands sheet is remeasured during orientation changes. */
@@ -266,16 +92,6 @@ const SUGGESTED_DISCARD_OVERLAY_MIN_SHEET_PX = 112
 /** Stable empty list so blank-exchange inputs keep a constant identity when no blank is held. */
 const EMPTY_TILE_DEF_LIST: readonly TileDef[] = []
 
-/** Wall-heat gradient: flat green at opening count; slides toward red after the first tile leaves the wall. */
-function wallRemainHeatStyle(
-  wallLen: number,
-  openingWallLen: number,
-): CSSProperties | undefined {
-  if (wallLen >= openingWallLen || wallLen === 0 || openingWallLen <= 1) return undefined
-  return {
-    '--wall-t': String(Math.max(0, Math.min(1, wallLen / (openingWallLen - 1)))),
-  } as CSSProperties
-}
 
 const BOT_DIFFICULTY_LABEL: Record<BotDifficulty, string> = {
   easy: 'Novice',
@@ -570,314 +386,6 @@ function readSuggestedHandsTrayDefaultOpenFromStorage(): boolean {
  * mahjong-declared  Player declared Mah Jongg on a bot's discard.
  * bot-mahjong       A bot won by self-draw; game over, show bot win screen.
  */
-type MainPhase = 'east-discard' | 'bot-turn' | 'call-staging' | 'mahjong-declared' | 'dead-hand' | 'wall-game' | 'bot-mahjong'
-
-/**
- * Fixed full-screen overlay: `card` matches Charleston/call; `table` is felt + gold for swap;
- * `mahjong-blocked` is the coach modal for illegal Mah Jongg on a discard.
- */
-type GameBlockingDialog =
-  | { variant: 'card'; message: string }
-  | { variant: 'table'; title: string; message: string }
-  | { variant: 'mahjong-blocked'; rankInput: RankSuggestedHandsInput }
-  | { variant: 'dead-hand-warning' }
-  | { variant: 'mahjong-dead-warning'; rankInput: RankSuggestedHandsInput; deadHandReason: DeadHandReason }
-  | { variant: 'call-exposure-dead-warning'; rankInput: RankSuggestedHandsInput }
-  | {
-      variant: 'call-meld-size-warning'
-      rankInput: RankSuggestedHandsInput
-      neededHandTiles: 3 | 4 | 5
-    }
-  | { variant: 'discard-dead-warning'; rankInput: RankSuggestedHandsInput }
-  | { variant: 'different-card-requires-new-game'; pendingCardId: PlayableCardId }
-  | { variant: 'concealed-call-warning' }
-
-const CALL_STAGING_DROP_ID = 'call-staging-meld-drop'
-const EAST_EXPOSURE_MELD_SORT_ID_PREFIX = 'east-exposure-meld:'
-
-function eastExposureMeldSortId(exposureIdx: number): string {
-  return `${EAST_EXPOSURE_MELD_SORT_ID_PREFIX}${exposureIdx}`
-}
-
-function parseEastExposureMeldSortId(id: string): number | null {
-  if (!id.startsWith(EAST_EXPOSURE_MELD_SORT_ID_PREFIX)) return null
-  const raw = id.slice(EAST_EXPOSURE_MELD_SORT_ID_PREFIX.length)
-  const parsed = Number(raw)
-  return Number.isInteger(parsed) && parsed >= 0 ? parsed : null
-}
-
-/** Rack drop boxes highlight and accept drops when the dragged tile overlaps them, not the pointer. */
-function collisionHitsForTileOverlappingZones(
-  args: Parameters<CollisionDetection>[0],
-  zoneIds: readonly string[],
-): ReturnType<CollisionDetection> {
-  const containers = args.droppableContainers.filter((c) => zoneIds.includes(String(c.id)))
-  if (containers.length === 0) return []
-  return rectIntersection({ ...args, droppableContainers: containers })
-}
-
-function pointerOverCallInitiateTarget(pointer: { x: number; y: number }): boolean {
-  const el = document.querySelector<HTMLElement>('.exposure-rack__call-initiate-target')
-  if (!el) return false
-  const rect = el.getBoundingClientRect()
-  if (rect.width < 1 || rect.height < 1) return false
-  return (
-    pointer.x >= rect.left &&
-    pointer.x <= rect.left + rect.width &&
-    pointer.y >= rect.top &&
-    pointer.y <= rect.top + rect.height
-  )
-}
-
-/** True when the pointer is anywhere over the top discard tracker section (blank-exchange drop). */
-function pointerOverBlankExchangeTarget(pointer: { x: number; y: number }): boolean {
-  const el = document.querySelector<HTMLElement>(
-    '.blank-exchange-dropzone, .panel--discard-tracker--top',
-  )
-  if (!el) return false
-  const rect = el.getBoundingClientRect()
-  if (rect.width < 1 || rect.height < 1) return false
-  return (
-    pointer.x >= rect.left &&
-    pointer.x <= rect.left + rect.width &&
-    pointer.y >= rect.top &&
-    pointer.y <= rect.top + rect.height
-  )
-}
-
-function pointerOverPassBoxTarget(pointer: { x: number; y: number }): boolean {
-  const el = document.querySelector<HTMLElement>('.pass-strip-tail__inner, .pass-box')
-  if (!el) return false
-  const rect = el.getBoundingClientRect()
-  if (rect.width < 1 || rect.height < 1) return false
-  return (
-    pointer.x >= rect.left &&
-    pointer.x <= rect.left + rect.width &&
-    pointer.y >= rect.top &&
-    pointer.y <= rect.top + rect.height
-  )
-}
-
-function isActiveBotDiscardDrag(
-  dragId: string,
-  activeBotDiscard: TileInstance | null,
-): boolean {
-  const tileId = parseIncomingBotDiscardDragId(dragId)
-  return tileId != null && tileId === activeBotDiscard?.id
-}
-
-/**
- * Call drop target — only mounted while the opponent discard is being dragged out of its slot.
- * Teal box chrome matches Charleston / discard staging.
- */
-function CallInitiateFirstEmptyTarget() {
-  const { setNodeRef, isOver } = useDroppable({ id: CALL_INITIATE_FIRST_SLOT_ID })
-  return (
-    <div
-      ref={setNodeRef}
-      role="listitem"
-      aria-label="Call — drop the discard here to start a claim"
-      className={[
-        'exposure-rack__slot',
-        'exposure-rack__slot--empty',
-        'exposure-rack__call-initiate-target',
-        'exposure-rack__call-initiate-target--near',
-        isOver ? 'exposure-rack__call-initiate-target--over' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-    />
-  )
-}
-
-/** Droppable wrapper around the exposure rack during call-staging — drop a tile to add it to the staged meld. */
-function StagingMeldDropZone({
-  active,
-  children,
-}: {
-  active: boolean
-  children: ReactNode
-}) {
-  const { setNodeRef, isOver } = useDroppable({ id: CALL_STAGING_DROP_ID, disabled: !active })
-  return (
-    <div
-      ref={setNodeRef}
-      className={['staging-meld-drop-zone', isOver ? 'staging-meld-drop-zone--over' : '']
-        .filter(Boolean)
-        .join(' ')}
-    >
-      {children}
-    </div>
-  )
-}
-
-/** Invisible drop target: whole discard panel (same box as discards — no swap-only chrome). */
-function DiscardPileDropZone({
-  swapDropActive,
-  children,
-  onContainerNode,
-}: {
-  swapDropActive: boolean
-  children: ReactNode
-  onContainerNode?: (node: HTMLDivElement | null) => void
-}) {
-  const { setNodeRef } = useDroppable({
-    id: JOKER_SWAP_STAGING_ID,
-    disabled: !swapDropActive,
-  })
-  return (
-    <div
-      ref={(node) => {
-        setNodeRef(node)
-        onContainerNode?.(node)
-      }}
-      className="discard-pile-drop-zone"
-    >
-      {children}
-    </div>
-  )
-}
-
-/** Whole-opponent-rack drop target: allows joker swap by dropping anywhere in that seat's row. */
-function OpponentExposureDropZone({
-  seat,
-  active,
-  showWatermark = true,
-  watermarkLabel,
-  tag = 'li',
-  children,
-}: {
-  seat: BotSeat
-  active: boolean
-  showWatermark?: boolean
-  /** Compass seat name when `watermarkLabel` is omitted (legacy bot column). */
-  watermarkLabel?: string
-  tag?: 'li' | 'div'
-  children: ReactNode
-}) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: botSeatSwapDropId(seat),
-    disabled: !active,
-  })
-  const label = watermarkLabel ?? seat
-  const Tag = tag
-  return (
-    <Tag
-      ref={setNodeRef}
-      className={[
-        'app-opponents-rail__cell',
-        active ? 'app-opponents-rail__cell--swap-drop' : '',
-        isOver ? 'app-opponents-rail__cell--swap-over' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-      aria-label={watermarkLabel ?? undefined}
-    >
-      {showWatermark ? (
-        <span className="bot-exposure-row__watermark" aria-hidden="true">{label}</span>
-      ) : null}
-      {children}
-    </Tag>
-  )
-}
-
-/** Logic tray toggle — context consumer so the play surface does not re-render on open/close. */
-function LogicTrayToggleButton() {
-  const { trayOpen, toggleTray } = useSuggestedHandsTray()
-  return (
-    <button
-      type="button"
-      className={[
-        'btn btn--rack-neutral btn--logic rack-bottom-tile-cell rack-bottom-tile-cell--c7-8',
-        trayOpen ? 'btn--logic--open' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-      aria-label="Logic"
-      aria-pressed={trayOpen}
-      onClick={toggleTray}
-    >
-      <img className="btn--logic__img" src={logicLogoSrc} alt="Logic" draggable={false} />
-    </button>
-  )
-}
-
-/** Pins the focused hand when the Logic tray closes — context consumer so App does not subscribe. */
-function SuggestedHandsPinOnTrayClose({
-  focusKeyRef,
-  onClosedWithFocus,
-}: {
-  focusKeyRef: RefObject<string | null>
-  onClosedWithFocus: (focusKey: string) => void
-}) {
-  const { trayOpen } = useSuggestedHandsTray()
-  const prevRef = useRef(trayOpen)
-  useEffect(() => {
-    if (prevRef.current && !trayOpen) {
-      const k = focusKeyRef.current
-      if (k) onClosedWithFocus(k)
-    }
-    prevRef.current = trayOpen
-  }, [trayOpen, focusKeyRef, onClosedWithFocus])
-  return null
-}
-
-/** Re-run overlay bounds when the tray opens/closes without App subscribing to trayOpen. */
-function SuggestedHandsBoundsOnTrayChange({ onChange }: { onChange: () => void }) {
-  const { trayOpen } = useSuggestedHandsTray()
-  useLayoutEffect(() => {
-    onChange()
-  }, [trayOpen, onChange])
-  return null
-}
-
-/** Bottom discard tray `data-suggested-hands-open` without App re-rendering on tray toggle. */
-function SuggestedHandsOpenDataAttr({
-  elRef,
-}: {
-  elRef: RefObject<HTMLElement | null>
-}) {
-  const { trayOpen } = useSuggestedHandsTray()
-  useLayoutEffect(() => {
-    const el = elRef.current
-    if (!el) return
-    el.dataset.suggestedHandsOpen = trayOpen ? 'on' : 'off'
-  }, [trayOpen, elRef])
-  return null
-}
-
-/** Suggested-hands popup chrome — tray open class from context so App does not re-render on toggle. */
-function SuggestedHandsPopupChrome({
-  popupRef,
-  overlayStyle,
-  children,
-}: {
-  popupRef: RefObject<HTMLDivElement | null>
-  overlayStyle: CSSProperties
-  children: (trayOpen: boolean) => ReactNode
-}) {
-  const { trayOpen } = useSuggestedHandsTray()
-  return (
-    <div
-      ref={popupRef}
-      id="suggested-hands-popup"
-      className={[
-        'suggested-hands-popup',
-        'suggested-hands-popup--discard-overlay',
-        trayOpen ? 'suggested-hands-popup--open' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-      role="dialog"
-      aria-label="Suggested Hands"
-      aria-modal="false"
-      aria-hidden={!trayOpen}
-      style={overlayStyle}
-    >
-      {children(trayOpen)}
-    </div>
-  )
-}
 
 /** Resets the menu’s draft card id when the menu closes — must be a context consumer so `App` does not. */
 function MenuCardDraftOnClose({ onClosed }: { onClosed: () => void }) {
@@ -890,1105 +398,8 @@ function MenuCardDraftOnClose({ onClosed }: { onClosed: () => void }) {
   return null
 }
 
-/** Hand / Charleston action bar: column 2 menu. Reads open state from context so toggling
- *  the menu does not re-render the surrounding play surface. */
-function HandRackMenuAnchor({
-  menuContainerRef,
-}: {
-  menuContainerRef: RefObject<HTMLDivElement | null>
-}) {
-  const { menuOpen, toggleMenu } = useAppMenuOpen()
-  return (
-    <div
-      ref={menuContainerRef}
-      className="app-menu-anchor app-menu-anchor--hand-rack rack-bottom-tile-cell rack-bottom-tile-cell--c2"
-    >
-      <button
-        type="button"
-        className={[
-          'btn btn--rack-neutral app-bottom-center-controls__menu-btn',
-          menuOpen ? 'app-bottom-center-controls__menu-btn--open' : '',
-        ]
-          .filter(Boolean)
-          .join(' ')}
-        aria-label="Menu"
-        aria-haspopup="dialog"
-        aria-expanded={menuOpen}
-        aria-controls={menuOpen ? 'app-menu-modal' : undefined}
-        onClick={toggleMenu}
-      >
-        Menu
-      </button>
-    </div>
-  )
-}
 
-/** Player compass seat — centered in the well from discard-tracker bottom to main-rack top. */
-function PlayerRackSeatLabel({
-  seat,
-  isActiveTurn = false,
-  isCalledThrower = false,
-}: {
-  seat: Seat
-  /** Green fill — player's turn (discard / Charleston / call-staging). */
-  isActiveTurn?: boolean
-  /** Green inset border — someone called this seat's discard (mirrors discard-tracker bot seat labels). */
-  isCalledThrower?: boolean
-}) {
-  return (
-    <span
-      className="panel-hand-rack__seat-label"
-      aria-hidden
-    >
-      <span className="panel-hand-rack__seat-label__prefix">Seat:</span>
-      <span
-        className={[
-          'panel-hand-rack__seat-label__chip',
-          isActiveTurn ? 'panel-hand-rack__seat-label__chip--turn' : '',
-          isCalledThrower && !isActiveTurn ? 'panel-hand-rack__seat-label__chip--called' : '',
-        ]
-          .filter(Boolean)
-          .join(' ')}
-      >
-        {seatLabel(seat)}
-      </span>
-    </span>
-  )
-}
 
-/** First column of the discard-tracker bot band: compass initial (S / W / N). */
-function DiscardTrackerBotSeatLabel({
-  seat,
-  isActiveTurn = false,
-  isCalledThrower = false,
-}: {
-  seat: BotSeat
-  isActiveTurn?: boolean
-  isCalledThrower?: boolean
-}) {
-  const label = seat[0]
-  return (
-    <div
-      className="exposure-rack exposure-rack--discard-tracker-opponent exposure-rack--discard-tracker-prefix exposure-rack--discard-tracker-bot-seat-label"
-      role="presentation"
-      aria-label={`${seat} seat`}
-    >
-      <div
-        className={[
-          'exposure-rack__slot',
-          'sorted-discard-tray__slot',
-          'sorted-discard-tray__slot--seat-label',
-          isActiveTurn ? 'sorted-discard-tray__slot--seat-turn' : '',
-          isCalledThrower ? 'sorted-discard-tray__slot--seat-called' : '',
-        ]
-          .filter(Boolean)
-          .join(' ')}
-        role="presentation"
-      >
-        <span className="sorted-discard-tray__seat-label" aria-hidden>
-          {label}
-        </span>
-      </div>
-    </div>
-  )
-}
-
-/** Discard tray overlay per row: 1 prefix + 14 bot exposure + 13 sorted = 28 content slots (+29 for tile sizing). */
-const DISCARD_TRACKER_SLOTS_ACROSS = 29
-const DISCARD_TRACKER_BOT_PREFIX_SLOTS = 1
-const DISCARD_TRACKER_BOT_ROW_SLOTS = 14
-const DISCARD_TRACKER_SORTED_ROW_SLOTS = 13
-/**
- * Sorted B/C/D band width in tile-width units: the suit-label chip is 1.75× a tile + 12 rank tiles
- * = 13.75. Used as the popup's `--discard-tracker-slots-across` divisor so the @container sizes
- * tiles to fill the grid almost exactly (an integer 14 left ~half a tile of centered slack each
- * side, which read as the box being too wide). Popup-only; the on-board grid uses 29.
- */
-const DISCARD_TRACKER_SORTED_BAND_COLS = 13.75
-
-/** Row 1 of sorted discard: bams 1–9, green dragon (G), North, South. */
-const SORTED_DISCARD_ROW1_TILES: readonly TileInstance[] = [
-  ...([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((rank) => ({
-    id: `sorted-discard-r1-b${rank}`,
-    def: { cat: 'suit' as const, suit: 'bam' as const, rank },
-  })),
-  {
-    id: 'sorted-discard-r1-green',
-    def: { cat: 'dragon' as const, dragon: 'green' as const },
-  },
-  {
-    id: 'sorted-discard-r1-n',
-    def: { cat: 'wind' as const, wind: 'N' },
-  },
-  {
-    id: 'sorted-discard-r1-s',
-    def: { cat: 'wind' as const, wind: 'S' },
-  },
-]
-
-/** Row 2 of sorted discard: dots 1–9, soap (0), East, West. */
-const SORTED_DISCARD_ROW2_TILES: readonly TileInstance[] = [
-  ...([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((rank) => ({
-    id: `sorted-discard-r2-d${rank}`,
-    def: { cat: 'suit' as const, suit: 'dot' as const, rank },
-  })),
-  {
-    id: 'sorted-discard-r2-soap',
-    def: { cat: 'dragon' as const, dragon: 'soap' as const },
-  },
-  {
-    id: 'sorted-discard-r2-e',
-    def: { cat: 'wind' as const, wind: 'E' },
-  },
-  {
-    id: 'sorted-discard-r2-w',
-    def: { cat: 'wind' as const, wind: 'W' },
-  },
-]
-
-/** Row 3 of sorted discard: craks 1–9, red dragon (R), flower (F), blank (B) or joker (J) when blanks off. */
-const SORTED_DISCARD_ROW3_TILES: readonly TileInstance[] = [
-  ...([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((rank) => ({
-    id: `sorted-discard-r3-c${rank}`,
-    def: { cat: 'suit' as const, suit: 'crak' as const, rank },
-  })),
-  {
-    id: 'sorted-discard-r3-red',
-    def: { cat: 'dragon' as const, dragon: 'red' as const },
-  },
-  {
-    id: 'sorted-discard-r3-f',
-    def: { cat: 'flower' as const, flower: 1 },
-  },
-  {
-    id: 'sorted-discard-r3-blank',
-    def: BLANK_TILE_DEF,
-  },
-]
-
-function sortedDiscardTrayTileFaceProps(
-  def: TileDef,
-  hasBeenDiscarded: boolean,
-): {
-  compactRankOnly: boolean
-  sortedDiscardGlyph: true
-  sortedDiscardGlyphCenter: true
-  sortedDiscardDotBlue: boolean
-  sortedDiscardBamGreen: boolean
-  sortedDiscardCrakRed: boolean
-} {
-  const isDot =
-    (def.cat === 'suit' && def.suit === 'dot') ||
-    (def.cat === 'dragon' && def.dragon === 'soap')
-  const isBam =
-    (def.cat === 'suit' && def.suit === 'bam') ||
-    (def.cat === 'dragon' && def.dragon === 'green')
-  const isCrak =
-    (def.cat === 'suit' && def.suit === 'crak') ||
-    (def.cat === 'dragon' && def.dragon === 'red')
-  return {
-    compactRankOnly: def.cat === 'suit',
-    sortedDiscardGlyph: true,
-    sortedDiscardGlyphCenter: true,
-    sortedDiscardDotBlue: hasBeenDiscarded && isDot,
-    sortedDiscardBamGreen: hasBeenDiscarded && isBam,
-    sortedDiscardCrakRed: hasBeenDiscarded && isCrak,
-  }
-}
-
-function sortedDiscardTrackerSlotNeedsHighlight(
-  def: TileDef,
-  needDefs: readonly TileDef[] | null | undefined,
-): boolean {
-  if (!needDefs || needDefs.length === 0) return false
-  return needDefs.some((d) => tileDefsEqual(d, def))
-}
-
-function SortedDiscardTrayRow({
-  tiles,
-  slotCount,
-  leadingEmptySlots = 0,
-  leadingSuitLabel,
-  leadingSuitLabelTone = 'dot',
-  trailingGlyphSlots = [],
-  ariaLabel,
-  discardPile,
-  blankTilesEnabled = true,
-  suggestedNeedDefs = null,
-  onSlotActivate = null,
-  pickableDefs = null,
-}: {
-  tiles: readonly TileInstance[]
-  slotCount: number
-  leadingEmptySlots?: number
-  /** One leading slot with the suit name (BAM, CRK, DOT). */
-  leadingSuitLabel?: string
-  leadingSuitLabelTone?: 'dot' | 'bam' | 'crak'
-  /** Glyph-only slots after `tiles` (no matching discard count). */
-  trailingGlyphSlots?: readonly { id: string; label: string; ariaLabel: string }[]
-  ariaLabel: string
-  discardPile: readonly DiscardEntry[]
-  /** When false, the blank tracker slot shows joker (J) instead (blank tiles off in menu). */
-  blankTilesEnabled?: boolean
-  /** Focused suggested hand: defs still short — inner ring on matching tracker slots. */
-  suggestedNeedDefs?: readonly TileDef[] | null
-  /** Blank-exchange popup: tap a discarded tile type to redeem the blank for it. */
-  onSlotActivate?: ((def: TileDef) => void) | null
-  /** Blank-exchange popup: defs eligible to pick (present in the discard pile). */
-  pickableDefs?: readonly TileDef[] | null
-}) {
-  const leadingSlots = (leadingSuitLabel ? 1 : 0) + leadingEmptySlots
-  const emptyCount = Math.max(0, slotCount - leadingSlots - tiles.length - trailingGlyphSlots.length)
-  return (
-    <div
-      className="exposure-rack exposure-rack--discard-tracker-opponent exposure-rack--discard-tracker-sorted-row"
-      role="list"
-      aria-label={ariaLabel}
-    >
-      {leadingSuitLabel ? (
-        <div
-          className={[
-            'exposure-rack__slot',
-            'sorted-discard-tray__slot',
-            'sorted-discard-tray__slot--discarded',
-            'sorted-discard-tray__slot--suit-label',
-            `sorted-discard-tray__slot--suit-label-${leadingSuitLabelTone}`,
-          ].join(' ')}
-          role="presentation"
-          aria-label={`${leadingSuitLabel} suit`}
-        >
-          <div
-            className={[
-              'tile-face',
-              'tile-face--sorted-discard-glyph',
-              'tile-face--sorted-discard-glyph-center',
-              leadingSuitLabelTone === 'dot'
-                ? 'tile-face--sorted-discard-dot'
-                : leadingSuitLabelTone === 'bam'
-                  ? 'tile-face--sorted-discard-bam'
-                  : 'tile-face--sorted-discard-crak',
-            ].join(' ')}
-            aria-hidden
-          >
-            <span
-              className={[
-                'sorted-discard-tray__suit-label',
-                `sorted-discard-tray__suit-label--${leadingSuitLabelTone}`,
-              ].join(' ')}
-            >
-              {leadingSuitLabel}
-            </span>
-          </div>
-        </div>
-      ) : null}
-      {Array.from({ length: leadingEmptySlots }, (_, i) => (
-        <div
-          key={`sorted-discard-lead-empty-${i}`}
-          className="exposure-rack__slot exposure-rack__slot--empty"
-          aria-hidden
-        />
-      ))}
-      {tiles.map((tile) => {
-        const isBlankSlot = tile.def.cat === 'blank'
-        const blankReplacedByJoker = isBlankSlot && !blankTilesEnabled
-        const trackerDef: TileDef = blankReplacedByJoker
-          ? { cat: 'joker' }
-          : tile.def
-        const discardCount = countDiscardEntriesMatchingDef(discardPile, trackerDef)
-        const hasBeenDiscarded = discardCount > 0
-        const suggestGuideOn = suggestedNeedDefs !== null
-        const suggestNeed =
-          suggestGuideOn && sortedDiscardTrackerSlotNeedsHighlight(trackerDef, suggestedNeedDefs)
-        const suggestDim = suggestGuideOn && !suggestNeed
-        const awaitingDiscard = !suggestGuideOn && !hasBeenDiscarded
-        const exchangeMode = onSlotActivate !== null
-        const isPickable =
-          exchangeMode &&
-          !blankReplacedByJoker &&
-          (pickableDefs?.some((d) => tileDefsEqual(d, trackerDef)) ?? false)
-        const isUnpickable = exchangeMode && !isPickable
-        return (
-          <div
-            key={tile.id}
-            className={[
-              'exposure-rack__slot',
-              'sorted-discard-tray__slot',
-              isBlankSlot && blankTilesEnabled ? 'sorted-discard-tray__slot--blank' : '',
-              hasBeenDiscarded ? 'sorted-discard-tray__slot--discarded' : '',
-              awaitingDiscard ? 'sorted-discard-tray__slot--awaiting-discard' : '',
-              suggestDim ? 'sorted-discard-tray__slot--suggest-dim' : '',
-              suggestNeed ? 'sorted-discard-tray__slot--suggest-need' : '',
-              isPickable ? 'sorted-discard-tray__slot--pickable' : '',
-              isUnpickable ? 'sorted-discard-tray__slot--unpickable' : '',
-            ]
-              .filter(Boolean)
-              .join(' ')}
-            role={isPickable ? 'button' : 'listitem'}
-            tabIndex={isPickable ? 0 : undefined}
-            onClick={isPickable ? () => onSlotActivate?.(trackerDef) : undefined}
-            onKeyDown={
-              isPickable
-                ? (ev) => {
-                    if (ev.key === 'Enter' || ev.key === ' ') {
-                      ev.preventDefault()
-                      onSlotActivate?.(trackerDef)
-                    }
-                  }
-                : undefined
-            }
-            aria-label={
-              isPickable
-                ? `Exchange blank for ${tileAriaLabel(trackerDef)}${
-                    discardCount > 0 ? `, ${discardCount} discarded` : ''
-                  }`
-                : suggestNeed
-                ? `${tileAriaLabel(trackerDef)}, needed for focused hand${
-                    discardCount > 0 ? `, ${discardCount} discarded` : ''
-                  }`
-                : discardCount > 0
-                  ? `${tileAriaLabel(trackerDef)}, ${discardCount} discarded`
-                  : tileAriaLabel(trackerDef)
-            }
-          >
-            <TileFace
-              def={trackerDef}
-              {...sortedDiscardTrayTileFaceProps(trackerDef, hasBeenDiscarded || suggestNeed)}
-            />
-            <span className="sorted-discard-tray__count" aria-hidden>
-              {discardCount > 0 ? discardCount : null}
-            </span>
-          </div>
-        )
-      })}
-      {trailingGlyphSlots.map((slot) => (
-        <div
-          key={slot.id}
-          className="exposure-rack__slot sorted-discard-tray__slot sorted-discard-tray__slot--blank"
-          role="listitem"
-          aria-label={slot.ariaLabel}
-        >
-          <div
-            className={[
-              'tile-face',
-              'tile-face--sorted-discard-glyph',
-              'tile-face--sorted-discard-glyph-center',
-            ].join(' ')}
-            aria-hidden
-          >
-            <span className="tile-face__glyph">
-              <span className="tile-face__glyph-letter">{slot.label}</span>
-            </span>
-          </div>
-        </div>
-      ))}
-      {Array.from({ length: emptyCount }, (_, i) => (
-        <div
-          key={`sorted-discard-empty-${i}`}
-          className="exposure-rack__slot exposure-rack__slot--empty"
-          aria-hidden
-        />
-      ))}
-    </div>
-  )
-}
-
-/**
- * Wraps the sorted discard tracker so a blank dragged from the rack (your turn) can be dropped
- * anywhere over the tracker boundary. The droppable is only live while `active`.
- */
-function BlankExchangeDropZone({
-  active,
-  children,
-}: {
-  active: boolean
-  children: ReactNode
-}) {
-  // Mount the droppable only while a blank is in hand-drag (your turn). Mounting it mid-drag — the
-  // same pattern as the Call drop target — guarantees dnd-kit measures its rect, so `isOver`
-  // (orange outline) and `over` (drop) both fire reliably.
-  if (!active) return <>{children}</>
-  return <ArmedBlankExchangeDropZone>{children}</ArmedBlankExchangeDropZone>
-}
-
-function ArmedBlankExchangeDropZone({ children }: { children: ReactNode }) {
-  const { setNodeRef, isOver } = useDroppable({ id: BLANK_EXCHANGE_DROP_ID })
-  return (
-    <div
-      ref={setNodeRef}
-      className={[
-        'blank-exchange-dropzone',
-        isOver ? 'blank-exchange-dropzone--over' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-    >
-      {children}
-    </div>
-  )
-}
-
-/**
- * The popup is one horizontal band of {@link DISCARD_TRACKER_SORTED_BAND_COLS} slot-columns. We size
- * it relative to whatever the on-board sorted discard band currently measures in this window: the
- * popup band is exactly {@link BLANK_EXCHANGE_POPUP_SCALE}× that width, so the popup always looks the
- * same proportion bigger than the tracker regardless of window/PWA size. The shared
- * `top-exposure-band` @container then sizes every tile to fill the band — just like the on-board
- * tracker. A viewport-fit clamp keeps it from ever overflowing on very small/short screens.
- */
-const BLANK_EXCHANGE_POPUP_FACE_GAP = 3
-const BLANK_EXCHANGE_POPUP_ROW_GAP = 4
-/** Popup band is this multiple of the on-board sorted discard band (≈50% larger). */
-const BLANK_EXCHANGE_POPUP_SCALE = 1.5
-
-/** Width the popup grid should take: 1.5× the on-board band, clamped so the 3-row band + Cancel fit. */
-function computeBlankExchangePopupBandWidth(): number {
-  const panelPad = 48 // panel inline padding + border, both sides
-  const cancelReserve = 64 // gap + Cancel button row beneath the band
-  const gap = BLANK_EXCHANGE_POPUP_FACE_GAP
-  const cols = DISCARD_TRACKER_SORTED_BAND_COLS
-  // Largest width that still fits the viewport on both axes (incl. the Cancel row beneath the band).
-  const availW = window.innerWidth * 0.94 - panelPad
-  const availH = window.innerHeight * 0.92 - panelPad - cancelReserve
-  // tileW = (W - (cols-1)*gap) / cols; band height = 3*(tileW*4/3) + 2*rowGap = 4*tileW + 2*rowGap.
-  // Solve the widest W whose band height still fits availH so tall layouts never clip vertically.
-  const maxWByHeight =
-    ((availH - 2 * BLANK_EXCHANGE_POPUP_ROW_GAP) * cols) / 4 + (cols - 1) * gap
-  const fitCap = Math.min(availW, maxWByHeight)
-
-  // Preferred: exactly 1.5× the on-board sorted discard band as rendered right now in this window.
-  const onboardRow = Array.from(
-    document.querySelectorAll('.exposure-rack--discard-tracker-sorted-row'),
-  ).find((el) => !el.closest('.blank-exchange-overlay'))
-  const onboardW = onboardRow ? onboardRow.getBoundingClientRect().width : 0
-  const preferred = onboardW > 1 ? onboardW * BLANK_EXCHANGE_POPUP_SCALE : fitCap
-
-  return Math.max(120, Math.min(preferred, fitCap))
-}
-
-/**
- * Centered, enlarged copy of the sorted discard tracker, shown after a blank is dropped on the
- * tracker. It keeps the exact look of the on-board tracker; each already-discarded tile type can
- * be tapped to redeem the blank for it.
- */
-function BlankExchangeOverlay({
-  discardPile,
-  blankTilesEnabled,
-  suggestedNeedDefs,
-  onPick,
-  onCancel,
-}: {
-  discardPile: readonly DiscardEntry[]
-  blankTilesEnabled: boolean
-  /** Mirrors the on-board tracker's suggested-hand guide: needed tiles lit, others dimmed. */
-  suggestedNeedDefs: readonly TileDef[] | null
-  onPick: (def: TileDef) => void
-  onCancel: () => void
-}) {
-  const pickableDefs = useMemo(
-    () => discardedDefsForBlankExchange(discardPile),
-    [discardPile],
-  )
-  /** Width handed to the band grid; the `top-exposure-band` @container sizes tiles to fill it. */
-  const [bandW, setBandW] = useState<number | null>(null)
-  /** Width/height of the action-row Call/Swap button so Cancel matches its shape. */
-  const [actionBtnSize, setActionBtnSize] = useState<{ w: number; h: number } | null>(null)
-  /** Horizontal shift (px) so the panel centers on the playing area, not the whole viewport. */
-  const [centerOffsetX, setCenterOffsetX] = useState(0)
-
-  useLayoutEffect(() => {
-    const measure = () => {
-      const w = computeBlankExchangePopupBandWidth()
-      setBandW((prev) => (prev !== null && Math.abs(prev - w) < 0.5 ? prev : w))
-
-      const actionBtn = document.querySelector(
-        '.panel--hand .rack-bottom-bar--main .btn--joker-swap-action.rack-bottom-tile-cell--c9-10',
-      )
-      if (actionBtn) {
-        const r = actionBtn.getBoundingClientRect()
-        if (r.width > 1 && r.height > 1) setActionBtnSize({ w: r.width, h: r.height })
-      }
-
-      // Center on the main rack / action-button area (shifted right by the device cutout's safe
-      // inset) rather than the whole window. Offset = play-area center − viewport center.
-      const playArea =
-        document.querySelector('.panel--hand') ??
-        document.querySelector('.app-rack-stage') ??
-        document.querySelector('.app-play-split')
-      if (playArea) {
-        const pr = playArea.getBoundingClientRect()
-        if (pr.width > 1) {
-          let offset = pr.left + pr.width / 2 - window.innerWidth / 2
-          // Clamp so the (centered) panel never spills past either viewport edge once shifted.
-          const panelEl = document.querySelector('.blank-exchange-overlay__panel')
-          const panelW = panelEl ? panelEl.getBoundingClientRect().width : 0
-          if (panelW > 1) {
-            const margin = 6
-            const half = panelW / 2
-            const winCenter = window.innerWidth / 2
-            const minOffset = margin + half - winCenter
-            const maxOffset = window.innerWidth - margin - half - winCenter
-            if (minOffset <= maxOffset) offset = Math.min(Math.max(offset, minOffset), maxOffset)
-          }
-          setCenterOffsetX((prev) => (Math.abs(prev - offset) < 0.5 ? prev : offset))
-        }
-      }
-    }
-    measure()
-    requestAnimationFrame(measure)
-    window.addEventListener('resize', measure)
-    return () => window.removeEventListener('resize', measure)
-  }, [])
-
-  const overlayGridStyle: CSSProperties = {
-    ['--discard-tracker-slots-across' as string]: DISCARD_TRACKER_SORTED_BAND_COLS,
-    ...(bandW !== null
-      ? {
-          width: bandW,
-          gap: `${BLANK_EXCHANGE_POPUP_ROW_GAP}px`,
-          ['--player-rack-face-gap' as string]: `${BLANK_EXCHANGE_POPUP_FACE_GAP}px`,
-        }
-      : {}),
-  }
-  const scaleHostStyle: CSSProperties = bandW !== null ? { opacity: 1 } : { opacity: 0 }
-  // No transform: the grid is sized directly and its @container fills it with tiles. Flow the mirror
-  // in-line (override the absolute board-mirror positioning) so the panel sizes to the band. Zero the
-  // padding so the board's `.app-play-split` horizontal inset doesn't pad the popup wider than its band.
-  const mirrorStyle: CSSProperties = { position: 'static', padding: 0 }
-
-  return (
-    <div
-      className="blank-exchange-overlay"
-      role="dialog"
-      aria-modal
-      aria-labelledby="blank-exchange-overlay-title"
-      onClick={onCancel}
-    >
-      <div
-        className="blank-exchange-overlay__panel"
-        onClick={(e) => e.stopPropagation()}
-        style={centerOffsetX ? { transform: `translateX(${centerOffsetX}px)` } : undefined}
-      >
-        <h2 id="blank-exchange-overlay-title" className="blank-exchange-overlay__title">
-          Select a tile to recover.
-        </h2>
-        <div className="blank-exchange-overlay__scale-host" style={scaleHostStyle}>
-          <div
-            className="blank-exchange-overlay__tracker-mirror app-play-split app-top-exposure-container"
-            style={mirrorStyle}
-          >
-            <div className="discard-tracker__shell">
-              <div className="discard-tracker__content discard-tracker__content--tile-groups-only">
-                <div className="discard-tracker__tile-groups-container">
-                  <div
-                    className="discard-tracker__overlay-grid"
-                    aria-label="Discard tracker exchange"
-                    style={overlayGridStyle}
-                  >
-                    <div className="discard-tracker__overlay-row">
-                      <SortedDiscardTrayRow
-                        tiles={SORTED_DISCARD_ROW1_TILES}
-                        slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
-                        leadingSuitLabel={tileSuitRackWord('bam')}
-                        leadingSuitLabelTone="bam"
-                        ariaLabel="Exchange row 1"
-                        discardPile={discardPile}
-                        suggestedNeedDefs={suggestedNeedDefs}
-                        onSlotActivate={onPick}
-                        pickableDefs={pickableDefs}
-                      />
-                    </div>
-                    <div className="discard-tracker__overlay-row">
-                      <SortedDiscardTrayRow
-                        tiles={SORTED_DISCARD_ROW2_TILES}
-                        slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
-                        leadingSuitLabel={tileSuitRackWord('dot')}
-                        leadingSuitLabelTone="dot"
-                        ariaLabel="Exchange row 2"
-                        discardPile={discardPile}
-                        suggestedNeedDefs={suggestedNeedDefs}
-                        onSlotActivate={onPick}
-                        pickableDefs={pickableDefs}
-                      />
-                    </div>
-                    <div className="discard-tracker__overlay-row">
-                      <SortedDiscardTrayRow
-                        tiles={SORTED_DISCARD_ROW3_TILES}
-                        slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
-                        leadingSuitLabel={tileSuitRackWord('crak')}
-                        leadingSuitLabelTone="crak"
-                        ariaLabel="Exchange row 3"
-                        discardPile={discardPile}
-                        blankTilesEnabled={blankTilesEnabled}
-                        suggestedNeedDefs={suggestedNeedDefs}
-                        onSlotActivate={onPick}
-                        pickableDefs={pickableDefs}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <button
-          type="button"
-          className="btn btn--joker-swap-action blank-exchange-overlay__cancel"
-          onClick={onCancel}
-          style={
-            actionBtnSize
-              ? {
-                  width: actionBtnSize.w,
-                  height: actionBtnSize.h,
-                  minHeight: actionBtnSize.h,
-                }
-              : undefined
-          }
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  )
-}
-
-/** 3 rows: 13-column sorted discard grid (inset) + prefix + 14-column bot exposures. */
-function DiscardTrackerSlotGrid({
-  discardPile,
-  botExposures,
-  mainPhase,
-  activeBotIndex,
-  calledThrowerRowIdx,
-  jokerSwapUiActive,
-  animationsEnabled,
-  botExposureFlyInTileIds,
-  exposureJokerSwapFlyInTileIds,
-  botExposureSuggestedTileGuide,
-  botExposureDeadIds,
-  jokerSwapHintBounceTileIds,
-  jokerSwapHintBounceEpoch,
-  blankTilesEnabled,
-  suggestedDiscardTrackerNeedDefs,
-  botSlotSeats,
-}: {
-  discardPile: readonly DiscardEntry[]
-  botExposures: BotExposure[]
-  mainPhase: MainPhase
-  activeBotIndex: number | null
-  /** Seat row (0=South, 1=West, 2=North) that threw the tile currently being called. */
-  calledThrowerRowIdx: number | null
-  jokerSwapUiActive: boolean
-  animationsEnabled: boolean
-  botExposureFlyInTileIds: ReadonlySet<string> | null
-  exposureJokerSwapFlyInTileIds: ReadonlySet<string> | null
-  botExposureSuggestedTileGuide: { bestIds: ReadonlySet<string> } | null
-  botExposureDeadIds: ReadonlySet<string> | null
-  jokerSwapHintBounceTileIds: ReadonlySet<string> | null
-  jokerSwapHintBounceEpoch: number
-  blankTilesEnabled: boolean
-  suggestedDiscardTrackerNeedDefs: readonly TileDef[] | null
-  botSlotSeats: BotSlotSeats
-}) {
-  const botExposureSeats = useMemo(
-    () => botSlotSeats.map((s) => seatLabel(s) as BotSeat),
-    [botSlotSeats],
-  )
-  const botBandSlots =
-    DISCARD_TRACKER_BOT_PREFIX_SLOTS + DISCARD_TRACKER_BOT_ROW_SLOTS
-  const overlayGridRef = useRef<HTMLDivElement>(null)
-  const coachGuideActive =
-    !!botExposureSuggestedTileGuide?.bestIds?.size ||
-    !!suggestedDiscardTrackerNeedDefs?.length
-  useCoachLitNeighborClip(overlayGridRef, coachGuideActive, [
-    botExposures,
-    botExposureSuggestedTileGuide,
-    botExposureDeadIds,
-    suggestedDiscardTrackerNeedDefs,
-    mainPhase,
-    jokerSwapUiActive,
-    animationsEnabled,
-    botExposureFlyInTileIds,
-    exposureJokerSwapFlyInTileIds,
-    jokerSwapHintBounceTileIds,
-    jokerSwapHintBounceEpoch,
-  ])
-
-  const botRowMelds = useMemo(
-    () =>
-      botExposureSeats.map((seat) =>
-        botExposures
-          .map((exp, globalIdx) => ({ exp, globalIdx }))
-          .filter(({ exp }) => exp.seat === seat)
-          .filter(
-            ({ exp }) =>
-              mainPhase !== 'wall-game' ||
-              exp.tiles.length <= WALL_GAME_MAX_EXPOSURE_MELD_TILES,
-          )
-          .map(({ exp, globalIdx }) => ({
-            tiles: exp.tiles,
-            dropZoneId:
-              jokerSwapUiActive && exp.tiles.some((t) => t.def.cat === 'joker')
-                ? botExposureSwapDropId(globalIdx)
-                : undefined,
-          })),
-      ),
-    [botExposureSeats, botExposures, mainPhase, jokerSwapUiActive],
-  )
-
-  return (
-    <div
-      ref={overlayGridRef}
-      className="discard-tracker__overlay-grid"
-      aria-label="Discard tracker slot grid"
-      style={
-        {
-          ['--discard-tracker-slots-across' as string]: DISCARD_TRACKER_SLOTS_ACROSS,
-          ['--discard-tracker-bot-band-slots' as string]: botBandSlots,
-        } as CSSProperties
-      }
-    >
-      {botExposureSeats.map((seat, rowIdx) => {
-        const melds = botRowMelds[rowIdx] ?? []
-        return (
-          <div key={seat} className="discard-tracker__overlay-row">
-            {rowIdx === 0 ? (
-              <SortedDiscardTrayRow
-                tiles={SORTED_DISCARD_ROW1_TILES}
-                slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
-                leadingSuitLabel={tileSuitRackWord('bam')}
-                leadingSuitLabelTone="bam"
-                ariaLabel="Sorted discard row 1"
-                discardPile={discardPile}
-                suggestedNeedDefs={suggestedDiscardTrackerNeedDefs}
-              />
-            ) : rowIdx === 1 ? (
-              <SortedDiscardTrayRow
-                tiles={SORTED_DISCARD_ROW2_TILES}
-                slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
-                leadingSuitLabel={tileSuitRackWord('dot')}
-                leadingSuitLabelTone="dot"
-                ariaLabel="Sorted discard row 2"
-                discardPile={discardPile}
-                suggestedNeedDefs={suggestedDiscardTrackerNeedDefs}
-              />
-            ) : (
-              <SortedDiscardTrayRow
-                tiles={SORTED_DISCARD_ROW3_TILES}
-                slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
-                leadingSuitLabel={tileSuitRackWord('crak')}
-                leadingSuitLabelTone="crak"
-                ariaLabel="Sorted discard row 3"
-                discardPile={discardPile}
-                blankTilesEnabled={blankTilesEnabled}
-                suggestedNeedDefs={suggestedDiscardTrackerNeedDefs}
-              />
-            )}
-            <DiscardTrackerBotSeatLabel
-              seat={seat}
-              isActiveTurn={mainPhase === 'bot-turn' && activeBotIndex === rowIdx}
-              isCalledThrower={calledThrowerRowIdx === rowIdx}
-            />
-            <OpponentExposureDropZone
-              seat={seat}
-              active={jokerSwapUiActive}
-              showWatermark={false}
-              tag="div"
-            >
-              <ExposureRack
-                melds={melds}
-                slotCount={DISCARD_TRACKER_BOT_ROW_SLOTS}
-                className="exposure-rack--discard-tracker-opponent exposure-rack--discard-tracker-bot-row"
-                gridMeldColumnSpans
-                ariaLabel={`${seat} exposures`}
-                stackSuitTiles
-                flyInTileIds={animationsEnabled ? botExposureFlyInTileIds : null}
-                flyInFromBelowTileIds={animationsEnabled ? exposureJokerSwapFlyInTileIds : null}
-                suggestedTileGuide={botExposureSuggestedTileGuide}
-                suggestedDeadTileIds={botExposureDeadIds}
-                botJokerBorderMenuOn={false}
-                jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
-                jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
-              />
-            </OpponentExposureDropZone>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-/** East’s own exposure row: joker swap by dropping anywhere on your melds (same as a bot seat). */
-function EastOwnJokerSwapDropZone({ active, children }: { active: boolean; children: ReactNode }) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: EAST_SEAT_SWAP_ID,
-    disabled: !active,
-  })
-  return (
-    <div
-      ref={setNodeRef}
-      className={[
-        'east-own-exposure-swap-wrap',
-        active ? 'east-own-exposure-swap-wrap--active' : '',
-        isOver ? 'east-own-exposure-swap-wrap--over' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-    >
-      {children}
-    </div>
-  )
-}
-
-/** Staged East discard tile: `useSortable` (same `SortableContext` as the hand) so rack neighbours slide like in-hand drags. */
-function EastDiscardStagingSortableFace({
-  tile,
-  suggestBest,
-  suggestBlankExchange,
-  suggestDim,
-  jokerSwapHintBounce = false,
-  jokerSwapHintBounceEpoch = 0,
-  onTileClickReturn,
-}: {
-  tile: TileInstance
-  suggestBest?: boolean
-  /** Blank could be redeemed for a discard this line still needs — Simple joker yellow ring. */
-  suggestBlankExchange?: boolean
-  suggestDim?: boolean
-  jokerSwapHintBounce?: boolean
-  jokerSwapHintBounceEpoch?: number
-  onTileClickReturn: () => void
-}) {
-  const { active } = useDndContext()
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({
-    id: tile.id,
-    animateLayoutChanges: () => false,
-  })
-  const dragStyle: CSSProperties = {
-    transform: isDragging ? undefined : CSS.Transform.toString(transform),
-    transition:
-      isDragging
-        ? 'none'
-        : active
-          ? 'transform 0.14s cubic-bezier(0.2, 0, 0.2, 1)'
-          : 'none',
-    touchAction: 'none',
-  }
-  return (
-    <div
-      ref={setNodeRef}
-      style={dragStyle}
-      className={[
-        'east-discard-staging__tile',
-        isDragging ? 'east-discard-staging__tile--dragging' : '',
-        suggestBest ? 'east-discard-staging__tile--suggest-best' : '',
-        suggestBlankExchange ? 'east-discard-staging__tile--blank-exchange-hint' : '',
-        suggestDim ? 'east-discard-staging__tile--suggest-dim' : '',
-        jokerSwapHintBounce ? 'east-discard-staging__tile--joker-swap-hint-bounce' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-      {...listeners}
-      {...attributes}
-      onClick={(e) => {
-        e.stopPropagation()
-        onTileClickReturn()
-      }}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onTileClickReturn()
-        }
-      }}
-    >
-      <div
-        key={jokerSwapHintBounce ? `jsb-ed-${jokerSwapHintBounceEpoch}` : 'ed-face'}
-      >
-        <TileFace def={tile.def} elevated={isDragging} rackSuitStacked />
-      </div>
-    </div>
-  )
-}
-
-function EastDiscardStagingSlot({
-  enabled,
-  compact,
-  tile,
-  sortableSuppressed,
-  onTileClickReturn,
-  suggestBest,
-  suggestBlankExchange,
-  suggestDim,
-  jokerSwapHintBounce = false,
-  jokerSwapHintBounceEpoch = 0,
-}: {
-  enabled: boolean
-  /** Single-cell layout on the exposure rack row (vs. larger panel slot). */
-  compact?: boolean
-  tile: TileInstance | null
-  /**
-   * While the tile id is preview-inserted into the hand list (drag over rack), unmount the
-   * staging `useSortable` so only the hand phantom registers — same pattern as Charleston pass.
-   */
-  sortableSuppressed?: boolean
-  onTileClickReturn: () => void
-  /** Tile matches the focused suggested hand — show white inset ring. */
-  suggestBest?: boolean
-  /** Blank could be redeemed for a discard this line still needs — Simple joker yellow ring. */
-  suggestBlankExchange?: boolean
-  /** Tile is not needed for the focused suggested hand — dim like other unneeded rack tiles. */
-  suggestDim?: boolean
-  /** Joker swap hint: dock-bounce the staged tile when it can redeem an exposed joker. */
-  jokerSwapHintBounce?: boolean
-  jokerSwapHintBounceEpoch?: number
-}) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: EAST_DISCARD_STAGING_ID,
-    disabled: !enabled,
-  })
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={[
-        'east-discard-staging',
-        compact ? 'east-discard-staging--inline' : '',
-        isOver ? 'east-discard-staging--over' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-      aria-label="Staged discard"
-    >
-      {tile && !sortableSuppressed ? (
-        <EastDiscardStagingSortableFace
-          tile={tile}
-          suggestBest={suggestBest}
-          suggestBlankExchange={suggestBlankExchange}
-          suggestDim={suggestDim}
-          jokerSwapHintBounce={jokerSwapHintBounce}
-          jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
-          onTileClickReturn={onTileClickReturn}
-        />
-      ) : (
-        <span className="east-discard-staging__placeholder" aria-hidden="true" />
-      )}
-    </div>
-  )
-}
-
-/** When a bot claimed a discard after East skipped, or called the player's discard — drives seat-label call state. */
-type BotTurnBanner = {
-  callerBotIndex: 0 | 1 | 2
-  calledDef: TileDef
-  /** Bot seat (0=South, 1=West, 2=North) that threw the tile; null when the player threw. */
-  discarderBotIndex: 0 | 1 | 2 | null
-}
-
-type RoundState = {
-  hand: TileInstance[]
-  bots: [TileInstance[], TileInstance[], TileInstance[]]
-  /** Compass seat the human plays this hand (UI stays at the bottom). */
-  playerSeat: Seat
-  /** Compass seat at each bot UI slot (right / across / left). */
-  botSlotSeats: BotSlotSeats
-  wall: TileInstance[]
-  /** Wall length right after opening deal — drives the rack wall-heat meter for this hand. */
-  openingWallTileCount: number
-  passSlots: PassSlots
-  selectedHandTileId: string | null
-  charlestonPhase: CharlestonPhase
-  charlestonSkippedSecondRound: boolean
-  awaitingSecondCharlestonChoice: boolean
-  mainPhase: MainPhase
-  discardPile: DiscardEntry[]
-  /** Id of the most recent tile added to East's hand (draw or discard claim); shown with a green ring. */
-  drawnTileId: string | null
-  /** Index (0=South, 1=West, 2=North) of the bot whose discard is awaiting a Call (claim) decision. */
-  activeBotIndex: number | null
-  /** The tile the active bot just discarded; player can Call to claim it or skip. */
-  activeBotDiscard: TileInstance | null
-  /** Narration when the live discard came from a bot-on-bot claim (East had skipped the prior discard). */
-  botTurnBanner: BotTurnBanner | null
-  /** East's face-up melds accumulated this round. */
-  eastExposures: EastExposure[]
-  /** Bot face-up melds (calls on East's discards). */
-  botExposures: BotExposure[]
-  /** Tile removed from hand, awaiting Discard — main game East only. */
-  pendingEastDiscardTile: TileInstance | null
-  /** Original hand index of pendingEastDiscardTile — used to restore position on return. */
-  pendingEastDiscardIdx: number | null
-  /** Original hand indices of each pass-slot tile — used to restore position on return. */
-  passSlotOrigins: [number | null, number | null, number | null]
-  /** After each Charleston receive: hand tile ids not present before that pass (thin white edge line until next pass). */
-  charlestonNewTileIds: string[]
-  /**
-   * One-shot fly-in toward the rack for tiles in `ids` (cleared after animation).
-   * Opening deal uses `from: 'across'` so every hand tile drops in from above its slot.
-   */
-  handTileFlyIn: HandTileFlyIn | null
-  /**
-   * One hand tile id: play the wall-draw keyframes from **below** that rack slot (same as call tiles
-   * into exposure). Set when a joker is redeemed from the table into your hand; cleared after the fly.
-   */
-  handJokerSwapFlyInFromBelowId: string | null
-  /**
-   * One exposure tile id: play the drop-in from **below** that rack slot when a natural replaces an
-   * exposed joker during joker swap. Cleared after the fly.
-   */
-  exposureJokerSwapFlyInTileId: string | null
-  /** Ids of hand tiles the player has selected to join the staged call meld (call-staging phase only). */
-  stagedCallTileIds: string[]
-  /**
-   * After committing a claim (pung/kong/quint) while East is still in east-discard (has not
-   * discarded): id of the called tile in the meld the player may tap to re-enter call-staging
-   * and change non-called tiles. Cleared when East’s discard is committed.
-   */
-  callAmendableAfterClaimTileId: string | null
-  /** Legacy call-amend fields kept null for older saved rounds. */
-  callAmendFromBotIndex: 0 | 1 | 2 | null
-  /** Non-null when a bot won. Drives the bot-mahjong end screen. */
-  botWin:
-    | ({ botIndex: 0 | 1 | 2 } & (
-        | { how: 'self-draw'; tile: TileDef }
-        | { how: 'called-discard'; tile: TileDef; discardFrom: Seat | BotSeat }
-      ))
-    | null
-  /** How the player won Mah Jongg (set when mainPhase becomes 'mahjong-declared'). */
-  playerWinMethod:
-    | { type: 'self-draw'; tile: TileDef }
-    | { type: 'called-discard'; botLabel: BotSeat; tile: TileDef }
-    | null
-  /** Set when mainPhase becomes 'dead-hand' — drives the end-game explanation. */
-  deadHandReason: DeadHandReason | null
-}
-
-/**
- * Discard pile entries shown in the strip / tracker counts — excludes a bot discard still
- * claimable during `bot-turn` or `call-staging` until all players pass or someone claims it.
- */
-function discardPileCommittedForDisplay(
-  r: Pick<RoundState, 'discardPile' | 'mainPhase' | 'activeBotDiscard'>,
-): RoundState['discardPile'] {
-  if (
-    (r.mainPhase === 'bot-turn' || r.mainPhase === 'call-staging') &&
-    r.activeBotDiscard
-  ) {
-    return r.discardPile.filter((e) => e.tile.id !== r.activeBotDiscard!.id)
-  }
-  return r.discardPile
-}
-
-/**
- * Tiles in the discard pile that count as “dead” for practice-card table visibility / coach hints.
- * Matches the discard strip: while a bot’s discard is still claimable (`bot-turn` / `call-staging`),
- * that tile is omitted until the claim resolves — it must not read as already in your rack or as a
- * settled dead copy for `rankSuggestedHands` / strip need highlights.
- */
-function deadDiscardTilesForRanking(
-  r: Pick<RoundState, 'discardPile' | 'mainPhase' | 'activeBotDiscard'>,
-): TileInstance[] {
-  return discardPileCommittedForDisplay(r).map((e) => e.tile)
-}
 
 function totalCopiesForDeadHintDef(def: TileDef): number {
   if (def.cat === 'flower' || def.cat === 'joker') return 8
@@ -2061,31 +472,6 @@ function roundOpeningDeckOrder(r: Pick<RoundState, 'hand' | 'bots' | 'wall' | 'p
   return [...four.east, ...four.south, ...four.west, ...four.north, ...r.wall]
 }
 
-function toFourHands(r: Pick<RoundState, 'hand' | 'bots' | 'playerSeat' | 'botSlotSeats'>): FourHands {
-  return fourHandsFromRound(r.hand, r.bots, r.playerSeat, r.botSlotSeats)
-}
-
-function applyCharlestonPassForRound(
-  r: Pick<RoundState, 'hand' | 'bots' | 'playerSeat' | 'botSlotSeats'>,
-  phase: Exclude<CharlestonPhase, 'done'>,
-  playerPass: TileInstance[],
-  blindCount: number,
-  opts?: { pickBotPass?: CharlestonBotPassPicker },
-): FourHands {
-  const absolute = toFourHands(r)
-  const rotated = fourHandsWithPlayerAsEast(absolute, r.playerSeat)
-  const nextRotated = applyCharlestonExchange(phase, rotated, playerPass, blindCount, opts)
-  return fourHandsFromPlayerAsEast(nextRotated, r.playerSeat)
-}
-
-function botLabelAt(r: Pick<RoundState, 'botSlotSeats'>, botIndex: 0 | 1 | 2): BotSeat {
-  return seatLabel(r.botSlotSeats[botIndex]) as BotSeat
-}
-
-function botSeatAt(r: Pick<RoundState, 'botSlotSeats'>, botIndex: 0 | 1 | 2): Seat {
-  return r.botSlotSeats[botIndex]
-}
-
 function discardFromSeat(seat: Seat): 'east' | 'South' | 'West' | 'North' {
   return seat === 'east' ? 'east' : (seatLabel(seat) as 'South' | 'West' | 'North')
 }
@@ -2102,56 +488,6 @@ function toWinDiscardFrom(seat: Seat | BotSeat): 'east' | 'South' | 'West' | 'No
             ? 'north'
             : seat
   return discardFromSeat(normalized)
-}
-
-/** Player's open-claim melds (East compass row when player is East; else that seat in bot exposures). */
-function playerClaimMeldsForRound(
-  r: Pick<RoundState, 'playerSeat' | 'eastExposures' | 'botExposures'>,
-): ReadonlyArray<{ tiles: TileInstance[] }> {
-  if (r.playerSeat === 'east') return r.eastExposures
-  const label = seatLabel(r.playerSeat) as BotSeat
-  return r.botExposures.filter((e) => e.seat === label)
-}
-
-/** Melds shown in the player's exposure row above the hand rack. */
-function playerExposureMeldsForRound(
-  r: Pick<RoundState, 'playerSeat' | 'eastExposures' | 'botExposures'>,
-): EastExposure[] {
-  if (r.playerSeat === 'east') return r.eastExposures
-  const label = seatLabel(r.playerSeat) as BotSeat
-  return r.botExposures
-    .filter((e) => e.seat === label)
-    .map((e) => ({
-      tiles: e.tiles,
-      claimType: e.claimType,
-      calledTileId: e.tiles[0]?.id,
-    }))
-}
-
-function replacePlayerExposures(r: RoundState, exposures: EastExposure[]): RoundState {
-  if (r.playerSeat === 'east') {
-    return { ...r, eastExposures: exposures }
-  }
-  const label = seatLabel(r.playerSeat) as BotSeat
-  const rest = r.botExposures.filter((e) => e.seat !== label)
-  const mapped: BotExposure[] = exposures.map((exp) => ({
-    seat: label,
-    tiles: exp.tiles,
-    claimType: exp.claimType,
-  }))
-  return { ...r, botExposures: [...rest, ...mapped] }
-}
-
-function commitPlayerExposureOrdered(
-  r: RoundState,
-  handNext: TileInstance[],
-  pileNext: DiscardEntry[],
-  exposure: EastExposure,
-): EastExposure[] {
-  return orderEastExposuresForClosestCardLine(r, handNext, pileNext, [
-    ...playerExposureMeldsForRound(r),
-    exposure,
-  ])
 }
 
 type OpeningDealMeta = {
@@ -2220,9 +556,6 @@ function roundStateFromOpeningDeck(
   }
 }
 
-function applyDeadHand(r: RoundState, reason: DeadHandReason): RoundState {
-  return { ...r, mainPhase: 'dead-hand', deadHandReason: reason }
-}
 
 function createNewRound(
   tenJokersEnabled: boolean,
@@ -2241,16 +574,7 @@ function createNewRound(
   )
 }
 
-function charlestonIncomingHandTileIds(
-  prevHand: TileInstance[],
-  nextHand: TileInstance[],
-): string[] {
-  const prev = new Set(prevHand.map((t) => t.id))
-  return nextHand.filter((t) => !prev.has(t.id)).map((t) => t.id)
-}
 
-/** Bot exposures with this many tiles in one meld are treated as wall-game hand dumps, not real calls. */
-const WALL_GAME_MAX_EXPOSURE_MELD_TILES = 10
 /** Stable empty melds for memo(ExposureRack) during mahjong-declared. */
 const EMPTY_EXPOSURE_RACK_MELDS: { tiles: TileInstance[] }[] = []
 
@@ -2875,107 +1199,6 @@ async function findFirstBotMahjongOnDiscard(
   return null
 }
 
-function getRepDefForExposedJoker(
-  r: RoundState,
-  parsed: { rack: 'bot' | 'east'; exposureIdx: number },
-): TileDef | null {
-  if (parsed.rack === 'bot') {
-    const exp = r.botExposures[parsed.exposureIdx]
-    return exp ? representativeDefInExposedMeld(exp.tiles) : null
-  }
-  const exp = r.eastExposures[parsed.exposureIdx]
-  return exp ? representativeDefInExposedMeld(exp.tiles) : null
-}
-
-/**
- * East trades a natural from their hand for an exposed joker (on any rack). The natural
- * replaces the joker in the meld; East receives the joker.
- */
-function applyEastNaturalForExposedJoker(
-  r: RoundState,
-  p: { rack: 'bot' | 'east'; exposureIdx: number; jokerTileId: string; eastTileId: string },
-): RoundState {
-  if (r.mainPhase !== 'east-discard' && r.mainPhase !== 'call-staging') return r
-  // Don't pull a tile out of the call you're currently staging — it would leave a dangling id
-  // in stagedCallTileIds and break the call meld.
-  if (r.mainPhase === 'call-staging' && r.stagedCallTileIds.includes(p.eastTileId)) return r
-  const handIdx = r.hand.findIndex((t) => t.id === p.eastTileId)
-  // Also accept tiles staged in the discard tray (pendingEastDiscardTile).
-  const fromPending = handIdx < 0 && r.pendingEastDiscardTile?.id === p.eastTileId
-  if (handIdx < 0 && !fromPending) return r
-  const eastTile = handIdx >= 0 ? r.hand[handIdx]! : r.pendingEastDiscardTile!
-  if (eastTile.def.cat === 'joker') return r
-
-  const rep = getRepDefForExposedJoker(r, p)
-  if (!rep || !tileDefsEqual(eastTile.def, rep)) return r
-
-  // Build the updated hand: if the tile came from hand, replace it with the joker in-place;
-  // if it came from pendingEastDiscardTile, append the joker to the current hand.
-  function buildHandAndPending(joker: TileInstance): { handNext: TileInstance[]; pendingNext: TileInstance | null } {
-    if (handIdx >= 0) {
-      const handNext = [...r.hand]
-      handNext[handIdx] = joker
-      return { handNext, pendingNext: r.pendingEastDiscardTile }
-    }
-    return { handNext: [...r.hand, joker], pendingNext: null }
-  }
-
-  if (p.rack === 'bot') {
-    const exp = r.botExposures[p.exposureIdx]
-    if (!exp) return r
-    const joker = exp.tiles.find((t) => t.id === p.jokerTileId)
-    if (!joker || joker.def.cat !== 'joker') return r
-    const { handNext, pendingNext } = buildHandAndPending(joker)
-    const botExposuresNext = [...r.botExposures]
-    botExposuresNext[p.exposureIdx] = {
-      ...exp,
-      tiles: exp.tiles.map((t) => (t.id === p.jokerTileId ? eastTile : t)),
-    }
-    return applyBotsJokerSwapsFromEast({
-      ...r,
-      hand: handNext,
-      botExposures: botExposuresNext,
-      pendingEastDiscardTile: pendingNext,
-      drawnTileId: joker.id,
-      handTileFlyIn: null,
-      handJokerSwapFlyInFromBelowId: joker.id,
-      exposureJokerSwapFlyInTileId: eastTile.id,
-      selectedHandTileId: null,
-    })
-  }
-
-  const exp = r.eastExposures[p.exposureIdx]
-  if (!exp) return r
-  const joker = exp.tiles.find((t) => t.id === p.jokerTileId)
-  if (!joker || joker.def.cat !== 'joker') return r
-  const { handNext, pendingNext } = buildHandAndPending(joker)
-  const eastExposuresNext = [...r.eastExposures]
-  eastExposuresNext[p.exposureIdx] = {
-    ...exp,
-    tiles: exp.tiles.map((t) => (t.id === p.jokerTileId ? eastTile : t)),
-  }
-  return applyBotsJokerSwapsFromEast({
-    ...r,
-    hand: handNext,
-    eastExposures: eastExposuresNext,
-    pendingEastDiscardTile: pendingNext,
-    drawnTileId: joker.id,
-    handTileFlyIn: null,
-    handJokerSwapFlyInFromBelowId: joker.id,
-    exposureJokerSwapFlyInTileId: eastTile.id,
-    selectedHandTileId: null,
-  })
-}
-
-/**
- * Bot joker redemptions run only in {@link performBotPreDiscardSwaps} on that seat’s own turn
- * (E → S → W → N), before they discard — not during `bot-turn` while another seat’s discard is
- * claimable. East uses {@link applyEastNaturalForExposedJoker} on `east-discard` / `call-staging`.
- */
-function applyBotsJokerSwapsFromEast(r: RoundState): RoundState {
-  return r
-}
-
 /**
  * East commits a discard already taken out of the hand (`pendingEastDiscardTile` or staging flow).
  */
@@ -3420,390 +1643,6 @@ async function applySkipBotDiscard(
   return advanceToNextActorAfter(r, fromSeat, botsNext, botWinsEnabled, botDifficulty, cardId)
 }
 
-/** Player decided to call — move called tile into staging exposure; player picks meld tiles. */
-function applyInitiateCall(r: RoundState): RoundState {
-  if (r.mainPhase !== 'bot-turn' || !r.activeBotDiscard) return r
-  return { ...r, mainPhase: 'call-staging', stagedCallTileIds: [], botTurnBanner: null }
-}
-
-/**
- * Auto-select `needed` hand tiles for the staged meld (naturals first, then jokers).
- * Replaces any prior staged selection.
- */
-function applyAutoSelectCallTiles(r: RoundState, needed: number): RoundState {
-  if (r.mainPhase !== 'call-staging' || !r.activeBotDiscard) return r
-  const calledDef = r.activeBotDiscard.def
-  const naturals = findExactMatches(r.hand, calledDef)
-  const jokers = r.hand.filter((t) => t.def.cat === 'joker')
-  const selected = [...naturals, ...jokers].slice(0, needed)
-  return { ...r, stagedCallTileIds: selected.map((t) => t.id) }
-}
-
-/** Toggle a hand tile into/out of the staged call meld (any tile except the locked called tile). */
-function applyToggleStagedCallTile(r: RoundState, tileId: string): RoundState {
-  if (r.mainPhase !== 'call-staging' || !r.activeBotDiscard) return r
-  if (r.stagedCallTileIds.includes(tileId)) {
-    return { ...r, stagedCallTileIds: r.stagedCallTileIds.filter((id) => id !== tileId) }
-  }
-  const tile = r.hand.find((t) => t.id === tileId)
-  if (!tile) return r
-  if (r.stagedCallTileIds.length >= 5) return r
-  return { ...r, stagedCallTileIds: [...r.stagedCallTileIds, tileId] }
-}
-
-/** After committing a new claim meld, left-to-right order of exposures matches the closest line’s group order when possible. */
-function orderEastExposuresForClosestCardLine(
-  r: RoundState,
-  hand: TileInstance[],
-  discardPile: RoundState['discardPile'],
-  nextEast: EastExposure[],
-): EastExposure[] {
-  if (nextEast.length < 2) return nextEast
-  const { closestLine } = summarizeRackTowardWin({
-    hand,
-    wallRemaining: r.wall.length,
-    discards: discardPile.map((e) => e.tile),
-    exposures: r.botExposures,
-    playerClaimMelds: nextEast,
-    eastTableClaimMelds: nextEast,
-    patterns: getActiveCardPatterns(),
-  })
-  if (!closestLine) return nextEast
-  const pat = getActiveCardPatternById(closestLine.id)
-  if (!pat) return nextEast
-  const reordered = reorderEastExposuresToPatternGroupOrder(nextEast, pat)
-  if (!reordered) return nextEast
-  return reordered as EastExposure[]
-}
-
-function buildRankInputAfterStagedCall(
-  r: RoundState,
-  handNext: TileInstance[],
-  pileNext: RoundState['discardPile'],
-  eastMelds: EastExposure[],
-): RankSuggestedHandsInput {
-  return {
-    hand: handNext,
-    wallRemaining: r.wall.length,
-    discards: pileNext.map((e) => e.tile),
-    exposures: r.botExposures,
-    playerClaimMelds: eastMelds,
-    eastTableClaimMelds: eastMelds,
-    patterns: getActiveCardPatterns(),
-  }
-}
-
-/** Hand + exposures after modeling the in-progress call meld (called discard + staged hand tiles). */
-function buildCallStagingPreview(
-  r: Pick<
-    RoundState,
-    'hand' | 'discardPile' | 'eastExposures' | 'activeBotDiscard' | 'stagedCallTileIds'
-  >,
-  orderRound?: RoundState,
-): { handNext: TileInstance[]; eastMelds: EastExposure[] } | null {
-  if (!r.activeBotDiscard) return null
-
-  const calledTile = r.activeBotDiscard
-  const stagedTiles = r.stagedCallTileIds
-    .map((id) => r.hand.find((t) => t.id === id))
-    .filter((t): t is TileInstance => !!t)
-  if (stagedTiles.length > 5) return null
-
-  const stagedIds = new Set(r.stagedCallTileIds)
-  const handNext = r.hand.filter((t) => !stagedIds.has(t.id))
-  const pileNext = r.discardPile.filter((e) => e.tile.id !== calledTile.id)
-  const claimType = claimTypeForHandTilesFromDiscard(stagedTiles.length) ?? 'pung'
-  const exposure: EastExposure = {
-    tiles: [calledTile, ...stagedTiles],
-    claimType,
-    calledTileId: calledTile.id,
-  }
-  let eastMelds: EastExposure[] = [...r.eastExposures, exposure]
-  if (stagedTiles.length >= 2 && orderRound) {
-    eastMelds = orderEastExposuresForClosestCardLine(orderRound, handNext, pileNext, eastMelds)
-  }
-  return { handNext, eastMelds }
-}
-
-/**
- * Rank input while call-staging: the exposure slot (called discard + staged hand tiles) counts
- * toward tiles-away / prob exactly as after Done — without requiring a committable meld shape.
- */
-function rankInputDuringCallStaging(
-  r: Pick<
-    RoundState,
-    | 'mainPhase'
-    | 'hand'
-    | 'wall'
-    | 'discardPile'
-    | 'botExposures'
-    | 'eastExposures'
-    | 'activeBotDiscard'
-    | 'stagedCallTileIds'
-  >,
-): RankSuggestedHandsInput | null {
-  if (r.mainPhase !== 'call-staging' || !r.activeBotDiscard) return null
-
-  const preview = buildCallStagingPreview(r, r as RoundState)
-  if (!preview) return null
-  const pileNext = r.discardPile.filter((e) => e.tile.id !== r.activeBotDiscard!.id)
-  return buildRankInputAfterStagedCall(r as RoundState, preview.handNext, pileNext, preview.eastMelds)
-}
-
-/** Rank input after committing the currently staged call tiles, or `null` if not a committable meld. */
-function previewStagedCallRankInput(r: RoundState): RankSuggestedHandsInput | null {
-  if (r.mainPhase !== 'call-staging' || !r.activeBotDiscard) return null
-  const calledTile = r.activeBotDiscard
-  const stagedTiles = r.stagedCallTileIds
-    .map((id) => r.hand.find((t) => t.id === id))
-    .filter((t): t is TileInstance => !!t)
-  if (stagedTiles.length === 0) return null
-  if (stagedTiles.length > 5) return null
-  if (stagedTiles.length === 1) {
-    const meldOk = stagedTiles.every(
-      (t) => t.def.cat === 'joker' || tileDefsEqual(t.def, calledTile.def),
-    )
-    if (!meldOk) return null
-    return rankInputDuringCallStaging(r)
-  }
-  const meldIsValid = stagedTiles.every(
-    (t) => t.def.cat === 'joker' || tileDefsEqual(t.def, calledTile.def),
-  )
-  if (!meldIsValid) return null
-  if (!claimTypeForHandTilesFromDiscard(stagedTiles.length)) return null
-  return rankInputDuringCallStaging(r)
-}
-
-/**
- * `bestTilesAway` after committing the current staged call meld (pung+), or `null` if the staging
- * does not form a committable shape (invalid or incomplete mapping).
- */
-function previewStagedCallBestTilesAway(r: RoundState): number | null {
-  const input = previewStagedCallRankInput(r)
-  if (!input) return null
-  return summarizeRackTowardWin(input).bestTilesAway
-}
-
-function previewAutoSelectedCallRankInput(
-  r: RoundState,
-  needed: number,
-): RankSuggestedHandsInput | null {
-  if (
-    (r.mainPhase !== 'bot-turn' && r.mainPhase !== 'call-staging') ||
-    !r.activeBotDiscard
-  ) {
-    return null
-  }
-  if (needed < 2 || needed > 5) return null
-  const calledTile = r.activeBotDiscard
-  const naturals = findExactMatches(r.hand, calledTile.def)
-  const jokers = r.hand.filter((t) => t.def.cat === 'joker')
-  const stagedTiles = [...naturals, ...jokers].slice(0, needed)
-  if (stagedTiles.length < needed) return null
-
-  const stagedIds = new Set(stagedTiles.map((t) => t.id))
-  const handNext = r.hand.filter((t) => !stagedIds.has(t.id))
-  const pileNext = r.discardPile.filter((e) => e.tile.id !== calledTile.id)
-  const claimType = claimTypeForHandTilesFromDiscard(needed)
-  if (!claimType) return null
-  const exposure: EastExposure = {
-    tiles: [calledTile, ...stagedTiles],
-    claimType,
-    calledTileId: calledTile.id,
-  }
-  const eastMelds = orderEastExposuresForClosestCardLine(r, handNext, pileNext, [
-    ...r.eastExposures,
-    exposure,
-  ])
-
-  return buildRankInputAfterStagedCall(r, handNext, pileNext, eastMelds)
-}
-
-/**
- * Commit the staged meld: remove staged tiles from hand, add the exposure, return to east-discard;
- * or complete Mah Jongg on the live discard (0 staged = tile to hand only; 1 staged = pair exposure win).
- *
- * Training mode: an invalid meld (mismatched non-joker tiles) is committed anyway so the player
- * sees a warning at discard time. Competition mode kills the hand on commit.
- */
-function applyCommitStagedCall(
-  r: RoundState,
-  gameMode: 'training' | 'competition' = 'competition',
-): RoundState {
-  if (r.mainPhase !== 'call-staging' || !r.activeBotDiscard) return r
-  const calledTile = r.activeBotDiscard
-  const stagedTiles = r.stagedCallTileIds
-    .map((id) => r.hand.find((t) => t.id === id))
-    .filter((t): t is TileInstance => !!t)
-
-  if (stagedTiles.length === 0) {
-    const chk: CallValidationRoundSlice = {
-      mainPhase: 'bot-turn',
-      activeBotDiscard: calledTile,
-      hand: r.hand,
-      eastExposures: r.eastExposures,
-      botExposures: r.botExposures,
-      wall: r.wall,
-      discardPile: r.discardPile,
-    }
-    if (hasLegalMahjongOnBotDiscard(chk)) {
-      return applyDeclareMahjong({ ...r, mainPhase: 'bot-turn' })
-    }
-    return r
-  }
-
-  if (stagedTiles.length === 1) {
-    const meldOk = stagedTiles.every(
-      (t) => t.def.cat === 'joker' || tileDefsEqual(t.def, calledTile.def),
-    )
-    if (!meldOk) {
-      if (gameMode === 'training') return r
-      return applyDeadHand(r, 'invalid-call-meld')
-    }
-    const stagedIds = new Set(r.stagedCallTileIds)
-    const handNext = r.hand.filter((t) => !stagedIds.has(t.id))
-    const pileNext = r.discardPile.filter((e) => e.tile.id !== calledTile.id)
-    const exposure: EastExposure = {
-      tiles: [calledTile, ...stagedTiles],
-      claimType: 'pung',
-      calledTileId: calledTile.id,
-    }
-    const eastMelds = commitPlayerExposureOrdered(r, handNext, pileNext, exposure)
-    const { bestTilesAway } = summarizeRackTowardWin({
-      hand: handNext,
-      wallRemaining: r.wall.length,
-      discards: pileNext.map((e) => e.tile),
-      exposures: r.botExposures,
-      playerClaimMelds: eastMelds,
-      eastTableClaimMelds: r.eastExposures,
-    })
-    if (bestTilesAway !== 0) return r
-    const botLabel = botLabelAt(r, r.activeBotIndex as 0 | 1 | 2)
-    return applyBotsJokerSwapsFromEast({
-      ...replacePlayerExposures(r, eastMelds),
-      hand: handNext,
-      discardPile: pileNext,
-      mainPhase: 'mahjong-declared',
-      activeBotIndex: null,
-      activeBotDiscard: null,
-      botTurnBanner: null,
-      pendingEastDiscardTile: null,
-      drawnTileId: null,
-      selectedHandTileId: null,
-      stagedCallTileIds: [],
-      playerWinMethod: { type: 'called-discard', botLabel, tile: calledTile.def },
-    })
-  }
-
-  if (stagedTiles.length < 2 || stagedTiles.length > 5) return r
-  // Every staged hand tile must exactly match the called tile's def or be a joker. In competition
-  // mode an invalid meld kills the hand immediately; training mode commits anyway so the player
-  // sees a warning when they try to discard.
-  const meldIsValid = stagedTiles.every(
-    (t) => t.def.cat === 'joker' || tileDefsEqual(t.def, calledTile.def),
-  )
-  if (!meldIsValid && gameMode !== 'training') {
-    return applyDeadHand(r, 'invalid-call-meld')
-  }
-  const claimType = claimTypeForHandTilesFromDiscard(stagedTiles.length)
-  if (!claimType) return r
-  const stagedIds = new Set(r.stagedCallTileIds)
-  const handNext = r.hand.filter((t) => !stagedIds.has(t.id))
-  const pileNext = r.discardPile.filter((e) => e.tile.id !== calledTile.id)
-  const exposure: EastExposure = {
-    tiles: [calledTile, ...stagedTiles],
-    claimType,
-    calledTileId: calledTile.id,
-  }
-  const nextEast = commitPlayerExposureOrdered(r, handNext, pileNext, exposure)
-  const { bestTilesAway: awayOpen } = summarizeRackTowardWin({
-    hand: handNext,
-    wallRemaining: r.wall.length,
-    discards: pileNext.map((e) => e.tile),
-    exposures: r.botExposures,
-    playerClaimMelds: nextEast,
-    eastTableClaimMelds: r.eastExposures,
-  })
-  if (awayOpen === 0) {
-    const botLabel = botLabelAt(r, r.activeBotIndex as 0 | 1 | 2)
-    return applyBotsJokerSwapsFromEast({
-      ...replacePlayerExposures(r, nextEast),
-      hand: handNext,
-      discardPile: pileNext,
-      mainPhase: 'mahjong-declared',
-      activeBotIndex: null,
-      activeBotDiscard: null,
-      botTurnBanner: null,
-      pendingEastDiscardTile: null,
-      drawnTileId: null,
-      selectedHandTileId: null,
-      stagedCallTileIds: [],
-      callAmendableAfterClaimTileId: null,
-      callAmendFromBotIndex: null,
-      playerWinMethod: { type: 'called-discard', botLabel, tile: calledTile.def },
-    })
-  }
-  return applyBotsJokerSwapsFromEast({
-    ...replacePlayerExposures(r, nextEast),
-    hand: handNext,
-    discardPile: pileNext,
-    mainPhase: 'east-discard',
-    activeBotIndex: null,
-    activeBotDiscard: null,
-    botTurnBanner: null,
-    pendingEastDiscardTile: null,
-    drawnTileId: null,
-    selectedHandTileId: null,
-    stagedCallTileIds: [],
-    callAmendableAfterClaimTileId: null,
-    callAmendFromBotIndex: null,
-  })
-}
-
-
-/**
- * Player declares Mah Jongg on the active bot's discard.
- * The discard is added to East's hand (completing the winning hand).
- * Win validation comes in a later step; this records the claim.
- */
-function applyDeclareMahjong(r: RoundState): RoundState {
-  if ((r.mainPhase !== 'bot-turn' && r.mainPhase !== 'call-staging') || !r.activeBotDiscard) return r
-  const calledTile = r.activeBotDiscard
-  const pileNext = r.discardPile.filter((e) => e.tile.id !== calledTile.id)
-  const botLabel = botLabelAt(r, r.activeBotIndex as 0 | 1 | 2)
-  const flyFrom =
-    r.activeBotIndex != null ? handTileFlyInFromBotSeat(r.activeBotIndex as 0 | 1 | 2) : ('across' as const)
-  return {
-    ...r,
-    hand: [...r.hand, calledTile],
-    discardPile: pileNext,
-    mainPhase: 'mahjong-declared',
-    activeBotIndex: null,
-    activeBotDiscard: null,
-    botTurnBanner: null,
-    drawnTileId: null,
-    selectedHandTileId: null,
-    stagedCallTileIds: [],
-    playerWinMethod: { type: 'called-discard', botLabel, tile: calledTile.def },
-    handTileFlyIn: { ids: [calledTile.id], from: flyFrom },
-  }
-}
-
-/** Self-draw Mah Jongg: player declares on their own drawn tile (east-discard phase). */
-function applyDeclareMahjongSelfDraw(r: RoundState): RoundState {
-  if (r.mainPhase !== 'east-discard' || !r.drawnTileId) return r
-  const drawnTile = r.hand.find((t) => t.id === r.drawnTileId)
-  if (!drawnTile) return r
-  return {
-    ...r,
-    playerWinMethod: { type: 'self-draw', tile: drawnTile.def },
-    mainPhase: 'mahjong-declared',
-    drawnTileId: null,
-    selectedHandTileId: null,
-    pendingEastDiscardTile: null,
-  }
-}
-
 /** Suggested-hand filter row: pressable pill with label inside (matches menu radio chips). */
 function AppMenuFilterToggleButton({
   pressed,
@@ -3944,6 +1783,7 @@ export default function App() {
   /** While true, ResizeObserver / visualViewport must not rewrite `--hand-panel-cqw` (mobile drag). */
   const handPanelCqwFrozenRef = useRef(false)
   const refreshHandPanelCqwRef = useRef<() => void>(() => {})
+  const playSurfaceDnDApiRef = useRef<PlaySurfaceDnDApi | null>(null)
   const [suggestedDiscardOverlayBounds, setSuggestedDiscardOverlayBounds] = useState({
     topExtendPx: 0,
     bottomExtendPx: 0,
@@ -4446,8 +2286,6 @@ export default function App() {
   /** Natural dragged into the joker swap slot (next to discards); tap Swap — not a discard. */
   const [pendingJokerSwapTileId, setPendingJokerSwapTileId] = useState<string | null>(null)
   const gameModeRef = useRef<'training' | 'competition'>('training')
-  const lastDragPointerRef = useRef({ x: 0, y: 0 })
-  const globalDragPointerCleanupRef = useRef<(() => void) | null>(null)
   /** Drop on call-initiate: animate the called tile from the release point into the exposure slot. */
   const [callEntryMagnet, setCallEntryMagnet] = useState<{ from: { x: number; y: number } } | null>(null)
   const [charlestonPassError, setCharlestonPassError] = useState<string | null>(null)
@@ -6146,718 +3984,7 @@ export default function App() {
     return { rows: [eastRow, ...botRows] }
   }, [mainPhase, bots, hand, wall.length, discardTiles, botExposures, eastExposures, cardPatterns, botSlotSeats, playerYouLabelText])
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-  )
-
-  const [dragOverlayTile, setDragOverlayTile] = useState<TileInstance | null>(null)
-  const [dragOverlayMeldTiles, setDragOverlayMeldTiles] = useState<TileInstance[] | null>(null)
-  const [dragOverlayRackSuitStacked, setDragOverlayRackSuitStacked] = useState(false)
-  /** Set when a blank is dropped on the tracker: the centered tracker becomes tappable to pick a discard. */
-  const [blankExchangeOpen, setBlankExchangeOpen] = useState<{ blankTileId: string } | null>(null)
-  /** A blank tile is being dragged on your turn — from the rack OR staged in the discard slot —
-   * arms the tracker drop zone (shows the orange outline + enables the drop). */
-  const blankExchangeDragArmed =
-    charlestonDone &&
-    mainPhase === 'east-discard' &&
-    dragOverlayTile?.def.cat === 'blank' &&
-    (hand.some((t) => t.id === dragOverlayTile.id) ||
-      pendingEastDiscardTile?.id === dragOverlayTile.id)
-
-  const closeBlankExchange = useCallback(() => {
-    setBlankExchangeOpen(null)
-  }, [])
-
-  const performBlankExchange = useCallback(
-    (chosenDef: TileDef) => {
-      const target = blankExchangeOpen
-      if (!target) return
-      pushRound((r) => {
-        if (r.mainPhase !== 'east-discard') return r
-        const eligible = discardedDefsForBlankExchange(r.discardPile)
-        if (!eligible.some((d) => tileDefsEqual(d, chosenDef))) return r
-        const newTile: TileInstance = { id: crypto.randomUUID(), def: chosenDef }
-
-        // The redeemed tile is taken out of the discards: drop one matching entry so its tracker
-        // count falls by one (and it stops being exchangeable once none of that type remain).
-        const takenIdx = r.discardPile.findIndex(({ tile }) => tileDefsEqual(tile.def, chosenDef))
-        const discardWithoutTaken =
-          takenIdx >= 0
-            ? [...r.discardPile.slice(0, takenIdx), ...r.discardPile.slice(takenIdx + 1)]
-            : [...r.discardPile]
-
-        // The blank can be in the hand (dragged to the tracker) or staged in the discard slot
-        // (tapped in, then Swap). Either way the redeemed tile lands back in the hand.
-        const handIdx = r.hand.findIndex(
-          (t) => t.id === target.blankTileId && t.def.cat === 'blank',
-        )
-        if (handIdx >= 0) {
-          const blankTile = r.hand[handIdx]!
-          const handNext = [...r.hand]
-          handNext[handIdx] = newTile
-          return {
-            ...r,
-            hand: handNext,
-            // The given-up blank goes face-up into the discards — shows under B in the tracker.
-            discardPile: [...discardWithoutTaken, { tile: blankTile, seat: 'east' }],
-            drawnTileId: newTile.id,
-            selectedHandTileId: null,
-          }
-        }
-        if (
-          r.pendingEastDiscardTile?.id === target.blankTileId &&
-          r.pendingEastDiscardTile.def.cat === 'blank'
-        ) {
-          const blankTile = r.pendingEastDiscardTile
-          const insertIdx = Math.min(r.pendingEastDiscardIdx ?? r.hand.length, r.hand.length)
-          const handNext = [...r.hand]
-          handNext.splice(insertIdx, 0, newTile)
-          return {
-            ...r,
-            hand: handNext,
-            // The given-up blank goes face-up into the discards — shows under B in the tracker.
-            discardPile: [...discardWithoutTaken, { tile: blankTile, seat: 'east' }],
-            pendingEastDiscardTile: null,
-            pendingEastDiscardIdx: null,
-            drawnTileId: newTile.id,
-            selectedHandTileId: null,
-          }
-        }
-        return r
-      })
-      closeBlankExchange()
-    },
-    [blankExchangeOpen, pushRound, closeBlankExchange],
-  )
-
-  // If the player's turn ends (e.g. undo, new deal) close any open exchange popup.
-  useEffect(() => {
-    if (mainPhase !== 'east-discard') {
-      setBlankExchangeOpen(null)
-    }
-  }, [mainPhase])
-  /** While dragging a Charleston pass tile over the hand, lift it into the hand sortable list so neighbours slide. */
-  const [charlestonPassIntoHandPreview, setCharlestonPassIntoHandPreview] = useState<{
-    tileId: string
-    handPreviewIndex: number
-  } | null>(null)
-  /**
-   * While dragging a hand tile up onto a Charleston pass slot, the pass box wins the drop target so
-   * dnd-kit clears the hand's reorder transforms — the slid neighbours would otherwise snap back to
-   * their home columns ("slide right"). Holding the lifted tile's id here tells the hand to preview
-   * the rack *compacted* (as if the tile were already removed), which matches the dropped state, so
-   * there is no jarring snap.
-   */
-  const [charlestonHandPassStageTileId, setCharlestonHandPassStageTileId] = useState<string | null>(null)
-  /** Same idea as Charleston: while dragging staged East discard over the rack, hand list preview + phantom so neighbours slide. */
-  const [eastDiscardIntoHandPreview, setEastDiscardIntoHandPreview] = useState<{
-    tileId: string
-    handPreviewIndex: number
-  } | null>(null)
-
-  /** While dragging the live bot discard — mounts the teal call drop box on the exposure row. */
-  const [incomingBotDiscardCallDragActive, setIncomingBotDiscardCallDragActive] = useState(false)
-
-  useEffect(() => {
-    if (mainPhase !== 'bot-turn' || !activeBotDiscard) {
-      setIncomingBotDiscardCallDragActive(false)
-    }
-  }, [mainPhase, activeBotDiscard])
-
-  const tileDragCollisionDetection = useMemo<CollisionDetection>(
-    () => (args) => {
-      const aid = String(args.active.id)
-      if (parseEastExposureMeldSortId(aid) != null) {
-        const meldContainers = args.droppableContainers.filter(
-          (c) => parseEastExposureMeldSortId(String(c.id)) != null,
-        )
-        if (meldContainers.length === 0) return []
-        const pointerX = args.pointerCoordinates?.x ?? lastDragPointerRef.current.x
-        const activeMeldContainer = meldContainers.find((c) => String(c.id) === aid)
-        const activeMeldRect = activeMeldContainer ? args.droppableRects.get(activeMeldContainer.id) : null
-        if (
-          activeMeldContainer &&
-          activeMeldRect &&
-          Number.isFinite(pointerX) &&
-          pointerX >= activeMeldRect.left &&
-          pointerX <= activeMeldRect.left + activeMeldRect.width
-        ) {
-          // Keep the lifted meld's original slot reachable so neighbours can reopen around it.
-          return [
-            {
-              id: activeMeldContainer.id,
-              data: {
-                droppableContainer: activeMeldContainer,
-                value: 0,
-              },
-            },
-          ]
-        }
-        const otherMeldContainers = meldContainers.filter((c) => String(c.id) !== aid)
-        if (otherMeldContainers.length > 0 && Number.isFinite(pointerX)) {
-          const byCenterX = otherMeldContainers
-            .map((container) => {
-              const rect = args.droppableRects.get(container.id)
-              if (!rect) return null
-              return {
-                container,
-                centerX: rect.left + rect.width / 2,
-              }
-            })
-            .filter((x): x is { container: (typeof otherMeldContainers)[number]; centerX: number } => x != null)
-            .sort((a, b) => a.centerX - b.centerX)
-          const target = byCenterX.find((x) => pointerX < x.centerX) ?? byCenterX[byCenterX.length - 1]
-          if (target) {
-            return [
-              {
-                id: target.container.id,
-                data: {
-                  droppableContainer: target.container,
-                  value: Math.abs(pointerX - target.centerX),
-                },
-              },
-            ]
-          }
-        }
-        return closestCenter({
-          ...args,
-          droppableContainers: otherMeldContainers.length > 0 ? otherMeldContainers : meldContainers,
-        })
-      }
-      const fromPassSlot = passSlots.some((s) => s?.id === aid)
-      const fromStagedDiscard = pendingEastDiscardTile?.id === aid
-      const fromHandTile = hand.some((t) => t.id === aid)
-      const fromBotDiscardForCall = isActiveBotDiscardDrag(aid, activeBotDiscard ?? null)
-      const botSeatOverlapHits = (): ReturnType<CollisionDetection> => {
-        if (!charlestonDone || !jokerSwapUiActive || (!fromHandTile && !fromStagedDiscard)) return []
-        const botSeatContainers = args.droppableContainers.filter(
-          (c) => parseBotSeatSwapDropId(String(c.id)) !== null,
-        )
-        if (botSeatContainers.length === 0) return []
-        return rectIntersection({ ...args, droppableContainers: botSeatContainers })
-      }
-
-      if (fromBotDiscardForCall && charlestonDone && mainPhase === 'bot-turn') {
-        const callContainers = args.droppableContainers.filter(
-          (c) => String(c.id) === CALL_INITIATE_FIRST_SLOT_ID,
-        )
-        const callHits = collisionHitsForTileOverlappingZones(args, [CALL_INITIATE_FIRST_SLOT_ID])
-        if (callHits.length > 0) return callHits
-        if (callContainers.length > 0) {
-          const pointerCall = pointerWithin({ ...args, droppableContainers: callContainers })
-          if (pointerCall.length > 0) return pointerCall
-        }
-        return []
-      }
-
-      // Blank tile dragged on your turn — from the rack OR staged in the discard slot — → the sorted
-      // discard tracker wins as soon as the tile overlaps it (so it can be dropped anywhere over the
-      // tracker boundary). The staged path mirrors how a blank drags out of the main rack.
-      if (
-        charlestonDone &&
-        mainPhase === 'east-discard' &&
-        ((fromHandTile && hand.some((t) => t.id === aid && t.def.cat === 'blank')) ||
-          (fromStagedDiscard && pendingEastDiscardTile?.def.cat === 'blank'))
-      ) {
-        const trackerHits = collisionHitsForTileOverlappingZones(args, [BLANK_EXCHANGE_DROP_ID])
-        if (trackerHits.length > 0) return trackerHits
-      }
-
-      if (fromHandTile || fromBotDiscardForCall || fromPassSlot || fromStagedDiscard) {
-        if (!charlestonDone && fromHandTile) {
-          // The pass strip is a thin (~1/3-tile) slot strip sitting just above the hand row, with the
-          // slots hovering over the right-most hand tiles. Claiming it on any rect overlap let it
-          // steal the `over` the instant a tile was lifted slightly toward it — collapsing the in-rack
-          // reorder so neighbours (including the tiles under the slots) snapped back to their home
-          // columns. Instead, claim once the dragged tile is horizontally over the slot strip AND
-          // nudged up onto it — the tile's top edge rising above the slot strip's mid-line. At rack
-          // height the tile's top sits at the hand-row top (below that line), so the in-rack reorder
-          // keeps running and every tile slides as the drag crosses it; lift the tile onto a slot and
-          // the pass box grabs it so it drops straight in.
-          const passContainer = args.droppableContainers.find((c) => String(c.id) === PASS_BOX_ID)
-          const passRect = passContainer ? args.droppableRects.get(passContainer.id) : null
-          const dragRect = args.collisionRect
-          if (passContainer && passRect && dragRect) {
-            const cx = dragRect.left + dragRect.width / 2
-            const horizontallyOverSlots = cx >= passRect.left && cx <= passRect.left + passRect.width
-            const slotGrabLine = passRect.top + passRect.height / 2
-            const liftedOntoSlots = dragRect.top < slotGrabLine
-            if (horizontallyOverSlots && liftedOntoSlots) {
-              return [
-                {
-                  id: passContainer.id,
-                  data: { droppableContainer: passContainer, value: 0 },
-                },
-              ]
-            }
-          }
-        }
-        if (charlestonDone && mainPhase === 'east-discard' && (fromHandTile || fromStagedDiscard)) {
-          const pointerX = args.pointerCoordinates?.x ?? lastDragPointerRef.current.x
-          const pointerY = args.pointerCoordinates?.y ?? lastDragPointerRef.current.y
-          const handBankContainer = args.droppableContainers.find((c) => String(c.id) === HAND_BANK_ID)
-          const handBankRect = handBankContainer ? args.droppableRects.get(handBankContainer.id) : null
-          const pointerOverHandBankHorizontally =
-            handBankRect != null &&
-            Number.isFinite(pointerX) &&
-            pointerX >= handBankRect.left &&
-            pointerX <= handBankRect.left + handBankRect.width
-          const pointerInHandBank =
-            pointerOverHandBankHorizontally &&
-            handBankRect != null &&
-            Number.isFinite(pointerY) &&
-            pointerY >= handBankRect.top &&
-            pointerY <= handBankRect.top + handBankRect.height
-          // Hand → staging: accept as soon as the dragged tile overlaps the slot (pointer can
-          // still be in the hand row while the tile has moved up into the exposure row).
-          // Column 14 shares the rack width with the discard slot above — a horizontal-only test
-          // wrongly blocked staging until the pointer moved past the right edge of the rack, so
-          // this direction uses the full (both-axes) hand-bank test for the fallback.
-          if (fromHandTile) {
-            const stagingOverlap = collisionHitsForTileOverlappingZones(args, [EAST_DISCARD_STAGING_ID])
-            if (stagingOverlap.length > 0) return stagingOverlap
-            if (!pointerInHandBank) {
-              const stagingContainers = args.droppableContainers.filter(
-                (c) => String(c.id) === EAST_DISCARD_STAGING_ID,
-              )
-              if (stagingContainers.length > 0) {
-                const pointerStaging = pointerWithin({ ...args, droppableContainers: stagingContainers })
-                if (pointerStaging.length > 0) return pointerStaging
-              }
-            }
-          }
-          // Staging → hand (returning the staged tile to the rack): keep the hand reorder / insert
-          // preview slide alive while the pointer is anywhere over the rack columns. The staged tile
-          // starts out overlapping the discard slot, so a tile-overlap or vertical test would
-          // suppress the rack slide for most of the drag (the tile just snaps in on release). Staging
-          // only wins again once the pointer leaves the hand row horizontally.
-          if (fromStagedDiscard && !pointerOverHandBankHorizontally) {
-            const stagingHits = collisionHitsForTileOverlappingZones(args, [EAST_DISCARD_STAGING_ID])
-            if (stagingHits.length > 0) return stagingHits
-            const stagingContainers = args.droppableContainers.filter(
-              (c) => String(c.id) === EAST_DISCARD_STAGING_ID,
-            )
-            if (stagingContainers.length > 0) {
-              const pointerStaging = pointerWithin({ ...args, droppableContainers: stagingContainers })
-              if (pointerStaging.length > 0) return pointerStaging
-            }
-          }
-        }
-        if (
-          charlestonDone &&
-          mainPhase === 'bot-turn' &&
-          fromHandTile
-        ) {
-          const callContainers = args.droppableContainers.filter(
-            (c) => String(c.id) === CALL_INITIATE_FIRST_SLOT_ID,
-          )
-          const callHits = collisionHitsForTileOverlappingZones(args, [CALL_INITIATE_FIRST_SLOT_ID])
-          if (callHits.length > 0) return callHits
-          if (callContainers.length > 0) {
-            const pointerCall = pointerWithin({ ...args, droppableContainers: callContainers })
-            if (pointerCall.length > 0) return pointerCall
-          }
-        }
-      }
-
-      const hits = pointerWithin(args)
-      if (hits.length > 0) {
-        const pick = (id: string | number) => hits.find((c) => c.id === id)
-        if (!charlestonDone) {
-          const fromHand = fromHandTile
-          const passOccupant = hits.find((h) => passSlots.some((s) => s?.id === h.id))
-          if (fromHand && passOccupant) {
-            return [passOccupant]
-          }
-          if (
-            fromPassSlot &&
-            passOccupant &&
-            String(passOccupant.id) !== aid
-          ) {
-            return [passOccupant]
-          }
-          const passBoxHit = hits.find((h) => String(h.id) === PASS_BOX_ID)
-          if (fromPassSlot && passBoxHit) {
-            return [passBoxHit]
-          }
-        }
-        if (fromPassSlot || fromStagedDiscard) {
-          const handTileIds = new Set(hand.map((t) => t.id))
-          const overHandTile = hits.find((h) => handTileIds.has(String(h.id)))
-          const handBankHit = pick(HAND_BANK_ID)
-          if (overHandTile || handBankHit) {
-            const pointerX = args.pointerCoordinates?.x ?? lastDragPointerRef.current.x
-            const handTileContainers = args.droppableContainers.filter((c) => handTileIds.has(String(c.id)))
-            if (Number.isFinite(pointerX) && handTileContainers.length > 0) {
-              const byCenterX = handTileContainers
-                .map((container) => {
-                  const rect = args.droppableRects.get(container.id)
-                  if (!rect) return null
-                  return {
-                    container,
-                    centerX: rect.left + rect.width / 2,
-                  }
-                })
-                .filter((x): x is { container: (typeof handTileContainers)[number]; centerX: number } => x != null)
-                .sort((a, b) => a.centerX - b.centerX)
-              const target = byCenterX.find((x) => pointerX < x.centerX)
-              if (target) {
-                return [
-                  {
-                    id: target.container.id,
-                    data: {
-                      droppableContainer: target.container,
-                      value: Math.abs(pointerX - target.centerX),
-                    },
-                  },
-                ]
-              }
-              // Pointer is to the right of every tile centre → appending past the last tile.
-              // Resolve to the hand-bank zone (not the last tile) so crossing the last tile's
-              // centre actually changes `over` and re-fires `onDragOver`. If both zones map to
-              // the last tile, dnd-kit never re-fires while the pointer stays over it and the
-              // gap between the two right-most tiles can never open.
-              if (handBankHit) return [handBankHit]
-            }
-            if (overHandTile) return [overHandTile]
-            if (handBankHit) return [handBankHit]
-          }
-        }
-        // call-staging: staged tiles are useSortable, so hand↔exposure drag is
-        // handled by closestCenter detecting staged tile IDs as drop targets.
-        // Only fall back to the zone id when no staged tile is under the pointer
-        // (e.g. dragging over the called tile or empty exposure space).
-        if (
-          charlestonDone &&
-          mainPhase === 'call-staging' &&
-          !stagedCallTileIds.includes(aid) &&
-          pick(CALL_STAGING_DROP_ID) &&
-          !hits.some((h) => stagedCallTileIds.includes(String(h.id)))
-        ) {
-          return [pick(CALL_STAGING_DROP_ID)!]
-        }
-        // Prefer bot/East exposure melds over the discard-tray staging zone (full-area droppable under the overlay).
-        if (charlestonDone && jokerSwapUiActive) {
-          const eastMeldHit = hits.find((h) => parseEastExposureSwapDropId(String(h.id)) !== null)
-          if (eastMeldHit) return [eastMeldHit]
-          const eastSeatHit = hits.find((h) => String(h.id) === EAST_SEAT_SWAP_ID)
-          if (eastSeatHit) return [eastSeatHit]
-          const meldHit = hits.find((h) => parseBotExposureSwapDropId(String(h.id)) !== null)
-          if (meldHit) return [meldHit]
-          const seatHit = hits.find((h) => parseBotSeatSwapDropId(String(h.id)) !== null)
-          if (seatHit) return [seatHit]
-        }
-        const botSeatOverlap = botSeatOverlapHits()
-        if (botSeatOverlap.length > 0) return [botSeatOverlap[0]!]
-        if (hand.some((t) => t.id === aid)) {
-          const handTileIds = new Set(hand.map((t) => t.id))
-          const overHandRack =
-            hits.some((h) => handTileIds.has(String(h.id))) ||
-            hits.some((h) => String(h.id) === HAND_BANK_ID)
-          if (overHandRack) {
-            // Rack reorder is driven off the lifted tile's *edges* crossing neighbour *centres*,
-            // not off the finger position or a "left my home column" test. The dragged tile's
-            // measured rect (collisionRect) is the visible lifted tile translated by the drag; the
-            // neighbour rects stay at their original (pre-shift) positions while dragging, so their
-            // centres are stable thresholds. A neighbour only yields once the dragged tile's leading
-            // edge has travelled *past that neighbour's centre* — i.e. the tile is more than half
-            // overlapped — instead of jumping the instant the two tiles touch.
-            type RackEntry = { id: string; container: (typeof args.droppableContainers)[number]; centerX: number }
-            const rackTiles: RackEntry[] = hand
-              .map((t): RackEntry | null => {
-                const container = args.droppableContainers.find((c) => String(c.id) === t.id)
-                const rect = container ? args.droppableRects.get(container.id) : null
-                if (!container || !rect) return null
-                return { id: t.id, container, centerX: rect.left + rect.width / 2 }
-              })
-              .filter((x): x is RackEntry => x != null)
-              .sort((a, b) => a.centerX - b.centerX)
-
-            const activeIdx = rackTiles.findIndex((x) => x.id === aid)
-            const activeEntry = activeIdx >= 0 ? rackTiles[activeIdx] : null
-            const activeHandRect = activeEntry ? args.droppableRects.get(activeEntry.container.id) : null
-
-            if (activeEntry && activeHandRect) {
-              const halfW = activeHandRect.width / 2
-              const centerX =
-                args.collisionRect != null
-                  ? args.collisionRect.left + args.collisionRect.width / 2
-                  : args.pointerCoordinates?.x ?? lastDragPointerRef.current.x
-              const rightEdge =
-                args.collisionRect != null ? args.collisionRect.left + args.collisionRect.width : centerX + halfW
-              const leftEdge = args.collisionRect != null ? args.collisionRect.left : centerX - halfW
-
-              let newIdx = activeIdx
-              if (Number.isFinite(rightEdge)) {
-                for (let i = activeIdx + 1; i < rackTiles.length; i++) {
-                  if (rightEdge > rackTiles[i]!.centerX) newIdx = i
-                  else break
-                }
-              }
-              if (newIdx === activeIdx && Number.isFinite(leftEdge)) {
-                for (let i = activeIdx - 1; i >= 0; i--) {
-                  if (leftEdge < rackTiles[i]!.centerX) newIdx = i
-                  else break
-                }
-              }
-              // newIdx === activeIdx returns the lifted tile's own slot (no shift) and keeps the
-              // home column reachable so neighbours can reopen around it.
-              const overEntry = rackTiles[newIdx] ?? activeEntry
-              return [
-                {
-                  id: overEntry.container.id,
-                  data: {
-                    droppableContainer: overEntry.container,
-                    value: Number.isFinite(centerX) ? Math.abs(centerX - overEntry.centerX) : 0,
-                  },
-                },
-              ]
-            }
-          }
-        }
-        // Seat-wide joker swap when the pointer is just outside the meld rect but the tile overlaps.
-        if (charlestonDone && jokerSwapUiActive) {
-          const seatContainers = args.droppableContainers.filter(
-            (c) =>
-              parseBotSeatSwapDropId(String(c.id)) !== null || String(c.id) === EAST_SEAT_SWAP_ID,
-          )
-          if (seatContainers.length > 0) {
-            const overlapHits = rectIntersection({ ...args, droppableContainers: seatContainers })
-            if (overlapHits.length > 0) return [overlapHits[0]!]
-          }
-        }
-      }
-      const botSeatOverlap = botSeatOverlapHits()
-      if (botSeatOverlap.length > 0) return [botSeatOverlap[0]!]
-      return closestCenter(args)
-    },
-    [
-      charlestonDone,
-      mainPhase,
-      jokerSwapUiActive,
-      passSlots,
-      hand,
-      pendingEastDiscardTile,
-      stagedCallTileIds,
-      activeBotDiscard?.id,
-    ],
-  )
-
-  const pinHandRackGeometryForMobileDrag = useCallback(() => {
-    if (typeof window === 'undefined' || !window.matchMedia('(pointer: coarse)').matches) return
-    // Freeze panel width tokens only. Height pins on `.rack-stage__rack-top` / `.hand-bank` caused
-    // a persistent dead band between the green exposure slots and the hand row when the pinned box
-    // was taller than the compact strip (inline height stuck or content top-aligned in the box).
-    // The jog is handled by composited tile faces (part-0008) + this cqw freeze.
-    handPanelCqwFrozenRef.current = true
-  }, [])
-
-  const releaseHandRackGeometryAfterMobileDrag = useCallback(() => {
-    handPanelCqwFrozenRef.current = false
-    refreshHandPanelCqwRef.current()
-  }, [])
-
-  const onDragStart = useCallback(
-    (e: DragStartEvent) => {
-      pinHandRackGeometryForMobileDrag()
-      setCharlestonPassIntoHandPreview(null)
-      setEastDiscardIntoHandPreview(null)
-      globalDragPointerCleanupRef.current?.()
-      const aev = e.activatorEvent
-      if (aev && 'clientX' in aev) {
-        const pe = aev as PointerEvent
-        lastDragPointerRef.current = { x: pe.clientX, y: pe.clientY }
-      }
-      const onGlobalPtr = (ev: PointerEvent) => {
-        lastDragPointerRef.current = { x: ev.clientX, y: ev.clientY }
-      }
-      window.addEventListener('pointermove', onGlobalPtr, { passive: true })
-      globalDragPointerCleanupRef.current = () => {
-        window.removeEventListener('pointermove', onGlobalPtr)
-        globalDragPointerCleanupRef.current = null
-      }
-      const id = String(e.active.id)
-      const exposureMeldIdx = parseEastExposureMeldSortId(id)
-      if (exposureMeldIdx != null) {
-        const exp = eastExposures[exposureMeldIdx]
-        setDragOverlayTile(null)
-        setDragOverlayMeldTiles(exp ? exp.tiles : null)
-        setDragOverlayRackSuitStacked(true)
-        return
-      }
-      const fromHand = hand.find((t) => t.id === id)
-      const fromLiveBotDiscard = isActiveBotDiscardDrag(id, activeBotDiscard ?? null)
-      if (fromLiveBotDiscard) {
-        setIncomingBotDiscardCallDragActive(true)
-      }
-      if (fromHand || fromLiveBotDiscard) {
-        setDragOverlayTile(fromHand ?? activeBotDiscard ?? null)
-        setDragOverlayMeldTiles(null)
-        setDragOverlayRackSuitStacked(true)
-        return
-      }
-      for (const s of passSlots) {
-        if (s?.id === id) {
-          setDragOverlayTile(s)
-          setDragOverlayMeldTiles(null)
-          setDragOverlayRackSuitStacked(true)
-          return
-        }
-      }
-      if (pendingEastDiscardTile?.id === id) {
-        setDragOverlayTile(pendingEastDiscardTile)
-        setDragOverlayMeldTiles(null)
-        setDragOverlayRackSuitStacked(true)
-        return
-      }
-      setDragOverlayTile(null)
-      setDragOverlayMeldTiles(null)
-      setDragOverlayRackSuitStacked(false)
-    },
-    [
-      hand,
-      passSlots,
-      pendingEastDiscardTile,
-      charlestonDone,
-      mainPhase,
-      activeBotDiscard,
-      eastExposures,
-      pinHandRackGeometryForMobileDrag,
-    ],
-  )
-
-  const handVisualInsertIndexFromPointer = useCallback(() => {
-    const pointerX = lastDragPointerRef.current.x
-    if (!Number.isFinite(pointerX)) return null
-    const elementsById = new Map<string, HTMLElement>()
-    document.querySelectorAll<HTMLElement>('.hand-row [data-hand-tile-id]').forEach((el) => {
-      const id = el.dataset.handTileId
-      if (id) elementsById.set(id, el)
-    })
-    const centers = hand
-      .map((tile, index) => {
-        const el = elementsById.get(tile.id)
-        if (!el) return null
-        const rect = el.getBoundingClientRect()
-        if (rect.width < 1) return null
-        return { index, centerX: rect.left + rect.width / 2 }
-      })
-      .filter((x): x is { index: number; centerX: number } => x != null)
-      .sort((a, b) => a.centerX - b.centerX)
-    if (centers.length === 0) return null
-    return centers.find((x) => pointerX < x.centerX)?.index ?? hand.length
-  }, [hand])
-
-  const handInsertIndexFromOver = useCallback(
-    (over: { rect: { left: number; width: number } }, overHandIdx: number) => {
-      const visualIndex = handVisualInsertIndexFromPointer()
-      if (visualIndex != null) return visualIndex
-
-      const rect = over.rect
-      const centerX = rect.left + rect.width / 2
-      const pointerX = lastDragPointerRef.current.x
-      return pointerX > centerX ? Math.min(overHandIdx + 1, hand.length) : overHandIdx
-    },
-    [hand.length, handVisualInsertIndexFromPointer],
-  )
-
-  const onDragOver = useCallback(
-    (e: DragOverEvent) => {
-      const aid = String(e.active.id)
-      if (charlestonDone) {
-        if (mainPhase === 'east-discard' && pendingEastDiscardTile && aid === pendingEastDiscardTile.id) {
-          const over = e.over
-          if (!over) {
-            setEastDiscardIntoHandPreview(null)
-            return
-          }
-          const oid = String(over.id)
-          if (oid === HAND_BANK_ID) {
-            const handPreviewIndex = handVisualInsertIndexFromPointer() ?? hand.length
-            setEastDiscardIntoHandPreview((prev) =>
-              prev?.tileId === aid && prev.handPreviewIndex === handPreviewIndex
-                ? prev
-                : { tileId: aid, handPreviewIndex },
-            )
-            return
-          }
-          const overHandIdx = hand.findIndex((t) => t.id === oid)
-          if (overHandIdx >= 0) {
-            const handPreviewIndex = handInsertIndexFromOver(over, overHandIdx)
-            setEastDiscardIntoHandPreview((prev) =>
-              prev?.tileId === aid && prev.handPreviewIndex === handPreviewIndex
-                ? prev
-                : { tileId: aid, handPreviewIndex },
-            )
-            return
-          }
-          setEastDiscardIntoHandPreview(null)
-        } else {
-          setEastDiscardIntoHandPreview(null)
-        }
-        return
-      }
-      const passFromIdx = passSlots.findIndex((s) => s?.id === aid)
-      if (passFromIdx < 0) {
-        setCharlestonPassIntoHandPreview(null)
-        // Hand tile lifted onto a pass slot → preview the rack compacting (tile removed) so the slid
-        // neighbours don't snap back to home when the pass box takes the drop target.
-        const overId = e.over ? String(e.over.id) : null
-        setCharlestonHandPassStageTileId(
-          overId === PASS_BOX_ID && hand.some((t) => t.id === aid) ? aid : null,
-        )
-        return
-      }
-      setCharlestonHandPassStageTileId(null)
-      const over = e.over
-      if (!over) {
-        setCharlestonPassIntoHandPreview(null)
-        return
-      }
-      const oid = String(over.id)
-      if (oid === HAND_BANK_ID) {
-        const handPreviewIndex = handVisualInsertIndexFromPointer() ?? hand.length
-        setCharlestonPassIntoHandPreview((prev) =>
-          prev?.tileId === aid && prev.handPreviewIndex === handPreviewIndex
-            ? prev
-            : { tileId: aid, handPreviewIndex },
-        )
-        return
-      }
-      const overHandIdx = hand.findIndex((t) => t.id === oid)
-      if (overHandIdx >= 0) {
-        const handPreviewIndex = handInsertIndexFromOver(over, overHandIdx)
-        setCharlestonPassIntoHandPreview((prev) =>
-          prev?.tileId === aid && prev.handPreviewIndex === handPreviewIndex
-            ? prev
-            : { tileId: aid, handPreviewIndex },
-        )
-        return
-      }
-      setCharlestonPassIntoHandPreview(null)
-    },
-    [
-      charlestonDone,
-      mainPhase,
-      pendingEastDiscardTile,
-      passSlots,
-      hand,
-      handInsertIndexFromOver,
-      handVisualInsertIndexFromPointer,
-    ],
-  )
-
-  const onDragCancel = useCallback(() => {
-    releaseHandRackGeometryAfterMobileDrag()
-    setIncomingBotDiscardCallDragActive(false)
-    setCharlestonPassIntoHandPreview(null)
-    setEastDiscardIntoHandPreview(null)
-    setCharlestonHandPassStageTileId(null)
-    setDragOverlayTile(null)
-    setDragOverlayMeldTiles(null)
-    setDragOverlayRackSuitStacked(false)
-  }, [releaseHandRackGeometryAfterMobileDrag])
-
+  /** Play DnD lives in PlaySurface; App only keeps round/handlers + thin API bridge. */
   const passSlotCount = passSlots.filter(Boolean).length
   const blindPhase = !charlestonDone && charlestonAllowsBlind(charlestonPhase)
   const courtesyPhase = charlestonPhase === 'courtesy'
@@ -6881,11 +4008,7 @@ export default function App() {
     setCharlestonPassError(null)
     setCallRuleError(null)
     setBlockingDialog(null)
-    setDragOverlayTile(null)
-    setDragOverlayMeldTiles(null)
-    setDragOverlayRackSuitStacked(false)
-    setCharlestonPassIntoHandPreview(null)
-    setEastDiscardIntoHandPreview(null)
+    playSurfaceDnDApiRef.current?.resetDragUi()
     setPassStripFlyOut(null)
     setSuggestedFocusHandKey(null)
     setSuggestedPinnedHandKeys([])
@@ -7005,546 +4128,46 @@ export default function App() {
     return true
   }, [performNewHandDeal])
 
-  const sendCharlestonPass = useCallback(() => {
-    void (async () => {
-      const base = roundRef.current
-      if (base.charlestonPhase === 'done') return
-      const phase = base.charlestonPhase
-      const eastRack = base.passSlots.filter(Boolean) as TileInstance[]
-      const blocked = eastRack.find((t) => !charlestonPassEligible(t.def))
-      if (blocked) {
-        setCharlestonPassError(
-          charlestonPassBlockedMessage(blocked.def.cat === 'blank' ? 'blank' : 'joker'),
-        )
-        return
-      }
-
-      const cardId = committedCardIdRef.current
-      const difficulty = botDifficultyRef.current
-      const absolute = toFourHands(base)
-      const rotated = fourHandsWithPlayerAsEast(absolute, base.playerSeat)
-      const passCount = phase === 'courtesy' ? eastRack.length : 3
-      // Sync bot picks — await would leave a post–fly-out gap before hand + receive fly-in commit.
-      const southPass = chooseBotCharlestonPass(
-        rotated.south,
-        passCount,
-        seatLabel(base.botSlotSeats[0]) as BotSeat,
-        difficulty,
-        cardId,
-      )
-      const westPass = chooseBotCharlestonPass(
-        rotated.west,
-        passCount,
-        seatLabel(base.botSlotSeats[1]) as BotSeat,
-        difficulty,
-        cardId,
-      )
-      const northPass = chooseBotCharlestonPass(
-        rotated.north,
-        passCount,
-        seatLabel(base.botSlotSeats[2]) as BotSeat,
-        difficulty,
-        cardId,
-      )
-
-      const charlestonBotPassOpts: { pickBotPass: CharlestonBotPassPicker } = {
-        pickBotPass: (_hand, _n, botIndex) =>
-          botIndex === 0 ? southPass : botIndex === 1 ? westPass : northPass,
-      }
-
-      const flyDir = handTileFlyInFromCharlestonPhase(phase)
-
-      let next: RoundState
-      if (phase === 'courtesy') {
-        if (eastRack.length > 3) return
-        const nextHands = applyCharlestonPassForRound(base, phase, eastRack, 0, charlestonBotPassOpts)
-        const nextPhase = nextCharlestonPhase(phase)
-        const incoming = charlestonIncomingHandTileIds(base.hand, nextHands[base.playerSeat])
-        const incomingFly =
-          incoming.length > 0 && flyDir != null
-            ? { ids: [...incoming], from: flyDir }
-            : null
-        next = await applyCharlestonDoneIfNeeded(
-          {
-            ...base,
-            ...handsFromFourHands(nextHands, base.playerSeat, base.botSlotSeats),
-            passSlots: [null, null, null],
-            passSlotOrigins: [null, null, null],
-            selectedHandTileId: null,
-            charlestonPhase: nextPhase,
-            awaitingSecondCharlestonChoice: false,
-            charlestonNewTileIds: incoming,
-            handTileFlyIn: incomingFly,
-          },
-          nextPhase,
-          botWinsEnabledRef.current,
-          difficulty,
-          cardId,
-        )
-      } else {
-        const blindOk = charlestonAllowsBlind(phase)
-        if (blindOk) {
-          const blindCount = 3 - eastRack.length
-          if (blindCount < 0 || blindCount > 3) return
-          const nextHands = applyCharlestonPassForRound(
-            base,
-            phase,
-            eastRack,
-            blindCount,
-            charlestonBotPassOpts,
-          )
-          const nextPhase = nextCharlestonPhase(phase)
-          const incoming =
-            nextPhase === 'done'
-              ? []
-              : charlestonIncomingHandTileIds(base.hand, nextHands[base.playerSeat])
-          next = await applyCharlestonDoneIfNeeded(
-            {
-              ...base,
-              ...handsFromFourHands(nextHands, base.playerSeat, base.botSlotSeats),
-              passSlots: [null, null, null],
-              passSlotOrigins: [null, null, null],
-              selectedHandTileId: null,
-              charlestonPhase: nextPhase,
-              awaitingSecondCharlestonChoice: nextPhase === 'left2',
-              charlestonNewTileIds: incoming,
-              handTileFlyIn:
-                incoming.length > 0 && flyDir != null ? { ids: [...incoming], from: flyDir } : null,
-            },
-            nextPhase,
-            botWinsEnabledRef.current,
-            difficulty,
-            cardId,
-          )
-        } else {
-          if (eastRack.length !== 3) return
-          const nextHands = applyCharlestonPassForRound(base, phase, eastRack, 0, charlestonBotPassOpts)
-          const nextPhase = nextCharlestonPhase(phase)
-          const incoming =
-            nextPhase === 'done'
-              ? []
-              : charlestonIncomingHandTileIds(base.hand, nextHands[base.playerSeat])
-          next = await applyCharlestonDoneIfNeeded(
-            {
-              ...base,
-              ...handsFromFourHands(nextHands, base.playerSeat, base.botSlotSeats),
-              passSlots: [null, null, null],
-              passSlotOrigins: [null, null, null],
-              selectedHandTileId: null,
-              charlestonPhase: nextPhase,
-              awaitingSecondCharlestonChoice: nextPhase === 'left2',
-              charlestonNewTileIds: incoming,
-              handTileFlyIn:
-                incoming.length > 0 && flyDir != null ? { ids: [...incoming], from: flyDir } : null,
-            },
-            nextPhase,
-            botWinsEnabledRef.current,
-            difficulty,
-            cardId,
-          )
-        }
-      }
-
-      if (roundRef.current !== base) return
-      pushRound(next)
-    })()
-  }, [pushRound])
-
-  const skipToCourtesyPass = useCallback(() => {
-    if (passStripFlyoutTimerRef.current) {
-      clearTimeout(passStripFlyoutTimerRef.current)
-      passStripFlyoutTimerRef.current = null
-    }
-    setPassStripFlyOut(null)
-    pushRound((r) => {
-      if (r.charlestonPhase !== 'left2' || !r.awaitingSecondCharlestonChoice) return r
-      // Return any tiles currently parked in the pass slots back to the hand so
-      // stopping the Charleston never silently drops the player's tiles.
-      const returning = r.passSlots.filter(Boolean) as TileInstance[]
-      const handNext = returning.length > 0 ? [...r.hand, ...returning] : r.hand
-      return {
-        ...r,
-        hand: handNext,
-        charlestonPhase: 'courtesy',
-        charlestonSkippedSecondRound: true,
-        awaitingSecondCharlestonChoice: false,
-        passSlots: [null, null, null],
-        passSlotOrigins: [null, null, null],
-        selectedHandTileId: null,
-      }
-    })
-  }, [pushRound])
-
-  const onCharlestonPassButtonClick = useCallback(() => {
-    const passSlotCount = passSlots.filter(Boolean).length
-    const blindPhaseLocal = !charlestonDone && charlestonAllowsBlind(charlestonPhase)
-    const courtesyPhaseLocal = charlestonPhase === 'courtesy'
-    const secondCharlestonLeftChoiceLocal = charlestonPhase === 'left2'
-    const ready =
-      secondCharlestonLeftChoiceLocal
-        ? passSlotCount === 0 || passSlotCount === 3
-        : courtesyPhaseLocal
-          ? passSlotCount <= 3
-          : blindPhaseLocal
-            ? passSlotCount <= 3
-            : passSlotCount === 3
-    if (!ready) return
-    if (secondCharlestonLeftChoiceLocal && passSlotCount === 0) {
-      skipToCourtesyPass()
-      return
-    }
-    const eastRack = passSlots.filter(Boolean) as TileInstance[]
-    if (eastRack.some((t) => !charlestonPassEligible(t.def))) {
-      sendCharlestonPass()
-      return
-    }
-    const flyOutDir: PassStripFlyOutFrom | null = courtesyPhaseLocal
-      ? 'courtesy-top'
-      : handTileFlyInFromCharlestonPhase(charlestonPhase)
-    if (!flyOutDir) {
-      sendCharlestonPass()
-      return
-    }
-    if (passStripFlyoutTimerRef.current) {
-      clearTimeout(passStripFlyoutTimerRef.current)
-      passStripFlyoutTimerRef.current = null
-    }
-    setPassStripFlyOut(flyOutDir)
-    passStripFlyoutTimerRef.current = window.setTimeout(() => {
-      passStripFlyoutTimerRef.current = null
-      setPassStripFlyOut(null)
-      sendCharlestonPass()
-    }, 350)
-  }, [passSlots, charlestonPhase, charlestonDone, sendCharlestonPass, skipToCourtesyPass])
-
-  const skipBotDiscard = useCallback(() => {
-    void pushRoundAsync((r) =>
-      applySkipBotDiscard(
-        r,
-        botWinsEnabledRef.current,
-        botDifficultyRef.current,
-        committedCardIdRef.current,
-      ),
-    )
-  }, [pushRoundAsync])
-  const commitEastDiscard = useCallback(() => {
-    const cur = roundRef.current
-    const pendingTile = cur.pendingEastDiscardTile
-    if (cur.mainPhase === 'east-discard' && pendingTile?.def.cat === 'blank') {
-      const rankInput: RankSuggestedHandsInput = {
-        hand: [...cur.hand, pendingTile],
-        wallRemaining: cur.wall.length,
-        discards: cur.discardPile.map((e) => e.tile),
-        exposures: cur.botExposures,
-        playerClaimMelds: cur.eastExposures,
-        eastTableClaimMelds: cur.eastExposures,
-        patterns: getActiveCardPatterns(),
-      }
-      if (summarizeRackTowardWin(rankInput).bestTilesAway < 14) {
-        queueMicrotask(() =>
-          setBlockingDialog({
-            variant: 'table',
-            title: BLOCKING_TITLE_SWAP_ERROR,
-            message: MSG_DISCARD_BLANK_USE_SWAP,
-          }),
-        )
-        return
-      }
-    }
-    if (gameModeRef.current === 'training') {
-      // Post-discard rack: the parked discard is leaving the hand and becomes table-visible.
-      if (cur.mainPhase === 'east-discard' && pendingTile) {
-        const rankInput: RankSuggestedHandsInput = {
-          hand: cur.hand,
-          wallRemaining: cur.wall.length,
-          discards: [...cur.discardPile.map((e) => e.tile), pendingTile],
-          exposures: cur.botExposures,
-          playerClaimMelds: cur.eastExposures,
-          eastTableClaimMelds: cur.eastExposures,
-          patterns: getActiveCardPatterns(),
-        }
-        const { bestTilesAway, closestLine } = summarizeRackTowardWin(rankInput)
-        // No line on the card can complete from this rack — discarding will lock in a dead hand.
-        if (!closestLine || bestTilesAway >= 14) {
-          if (deadHandWarningsEnabledRef.current) {
-            queueMicrotask(() =>
-              setBlockingDialog({ variant: 'discard-dead-warning', rankInput }),
-            )
-            return
-          }
-        }
-      }
-    }
-    void pushRoundAsync((r) =>
-      commitEastDiscardAfterStaged(
-        r,
-        botWinsEnabledRef.current,
-        botDifficultyRef.current,
-        committedCardIdRef.current,
-      ),
-    )
-  }, [pushRoundAsync])
-  const returnStagedEastDiscard = useCallback(() => {
-    pushRound((r) => {
-      if (!r.pendingEastDiscardTile) return r
-      const t = r.pendingEastDiscardTile
-      return {
-        ...r,
-        hand: [...r.hand, t],
-        pendingEastDiscardTile: null,
-        pendingEastDiscardIdx: null,
-        selectedHandTileId: null,
-      }
-    })
-  }, [pushRound])
-  const declareMahjong = useCallback(() => {
-    pushRound((cur) => {
-      if (cur.charlestonPhase !== 'done') {
-        if (charlestonMahjongButtonPhase(cur.charlestonPhase)) {
-          queueMicrotask(() =>
-            setBlockingDialog({ variant: 'card', message: MSG_MAHJONG_DURING_CHARLESTON }),
-          )
-        }
-        return cur
-      }
-      if (cur.mainPhase === 'east-discard') {
-        // Self-draw Mah Jongg: player declares on their own drawn tile.
-        const rankInput: RankSuggestedHandsInput = {
-          hand: cur.hand,
-          wallRemaining: cur.wall.length,
-          discards: cur.discardPile.map((e) => e.tile),
-          exposures: cur.botExposures,
-          playerClaimMelds: cur.eastExposures,
-          eastTableClaimMelds: cur.eastExposures,
-          patterns: getActiveCardPatterns(),
-        }
-        const { bestTilesAway } = summarizeRackTowardWin(rankInput)
-        if (bestTilesAway !== 0) {
-          if (gameModeRef.current === 'training' && deadHandWarningsEnabledRef.current) {
-            queueMicrotask(() =>
-              setBlockingDialog({
-                variant: 'mahjong-dead-warning',
-                rankInput,
-                deadHandReason: 'illegal-mahjong-self-draw',
-              }),
-            )
-            return cur
-          }
-          return applyDeadHand(cur, 'illegal-mahjong-self-draw')
-        }
-        return applyDeclareMahjongSelfDraw(cur)
-      }
-      if (cur.mainPhase === 'call-staging' && cur.activeBotDiscard) {
-        if (cur.stagedCallTileIds.length > 0) {
-          const away = previewStagedCallBestTilesAway(cur)
-          if (away === 0) {
-            return applyCommitStagedCall(cur, gameModeRef.current)
-          }
-          const called = cur.activeBotDiscard
-          const rankInput: RankSuggestedHandsInput = {
-            hand: [...cur.hand, called],
-            wallRemaining: cur.wall.length,
-            discards: cur.discardPile.filter((e) => e.tile.id !== called.id).map((e) => e.tile),
-            exposures: cur.botExposures,
-            playerClaimMelds: cur.eastExposures,
-            eastTableClaimMelds: cur.eastExposures,
-            patterns: getActiveCardPatterns(),
-          }
-          if (gameModeRef.current === 'training' && deadHandWarningsEnabledRef.current) {
-            queueMicrotask(() =>
-              setBlockingDialog({
-                variant: 'mahjong-dead-warning',
-                rankInput,
-                deadHandReason: 'illegal-mahjong-call-staged',
-              }),
-            )
-            return cur
-          }
-          return applyDeadHand(cur, 'illegal-mahjong-call-staged')
-        }
-        const slice: CallValidationRoundSlice = {
-          mainPhase: 'call-staging',
-          activeBotDiscard: cur.activeBotDiscard,
-          hand: cur.hand,
-          eastExposures: cur.eastExposures,
-          botExposures: cur.botExposures,
-          wall: cur.wall,
-          discardPile: cur.discardPile,
-        }
-        if (!hasLegalMahjongOnBotDiscard(slice)) {
-          const called = cur.activeBotDiscard
-          const rankInput: RankSuggestedHandsInput = {
-            hand: [...cur.hand, called],
-            wallRemaining: cur.wall.length,
-            discards: cur.discardPile.filter((e) => e.tile.id !== called.id).map((e) => e.tile),
-            exposures: cur.botExposures,
-            playerClaimMelds: cur.eastExposures,
-            eastTableClaimMelds: cur.eastExposures,
-            patterns: getActiveCardPatterns(),
-          }
-          if (gameModeRef.current === 'training' && deadHandWarningsEnabledRef.current) {
-            queueMicrotask(() =>
-              setBlockingDialog({
-                variant: 'mahjong-dead-warning',
-                rankInput,
-                deadHandReason: 'illegal-mahjong-call-discard',
-              }),
-            )
-            return cur
-          }
-          return applyDeadHand(cur, 'illegal-mahjong-call-discard')
-        }
-        return applyDeclareMahjong({ ...cur, mainPhase: 'bot-turn' })
-      }
-      if (cur.mainPhase !== 'bot-turn' || !cur.activeBotDiscard) return cur
-      const slice = {
-        mainPhase: cur.mainPhase,
-        activeBotDiscard: cur.activeBotDiscard,
-        hand: cur.hand,
-        eastExposures: cur.eastExposures,
-        botExposures: cur.botExposures,
-        wall: cur.wall,
-        discardPile: cur.discardPile,
-      }
-      if (!hasLegalMahjongOnBotDiscard(slice)) {
-        const called = cur.activeBotDiscard!
-        const rankInput: RankSuggestedHandsInput = {
-          hand: [...cur.hand, called],
-          wallRemaining: cur.wall.length,
-          discards: cur.discardPile.filter((e) => e.tile.id !== called.id).map((e) => e.tile),
-          exposures: cur.botExposures,
-          playerClaimMelds: cur.eastExposures,
-          eastTableClaimMelds: cur.eastExposures,
-          patterns: getActiveCardPatterns(),
-        }
-        if (gameModeRef.current === 'training' && deadHandWarningsEnabledRef.current) {
-          // Training mode: warn before committing to dead hand
-          queueMicrotask(() =>
-            setBlockingDialog({
-              variant: 'mahjong-dead-warning',
-              rankInput,
-              deadHandReason: 'illegal-mahjong-bot-discard',
-            }),
-          )
-          return cur
-        }
-        return applyDeadHand(cur, 'illegal-mahjong-bot-discard')
-      }
-      return applyDeclareMahjong(cur)
-    })
-  }, [pushRound])
-
-  const executeJokerSwapFromSlot = useCallback(() => {
-    if (!jokerSwapUiActive) {
-      setBlockingDialog({
-        variant: 'table',
-        title: BLOCKING_TITLE_SWAP_ERROR,
-        message: MSG_SWAP_NO_EXPOSED_JOKERS,
-      })
-      return
-    }
-    // Accept the explicitly-staged swap tile, or fall back to the discard-tray tile.
-    const pid = pendingJokerSwapTileId ?? pendingEastDiscardTile?.id ?? null
-    if (!pid) {
-      setBlockingDialog({
-        variant: 'table',
-        title: BLOCKING_TITLE_SWAP_ERROR,
-        message: MSG_SWAP_PICK_TILE_FIRST,
-      })
-      return
-    }
-    if (!jokerSwapPick) {
-      setBlockingDialog({
-        variant: 'table',
-        title: BLOCKING_TITLE_SWAP_ERROR,
-        message: MSG_SWAP_NO_LEGAL_FOR_TILE,
-      })
-      return
-    }
-    const pick = jokerSwapPick
-    setPendingJokerSwapTileId(null)
-    pushRound((r) => applyEastNaturalForExposedJoker(r, { ...pick, eastTileId: pid }))
-  }, [jokerSwapUiActive, pendingJokerSwapTileId, pendingEastDiscardTile, jokerSwapPick, pushRound])
-
-  /**
-   * The shared "Swap" button on your turn. Routes to whichever swap applies:
-   *  1. A staged/selected blank → open the discard-tracker exchange popup (any discard except jokers).
-   *  2. A staged natural matching an exposed joker → redeem that joker.
-   *  3. A blank anywhere in hand (nothing staged) → open the exchange popup.
-   *  4. An exposed joker with no valid staging → delegate to the joker-swap validator (shows guidance).
-   *  5. Nothing to swap → explain the two swap paths.
-   */
-  const executeSwapFromSlot = useCallback(() => {
-    const canBlankExchange = charlestonDone && mainPhase === 'east-discard'
-    const selectedTile =
-      (pendingJokerSwapTileId
-        ? hand.find((t) => t.id === pendingJokerSwapTileId)
-        : selectedHandTileId
-          ? hand.find((t) => t.id === selectedHandTileId)
-          : null) ?? null
-    const eligibleDiscards = discardedDefsForBlankExchange(discardPile)
-
-    const openBlankExchange = (blankTileId: string) => {
-      if (eligibleDiscards.length === 0) {
-        setBlockingDialog({
-          variant: 'table',
-          title: BLOCKING_TITLE_SWAP_ERROR,
-          message: MSG_SWAP_BLANK_NO_DISCARDS,
-        })
-        return
-      }
-      setBlankExchangeOpen({ blankTileId })
-    }
-
-    // 1) A blank is staged in the discard slot, or selected in the hand — exchange it.
-    const stagedBlank =
-      pendingEastDiscardTile?.def.cat === 'blank'
-        ? pendingEastDiscardTile
-        : selectedTile?.def.cat === 'blank'
-          ? selectedTile
-          : null
-    if (canBlankExchange && stagedBlank) {
-      openBlankExchange(stagedBlank.id)
-      return
-    }
-
-    // 2) A natural is staged that can redeem an exposed joker.
-    const jokerSwapReady =
-      jokerSwapUiActive &&
-      (pendingJokerSwapTileId != null || pendingEastDiscardTile != null) &&
-      jokerSwapPick != null
-    if (jokerSwapReady) {
-      executeJokerSwapFromSlot()
-      return
-    }
-
-    // 3) Nothing staged, but a blank is in hand — exchange the first one.
-    if (
-      canBlankExchange &&
-      !pendingEastDiscardTile &&
-      !pendingJokerSwapTileId &&
-      !selectedHandTileId
-    ) {
-      const anyBlank = hand.find((t) => t.def.cat === 'blank')
-      if (anyBlank) {
-        openBlankExchange(anyBlank.id)
-        return
-      }
-    }
-
-    // 4) An exposed joker exists but the staging isn't valid — let the joker validator explain.
-    if (jokerSwapUiActive) {
-      executeJokerSwapFromSlot()
-      return
-    }
-
-    // 5) Neither path is available.
-    setBlockingDialog({
-      variant: 'table',
-      title: BLOCKING_TITLE_SWAP_ERROR,
-      message: MSG_SWAP_NOTHING_AVAILABLE,
-    })
-  }, [
+  const {
+    sendCharlestonPass,
+    skipToCourtesyPass,
+    onCharlestonPassButtonClick,
+    skipBotDiscard,
+    commitEastDiscard,
+    returnStagedEastDiscard,
+    declareMahjong,
+    executeJokerSwapFromSlot,
+    executeSwapFromSlot,
+    sortHand,
+    initiateCall,
+    proceedWithCall,
+    commitStagedCall,
+    onHandTileActivate,
+    onPassBoxClick,
+    onPassTileClickReturn,
+  } = useRoundActions({
+    roundRef,
+    pushRound,
+    pushRoundAsync,
+    applyCharlestonDoneIfNeeded,
+    commitEastDiscardAfterStaged,
+    applySkipBotDiscard,
+    gameModeRef,
+    botDifficultyRef,
+    botWinsEnabledRef,
+    committedCardIdRef,
+    deadHandWarningsEnabledRef,
+    concealedHandReminderEnabledRef,
+    focusedHandIsConcealedRef,
+    suggestedFocusHandKeyRef,
+    sortModeRef,
+    playSurfaceDnDApiRef,
+    passStripFlyoutTimerRef,
+    lastPassReturnTileIdRef,
+    animationsEnabled,
+    suggestedSuppressedHandKey,
+    passSlots,
+    charlestonPhase,
     charlestonDone,
     mainPhase,
     pendingJokerSwapTileId,
@@ -7554,151 +4177,14 @@ export default function App() {
     discardPile,
     jokerSwapUiActive,
     jokerSwapPick,
-    executeJokerSwapFromSlot,
-    setBlankExchangeOpen,
     setBlockingDialog,
-  ])
+    setCharlestonPassError,
+    setPendingJokerSwapTileId,
+    setPassStripFlyOut,
+    setCallRuleError,
+    setEastCallStagedWaveFlyIn,
+  })
 
-  const sortHand = useCallback(() => {
-    const focusKey = suggestedFocusHandKeyRef.current
-    if (focusKey && focusKey !== suggestedSuppressedHandKey) {
-      const variantSep = ['::tier::', '::oc::', '::ocall::']
-        .map((s) => focusKey.indexOf(s))
-        .filter((i) => i >= 0)
-        .reduce((m, i) => (m < 0 ? i : Math.min(m, i)), -1)
-      const patternId =
-        variantSep >= 0 ? focusKey.slice(0, variantSep) : focusKey
-      sortModeRef.current = null
-      pushRound((r) => ({
-        ...r,
-        hand: sortHandForSuggestedPattern(
-          r.hand,
-          patternId,
-          {
-            hand: r.hand,
-            wallRemaining: r.wall.length,
-            discards: deadDiscardTilesForRanking(r),
-            exposures: r.botExposures,
-            playerClaimMelds: r.eastExposures,
-            eastTableClaimMelds: r.eastExposures,
-            patterns: getActiveCardPatterns(),
-          },
-          focusKey,
-        ),
-      }))
-      return
-    }
-    const nextMode: SortMode = sortModeRef.current === 'suit' ? 'number' : 'suit'
-    sortModeRef.current = nextMode
-    pushRound((r) => ({ ...r, hand: sortTiles(r.hand, nextMode) }))
-  }, [pushRound, suggestedSuppressedHandKey])
-
-  const proceedWithCallRef = useRef<(() => void) | null>(null)
-
-  const initiateCall = useCallback(() => {
-    if (
-      concealedHandReminderEnabledRef.current &&
-      focusedHandIsConcealedRef.current
-    ) {
-      setBlockingDialog({ variant: 'concealed-call-warning' })
-      return
-    }
-    proceedWithCallRef.current?.()
-  }, [])
-
-  const proceedWithCall = useCallback(() => {
-    // Always validate from the latest committed round (same as commitStagedCall). Render
-    // closures can lag on mobile/PWA taps right after a draw or pass animation.
-    const cur = roundRef.current
-    const callSlice: CallValidationRoundSlice = {
-      mainPhase: cur.mainPhase,
-      activeBotDiscard: cur.activeBotDiscard,
-      hand: cur.hand,
-      eastExposures: cur.eastExposures,
-      botExposures: cur.botExposures,
-      wall: cur.wall,
-      discardPile: cur.discardPile,
-    }
-    const err = getCallInitiateBlockMessage(callSlice)
-    if (err === MSG_CALL_DEAD_JOKER) {
-      setCallRuleError(null)
-      setBlockingDialog({
-        variant: 'table',
-        title: 'Dead joker',
-        message: err,
-      })
-    } else if (err === MSG_CALL_INSUFFICIENT_TILES) {
-      if (deadHandWarningsEnabledRef.current) {
-        setCallRuleError(null)
-        setBlockingDialog({
-          variant: 'dead-hand-warning',
-        })
-      } else {
-        setBlockingDialog(null)
-        setCallRuleError(MSG_CALL_INSUFFICIENT_TILES)
-      }
-    } else if (err) {
-      setBlockingDialog(null)
-      setCallRuleError(err)
-    } else {
-      setBlockingDialog(null)
-      setCallRuleError(null)
-      const flags = getCallCapacityFlags(cur.hand, cur.activeBotDiscard)
-      const maxClaimHand = maxOpenClaimHandTiles(flags)
-      const stagingNeeded =
-        flags.canPung
-          ? 2
-          : hasLegalMahjongOnBotDiscard({
-              ...callSlice,
-              mainPhase: 'bot-turn',
-            })
-            ? 0
-            : 2
-      // Training: warn only when **every** exposure size you could legally commit with this discard
-      // fits no playable line. If a pung satisfies part of the card but a kong would not, no warning.
-      // Conversely, if the card needs a kong for that meld and you can only form a pung, every preview fails → warning.
-      const rankInputWorstCase =
-        gameModeRef.current === 'training' && flags.canPung
-          ? previewAutoSelectedCallRankInput(cur, maxClaimHand)
-          : null
-      if (gameModeRef.current === 'training' && flags.canPung) {
-        const candidateSizes: Array<2 | 3 | 4 | 5> = []
-        if (flags.canPung) candidateSizes.push(2)
-        if (flags.canKong) candidateSizes.push(3)
-        if (flags.canQuint) candidateSizes.push(4)
-        if (flags.canSextet) candidateSizes.push(5)
-
-        let anyCallableLineFits = false
-        for (const n of candidateSizes) {
-          const input = previewAutoSelectedCallRankInput(cur, n)
-          if (!input) continue
-          if (summarizeRackTowardWin(input).closestLine) {
-            anyCallableLineFits = true
-            break
-          }
-        }
-        if (!anyCallableLineFits && rankInputWorstCase) {
-          if (deadHandWarningsEnabledRef.current) {
-            setBlockingDialog({
-              variant: 'call-exposure-dead-warning',
-              rankInput: rankInputWorstCase,
-            })
-            return
-          }
-        }
-      }
-      setEastCallStagedWaveFlyIn(
-        animationsEnabled
-          ? {
-              staggerDelayMs: 44,
-              baseDelayMs: 0,
-            }
-          : null,
-      )
-      pushRound((r) => applyAutoSelectCallTiles(applyInitiateCall(r), stagingNeeded))
-    }
-  }, [animationsEnabled, pushRound])
-  proceedWithCallRef.current = proceedWithCall
 
   useLayoutEffect(() => {
     if (mainPhase !== 'call-staging' || !callEntryMagnet) return
@@ -7747,102 +4233,7 @@ export default function App() {
   }, [mainPhase, callEntryMagnet])
 
   /** Commit the staged meld — removes tiles from hand and returns to east-discard. */
-  const commitStagedCall = useCallback(() => {
-    setCallRuleError(null)
-    const cur = roundRef.current
-    if (
-      gameModeRef.current === 'training' &&
-      deadHandWarningsEnabledRef.current &&
-      cur.mainPhase === 'call-staging' &&
-      cur.activeBotDiscard &&
-      cur.stagedCallTileIds.length >= 2
-    ) {
-      const rankInput = previewStagedCallRankInput(cur)
-      const stagedN = cur.stagedCallTileIds.length
-      if (rankInput && !summarizeRackTowardWin(rankInput).closestLine) {
-        const flags = getCallCapacityFlags(cur.hand, cur.activeBotDiscard)
-        const largerSizes: Array<3 | 4 | 5> = []
-        if (flags.canKong && stagedN < 3) largerSizes.push(3)
-        if (flags.canQuint && stagedN < 4) largerSizes.push(4)
-        if (flags.canSextet && stagedN < 5) largerSizes.push(5)
-        for (const n of largerSizes) {
-          const alt = previewAutoSelectedCallRankInput(cur, n)
-          if (alt && summarizeRackTowardWin(alt).closestLine) {
-            queueMicrotask(() =>
-              setBlockingDialog({
-                variant: 'call-meld-size-warning',
-                rankInput: alt,
-                neededHandTiles: n,
-              }),
-            )
-            return
-          }
-        }
-      }
-    }
-    pushRound((r) => applyCommitStagedCall(r, gameModeRef.current))
-  }, [pushRound])
 
-  const onHandTileActivate = useCallback((id: string) => {
-    let passBlockedCat: 'joker' | 'blank' | null = null
-    pushRound((r) => {
-      if (r.charlestonPhase === 'done') {
-        if (r.mainPhase === 'east-discard') {
-          const handIdx = r.hand.findIndex((t) => t.id === id)
-          if (handIdx < 0) return r
-          const picked = r.hand[handIdx]!
-          const handNext = [...r.hand]
-          handNext.splice(handIdx, 1)
-          const prior = r.pendingEastDiscardTile
-          const priorIdx = r.pendingEastDiscardIdx
-          let handAfter: TileInstance[]
-          if (prior) {
-            const insertIdx = Math.min(priorIdx ?? handNext.length, handNext.length)
-            handAfter = [...handNext]
-            handAfter.splice(insertIdx, 0, prior)
-          } else {
-            handAfter = handNext
-          }
-          return {
-            ...r,
-            hand: handAfter,
-            pendingEastDiscardTile: picked,
-            pendingEastDiscardIdx: handIdx,
-            selectedHandTileId: null,
-          }
-        }
-        if (r.mainPhase === 'call-staging') {
-          return applyToggleStagedCallTile(r, id)
-        }
-        return r  // bot-turn: hand clicks do nothing
-      }
-
-      const emptyIdx = firstEmptyPassSlotIndex(r.passSlots)
-      if (emptyIdx >= 0) {
-        const handIdx = r.hand.findIndex((t) => t.id === id)
-        if (handIdx < 0) return r
-        const tile = r.hand[handIdx]!
-        if (!charlestonPassEligible(tile.def)) {
-          passBlockedCat = tile.def.cat === 'blank' ? 'blank' : 'joker'
-          return r
-        }
-        const handNext = [...r.hand]
-        const passNext: PassSlots = [...r.passSlots]
-        handNext.splice(handIdx, 1)
-        const bumped = passNext[emptyIdx]
-        passNext[emptyIdx] = tile
-        if (bumped) handNext.push(bumped)
-        const passOriginsNext: [number | null, number | null, number | null] = [...r.passSlotOrigins]
-        passOriginsNext[emptyIdx] = handIdx
-        lastPassReturnTileIdRef.current = null
-        return { ...r, hand: handNext, passSlots: passNext, passSlotOrigins: passOriginsNext, selectedHandTileId: null }
-      }
-      return r
-    })
-    if (passBlockedCat) {
-      setCharlestonPassError(charlestonPassBlockedMessage(passBlockedCat))
-    }
-  }, [setCharlestonPassError, pushRound])
 
   const onToggleStagedCallTile = useCallback(
     (id: string) => {
@@ -7851,404 +4242,7 @@ export default function App() {
     [pushRound],
   )
 
-  const onDragEnd = useCallback(
-    (e: DragEndEvent) => {
-      const { active, over } = e
-      const aid = String(active.id)
-      const passTileStillOverPassBox =
-        !charlestonDone &&
-        passSlots.some((s) => s?.id === aid) &&
-        pointerOverPassBoxTarget(lastDragPointerRef.current)
-      try {
-        // Blank dropped anywhere over the discard tracker (your turn) → open the centered exchange
-        // popup. Accepts a blank dragged from the hand OR one staged in the discard slot. Checked
-        // first (with a pointer-position fallback) so it works even if dnd-kit hasn't measured the
-        // tracker droppable for this drag.
-        const draggedBlankForExchange =
-          hand.some((t) => t.id === aid && t.def.cat === 'blank') ||
-          (pendingEastDiscardTile?.id === aid && pendingEastDiscardTile.def.cat === 'blank')
-        if (
-          charlestonDone &&
-          mainPhase === 'east-discard' &&
-          draggedBlankForExchange &&
-          (String(over?.id) === BLANK_EXCHANGE_DROP_ID ||
-            pointerOverBlankExchangeTarget(lastDragPointerRef.current))
-        ) {
-          setBlankExchangeOpen({ blankTileId: aid })
-          return
-        }
-        if (!over) {
-          if (
-            isActiveBotDiscardDrag(aid, activeBotDiscard ?? null) &&
-            pointerOverCallInitiateTarget(lastDragPointerRef.current)
-          ) {
-            initiateCall()
-            return
-          }
-          if (passTileStillOverPassBox) {
-            return
-          }
-          if (!charlestonDone && passSlots.some((s) => s?.id === aid)) {
-            pushRound((r) => {
-              if (r.charlestonPhase === 'done') return r
-              const passFromIdx = r.passSlots.findIndex((s) => s?.id === aid)
-              if (passFromIdx < 0) return r
-              const passSlotsNext: PassSlots = [...r.passSlots]
-              const passOriginsNext: [number | null, number | null, number | null] = [...r.passSlotOrigins]
-              const tile = passSlotsNext[passFromIdx]
-              passSlotsNext[passFromIdx] = null
-              passOriginsNext[passFromIdx] = null
-              const handNext = [...r.hand]
-              if (tile) handNext.push(tile)
-              const compacted = compactPassSlotsToRight(passSlotsNext, passOriginsNext)
-              return {
-                ...r,
-                hand: handNext,
-                passSlots: compacted.passSlots,
-                passSlotOrigins: compacted.passSlotOrigins,
-                selectedHandTileId: null,
-              }
-            })
-            return
-          }
-          /* Charleston: release outside any droppable → park tile on the right end of the rack. */
-          if (!charlestonDone && hand.some((t) => t.id === aid)) {
-            pushRound((r) => {
-              if (r.charlestonPhase === 'done') return r
-              const idx = r.hand.findIndex((t) => t.id === aid)
-              if (idx < 0) return r
-              const hn = [...r.hand]
-              const [tile] = hn.splice(idx, 1)
-              hn.push(tile)
-              return { ...r, hand: hn, selectedHandTileId: null }
-            })
-          }
-          return
-        }
-        const oid = String(over.id)
 
-        const exposureFromIdx = parseEastExposureMeldSortId(aid)
-        const exposureToIdx = parseEastExposureMeldSortId(oid)
-        if (exposureFromIdx != null && exposureToIdx != null) {
-          if (exposureFromIdx !== exposureToIdx) {
-            pushRound((r) => {
-              if (exposureFromIdx >= r.eastExposures.length || exposureToIdx >= r.eastExposures.length) {
-                return r
-              }
-              return {
-                ...r,
-                eastExposures: arrayMove(r.eastExposures, exposureFromIdx, exposureToIdx),
-              }
-            })
-          }
-          return
-        }
-
-        if (
-          oid === CALL_INITIATE_FIRST_SLOT_ID ||
-          (isActiveBotDiscardDrag(aid, activeBotDiscard ?? null) &&
-            pointerOverCallInitiateTarget(lastDragPointerRef.current))
-        ) {
-          if (hand.some((t) => t.id === aid) || isActiveBotDiscardDrag(aid, activeBotDiscard ?? null)) {
-            initiateCall()
-          }
-          return
-        }
-
-        // ── call-staging cross-zone drag ──────────────────────────────────────────
-        if (mainPhase === 'call-staging') {
-          const aidStaged = stagedCallTileIds.includes(aid)
-          const oidStaged = stagedCallTileIds.includes(oid)
-          const oidIsHandTile = !oidStaged && hand.some((t) => t.id === oid)
-
-          // Staged tile dragged down to a hand tile position → un-stage + reorder
-          if (aidStaged && oidIsHandTile) {
-            pushRound((r) => {
-              const unstagedR = applyToggleStagedCallTile(r, aid)
-              const fromIdx = unstagedR.hand.findIndex((t) => t.id === aid)
-              const toIdx = unstagedR.hand.findIndex((t) => t.id === oid)
-              if (fromIdx >= 0 && toIdx >= 0 && fromIdx !== toIdx) {
-                return { ...unstagedR, hand: arrayMove(unstagedR.hand, fromIdx, toIdx) }
-              }
-              return unstagedR
-            })
-            return
-          }
-          // Staged tile dropped on hand bank (no specific tile target) → un-stage in place
-          if (aidStaged && oid === HAND_BANK_ID) {
-            pushRound((r) => applyToggleStagedCallTile(r, aid))
-            return
-          }
-          // Hand tile dragged up to a staged slot or exposure zone → stage it
-          if (!aidStaged && (oidStaged || oid === CALL_STAGING_DROP_ID)) {
-            pushRound((r) => applyToggleStagedCallTile(r, aid))
-            return
-          }
-        }
-
-        // Joker swap: your exposures, your row, or any bot exposure rack (same rules: natural for joker).
-        const eastExposureSwapIdx = parseEastExposureSwapDropId(oid)
-        const eastSeat = oid === EAST_SEAT_SWAP_ID
-        const exposureSwapIdx = parseBotExposureSwapDropId(oid)
-        const seatSwap = parseBotSeatSwapDropId(oid)
-        if (jokerSwapUiActive && (eastExposureSwapIdx !== null || eastSeat || exposureSwapIdx !== null || seatSwap)) {
-          pushRound((r) => {
-            const fromHand = r.hand.find((t) => t.id === aid)
-            const fromPending = !fromHand && r.pendingEastDiscardTile?.id === aid
-              ? r.pendingEastDiscardTile
-              : null
-            const natural = fromHand ?? fromPending
-            if (!natural || natural.def.cat === 'joker') return r
-
-            let pick: JokerSwapTargetPick | null = null
-            if (eastExposureSwapIdx !== null) {
-              pick = findJokerSwapTargetAtEastExposure(
-                r.eastExposures,
-                eastExposureSwapIdx,
-                natural.def,
-              )
-            } else if (eastSeat) {
-              pick = findJokerSwapTargetInEastRack(r.eastExposures, natural.def)
-            } else if (exposureSwapIdx !== null) {
-              pick = findNextBotJokerSwapTarget(r.botExposures, natural.def)
-            } else if (seatSwap) {
-              pick = findNextBotJokerSwapTarget(r.botExposures, natural.def)
-            }
-            if (!pick) return r
-            return applyEastNaturalForExposedJoker(r, { ...pick, eastTileId: aid })
-          })
-          setPendingJokerSwapTileId(null)
-          return
-        }
-
-        let passBlockedCat: 'joker' | 'blank' | null = null
-        pushRound((r) => {
-      const passSlotsNext: PassSlots = [...r.passSlots]
-      const handNext = [...r.hand]
-      const handIdx = handNext.findIndex((t) => t.id === aid)
-      const passFromIdx = passSlotsNext.findIndex((s) => s?.id === aid)
-      const overHandIdx = handNext.findIndex((t) => t.id === oid)
-      const passToIdx =
-        passFromIdx >= 0 && oid === PASS_BOX_ID
-          ? null
-          : passDropIndex(oid, passSlotsNext)
-      const blockPass = r.charlestonPhase === 'done'
-
-      if (!blockPass && passFromIdx >= 0 && passTileStillOverPassBox && passToIdx === null) {
-        return r
-      }
-
-      if (r.mainPhase === 'east-discard' && r.pendingEastDiscardTile?.id === aid && oid === HAND_BANK_ID) {
-        const t = r.pendingEastDiscardTile
-        const handNext2 = [...r.hand]
-        const insertIdx = Math.min(
-          handVisualInsertIndexFromPointer() ?? r.pendingEastDiscardIdx ?? handNext2.length,
-          handNext2.length,
-        )
-        handNext2.splice(insertIdx, 0, t)
-        return { ...r, hand: handNext2, pendingEastDiscardTile: null, pendingEastDiscardIdx: null, selectedHandTileId: null }
-      }
-      if (
-        r.mainPhase === 'east-discard' &&
-        r.pendingEastDiscardTile?.id === aid &&
-        overHandIdx >= 0
-      ) {
-        const t = r.pendingEastDiscardTile
-        const hn = [...r.hand]
-        const insertIdx = handInsertIndexFromOver(over, overHandIdx)
-        hn.splice(insertIdx, 0, t)
-        return { ...r, hand: hn, pendingEastDiscardTile: null, pendingEastDiscardIdx: null, selectedHandTileId: null }
-      }
-      if (r.mainPhase === 'east-discard' && oid === EAST_DISCARD_STAGING_ID && handIdx >= 0) {
-        const moved = handNext[handIdx]!
-        handNext.splice(handIdx, 1)
-        const prior = r.pendingEastDiscardTile
-        const priorIdx = r.pendingEastDiscardIdx
-        let handAfter: TileInstance[]
-        if (prior) {
-          const insertIdx = Math.min(priorIdx ?? handNext.length, handNext.length)
-          handAfter = [...handNext]
-          handAfter.splice(insertIdx, 0, prior)
-        } else {
-          handAfter = handNext
-        }
-        return { ...r, hand: handAfter, pendingEastDiscardTile: moved, pendingEastDiscardIdx: handIdx, selectedHandTileId: null }
-      }
-      if (r.mainPhase === 'call-staging' && oid === CALL_STAGING_DROP_ID && handIdx >= 0) {
-        return applyToggleStagedCallTile(r, aid)
-      }
-
-      if (handIdx >= 0 && overHandIdx >= 0 && handIdx !== overHandIdx) {
-        return { ...r, hand: arrayMove(handNext, handIdx, overHandIdx), selectedHandTileId: null }
-      }
-
-      /* Charleston: dropped on hand bank or full pass box → cancel pass, tile to rack end. */
-      if (!blockPass && handIdx >= 0 && oid === HAND_BANK_ID) {
-        const moved = handNext[handIdx]!
-        handNext.splice(handIdx, 1)
-        handNext.push(moved)
-        return { ...r, hand: handNext, selectedHandTileId: null }
-      }
-      if (!blockPass && handIdx >= 0 && oid === PASS_BOX_ID && passToIdx === null) {
-        const moved = handNext[handIdx]!
-        handNext.splice(handIdx, 1)
-        handNext.push(moved)
-        return { ...r, hand: handNext, selectedHandTileId: null }
-      }
-
-      if (!blockPass && passFromIdx >= 0 && passToIdx !== null && handIdx < 0) {
-        if (passFromIdx === passToIdx) return { ...r, selectedHandTileId: null }
-        const reordered = reorderPassSlots(r.passSlots, r.passSlotOrigins, passFromIdx, passToIdx)
-        return {
-          ...r,
-          passSlots: reordered.passSlots,
-          passSlotOrigins: reordered.passSlotOrigins,
-          selectedHandTileId: null,
-        }
-      }
-
-      if (!blockPass && handIdx >= 0 && passToIdx !== null) {
-        const moved = handNext[handIdx]!
-        if (!charlestonPassEligible(moved.def)) {
-          passBlockedCat = moved.def.cat === 'blank' ? 'blank' : 'joker'
-          return r
-        }
-        handNext.splice(handIdx, 1)
-        const bumped = passSlotsNext[passToIdx]
-        const passOriginsNext: [number | null, number | null, number | null] = [...r.passSlotOrigins]
-        if (bumped) {
-          handNext.push(bumped)
-        }
-        passSlotsNext[passToIdx] = moved
-        passOriginsNext[passToIdx] = handIdx
-        return { ...r, hand: handNext, passSlots: passSlotsNext, passSlotOrigins: passOriginsNext, selectedHandTileId: null }
-      }
-
-      if (passFromIdx >= 0 && oid === HAND_BANK_ID) {
-        const t = passSlotsNext[passFromIdx]
-        passSlotsNext[passFromIdx] = null
-        const passOriginsNext: [number | null, number | null, number | null] = [...r.passSlotOrigins]
-        passOriginsNext[passFromIdx] = null
-        const insertIdx = Math.min(handVisualInsertIndexFromPointer() ?? handNext.length, handNext.length)
-        if (t) handNext.splice(insertIdx, 0, t)
-        const compacted = compactPassSlotsToRight(passSlotsNext, passOriginsNext)
-        return {
-          ...r,
-          hand: handNext,
-          passSlots: compacted.passSlots,
-          passSlotOrigins: compacted.passSlotOrigins,
-        }
-      }
-
-      if (passFromIdx >= 0 && overHandIdx >= 0) {
-        const t = passSlotsNext[passFromIdx]
-        passSlotsNext[passFromIdx] = null
-        const passOriginsNext: [number | null, number | null, number | null] = [...r.passSlotOrigins]
-        passOriginsNext[passFromIdx] = null
-        const insertIdx = handInsertIndexFromOver(over, overHandIdx)
-        if (t) handNext.splice(insertIdx, 0, t)
-        const compacted = compactPassSlotsToRight(passSlotsNext, passOriginsNext)
-        return {
-          ...r,
-          hand: handNext,
-          passSlots: compacted.passSlots,
-          passSlotOrigins: compacted.passSlotOrigins,
-        }
-      }
-
-      return r
-    })
-        if (passBlockedCat) {
-          setCharlestonPassError(charlestonPassBlockedMessage(passBlockedCat))
-        }
-      } finally {
-        releaseHandRackGeometryAfterMobileDrag()
-        globalDragPointerCleanupRef.current?.()
-        setIncomingBotDiscardCallDragActive(false)
-        setDragOverlayTile(null)
-        setDragOverlayMeldTiles(null)
-        setDragOverlayRackSuitStacked(false)
-        setCharlestonPassIntoHandPreview(null)
-        setEastDiscardIntoHandPreview(null)
-        setCharlestonHandPassStageTileId(null)
-      }
-    },
-    [
-      hand,
-      charlestonDone,
-      releaseHandRackGeometryAfterMobileDrag,
-      jokerSwapUiActive,
-      mainPhase,
-      passSlots,
-      pendingEastDiscardTile,
-      setBlankExchangeOpen,
-      stagedCallTileIds,
-      pushRound,
-      initiateCall,
-      activeBotDiscard?.id,
-      handInsertIndexFromOver,
-      handVisualInsertIndexFromPointer,
-    ],
-  )
-
-  const onPassBoxClick = useCallback(() => {
-    let passBlockedCat: 'joker' | 'blank' | null = null
-    pushRound((r) => {
-      if (r.charlestonPhase === 'done') return r
-      const emptyIdx = firstEmptyPassSlotIndex(r.passSlots)
-      if (emptyIdx < 0) return r
-      const tileId = r.selectedHandTileId ?? lastPassReturnTileIdRef.current
-      if (!tileId) return r
-      const handIdx = r.hand.findIndex((t) => t.id === tileId)
-      if (handIdx < 0) return { ...r, selectedHandTileId: null }
-      const tileDef = r.hand[handIdx]!.def
-      if (!charlestonPassEligible(tileDef)) {
-        passBlockedCat = tileDef.cat === 'blank' ? 'blank' : 'joker'
-        return { ...r, selectedHandTileId: null }
-      }
-
-      const passSlotsNext: PassSlots = [...r.passSlots]
-      const handNext = [...r.hand]
-      const [moved] = handNext.splice(handIdx, 1)
-      const bumped = passSlotsNext[emptyIdx]
-      passSlotsNext[emptyIdx] = moved
-      if (bumped) handNext.push(bumped)
-      const passOriginsNext: [number | null, number | null, number | null] = [...r.passSlotOrigins]
-      passOriginsNext[emptyIdx] = handIdx
-      lastPassReturnTileIdRef.current = null
-
-      return { ...r, hand: handNext, passSlots: passSlotsNext, passSlotOrigins: passOriginsNext, selectedHandTileId: null }
-    })
-    if (passBlockedCat) {
-      setCharlestonPassError(charlestonPassBlockedMessage(passBlockedCat))
-    }
-  }, [setCharlestonPassError, pushRound])
-
-  const onPassTileClickReturn = useCallback((slotIndex: number) => {
-    pushRound((r) => {
-      if (r.charlestonPhase === 'done') return r
-      const t = r.passSlots[slotIndex]
-      if (!t) return r
-      lastPassReturnTileIdRef.current = t.id
-      const passSlotsNext: PassSlots = [...r.passSlots]
-      passSlotsNext[slotIndex] = null
-      const passOriginsNext: [number | null, number | null, number | null] = [...r.passSlotOrigins]
-      passOriginsNext[slotIndex] = null
-      const handNext = [...r.hand]
-      handNext.push(t)
-      const compacted = compactPassSlotsToRight(passSlotsNext, passOriginsNext)
-      return {
-        ...r,
-        hand: handNext,
-        passSlots: compacted.passSlots,
-        passSlotOrigins: compacted.passSlotOrigins,
-        selectedHandTileId:
-          r.selectedHandTileId != null && handNext.some((tile) => tile.id === r.selectedHandTileId)
-            ? r.selectedHandTileId
-            : null,
-      }
-    })
-  }, [pushRound])
 
   /*
    * Freeze the hand panel's container-query width to a px value (`--hand-panel-cqw`, consumed by
@@ -8340,10 +4334,6 @@ export default function App() {
   }, [passSlots])
   /** Keep Charleston hand sortables stable; cross-zone preview gap is a visual transform in `SortableHand`. */
   const charlestonHandSortableIds = handIds
-  const charlestonPassPhantomTile = useMemo(() => {
-    if (!charlestonPassIntoHandPreview) return null
-    return passSlots.find((s) => s?.id === charlestonPassIntoHandPreview.tileId) ?? null
-  }, [charlestonPassIntoHandPreview, passSlots])
   /** East discard + pending: keep active id stable in its staging slot; hand preview gap is visual only. */
   const eastMainSortableIds = useMemo(() => {
     if (mainPhase !== 'east-discard' || !pendingEastDiscardTile) return null
@@ -8414,30 +4404,27 @@ export default function App() {
     onToggleStagedCallTile,
   ])
 
-  const charlestonExposureTrailingSuffix = useMemo(
-    () => (
-      <PassStrip
-        variant="inlineTail"
-        slots={passSlots}
-        onPassBoxClick={onPassBoxClick}
-        onPassTileClickReturn={onPassTileClickReturn}
-        suggestedBestIds={suggestedTileGuideForRack?.bestIds}
-        suggestedBlankExchangeIds={suggestedTileGuideForRack?.blankExchangeIds}
-        flyOutFrom={passStripFlyOut}
-        hiddenSortableTileId={null}
-        returningTileId={charlestonPassIntoHandPreview?.tileId ?? null}
-        inlineHeaderTitle={charlestonRackRoundTitleText}
-        inlineHeaderInstruction={<CharlestonPassStripInstructionMain phase={charlestonPhase} />}
-        inlineHeaderInstructionAria={charlestonPassStripInstructionAria(charlestonPhase)}
-      />
-    ),
+  const charlestonPassStrip = useMemo(
+    () =>
+      charlestonDone
+        ? null
+        : {
+            slots: passSlots,
+            onPassBoxClick,
+            onPassTileClickReturn,
+            flyOutFrom: passStripFlyOut,
+            inlineHeaderTitle: charlestonRackRoundTitleText,
+            inlineHeaderInstruction: (
+              <CharlestonPassStripInstructionMain phase={charlestonPhase} />
+            ),
+            inlineHeaderInstructionAria: charlestonPassStripInstructionAria(charlestonPhase),
+          },
     [
+      charlestonDone,
       passSlots,
       onPassBoxClick,
       onPassTileClickReturn,
-      suggestedTileGuideForRack,
       passStripFlyOut,
-      charlestonPassIntoHandPreview?.tileId,
       charlestonRackRoundTitleText,
       charlestonPhase,
     ],
@@ -8506,64 +4493,6 @@ export default function App() {
     jokerSwapHintBounceEpoch,
   ])
 
-  const callInitiateFirstEmptyOverride = useMemo(() => {
-    if (
-      !(
-        charlestonDone &&
-        mainPhase === 'bot-turn' &&
-        activeBotDiscard &&
-        incomingBotDiscardCallDragActive
-      )
-    ) {
-      return undefined
-    }
-    return <CallInitiateFirstEmptyTarget />
-  }, [charlestonDone, mainPhase, activeBotDiscard, incomingBotDiscardCallDragActive])
-
-  const mainGameCallDisabled = mainPhase !== 'bot-turn' || !activeBotDiscard
-  /**
-   * Shared c9–10 cell: on your turn (East discard) the control is always "Swap" — it redeems an
-   * exposed joker (staged natural) or exchanges a blank for a discarded tile. Joker-swap UI also
-   * makes it "Swap" during call-staging. Otherwise it's "Call" (active only on a bot's discard).
-   */
-  const mainBarSharedSlotIsSwap =
-    jokerSwapUiActive || mainPhase === 'east-discard'
-  /** Dim Swap until joker redemption or blank exchange is actually possible (matches Charleston). */
-  const hasBlankForExchange =
-    hand.some((t) => t.def.cat === 'blank') || pendingEastDiscardTile?.def.cat === 'blank'
-  const mainGameSwapDisabled =
-    !jokerSwapUiActive &&
-    !(
-      charlestonDone &&
-      mainPhase === 'east-discard' &&
-      blankTilesEnabled &&
-      hasBlankForExchange &&
-      discardedDefsForBlankExchange(discardPile).length > 0
-    )
-  const mahjongButtonEnabled =
-    charlestonDone &&
-    (mainPhase === 'east-discard' ||
-      ((mainPhase === 'bot-turn' || mainPhase === 'call-staging') && !!activeBotDiscard))
-  const mainGamePrimaryIsDone =
-    mainPhase === 'call-staging' && showCallStagingDoneButton
-  const mainGamePrimaryDisabled =
-    mainPhase === 'east-discard'
-      ? !pendingEastDiscardTile
-      : mainPhase === 'call-staging'
-        ? mainGamePrimaryIsDone
-          ? !canCommitStagedCallDone
-          : true
-        : mainPhase === 'bot-turn'
-          ? !activeBotDiscard
-          : true
-  const mainGamePrimaryLabel = mainGamePrimaryIsDone
-    ? 'Done'
-    : mainPhase === 'east-discard' || mainPhase === 'call-staging'
-      ? 'Discard'
-      : 'Ignore'
-
-  const showJokerSwapRackHint = !!jokerSwapHintTargetIds && mainBarSharedSlotIsSwap
-
   const showMahjongRackHint = useMemo(() => {
     if (!mahjongHintEnabled || !charlestonDone) return false
     if (mainPhase === 'east-discard') {
@@ -8604,145 +4533,134 @@ export default function App() {
   /** Discard tracker + suggested hands row below rack (always on so layout is visible during Charleston). */
   const showPlaySplitRow = true
 
-  const playerSeatLabelActiveTurn = useMemo(() => {
-    if (
-      mainPhase === 'wall-game' ||
-      mainPhase === 'mahjong-declared' ||
-      mainPhase === 'bot-mahjong' ||
-      mainPhase === 'dead-hand'
-    ) {
-      return false
-    }
-    if (!charlestonDone) return true
-    return mainPhase === 'east-discard' || mainPhase === 'call-staging'
-  }, [charlestonDone, mainPhase])
-
-  /** Player threw the discard another seat is calling (bot-on-bot uses discarderBotIndex; player uses null). */
-  const playerSeatLabelCalledThrower = useMemo(
-    () =>
-      charlestonDone &&
-      mainPhase === 'bot-turn' &&
-      botTurnBanner != null &&
-      botTurnBanner.discarderBotIndex === null,
-    [charlestonDone, mainPhase, botTurnBanner],
-  )
-
-  /** Call-initiate drop slot conflicts with the default above-rack seat label — hide until drag ends. */
-  const hidePlayerSeatLabelForCallSlot =
-    incomingBotDiscardCallDragActive && playerExposureMelds.length === 0
-
-  /** Vertically center the player seat label between the top discard tracker and the main hand rack. */
-  const updatePlayerSeatLabelPosition = useCallback(() => {
-    const rackBottom = playerHandRackBottomRef.current
-    if (!rackBottom) return
-    const handTray = rackBottom.closest('.panel-hand-rack__hand-tray') as HTMLElement | null
-
-    const rbRect = rackBottom.getBoundingClientRect()
-    const handTop = rbRect.top
-    const topTracker =
-      topDiscardTrackerPanelRef.current ??
-      (rackBottom.closest('.app-dnd-frame')?.querySelector(
-        '.app-top-exposure-container .panel--discard-tracker',
-      ) as HTMLElement | null)
-
-    const bandTop = topTracker
-      ? topTracker.getBoundingClientRect().bottom
-      : (rackBottom.closest('.panel-hand-rack') as HTMLElement | null)?.getBoundingClientRect().top ??
-        handTop
-    const bandH = Math.max(0, handTop - bandTop)
-
-    const setLabelTop = (topPx: string) => {
-      // Label lives on the hand-tray (above rack-top stacking); keep the token there.
-      ;(handTray ?? rackBottom).style.setProperty('--player-seat-label-top', topPx)
-    }
-
-    // Call meld pinned in the exposure area (staged during call-staging or committed): it sits at
-    // the rack's left column and spans the full rack height, so the label can't sit above the hand
-    // (it hides behind the meld). Drop it into the empty band below the meld — between the meld's
-    // bottom and the action-button row — as soon as the meld appears.
-    const rackTop = eastExposureRackTopRef.current
-    const meldFaces = rackTop?.querySelectorAll(
-      '.exposure-rack__call-meld-strip .tile-face',
-    )
-    if (meldFaces && meldFaces.length > 0) {
-      let meldBottom = -Infinity
-      meldFaces.forEach((el) => {
-        meldBottom = Math.max(meldBottom, el.getBoundingClientRect().bottom)
-      })
-      const actionWell = handTray?.querySelector(
-        '.panel-hand-rack__action-well',
-      ) as HTMLElement | null
-      const bandBottom = actionWell
-        ? actionWell.getBoundingClientRect().top
-        : rbRect.bottom
-      const belowMeldMid = (meldBottom + bandBottom) / 2
-      // Offset from hand-tray top (label is absolutely positioned on the tray).
-      const trayTop = (handTray ?? rackBottom).getBoundingClientRect().top
-      setLabelTop(`${belowMeldMid - trayTop}px`)
-      return
-    }
-
-    const centerOffset = bandH > 0 ? -bandH / 2 : -8
-    // Same visual as before: offset from rack-bottom top ≈ hand-tray top (label is out of flow).
-    setLabelTop(`${centerOffset}px`)
-  }, [])
-
-  useLayoutEffect(() => {
-    updatePlayerSeatLabelPosition()
-
-    const rackBottom = playerHandRackBottomRef.current
-    if (!rackBottom) return
-
-    let raf = 0
-    const scheduleUpdate = () => {
-      window.cancelAnimationFrame(raf)
-      raf = window.requestAnimationFrame(updatePlayerSeatLabelPosition)
-    }
-
-    const topTracker =
-      topDiscardTrackerPanelRef.current ??
-      (rackBottom.closest('.app-dnd-frame')?.querySelector(
-        '.app-top-exposure-container .panel--discard-tracker',
-      ) as HTMLElement | null)
-    const rackTop = eastExposureRackTopRef.current
-    const panelHandRack = rackBottom.closest('.panel-hand-rack')
-
-    let ro: ResizeObserver | null = null
-    if (typeof ResizeObserver !== 'undefined') {
-      ro = new ResizeObserver(scheduleUpdate)
-      ro.observe(rackBottom)
-      if (topTracker) ro.observe(topTracker)
-      if (rackTop) ro.observe(rackTop)
-      if (panelHandRack) ro.observe(panelHandRack)
-    } else {
-      window.addEventListener('resize', scheduleUpdate)
-    }
-    window.addEventListener('orientationchange', scheduleUpdate)
-    window.visualViewport?.addEventListener('resize', scheduleUpdate)
-    const settleTimers = [80, 180, 360].map((delay) => window.setTimeout(scheduleUpdate, delay))
-
-    return () => {
-      ro?.disconnect()
-      window.removeEventListener('resize', scheduleUpdate)
-      window.removeEventListener('orientationchange', scheduleUpdate)
-      window.visualViewport?.removeEventListener('resize', scheduleUpdate)
-      settleTimers.forEach((id) => window.clearTimeout(id))
-      window.cancelAnimationFrame(raf)
-    }
-  }, [
-    updatePlayerSeatLabelPosition,
-    charlestonDone,
-    mainPhase,
-    showPlaySplitRow,
-    callMeldInsetCols,
-    playerExposureMelds.length,
-    hand.length,
-    incomingBotDiscardCallDragActive,
-  ])
-
   /** Suggested-hands tab + popup shell: hidden only on dead hand / bot Mah Jongg (no rack action row). */
   const showSuggestedHandsPanel =
     mainPhase !== 'dead-hand' && mainPhase !== 'bot-mahjong'
+
+  const showReviewNewGameBelowDiscard =
+    (mainPhase === 'wall-game' && wallGameReviewing) ||
+    (mainPhase === 'mahjong-declared' && mahjongWinReviewing)
+
+  const playSurfaceSeatLabel = useMemo(
+    () =>
+      buildPlayerSeatLabelProps({
+        charlestonDone,
+        mainPhase,
+        botTurnBannerPresent: botTurnBanner != null,
+        botTurnBannerDiscarderBotIndex: botTurnBanner?.discarderBotIndex,
+      }),
+    [charlestonDone, mainPhase, botTurnBanner],
+  )
+
+  const playSurfaceActionBar = useMemo(
+    () =>
+      buildPlaySurfaceActionBarProps({
+        charlestonDone,
+        mainPhase,
+        activeBotDiscard,
+        jokerSwapUiActive,
+        hand,
+        pendingEastDiscardTile,
+        blankTilesEnabled,
+        discardPile,
+        showCallStagingDoneButton,
+        canCommitStagedCallDone,
+        jokerSwapHintTargetIds,
+        showMahjongRackHint,
+        showSuggestedHandsPanel,
+        suggestedPanelTilesOn,
+        concealedHandReminderEnabled,
+        focusedHandIsConcealed,
+        showReviewNewGameBelowDiscard,
+        mahjongWinReviewing,
+        undoEnabled,
+        canUndo,
+      }),
+    [
+      charlestonDone,
+      mainPhase,
+      activeBotDiscard,
+      jokerSwapUiActive,
+      hand,
+      pendingEastDiscardTile,
+      blankTilesEnabled,
+      discardPile,
+      showCallStagingDoneButton,
+      canCommitStagedCallDone,
+      jokerSwapHintTargetIds,
+      showMahjongRackHint,
+      showSuggestedHandsPanel,
+      suggestedPanelTilesOn,
+      concealedHandReminderEnabled,
+      focusedHandIsConcealed,
+      showReviewNewGameBelowDiscard,
+      mahjongWinReviewing,
+      undoEnabled,
+      canUndo,
+    ],
+  )
+
+  const playSurfaceCoach = useMemo((): PlaySurfaceCoachProps => {
+    return {
+      suggestedTileGuideForRack,
+      suggestedDeadTileGuideForRack,
+      botExposureSuggestedTileGuide,
+      botExposureDeadIds: suggestedDeadTableGuideForView?.botExposureDeadIds ?? null,
+      suggestedDiscardTrackerNeedDefs,
+      jokerSwapHintBounceIds,
+      jokerSwapHintBounceEpoch,
+      charlestonGlowTileIds,
+      handTileFlyIn,
+      handJokerSwapFlyInFromBelowId,
+      botExposureFlyInTileIds,
+      exposureJokerSwapFlyInTileIds,
+    }
+  }, [
+    suggestedTileGuideForRack,
+    suggestedDeadTileGuideForRack,
+    botExposureSuggestedTileGuide,
+    suggestedDeadTableGuideForView?.botExposureDeadIds,
+    suggestedDiscardTrackerNeedDefs,
+    jokerSwapHintBounceIds,
+    jokerSwapHintBounceEpoch,
+    charlestonGlowTileIds,
+    handTileFlyIn,
+    handJokerSwapFlyInFromBelowId,
+    botExposureFlyInTileIds,
+    exposureJokerSwapFlyInTileIds,
+  ])
+
+  const playSurfaceRackChrome = useMemo((): PlaySurfaceRackChromeProps => {
+    return {
+      charlestonPassSortableItems,
+      charlestonEastExposureMelds,
+      charlestonPassStrip,
+      charlestonHandSortableIds,
+      sortableItems,
+      eastPlayerExposureRackMelds,
+      callMeldInsetCols,
+      eastCallStagedWaveFlyIn,
+      eastExposureLastSlotLabel,
+      eastExposureLastSlotClassName,
+      eastDiscardLastSlotReplace,
+      visibleHandTiles,
+      winHandSortedTiles,
+    }
+  }, [
+    charlestonPassSortableItems,
+    charlestonEastExposureMelds,
+    charlestonPassStrip,
+    charlestonHandSortableIds,
+    sortableItems,
+    eastPlayerExposureRackMelds,
+    callMeldInsetCols,
+    eastCallStagedWaveFlyIn,
+    eastExposureLastSlotLabel,
+    eastExposureLastSlotClassName,
+    eastDiscardLastSlotReplace,
+    visibleHandTiles,
+    winHandSortedTiles,
+  ])
 
   const updateSuggestedDiscardOverlayBounds = useCallback(() => {
     const popup = suggestedHandsPopupRef.current
@@ -8871,12 +4789,7 @@ export default function App() {
     mainPhase,
   ])
 
-  /** Post-game rack review: New Game sits on a second row under Pass / Discard (cols 12–14). */
-  const showReviewNewGameBelowDiscard =
-    (mainPhase === 'wall-game' && wallGameReviewing) ||
-    (mainPhase === 'mahjong-declared' && mahjongWinReviewing)
-
-  const renderSuggestedHandsPopup = () => {
+  const suggestedHandsPopup = useMemo(() => {
     if (!showSuggestedHandsPanel) return null
 
     const overlayStyle: CSSProperties = {
@@ -8919,7 +4832,26 @@ export default function App() {
         )}
       </SuggestedHandsPopupChrome>
     )
-  }
+  }, [
+    showSuggestedHandsPanel,
+    suggestedDiscardOverlayBounds,
+    toggleSuggestedPinnedHandKey,
+    eastSuggestedHands,
+    suggestedFocusHandKey,
+    suggestedPinnedHandKeys,
+    onSuggestedPatternClick,
+    onSuggestedFocusKeyMigrate,
+    suggestedPanelTilesOn,
+    deferredRackForSuggestedStrip,
+    deferredRackForSuggestedPatternMatch,
+    suggestedHandsExposureTileIds,
+    suggestedHandsUncheckedSections,
+    suggestedHandsHideConcealed,
+    cardPatterns,
+    cardSectionOrder,
+    suggestedDeadCauseByFocusKey,
+    suggestedFocusedHandDeadCause,
+  ])
 
   return (
     <AppMenuOpenProvider>
@@ -9450,7 +5382,7 @@ export default function App() {
                     className="btn charleston-error-dialog__rack-action"
                     onClick={() => {
                       setBlockingDialog(null)
-                      proceedWithCallRef.current?.()
+                      proceedWithCall()
                     }}
                   >
                     Call
@@ -9927,619 +5859,70 @@ export default function App() {
           </div>
         </div>
       )}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={tileDragCollisionDetection}
-        onDragStart={onDragStart}
-        onDragOver={onDragOver}
-        onDragCancel={onDragCancel}
-        onDragEnd={onDragEnd}
-      >
-      <div
-        className="app-layout"
-        data-animations={animationsEnabled ? 'on' : 'off'}
-        data-joker-swap-hint={jokerSwapHintEnabled ? 'on' : 'off'}
-        data-joker-swap-hint-iter={jokerSwapHandHintSingleBounce ? '1' : '4'}
-      >
-        <div className="app-main">
-          <div
-            className={[
-              'app-main__scroll',
-              charlestonDone && mainPhase !== 'east-discard' && mainPhase !== 'bot-mahjong'
-                ? ''
-                : 'app-main__scroll--collapsed',
-            ]
-              .filter(Boolean)
-              .join(' ')}
-          >
-          </div>
-
-            <SuggestedHandsDndFrame>
-            {showPlaySplitRow ? (
-                <div className="app-play-split app-top-exposure-container">
-                <div className="app-play-split__left">
-                  <section
-                    ref={topDiscardTrackerPanelRef}
-                    className="panel panel--discard-tracker panel--discard-tracker--top"
-                    aria-label="Discard tracker"
-                  >
-                    <div className="discard-tracker__shell">
-                      <div className="discard-tracker__content discard-tracker__content--tile-groups-only">
-                        <BlankExchangeDropZone active={!!blankExchangeDragArmed}>
-                        <div className="discard-tracker__tile-groups-container">
-                        <DiscardTrackerSlotGrid
-                          discardPile={displayedDiscardPile}
-                          botExposures={botExposures}
-                          mainPhase={mainPhase}
-                          activeBotIndex={activeBotIndex}
-                          calledThrowerRowIdx={
-                            mainPhase === 'call-staging' && activeBotIndex != null
-                              ? activeBotIndex
-                              : botTurnBanner?.discarderBotIndex ?? null
-                          }
-                          jokerSwapUiActive={jokerSwapUiActive}
-                          animationsEnabled={animationsEnabled}
-                          botExposureFlyInTileIds={botExposureFlyInTileIds}
-                          exposureJokerSwapFlyInTileIds={exposureJokerSwapFlyInTileIds}
-                          botExposureSuggestedTileGuide={botExposureSuggestedTileGuide}
-                          botExposureDeadIds={
-                            suggestedDeadTableGuideForView?.botExposureDeadIds ?? null
-                          }
-                          jokerSwapHintBounceTileIds={jokerSwapHintBounceIds?.jokers ?? null}
-                          jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
-                          blankTilesEnabled={blankTilesEnabled}
-                          suggestedDiscardTrackerNeedDefs={suggestedDiscardTrackerNeedDefs}
-                          botSlotSeats={botSlotSeats}
-                        />
-                        </div>
-                        </BlankExchangeDropZone>
-                      </div>
-                    </div>
-                  </section>
-                </div>
-                </div>
-            ) : null}
-              <div className="app-rack-stage">
-            {/* ── Hand ── */}
-            <section ref={handPanelRef} className="panel panel--hand" aria-label={`Your hand, ${seatLabel(playerSeat)}`}>
-              <div className="panel-hand-rack">
-                <div className="panel-hand-rack__column">
-                  {!charlestonDone ? (
-                    <>
-                      <div className="rack-stage rack-stage--charleston" role="group">
-                        <div className="rack-stage__rack-col">
-                          <div ref={eastExposureRackTopRef} className="rack-stage__rack-top">
-                            <SortableContext items={charlestonPassSortableItems} strategy={rectSortingStrategy}>
-                            <ExposureRack
-                              className="exposure-rack--charleston-pass"
-                              stackSuitTiles
-                              melds={charlestonEastExposureMelds}
-                              suggestedTileGuide={suggestedTileGuideForRack}
-                              slotCount={14}
-                              reserveTrailingSlots={3}
-                              shiftPassStripLeftSlots={playerSeat === 'east' ? 0 : 1}
-                              ariaLabel="Your exposures and Charleston pass"
-                              trailingSuffix={charlestonExposureTrailingSuffix}
-                            />
-                            </SortableContext>
-                          </div>
-                          <div className="panel-hand-rack__hand-tray">
-                            <PlayerRackSeatLabel
-                              seat={playerSeat}
-                              isActiveTurn={playerSeatLabelActiveTurn}
-                              isCalledThrower={playerSeatLabelCalledThrower}
-                            />
-                            <div ref={playerHandRackBottomRef} className="rack-stage__rack-bottom">
-                                <HandBank>
-                                  <SortableContext items={charlestonHandSortableIds} strategy={rectSortingStrategy}>
-                                  <SortableHand
-                                    tiles={hand}
-                                    sortableOrder={charlestonHandSortableIds}
-                                    charlestonPassPhantomTile={charlestonPassPhantomTile}
-                                    externalInsertPreviewIndex={charlestonPassIntoHandPreview?.handPreviewIndex ?? null}
-                                    passStageTileId={charlestonHandPassStageTileId}
-                                    selectedTileId={selectedHandTileId}
-                                    onTileActivate={onHandTileActivate}
-                                    highlightedTileId={drawnTileId}
-                                    charlestonGlowTileIds={charlestonGlowTileIds ?? undefined}
-                                    handTileFlyIn={animationsEnabled ? handTileFlyIn : null}
-                                    handJokerSwapFlyInFromBelowId={
-                                      animationsEnabled ? handJokerSwapFlyInFromBelowId : null
-                                    }
-                                    suggestedTileGuide={suggestedTileGuideForRack}
-                                    suggestedDeadTileGuide={suggestedDeadTileGuideForRack}
-                                    discardMode={false}
-                                    animationsEnabled={animationsEnabled}
-                                    jokerSwapHintBounceTileIds={jokerSwapHintBounceIds?.hand ?? null}
-                                    jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
-                                  />
-                                  </SortableContext>
-                                </HandBank>
-                            </div>
-                            <div
-                              className="panel-hand-rack__charleston-actions-well"
-                            >
-                            <div
-                              className="rack-bottom-bar rack-bottom-bar--charleston rack-bottom-bar--tile-grid"
-                              role="group"
-                              aria-label="Charleston pass"
-                            >
-                              <button
-                                type="button"
-                                className="btn btn--rack-neutral rack-bottom-tile-cell rack-bottom-tile-cell--c1"
-                                onClick={sortHand}
-                              >
-                                Sort
-                              </button>
-                              <HandRackMenuAnchor
-                                menuContainerRef={menuContainerRef}
-                              />
-                              <WallTilesRemainCell
-                                count={wall.length}
-                                className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell rack-bottom-tile-cell--c3${
-                                  wall.length >= openingWallTileCount ? ' rack-bottom-wall--full' : ''
-                                }${wall.length === 0 ? ' rack-bottom-wall--empty' : ''}`}
-                                style={wallRemainHeatStyle(wall.length, openingWallTileCount)}
-                              />
-                              {showSuggestedHandsPanel ? (
-                                <button
-                                  type="button"
-                                  className={[
-                                    'btn',
-                                    'btn--primary',
-                                    'charleston-pass-btn',
-                                    'suggested-hands-tab',
-                                    'rack-bottom-tile-cell',
-                                    'rack-bottom-tile-cell--c4-5',
-                                    suggestedPanelTilesOn && mainPhase !== 'mahjong-declared'
-                                      ? 'suggested-hands-tab--open'
-                                      : '',
-                                  ]
-                                    .filter(Boolean)
-                                    .join(' ')}
-                                  aria-label="Suggested tiles"
-                                  aria-pressed={mainPhase !== 'mahjong-declared' && suggestedPanelTilesOn}
-                                  onClick={onSuggestedTilesButtonClick}
-                                  onPointerDown={onSuggestedTilesButtonPointerDown}
-                                  onPointerUp={onSuggestedTilesButtonPointerUpOrLeave}
-                                  onPointerLeave={onSuggestedTilesButtonPointerUpOrLeave}
-                                  onPointerCancel={onSuggestedTilesButtonPointerUpOrLeave}
-                                >
-                                  Tiles
-                                </button>
-                              ) : null}
-                              <button
-                                type="button"
-                                className={[
-                                  'btn btn--mahjong rack-bottom-tile-cell rack-bottom-tile-cell--c5-6',
-                                  showMahjongRackHint ? 'btn--mahjong-hint' : '',
-                                ]
-                                  .filter(Boolean)
-                                  .join(' ')}
-                                disabled={!mahjongButtonEnabled}
-                                onClick={declareMahjong}
-                                aria-label="Mah Jongg"
-                              >
-                                <span className="btn--mahj__logo-stack">
-                                  <span className="btn--mahj__logo-stack__well" aria-hidden />
-                                  <img className="btn--mahj__img" src={mahjLogoSrc} alt="" draggable={false} />
-                                </span>
-                              </button>
-                              <LogicTrayToggleButton />
-                              <button
-                                type="button"
-                                className="btn btn--joker-swap-action rack-bottom-tile-cell rack-bottom-tile-cell--c9-10"
-                                disabled
-                                aria-label="Swap"
-                              >
-                                Swap
-                              </button>
-                              <button
-                                type="button"
-                                className="btn btn--primary charleston-pass-btn rack-bottom-tile-cell rack-bottom-tile-cell--c12-14"
-                                aria-label={charlestonPassDirections(charlestonPhase)}
-                                disabled={!passReady || passStripFlyOut != null}
-                                aria-disabled={!passReady || passStripFlyOut != null}
-                                onClick={onCharlestonPassButtonClick}
-                              >
-                                {charlestonPassButtonLabel()}
-                              </button>
-                              {undoEnabled && canUndo ? (
-                                <span
-                                  className="btn__undo-inset rack-bottom-tile-cell rack-bottom-tile-cell--c12-14"
-                                  role="button"
-                                  tabIndex={0}
-                                  aria-label="Undo"
-                                  onClick={() => undoAction()}
-                                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); undoAction() } }}
-                                >
-                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                    <polyline points="1 4 1 10 7 10" />
-                                    <path d="M6 18a9 9 0 1 0-.36-12.36L1 10" />
-                                  </svg>
-                                </span>
-                              ) : null}
-                            </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="rack-stage rack-stage--main-rack">
-                        <div
-                          className={[
-                            'rack-stage__rack-col',
-                            callMeldInsetCols > 0 ? 'rack-stage__rack-col--call-meld-inset' : '',
-                          ]
-                            .filter(Boolean)
-                            .join(' ')}
-                          style={
-                            callMeldInsetCols > 0
-                              ? ({
-                                  ['--call-meld-inset-cols' as string]: callMeldInsetCols,
-                                } as CSSProperties)
-                              : undefined
-                          }
-                        >
-                          <SortableContext items={sortableItems} strategy={rectSortingStrategy}>
-                          <div ref={eastExposureRackTopRef} className="rack-stage__rack-top">
-                            <StagingMeldDropZone active={mainPhase === 'call-staging'}>
-                            <EastOwnJokerSwapDropZone active={jokerSwapUiActive}>
-                            <ExposureRack
-                              stackSuitTiles
-                              ownedMeldHighlight
-                              callStagingWaveFlyIn={
-                                animationsEnabled ? eastCallStagedWaveFlyIn : null
-                              }
-                              flyInTileIds={exposureJokerSwapFlyInTileIds}
-                              flyInFromBelowTileIds={exposureJokerSwapFlyInTileIds}
-                              jokerSwapHintBounceTileIds={jokerSwapHintBounceIds?.jokers ?? null}
-                              jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
-                              melds={eastPlayerExposureRackMelds}
-                              suggestedTileGuide={suggestedTileGuideForRack}
-                              highlightCalledTile={mainPhase === 'call-staging'}
-                              ariaLabel="Your exposures"
-                              reserveLastSlotForDiscard={mainPhase !== 'call-staging' && mainPhase !== 'mahjong-declared' && mainPhase !== 'bot-mahjong'}
-                              lastSlotTile={
-                                activeBotDiscard && mainPhase === 'bot-turn'
-                                  ? activeBotDiscard
-                                  : null
-                              }
-                              incomingBotDiscardFlyFrom={
-                                animationsEnabled ? incomingBotDiscardFlyFrom : null
-                              }
-                              lastSlotDraggableForCallInit={
-                                mainPhase === 'bot-turn' && activeBotDiscard != null
-                              }
-                              lastSlotLabel={eastExposureLastSlotLabel}
-                              lastSlotClassName={eastExposureLastSlotClassName}
-                              lastSlotReplace={eastDiscardLastSlotReplace}
-                              firstEmptyOverride={callInitiateFirstEmptyOverride}
-                            />
-                            </EastOwnJokerSwapDropZone>
-                            </StagingMeldDropZone>
-                          </div>
-                          <div className="panel-hand-rack__hand-tray">
-                            {mainPhase !== 'bot-mahjong' &&
-                            mainPhase !== 'dead-hand' &&
-                            !hidePlayerSeatLabelForCallSlot ? (
-                              <PlayerRackSeatLabel
-                                seat={playerSeat}
-                                isActiveTurn={playerSeatLabelActiveTurn}
-                                isCalledThrower={playerSeatLabelCalledThrower}
-                              />
-                            ) : null}
-                            {mainPhase !== 'bot-mahjong' && (
-                            <div ref={playerHandRackBottomRef} className="rack-stage__rack-bottom">
-                                <HandBank>
-                                  <SortableHand
-                                    tiles={
-                                      mainPhase === 'mahjong-declared'
-                                        ? (winHandSortedTiles ?? [])
-                                        : visibleHandTiles
-                                    }
-                                    sortableOrder={undefined}
-                                    externalInsertPreviewIndex={eastDiscardIntoHandPreview?.handPreviewIndex ?? null}
-                                    selectedTileId={
-                                      mainPhase === 'east-discard' ? null : selectedHandTileId
-                                    }
-                                    onTileActivate={onHandTileActivate}
-                                    highlightedTileId={drawnTileId}
-                                    charlestonGlowTileIds={charlestonGlowTileIds ?? undefined}
-                                    handTileFlyIn={animationsEnabled ? handTileFlyIn : null}
-                                    handJokerSwapFlyInFromBelowId={
-                                      animationsEnabled ? handJokerSwapFlyInFromBelowId : null
-                                    }
-                                    suggestedTileGuide={suggestedTileGuideForRack}
-                                    suggestedDeadTileGuide={suggestedDeadTileGuideForRack}
-                                    discardMode={false}
-                                    animationsEnabled={animationsEnabled}
-                                    jokerSwapHintBounceTileIds={jokerSwapHintBounceIds?.hand ?? null}
-                                    jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
-                                  />
-                                </HandBank>
-                            </div>
-                            )}
-                            {mainPhase !== 'bot-mahjong' && mainPhase !== 'dead-hand' ? (
-                              <div
-                                className="panel-hand-rack__action-well"
-                              >
-                              <div
-                                className="rack-bottom-bar rack-bottom-bar--main rack-bottom-bar--tile-grid"
-                                role="group"
-                                aria-label="Table actions"
-                              >
-                                <button
-                                  type="button"
-                                  className="btn btn--rack-neutral rack-bottom-tile-cell rack-bottom-tile-cell--c1"
-                                  onClick={sortHand}
-                                >
-                                  Sort
-                                </button>
-                                <HandRackMenuAnchor
-                                  menuContainerRef={menuContainerRef}
-                                />
-                                <WallTilesRemainCell
-                                  count={wall.length}
-                                  className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell rack-bottom-tile-cell--c3${
-                                    wall.length >= openingWallTileCount ? ' rack-bottom-wall--full' : ''
-                                  }${wall.length === 0 ? ' rack-bottom-wall--empty' : ''}`}
-                                  style={wallRemainHeatStyle(wall.length, openingWallTileCount)}
-                                />
-                                {showSuggestedHandsPanel ? (
-                                  <button
-                                    type="button"
-                                    className={[
-                                      'btn',
-                                      'btn--primary',
-                                      'charleston-pass-btn',
-                                      'suggested-hands-tab',
-                                      'rack-bottom-tile-cell',
-                                      'rack-bottom-tile-cell--c4-5',
-                                      suggestedPanelTilesOn && mainPhase !== 'mahjong-declared'
-                                        ? 'suggested-hands-tab--open'
-                                        : '',
-                                    ]
-                                      .filter(Boolean)
-                                      .join(' ')}
-                                    aria-label="Suggested tiles"
-                                    aria-pressed={mainPhase !== 'mahjong-declared' && suggestedPanelTilesOn}
-                                    onClick={onSuggestedTilesButtonClick}
-                                    onPointerDown={onSuggestedTilesButtonPointerDown}
-                                    onPointerUp={onSuggestedTilesButtonPointerUpOrLeave}
-                                    onPointerLeave={onSuggestedTilesButtonPointerUpOrLeave}
-                                    onPointerCancel={onSuggestedTilesButtonPointerUpOrLeave}
-                                  >
-                                    Tiles
-                                  </button>
-                                ) : null}
-                                <button
-                                  type="button"
-                                  className={[
-                                    'btn btn--mahjong rack-bottom-tile-cell rack-bottom-tile-cell--c5-6',
-                                    showMahjongRackHint ? 'btn--mahjong-hint' : '',
-                                    mainPhase === 'mahjong-declared' && mahjongWinReviewing
-                                      ? 'btn--mahjong-rack-pressed-in'
-                                      : '',
-                                  ]
-                                    .filter(Boolean)
-                                    .join(' ')}
-                                  disabled={!mahjongButtonEnabled}
-                                  aria-label="Mah Jongg"
-                                  onClick={declareMahjong}
-                                >
-                                  <span className="btn--mahj__logo-stack">
-                                    <span className="btn--mahj__logo-stack__well" aria-hidden />
-                                    <img className="btn--mahj__img" src={mahjLogoSrc} alt="" draggable={false} />
-                                  </span>
-                                </button>
-                                <LogicTrayToggleButton />
-                                {mainBarSharedSlotIsSwap ? (
-                                  <button
-                                    type="button"
-                                    className={[
-                                      'btn btn--joker-swap-action rack-bottom-tile-cell rack-bottom-tile-cell--c9-10',
-                                      showJokerSwapRackHint ? 'btn--joker-swap-hint' : '',
-                                    ]
-                                      .filter(Boolean)
-                                      .join(' ')}
-                                    disabled={mainGameSwapDisabled}
-                                    aria-disabled={mainGameSwapDisabled}
-                                    onClick={executeSwapFromSlot}
-                                    aria-label="Swap"
-                                  >
-                                    Swap
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    className={[
-                                      'btn btn--joker-swap-action rack-bottom-tile-cell rack-bottom-tile-cell--c9-10',
-                                      concealedHandReminderEnabled && focusedHandIsConcealed ? 'btn--call-concealed' : '',
-                                    ]
-                                      .filter(Boolean)
-                                      .join(' ')}
-                                    disabled={mainGameCallDisabled}
-                                    onClick={initiateCall}
-                                    aria-label="Call discard"
-                                  >
-                                    {concealedHandReminderEnabled && focusedHandIsConcealed ? (
-                                      <>
-                                        <span
-                                          className="hands-list__card-c"
-                                          aria-label="Concealed hand"
-                                        >C</span>all
-                                      </>
-                                    ) : 'Call'}
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  className={[
-                                    'btn rack-bottom-tile-cell rack-bottom-tile-cell--c12-14',
-                                    mainPhase === 'east-discard' || mainGamePrimaryIsDone ? 'btn--discard' : '',
-                                  ]
-                                    .filter(Boolean)
-                                    .join(' ')}
-                                  disabled={mainGamePrimaryDisabled}
-                                  aria-disabled={mainGamePrimaryDisabled}
-                                  aria-label={
-                                    mainGamePrimaryIsDone
-                                      ? 'Commit meld and proceed to discard'
-                                      : mainGamePrimaryLabel
-                                  }
-                                  onClick={() => {
-                                    if (mainGamePrimaryIsDone) commitStagedCall()
-                                    else if (mainPhase === 'east-discard') commitEastDiscard()
-                                    else if (mainPhase === 'bot-turn') skipBotDiscard()
-                                  }}
-                                >
-                                  {mainGamePrimaryLabel}
-                                </button>
-                                {undoEnabled && canUndo ? (
-                                  <span
-                                    className="btn__undo-inset rack-bottom-tile-cell rack-bottom-tile-cell--c12-14"
-                                    role="button"
-                                    tabIndex={0}
-                                    aria-label="Undo"
-                                    onClick={() => undoAction()}
-                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); undoAction() } }}
-                                  >
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                      <polyline points="1 4 1 10 7 10" />
-                                      <path d="M6 18a9 9 0 1 0-.36-12.36L1 10" />
-                                    </svg>
-                                  </span>
-                                ) : null}
-                              </div>
-                              {showReviewNewGameBelowDiscard ? (
-                                <div
-                                  className="rack-bottom-bar rack-bottom-bar--main rack-bottom-bar--tile-grid panel-hand-rack__review-new-game-row"
-                                  role="group"
-                                  aria-label={
-                                    mainPhase === 'wall-game'
-                                      ? 'Wall game review actions'
-                                      : 'Mah Jongg review actions'
-                                  }
-                                >
-                                  <div
-                                    className="panel-hand-rack__review-new-game-spacer"
-                                    aria-hidden
-                                  />
-                                  <button
-                                    type="button"
-                                    className="btn btn--rack-neutral rack-bottom-tile-cell rack-bottom-tile-cell--c12-14"
-                                    onClick={() => {
-                                      void newHand()
-                                    }}
-                                  >
-                                    New Game
-                                  </button>
-                                </div>
-                              ) : null}
-                              </div>
-                            ) : null}
-                          </div>
-                          </SortableContext>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </section>
-            </div>
-            {showPlaySplitRow ? (
-              <div className="app-discard-bottom-container">
-                <section
-                  ref={discardTrackerPanelRef}
-                  className="panel panel--discard-tracker panel--discard-tracker--bottom"
-                  aria-label="Discard tray"
-                  data-joker-swap-dnd={jokerSwapUiActive ? 'on' : 'off'}
-                >
-                  <SuggestedHandsOpenDataAttr elRef={discardTrackerPanelRef} />
-                  <div className="discard-tracker__shell">
-                    <div className="discard-tracker__content">
-                      <div className="discard-tracker__watermark" aria-hidden>
-                        <RackLogoWatermark />
-                      </div>
-                      <div className="discard-tracker__discard-container">
-                        <DiscardPileDropZone
-                          swapDropActive={false}
-                          onContainerNode={(node) => {
-                            discardPileScrollElRef.current = node
-                          }}
-                        >
-                          <div className="discard-pile" role="list" aria-label="Committed discards" />
-                        </DiscardPileDropZone>
-                      </div>
-                      {renderSuggestedHandsPopup()}
-                    </div>
-                  </div>
-                </section>
-              </div>
-            ) : null}
-              {blankExchangeOpen ? (
-                <BlankExchangeOverlay
-                  discardPile={displayedDiscardPile}
-                  blankTilesEnabled={blankTilesEnabled}
-                  suggestedNeedDefs={suggestedDiscardTrackerNeedDefs}
-                  onPick={performBlankExchange}
-                  onCancel={closeBlankExchange}
-                />
-              ) : null}
-              <DragOverlay dropAnimation={null}>
-                {dragOverlayMeldTiles ? (
-                  <div className="drag-overlay-meld">
-                    {dragOverlayMeldTiles.map((tile) => (
-                      <div
-                        key={tile.id}
-                        className={[
-                          'drag-overlay-tile',
-                          suggestedTileGuideForRack?.blankExchangeIds?.has(tile.id)
-                            ? 'sortable-tile-wrap--blank-exchange-hint'
-                            : suggestedTileGuideForRack?.bestIds.has(tile.id)
-                              ? 'sortable-tile-wrap--suggest-best'
-                              : '',
-                        ]
-                          .filter(Boolean)
-                          .join(' ')}
-                      >
-                        <TileFace
-                          def={tile.def}
-                          elevated
-                          rackSuitStacked={dragOverlayRackSuitStacked}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : dragOverlayTile ? (
-                  <div
-                    className={[
-                      'drag-overlay-tile',
-                      suggestedTileGuideForRack?.blankExchangeIds?.has(dragOverlayTile.id)
-                        ? 'sortable-tile-wrap--blank-exchange-hint'
-                        : suggestedTileGuideForRack?.bestIds.has(dragOverlayTile.id)
-                          ? 'sortable-tile-wrap--suggest-best'
-                          : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')}
-                  >
-                    <TileFace
-                      def={dragOverlayTile.def}
-                      elevated
-                      rackSuitStacked={dragOverlayRackSuitStacked}
-                    />
-                  </div>
-                ) : null}
-              </DragOverlay>
-            </SuggestedHandsDndFrame>
-        </div>
-      </div>
-    </DndContext>
+      <PlaySurface
+        animationsEnabled={animationsEnabled}
+        jokerSwapHintEnabled={jokerSwapHintEnabled}
+        jokerSwapHandHintSingleBounce={jokerSwapHandHintSingleBounce}
+        charlestonDone={charlestonDone}
+        mainPhase={mainPhase}
+        charlestonPhase={charlestonPhase}
+        showPlaySplitRow={showPlaySplitRow}
+        displayedDiscardPile={displayedDiscardPile}
+        botExposures={botExposures}
+        activeBotIndex={activeBotIndex}
+        botTurnBannerDiscarderBotIndex={botTurnBanner?.discarderBotIndex ?? null}
+        jokerSwapUiActive={jokerSwapUiActive}
+        blankTilesEnabled={blankTilesEnabled}
+        botSlotSeats={botSlotSeats}
+        handPanelRef={handPanelRef}
+        topDiscardTrackerPanelRef={topDiscardTrackerPanelRef}
+        eastExposureRackTopRef={eastExposureRackTopRef}
+        playerHandRackBottomRef={playerHandRackBottomRef}
+        discardTrackerPanelRef={discardTrackerPanelRef}
+        discardPileScrollElRef={discardPileScrollElRef}
+        menuContainerRef={menuContainerRef}
+        handPanelCqwFrozenRef={handPanelCqwFrozenRef}
+        refreshHandPanelCqwRef={refreshHandPanelCqwRef}
+        dndApiRef={playSurfaceDnDApiRef}
+        playerSeat={playerSeat}
+        seatLabel={playSurfaceSeatLabel}
+        hasPlayerExposures={playerExposureMelds.length > 0}
+        hand={hand}
+        wall={wall}
+        openingWallTileCount={openingWallTileCount}
+        selectedHandTileId={selectedHandTileId}
+        drawnTileId={drawnTileId}
+        passSlots={passSlots}
+        pendingEastDiscardTile={pendingEastDiscardTile}
+        stagedCallTileIds={stagedCallTileIds}
+        eastExposures={eastExposures}
+        coach={playSurfaceCoach}
+        rackChrome={playSurfaceRackChrome}
+        actionBar={playSurfaceActionBar}
+        activeBotDiscard={activeBotDiscard}
+        incomingBotDiscardFlyFrom={incomingBotDiscardFlyFrom}
+        passReady={passReady}
+        suggestedHandsPopup={suggestedHandsPopup}
+        pushRound={pushRound}
+        setPendingJokerSwapTileId={setPendingJokerSwapTileId}
+        setCharlestonPassError={setCharlestonPassError}
+        applyToggleStagedCallTile={applyToggleStagedCallTile}
+        applyEastNaturalForExposedJoker={applyEastNaturalForExposedJoker}
+        onHandTileActivate={onHandTileActivate}
+        sortHand={sortHand}
+        declareMahjong={declareMahjong}
+        onSuggestedTilesButtonClick={onSuggestedTilesButtonClick}
+        onSuggestedTilesButtonPointerDown={onSuggestedTilesButtonPointerDown}
+        onSuggestedTilesButtonPointerUpOrLeave={onSuggestedTilesButtonPointerUpOrLeave}
+        onCharlestonPassButtonClick={onCharlestonPassButtonClick}
+        undoAction={undoAction}
+        executeSwapFromSlot={executeSwapFromSlot}
+        initiateCall={initiateCall}
+        commitStagedCall={commitStagedCall}
+        commitEastDiscard={commitEastDiscard}
+        skipBotDiscard={skipBotDiscard}
+        newHand={newHand}
+      />
     </div>
     </SuggestedHandsTrayProvider>
     </TileGraphicsProvider>

@@ -378,6 +378,23 @@
   gap: 0.18em;
 }
 
+/* Smooth Seat: relocation when a call meld pins and the label moves under the exposure. */
+.app-layout[data-animations='on']
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  > .panel-hand-rack__seat-label {
+  transition: top 0.34s cubic-bezier(0.22, 0.7, 0.22, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-layout[data-animations='on']
+    .panel--hand
+    .panel-hand-rack__hand-tray
+    > .panel-hand-rack__seat-label {
+    transition: none;
+  }
+}
+
 .panel--hand .panel-hand-rack__seat-label {
   color: #c2c2c8;
   font-size: var(--player-seat-label-fs);

@@ -9,19 +9,33 @@
 
 
 /*
- * Opening-deal wave: tiles must paint over Charleston text/slots.
+ * Wall-draw / Charleston / opening-deal fly-in.
  *
- * `.rack-stage__rack-bottom` normally uses z-index: 1, which traps tile `z-index: 10`
- * under `.rack-stage__rack-top` (z-index: 2). Opening that context lets just-drawn tiles
- * compete in the column stack above Charleston.
+ * `.rack-stage__rack-bottom` is normally z-index 1 under `.rack-stage__rack-top` (z-index 2),
+ * so a just-drawn tile’s z-index:10 cannot clear the green discard / pass strip.
  *
- * Joker-swap bounce still lifts the whole rack-bottom so the arc clears the exposure row.
+ * Use z-index: 3 (not `auto`): after an exposure, call-meld inset applies `transform: translateX`
+ * on `.hand-row`, which creates a stacking context and traps tile z-index inside the hand.
+ * `auto` then leaves the whole hand under rack-top — fly-in slides in *behind* the green slot.
+ * z-index: 3 lifts the hand above rack-top for the animation (same idea as joker-swap bounce).
+ *
+ * Exception — pinned call melds: that lift buries owned-meld vignettes under the hand for the
+ * whole fly-in. Keep the hand under rack-top so the meld stay lifted; the green slot may sit
+ * above the flying tile while melds are exposed (vignette > green-slot clearance).
  */
 .app-layout[data-animations='on']
   .panel--hand
   .panel-hand-rack__hand-tray:has(.sortable-tile-wrap--just-drawn)
   .rack-stage__rack-bottom {
-  z-index: auto;
+  z-index: 3;
+}
+
+.app-layout[data-animations='on']
+  .panel--hand
+  .rack-stage__rack-col:has(.exposure-rack--has-call-melds)
+  .panel-hand-rack__hand-tray:has(.sortable-tile-wrap--just-drawn)
+  .rack-stage__rack-bottom {
+  z-index: 1;
 }
 
 .app-layout[data-animations='on']
@@ -46,6 +60,19 @@
   > .panel-hand-rack__seat-label {
   /* Seat chip is z-index 10 in part-0084 — keep it under Charleston (2) and flying tiles (10). */
   z-index: 1;
+}
+
+/*
+ * With call melds the hand stays under rack-top (vignette fix above). Dropping the seat to
+ * z-index 1 would tuck it under that exposure for the fly-in — keep the normal lift so Seat:
+ * stays readable below the meld.
+ */
+.app-layout[data-animations='on']
+  .panel--hand
+  .rack-stage__rack-col:has(.exposure-rack--has-call-melds)
+  .panel-hand-rack__hand-tray:has(.sortable-tile-wrap--just-drawn)
+  > .panel-hand-rack__seat-label {
+  z-index: 10;
 }
 
 /*
