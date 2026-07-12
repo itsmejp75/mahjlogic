@@ -322,13 +322,6 @@
     calc(var(--pass-strip-box-w) / 9.95),
     calc(var(--rack-tile-h) / 5.02)
   );
-  --player-seat-label-fs: calc(
-    min(
-      calc(var(--_pass-strip-fs-pref) * 1.2),
-      calc(var(--pass-strip-box-w) / 8.25),
-      calc(var(--rack-tile-h) / 4.15)
-    ) * 0.9
-  );
   --rack-inline-slot-strip-h: calc(var(--rack-tile-h) / 3);
   --rack-inline-slot-nudge-y: calc(var(--play-tray-h-divider) / 2);
 }
@@ -349,17 +342,26 @@
     calc(var(--pass-strip-box-w) / 9.95),
     calc(var(--rack-tile-h) / 5.02)
   );
+}
+
+/*
+ * Seat: label lives on the hand-tray (sibling of rack-bottom), so size tokens must be
+ * here — not only on rack-top/bottom — or font-size falls back to a fixed inherited rem
+ * and stops tracking tile scale on resize.
+ */
+.panel--hand .panel-hand-rack__hand-tray {
+  position: relative;
+  --rack-tile-w: var(--hand-rack-tile-w);
+  --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
+  --pass-strip-box-w: calc(3 * var(--rack-tile-w) + 2 * var(--player-rack-face-gap, var(--rack-tile-gap)));
+  /* Pure tile math (no rem ceiling) so Seat: keeps the same ratio as the hand on resize. */
   --player-seat-label-fs: calc(
     min(
-      calc(var(--_pass-strip-fs-pref) * 1.2),
+      calc(var(--pass-strip-box-w) * 0.1308),
       calc(var(--pass-strip-box-w) / 8.25),
       calc(var(--rack-tile-h) / 4.15)
     ) * 0.9
   );
-}
-
-.panel--hand .panel-hand-rack__hand-tray {
-  position: relative;
 }
 
 .panel--hand .panel-hand-rack__hand-tray > .panel-hand-rack__seat-label {
@@ -378,7 +380,7 @@
 
 .panel--hand .panel-hand-rack__seat-label {
   color: #c2c2c8;
-  font-size: var(--player-seat-label-fs, calc(var(--pass-strip-header-fs) * 1.2));
+  font-size: var(--player-seat-label-fs);
 }
 
 .panel--hand .panel-hand-rack__seat-label__prefix {

@@ -724,11 +724,33 @@ html .app-top-exposure-container .discard-tracker__overlay-grid .exposure-rack__
   min-height: var(--rack-tile-h);
 }
 
+/*
+ * Bot S/W/N filled faces: absolute inset cover so mobile subpixel slot height cannot
+ * leave a white watermark hairline under the tile (beats the flex fill above).
+ */
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot
+  .tile-face {
+  position: absolute;
+  inset: 0;
+  flex: none;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  max-width: none;
+  max-height: none;
+}
+
 html .app-top-exposure-container .exposure-rack--discard-tracker-bot-row .exposure-rack__slot {
+  position: relative;
   align-self: start;
   justify-content: flex-start;
   align-items: stretch;
   overflow: hidden;
+  background: transparent;
 }
 
 html

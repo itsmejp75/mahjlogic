@@ -486,6 +486,9 @@
  * can make slots taller than `--rack-tile-h` when the overlay row is sub-pixel taller
  * (common on row 1 / mobile). Tile faces stay at fixed height → white watermark sliver
  * under the tiles. Pin row height, start-align grid items, and fill + clip every slot.
+ *
+ * Absolute `inset: 0` on the face is the durable cover: flex stretch still leaves a
+ * 1px gap on iOS WKWebView when coach opens `overflow: visible` for lift shadows.
  */
 .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row {
   grid-auto-rows: var(--rack-tile-h);
@@ -493,19 +496,28 @@
 }
 
 .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row .exposure-rack__slot {
+  position: relative;
   align-self: start;
   justify-content: flex-start;
   align-items: stretch;
   overflow: hidden;
+  background: transparent;
 }
 
 .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot
   .tile-face {
-  flex: 1 1 auto;
+  position: absolute;
+  inset: 0;
+  flex: none;
+  width: 100%;
   height: 100%;
-  min-height: var(--rack-tile-h);
+  min-width: 0;
+  min-height: 0;
+  max-width: none;
+  max-height: none;
+  box-sizing: border-box;
 }
 
 .discard-tracker__overlay-grid
@@ -1049,6 +1061,10 @@
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--seat-label.sorted-discard-tray__slot--seat-turn {
   background-color: var(--card-ink-green, #52b147);
   border-radius: var(--discard-tray-tile-corner-r, var(--tile-face-border-radius));
+  /* Same height pin as bot tiles — mobile subpixel stretch was showing a white hairline under the box. */
+  align-self: start;
+  overflow: hidden;
+  max-height: var(--rack-tile-h);
 }
 
 .discard-tracker__overlay-grid

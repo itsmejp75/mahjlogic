@@ -18,10 +18,12 @@ function jokerSwapHintBounceClass(
 
 function jokerSwapBounceSlotKey(
   tileId: string,
-  bounceIds: ReadonlySet<string> | null | undefined,
-  epoch: number,
+  _bounceIds: ReadonlySet<string> | null | undefined,
+  _epoch: number,
 ): string {
-  if (bounceIds?.has(tileId)) return `jsb-${epoch}-${tileId}`
+  // Keep a stable React key through joker-swap dock-bounce. Remounting on bounce cleared
+  // coach lit↔lit clip classes and left bottom-seat lift painting over the lit tile above.
+  // Animation restarts when `.exposure-rack__slot--joker-swap-hint-bounce` is toggled on.
   return tileId
 }
 

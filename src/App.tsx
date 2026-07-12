@@ -1459,6 +1459,8 @@ function DiscardTrackerSlotGrid({
     animationsEnabled,
     botExposureFlyInTileIds,
     exposureJokerSwapFlyInTileIds,
+    jokerSwapHintBounceTileIds,
+    jokerSwapHintBounceEpoch,
   ])
 
   return (

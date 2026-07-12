@@ -5490,15 +5490,15 @@ export function compareSuggestedHandsByProximity(a: SuggestedHandLine, b: Sugges
 }
 
 /**
- * Suggested-hands panel: drop 0% lines unless that pattern is the active selection so the
- * player can read the dead-tile warning; deselecting removes the row on the next render.
+ * Suggested-hands panel visibility. Currently shows every ranked line, including 0% Prob
+ * (so near-edge hands stop flickering in/out). `focusedPatternId` is unused but kept for
+ * call-site compatibility if we reintroduce a hide-0% filter later.
  */
 export function suggestedHandShownInPanelList(
-  line: SuggestedHandLine,
-  focusedPatternId: string | null,
+  _line: SuggestedHandLine,
+  _focusedPatternId: string | null,
 ): boolean {
-  if (line.completionProbability > 0) return true
-  return focusedPatternId != null && line.id === focusedPatternId
+  return true
 }
 
 export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHandLine[] {

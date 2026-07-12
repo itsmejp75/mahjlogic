@@ -83,16 +83,22 @@
 }
 
 /*
- * Top-band bot exposures: meld wraps + slots clip to tile height (`overflow: hidden` /
- * `max-height` in part-0123). Open the chain and lift the bouncing slot above neighbors
- * (and the row above sibling overlay rows) so the dock-bounce is not cut off.
+ * Top-band bot exposures: open overflow so dock-bounce is not clipped — but do NOT raise
+ * overlay-row / cell z-index. Lit↔lit seat stacking (earlier seats above later) must stay
+ * identical before, during, and after the hint; raising the bouncing seat was why North's
+ * lift painted over West after the bounce remounted tiles without clip classes.
  */
 .app-layout[data-joker-swap-hint='on'][data-animations='on']
   .app-top-exposure-container
   .discard-tracker__overlay-row:has(.exposure-rack__slot--joker-swap-hint-bounce) {
   overflow: visible;
-  position: relative;
-  z-index: 6;
+}
+
+.app-layout[data-joker-swap-hint='on'][data-animations='on']
+  .app-top-exposure-container
+  .discard-tracker__overlay-row
+  > .app-opponents-rail__cell:has(.exposure-rack__slot--joker-swap-hint-bounce) {
+  overflow: visible;
 }
 
 .app-layout[data-joker-swap-hint='on'][data-animations='on']
@@ -107,8 +113,6 @@
   :is(.exposure-rack__meld-drop, .exposure-rack__meld-grid-span):has(
     .exposure-rack__slot--joker-swap-hint-bounce
   ) {
-  position: relative;
-  z-index: 50;
   overflow: visible;
   max-height: none;
 }
@@ -121,8 +125,9 @@
   .exposure-rack--discard-tracker-bot-row
   :is(.exposure-rack__meld-drop, .exposure-rack__meld-grid-span)
   > .exposure-rack__slot--joker-swap-hint-bounce {
+  /* Above dim siblings in the same meld only — not above other seats. */
   position: relative;
-  z-index: 50;
+  z-index: 2;
   overflow: visible;
 }
 

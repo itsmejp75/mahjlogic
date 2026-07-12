@@ -15,6 +15,12 @@ export const CLIP_CLASSES = [
 export const COACH_LIT_SLOT =
   '.exposure-rack__slot--suggest-best, .sorted-discard-tray__slot--suggest-need'
 
+/** Dim coach cells — vertical seam clip only (rim overlaps across meld rows). */
+export const COACH_DIM_SLOT =
+  '.exposure-rack__slot--suggest-dim:not(.exposure-rack__slot--suggest-best)'
+
+export const COACH_VERTICAL_CLIP_SLOT = `${COACH_LIT_SLOT}, ${COACH_DIM_SLOT}`
+
 /**
  * Per-rack scopes for bot exposure rows. Sorted discard rows use a separate cross-row pass
  * on `.discard-tracker__overlay-grid` so vertically aligned B/C/D columns clip at row seams.
@@ -56,11 +62,14 @@ export function areVerticallyAdjacentLitSlots(
   maxGapPx: number,
   columnOverlapMin = 0.45,
 ): boolean {
-  const overlapX = Math.min(a.right, b.right) - Math.max(a.left, b.left)
-  if (overlapX <= 0) return false
-
+  const centerA = (a.left + a.right) / 2
+  const centerB = (b.left + b.right) / 2
   const minWidth = Math.min(a.width, b.width)
-  if (overlapX < minWidth * columnOverlapMin) return false
+  if (Math.abs(centerA - centerB) > minWidth * columnOverlapMin) {
+    const overlapX = Math.min(a.right, b.right) - Math.max(a.left, b.left)
+    if (overlapX <= 0) return false
+    if (overlapX < minWidth * columnOverlapMin) return false
+  }
 
   const top = a.top <= b.top ? a : b
   const bottom = top === a ? b : a
@@ -85,7 +94,8 @@ export function areHorizontallyAdjacentLitSlots(
 
   const left = a.left <= b.left ? a : b
   const right = left === a ? b : a
-  if (Math.abs(left.top - right.top) > 2) return false
+  // Row overlap already proves shared band; do not require near-equal tops (subpixel /
+  // bounce / DPR drift previously dropped adjacent lit jokers intermittently).
 
   const gap = right.left - left.right
   return gap >= -1 && gap <= maxGapPx
@@ -131,19 +141,21 @@ function slotId(el: HTMLElement, index: number): string {
 }
 
 function clearClipClasses(root: ParentNode) {
-  root.querySelectorAll<HTMLElement>(COACH_LIT_SLOT).forEach((el) => {
+  root.querySelectorAll<HTMLElement>(COACH_VERTICAL_CLIP_SLOT).forEach((el) => {
     el.classList.remove(...CLIP_CLASSES)
+    delete el.dataset.coachVabove
+    delete el.dataset.coachVbelow
   })
 }
 
 function readMaxCoachGapPx(scope: ParentNode): number {
   if (!(scope instanceof Element)) return 24
 
-  const rowGap = parseFloat(getComputedStyle(scope).rowGap || getComputedStyle(scope).gap || '')
-  const faceGap = parseFloat(
-    getComputedStyle(scope).getPropertyValue('--player-rack-face-gap').trim() || '',
-  )
-  const gaps = [rowGap, faceGap].filter(Number.isFinite)
+  const style = getComputedStyle(scope)
+  const rowGap = parseFloat(style.rowGap || style.gap || '')
+  const faceGap = parseFloat(style.getPropertyValue('--player-rack-face-gap').trim() || '')
+  const botRowGap = parseFloat(style.getPropertyValue('--discard-bot-row-gap-y').trim() || '')
+  const gaps = [rowGap, faceGap, botRowGap].filter(Number.isFinite)
   if (gaps.length === 0) return 24
   return Math.max(Math.max(...gaps) + 6, 12)
 }
@@ -156,16 +168,21 @@ export function findCoachLitClipScopes(root: ParentNode): HTMLElement[] {
   return [...root.querySelectorAll<HTMLElement>(COACH_LIT_CLIP_SCOPE)]
 }
 
-function applyLitSlotClipClasses(
-  litEls: readonly HTMLElement[],
+function isLitCoachSlot(el: Element): boolean {
+  return el.matches('.exposure-rack__slot--suggest-best, .sorted-discard-tray__slot--suggest-need')
+}
+
+function applyCoachClipClasses(
+  els: readonly HTMLElement[],
   maxGapPx: number,
+  directions: 'all' | 'vertical' | 'horizontal',
 ) {
-  if (litEls.length < 2) return
+  if (els.length < 2) return
 
   const idToEl = new Map<string, HTMLElement>()
-  const rects: LitSlotRect[] = litEls.map((el, index) => {
+  const rects: LitSlotRect[] = els.map((el, index) => {
     const r = el.getBoundingClientRect()
-    const id = slotId(el, index)
+    const id = `${slotId(el, index)}#${index}`
     idToEl.set(id, el)
     return {
       id,
@@ -183,10 +200,76 @@ function applyLitSlotClipClasses(
   for (const [id, edges] of clips) {
     const el = idToEl.get(id)
     if (!el) continue
-    if (edges.top) el.classList.add(COACH_LIT_CLIP_TOP)
-    if (edges.right) el.classList.add(COACH_LIT_CLIP_RIGHT)
-    if (edges.bottom) el.classList.add(COACH_LIT_CLIP_BOTTOM)
-    if (edges.left) el.classList.add(COACH_LIT_CLIP_LEFT)
+    const isLit = isLitCoachSlot(el)
+
+    if (edges.top && (directions === 'all' || directions === 'vertical')) {
+      el.classList.add(COACH_LIT_CLIP_TOP)
+      el.dataset.coachVabove = '1'
+    }
+    if (edges.right && directions !== 'vertical' && isLit) {
+      el.classList.add(COACH_LIT_CLIP_RIGHT)
+    }
+    if (edges.bottom && (directions === 'all' || directions === 'vertical')) {
+      el.classList.add(COACH_LIT_CLIP_BOTTOM)
+      el.dataset.coachVbelow = '1'
+    }
+    if (edges.left && directions !== 'vertical' && isLit) {
+      el.classList.add(COACH_LIT_CLIP_LEFT)
+    }
+  }
+}
+
+/**
+ * Vertical seams including dim tiles: clip dim rim edges against lit/dim neighbors, but never
+ * clip a lit tile's lift against a dim neighbor — lit lift must paint over the dim row below.
+ */
+function applyVerticalDimSeamClips(els: readonly HTMLElement[], maxGapPx: number) {
+  if (els.length < 2) return
+
+  const idToEl = new Map<string, HTMLElement>()
+  const rects: LitSlotRect[] = els.map((el, index) => {
+    const r = el.getBoundingClientRect()
+    const id = `${slotId(el, index)}#${index}`
+    idToEl.set(id, el)
+    return {
+      id,
+      top: r.top,
+      bottom: r.bottom,
+      left: r.left,
+      right: r.right,
+      width: r.width,
+      height: r.height,
+    }
+  })
+
+  for (let i = 0; i < rects.length; i++) {
+    for (let j = i + 1; j < rects.length; j++) {
+      const a = rects[i]
+      const b = rects[j]
+      if (!areVerticallyAdjacentLitSlots(a, b, maxGapPx)) continue
+
+      const top = a.top <= b.top ? a : b
+      const bottom = top === a ? b : a
+      const topEl = idToEl.get(top.id)!
+      const bottomEl = idToEl.get(bottom.id)!
+      const topLit = isLitCoachSlot(topEl)
+      const bottomLit = isLitCoachSlot(bottomEl)
+
+      if (topLit && bottomLit) {
+        // Lit↔lit handled by the lit-only pass (lift + vignette).
+        continue
+      }
+
+      // Dim facing a lit or dim neighbor: clip dim rim only.
+      if (!topLit) {
+        topEl.classList.add(COACH_LIT_CLIP_BOTTOM)
+        topEl.dataset.coachVbelow = '1'
+      }
+      if (!bottomLit) {
+        bottomEl.classList.add(COACH_LIT_CLIP_TOP)
+        bottomEl.dataset.coachVabove = '1'
+      }
+    }
   }
 }
 
@@ -197,8 +280,19 @@ function visibleLitCoachSlots(scope: ParentNode): HTMLElement[] {
   })
 }
 
+function visibleVerticalClipCoachSlots(scope: ParentNode): HTMLElement[] {
+  return [...scope.querySelectorAll<HTMLElement>(COACH_VERTICAL_CLIP_SLOT)].filter((el) => {
+    const rect = el.getBoundingClientRect()
+    return rect.width > 0 && rect.height > 0
+  })
+}
+
 function updateCoachLitNeighborClipInScope(scope: ParentNode) {
-  applyLitSlotClipClasses(visibleLitCoachSlots(scope), readMaxCoachGapPx(scope))
+  const maxGapPx = readMaxCoachGapPx(scope)
+  // Lit↔lit (and lit horizontal): clip lift + vignette at same-height seams.
+  applyCoachClipClasses(visibleLitCoachSlots(scope), maxGapPx, 'all')
+  // Lit↔dim / dim↔dim: clip dim rims only — never chop lit lift over a dim row.
+  applyVerticalDimSeamClips(visibleVerticalClipCoachSlots(scope), maxGapPx)
 }
 
 /** Sorted B/C/D rows share columns across overlay rows — clip rim/lift at vertical seams. */
@@ -206,12 +300,31 @@ function updateSortedDiscardTrackerLitClip(grid: ParentNode) {
   const litEls = visibleLitCoachSlots(grid).filter((el) =>
     el.closest('.exposure-rack--discard-tracker-sorted-row'),
   )
-  applyLitSlotClipClasses(litEls, readMaxCoachGapPx(grid))
+  applyCoachClipClasses(litEls, readMaxCoachGapPx(grid), 'all')
 }
 
 /**
- * Clip coach rim + lift on every edge that faces another lit tile in the same exposure rack.
- * Bot tracker S/W/N rows stay separate scopes; sorted discard rows clip across all three bands.
+ * Bot S/W/N exposure racks are separate per-seat scopes, but vertically aligned lit tiles
+ * across adjacent seats must clip like same-height tiles (otherwise the lower seat's lift
+ * paints over the lit tile above — overlay rows elevate later seats).
+ */
+function updateBotExposureTrackerLitClip(grid: ParentNode) {
+  const litEls = visibleLitCoachSlots(grid).filter((el) =>
+    el.closest('.exposure-rack--discard-tracker-bot-row'),
+  )
+  applyCoachClipClasses(litEls, readMaxCoachGapPx(grid), 'vertical')
+  applyVerticalDimSeamClips(
+    visibleVerticalClipCoachSlots(grid).filter((el) =>
+      el.closest('.exposure-rack--discard-tracker-bot-row'),
+    ),
+    readMaxCoachGapPx(grid),
+  )
+}
+
+/**
+ * Clip coach rim + lift on every edge that faces another lit tile.
+ * Per-rack scopes handle horizontal + within-rack seams; overlay-grid passes clip B/C/D and
+ * S/W/N columns across adjacent seats.
  */
 export function updateCoachLitNeighborClip(root: ParentNode | null | undefined) {
   if (!root) return
@@ -234,5 +347,6 @@ export function updateCoachLitNeighborClip(root: ParentNode | null | undefined) 
 
   for (const grid of sortedGrids) {
     updateSortedDiscardTrackerLitClip(grid)
+    updateBotExposureTrackerLitClip(grid)
   }
 }

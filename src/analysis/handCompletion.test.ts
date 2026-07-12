@@ -735,13 +735,13 @@ describe('compareSuggestedHandsByProximity', () => {
     expect(compareSuggestedHandsByProximity(line(5, 90), line(5, 60))).toBeLessThan(0)
   })
 
-  it('hides 0% lines unless that pattern is the active selection', () => {
+  it('shows 0% lines (including when nothing is focused)', () => {
     const dead = line(6, 0)
     const live = line(6, 40)
-    expect(suggestedHandShownInPanelList(dead, null)).toBe(false)
+    expect(suggestedHandShownInPanelList(dead, null)).toBe(true)
     expect(suggestedHandShownInPanelList(live, null)).toBe(true)
     expect(suggestedHandShownInPanelList(dead, dead.id)).toBe(true)
-    expect(suggestedHandShownInPanelList(dead, 'other-pattern')).toBe(false)
+    expect(suggestedHandShownInPanelList(dead, 'other-pattern')).toBe(true)
   })
 })
 
