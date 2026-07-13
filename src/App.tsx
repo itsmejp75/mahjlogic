@@ -6,18 +6,17 @@ import type { ClaimType, DiscardEntry, EastExposure, Seat, TileDef, TileInstance
 import { formatMahjongWinDescription } from './mahjong/labels'
 import { findFocusedPatternDeadCause, focusedLineJokerIneligibleNeedForDef, type DeadCauseHint } from './mahjong/deadCauseHint'
 import { addDeadHintNeed, copyDeadHintNeeds, deadHintDefKey, deadHintGroupNeedVariants, patternNeedVariantIsSatisfiable, type DeadHintNeedMap } from './mahjong/deadHintVariants'
-import { findExactMatches, sortTiles, tileDefsEqual, type SortMode } from './mahjong/tileUtils'
-import { compactPassSlotsToRight, firstEmptyPassSlotIndex, type PassSlots } from './mahjong/passTargets'
-import { applyCharlestonExchange, charlestonAllowsBlind, charlestonMahjongButtonPhase, charlestonPassBlockedMessage, charlestonPassEligible, charlestonPassStripInstructionAria, charlestonRackRoundTitle, nextCharlestonPhase, type CharlestonBotPassPicker, type CharlestonPhase, type FourHands } from './mahjong/charleston'
+import { findExactMatches, tileDefsEqual, type SortMode } from './mahjong/tileUtils'
+import { charlestonAllowsBlind, charlestonPassStripInstructionAria, charlestonRackRoundTitle, type CharlestonPhase } from './mahjong/charleston'
 import type { HandTileFlyInFrom } from './mahjong/handTileFlyIn'
-import { handTileFlyInFromBotSeat, handTileFlyInFromCharlestonPhase } from './mahjong/handTileFlyIn'
-import { assignOpeningHands, botIndicesAfterCompassSeat, botIndicesAfterPlayerDiscard, botIndicesInCompassPlayOrder, botIndexForCompassSeat, DEFAULT_BOT_SLOT_SEATS, fourHandsFromPlayerAsEast, fourHandsWithPlayerAsEast, handsFromFourHands, nextCompassSeat, playerYouLabel, seatLabel, toFourHands as fourHandsFromRound, type BotSlotSeats } from './mahjong/seats'
+import { handTileFlyInFromBotSeat } from './mahjong/handTileFlyIn'
+import { assignOpeningHands, botIndicesAfterCompassSeat, botIndicesAfterPlayerDiscard, botIndicesInCompassPlayOrder, botIndexForCompassSeat, DEFAULT_BOT_SLOT_SEATS, nextCompassSeat, playerYouLabel, seatLabel, toFourHands as fourHandsFromRound, type BotSlotSeats } from './mahjong/seats'
 import { type PassStripFlyOutFrom } from './components/PassStrip'
 import { TileFace } from './components/TileFace'
 import { PLAYABLE_CARD_IDS, PLAYABLE_CARD_LABEL, type PlayableCardId, cardSectionOrderFromPatterns, patternsForCard, playableCardShortLabel, readPlayableCardFromStorage, writePlayableCardToStorage } from './card/cardCatalog'
 import type { PracticePattern } from './card/practicePatterns'
-import { getActiveCardPatternById, getActiveCardPatterns, patternByIdLookup, setActiveCardPatterns } from './card/activeCardPatternsScope'
-import { buildPinnedPatternsFromFocusKey, computeRackPatternHighlightIds, computeBlankExchangeFills, greedyPatternMatchDetail, jokerSwapHandHintUsesSingleBounceIteration, focusKeyForSuggestedHandLine, focusKeyPatternId, sortHandForSuggestedPattern, sortFullRackTilesForPattern, suggestedHandsTiedAtBest, summarizeRackTowardWin, computeSuggestedDiscardNeedHighlightIds, computeSuggestedDiscardTrackerNeedDefs, computeBotExposureSuggestedBestIds, findInfeasibleBestIds, buildUnavailableTileDefCounts, tileMultisetSignature, type RankSuggestedHandsInput } from './analysis/suggestedHands'
+import { patternByIdLookup, setActiveCardPatterns } from './card/activeCardPatternsScope'
+import { buildPinnedPatternsFromFocusKey, computeRackPatternHighlightIds, computeBlankExchangeFills, greedyPatternMatchDetail, jokerSwapHandHintUsesSingleBounceIteration, focusKeyForSuggestedHandLine, focusKeyPatternId, sortFullRackTilesForPattern, suggestedHandsTiedAtBest, summarizeRackTowardWin, computeSuggestedDiscardNeedHighlightIds, computeSuggestedDiscardTrackerNeedDefs, computeBotExposureSuggestedBestIds, findInfeasibleBestIds, buildUnavailableTileDefCounts, tileMultisetSignature, type RankSuggestedHandsInput } from './analysis/suggestedHands'
 import { tileInstancesWithClaimMeldJokersResolved } from './analysis/eastExposurePatternFit'
 import { useRankSuggestedHandsWorker } from './analysis/rankSuggestedHandsAsync'
 import { CharlestonPassStripInstructionMain } from './components/CharlestonPassStripInstructionLabel'
@@ -32,13 +31,13 @@ const PostGameLoserRackRow = lazy(() =>
 )
 import { HIDE_CONCEALED_HANDS_STORAGE_KEY, readHideConcealedHandsFromStorage, writeHideConcealedHandsToStorage, readUncheckedSectionsFromStorage, writeUncheckedSectionsToStorage, suggestedHandsFilterMenuColumns, SUGGESTED_HANDS_UNCHECKED_SECTIONS_KEY, suggestedHandSectionMenuLabel, suggestedHandSectionsAvailableWithClaimMelds, isSuggestedHandSectionFilterEnabled, toggledSuggestedHandSectionFilter } from './suggestedHands/filterSettings'
 import type { BotExposure, BotSeat } from './analysis/types'
-import { BOT_DIFFICULTIES, type BotDifficulty, chooseBotCharlestonPass, chooseBotDiscard, botCallStrategicProbability, botBestTilesAway, tryBotBlankExchange, DEFAULT_BOT_DIFFICULTY, isBotDifficulty, type BotRankContext } from './analysis/botAI'
-import { getCallInitiateBlockMessage, getCallCapacityFlags, maxOpenClaimHandTiles, claimTypeForHandTilesFromDiscard, BLOCKING_TITLE_SWAP_ERROR, hasLegalMahjongOnBotDiscard, isMahjongWinOnLiveBotDiscard, isSelfDrawMahjongWin, MSG_CALL_DEAD_JOKER, MSG_CALL_INSUFFICIENT_TILES, MSG_MAHJONG_DURING_CHARLESTON, MSG_DISCARD_BLANK_USE_SWAP, MSG_SWAP_BLANK_NO_DISCARDS, MSG_SWAP_NO_EXPOSED_JOKERS, MSG_SWAP_NO_LEGAL_FOR_TILE, MSG_SWAP_NOTHING_AVAILABLE, MSG_SWAP_PICK_TILE_FIRST, type CallValidationRoundSlice } from './mahjong/callValidation'
-import { deadHandExplanation, type DeadHandReason } from './mahjong/deadHandReason'
+import { BOT_DIFFICULTIES, type BotDifficulty, chooseBotDiscard, botCallStrategicProbability, botBestTilesAway, tryBotBlankExchange, DEFAULT_BOT_DIFFICULTY, isBotDifficulty, type BotRankContext } from './analysis/botAI'
+import { hasLegalMahjongOnBotDiscard, isMahjongWinOnLiveBotDiscard, isSelfDrawMahjongWin, type CallValidationRoundSlice } from './mahjong/callValidation'
+import { deadHandExplanation } from './mahjong/deadHandReason'
 import { incomingBotDiscardDragId } from './mahjong/jokerSwapIds'
 import { discardedDefsForBlankExchange } from './mahjong/blankExchange'
-import { eastExposureSwapDropId, findNextJokerSwapTarget, collectHandTileIdsSwappableForJokers, collectSwappableJokerTileIds, representativeDefInExposedMeld } from './mahjong/jokerSwapTarget'
-import { openClaimMeldsFitSomePracticeLine, reorderEastExposuresToPatternGroupOrder } from './analysis/eastExposurePatternFit'
+import { eastExposureSwapDropId, findNextJokerSwapTarget, collectHandTileIdsSwappableForJokers, collectSwappableJokerTileIds } from './mahjong/jokerSwapTarget'
+import { openClaimMeldsFitSomePracticeLine } from './analysis/eastExposurePatternFit'
 import { DEFAULT_TILE_GRAPHICS, isTileGraphics, MENU_TILE_GRAPHICS, TILE_GRAPHICS_LABEL, type TileGraphics } from './tiles/tileGraphics'
 import { TileGraphicsProvider } from './tiles/TileGraphicsContext'
 import { AppMenuOpenGate, AppMenuOpenProvider, appMenuOpenApiRef, useAppMenuOpen } from './app/AppMenuOpenContext'
@@ -56,32 +55,20 @@ import {
 import type { GameBlockingDialog } from './app/gameDialog'
 import {
   applyBotsJokerSwapsFromEast,
-  applyCharlestonPassForRound,
   applyCommitStagedCall,
   applyDeadHand,
-  applyDeclareMahjong,
-  applyDeclareMahjongSelfDraw,
   applyEastNaturalForExposedJoker,
-  applyInitiateCall,
   applyAutoSelectCallTiles,
   applyToggleStagedCallTile,
   botLabelAt,
   botSeatAt,
   buildCallStagingPreview,
-  buildRankInputAfterStagedCall,
-  charlestonIncomingHandTileIds,
-  commitPlayerExposureOrdered,
   deadDiscardTilesForRanking,
   discardPileCommittedForDisplay,
-  orderEastExposuresForClosestCardLine,
   playerClaimMeldsForRound,
   playerExposureMeldsForRound,
-  previewAutoSelectedCallRankInput,
   previewStagedCallBestTilesAway,
-  previewStagedCallRankInput,
   rankInputDuringCallStaging,
-  replacePlayerExposures,
-  toFourHands,
 } from './app/roundMutations'
 import { useRoundActions } from './app/useRoundActions'
 import './styles/style.css'
@@ -1463,7 +1450,7 @@ async function commitEastDiscardAfterStaged(
   r: RoundState,
   botWinsEnabled = false,
   botDifficulty: BotDifficulty = 'normal',
-  cardId: PlayableCardId,
+  cardId: PlayableCardId = '2026',
 ): Promise<RoundState> {
   const staged = r.pendingEastDiscardTile
   if (!staged || r.mainPhase !== 'east-discard') return r
@@ -1480,7 +1467,7 @@ async function applySkipBotDiscard(
   r: RoundState,
   botWinsEnabled = false,
   botDifficulty: BotDifficulty = 'normal',
-  cardId: PlayableCardId,
+  cardId: PlayableCardId = '2026',
 ): Promise<RoundState> {
   if (r.mainPhase !== 'bot-turn' || r.activeBotIndex === null || !r.activeBotDiscard) return r
 
@@ -4129,14 +4116,11 @@ export default function App() {
   }, [performNewHandDeal])
 
   const {
-    sendCharlestonPass,
-    skipToCourtesyPass,
     onCharlestonPassButtonClick,
     skipBotDiscard,
     commitEastDiscard,
     returnStagedEastDiscard,
     declareMahjong,
-    executeJokerSwapFromSlot,
     executeSwapFromSlot,
     sortHand,
     initiateCall,

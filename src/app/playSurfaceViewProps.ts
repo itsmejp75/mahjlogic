@@ -196,7 +196,7 @@ export type PlaySurfaceCharlestonPassStripProps = {
   onPassBoxClick: () => void
   onPassTileClickReturn: (slotIndex: number) => void
   flyOutFrom: PassStripFlyOutFrom | null
-  inlineHeaderTitle: string
+  inlineHeaderTitle: string | null
   inlineHeaderInstruction: ReactNode
   inlineHeaderInstructionAria: string
 }

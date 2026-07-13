@@ -9,8 +9,6 @@ import type { DeadHandReason } from '../mahjong/deadHandReason'
 import type { RoundState } from './roundState'
 import type { RankSuggestedHandsInput } from '../analysis/suggestedHands'
 import type { CallValidationRoundSlice } from '../mahjong/callValidation'
-import type { BotSlotSeats } from '../mahjong/seats'
-import type { MainPhase } from './playSurfaceUi'
 
 import { applyCharlestonExchange } from '../mahjong/charleston'
 import { handTileFlyInFromBotSeat } from '../mahjong/handTileFlyIn'

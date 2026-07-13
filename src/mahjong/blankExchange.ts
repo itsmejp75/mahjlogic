@@ -56,6 +56,16 @@ export type PlayerBlankExchangeRoundSlice = {
   pendingEastDiscardIdx: number | null
 }
 
+/** Fields mutated by a successful player blank exchange (does not widen `mainPhase`). */
+export type PlayerBlankExchangePatch = {
+  hand: TileInstance[]
+  discardPile: DiscardEntry[]
+  pendingEastDiscardTile: TileInstance | null
+  pendingEastDiscardIdx: number | null
+  drawnTileId: string
+  selectedHandTileId: null
+}
+
 /**
  * Player blank exchange (hand or staged discard slot). Preserves prior attribution of the
  * given-up blank as seat `east` (UI bottom rack). Returns null when the swap is illegal.
@@ -64,10 +74,7 @@ export function applyPlayerBlankExchange(
   r: PlayerBlankExchangeRoundSlice,
   blankTileId: string,
   chosenDef: TileDef,
-): (PlayerBlankExchangeRoundSlice & {
-  drawnTileId: string
-  selectedHandTileId: null
-}) | null {
+): PlayerBlankExchangePatch | null {
   if (r.mainPhase !== 'east-discard') return null
   const eligible = discardedDefsForBlankExchange(r.discardPile)
   if (!eligible.some((d) => tileDefsEqual(d, chosenDef))) return null
@@ -85,9 +92,10 @@ export function applyPlayerBlankExchange(
     const handNext = [...r.hand]
     handNext[handIdx] = newTile
     return {
-      ...r,
       hand: handNext,
       discardPile: [...discardWithoutTaken, { tile: blankTile, seat: 'east' }],
+      pendingEastDiscardTile: r.pendingEastDiscardTile,
+      pendingEastDiscardIdx: r.pendingEastDiscardIdx,
       drawnTileId: newTile.id,
       selectedHandTileId: null,
     }
@@ -101,7 +109,6 @@ export function applyPlayerBlankExchange(
     const handNext = [...r.hand]
     handNext.splice(insertIdx, 0, newTile)
     return {
-      ...r,
       hand: handNext,
       discardPile: [...discardWithoutTaken, { tile: blankTile, seat: 'east' }],
       pendingEastDiscardTile: null,
