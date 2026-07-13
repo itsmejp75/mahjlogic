@@ -290,13 +290,7 @@ function readUndoFromStorage(): boolean {
 function readAnimationsFromStorage(): boolean {
   try {
     const v = localStorage.getItem(LS_KEY_ANIMATIONS)
-    if (v === null) {
-      // Honor OS “reduce motion” until the user picks an explicit preference.
-      if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        return false
-      }
-      return true
-    }
+    if (v === null) return true
     return v === 'true' || v === '1'
   } catch {
     return true
