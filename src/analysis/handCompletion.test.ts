@@ -76,7 +76,7 @@ describe('computeHandCompletionMetrics', () => {
     expect(m.D).toBe(1)
   })
 
-  it('treats jokers as zero for concealed hands', () => {
+  it('treats jokers as zero when jokersDisallowed (Singles and Pairs)', () => {
     const ctx: HandInventoryContext = {
       naturals: { 's:dot:2': 4, 's:dot:3': 4, 's:dot:4': 2, 's:dot:5': 1 },
       jokersInHand: 3,
@@ -88,6 +88,21 @@ describe('computeHandCompletionMetrics', () => {
     expect(m.M_joker).toBe(0)
     expect(m.P_base).toBe(79) // 11/14
     expect(m.P).toBe(79)
+  })
+
+  it('allocates jokers to concealed-hand pungs when jokers are allowed', () => {
+    const pungSlots: CompletionSlot[] = [{ tileType: 's:bam:8', targetCount: 3 }]
+    const ctx: HandInventoryContext = {
+      naturals: { 's:bam:8': 1 },
+      jokersInHand: 2,
+      blanksInHand: 0,
+      discardCounts: {},
+      jokersDisallowed: false,
+    }
+    const m = computeHandCompletionMetrics(pungSlots, ctx)
+    expect(m.M_nat).toBe(1)
+    expect(m.M_joker).toBe(2)
+    expect(m.D).toBe(11)
   })
 
   it('does not assign jokers to pair slots', () => {
@@ -652,7 +667,22 @@ describe('calculateWallCompletionProbability', () => {
     expect(withHint).toBe(withoutHint)
   })
 
-  it('does not apply joker-swap hint relief for concealed or singles-and-pairs lines', () => {
+  it('does not apply joker-swap hint relief for singles-and-pairs lines', () => {
+    const slots: CompletionSlot[] = [{ tileType: 'w:west', targetCount: 3 }]
+    const ctx: HandInventoryContext = {
+      naturals: { 'w:west': 1 },
+      jokersInHand: 0,
+      blanksInHand: 0,
+      discardCounts: {},
+      jokersDisallowed: true,
+    }
+    const completion = computeHandCompletionMetrics(slots, ctx)
+    expect(
+      jokerSwapHintReliefForLine(2, slots, ctx, completion, {}, DEFAULT_DECK_COMPOSITION, true, true),
+    ).toBe(0)
+  })
+
+  it('applies joker-swap hint relief for concealed meld hands', () => {
     const slots: CompletionSlot[] = [{ tileType: 'w:west', targetCount: 3 }]
     const ctx: HandInventoryContext = {
       naturals: { 'w:west': 1 },
@@ -664,10 +694,7 @@ describe('calculateWallCompletionProbability', () => {
     const completion = computeHandCompletionMetrics(slots, ctx)
     expect(
       jokerSwapHintReliefForLine(2, slots, ctx, completion, {}, DEFAULT_DECK_COMPOSITION, true, false),
-    ).toBe(0)
-    expect(
-      jokerSwapHintReliefForLine(2, slots, ctx, completion, {}, DEFAULT_DECK_COMPOSITION, false, true),
-    ).toBe(0)
+    ).toBe(2)
   })
 
   it('returns non-zero scores on a fresh opening deal with a full wall', () => {
@@ -823,6 +850,77 @@ describe('computePatternCompletionMetrics', () => {
     const m = computePatternCompletionMetrics(quint, rack, [])
     expect(m.P).toBeGreaterThan(0)
     expect(m.P).toBeLessThan(100)
+  })
+
+  it('counts rack jokers toward concealed 2468 #8 pungs (not dead at 0%)', () => {
+    const pattern = NMJL_2026_PATTERNS.find((p) => p.id === 'nmjl2026:2468-8')!
+    const hand = [
+      { id: '1', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 2 } },
+      { id: '2', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 4 } },
+      { id: '3', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 6 } },
+      { id: '4', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 8 } },
+      { id: '5', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 6 } },
+      { id: '6', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 8 } },
+      { id: '7', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 6 } },
+      { id: '8', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 1 } },
+      { id: '9', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 3 } },
+      { id: '10', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 5 } },
+      { id: '11', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 3 } },
+      { id: '12', def: { cat: 'wind' as const, wind: 'east' as const } },
+      { id: '13', def: { cat: 'joker' as const } },
+      { id: '14', def: { cat: 'joker' as const } },
+    ]
+    const discards = [
+      { id: 'd1', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 8 } },
+      { id: 'd2', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 8 } },
+      { id: 'd3', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 1 } },
+      { id: 'd4', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 2 } },
+      { id: 'd5', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 4 } },
+      { id: 'd6', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 4 } },
+      { id: 'd7', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 5 } },
+      { id: 'd8', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 8 } },
+      { id: 'd9', def: { cat: 'dragon' as const, dragon: 'soap' as const } },
+      { id: 'd10', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 1 } },
+      { id: 'd11', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 7 } },
+      { id: 'd12', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 8 } },
+      { id: 'd13', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 9 } },
+      { id: 'd14', def: { cat: 'flower' as const } },
+      { id: 'd15', def: { cat: 'dragon' as const, dragon: 'red' as const } },
+    ]
+    const exposures = [
+      {
+        tiles: [
+          { id: 's1', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 2 } },
+          { id: 's2', def: { cat: 'joker' as const } },
+          { id: 's3', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 2 } },
+        ],
+      },
+      {
+        tiles: [
+          { id: 'n1', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 5 } },
+          { id: 'n2', def: { cat: 'joker' as const } },
+          { id: 'n3', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 5 } },
+        ],
+      },
+    ]
+    const ranked = rankSuggestedHands({
+      hand,
+      wallRemaining: 80,
+      discards,
+      exposures,
+      deckSettings: { totalJokersInGame: 8, totalBlanksInGame: 0 },
+      patterns: [pattern],
+    })
+    const line = ranked.find((l) => l.id === pattern.id)
+    expect(line?.tilesNeededRough).toBe(6)
+    expect(line?.completionProbability).toBeGreaterThan(10)
+    expect(line?.completionProbability).toBeLessThan(99)
+    expect(isHandDeadByVisibleTiles(
+      [{ tileType: 's:crak:2', targetCount: 1 }],
+      {},
+      { 's:crak:2': 2 },
+      DEFAULT_DECK_COMPOSITION,
+    )).toBe(false)
   })
 })
 

@@ -31,7 +31,7 @@ export type HandInventoryContext = {
   blanksInHand: number
   /** Natural tiles in the discard pile (blank redemption only). */
   discardCounts: TileCountMap
-  /** When true, jokers cannot contribute (concealed or Singles & Pairs). */
+  /** When true, jokers cannot contribute (Singles & Pairs section only). */
   jokersDisallowed: boolean
 }
 
@@ -469,10 +469,10 @@ export function jokerSwapHintReliefForLine(
   completion: HandCompletionMetrics,
   _visibleNaturals: TileCountMap,
   _deck: DeckComposition,
-  isConcealed: boolean,
+  _isConcealed: boolean,
   isSinglesAndPairs: boolean,
 ): number {
-  if (swappableExposedJokers <= 0 || isConcealed || isSinglesAndPairs || ctx.jokersDisallowed) {
+  if (swappableExposedJokers <= 0 || isSinglesAndPairs || ctx.jokersDisallowed) {
     return 0
   }
   return Math.min(

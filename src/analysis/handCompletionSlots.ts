@@ -371,7 +371,7 @@ export function buildInventoryContext(
     jokersInHand,
     blanksInHand,
     discardCounts,
-    jokersDisallowed: p.closed || p.section === 'SINGLES AND PAIRS',
+    jokersDisallowed: p.section === 'SINGLES AND PAIRS',
   }
 }
 

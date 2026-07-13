@@ -91,7 +91,7 @@ export function calculateHandCompletionProbability(
     jokersInHand: input.playerJokersInHand,
     blanksInHand: input.blankTilesHeldByPlayer,
     discardCounts: input.visibleDiscardTiles ?? {},
-    jokersDisallowed: input.isConcealed,
+    jokersDisallowed: false,
   }
   if (slots.length === 0 && input.tilesNeededRough != null) {
     const filled = Math.max(0, 14 - input.tilesNeededRough)
