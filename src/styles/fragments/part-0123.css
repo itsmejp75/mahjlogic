@@ -3316,62 +3316,103 @@ html body .app .panel--discard-tracker :is(
   border-radius: var(--discard-tray-tile-corner-r, var(--tile-face-border-radius));
 }
 /*
- * Simple joker yellow frame hugging ONLY the sorted discard tracker tiles, never the seat labels /
- * bot exposures. The box is drawn on the overlay grid — the `top-exposure-band` container — so it is
- * sized with the SAME column math the grid uses: one `1fr` column equals
- * `--rack-tile-w = (100cqi - 28·gap) / 29`. The right edge snugs to the last sorted tile (S/W/B):
- * the sorted row is a flex of a 1.75× suit-label slot + 12 tile slots with 12 gaps between them,
- * so its content width is `13.75·tileW + 12·gap`. (A box drawn on the dropzone instead sits above
- * the container context, so `cqi`/`1fr` widths don't resolve and the frame ends up the wrong width.)
- */
-.blank-exchange-dropzone--over .discard-tracker__overlay-grid::after {
-  --_tracker-tile-w: max(1px, (100cqi - 28 * var(--player-rack-face-gap)) / 29);
-  /* Sits just outside the tile edges; absolute + pointer-events:none, so it never shifts layout. */
-  --_frame-outset: 2px;
-  content: '';
-  position: absolute;
-  top: calc(-1 * var(--_frame-outset));
-  bottom: calc(-1 * var(--_frame-outset));
-  left: calc(-1 * var(--_frame-outset));
-  width: calc(13.75 * var(--_tracker-tile-w) + 12 * var(--player-rack-face-gap) + 2 * var(--_frame-outset));
-  box-sizing: border-box;
-  border: 1px solid var(--simple-joker-yellow, #ffc107);
-  border-radius: calc(var(--discard-tray-tile-corner-r, var(--tile-face-border-radius)) + var(--_frame-outset));
-  pointer-events: none;
-  z-index: 3;
-}
-
-/*
- * Joker swap: ONE Simple joker yellow frame around the whole bot exposure block (grid cols 16–29, all three rows)
- * instead of a per-row ring. Drawn on the overlay grid — the `top-exposure-band` container — so its
- * left edge uses the same column math as the sorted-band frame: the bot band begins after the 14
- * sorted columns + the 1 seat-label column, i.e. at `15·tileW + 15·gap`, and runs flush to the grid's
- * right edge. Shown whenever a swappable tile is dragged over any bot seat cell; the drop resolves to
- * the first valid seat (South→West→North) regardless of which row the pointer is over, so the entire
- * block acts as one drop area. Outset + pointer-events:none keep it from shifting layout.
+ * Drop frames (blank exchange + joker swap): same soft outer glow as rack Swap / MAHJ hints
+ * (part-0124), tinted with `--simple-joker-yellow`. Same border, outset, radius, and halo for both.
  *
- * Triggered by EITHER the seat cell (`--swap-over`, fires over the empty wells) OR a meld drop zone
- * (`exposure-rack__meld-drop--over`, fires over the actual exposed tiles) — so hovering any part of
- * the block, tiles or wells, lights the frame.
+ * Drawn on `.discard-tracker__tile-groups-container` (avoids overlay-grid `container-type` clip).
+ * While lit, the top band is forced above `.app-rack-stage` so the bottom halo paints over Discard>.
  */
 html .app-dnd-frame .app-top-exposure-container
-  .discard-tracker__overlay-grid:has(
+  .blank-exchange-dropzone--over
+  .discard-tracker__tile-groups-container::after,
+html .app-dnd-frame .app-top-exposure-container
+  .discard-tracker__tile-groups-container:has(
     .app-opponents-rail__cell--swap-over,
     .exposure-rack__meld-drop--over
   )::before {
-  --_tracker-tile-w: max(1px, (100cqi - 28 * var(--player-rack-face-gap)) / 29);
+  --_drop-frame-color: var(--simple-joker-yellow, #ffc107);
+  --_tracker-tile-w: max(1px, calc((100% - 28 * var(--player-rack-face-gap)) / 29));
+  /* Gap outside tiles/slots — not flush to their edges. */
   --_frame-outset: 2px;
   content: '';
   position: absolute;
   top: calc(-1 * var(--_frame-outset));
   bottom: calc(-1 * var(--_frame-outset));
-  right: calc(-1 * var(--_frame-outset));
-  left: calc(15 * var(--_tracker-tile-w) + 15 * var(--player-rack-face-gap) - var(--_frame-outset));
   box-sizing: border-box;
-  border: 1px solid var(--simple-joker-yellow, #ffc107);
-  border-radius: calc(var(--discard-tray-tile-corner-r, var(--tile-face-border-radius)) + var(--_frame-outset));
+  border: 1px solid var(--_drop-frame-color);
+  border-radius: calc(
+    var(--discard-tray-tile-corner-r, var(--tile-face-border-radius)) + var(--_frame-outset)
+  );
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--_drop-frame-color) 85%, transparent),
+    0 0 10px 3px color-mix(in srgb, var(--_drop-frame-color) 55%, transparent);
   pointer-events: none;
-  z-index: 3;
+  z-index: 8;
+}
+
+/* Blank exchange: sorted band only (grid cols 1–14) — never seat labels / bot exposures. */
+html .app-dnd-frame .app-top-exposure-container
+  .blank-exchange-dropzone--over
+  .discard-tracker__tile-groups-container::after {
+  left: calc(-1 * var(--_frame-outset));
+  right: auto;
+  width: calc(
+    14 * var(--_tracker-tile-w) + 13 * var(--player-rack-face-gap) + 2 * var(--_frame-outset)
+  );
+}
+
+/* Joker swap: bot exposures only (grid cols 16–29, after 14 sorted + 1 seat-label). */
+html .app-dnd-frame .app-top-exposure-container
+  .discard-tracker__tile-groups-container:has(
+    .app-opponents-rail__cell--swap-over,
+    .exposure-rack__meld-drop--over
+  )::before {
+  right: calc(-1 * var(--_frame-outset));
+  left: calc(
+    15 * var(--_tracker-tile-w) + 15 * var(--player-rack-face-gap) - var(--_frame-outset)
+  );
+}
+
+/*
+ * While a drop frame is lit: raise this band above the hand rack (incl. hint z-index:5) and
+ * open overflow on the tray chain so the outer glow can spill into the Discard> strip.
+ */
+html .app-dnd-frame > .app-play-split.app-top-exposure-container:has(
+    .blank-exchange-dropzone--over,
+    .app-opponents-rail__cell--swap-over,
+    .exposure-rack__meld-drop--over
+  ) {
+  position: relative;
+  z-index: 30 !important;
+  overflow: visible !important;
+}
+
+html .app-dnd-frame:has(
+    > .app-play-split.app-top-exposure-container:has(
+      .blank-exchange-dropzone--over,
+      .app-opponents-rail__cell--swap-over,
+      .exposure-rack__meld-drop--over
+    )
+  )
+  > .app-rack-stage {
+  z-index: 1 !important;
+}
+
+html .app-dnd-frame > .app-play-split.app-top-exposure-container:has(
+    .blank-exchange-dropzone--over,
+    .app-opponents-rail__cell--swap-over,
+    .exposure-rack__meld-drop--over
+  )
+  :is(
+    .panel--discard-tracker,
+    .discard-tracker__shell,
+    .discard-tracker__content,
+    .discard-tracker__content--tile-groups-only,
+    .discard-tracker__tile-groups-container,
+    .blank-exchange-dropzone
+  ) {
+  position: relative;
+  overflow: visible !important;
 }
 
 /* The unified frame above replaces the per-row (seat cell) and per-meld (tile) joker-swap rings. */

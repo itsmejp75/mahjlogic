@@ -262,13 +262,39 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
       const fromStagedDiscard = pendingEastDiscardTile?.id === aid
       const fromHandTile = hand.some((t) => t.id === aid)
       const fromBotDiscardForCall = isActiveBotDiscardDrag(aid, activeBotDiscard ?? null)
-      const botSeatOverlapHits = (): ReturnType<CollisionDetection> => {
+
+      /**
+       * Joker swap: any overlap of the *dragged tile* with a bot/East exposure drop zone wins
+       * (seat-wide or meld). Pointer may still be over the hand — same idea as blank→tracker.
+       * Prefer seat-wide targets so the unified yellow frame (`--swap-over`) lights consistently.
+       */
+      const jokerSwapTileOverlapHits = (): ReturnType<CollisionDetection> => {
         if (!charlestonDone || !jokerSwapUiActive || (!fromHandTile && !fromStagedDiscard)) return []
-        const botSeatContainers = args.droppableContainers.filter(
-          (c) => parseBotSeatSwapDropId(String(c.id)) !== null,
-        )
-        if (botSeatContainers.length === 0) return []
-        return rectIntersection({ ...args, droppableContainers: botSeatContainers })
+        const dragged =
+          (fromHandTile ? hand.find((t) => t.id === aid) : null) ??
+          (fromStagedDiscard ? pendingEastDiscardTile : null)
+        if (!dragged || dragged.def.cat === 'joker' || dragged.def.cat === 'blank') return []
+        const swapContainers = args.droppableContainers.filter((c) => {
+          const id = String(c.id)
+          return (
+            parseBotSeatSwapDropId(id) !== null ||
+            parseBotExposureSwapDropId(id) !== null ||
+            parseEastExposureSwapDropId(id) !== null ||
+            id === EAST_SEAT_SWAP_ID
+          )
+        })
+        if (swapContainers.length === 0) return []
+        const overlapHits = rectIntersection({ ...args, droppableContainers: swapContainers })
+        if (overlapHits.length === 0) return []
+        const seatHit = overlapHits.find((h) => parseBotSeatSwapDropId(String(h.id)) !== null)
+        if (seatHit) return [seatHit]
+        const eastSeatHit = overlapHits.find((h) => String(h.id) === EAST_SEAT_SWAP_ID)
+        if (eastSeatHit) return [eastSeatHit]
+        const meldHit = overlapHits.find((h) => parseBotExposureSwapDropId(String(h.id)) !== null)
+        if (meldHit) return [meldHit]
+        const eastMeldHit = overlapHits.find((h) => parseEastExposureSwapDropId(String(h.id)) !== null)
+        if (eastMeldHit) return [eastMeldHit]
+        return [overlapHits[0]!]
       }
 
       if (fromBotDiscardForCall && charlestonDone && mainPhase === 'bot-turn') {
@@ -295,6 +321,13 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
       ) {
         const trackerHits = collisionHitsForTileOverlappingZones(args, [BLANK_EXCHANGE_DROP_ID])
         if (trackerHits.length > 0) return trackerHits
+      }
+
+      // Natural for joker swap: tile overlap with bot/East exposures beats hand-rack reorder so the
+      // yellow frame + drop stay active whenever any part of the tile covers the drop area.
+      {
+        const swapHits = jokerSwapTileOverlapHits()
+        if (swapHits.length > 0) return swapHits
       }
 
       if (fromHandTile || fromBotDiscardForCall || fromPassSlot || fromStagedDiscard) {
@@ -481,7 +514,7 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
           const seatHit = hits.find((h) => parseBotSeatSwapDropId(String(h.id)) !== null)
           if (seatHit) return [seatHit]
         }
-        const botSeatOverlap = botSeatOverlapHits()
+        const botSeatOverlap = jokerSwapTileOverlapHits()
         if (botSeatOverlap.length > 0) return [botSeatOverlap[0]!]
         if (hand.some((t) => t.id === aid)) {
           const handTileIds = new Set(hand.map((t) => t.id))
@@ -551,18 +584,12 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
         }
         // Seat-wide joker swap when the pointer is just outside the meld rect but the tile overlaps.
         if (charlestonDone && jokerSwapUiActive) {
-          const seatContainers = args.droppableContainers.filter(
-            (c) =>
-              parseBotSeatSwapDropId(String(c.id)) !== null || String(c.id) === EAST_SEAT_SWAP_ID,
-          )
-          if (seatContainers.length > 0) {
-            const overlapHits = rectIntersection({ ...args, droppableContainers: seatContainers })
-            if (overlapHits.length > 0) return [overlapHits[0]!]
-          }
+          const swapHits = jokerSwapTileOverlapHits()
+          if (swapHits.length > 0) return swapHits
         }
       }
-      const botSeatOverlap = botSeatOverlapHits()
-      if (botSeatOverlap.length > 0) return [botSeatOverlap[0]!]
+      const botSeatOverlap = jokerSwapTileOverlapHits()
+      if (botSeatOverlap.length > 0) return botSeatOverlap
       return closestCenter(args)
     },
     [

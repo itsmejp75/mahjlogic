@@ -2124,6 +2124,32 @@ html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-t
 }
 
 /*
+ * Yellow drop-frame glow must paint over Discard> / discard-slot chrome. Hint stacking raises
+ * `.app-rack-stage` to 5 — beat that with !important while a frame is lit (same trigger as
+ * the frame itself on `.app-top-exposure-container:has(...)`).
+ */
+html .app-dnd-frame > .app-play-split.app-top-exposure-container:has(
+    .blank-exchange-dropzone--over,
+    .app-opponents-rail__cell--swap-over,
+    .exposure-rack__meld-drop--over
+  ) {
+  position: relative;
+  z-index: 30 !important;
+  overflow: visible !important;
+}
+
+html .app-dnd-frame:has(
+    > .app-play-split.app-top-exposure-container:has(
+      .blank-exchange-dropzone--over,
+      .app-opponents-rail__cell--swap-over,
+      .exposure-rack__meld-drop--over
+    )
+  )
+  > .app-rack-stage {
+  z-index: 1 !important;
+}
+
+/*
  * Menu-styled blocking dialogs — fixed menu type scale + rack-action tokens.
  */
 .charleston-error-overlay:has(.charleston-error-dialog--menu-shell) {
