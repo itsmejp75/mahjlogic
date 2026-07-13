@@ -181,8 +181,8 @@
   --app-h-pad-base: clamp(0.3rem, 1.65vw, 1.35rem);
   --app-h-pad: calc(var(--app-h-pad-base) + var(--app-safe-inline));
   --app-v-pad: var(--app-h-pad-base);
-  /* Bottom inset on `.app-main` — 0 for browser/native flush; PWA sets via `[data-home-screen-app]`. */
-  --app-v-pad-bottom: 0px;
+  /* Bottom inset on `.app-main` — matches top / side base pad; native + short landscape set 0. */
+  --app-v-pad-bottom: var(--app-v-pad);
   --play-split-tray-panel-padding-bottom: 0px;
   --hand-rack-usable-w: calc(
     var(--app-play-fit-inline)

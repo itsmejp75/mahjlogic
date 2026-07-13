@@ -519,8 +519,8 @@
   flex: 1 1 0;
   min-height: 0;
   overflow: hidden;
-  /* Top breathing room only — bottom flush so the taupe wrapper matches the top inset. */
+  /* Match top / side breathing room (`--app-v-pad` == `--app-h-pad-base`). */
   padding-top: var(--app-v-pad);
-  padding-bottom: 0;
+  padding-bottom: var(--app-v-pad-bottom, var(--app-v-pad));
 }
 

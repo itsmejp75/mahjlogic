@@ -45,6 +45,7 @@
     /* Same rhythm as @media (max-width: 47.99rem); neutralize tight phone-landscape overrides. */
     --app-h-pad-base: clamp(0.35rem, 2.2vw, 0.75rem);
     --app-v-pad: var(--app-h-pad-base);
+    /* Flush bottom on narrow / phone layouts (native + short landscape keep their own 0). */
     --app-v-pad-bottom: 0px;
     --play-split-tray-panel-padding-bottom: 0px;
     --hand-window-pad-inline: clamp(0.2rem, 1.2vw, 0.35rem);
