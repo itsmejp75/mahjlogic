@@ -23,40 +23,40 @@
  * whole fly-in. Keep the hand under rack-top so the meld stay lifted; the green slot may sit
  * above the flying tile while melds are exposed (vignette > green-slot clearance).
  */
-.app-layout[data-animations='on']
+.app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
   .panel--hand
-  .panel-hand-rack__hand-tray:has(.sortable-tile-wrap--just-drawn)
+  .panel-hand-rack__hand-tray
   .rack-stage__rack-bottom {
   z-index: 3;
 }
 
-.app-layout[data-animations='on']
+.app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
   .panel--hand
   .rack-stage__rack-col:has(.exposure-rack--has-call-melds)
-  .panel-hand-rack__hand-tray:has(.sortable-tile-wrap--just-drawn)
+  .panel-hand-rack__hand-tray
   .rack-stage__rack-bottom {
   z-index: 1;
 }
 
-.app-layout[data-animations='on']
+.app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
   .panel--hand
-  .panel-hand-rack__hand-tray:has(.sortable-tile-wrap--just-drawn)
+  .panel-hand-rack__hand-tray
   .hand-row {
   /* part-0008 isolates + clips the row; open both so tile z-index:10 clears Charleston. */
   isolation: auto;
   overflow: visible;
 }
 
-.app-layout[data-animations='on']
+.app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
   .panel--hand
-  .panel-hand-rack__hand-tray:has(.sortable-tile-wrap--just-drawn)
+  .panel-hand-rack__hand-tray
   .hand-bank {
   overflow: visible;
 }
 
-.app-layout[data-animations='on']
+.app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
   .panel--hand
-  .panel-hand-rack__hand-tray:has(.sortable-tile-wrap--just-drawn)
+  .panel-hand-rack__hand-tray
   > .panel-hand-rack__seat-label {
   /* Seat chip is z-index 10 in part-0084 — keep it under Charleston (2) and flying tiles (10). */
   z-index: 1;
@@ -67,10 +67,10 @@
  * z-index 1 would tuck it under that exposure for the fly-in — keep the normal lift so Seat:
  * stays readable below the meld.
  */
-.app-layout[data-animations='on']
+.app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
   .panel--hand
   .rack-stage__rack-col:has(.exposure-rack--has-call-melds)
-  .panel-hand-rack__hand-tray:has(.sortable-tile-wrap--just-drawn)
+  .panel-hand-rack__hand-tray
   > .panel-hand-rack__seat-label {
   z-index: 10;
 }
@@ -80,9 +80,9 @@
  * (suggest-best z-index 3 / just-drawn z-index 10) paint over the action row (z-index 1).
  * Keep Pass / Sort / etc. above those glows for the whole fly-in — above tile z-index 10.
  */
-.app-layout[data-animations='on']
+.app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
   .panel--hand
-  .panel-hand-rack__hand-tray:has(.sortable-tile-wrap--just-drawn)
+  .panel-hand-rack__hand-tray
   > :is(.panel-hand-rack__action-well, .panel-hand-rack__charleston-actions-well) {
   z-index: 20;
 }

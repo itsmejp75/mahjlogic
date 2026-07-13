@@ -423,6 +423,9 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
       <div
         className="app-layout"
         data-animations={animationsEnabled ? 'on' : 'off'}
+        data-hand-fly-in={
+          animationsEnabled && handTileFlyIn ? handTileFlyIn.from : undefined
+        }
         data-joker-swap-hint={jokerSwapHintEnabled ? 'on' : 'off'}
         data-joker-swap-hint-iter={jokerSwapHandHintSingleBounce ? '1' : '4'}
       >

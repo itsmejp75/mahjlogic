@@ -502,6 +502,9 @@
   align-items: stretch;
   overflow: hidden;
   background: transparent;
+  height: var(--rack-tile-h);
+  min-height: var(--rack-tile-h);
+  max-height: var(--rack-tile-h);
 }
 
 .discard-tracker__overlay-grid
@@ -510,9 +513,10 @@
   .tile-face {
   position: absolute;
   inset: 0;
+  bottom: -1px;
   flex: none;
   width: 100%;
-  height: 100%;
+  height: auto;
   min-width: 0;
   min-height: 0;
   max-width: none;
@@ -607,11 +611,18 @@
 
 /* Bot exposure band: empty wells match Mahj Logic watermark luminance (not action-button gray). */
 .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row .exposure-rack__slot--empty::before {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  min-height: 0;
+  max-height: none;
   border: none;
   border-radius: var(--tile-face-border-radius);
   background: var(--table-watermark-slot-fill);
   background-image: none;
   box-shadow: none;
+  box-sizing: border-box;
 }
 
 /* Highlight / hover rings: use tray-scaled radius, not the main-rack 0.35rem default. */
@@ -859,14 +870,27 @@
   align-items: center;
   justify-content: center;
   position: relative;
+  /* Always pin + clip — mobile WKWebView subpixel stretch reopens a white watermark hairline
+   * under S/W/N even when the green turn chip is not lit. */
+  align-self: start;
+  overflow: hidden;
+  height: var(--rack-tile-h);
+  min-height: var(--rack-tile-h);
+  max-height: var(--rack-tile-h);
+  background: transparent;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--seat-label .sorted-discard-tray__seat-label {
   position: absolute;
-  /* Centered in the label column — same as B/C/D suit labels. */
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+  /* Fill the seat box so S/W/N centers in the green turn chip (not just the em-box midpoint). */
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: none;
+  z-index: 1;
 }
 
 .discard-tracker__overlay-grid .sorted-discard-tray__suit-label {
@@ -1060,11 +1084,15 @@
 /* Active opponent turn: green slot fill behind S / W / N. */
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--seat-label.sorted-discard-tray__slot--seat-turn {
   background-color: var(--card-ink-green, #52b147);
+  /* Extra 1px of green paint, clipped by overflow:hidden — covers mobile WebKit fringe under the chip. */
+  background-image: linear-gradient(var(--card-ink-green, #52b147), var(--card-ink-green, #52b147));
+  background-size: 100% calc(100% + 1px);
+  background-position: top center;
+  background-repeat: no-repeat;
   border-radius: var(--discard-tray-tile-corner-r, var(--tile-face-border-radius));
-  /* Same height pin as bot tiles — mobile subpixel stretch was showing a white hairline under the box. */
-  align-self: start;
-  overflow: hidden;
-  max-height: var(--rack-tile-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .discard-tracker__overlay-grid

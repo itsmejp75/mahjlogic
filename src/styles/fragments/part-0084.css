@@ -66,8 +66,19 @@
 
 .panel--hand .exposure-rack--has-call-melds {
   align-items: flex-end;
-  overflow: visible;
   position: relative;
+}
+
+/*
+ * Staging group ring sits 1px + border-w outside the tiles. Beat
+ * `.rack-stage__rack-top .exposure-rack { overflow-x: clip }` (part-0024) so the
+ * left edge is not clipped against the hand panel’s `--hand-window-pad-inline`.
+ */
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack:is(.exposure-rack--has-call-melds, :has(.exposure-rack__call-meld-strip--staging)) {
+  overflow: visible;
+  overflow-x: visible;
 }
 
 .panel--hand .exposure-rack__call-meld-anchor {
@@ -162,9 +173,10 @@
 .panel--hand .exposure-rack__call-meld-strip--staging .exposure-rack__call-meld-strip__inner::after {
   content: '';
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: inset 0 0 0 var(--call-meld-group-border-w) var(--call-meld-group-border);
+  /* 1px clearance outside the tiles; ring draws outward from that edge. */
+  inset: -1px;
+  border-radius: calc(var(--tile-face-border-radius) + 1px);
+  box-shadow: 0 0 0 var(--call-meld-group-border-w) var(--call-meld-group-border);
   pointer-events: none;
   z-index: 5;
 }

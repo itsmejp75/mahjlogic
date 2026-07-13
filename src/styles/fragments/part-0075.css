@@ -759,6 +759,11 @@
   z-index: 10;
 }
 
+/* Charleston / opening-deal: measure rack slots before unpausing (see `deferHandFlyMeasure`). */
+.sortable-tile-wrap--fly-paused.sortable-tile-wrap--just-drawn {
+  animation-play-state: paused;
+}
+
 /* Non-call exposure drop-ins use the shared `tile-drop-in`, but without overshoot. */
 .exposure-rack .exposure-rack__tile-fly.sortable-tile-wrap--just-drawn:not(.exposure-rack__call-staging-fly-up) {
   animation: tile-drop-in 0.36s cubic-bezier(0.22, 0.7, 0.22, 1) both;

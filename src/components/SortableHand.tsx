@@ -330,11 +330,14 @@ function SortableTile({
     deferHandFlyMeasure,
   ])
 
+  // Mount `just-drawn` during deferred measure too (paused) so rack z-index lifts before the
+  // first visible frame — otherwise tiles start behind the green pass strip and pop forward.
+  const showJustDrawnAnim = runFlyLayout && (flyAnimReady || deferHandFlyMeasure)
+  const flyPausedForMeasure = deferHandFlyMeasure && !flyAnimReady
+
   const flyStyle: CSSProperties = {
     ...flyMotionStyle,
     ...(handFlyInWaveDelayMs != null ? { animationDelay: `${handFlyInWaveDelayMs}ms` } : {}),
-    // Keep pending tiles invisible at rest so they don't flash before the measured fly-in starts.
-    ...(runFlyLayout && !flyAnimReady ? { opacity: 0 } : {}),
   }
 
   return (
@@ -370,11 +373,12 @@ function SortableTile({
         }
         ref={flyInRef}
         className={[
-          runFlyLayout && flyAnimReady
+          showJustDrawnAnim
             ? 'sortable-tile-wrap__fly sortable-tile-wrap--just-drawn'
             : 'sortable-tile-wrap__fly',
+          flyPausedForMeasure ? 'sortable-tile-wrap--fly-paused' : '',
           handFlyInWaveDelayMs != null ? 'sortable-tile-wrap--opening-deal-wave' : '',
-          runFlyLayout && flyAnimReady && isJustDrawn && drawInFromRackBottom
+          showJustDrawnAnim && isJustDrawn && drawInFromRackBottom
             ? 'exposure-rack__call-staging-fly-up'
             : '',
           jokerSwapHintBounce && !runFlyLayout ? 'sortable-tile-wrap__fly--joker-swap-hint-bounce' : '',

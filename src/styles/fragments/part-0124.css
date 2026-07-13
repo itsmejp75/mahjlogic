@@ -758,7 +758,10 @@
   --tile-face-highlight-inset: 0 0 0 0 transparent;
   --tile-face-highlight-shadow: 0 0 0 0 transparent;
   --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
-  position: relative;
+  /*
+   * Do NOT set position:relative here. Absolute inset cover (Last word) hides the watermark
+   * slot fill under S/W/N on mobile WebKit. Relative reopens the 1px hairline.
+   */
   z-index: 1;
   filter: none;
 }
@@ -2263,6 +2266,8 @@ html body .app .dead-hand-overlay .dead-hand-dialog .charleston-error-dialog__ra
  * - Elevate *lit slots only* (not whole melds/rows). A mixed lit+dim meld at z 12 used to cover the
  *   seat above’s bottom lift over that meld’s dim tiles / empty wells. Lit↔lit seams are
  *   clipped in `coachLitNeighborClip.ts` (same apparent height).
+ * - Opaque row backgrounds must not sit in a stacking context that eats North’s upward glow —
+ *   keep z-index:auto and open overflow on lit melds/slots after hairline overflow:hidden pins.
  */
 html .app-top-exposure-container .discard-tracker__overlay-row,
 .panel--discard-tracker .discard-tracker__overlay-grid .discard-tracker__overlay-row {
@@ -2411,6 +2416,7 @@ html
 /*
  * Lift glow only needs overflow on lit tiles — dim slots must stay clipped so the
  * white watermark well cannot peek under the face on mobile (S row especially).
+ * Beat part-0123 hairline `overflow: hidden` on every bot slot / meld child.
  */
 html
   .app-top-exposure-container
@@ -2734,8 +2740,10 @@ html body .app[data-tile-graphics]
 
 /*
  * Last word — bot exposure faces must cover the slot (mobile white hairline under S/W/N tiles).
- * Coach lift may open overflow on lit slots; absolute inset still leaves no gap for the
- * watermark well to peek. Do not regress to flex-only fill or `max-height: none` on melds.
+ * Coach lift / theme rules repeatedly reintroduced `position: relative` with higher specificity
+ * than earlier absolute cover. `!important` is intentional: absolute faces still contain
+ * ::before/::after polish. Lit slots still need overflow:visible for the lift glow (see below).
+ * Do not regress to flex-only fill, `position: relative` on these faces, or `max-height: none` on melds.
  */
 html
   .app-top-exposure-container
@@ -2747,6 +2755,10 @@ html
   .exposure-rack__slot:has(.tile-face) {
   position: relative;
   background: transparent;
+  /* Height pin only — lit coach slots still need overflow:visible for lift glow. */
+  height: var(--rack-tile-h);
+  min-height: var(--rack-tile-h);
+  max-height: var(--rack-tile-h);
 }
 
 html
@@ -2758,15 +2770,93 @@ html
 .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot
+  .tile-face,
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-best
+  .tile-face,
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-best
   .tile-face {
-  position: absolute;
+  position: absolute !important;
   inset: 0;
+  /* Hair oversize under overflow:hidden slots — survives fractional CSS px on WKWebView. */
+  bottom: -1px;
   flex: none;
   width: 100%;
-  height: 100%;
+  height: auto;
   min-width: 0;
   min-height: 0;
   max-width: none;
   max-height: none;
   box-sizing: border-box;
+}
+
+/*
+ * Lit coach slots open overflow for lift glow — keep the face’s 1px bottom oversize clipped
+ * only when overflow is hidden; when visible, pin height to the slot so nothing peeks.
+ */
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-best
+  .tile-face,
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-best
+  .tile-face {
+  bottom: 0;
+  height: 100%;
+}
+
+/*
+ * LAST WORD — coach lift on S/W/N must beat hairline `overflow:hidden` pins (part-0123 meld
+ * child slots are more specific than a bare `--suggest-best` rule). Without this, North often
+ * stayed lit-but-flush while South still showed lift (same suggest-best class, clipped glow).
+ * Also drop per-row stacking contexts + opaque fills that ate the lower seat’s upward glow.
+ */
+html.app-dnd-frame
+  .app-play-split.app-top-exposure-container
+  .discard-tracker__overlay-grid
+  > .discard-tracker__overlay-row,
+html
+  .app-dnd-frame
+  > .app-play-split.app-top-exposure-container
+  .discard-tracker__overlay-row {
+  z-index: auto !important;
+}
+
+html
+  .app-dnd-frame
+  > .app-play-split.app-top-exposure-container
+  .discard-tracker__overlay-row:has(.exposure-rack__slot--suggest-best) {
+  background-color: transparent;
+  background-image: none;
+  overflow: visible;
+}
+
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row
+  :is(.exposure-rack__meld-drop, .exposure-rack__meld-grid-span):has(
+    .exposure-rack__slot--suggest-best
+  ),
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row
+  :is(.exposure-rack__meld-drop, .exposure-rack__meld-grid-span)
+  > .exposure-rack__slot--suggest-best,
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-best,
+.panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-best {
+  overflow: visible !important;
 }

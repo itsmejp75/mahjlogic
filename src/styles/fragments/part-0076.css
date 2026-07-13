@@ -8,14 +8,7 @@
 
 
 
-.app[data-tile-graphics='designer']
-  :is(
-    .tile-face:not(.tile-face--illustrative-art),
-    .panel--discard-tracker
-      .discard-tracker__overlay-grid
-      .exposure-rack--discard-tracker-bot-row
-      .tile-face
-  ) {
+.app[data-tile-graphics='designer'] .tile-face:not(.tile-face--illustrative-art) {
   position: relative;
   isolation: isolate;
   overflow: hidden;
@@ -31,15 +24,34 @@
     var(--tile-face-suggest-dim-inset);
 }
 
-/* Translucent polish: cool silver highlights so white inlay still “floats” above the stone */
+/*
+ * Designer bot-row faces: do not force position:relative (that undoes absolute slot cover
+ * and reopens the mobile watermark hairline). Absolute faces still contain ::before polish.
+ */
 .app[data-tile-graphics='designer']
-  :is(
-    .tile-face:not(.tile-face--illustrative-art),
-    .panel--discard-tracker
-      .discard-tracker__overlay-grid
-      .exposure-rack--discard-tracker-bot-row
-      .tile-face
-  )::before {
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .tile-face {
+  isolation: isolate;
+  overflow: hidden;
+  /* Depth + cut edge — same shadows as general designer faces above. */
+  --tile-face-base-shadow:
+    0 1px 4px color-mix(in srgb, var(--color-black) 32%, transparent),
+    0 0 14px -2px color-mix(in srgb, #7a7e9a 10%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #f0f2fa 10%, transparent),
+    inset 0 -1px 0 color-mix(in srgb, var(--color-black) 26%, transparent);
+  box-shadow: var(--tile-face-base-shadow), var(--tile-face-highlight-inset), var(--tile-face-highlight-shadow),
+    var(--tile-face-suggest-dim-inset);
+}
+
+/* Translucent polish: cool silver highlights so white inlay still “floats” above the stone */
+.app[data-tile-graphics='designer'] .tile-face:not(.tile-face--illustrative-art)::before,
+.app[data-tile-graphics='designer']
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .tile-face::before {
   content: '';
   position: absolute;
   inset: 0;
