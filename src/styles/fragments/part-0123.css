@@ -1993,13 +1993,12 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
   .hands-panel__content {
   position: relative;
-  /* Dark chrome in the corner wedges under the list’s top radii (matches header). */
+  /* Dark chrome shows through the clipped list-corner wedges (matches header). */
   background-color: var(--app-bg-base);
 }
 
 /*
- * Hands tray body — starts under the header, top corners match the shell bottom radii
- * so the list curves down from the header the same way it curves at the tray foot.
+ * Hands tray body — starts under the header, top corners match the shell bottom radii.
  */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
@@ -2007,7 +2006,6 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   content: '';
   position: absolute;
   z-index: 0;
-  /* Same band height as the title-row paint (metric header line + cell pad-block). */
   font-size: var(--hands-metric-column-header-fs, var(--app-ui-control-fs-sm));
   top: calc(2 * 0.2em + 1em + var(--hands-sheet-grid-line-w, 0.5px));
   bottom: 0;
@@ -2025,6 +2023,26 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .hands-list-scroll {
   position: relative;
   z-index: 1;
+}
+
+/*
+ * Clip the scrolling body to the same top radii as the tray foot. Headers sit outside this
+ * scroller, so rounding here curves the list down from the header — including selected-row
+ * fills (overlays could not stay above that paint).
+ */
+.app
+  .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
+  .hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  > .hands-sheet__rows,
+.app
+  .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
+  .hands-panel__content
+  .hands-list-scroll
+  > .hands-list {
+  border-top-left-radius: var(--suggested-popup-radius);
+  border-top-right-radius: var(--suggested-popup-radius);
 }
 
 /*
