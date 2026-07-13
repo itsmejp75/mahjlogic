@@ -20,7 +20,7 @@ const SuggestedHandsTrayContext = createContext<SuggestedHandsTrayApi | null>(nu
 
 /**
  * Imperative tray open/close for App round handlers without making `App` a tray consumer
- * (which would re-render the play tree on every Logic-tray toggle).
+ * (which would re-render the play tree on every tray open/close).
  */
 export const suggestedHandsTrayApiRef: {
   current: Pick<SuggestedHandsTrayApi, 'setTrayOpen' | 'toggleTray'>

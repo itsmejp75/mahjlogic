@@ -4778,7 +4778,14 @@ export default function App() {
 
     const overlayStyle: CSSProperties = {
       ['--suggested-overlay-top-peek' as string]: '0px',
-      ['--suggested-overlay-content-h' as string]: `${suggestedDiscardOverlayBounds.contentHeightPx}px`,
+      /*
+       * Never publish `0px` — that makes `.panel--hands` height 0 (flex-end), so only the
+       * Away / Prob % / Points header strip paints at the bottom of an empty discard tray.
+       */
+      ['--suggested-overlay-content-h' as string]:
+        suggestedDiscardOverlayBounds.contentHeightPx > 0
+          ? `${suggestedDiscardOverlayBounds.contentHeightPx}px`
+          : '100%',
       ['--suggested-overlay-top-extend' as string]: `${suggestedDiscardOverlayBounds.topExtendPx}px`,
       ['--suggested-overlay-bottom-extend' as string]: `${suggestedDiscardOverlayBounds.bottomExtendPx}px`,
       ['--suggested-overlay-viewport-top' as string]: `${suggestedDiscardOverlayBounds.viewportTopPx}px`,

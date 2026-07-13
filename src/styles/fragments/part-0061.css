@@ -1043,7 +1043,7 @@
 
 .discard-tracker__overlay-grid .sorted-discard-tray__seat-label {
   font-family: var(--mono-sometype);
-  font-weight: 600;
+  font-weight: 500;
   font-size: calc(var(--rack-tile-w) * 1.2);
   line-height: 1;
   width: auto;

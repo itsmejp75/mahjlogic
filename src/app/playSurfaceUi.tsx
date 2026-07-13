@@ -166,21 +166,13 @@ export function OpponentExposureDropZone({
   )
 }
 
-/** Logic tray toggle — context consumer so the play surface does not re-render on open/close. */
+/** Logic rack button — no action yet; hands tray open/close is menu-only. */
 export function LogicTrayToggleButton() {
-  const { trayOpen, toggleTray } = useSuggestedHandsTray()
   return (
     <button
       type="button"
-      className={[
-        'btn btn--rack-neutral btn--logic rack-bottom-tile-cell rack-bottom-tile-cell--c7-8',
-        trayOpen ? 'btn--logic--open' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
+      className="btn btn--rack-neutral btn--logic rack-bottom-tile-cell rack-bottom-tile-cell--c7-8"
       aria-label="Logic"
-      aria-pressed={trayOpen}
-      onClick={toggleTray}
     >
       <img className="btn--logic__img" src={logicLogoSrc} alt="Logic" draggable={false} />
     </button>

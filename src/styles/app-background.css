@@ -8,14 +8,14 @@
  *
  * Where it is applied: part-0123.css block “Main app background surfaces”.
  * Suggested-hands shell stays transparent so this paint shows through.
- * Hands header keeps `--app-bg-base`; from below that row the lower-band paint is used.
+ * Main app chrome is a solid `--app-bg-base` (matches page footer pad).
+ * Hands tray keeps the lower-band + bottom upward darken gradient.
  * Excluded on purpose: slot wells (`--app-bg-slot-well`).
  *
  * Quick tweaks:
- *   --app-bg-base       overall charcoal tone through the hands header (also sync index.html)
- *   --app-bg-highlight  center of vignette (lighter)
- *   --app-bg-shadow     edge of vignette (darker)
+ *   --app-bg-base       solid app chrome / footer pad color (also sync index.html)
  *   --app-bg-lower-*    lighter band from below the hands header down (discard / hand rows)
+ *   --app-bg-bottom-darken-*  upward darken at the bottom of the hands tray
  *   --hands-row-active-fill / --app-bg-row-active / --app-bg-top-band-*
  *                       selected hands row + top B/C/D·S/W/N band
  *   --app-bg-noise-*    grain strength / fineness (see composed --app-bg-noise URL)
@@ -25,16 +25,17 @@
 
 :root {
   /* --- Color --- */
-  /* Page + hands header — unified dark charcoal. */
-  --app-bg-base: #283038;
-  --app-bg-highlight: #2d353d;
-  --app-bg-shadow: #22292f;
+  /* Solid app chrome — same as page footer pad. */
+  --app-bg-page-pad-color: #23282e;
+  --app-bg-base: var(--app-bg-page-pad-color);
+  --app-bg-highlight: var(--app-bg-page-pad-color);
+  --app-bg-shadow: var(--app-bg-page-pad-color);
 
   /* Surfaces that intentionally stay flat (not the textured main background). */
   --app-bg-flat: #5c6066;
   --app-bg-slot-well: #5c6066;
 
-  /* --- Vignette (subtle depth; flatten by setting highlight/shadow equal to base) --- */
+  /* --- Vignette (flattened — solid app bg; lower band still uses its own vignette) --- */
   --app-bg-vignette-shape: ellipse 140% 115% at 50% 42%;
   --app-bg-vignette: radial-gradient(
     var(--app-bg-vignette-shape),
@@ -59,11 +60,22 @@
   );
   /* Legacy alias */
   --app-bg-lower-darken-end: var(--app-bg-lower-band-shadow);
+  /* Soft upward fade from footer color into the lower band (hands tray bottom). */
+  --app-bg-bottom-darken-h: 2rem;
+  --app-bg-bottom-darken: linear-gradient(
+    to top,
+    var(--app-bg-page-pad-color) 0%,
+    var(--app-bg-page-pad-color) 0.4rem,
+    color-mix(in srgb, var(--app-bg-page-pad-color) 45%, transparent) 55%,
+    transparent 100%
+  );
   --app-bg-lower-band-paint-color: var(--app-bg-lower-band-base);
-  --app-bg-lower-band-paint-image: var(--app-bg-lower-band-vignette), var(--app-bg-noise);
-  --app-bg-lower-band-paint-size: auto, 128px 128px;
-  --app-bg-lower-band-paint-repeat: no-repeat, repeat;
-  --app-bg-lower-band-paint-blend: normal, soft-light;
+  /* Only the hands-tray bottom upward darken — no vignette / grain on the tray body. */
+  --app-bg-lower-band-paint-image: var(--app-bg-bottom-darken);
+  --app-bg-lower-band-paint-size: 100% var(--app-bg-bottom-darken-h);
+  --app-bg-lower-band-paint-position: bottom center;
+  --app-bg-lower-band-paint-repeat: no-repeat;
+  --app-bg-lower-band-paint-blend: normal;
   --app-bg-lower-band-paint-attachment: scroll;
 
   /* Full-bleed side paint (escapes inset tray / sheet rails to the viewport edges). */
@@ -77,24 +89,16 @@
   --app-bg-action-row-surface: var(--app-bg-base);
 
   /*
-   * Selected hands-tray row + top discard/bot band (B/C/D + S/W/N).
-   * Tracker: full-bleed on `.app-top-exposure-container::before`. Soft join: hand-rack
-   * `::before` gradient behind Seat / Charleston. Top app-main pad uses the same fill.
+   * Selected hands-tray row fill. Top B/C/D·S/W/N band matches solid app chrome
+   * (no darker top wash / fade while backgrounds are flat).
    */
   --app-bg-row-active: color-mix(in srgb, var(--app-bg-base) 40%, #161d26 60%);
   --hands-row-active-fill: var(--app-bg-row-active);
-  --app-bg-top-band-fill: var(--app-bg-row-active);
-  --app-bg-top-band-fade: 1.5rem;
-  /*
-   * How far the top-band dark continues into the East rack (Seat: / Charleston / pass slots)
-   * before the bottom feather. Tuned to the compact exposure / pass-strip row.
-   */
-  --app-bg-top-band-seat-end: calc(
-    var(--play-tray-h-divider, 0.25rem)
-    + max(1.75rem, calc(var(--hand-rack-tile-h, 3.2rem) * 0.42))
-  );
-  /* Flat paint for tracker top-band (matches row boxes). */
-  --app-bg-top-band-paint-color: var(--app-bg-top-band-fill);
+  --app-bg-top-band-fill: var(--app-bg-base);
+  --app-bg-top-band-fade: 0rem;
+  --app-bg-top-band-seat-end: 0rem;
+  /* Flat paint for tracker top-band (matches solid app chrome). */
+  --app-bg-top-band-paint-color: var(--app-bg-base);
 
   /*
    * --- Grain (SVG noise tile) ---
@@ -102,14 +106,13 @@
    */
   --app-bg-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128'%3E%3Cfilter id='a'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.05' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='128' height='128' filter='url(%23a)' opacity='0.26'/%3E%3C/svg%3E");
 
-  /* --- Composed paint (used by part-0123; normally do not edit) --- */
+  /* --- Composed paint: solid footer color (no vignette / grain on main chrome) --- */
   --app-bg-paint-color: var(--app-bg-base);
-  --app-bg-paint-image: var(--app-bg-vignette), var(--app-bg-noise);
-  --app-bg-paint-size: auto, 128px 128px;
-  --app-bg-paint-repeat: no-repeat, repeat;
-  --app-bg-paint-blend: normal, soft-light;
-  /* fixed = one shared grain phase across tray bands (avoids seams between sections) */
-  --app-bg-paint-attachment: fixed;
+  --app-bg-paint-image: none;
+  --app-bg-paint-size: auto;
+  --app-bg-paint-repeat: no-repeat;
+  --app-bg-paint-blend: normal;
+  --app-bg-paint-attachment: scroll;
 
   /* Legacy / semantic aliases */
   --app-tray-flat: var(--app-bg-flat);

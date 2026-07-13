@@ -369,14 +369,12 @@ html .app-dnd-frame > .app-play-split.app-top-exposure-container {
   overflow: visible;
   position: relative;
   z-index: 0;
-  /* One continuous dark band (not --window-surface / transparent). */
-  background: var(--app-bg-top-band-paint-color, var(--app-bg-top-band-fill));
+  /* Solid app chrome (same as footer pad / rack). */
+  background: var(--app-bg-base);
 }
 
 /*
- * Full-bleed top-band for the tracker only (height-clipped). Soft join into Seat /
- * Charleston is painted by `.panel-hand-rack::before` behind rack content — do not
- * extend this pseudo into the hand or it stacks over tiles / Seat text.
+ * Full-bleed solid chrome for the tracker. No darker top wash.
  */
 html .app-dnd-frame > .app-play-split.app-top-exposure-container::before {
   content: '';
@@ -387,7 +385,7 @@ html .app-dnd-frame > .app-play-split.app-top-exposure-container::before {
   left: var(--app-bg-side-bleed-left);
   width: var(--app-bg-side-bleed-width);
   pointer-events: none;
-  background-color: var(--app-bg-top-band-paint-color, var(--app-bg-top-band-fill));
+  background-color: var(--app-bg-base);
   background-image: none;
 }
 
@@ -397,12 +395,12 @@ html .app-dnd-frame > .app-play-split.app-top-exposure-container::after {
 }
 
 /*
- * Row boxes match the band fill so B/C/D·S/W/N read as one surface (no lighter gaps).
+ * Row boxes match solid app chrome (no lighter gaps / darker top wash).
  */
 html .app-dnd-frame > .app-play-split.app-top-exposure-container .discard-tracker__overlay-row {
   position: relative;
   z-index: 1;
-  background-color: var(--app-bg-top-band-fill, var(--hands-row-active-fill));
+  background-color: var(--app-bg-base);
   background-image: none;
   border-radius: calc(var(--tile-face-border-radius, 0.35rem) + 2px);
 }
@@ -782,7 +780,7 @@ html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-
 
 html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__seat-label {
   font-size: calc(var(--rack-tile-w) * 0.48);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 html
@@ -1839,11 +1837,12 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 /*
  * Let lower-band / top-band side bleed reach the viewport edges (beats part-0103/0104 overflow:hidden).
- * Discard tray always; hands popup only while open so the closed slide still clips cleanly.
+ * Do NOT set overflow:visible on `.discard-tracker__content`, the open hands panel, or
+ * `.hands-list-scroll` — that collapses `--suggested-overlay-sheet-h` / the rows scroller so only
+ * the Away/Prob%/Points header strip remains pinned at the bottom of an empty tray.
  */
 .panel--discard-tracker.panel--discard-tracker--bottom,
 .panel--discard-tracker.panel--discard-tracker--bottom > .discard-tracker__shell,
-.panel--discard-tracker.panel--discard-tracker--bottom .discard-tracker__content,
 .app-discard-bottom-container,
 .app-dnd-frame:has(> .app-play-split.app-top-exposure-container),
 .app-dnd-frame > .app-play-split.app-top-exposure-container,
@@ -1853,19 +1852,32 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   overflow: visible;
 }
 
-.app .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open,
-.app .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open .suggested-hands-popup__user-shift,
-.app .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open .panel--hands.suggested-hands-popup__user-shift,
+/* Hands open: keep the discard window + sheet height chain intact (part-0061 / part-0104). */
+.panel--discard-tracker[data-suggested-hands-open='on'] .discard-tracker__content,
+.app
+  .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
+  .panel--hands.suggested-hands-popup__user-shift,
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
   .hands-panel__content
   .hands-list-scroll:has(> .hands-sheet:not(.hands-sheet--tiles2)) {
-  overflow: visible;
+  overflow: hidden;
+}
+
+.app
+  .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
+  .hands-panel__content
+  .hands-list-scroll:has(> .hands-sheet:not(.hands-sheet--tiles2))
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  > .hands-sheet__rows {
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /*
  * Dark full-bleed band for the hands header only — covers side gutters through the title row
  * so the lighter lower-band reads from the bottom of the header down (not from its top).
+ * Solid app chrome (`--app-bg-base` = footer pad). Paint on list-column for full page width.
  */
 .app .suggested-hands-popup .hands-panel__content .hands-list__freeze-header.hands-list__row-hit {
   position: relative;
@@ -1888,6 +1900,8 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 .app .suggested-hands-popup .hands-panel__content .hands-list__freeze-header .hands-list__header-cell {
   position: relative;
   z-index: 1;
+  background-color: transparent;
+  background-image: none;
 }
 
 .app
@@ -1926,6 +1940,27 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   > .hands-sheet:not(.hands-sheet--tiles2)
   > .hands-sheet__cell--header {
   z-index: 3;
+  background-color: transparent;
+  background-image: none;
+}
+
+.app
+  .suggested-hands-popup
+  .hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet.hands-sheet--tilesHands::before {
+  background-color: var(--app-bg-base);
+  background-image: none;
+}
+
+.app
+  .suggested-hands-popup
+  .hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet.hands-sheet--tilesHands
+  > .hands-sheet__cell--header {
+  background-color: transparent;
+  background-image: none;
 }
 
 .app
@@ -1973,6 +2008,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   background-color: var(--app-bg-lower-band-paint-color);
   background-image: var(--app-bg-lower-band-paint-image);
   background-size: var(--app-bg-lower-band-paint-size);
+  background-position: var(--app-bg-lower-band-paint-position, bottom center);
   background-repeat: var(--app-bg-lower-band-paint-repeat);
   background-blend-mode: var(--app-bg-lower-band-paint-blend);
   background-attachment: var(--app-bg-lower-band-paint-attachment);
@@ -1987,40 +2023,45 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 }
 
 /*
- * Main app background surfaces — paint recipe lives in src/styles/app-background.css.
- * Page chrome stays base charcoal. Top B/C/D·S/W/N is one full-bleed band on
- * `.app-top-exposure-container` (with a soft feather into Seat / Charleston).
- * `.app-main` top pad (above the tracker) uses the same top-band so it isn’t a light gap.
+ * Full-bleed title-row band on `.hands-panel__list-column` (not clipped by scroll overflow-x).
+ * Solid `--app-bg-base` (footer pad color). Hands-tray bottom gradient stays on lower-band paint.
  */
-:is(html, body, #root) {
-  background-color: var(--app-bg-paint-color, var(--app-bg-base));
+.app
+  .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
+  .hands-panel__content
+  .hands-panel__list-column::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  left: var(--app-bg-side-bleed-left);
+  width: var(--app-bg-side-bleed-width);
+  /* Match the tallest header cell (Away / Prob % / Points metric track). */
+  font-size: var(--hands-metric-column-header-fs, var(--app-ui-control-fs-sm));
+  height: calc(2 * 0.2em + 1em + var(--hands-sheet-grid-line-w, 0.5px));
+  box-sizing: border-box;
+  pointer-events: none;
+  border-radius: 0;
+  background-color: var(--app-bg-base);
   background-image: none;
 }
 
 /*
- * Fill `.app-main`’s top padding with top-band dark (matches tracker). Height-limited to the
- * pad / safe-area so the dark does not run down the page sides. Child overflow cannot paint
- * this strip — `.app-main` uses `overflow: hidden`.
+ * Main app background surfaces — paint recipe lives in src/styles/app-background.css.
+ * Solid `--app-bg-base` everywhere in the upper chrome (no top-band dark wash).
  */
+:is(html, body, #root) {
+  background-color: var(--app-bg-page-pad-color, var(--app-bg-paint-color, var(--app-bg-base)));
+  background-image: none;
+}
+
+.app .app-main {
+  background-color: var(--app-bg-page-pad-color, var(--app-bg-base));
+  background-image: none;
+}
+
 .app .app-main:has(.app-play-split.app-top-exposure-container) {
-  background-color: transparent;
-  background-image: linear-gradient(
-    to bottom,
-    var(--app-bg-top-band-paint-color, var(--app-bg-top-band-fill)) 0%,
-    var(--app-bg-top-band-paint-color, var(--app-bg-top-band-fill))
-      calc(
-        var(--app-v-pad, 0px)
-        + env(safe-area-inset-top, 0px)
-        + var(--pwa-pad-top-extra, 0px)
-      ),
-    transparent
-      calc(
-        var(--app-v-pad, 0px)
-        + env(safe-area-inset-top, 0px)
-        + var(--pwa-pad-top-extra, 0px)
-      )
-  );
-  background-repeat: no-repeat;
+  background-image: none;
 }
 
 :is(
@@ -2043,7 +2084,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 }
 
 /*
- * Top B/C/D + S/W/N band — row boxes + container share `--app-bg-top-band-fill`.
+ * Top B/C/D + S/W/N shells — transparent so solid app chrome shows through.
  */
 html .app-dnd-frame > .app-play-split.app-top-exposure-container .panel--discard-tracker > .discard-tracker__shell,
 html .app-dnd-frame > .app-play-split.app-top-exposure-container .discard-tracker__tile-groups-container,
@@ -2083,6 +2124,7 @@ html .app-dnd-frame > .app-play-split.app-top-exposure-container .discard-tracke
   background-color: var(--app-bg-lower-band-paint-color);
   background-image: var(--app-bg-lower-band-paint-image);
   background-size: var(--app-bg-lower-band-paint-size);
+  background-position: var(--app-bg-lower-band-paint-position, bottom center);
   background-repeat: var(--app-bg-lower-band-paint-repeat);
   background-blend-mode: var(--app-bg-lower-band-paint-blend);
   background-attachment: var(--app-bg-lower-band-paint-attachment);
@@ -2238,8 +2280,7 @@ html[data-home-screen-app]:not([data-native-app])
 }
 
 /*
- * Continue the top-band behind Seat: / Charleston, then feather into the hand.
- * Full side-bleed + z-index 0 so this is backdrop only (tiles / labels paint above).
+ * Rack backdrop — solid app chrome (no top-band feather into the hand).
  */
 .app-dnd-frame:has(> .app-play-split.app-top-exposure-container)
   .panel.panel--hand
@@ -2250,18 +2291,7 @@ html[data-home-screen-app]:not([data-native-app])
   right: auto;
   width: var(--app-bg-side-bleed-width);
   background-color: var(--app-bg-paint-color);
-  background-image:
-    linear-gradient(
-      to bottom,
-      var(--app-bg-top-band-fill, var(--hands-row-active-fill)) 0%,
-      var(--app-bg-top-band-fill, var(--hands-row-active-fill)) var(--app-bg-top-band-seat-end, 2.75rem),
-      transparent calc(var(--app-bg-top-band-seat-end, 2.75rem) + var(--app-bg-top-band-fade, 1.5rem))
-    ),
-    var(--app-bg-paint-image);
-  background-size: auto, var(--app-bg-paint-size);
-  background-repeat: no-repeat, var(--app-bg-paint-repeat);
-  background-blend-mode: normal, var(--app-bg-paint-blend);
-  background-attachment: scroll, var(--app-bg-paint-attachment);
+  background-image: none;
   -webkit-mask-image: none;
   mask-image: none;
 }
