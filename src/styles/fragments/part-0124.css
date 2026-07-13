@@ -1219,7 +1219,7 @@
 }
 
 .wall-game-dialog--wall-seats .wall-game-dialog__review .mahjong-win__bots-review-list {
-  --hands-row-active-fill: color-mix(in srgb, var(--app-bg-base) 50%, #161d26 50%);
+  --hands-row-active-fill: color-mix(in srgb, var(--app-bg-base) 58%, #000 42%);
   --post-game-hand-row-pad-inline: 0.35rem;
   box-sizing: border-box;
   background-color: var(--hands-row-active-fill);

@@ -1831,7 +1831,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 .app .suggested-hands-popup .hands-panel__content {
   /* Beat part-0081 rgba fallback — same dark fill as the top discard/bot band. */
   --hands-row-active-fill: var(--app-bg-row-active);
-  /* Title row stays page-dark; body below uses the lighter lower-band paint. */
+  /* Title row + body share solid app chrome. */
   --hands-header-bg: var(--app-bg-base);
 }
 
@@ -1875,8 +1875,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 }
 
 /*
- * Dark full-bleed band for the hands header only — covers side gutters through the title row
- * so the lighter lower-band reads from the bottom of the header down (not from its top).
+ * Full-bleed band for the hands header — covers side gutters through the title row.
  * Solid app chrome (`--app-bg-base` = footer pad). Paint on list-column for full page width.
  */
 .app .suggested-hands-popup .hands-panel__content .hands-list__freeze-header.hands-list__row-hit {
@@ -1975,9 +1974,11 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 }
 
 /*
- * Below the hands header: lighter gray, full-bleed to the page sides.
- * Paint on non-scrolling ancestors — never on `.hands-sheet__rows` / `.hands-list` (those are
- * overflow-y scrollers; a 100vw absolute ::before there creates horizontal pan of the sheet).
+ * Below the hands header: bot empty-slot lift over app chrome.
+ * Top corners use `--suggested-popup-radius` (same as the tray foot) so the list curves
+ * down from the header. Paint on non-scrolling ancestors — never on `.hands-sheet__rows`
+ * / `.hands-list` (those are overflow-y scrollers; a 100vw absolute ::before there creates
+ * horizontal pan of the sheet).
  */
 .app .suggested-hands-popup .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) > .hands-sheet__rows,
 .app .suggested-hands-popup .hands-panel__content .hands-list-scroll > .hands-list {
@@ -1991,27 +1992,30 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
   .hands-panel__content {
   position: relative;
+  /* Dark chrome in the corner wedges under the list’s top radii (matches header). */
+  background-color: var(--app-bg-base);
 }
 
+/*
+ * Hands tray body — starts under the header, top corners match the shell bottom radii
+ * so the list curves down from the header the same way it curves at the tray foot.
+ */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
   .hands-panel__content::before {
   content: '';
   position: absolute;
   z-index: 0;
-  top: 0;
+  /* Same band height as the title-row paint (metric header line + cell pad-block). */
+  font-size: var(--hands-metric-column-header-fs, var(--app-ui-control-fs-sm));
+  top: calc(2 * 0.2em + 1em + var(--hands-sheet-grid-line-w, 0.5px));
   bottom: 0;
-  left: var(--app-bg-side-bleed-left);
-  width: var(--app-bg-side-bleed-width);
-  border-radius: 0;
+  left: 0;
+  width: 100%;
+  border-radius: var(--suggested-popup-radius) var(--suggested-popup-radius) 0 0;
   pointer-events: none;
-  background-color: var(--app-bg-lower-band-paint-color);
-  background-image: var(--app-bg-lower-band-paint-image);
-  background-size: var(--app-bg-lower-band-paint-size);
-  background-position: var(--app-bg-lower-band-paint-position, bottom center);
-  background-repeat: var(--app-bg-lower-band-paint-repeat);
-  background-blend-mode: var(--app-bg-lower-band-paint-blend);
-  background-attachment: var(--app-bg-lower-band-paint-attachment);
+  background-color: var(--app-bg-hands-tray);
+  background-image: none;
 }
 
 .app
@@ -2024,7 +2028,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 /*
  * Full-bleed title-row band on `.hands-panel__list-column` (not clipped by scroll overflow-x).
- * Solid `--app-bg-base` (footer pad color). Hands-tray bottom gradient stays on lower-band paint.
+ * Solid `--app-bg-base` (footer pad color). Lower band below is solid (no bottom darken).
  */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
@@ -2094,7 +2098,7 @@ html .app-dnd-frame > .app-play-split.app-top-exposure-container .discard-tracke
 }
 
 /*
- * Bottom discard tray — lighter band, full-bleed to the page sides.
+ * Bottom discard tray — same solid chrome as the rest of the app, full-bleed to the page sides.
  * Element stays transparent; ::before paints edge-to-edge so inset padding / max-width
  * does not leave dark gutters.
  */

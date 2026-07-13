@@ -225,6 +225,7 @@
   padding-block: 0.3rem 0.35rem;
   border-block-start: none;
   border-block-end: var(--hands-sheet-border, 1px solid color-mix(in srgb, var(--window-border) 55%, transparent));
+  border-block-end-color: transparent;
   border-inline-end: var(--hands-sheet-border, 1px solid color-mix(in srgb, var(--window-border) 55%, transparent));
   box-shadow: none;
 }
@@ -1883,6 +1884,7 @@
   > .hands-sheet__cell--header {
   border-block-start: none;
   border-block-end: var(--hands-sheet-border);
+  border-block-end-color: transparent;
   box-shadow: none;
 }
 
@@ -1926,7 +1928,7 @@
 }
 
 /* Odds / Away / Points column titles — match Charleston pass instructions (`.pass-strip-tail__instruction`,
- * part-0071): semibold, lighter ink, same scale as "Pass 3 Right".
+ * part-0071): medium weight, lighter ink, same scale as "Pass 3 Right".
  */
 .panel--hands {
   --_hands-metric-pass-box-w: calc(
@@ -1958,8 +1960,8 @@
 .suggested-hands-popup .panel--hands .hands-list__freeze-header .hands-list__cell--values .hands-list__header-meta,
 .panel--hands .hands-list__freeze-header .hands-list__cell--values .hands-list__header-meta {
   font-family: 'Figtree', var(--sans);
-  font-weight: 600;
-  font-variation-settings: 'wght' 600;
+  font-weight: 500;
+  font-variation-settings: 'wght' 500;
   font-size: var(--hands-metric-column-header-fs);
   line-height: 1;
   letter-spacing: clamp(0.032em, calc(var(--hand-rack-tile-w) * 0.0026), 0.072em);
@@ -3013,6 +3015,7 @@
   padding: 0;
   border-block-start: none;
   border-block-end: var(--hands-sheet-border);
+  border-block-end-color: transparent;
   border-inline-end: none;
   box-shadow: none;
 }
@@ -3242,6 +3245,7 @@
   position: sticky;
   top: 0;
   border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  border-bottom-color: transparent;
   box-sizing: border-box;
   z-index: 2;
   pointer-events: none;

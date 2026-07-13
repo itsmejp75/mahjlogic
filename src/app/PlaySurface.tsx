@@ -25,7 +25,6 @@ import { PassStrip } from '../components/PassStrip'
 import { TileFace } from '../components/TileFace'
 import { ExposureRack } from '../components/ExposureRack'
 import { WallTilesRemainCell } from '../components/WallTilesRemainCell'
-import { RackLogoWatermark } from '../components/RackLogoWatermark'
 import { SuggestedHandsDndFrame } from './SuggestedHandsTrayContext'
 import {
   BlankExchangeDropZone,
@@ -942,9 +941,6 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                   <SuggestedHandsOpenDataAttr elRef={discardTrackerPanelRef} />
                   <div className="discard-tracker__shell">
                     <div className="discard-tracker__content">
-                      <div className="discard-tracker__watermark" aria-hidden>
-                        <RackLogoWatermark />
-                      </div>
                       <div className="discard-tracker__discard-container">
                         <DiscardPileDropZone
                           swapDropActive={false}

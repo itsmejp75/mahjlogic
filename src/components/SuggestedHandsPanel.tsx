@@ -1528,8 +1528,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     return out
       .map((row, i) => ({ row, i }))
       .sort((a, b) => {
-        const prox = compareSuggestedHandsByProximity(a.row.line, b.row.line)
-        if (prox !== 0) return prox
+        // Pins float above proximity order (list is already proximity-sorted via `i`).
         const ap = pinIndex.has(a.row.pinKey) ? pinIndex.get(a.row.pinKey)! : null
         const bp = pinIndex.has(b.row.pinKey) ? pinIndex.get(b.row.pinKey)! : null
         if (ap !== null && bp !== null) return ap - bp || a.i - b.i

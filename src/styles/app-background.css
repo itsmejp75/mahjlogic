@@ -9,13 +9,13 @@
  * Where it is applied: part-0123.css block “Main app background surfaces”.
  * Suggested-hands shell stays transparent so this paint shows through.
  * Main app chrome is a solid `--app-bg-base` (matches page footer pad).
- * Hands tray keeps the lower-band + bottom upward darken gradient.
- * Excluded on purpose: slot wells (`--app-bg-slot-well`).
+ * Hands tray uses a slight lift over `--app-bg-base` (bot exposure empty-well tone).
+ * Discard lower band stays solid chrome. Excluded on purpose: slot wells (`--app-bg-slot-well`).
  *
  * Quick tweaks:
  *   --app-bg-base       solid app chrome / footer pad color (also sync index.html)
- *   --app-bg-lower-*    lighter band from below the hands header down (discard / hand rows)
- *   --app-bg-bottom-darken-*  upward darken at the bottom of the hands tray
+ *   --app-bg-hands-tray hands tray body (bot empty-slot luminance over base)
+ *   --app-bg-lower-*    lower play band (matches `--app-bg-base`)
  *   --hands-row-active-fill / --app-bg-row-active / --app-bg-top-band-*
  *                       selected hands row + top B/C/D·S/W/N band
  *   --app-bg-noise-*    grain strength / fineness (see composed --app-bg-noise URL)
@@ -35,7 +35,17 @@
   --app-bg-flat: #5c6066;
   --app-bg-slot-well: #5c6066;
 
-  /* --- Vignette (flattened — solid app bg; lower band still uses its own vignette) --- */
+  /*
+   * Hands tray body — same luminance as bot exposure empty wells
+   * (`--table-watermark-slot-fill` = white @ `--table-watermark-opacity` over chrome).
+   */
+  --app-bg-hands-tray: color-mix(
+    in srgb,
+    #fff calc(var(--table-watermark-opacity, 0.05) * 100%),
+    var(--app-bg-base)
+  );
+
+  /* --- Vignette (flattened — solid app bg) --- */
   --app-bg-vignette-shape: ellipse 140% 115% at 50% 42%;
   --app-bg-vignette: radial-gradient(
     var(--app-bg-vignette-shape),
@@ -46,12 +56,11 @@
 
   /*
    * Lower play band — from below the hands header down (discard tray + hand rows).
-   * Lighter than `--app-bg-base`. Use scroll attachment (not fixed) so the light tone
-   * lands in the tray itself rather than mapping to the top of the viewport.
+   * Same solid chrome as `--app-bg-base` (no lighter tray band).
    */
-  --app-bg-lower-band-base: #343e47;
-  --app-bg-lower-band-highlight: #39434c;
-  --app-bg-lower-band-shadow: #2e373f;
+  --app-bg-lower-band-base: var(--app-bg-base);
+  --app-bg-lower-band-highlight: var(--app-bg-base);
+  --app-bg-lower-band-shadow: var(--app-bg-base);
   --app-bg-lower-band-vignette: radial-gradient(
     var(--app-bg-vignette-shape),
     var(--app-bg-lower-band-highlight) 0%,
@@ -60,20 +69,11 @@
   );
   /* Legacy alias */
   --app-bg-lower-darken-end: var(--app-bg-lower-band-shadow);
-  /* Soft upward fade from footer color into the lower band (hands tray bottom). */
-  --app-bg-bottom-darken-h: 2rem;
-  --app-bg-bottom-darken: linear-gradient(
-    to top,
-    var(--app-bg-page-pad-color) 0%,
-    var(--app-bg-page-pad-color) 0.4rem,
-    color-mix(in srgb, var(--app-bg-page-pad-color) 45%, transparent) 55%,
-    transparent 100%
-  );
-  --app-bg-lower-band-paint-color: var(--app-bg-lower-band-base);
-  /* Only the hands-tray bottom upward darken — no vignette / grain on the tray body. */
-  --app-bg-lower-band-paint-image: var(--app-bg-bottom-darken);
-  --app-bg-lower-band-paint-size: 100% var(--app-bg-bottom-darken-h);
-  --app-bg-lower-band-paint-position: bottom center;
+  --app-bg-page-pad-color: #23282e;
+  --app-bg-lower-band-paint-color: var(--app-bg-base);
+  --app-bg-lower-band-paint-image: none;
+  --app-bg-lower-band-paint-size: auto;
+  --app-bg-lower-band-paint-position: center;
   --app-bg-lower-band-paint-repeat: no-repeat;
   --app-bg-lower-band-paint-blend: normal;
   --app-bg-lower-band-paint-attachment: scroll;
@@ -89,10 +89,10 @@
   --app-bg-action-row-surface: var(--app-bg-base);
 
   /*
-   * Selected hands-tray row fill. Top B/C/D·S/W/N band matches solid app chrome
-   * (no darker top wash / fade while backgrounds are flat).
+   * Selected hands-tray row fill — same hue as app chrome, darkened with black
+   * (not a separate blue-slate). Top B/C/D·S/W/N band matches solid app chrome.
    */
-  --app-bg-row-active: color-mix(in srgb, var(--app-bg-base) 40%, #161d26 60%);
+  --app-bg-row-active: color-mix(in srgb, var(--app-bg-base) 58%, #000 42%);
   --hands-row-active-fill: var(--app-bg-row-active);
   --app-bg-top-band-fill: var(--app-bg-base);
   --app-bg-top-band-fade: 0rem;
