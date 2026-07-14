@@ -225,8 +225,9 @@
   padding-block: 0.3rem 0.35rem;
   border-block-start: none;
   border-block-end: var(--hands-sheet-border, 1px solid color-mix(in srgb, var(--window-border) 55%, transparent));
-  border-block-end-color: transparent;
+  border-block-end-color: var(--hands-header-grid-line-color, transparent);
   border-inline-end: var(--hands-sheet-border, 1px solid color-mix(in srgb, var(--window-border) 55%, transparent));
+  border-inline-end-color: var(--hands-header-grid-line-color, transparent);
   box-shadow: none;
 }
 
@@ -1507,6 +1508,11 @@
   --hands-sheet-border: 1px solid var(--hands-sheet-grid-line-color);
   --hands-sheet-grid-line-w: 0.5px;
   /*
+   * Header-row grid lines (vertical + horizontal). Transparent for now — restore with:
+   *   --hands-header-grid-line-color: var(--hands-sheet-grid-line-color);
+   */
+  --hands-header-grid-line-color: transparent;
+  /*
    * Odds / Away / Points: one shared track — sized to the “Points” header title.
    */
   --hands-sheet-metric-col-w: calc(var(--hands-metric-title-fit-fs, var(--app-ui-control-fs-sm)) * 4.2 + 0.05rem);
@@ -1577,10 +1583,12 @@
     calc(var(--_hands-metric-pass-box-w) * 0.109),
     1.42rem
   );
-  --hands-metric-column-header-fs: min(
-    var(--_hands-metric-pass-fs-pref),
-    calc(var(--_hands-metric-pass-box-w) / 9.95),
-    calc(var(--_hands-metric-pass-tile-w) * 1.3333 / 5.02)
+  --hands-metric-column-header-fs: calc(
+    min(
+      var(--_hands-metric-pass-fs-pref),
+      calc(var(--_hands-metric-pass-box-w) / 9.95),
+      calc(var(--_hands-metric-pass-tile-w) * 1.3333 / 5.02)
+    ) * 0.9
   );
 }
 
@@ -1786,8 +1794,9 @@
 
 .hands-scroll-above-hint__icon {
   display: block;
-  width: 1em;
-  height: 1em;
+  /* Larger glyph; absolute positioning keeps header row height unchanged. */
+  width: 1.22em;
+  height: 1.22em;
 }
 
 .suggested-hands-popup .panel--hands .hands-scroll-above-hint {
@@ -1871,6 +1880,11 @@
   color: #dcdce0;
   /* Fill: `--hands-header-bg` on `.hands-panel__content` (consolidated block above). */
   box-shadow: none;
+  /* Grid borders stay for layout; color from `--hands-header-grid-line-color` (header only). */
+  border-block-start-color: var(--hands-header-grid-line-color, transparent);
+  border-block-end-color: var(--hands-header-grid-line-color, transparent);
+  border-inline-start-color: var(--hands-header-grid-line-color, transparent);
+  border-inline-end-color: var(--hands-header-grid-line-color, transparent);
 }
 
 /*
@@ -1884,7 +1898,7 @@
   > .hands-sheet__cell--header {
   border-block-start: none;
   border-block-end: var(--hands-sheet-border);
-  border-block-end-color: transparent;
+  border-block-end-color: var(--hands-header-grid-line-color, transparent);
   box-shadow: none;
 }
 
@@ -1895,18 +1909,36 @@
   border-inline-end: none;
 }
 
+/*
+ * Vertical spreadsheet rules — full sheet height. Header band uses `--hands-header-grid-line-color`
+ * so those segments can be transparent without removing the overlay (body keeps full color).
+ * Do NOT set font-size here — pin/category positions use `em` from the sheet font; overriding
+ * it shifts the painted rules through the category cells.
+ */
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2)::after {
   content: '';
   position: absolute;
   inset: 0;
   z-index: 6;
   pointer-events: none;
+  /* Match title-row band: 2×0.2em pad + 1em line + grid line, in metric header px (not sheet em). */
+  --hands-header-band-h: calc(
+    1.4 * var(--hands-metric-column-header-fs, var(--app-ui-control-fs-sm))
+    + var(--hands-sheet-grid-line-w, 0.5px)
+  );
+  --_hands-sheet-v-rule: linear-gradient(
+    to bottom,
+    var(--hands-header-grid-line-color, transparent) 0,
+    var(--hands-header-grid-line-color, transparent) var(--hands-header-band-h),
+    var(--hands-sheet-grid-line-color) var(--hands-header-band-h),
+    var(--hands-sheet-grid-line-color) 100%
+  );
   background-image:
-    linear-gradient(var(--hands-sheet-grid-line-color), var(--hands-sheet-grid-line-color)),
-    linear-gradient(var(--hands-sheet-grid-line-color), var(--hands-sheet-grid-line-color)),
-    linear-gradient(var(--hands-sheet-grid-line-color), var(--hands-sheet-grid-line-color)),
-    linear-gradient(var(--hands-sheet-grid-line-color), var(--hands-sheet-grid-line-color)),
-    linear-gradient(var(--hands-sheet-grid-line-color), var(--hands-sheet-grid-line-color));
+    var(--_hands-sheet-v-rule),
+    var(--_hands-sheet-v-rule),
+    var(--_hands-sheet-v-rule),
+    var(--_hands-sheet-v-rule),
+    var(--_hands-sheet-v-rule);
   background-repeat: no-repeat;
   background-size: var(--hands-sheet-grid-line-w) 100%;
   background-position:
@@ -1939,10 +1971,12 @@
     calc(var(--_hands-metric-pass-box-w) * 0.109),
     1.42rem
   );
-  --hands-metric-column-header-fs: min(
-    var(--_hands-metric-pass-fs-pref),
-    calc(var(--_hands-metric-pass-box-w) / 9.95),
-    calc(var(--hand-rack-tile-h, calc(var(--hand-rack-tile-w) * 1.3333)) / 5.02)
+  --hands-metric-column-header-fs: calc(
+    min(
+      var(--_hands-metric-pass-fs-pref),
+      calc(var(--_hands-metric-pass-box-w) / 9.95),
+      calc(var(--hand-rack-tile-h, calc(var(--hand-rack-tile-w) * 1.3333)) / 5.02)
+    ) * 0.9
   );
   /*
    * Rack-only title scale for metric column widths — not recomputed from sheet layout, so
@@ -3015,7 +3049,7 @@
   padding: 0;
   border-block-start: none;
   border-block-end: var(--hands-sheet-border);
-  border-block-end-color: transparent;
+  border-block-end-color: var(--hands-header-grid-line-color, transparent);
   border-inline-end: none;
   box-shadow: none;
 }
@@ -3123,6 +3157,7 @@
   width: 100%;
   min-width: 0;
   border-block-end: var(--hands-sheet-border);
+  border-block-end-color: var(--hands-header-grid-line-color, transparent);
 }
 
 .hands-sheet--tilesHands .hands-sheet__cell--combined .hands-sheet__category {
@@ -3245,7 +3280,7 @@
   position: sticky;
   top: 0;
   border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-  border-bottom-color: transparent;
+  border-bottom-color: var(--hands-header-grid-line-color, transparent);
   box-sizing: border-box;
   z-index: 2;
   pointer-events: none;

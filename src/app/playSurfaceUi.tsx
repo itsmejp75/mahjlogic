@@ -36,6 +36,7 @@ import { seatLabel, type BotSlotSeats } from '../mahjong/seats'
 import { countDiscardEntriesMatchingDef, tileDefsEqual } from '../mahjong/tileUtils'
 import type { DiscardEntry, Seat, TileDef, TileInstance } from '../mahjong/types'
 import { useCoachLitNeighborClip } from '../useCoachLitNeighborClip'
+import { countOpenHandsFittingClaimMelds } from '../analysis/eastExposurePatternFit'
 
 export type MainPhase =
   | 'east-discard'
@@ -933,6 +934,7 @@ export function DiscardTrackerSlotGrid({
   jokerSwapHintBounceTileIds,
   jokerSwapHintBounceEpoch,
   blankTilesEnabled,
+  botHandsIdentifierEnabled,
   suggestedDiscardTrackerNeedDefs,
   botSlotSeats,
 }: {
@@ -951,6 +953,7 @@ export function DiscardTrackerSlotGrid({
   jokerSwapHintBounceTileIds: ReadonlySet<string> | null
   jokerSwapHintBounceEpoch: number
   blankTilesEnabled: boolean
+  botHandsIdentifierEnabled: boolean
   suggestedDiscardTrackerNeedDefs: readonly TileDef[] | null
   botSlotSeats: BotSlotSeats
 }) {
@@ -998,6 +1001,16 @@ export function DiscardTrackerSlotGrid({
           })),
       ),
     [botExposureSeats, botExposures, mainPhase, jokerSwapUiActive],
+  )
+
+  const botRowPossibleOpenHandsCounts = useMemo(
+    () =>
+      botHandsIdentifierEnabled
+        ? botRowMelds.map((melds) =>
+            melds.length > 0 ? countOpenHandsFittingClaimMelds(melds) : null,
+          )
+        : botRowMelds.map(() => null),
+    [botRowMelds, botHandsIdentifierEnabled],
   )
 
   return (
@@ -1073,6 +1086,7 @@ export function DiscardTrackerSlotGrid({
                 botJokerBorderMenuOn={false}
                 jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
                 jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
+                possibleOpenHandsCount={botRowPossibleOpenHandsCounts[rowIdx] ?? null}
               />
             </OpponentExposureDropZone>
           </div>

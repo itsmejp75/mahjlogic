@@ -18,6 +18,7 @@
  *   --app-bg-lower-*    lower play band (matches `--app-bg-base`)
  *   --hands-row-active-fill / --app-bg-row-active / --app-bg-top-band-*
  *                       selected hands row + top B/C/D·S/W/N band
+ *   --hands-header-bottom-blur-*  short upward darkening at the header’s bottom edge
  *   --app-bg-noise-*    grain strength / fineness (see composed --app-bg-noise URL)
  *
  * Legacy names (--app-carpet-*, --app-tray-flat, --app-bg-action-row-surface) alias these tokens.
@@ -92,6 +93,19 @@
   --app-bg-top-band-seat-end: 0rem;
   /* Flat paint for tracker top-band (matches solid app chrome). */
   --app-bg-top-band-paint-color: var(--app-bg-base);
+
+  /*
+   * Hands header lip shadow — darker wash under the header edge (3D lip).
+   * Painted on the list body’s top (follows `--suggested-popup-radius` corners).
+   */
+  --hands-header-bottom-blur-h: 0.55rem;
+  --hands-header-bottom-blur-color: color-mix(in srgb, var(--app-bg-base) 80%, #000 20%);
+  --hands-header-bottom-blur: linear-gradient(
+    to bottom,
+    var(--hands-header-bottom-blur-color) 0%,
+    color-mix(in srgb, var(--hands-header-bottom-blur-color) 45%, transparent) 45%,
+    transparent 100%
+  );
 
   /*
    * --- Grain (SVG noise tile) ---

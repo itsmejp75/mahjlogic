@@ -663,6 +663,23 @@ export function openClaimMeldsFitSomePracticeLine(
 }
 
 /**
+ * How many **non–closed** card lines these claim melds still fit — opponent exposure hint.
+ * Returns 0 when there are no melds (caller should hide the hint).
+ */
+export function countOpenHandsFittingClaimMelds(
+  melds: ReadonlyArray<{ tiles: TileInstance[] }>,
+  book: readonly PracticePattern[] = getActiveCardPatterns(),
+): number {
+  if (melds.length === 0) return 0
+  let n = 0
+  for (const p of book) {
+    if (p.closed) continue
+    if (claimMeldsFitPracticePattern(p, melds)) n++
+  }
+  return n
+}
+
+/**
  * Assigns each hand embedding slot (card group order) to a meld index, if possible.
  * Prefers the same key/need matching as {@link canMatchMeldsToSlots}, but recovers
  * the slot index per meld for left-to-right display order.

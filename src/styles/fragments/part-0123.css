@@ -858,6 +858,33 @@ html
   box-sizing: border-box;
 }
 
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--possible-hands {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__possible-hands-count {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--rack-tile-w) * 0.92);
+  font-weight: 500;
+  line-height: 1;
+  color: color-mix(in srgb, var(--text-h) 78%, transparent);
+  text-align: center;
+}
+
 /*
  * Mobile landscape / PWA intentionally has NO sorted-tracker / bot-exposure structural overrides.
  * The base `.app-top-exposure-container` rules above are the same ones localhost uses (overlay-row
@@ -1926,7 +1953,8 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 /*
  * Full-bleed band for the hands header — covers side gutters through the title row.
- * Solid app chrome (`--app-bg-base` = footer pad). Paint on list-column for full page width.
+ * Solid app chrome (`--app-bg-base`). Lip shadow lives on the list top (follows corner radii).
+ * Header labels stay above (transparent cells, higher z-index).
  */
 .app .suggested-hands-popup .hands-panel__content .hands-list__freeze-header.hands-list__row-hit {
   position: relative;
@@ -2066,6 +2094,30 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   background-image: none;
 }
 
+/*
+ * Lip shadow under the hands header — same dark wash, clipped to the list’s top corner
+ * radii so the 3D edge follows the curve (not a straight band that stops before the corners).
+ * Above the scroller so scrolling rows pass under it; below the sticky header labels.
+ */
+.app
+  .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
+  .hands-panel__content::after {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  font-size: var(--hands-metric-column-header-fs, var(--app-ui-control-fs-sm));
+  top: calc(2 * 0.2em + 1em + var(--hands-sheet-grid-line-w, 0.5px));
+  left: 0;
+  width: 100%;
+  height: max(var(--hands-header-bottom-blur-h), var(--suggested-popup-radius));
+  border-radius: var(--suggested-popup-radius) var(--suggested-popup-radius) 0 0;
+  pointer-events: none;
+  background-image: var(--hands-header-bottom-blur);
+  background-repeat: no-repeat;
+  background-position: top center;
+  background-size: 100% var(--hands-header-bottom-blur-h);
+}
+
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
   .hands-panel__content
@@ -2096,7 +2148,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 /*
  * Full-bleed title-row band on `.hands-panel__list-column` (not clipped by scroll overflow-x).
- * Solid `--app-bg-base` (footer pad color). Lower band below is solid (no bottom darken).
+ * Solid `--app-bg-base`. Lip shadow is on `.hands-panel__content::after` (follows list radii).
  */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
@@ -2212,6 +2264,31 @@ html .app-dnd-frame > .app-play-split.app-top-exposure-container .discard-tracke
   background: var(--table-watermark-slot-fill);
   background-image: none;
   box-sizing: border-box;
+}
+
+.discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--possible-hands {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+.discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__possible-hands-count {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--rack-tile-w) * 0.92);
+  font-weight: 500;
+  line-height: 1;
+  color: color-mix(in srgb, var(--text-h) 78%, transparent);
+  text-align: center;
 }
 
 /*

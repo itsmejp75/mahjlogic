@@ -223,11 +223,14 @@
 .suggested-hands-popup .hands-panel__content .hands-list-scroll {
   --hands-sheet-grid-line-color: color-mix(in srgb, var(--window-border) 55%, transparent);
   --hands-sheet-border: 1px solid var(--hands-sheet-grid-line-color);
+  /* Header grid lines off — restore: var(--hands-sheet-grid-line-color). */
+  --hands-header-grid-line-color: transparent;
 }
 
 .suggested-hands-popup .hands-panel__content .hands-list-scroll > .hands-sheet {
   --hands-sheet-grid-line-color: color-mix(in srgb, var(--window-border) 55%, transparent);
   --hands-sheet-border: 1px solid var(--hands-sheet-grid-line-color);
+  --hands-header-grid-line-color: transparent;
 }
 
 /* Tray: spreadsheet grid lines are real cell borders — no row pseudo dividers to hide. */

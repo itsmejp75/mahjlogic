@@ -30,6 +30,35 @@
   flex: 0 0 auto;
 }
 
+/* Opponent open-hands count: same slot box as empties; no well / vignette chrome. */
+.exposure-rack__slot--possible-hands {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: none;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.exposure-rack__possible-hands-count {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Figtree', var(--sans);
+  font-size: calc(var(--rack-tile-w) * 0.92);
+  font-weight: 500;
+  line-height: 1;
+  color: color-mix(in srgb, var(--text-h) 78%, transparent);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  text-align: center;
+}
+
 /* Replaced first empty cell: wrapper must not add an extra flex item */
 .exposure-rack__first-empty-override {
   display: contents;

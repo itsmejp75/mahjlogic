@@ -80,6 +80,7 @@ export type PlaySurfaceProps = {
   animationsEnabled: boolean
   jokerSwapHintEnabled: boolean
   jokerSwapHandHintSingleBounce: boolean
+  botHandsIdentifierEnabled: boolean
 
   charlestonDone: boolean
   mainPhase: MainPhase
@@ -159,6 +160,7 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
     animationsEnabled,
     jokerSwapHintEnabled,
     jokerSwapHandHintSingleBounce,
+    botHandsIdentifierEnabled,
     charlestonDone,
     mainPhase,
     charlestonPhase,
@@ -476,6 +478,7 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                           jokerSwapHintBounceTileIds={jokerSwapHintBounceIds?.jokers ?? null}
                           jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
                           blankTilesEnabled={blankTilesEnabled}
+                          botHandsIdentifierEnabled={botHandsIdentifierEnabled}
                           suggestedDiscardTrackerNeedDefs={suggestedDiscardTrackerNeedDefs}
                           botSlotSeats={botSlotSeats}
                         />

@@ -120,6 +120,8 @@ const LS_KEY_MAHJONG_HINT = 'mahjlogic.mahjongHintEnabled'
 const MAHJONG_HINT_LABEL = 'Mah Jongg hint'
 const LS_KEY_DEAD_TILE_HINT = 'mahjlogic.deadTileHintEnabled'
 const DEAD_TILE_HINT_LABEL = 'Dead tile(s) hint'
+const LS_KEY_BOT_HANDS_IDENTIFIER = 'mahjlogic.botHandsIdentifierEnabled'
+const BOT_HANDS_IDENTIFIER_LABEL = 'Bot hands identifier'
 const LS_KEY_CONCEALED_HAND_REMINDER = 'mahjlogic.concealedHandReminderEnabled'
 
 const LS_KEY_BLANK_TILES = 'mahjlogic.blankTilesEnabled'
@@ -270,6 +272,16 @@ function readMahjongHintFromStorage(): boolean {
 function readDeadTileHintFromStorage(): boolean {
   try {
     const v = localStorage.getItem(LS_KEY_DEAD_TILE_HINT)
+    if (v === null) return true
+    return v === 'true' || v === '1'
+  } catch {
+    return true
+  }
+}
+
+function readBotHandsIdentifierFromStorage(): boolean {
+  try {
+    const v = localStorage.getItem(LS_KEY_BOT_HANDS_IDENTIFIER)
     if (v === null) return true
     return v === 'true' || v === '1'
   } catch {
@@ -1856,6 +1868,9 @@ export default function App() {
   const [deadTileHintEnabled, setDeadTileHintEnabled] = useState<boolean>(() =>
     readDeadTileHintFromStorage(),
   )
+  const [botHandsIdentifierEnabled, setBotHandsIdentifierEnabled] = useState<boolean>(() =>
+    readBotHandsIdentifierFromStorage(),
+  )
   const [concealedHandReminderEnabled, setConcealedHandReminderEnabled] = useState<boolean>(() =>
     readConcealedHandReminderFromStorage(),
   )
@@ -1981,6 +1996,18 @@ export default function App() {
     })
   }, [])
 
+  const toggleBotHandsIdentifier = useCallback(() => {
+    setBotHandsIdentifierEnabled((v) => {
+      const next = !v
+      try {
+        localStorage.setItem(LS_KEY_BOT_HANDS_IDENTIFIER, next ? 'true' : 'false')
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }, [])
+
   const toggleConcealedHandReminder = useCallback(() => {
     setConcealedHandReminderEnabled((v) => {
       const next = !v
@@ -2084,6 +2111,10 @@ export default function App() {
       const d = readDeadTileHintFromStorage()
       return prev === d ? prev : d
     })
+    setBotHandsIdentifierEnabled((prev) => {
+      const b = readBotHandsIdentifierFromStorage()
+      return prev === b ? prev : b
+    })
     setConcealedHandReminderEnabled((prev) => {
       const c = readConcealedHandReminderFromStorage()
       return prev === c ? prev : c
@@ -2144,6 +2175,9 @@ export default function App() {
       } else if (e.key === LS_KEY_DEAD_TILE_HINT) {
         if (e.newValue == null) return
         setDeadTileHintEnabled(e.newValue === 'true' || e.newValue === '1')
+      } else if (e.key === LS_KEY_BOT_HANDS_IDENTIFIER) {
+        if (e.newValue == null) return
+        setBotHandsIdentifierEnabled(e.newValue === 'true' || e.newValue === '1')
       } else if (e.key === LS_KEY_CONCEALED_HAND_REMINDER) {
         if (e.newValue == null) return
         setConcealedHandReminderEnabled(e.newValue === 'true' || e.newValue === '1')
@@ -5156,6 +5190,16 @@ export default function App() {
                 </div>
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
                   <AppMenuSettingSwitch
+                    labelId="app-menu-label-bot-hands-identifier"
+                    pressed={botHandsIdentifierEnabled}
+                    onToggle={toggleBotHandsIdentifier}
+                  />
+                  <span className="app-menu-modal__label" id="app-menu-label-bot-hands-identifier">
+                    {BOT_HANDS_IDENTIFIER_LABEL}
+                  </span>
+                </div>
+                <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                  <AppMenuSettingSwitch
                     labelId="app-menu-label-concealed-hand-reminder"
                     pressed={concealedHandReminderEnabled}
                     onToggle={toggleConcealedHandReminder}
@@ -5882,6 +5926,7 @@ export default function App() {
         animationsEnabled={animationsEnabled}
         jokerSwapHintEnabled={jokerSwapHintEnabled}
         jokerSwapHandHintSingleBounce={jokerSwapHandHintSingleBounce}
+        botHandsIdentifierEnabled={botHandsIdentifierEnabled}
         charlestonDone={charlestonDone}
         mainPhase={mainPhase}
         charlestonPhase={charlestonPhase}

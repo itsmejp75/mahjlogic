@@ -1129,6 +1129,12 @@ type Props = {
    * ring when a hand is focused); no meld group ring.
    */
   ownedMeldHighlight?: boolean
+  /**
+   * When set with at least one meld and room for two free slots, shows this count one empty
+   * slot after the melds (gap, then number). Opponent practice hint — open card hands still
+   * possible from these exposures. Does not affect tile lift / vignettes.
+   */
+  possibleOpenHandsCount?: number | null
 }
 
 export const ExposureRack = memo(
@@ -1168,14 +1174,16 @@ export const ExposureRack = memo(
   hideWatermark = false,
   gridMeldColumnSpans = false,
   ownedMeldHighlight = false,
+  possibleOpenHandsCount = null,
 }: Props) {
   const totalExposed = melds.reduce((n, m) => n + m.tiles.length, 0)
   const passStripShift = Math.max(0, shiftPassStripLeftSlots)
   const tailReserved = reserveTrailingSlots + (reserveLastSlotForDiscard ? 1 : 0)
-  const emptyCount = Math.max(
-    0,
-    slotCount - totalExposed - suffixSlotCount - tailReserved - passStripShift,
-  )
+  const freeAfterMelds = slotCount - totalExposed - suffixSlotCount - tailReserved - passStripShift
+  const showPossibleOpenHandsHint =
+    possibleOpenHandsCount != null && totalExposed > 0 && freeAfterMelds >= 2
+  const possibleOpenHandsHintSlots = showPossibleOpenHandsHint ? 2 : 0
+  const emptyCount = Math.max(0, freeAfterMelds - possibleOpenHandsHintSlots)
   const callInitiateShown = firstEmptyOverride != null
   const emptySlotCount = callInitiateShown ? Math.max(0, emptyCount - 1) : emptyCount
 
@@ -1474,6 +1482,25 @@ export const ExposureRack = memo(
       ) : null}
       {meldRow}
       {callMeldTileCount > 0 ? null : suffix}
+      {showPossibleOpenHandsHint ? (
+        <>
+          <div
+            key="possible-hands-gap"
+            className="exposure-rack__slot exposure-rack__slot--empty"
+            aria-hidden
+          />
+          <div
+            key="possible-hands-count"
+            className="exposure-rack__slot exposure-rack__slot--empty exposure-rack__slot--possible-hands"
+            role="status"
+            aria-label={`${possibleOpenHandsCount} possible hand${possibleOpenHandsCount === 1 ? '' : 's'}`}
+          >
+            <span className="exposure-rack__possible-hands-count" aria-hidden="true">
+              {possibleOpenHandsCount}
+            </span>
+          </div>
+        </>
+      ) : null}
       {callInitiateShown ? (
         <div key="call-initiate-override" role="presentation" className="exposure-rack__first-empty-override">
           {firstEmptyOverride}
@@ -1620,7 +1647,8 @@ export const ExposureRack = memo(
       prev.callStagingWaveFlyIn === next.callStagingWaveFlyIn &&
       prev.hideWatermark === next.hideWatermark &&
       prev.gridMeldColumnSpans === next.gridMeldColumnSpans &&
-      prev.ownedMeldHighlight === next.ownedMeldHighlight
+      prev.ownedMeldHighlight === next.ownedMeldHighlight &&
+      prev.possibleOpenHandsCount === next.possibleOpenHandsCount
     )
   },
 )
