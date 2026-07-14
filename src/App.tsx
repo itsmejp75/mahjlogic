@@ -5241,6 +5241,7 @@ export default function App() {
             if (blockingDialog?.variant === 'mahjong-dead-warning') return
             if (blockingDialog?.variant === 'call-exposure-dead-warning') return
             if (blockingDialog?.variant === 'call-meld-size-warning') return
+            if (blockingDialog?.variant === 'invalid-call-meld-warning') return
             if (blockingDialog?.variant === 'discard-dead-warning') return
             if (blockingDialog?.variant === 'concealed-call-warning') return
             setCharlestonPassError(null)
@@ -5271,6 +5272,7 @@ export default function App() {
                 : '',
               blockingDialog?.variant === 'call-exposure-dead-warning' ||
               blockingDialog?.variant === 'call-meld-size-warning' ||
+              blockingDialog?.variant === 'invalid-call-meld-warning' ||
               blockingDialog?.variant === 'discard-dead-warning'
                 ? 'charleston-error-dialog--blocking-neutral charleston-error-dialog--mahjong-dead-warning'
                 : '',
@@ -5293,6 +5295,7 @@ export default function App() {
               blockingDialog?.variant === 'mahjong-dead-warning' ||
               blockingDialog?.variant === 'call-exposure-dead-warning' ||
               blockingDialog?.variant === 'call-meld-size-warning' ||
+              blockingDialog?.variant === 'invalid-call-meld-warning' ||
               blockingDialog?.variant === 'discard-dead-warning' ||
               blockingDialog?.variant === 'concealed-call-warning'
                 ? 'game-blocking-error-title'
@@ -5306,6 +5309,7 @@ export default function App() {
               blockingDialog?.variant === 'mahjong-dead-warning' ||
               blockingDialog?.variant === 'call-exposure-dead-warning' ||
               blockingDialog?.variant === 'call-meld-size-warning' ||
+              blockingDialog?.variant === 'invalid-call-meld-warning' ||
               blockingDialog?.variant === 'discard-dead-warning' ||
               blockingDialog?.variant === 'concealed-call-warning'
                 ? 'game-blocking-error-body'
@@ -5510,6 +5514,36 @@ export default function App() {
                     }}
                   >
                     Expose pung anyway
+                  </button>
+                </div>
+              </>
+            ) : blockingDialog?.variant === 'invalid-call-meld-warning' ? (
+              <>
+                <h2 id="game-blocking-error-title" className="charleston-error-dialog__title">
+                  ⚠️ Invalid call meld
+                </h2>
+                <p id="game-blocking-error-body" className="charleston-error-dialog__body">
+                  Your staged tiles do not match the called discard. A call meld must be the same
+                  tile as the discard — jokers may substitute, but other tiles cannot. Cancel to
+                  fix your selection, or proceed and your hand will be dead.
+                </p>
+                <div className="charleston-error-dialog__actions charleston-error-dialog__actions--spread">
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => setBlockingDialog(null)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn--danger"
+                    onClick={() => {
+                      setBlockingDialog(null)
+                      pushRound((r) => applyDeadHand(r, 'invalid-call-meld'))
+                    }}
+                  >
+                    Proceed (Dead Hand)
                   </button>
                 </div>
               </>

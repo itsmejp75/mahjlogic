@@ -406,26 +406,32 @@ export function rankInputDuringCallStaging(
   return buildRankInputAfterStagedCall(r as RoundState, preview.handNext, pileNext, preview.eastMelds)
 }
 
-/** Rank input after committing the currently staged call tiles, or `null` if not a committable meld. */
-export function previewStagedCallRankInput(r: RoundState): RankSuggestedHandsInput | null {
+/**
+ * Whether every staged call tile matches the live discard (or is a joker).
+ * `null` when not in call-staging, no discard, or nothing is staged (Mah Jongg-only Done).
+ */
+export function stagedCallMeldMatchesDiscard(r: RoundState): boolean | null {
   if (r.mainPhase !== 'call-staging' || !r.activeBotDiscard) return null
   const calledTile = r.activeBotDiscard
   const stagedTiles = r.stagedCallTileIds
     .map((id) => r.hand.find((t) => t.id === id))
     .filter((t): t is TileInstance => !!t)
   if (stagedTiles.length === 0) return null
-  if (stagedTiles.length > 5) return null
-  if (stagedTiles.length === 1) {
-    const meldOk = stagedTiles.every(
-      (t) => t.def.cat === 'joker' || tileDefsEqual(t.def, calledTile.def),
-    )
-    if (!meldOk) return null
-    return rankInputDuringCallStaging(r)
-  }
-  const meldIsValid = stagedTiles.every(
+  return stagedTiles.every(
     (t) => t.def.cat === 'joker' || tileDefsEqual(t.def, calledTile.def),
   )
-  if (!meldIsValid) return null
+}
+
+/** Rank input after committing the currently staged call tiles, or `null` if not a committable meld. */
+export function previewStagedCallRankInput(r: RoundState): RankSuggestedHandsInput | null {
+  if (r.mainPhase !== 'call-staging' || !r.activeBotDiscard) return null
+  const stagedTiles = r.stagedCallTileIds
+    .map((id) => r.hand.find((t) => t.id === id))
+    .filter((t): t is TileInstance => !!t)
+  if (stagedTiles.length === 0) return null
+  if (stagedTiles.length > 5) return null
+  if (stagedCallMeldMatchesDiscard(r) === false) return null
+  if (stagedTiles.length === 1) return rankInputDuringCallStaging(r)
   if (!claimTypeForHandTilesFromDiscard(stagedTiles.length)) return null
   return rankInputDuringCallStaging(r)
 }
@@ -491,8 +497,8 @@ export function commitPlayerExposureOrdered(
  * Commit the staged meld: remove staged tiles from hand, add the exposure, return to east-discard;
  * or complete Mah Jongg on the live discard (0 staged = tile to hand only; 1 staged = pair exposure win).
  *
- * Training mode: an invalid meld (mismatched non-joker tiles) is committed anyway so the player
- * sees a warning at discard time. Competition mode kills the hand on commit.
+ * Training mode: an invalid meld (mismatched non-joker tiles) is still allowed to commit when the
+ * UI warning was dismissed or dead-hand warnings are off. Competition mode kills the hand on commit.
  */
 export function applyCommitStagedCall(
   r: RoundState,
@@ -521,9 +527,7 @@ export function applyCommitStagedCall(
   }
 
   if (stagedTiles.length === 1) {
-    const meldOk = stagedTiles.every(
-      (t) => t.def.cat === 'joker' || tileDefsEqual(t.def, calledTile.def),
-    )
+    const meldOk = stagedCallMeldMatchesDiscard(r) === true
     if (!meldOk) {
       if (gameMode === 'training') return r
       return applyDeadHand(r, 'invalid-call-meld')
@@ -564,9 +568,7 @@ export function applyCommitStagedCall(
   }
 
   if (stagedTiles.length < 2 || stagedTiles.length > 5) return r
-  const meldIsValid = stagedTiles.every(
-    (t) => t.def.cat === 'joker' || tileDefsEqual(t.def, calledTile.def),
-  )
+  const meldIsValid = stagedCallMeldMatchesDiscard(r) === true
   if (!meldIsValid && gameMode !== 'training') {
     return applyDeadHand(r, 'invalid-call-meld')
   }

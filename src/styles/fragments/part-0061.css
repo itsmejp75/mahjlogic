@@ -877,7 +877,7 @@
   height: var(--rack-tile-h);
   min-height: var(--rack-tile-h);
   max-height: var(--rack-tile-h);
-  background: transparent;
+  /* Leave background unset so `.…--seat-turn` green fill is not fought at equal specificity. */
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
 }

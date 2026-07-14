@@ -671,7 +671,19 @@ html
   height: var(--rack-tile-h);
   min-height: var(--rack-tile-h);
   max-height: var(--rack-tile-h);
-  background: transparent;
+  /* Do not set background here — it beats the green seat-turn fill (same cascade later). */
+}
+
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-seat-label
+  .sorted-discard-tray__slot--seat-label.sorted-discard-tray__slot--seat-turn {
+  background-color: var(--card-ink-green, #52b147);
+  background-image: linear-gradient(var(--card-ink-green, #52b147), var(--card-ink-green, #52b147));
+  background-size: 100% calc(100% + 1px);
+  background-position: top center;
+  background-repeat: no-repeat;
+  border-radius: var(--discard-tray-tile-corner-r, var(--tile-face-border-radius));
 }
 
 html .app-top-exposure-container .discard-tracker__overlay-grid .exposure-rack__slot {

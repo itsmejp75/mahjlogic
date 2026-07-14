@@ -18,6 +18,7 @@ export type GameBlockingDialog =
       rankInput: RankSuggestedHandsInput
       neededHandTiles: 3 | 4 | 5
     }
+  | { variant: 'invalid-call-meld-warning' }
   | { variant: 'discard-dead-warning'; rankInput: RankSuggestedHandsInput }
   | { variant: 'different-card-requires-new-game'; pendingCardId: PlayableCardId }
   | { variant: 'concealed-call-warning' }

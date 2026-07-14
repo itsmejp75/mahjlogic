@@ -62,6 +62,7 @@ import {
   previewAutoSelectedCallRankInput,
   previewStagedCallBestTilesAway,
   previewStagedCallRankInput,
+  stagedCallMeldMatchesDiscard,
   toFourHands,
 } from './roundMutations'
 
@@ -918,11 +919,15 @@ export function useRoundActions(args: UseRoundActionsArgs): UseRoundActionsResul
       deadHandWarningsEnabledRef.current &&
       cur.mainPhase === 'call-staging' &&
       cur.activeBotDiscard &&
-      cur.stagedCallTileIds.length >= 2
+      cur.stagedCallTileIds.length >= 1
     ) {
+      if (stagedCallMeldMatchesDiscard(cur) === false) {
+        queueMicrotask(() => setBlockingDialog({ variant: 'invalid-call-meld-warning' }))
+        return
+      }
       const rankInput = previewStagedCallRankInput(cur)
       const stagedN = cur.stagedCallTileIds.length
-      if (rankInput && !summarizeRackTowardWin(rankInput).closestLine) {
+      if (rankInput && stagedN >= 2 && !summarizeRackTowardWin(rankInput).closestLine) {
         const flags = getCallCapacityFlags(cur.hand, cur.activeBotDiscard)
         const largerSizes: Array<3 | 4 | 5> = []
         if (flags.canKong && stagedN < 3) largerSizes.push(3)
