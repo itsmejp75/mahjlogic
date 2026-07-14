@@ -493,11 +493,11 @@
       ),
     .panel--bot-exposures
       .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim),
-    /* Discard tracker: dim only — highlighted tiles stay flat (lift glow only). */
+    /* Discard tracker bot row: lit + dim rim (sorted suggest-need stays lift-only). */
     .panel--discard-tracker
       .discard-tracker__overlay-grid
       .exposure-rack--discard-tracker-bot-row
-      .exposure-rack__slot--suggest-dim:not(.exposure-rack__slot--suggest-best)
+      .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
   )
   .tile-face:not(.tile-face--illustrative-art)::before,
 .app[data-tile-graphics='solid-color']
@@ -529,7 +529,7 @@
     .panel--discard-tracker
       .discard-tracker__overlay-grid
       .exposure-rack--discard-tracker-bot-row
-      .exposure-rack__slot--suggest-dim:not(.exposure-rack__slot--suggest-best)
+      .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
   )
   .tile-face:not(.tile-face--illustrative-art)::before,
 .app[data-tile-graphics='light']
@@ -561,7 +561,7 @@
     .panel--discard-tracker
       .discard-tracker__overlay-grid
       .exposure-rack--discard-tracker-bot-row
-      .exposure-rack__slot--suggest-dim:not(.exposure-rack__slot--suggest-best)
+      .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
   )
   .tile-face:not(.tile-face--illustrative-art)::before,
 .app[data-tile-graphics='dark']
@@ -593,7 +593,7 @@
     .panel--discard-tracker
       .discard-tracker__overlay-grid
       .exposure-rack--discard-tracker-bot-row
-      .exposure-rack__slot--suggest-dim:not(.exposure-rack__slot--suggest-best)
+      .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
   )
   .tile-face:not(.tile-face--illustrative-art)::before {
   --tile-rim-fade: 8%;
@@ -766,6 +766,33 @@
   filter: none;
 }
 
+/*
+ * Lit bot-row jokers: keep the prism rim inset. Suggest-best clears `--tile-face-suggest-dim-inset`
+ * above and kills face `::after` (inscribed ring), which left jokers lit-but-flat when the slot
+ * lift glow was clipped or hard to read on a bright face.
+ */
+:is(
+  .panel--bot-exposures .exposure-rack__slot--suggest-best,
+  .panel--discard-tracker
+    .discard-tracker__overlay-grid
+    .exposure-rack--discard-tracker-bot-row
+    .exposure-rack__slot--suggest-best,
+  html
+    .app-top-exposure-container
+    .discard-tracker__overlay-grid
+    .exposure-rack--discard-tracker-bot-row
+    .exposure-rack__slot--suggest-best
+) .tile-face.tile--joker:not(.tile-face--illustrative-art) {
+  --tile-face-suggest-dim-inset:
+    inset calc(var(--rack-tile-w) * 0.045) 0 calc(var(--rack-tile-w) * 0.1) calc(var(--rack-tile-w) * -0.3)
+      rgba(28, 25, 22, 0.38),
+    inset calc(var(--rack-tile-w) * -0.045) calc(var(--rack-tile-w) * -0.045) calc(var(--rack-tile-w) * 0.1)
+      calc(var(--rack-tile-w) * -0.3) rgba(28, 25, 22, 0.4);
+  filter: none;
+  opacity: 1;
+  animation: none;
+}
+
 :is(
   .panel--bot-exposures .exposure-rack__slot--suggest-best,
   .panel--discard-tracker
@@ -831,14 +858,14 @@
 }
 
 /* Illustrative classic: coach vignette on full-bleed art faces (bot exposure + suggested-hands strip).
- * Discard tracker: dim only — highlighted tiles stay flat. */
+ * Discard tracker bot row: lit + dim (sorted suggest-need stays lift-only). */
 :is(
   .panel--bot-exposures
     .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim),
   .panel--discard-tracker
     .discard-tracker__overlay-grid
     .exposure-rack--discard-tracker-bot-row
-    .exposure-rack__slot--suggest-dim:not(.exposure-rack__slot--suggest-best),
+    .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim),
   .panel--hand
     .rack-stage__rack-top
     .pass-strip__tile-wrap:is(.pass-strip__tile-wrap--suggest-best, .pass-strip__tile-wrap--suggest-dim),
@@ -2453,7 +2480,7 @@ html
   .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot--suggest-best
-  .tile-face,
+  .tile-face:not(.tile--joker),
 html
   .app-top-exposure-container
   .discard-tracker__overlay-grid
@@ -2469,6 +2496,24 @@ html
   --tile-face-highlight-inset: 0 0 0 0 transparent;
   --tile-face-highlight-shadow: 0 0 0 0 transparent;
   --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+  --rack-tile-w: var(--discard-tray-rack-tile-w);
+  --rack-tile-h: var(--rack-tile-h);
+  filter: none;
+}
+
+html
+  .app-top-exposure-container
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-best
+  .tile-face.tile--joker:not(.tile-face--illustrative-art) {
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
+  --tile-face-suggest-dim-inset:
+    inset calc(var(--rack-tile-w) * 0.045) 0 calc(var(--rack-tile-w) * 0.1) calc(var(--rack-tile-w) * -0.3)
+      rgba(28, 25, 22, 0.38),
+    inset calc(var(--rack-tile-w) * -0.045) calc(var(--rack-tile-w) * -0.045) calc(var(--rack-tile-w) * 0.1)
+      calc(var(--rack-tile-w) * -0.3) rgba(28, 25, 22, 0.4);
   --rack-tile-w: var(--discard-tray-rack-tile-w);
   --rack-tile-h: var(--rack-tile-h);
   filter: none;
@@ -2496,7 +2541,7 @@ html
   .app-top-exposure-container
   .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
-  .exposure-rack__slot--suggest-dim:not(.exposure-rack__slot--suggest-best)
+  .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
   .tile-face.tile-face--illustrative-art::before {
   content: '';
   position: absolute;
@@ -2550,19 +2595,7 @@ html
   );
 }
 
-/* Tracker bot row lit tiles: lift glow only — no rim ::before (was bleeding across row seams). */
-html
-  .app-top-exposure-container
-  .discard-tracker__overlay-grid
-  .exposure-rack--discard-tracker-bot-row
-  .exposure-rack__slot--suggest-best
-  .tile-face.tile-face--illustrative-art::before {
-  content: none;
-  display: none;
-  box-shadow: none;
-  background: transparent;
-}
-
+/* Lit bot-row illustrative faces keep rim ::before (seam clip via coach-lit-clip / lit↔lit). */
 html
   .app-top-exposure-container
   .discard-tracker__overlay-grid
@@ -2624,7 +2657,9 @@ html
   content: '';
   position: absolute;
   inset: 0;
-  z-index: -1;
+  /* Above slot bg; face stays z-index 1. Avoid z-index:-1 — WebKit can drop it behind an
+   * ancestor fill so lit jokers read bright/flat with no lift halo. */
+  z-index: 0;
   pointer-events: none;
   border-radius: var(--tile-face-border-radius);
   box-shadow: var(--coach-centered-lift-shadow);
@@ -2637,15 +2672,14 @@ html
 }
 
 /*
- * Small-tile coach vignette — discard-tracker dim tiles + side-panel bot exposures: thin rim
- * with corner radials + symmetric edge fades. Highlighted discard-tracker tiles (bot + sorted
- * suggest-need) use lift glow only — no illustrative rim. Side-panel lit+dim unchanged.
+ * Small-tile coach vignette — discard-tracker bot lit+dim + side-panel bot exposures: thin rim
+ * with corner radials + symmetric edge fades. Sorted-band suggest-need stays lift-only (no rim).
  */
 html body .app
   :is(.panel--discard-tracker, html .app-top-exposure-container)
   .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
-  .exposure-rack__slot--suggest-dim:not(.exposure-rack__slot--suggest-best)
+  .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
   .tile-face::before,
 html body .app[data-tile-graphics]
   .panel--bot-exposures
@@ -2655,6 +2689,12 @@ html body .app[data-tile-graphics]
   .panel--bot-exposures
   .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
   .tile-face.tile-face--illustrative-art::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  display: block;
   border-radius: inherit;
   --coach-discard-corner-r: var(
     --discard-tray-tile-corner-r,
