@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { NMJL_2026_PATTERNS } from '../card/nmjl2026CardBook'
-import { countOpenHandsFittingClaimMelds } from './eastExposurePatternFit'
+import {
+  countOpenHandsFittingClaimMelds,
+  listOpenHandsFittingClaimMelds,
+} from './eastExposurePatternFit'
 
 describe('countOpenHandsFittingClaimMelds', () => {
   it('returns 0 with no melds', () => {
@@ -25,5 +28,13 @@ describe('countOpenHandsFittingClaimMelds', () => {
       },
     ]
     expect(countOpenHandsFittingClaimMelds(melds, NMJL_2026_PATTERNS)).toBe(3)
+    const listed = listOpenHandsFittingClaimMelds(melds, NMJL_2026_PATTERNS)
+    expect(listed).toHaveLength(3)
+    expect(listed.map((p) => p.cardHandCode)).toEqual(['5a', '5b', '5a'])
+    expect(listed.map((p) => p.section)).toEqual([
+      'CONSECUTIVE RUN',
+      'CONSECUTIVE RUN',
+      '13579',
+    ])
   })
 })

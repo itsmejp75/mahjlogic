@@ -680,6 +680,22 @@ export function countOpenHandsFittingClaimMelds(
 }
 
 /**
+ * Non–closed card lines these claim melds still fit, in book order (category / hand #).
+ */
+export function listOpenHandsFittingClaimMelds(
+  melds: ReadonlyArray<{ tiles: TileInstance[] }>,
+  book: readonly PracticePattern[] = getActiveCardPatterns(),
+): PracticePattern[] {
+  if (melds.length === 0) return []
+  const out: PracticePattern[] = []
+  for (const p of book) {
+    if (p.closed) continue
+    if (claimMeldsFitPracticePattern(p, melds)) out.push(p)
+  }
+  return out
+}
+
+/**
  * Assigns each hand embedding slot (card group order) to a meld index, if possible.
  * Prefers the same key/need matching as {@link canMatchMeldsToSlots}, but recovers
  * the slot index per meld for left-to-right display order.

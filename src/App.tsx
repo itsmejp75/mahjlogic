@@ -17,9 +17,10 @@ import { PLAYABLE_CARD_IDS, PLAYABLE_CARD_LABEL, type PlayableCardId, cardSectio
 import type { PracticePattern } from './card/practicePatterns'
 import { patternByIdLookup, setActiveCardPatterns } from './card/activeCardPatternsScope'
 import { buildPinnedPatternsFromFocusKey, computeRackPatternHighlightIds, computeBlankExchangeFills, greedyPatternMatchDetail, jokerSwapHandHintUsesSingleBounceIteration, focusKeyForSuggestedHandLine, focusKeyPatternId, sortFullRackTilesForPattern, suggestedHandsTiedAtBest, summarizeRackTowardWin, computeSuggestedDiscardNeedHighlightIds, computeSuggestedDiscardTrackerNeedDefs, computeBotExposureSuggestedBestIds, findInfeasibleBestIds, buildUnavailableTileDefCounts, tileMultisetSignature, type RankSuggestedHandsInput } from './analysis/suggestedHands'
-import { tileInstancesWithClaimMeldJokersResolved } from './analysis/eastExposurePatternFit'
+import { tileInstancesWithClaimMeldJokersResolved, listOpenHandsFittingClaimMelds, openClaimMeldsFitSomePracticeLine } from './analysis/eastExposurePatternFit'
 import { useRankSuggestedHandsWorker } from './analysis/rankSuggestedHandsAsync'
 import { CharlestonPassStripInstructionMain } from './components/CharlestonPassStripInstructionLabel'
+import { BotExposureHandsPanel } from './components/BotExposureHandsPanel'
 import { SuggestedHandsPanel } from './components/SuggestedHandsPanel'
 
 /** Rare overlays — keep analysis-heavy dialogs out of the initial play bundle. */
@@ -37,7 +38,6 @@ import { deadHandExplanation } from './mahjong/deadHandReason'
 import { incomingBotDiscardDragId } from './mahjong/jokerSwapIds'
 import { discardedDefsForBlankExchange } from './mahjong/blankExchange'
 import { eastExposureSwapDropId, findNextJokerSwapTarget, collectHandTileIdsSwappableForJokers, collectSwappableJokerTileIds } from './mahjong/jokerSwapTarget'
-import { openClaimMeldsFitSomePracticeLine } from './analysis/eastExposurePatternFit'
 import { DEFAULT_TILE_GRAPHICS, isTileGraphics, MENU_TILE_GRAPHICS, TILE_GRAPHICS_LABEL, type TileGraphics } from './tiles/tileGraphics'
 import { TileGraphicsProvider } from './tiles/TileGraphicsContext'
 import { AppMenuOpenGate, AppMenuOpenProvider, appMenuOpenApiRef, useAppMenuOpen } from './app/AppMenuOpenContext'
@@ -1871,6 +1871,8 @@ export default function App() {
   const [botHandsIdentifierEnabled, setBotHandsIdentifierEnabled] = useState<boolean>(() =>
     readBotHandsIdentifierFromStorage(),
   )
+  /** When set, the hands tray shows that seat’s possible open card hands instead of East’s list. */
+  const [botHandsIdentifierFocusSeat, setBotHandsIdentifierFocusSeat] = useState<BotSeat | null>(null)
   const [concealedHandReminderEnabled, setConcealedHandReminderEnabled] = useState<boolean>(() =>
     readConcealedHandReminderFromStorage(),
   )
@@ -1999,11 +2001,20 @@ export default function App() {
   const toggleBotHandsIdentifier = useCallback(() => {
     setBotHandsIdentifierEnabled((v) => {
       const next = !v
+      if (!next) setBotHandsIdentifierFocusSeat(null)
       try {
         localStorage.setItem(LS_KEY_BOT_HANDS_IDENTIFIER, next ? 'true' : 'false')
       } catch {
         /* ignore */
       }
+      return next
+    })
+  }, [])
+
+  const onBotExposureRowClick = useCallback((seat: BotSeat) => {
+    setBotHandsIdentifierFocusSeat((prev) => {
+      const next = prev === seat ? null : seat
+      if (next != null) suggestedHandsTrayApiRef.current.setTrayOpen(true)
       return next
     })
   }, [])
@@ -3736,6 +3747,7 @@ export default function App() {
       setSuggestedSuppressedHandKey(null)
       setSuggestedDeadTileGuidesByKey({})
       setSuggestedDeadTableGuidesByKey({})
+      setBotHandsIdentifierFocusSeat(null)
       suggestedHandsTrayApiRef.current.setTrayOpen(false)
     }
   }, [mainPhase])
@@ -4059,6 +4071,7 @@ export default function App() {
     setBlankTileCount((prev) => (prev === blankCount ? prev : blankCount))
     blankTileCountRef.current = blankCount
     suggestedHandsTrayApiRef.current.setTrayOpen(readSuggestedHandsTrayDefaultOpenFromStorage())
+    setBotHandsIdentifierFocusSeat(null)
     if (m !== c) {
       try {
         writePlayableCardToStorage(m)
@@ -4801,6 +4814,33 @@ export default function App() {
     mainPhase,
   ])
 
+  const botHandsIdentifierFocusMelds = useMemo(() => {
+    if (!botHandsIdentifierFocusSeat) return []
+    return botExposures
+      .filter((e) => e.seat === botHandsIdentifierFocusSeat)
+      .filter(
+        (e) =>
+          mainPhase !== 'wall-game' || e.tiles.length <= WALL_GAME_MAX_EXPOSURE_MELD_TILES,
+      )
+      .map((e) => ({ tiles: e.tiles }))
+  }, [botHandsIdentifierFocusSeat, botExposures, mainPhase])
+
+  const botHandsIdentifierPatterns = useMemo(() => {
+    if (!botHandsIdentifierFocusSeat || botHandsIdentifierFocusMelds.length === 0) return []
+    return listOpenHandsFittingClaimMelds(botHandsIdentifierFocusMelds, cardPatterns)
+  }, [botHandsIdentifierFocusSeat, botHandsIdentifierFocusMelds, cardPatterns])
+
+  useEffect(() => {
+    if (!botHandsIdentifierFocusSeat) return
+    if (!botHandsIdentifierEnabled || botHandsIdentifierFocusMelds.length === 0) {
+      setBotHandsIdentifierFocusSeat(null)
+    }
+  }, [
+    botHandsIdentifierFocusSeat,
+    botHandsIdentifierEnabled,
+    botHandsIdentifierFocusMelds.length,
+  ])
+
   const suggestedHandsPopup = useMemo(() => {
     if (!showSuggestedHandsPanel) return null
 
@@ -4827,33 +4867,43 @@ export default function App() {
         popupRef={suggestedHandsPopupRef}
         overlayStyle={overlayStyle}
       >
-        {(trayOpen) => (
-          <SuggestedHandsPanel
-            discardTraySurface
-            trayOpen={trayOpen}
-            onPinnedPatternChange={toggleSuggestedPinnedHandKey}
-            hands={eastSuggestedHands}
-            activePatternId={suggestedFocusHandKey}
-            pinnedHandKeys={suggestedPinnedHandKeys}
-            onPatternClick={onSuggestedPatternClick}
-            onFocusKeyMigrate={onSuggestedFocusKeyMigrate}
-            tilesGuideOn={suggestedPanelTilesOn}
-            rackTilesForSuggestedStrip={deferredRackForSuggestedStrip}
-            rackTilesForPatternMatch={deferredRackForSuggestedPatternMatch}
-            exposureTileIdsForSuggestedStrip={suggestedHandsExposureTileIds}
-            uncheckedSections={suggestedHandsUncheckedSections}
-            hideConcealedHands={suggestedHandsHideConcealed}
-            cardPatterns={cardPatterns}
-            cardSectionOrder={cardSectionOrder}
-            deadCauseByFocusKey={suggestedDeadCauseByFocusKey}
-            focusedHandDeadCause={suggestedFocusedHandDeadCause}
-          />
-        )}
+        {(trayOpen) =>
+          botHandsIdentifierFocusSeat ? (
+            <BotExposureHandsPanel
+              seat={botHandsIdentifierFocusSeat}
+              patterns={botHandsIdentifierPatterns}
+              discardTraySurface
+            />
+          ) : (
+            <SuggestedHandsPanel
+              discardTraySurface
+              trayOpen={trayOpen}
+              onPinnedPatternChange={toggleSuggestedPinnedHandKey}
+              hands={eastSuggestedHands}
+              activePatternId={suggestedFocusHandKey}
+              pinnedHandKeys={suggestedPinnedHandKeys}
+              onPatternClick={onSuggestedPatternClick}
+              onFocusKeyMigrate={onSuggestedFocusKeyMigrate}
+              tilesGuideOn={suggestedPanelTilesOn}
+              rackTilesForSuggestedStrip={deferredRackForSuggestedStrip}
+              rackTilesForPatternMatch={deferredRackForSuggestedPatternMatch}
+              exposureTileIdsForSuggestedStrip={suggestedHandsExposureTileIds}
+              uncheckedSections={suggestedHandsUncheckedSections}
+              hideConcealedHands={suggestedHandsHideConcealed}
+              cardPatterns={cardPatterns}
+              cardSectionOrder={cardSectionOrder}
+              deadCauseByFocusKey={suggestedDeadCauseByFocusKey}
+              focusedHandDeadCause={suggestedFocusedHandDeadCause}
+            />
+          )
+        }
       </SuggestedHandsPopupChrome>
     )
   }, [
     showSuggestedHandsPanel,
     suggestedDiscardOverlayBounds,
+    botHandsIdentifierFocusSeat,
+    botHandsIdentifierPatterns,
     toggleSuggestedPinnedHandKey,
     eastSuggestedHands,
     suggestedFocusHandKey,
@@ -5927,6 +5977,8 @@ export default function App() {
         jokerSwapHintEnabled={jokerSwapHintEnabled}
         jokerSwapHandHintSingleBounce={jokerSwapHandHintSingleBounce}
         botHandsIdentifierEnabled={botHandsIdentifierEnabled}
+        botHandsIdentifierFocusSeat={botHandsIdentifierFocusSeat}
+        onBotExposureRowClick={onBotExposureRowClick}
         charlestonDone={charlestonDone}
         mainPhase={mainPhase}
         charlestonPhase={charlestonPhase}

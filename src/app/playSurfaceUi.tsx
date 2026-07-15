@@ -935,6 +935,8 @@ export function DiscardTrackerSlotGrid({
   jokerSwapHintBounceEpoch,
   blankTilesEnabled,
   botHandsIdentifierEnabled,
+  botHandsIdentifierFocusSeat = null,
+  onBotExposureRowClick,
   suggestedDiscardTrackerNeedDefs,
   botSlotSeats,
 }: {
@@ -954,6 +956,9 @@ export function DiscardTrackerSlotGrid({
   jokerSwapHintBounceEpoch: number
   blankTilesEnabled: boolean
   botHandsIdentifierEnabled: boolean
+  /** Seat whose possible hands are shown in the tray (replaces Suggested Hands). */
+  botHandsIdentifierFocusSeat?: BotSeat | null
+  onBotExposureRowClick?: (seat: BotSeat) => void
   suggestedDiscardTrackerNeedDefs: readonly TileDef[] | null
   botSlotSeats: BotSlotSeats
 }) {
@@ -1027,8 +1032,20 @@ export function DiscardTrackerSlotGrid({
     >
       {botExposureSeats.map((seat, rowIdx) => {
         const melds = botRowMelds[rowIdx] ?? []
+        const rowClickable =
+          botHandsIdentifierEnabled && melds.length > 0 && onBotExposureRowClick != null
+        const rowActive = botHandsIdentifierFocusSeat === seat
         return (
-          <div key={seat} className="discard-tracker__overlay-row">
+          <div
+            key={seat}
+            className={[
+              'discard-tracker__overlay-row',
+              rowClickable ? 'discard-tracker__overlay-row--bot-hands-clickable' : '',
+              rowActive ? 'discard-tracker__overlay-row--bot-hands-active' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
             {rowIdx === 0 ? (
               <SortedDiscardTrayRow
                 tiles={SORTED_DISCARD_ROW1_TILES}
@@ -1072,22 +1089,54 @@ export function DiscardTrackerSlotGrid({
               showWatermark={false}
               tag="div"
             >
-              <ExposureRack
-                melds={melds}
-                slotCount={DISCARD_TRACKER_BOT_ROW_SLOTS}
-                className="exposure-rack--discard-tracker-opponent exposure-rack--discard-tracker-bot-row"
-                gridMeldColumnSpans
-                ariaLabel={`${seat} exposures`}
-                stackSuitTiles
-                flyInTileIds={animationsEnabled ? botExposureFlyInTileIds : null}
-                flyInFromBelowTileIds={animationsEnabled ? exposureJokerSwapFlyInTileIds : null}
-                suggestedTileGuide={botExposureSuggestedTileGuide}
-                suggestedDeadTileIds={botExposureDeadIds}
-                botJokerBorderMenuOn={false}
-                jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
-                jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
-                possibleOpenHandsCount={botRowPossibleOpenHandsCounts[rowIdx] ?? null}
-              />
+              <div
+                role={rowClickable ? 'button' : undefined}
+                tabIndex={rowClickable ? 0 : undefined}
+                aria-pressed={rowClickable ? rowActive : undefined}
+                aria-label={
+                  rowClickable
+                    ? rowActive
+                      ? `Hide ${seat} possible hands`
+                      : `Show ${seat} possible hands`
+                    : undefined
+                }
+                onClick={
+                  rowClickable
+                    ? (e) => {
+                        e.stopPropagation()
+                        onBotExposureRowClick(seat)
+                      }
+                    : undefined
+                }
+                onKeyDown={
+                  rowClickable
+                    ? (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          onBotExposureRowClick(seat)
+                        }
+                      }
+                    : undefined
+                }
+              >
+                <ExposureRack
+                  melds={melds}
+                  slotCount={DISCARD_TRACKER_BOT_ROW_SLOTS}
+                  className="exposure-rack--discard-tracker-opponent exposure-rack--discard-tracker-bot-row"
+                  gridMeldColumnSpans
+                  ariaLabel={`${seat} exposures`}
+                  stackSuitTiles
+                  flyInTileIds={animationsEnabled ? botExposureFlyInTileIds : null}
+                  flyInFromBelowTileIds={animationsEnabled ? exposureJokerSwapFlyInTileIds : null}
+                  suggestedTileGuide={botExposureSuggestedTileGuide}
+                  suggestedDeadTileIds={botExposureDeadIds}
+                  botJokerBorderMenuOn={false}
+                  jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
+                  jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
+                  possibleOpenHandsCount={botRowPossibleOpenHandsCounts[rowIdx] ?? null}
+                />
+              </div>
             </OpponentExposureDropZone>
           </div>
         )

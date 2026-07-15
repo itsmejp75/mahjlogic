@@ -50,13 +50,150 @@
   align-items: center;
   justify-content: center;
   font-family: 'Figtree', var(--sans);
-  font-size: calc(var(--rack-tile-w) * 0.92);
+  font-size: calc(var(--rack-tile-w) * 0.7);
   font-weight: 500;
   line-height: 1;
   color: color-mix(in srgb, var(--text-h) 78%, transparent);
   font-variant-numeric: tabular-nums;
   user-select: none;
   text-align: center;
+}
+
+/* Clickable bot exposure row → open possible-hands list in the tray. */
+.discard-tracker__overlay-row--bot-hands-clickable .app-opponents-rail__cell {
+  cursor: pointer;
+}
+
+.discard-tracker__overlay-row--bot-hands-clickable .app-opponents-rail__cell > [role='button'] {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  outline: none;
+}
+
+/*
+ * Selected bot exposure (hands-identifier): same soft yellow/orange outer glow as joker-swap /
+ * blank-exchange drop frames (part-0123). Raised so the halo paints over Discard> below.
+ * Single ::after frame (border + glow) — avoid a separate box-shadow ring that reads as a double border.
+ */
+.discard-tracker__overlay-row--bot-hands-active {
+  position: relative;
+  z-index: 6;
+}
+
+.discard-tracker__overlay-row--bot-hands-active .app-opponents-rail__cell {
+  position: relative;
+  z-index: 1;
+  outline: none;
+  box-shadow: none;
+}
+
+.discard-tracker__overlay-row--bot-hands-active .app-opponents-rail__cell::after {
+  --_drop-frame-color: var(--simple-joker-yellow, #ffc107);
+  /* Keep glow/outset proportional to tile size (was fixed 10px/3px/2px). */
+  --_frame-outset: max(1px, calc(var(--rack-tile-w) * 0.0625));
+  --_glow-blur: max(2px, calc(var(--rack-tile-w) * 0.3125));
+  --_glow-spread: max(1px, calc(var(--rack-tile-w) * 0.09375));
+  content: '';
+  position: absolute;
+  inset: calc(-1 * var(--_frame-outset));
+  box-sizing: border-box;
+  border: 0.5px solid var(--_drop-frame-color);
+  border-radius: calc(
+    var(--discard-tray-tile-corner-r, var(--tile-face-border-radius)) + var(--_frame-outset)
+  );
+  box-shadow: 0 0 var(--_glow-blur) var(--_glow-spread)
+    color-mix(in srgb, var(--_drop-frame-color) 55%, transparent);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Slim category | hand sheet replacing Suggested Hands while inspecting a bot. */
+.bot-exposure-hands-panel .hands-panel__content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.bot-exposure-hands-panel__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  /* Same band as Away / Prob % / Points sticky headers (part-0081 / part-0123). */
+  font-size: var(--hands-metric-column-header-fs, var(--app-ui-control-fs-sm));
+  height: calc(2 * 0.2em + 1em + var(--hands-sheet-grid-line-w, 0.5px));
+  padding: 0 0.45rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.bot-exposure-hands-panel__title {
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+  font-family: 'Figtree', var(--sans);
+  font-size: inherit;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text-h);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bot-exposure-hands-panel__empty {
+  margin: 0.75rem 0.6rem;
+  color: color-mix(in srgb, var(--text-h) 70%, transparent);
+  font-size: clamp(0.7rem, 2cqi, 0.95rem);
+}
+
+.bot-exposure-hands-panel__scroll {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+}
+
+.bot-exposure-hands-list {
+  --bot-hands-cat-w: minmax(7.2em, 28%);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  font-size: clamp(
+    0.5rem,
+    calc(var(--suggest-hands-panel-cqw-resolved, 100cqi) * 0.0235),
+    2.35rem
+  );
+  line-height: 1.2;
+}
+
+.bot-exposure-hands-list__row {
+  display: grid;
+  grid-template-columns: var(--bot-hands-cat-w) minmax(0, 1fr);
+  border-block-end: 1px solid color-mix(in srgb, var(--window-border) 55%, transparent);
+  min-width: 0;
+}
+
+.bot-exposure-hands-list__cat,
+.bot-exposure-hands-list__hand {
+  box-sizing: border-box;
+  padding: 0.4em 0.65em;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: inherit;
+  font: inherit;
+}
+
+.bot-exposure-hands-list__cat {
+  border-inline-end: 1px solid color-mix(in srgb, var(--window-border) 55%, transparent);
 }
 
 /* Replaced first empty cell: wrapper must not add an extra flex item */

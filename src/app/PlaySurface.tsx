@@ -40,7 +40,7 @@ import {
   SuggestedHandsOpenDataAttr,
   type MainPhase,
 } from './playSurfaceUi'
-import type { BotExposure } from '../analysis/types'
+import type { BotExposure, BotSeat } from '../analysis/types'
 import type { DiscardEntry, EastExposure, Seat, TileInstance } from '../mahjong/types'
 import type { HandTileFlyInFrom } from '../mahjong/handTileFlyIn'
 import type { PassSlots } from '../mahjong/passTargets'
@@ -81,6 +81,8 @@ export type PlaySurfaceProps = {
   jokerSwapHintEnabled: boolean
   jokerSwapHandHintSingleBounce: boolean
   botHandsIdentifierEnabled: boolean
+  botHandsIdentifierFocusSeat: BotSeat | null
+  onBotExposureRowClick: (seat: BotSeat) => void
 
   charlestonDone: boolean
   mainPhase: MainPhase
@@ -161,6 +163,8 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
     jokerSwapHintEnabled,
     jokerSwapHandHintSingleBounce,
     botHandsIdentifierEnabled,
+    botHandsIdentifierFocusSeat,
+    onBotExposureRowClick,
     charlestonDone,
     mainPhase,
     charlestonPhase,
@@ -479,6 +483,8 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                           jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
                           blankTilesEnabled={blankTilesEnabled}
                           botHandsIdentifierEnabled={botHandsIdentifierEnabled}
+                          botHandsIdentifierFocusSeat={botHandsIdentifierFocusSeat}
+                          onBotExposureRowClick={onBotExposureRowClick}
                           suggestedDiscardTrackerNeedDefs={suggestedDiscardTrackerNeedDefs}
                           botSlotSeats={botSlotSeats}
                         />

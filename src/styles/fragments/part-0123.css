@@ -878,7 +878,7 @@ html
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: calc(var(--rack-tile-w) * 0.92);
+  font-size: calc(var(--rack-tile-w) * 0.7);
   font-weight: 500;
   line-height: 1;
   color: color-mix(in srgb, var(--text-h) 78%, transparent);
@@ -2091,13 +2091,15 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   border-radius: var(--suggested-popup-radius) var(--suggested-popup-radius) 0 0;
   pointer-events: none;
   background-color: var(--app-bg-hands-tray);
-  background-image: none;
+  background-image: var(--hands-header-bottom-blur);
+  background-repeat: no-repeat;
+  background-position: top center;
+  background-size: 100% var(--hands-header-bottom-blur-h);
 }
 
 /*
- * Lip shadow under the hands header — same dark wash, clipped to the list’s top corner
- * radii so the 3D edge follows the curve (not a straight band that stops before the corners).
- * Above the scroller so scrolling rows pass under it; below the sticky header labels.
+ * Suggested Hands: thin dark lip stroke under the header (tip ends soften via mask).
+ * Lip wash is on ::before so it stays behind this stroke.
  */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
@@ -2108,14 +2110,133 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   font-size: var(--hands-metric-column-header-fs, var(--app-ui-control-fs-sm));
   top: calc(2 * 0.2em + 1em + var(--hands-sheet-grid-line-w, 0.5px));
   left: 0;
-  width: 100%;
+  right: 0;
+  width: auto;
   height: max(var(--hands-header-bottom-blur-h), var(--suggested-popup-radius));
   border-radius: var(--suggested-popup-radius) var(--suggested-popup-radius) 0 0;
   pointer-events: none;
-  background-image: var(--hands-header-bottom-blur);
+  background: transparent;
+  border: none;
+  box-sizing: border-box;
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, #000 62%, var(--app-bg-base));
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 78%,
+    rgb(0 0 0 / 0.55) 90%,
+    rgb(0 0 0 / 0.18) 96%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 78%,
+    rgb(0 0 0 / 0.55) 90%,
+    rgb(0 0 0 / 0.18) 96%,
+    transparent 100%
+  );
+}
+
+/* Bot hands-identifier: glow on tray (::before, behind text); orange stroke on ::after. */
+.app
+  .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
+  .bot-exposure-hands-panel {
+  /*
+   * Same tile math as the bot-exposure row glow (`--rack-tile-w` in the top band), derived from
+   * the overlay’s live viewport width so the wash shrinks with the window — no rem floor.
+   */
+  --_bot-glow-tile: max(
+    1px,
+    calc(
+      (
+        var(--suggested-overlay-viewport-width, 100%)
+        - 28 * var(--player-rack-face-gap, 0.125rem)
+      ) / 29
+    )
+  );
+  --_glow-blur: max(2px, calc(var(--_bot-glow-tile) * 0.3125));
+  --_glow-spread: max(1px, calc(var(--_bot-glow-tile) * 0.09375));
+  --_bot-header-glow-h: calc(var(--_glow-blur) + var(--_glow-spread));
+  --_bot-header-stroke-w: 0.5px;
+}
+
+.app
+  .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
+  .bot-exposure-hands-panel
+  .hands-panel__content::before {
+  --_drop-frame-color: var(--simple-joker-yellow, #ffc107);
+  /* Header glow — behind list text; must stay above any solid list-column band. */
+  z-index: 1;
+  background-image: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--_drop-frame-color) 55%, transparent) 0%,
+    color-mix(in srgb, var(--_drop-frame-color) 32%, transparent) 18%,
+    color-mix(in srgb, var(--_drop-frame-color) 14%, transparent) 42%,
+    color-mix(in srgb, var(--_drop-frame-color) 5%, transparent) 68%,
+    color-mix(in srgb, var(--_drop-frame-color) 1.5%, transparent) 88%,
+    transparent 100%
+  );
   background-repeat: no-repeat;
   background-position: top center;
-  background-size: 100% var(--hands-header-bottom-blur-h);
+  background-size: 100% var(--_bot-header-glow-h);
+}
+
+/* Bot title lives in the toolbar — don't paint the Suggested Hands header band over the glow. */
+.app
+  .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
+  .bot-exposure-hands-panel
+  .hands-panel__content
+  .hands-panel__list-column::before {
+  content: none;
+  background: none;
+}
+
+.app
+  .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
+  .bot-exposure-hands-panel
+  .hands-panel__content
+  .hands-list-scroll {
+  position: relative;
+  z-index: 2;
+  background: transparent;
+}
+
+.app
+  .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
+  .bot-exposure-hands-panel
+  .hands-panel__content::after {
+  --_drop-frame-color: var(--simple-joker-yellow, #ffc107);
+  --_frame-radius: var(--suggested-popup-radius);
+  z-index: 3;
+  left: 0;
+  right: 0;
+  width: auto;
+  height: max(var(--_frame-radius), var(--_bot-header-glow-h));
+  border-radius: var(--_frame-radius) var(--_frame-radius) 0 0;
+  background: transparent;
+  border: var(--_bot-header-stroke-w) solid var(--_drop-frame-color);
+  border-bottom-width: 0;
+  box-sizing: border-box;
+  box-shadow: none;
+  filter: none;
+  /* Soften vertical tip ends only (glow lives on ::before, so it is not masked). */
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 55%,
+    rgb(0 0 0 / 0.55) 78%,
+    rgb(0 0 0 / 0.15) 92%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 55%,
+    rgb(0 0 0 / 0.55) 78%,
+    rgb(0 0 0 / 0.15) 92%,
+    transparent 100%
+  );
+  clip-path: none;
 }
 
 .app
@@ -2148,7 +2269,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 /*
  * Full-bleed title-row band on `.hands-panel__list-column` (not clipped by scroll overflow-x).
- * Solid `--app-bg-base`. Lip shadow is on `.hands-panel__content::after` (follows list radii).
+ * Solid `--app-bg-base`. Lip wash on `::before`; dark stroke on `::after` (bot uses orange glow).
  */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
@@ -2284,7 +2405,7 @@ html .app-dnd-frame > .app-play-split.app-top-exposure-container .discard-tracke
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: calc(var(--rack-tile-w) * 0.92);
+  font-size: calc(var(--rack-tile-w) * 0.7);
   font-weight: 500;
   line-height: 1;
   color: color-mix(in srgb, var(--text-h) 78%, transparent);
@@ -3483,20 +3604,24 @@ html .app-dnd-frame .app-top-exposure-container
   )::before {
   --_drop-frame-color: var(--simple-joker-yellow, #ffc107);
   --_tracker-tile-w: max(1px, calc((100% - 28 * var(--player-rack-face-gap)) / 29));
-  /* Gap outside tiles/slots — not flush to their edges. */
-  --_frame-outset: 2px;
+  /* Keep glow/outset proportional to tile size (was fixed 10px/3px/2px). */
+  --_frame-outset: max(1px, calc(var(--_tracker-tile-w) * 0.0625));
+  --_glow-blur: max(2px, calc(var(--_tracker-tile-w) * 0.3125));
+  --_glow-spread: max(1px, calc(var(--_tracker-tile-w) * 0.09375));
   content: '';
   position: absolute;
   top: calc(-1 * var(--_frame-outset));
   bottom: calc(-1 * var(--_frame-outset));
   box-sizing: border-box;
-  border: 1px solid var(--_drop-frame-color);
+  border: max(1px, calc(var(--_tracker-tile-w) * 0.03125)) solid var(--_drop-frame-color);
   border-radius: calc(
     var(--discard-tray-tile-corner-r, var(--tile-face-border-radius)) + var(--_frame-outset)
   );
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--_drop-frame-color) 85%, transparent),
-    0 0 10px 3px color-mix(in srgb, var(--_drop-frame-color) 55%, transparent);
+    0 0 0 max(1px, calc(var(--_tracker-tile-w) * 0.03125))
+      color-mix(in srgb, var(--_drop-frame-color) 85%, transparent),
+    0 0 var(--_glow-blur) var(--_glow-spread)
+      color-mix(in srgb, var(--_drop-frame-color) 55%, transparent);
   pointer-events: none;
   z-index: 8;
 }
@@ -3535,6 +3660,40 @@ html .app-dnd-frame > .app-play-split.app-top-exposure-container:has(
   ) {
   position: relative;
   z-index: 30 !important;
+  overflow: visible !important;
+}
+
+/* Bot hands-identifier selection: same stack-above-rack treatment as joker-swap glow. */
+html .app-dnd-frame > .app-play-split.app-top-exposure-container:has(
+    .discard-tracker__overlay-row--bot-hands-active
+  ) {
+  position: relative;
+  z-index: 30 !important;
+  overflow: visible !important;
+}
+
+html .app-dnd-frame:has(
+    > .app-play-split.app-top-exposure-container:has(
+      .discard-tracker__overlay-row--bot-hands-active
+    )
+  )
+  > .app-rack-stage {
+  z-index: 1 !important;
+}
+
+html .app-dnd-frame > .app-play-split.app-top-exposure-container:has(
+    .discard-tracker__overlay-row--bot-hands-active
+  )
+  :is(
+    .panel--discard-tracker,
+    .discard-tracker__shell,
+    .discard-tracker__content,
+    .discard-tracker__content--tile-groups-only,
+    .discard-tracker__tile-groups-container,
+    .discard-tracker__overlay-grid,
+    .discard-tracker__overlay-row--bot-hands-active,
+    .app-opponents-rail__cell
+  ) {
   overflow: visible !important;
 }
 
