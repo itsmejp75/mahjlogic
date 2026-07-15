@@ -1863,6 +1863,27 @@
   font-size: 1.25em;
 }
 
+/*
+ * Tray sheet: match the bot possible-hands card-hand font. Category, card hand, and the
+ * Away / Prob % / Points numbers all render at 1em of the sheet base (same clamp used by
+ * `.bot-exposure-hands-list`), down from the 1.25em body-cell scale above. The parenthesis
+ * detail row is left untouched — its `--detail-pad` cell keeps the 1.25em size.
+ */
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__cell:not(.hands-sheet__cell--header):not(.hands-sheet__cell--detail-pad) {
+  font-size: 1em;
+}
+
+/* Category text: drop the 0.78em reduction so it matches the card-hand size too. */
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__category {
+  font-size: 1em;
+}
+
 .hands-sheet__cell--header {
   position: sticky;
   top: 0;
@@ -2582,6 +2603,38 @@
   max-width: 100%;
   min-width: 0;
   overflow: hidden;
+}
+
+/*
+ * Tray row height: pack more hands into view. Every body cell zeroes its own vertical padding
+ * and takes its height from the line box, so first collapse the line-height so each line hugs
+ * its text, then add a small symmetric `padding-block` for a little air above/below the text on
+ * both the card-hand line and the parenthesis/detail line. Dial `--hands-sheet-row-pad-y` for
+ * more/less breathing room. (Selector is intentionally very specific so it wins over the
+ * per-cell `padding: 0` rules above.)
+ */
+.hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) {
+  --hands-sheet-row-pad-y: 0.06em;
+  line-height: 1;
+}
+
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__rows
+  .hands-sheet__row-btn
+  > .hands-sheet__cell:not(.hands-sheet__cell--header):not(.hands-sheet__cell--tiles) {
+  padding-block: var(--hands-sheet-row-pad-y);
+}
+
+/* Parenthesis/detail line sits flush under the card-hand line — no gap above it. */
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__rows
+  .hands-sheet__row-btn
+  > .hands-sheet__cell--detail-pad:not(.hands-sheet__cell--header):not(.hands-sheet__cell--tiles) {
+  padding-block-start: 0;
 }
 
 /*

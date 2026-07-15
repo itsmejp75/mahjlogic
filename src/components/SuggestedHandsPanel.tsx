@@ -1265,6 +1265,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     scrollTop: 0,
   })
   const prevEffectiveFocusRowKeyRef = useRef<string | null>(null)
+  const prevTilesDetailActiveRef = useRef<boolean | null>(null)
 
   const dragScrollRef = useRef<{
     pointerId: number
@@ -1977,6 +1978,14 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     prevEffectiveFocusRowKeyRef.current = effectiveFocusRowKey
     const fallbackH = rowHeightForVirtual
 
+    // Toggling "Tiles" changes every row's height without necessarily reordering the list. That
+    // height change alone shifts the anchored row out of view (scrollTop stays put while content
+    // grows/shrinks above it), so treat it like a re-rank and re-pin the anchor to its prior spot.
+    const tilesToggled =
+      prevTilesDetailActiveRef.current != null &&
+      prevTilesDetailActiveRef.current !== tilesDetailActive
+    prevTilesDetailActiveRef.current = tilesDetailActive
+
     // At the very top with nothing selected, let the list re-rank from the top down (the "best"
     // hands are what you're looking at). Otherwise keep the viewed rows visually pinned so a hand
     // sorting in above/below doesn't push the rows you're reading up or down.
@@ -1986,7 +1995,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
 
     if (
       !atTopNoSelection &&
-      keysChanged &&
+      (keysChanged || tilesToggled) &&
       !dragScrollActiveRef.current
     ) {
       const scrollRect = scrollEl.getBoundingClientRect()
@@ -2082,6 +2091,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     refreshHandsAboveViewHint,
     rowHeightForVirtual,
     syncVirtualRange,
+    tilesDetailActive,
   ])
 
   // Measure a real mounted row so spacers match live height (font scales with panel cqi).

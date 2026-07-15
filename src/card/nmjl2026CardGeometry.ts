@@ -390,10 +390,12 @@ function buildGroupsAndMatches(row: Nmjl2026CsvHandRow): { groups: PatternGroup[
           const runHasDigitRanks = colorRunHasDigitRanks(run, row)
           if (isAnyThreeDragonsParenthetical(row) && !runHasDigitRanks) {
             // W&D #2: three D-only ink rows → consolidated `dragon-meld-permute` at end.
-          } else if (slot.ranks.size > 0 && !runHasDigitRanks) {
-            // Same ink twice (e.g. W&D #2 `blue:1234` then `blue:DDDD`) — not matching dragons on the run.
-            pushFixedGroup(groups, part.length, dragonTestForInk(run.ink))
           } else {
+            // NMJL ink convention: a dragon run printed in the same color as a number group
+            // belongs to that group's suit slot (matching dragons) — even when the card prints the
+            // dragons in a *separate* run of the same ink (Consec. Run 5b `red:22 … red:DDDD`,
+            // "Dragons Match Middle No."). Folding into the slot keeps the dragons tied to whatever
+            // suit that slot resolves to instead of locking them to one dragon type.
             slot.dragonCount += part.length
           }
           matchTests.push(dragon)

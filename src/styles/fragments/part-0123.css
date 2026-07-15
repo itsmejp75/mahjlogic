@@ -787,6 +787,18 @@ html .app-top-exposure-container .exposure-rack--discard-tracker-bot-row .exposu
   max-height: var(--rack-tile-h);
 }
 
+/*
+ * Filled meld faces hang 1px below the slot (`bottom: -1px` above) to cover a subpixel
+ * hairline, and the slot clips them with `overflow: hidden`. Round the slot's own corners
+ * so the clip keeps the tile's bottom radius instead of squaring it off (matches the top).
+ */
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot:has(.tile-face) {
+  border-radius: var(--discard-tray-tile-corner-r, var(--tile-face-border-radius));
+}
+
 html
   .app-top-exposure-container
   .discard-tracker__overlay-grid
@@ -2557,7 +2569,15 @@ html[data-home-screen-app]:not([data-native-app])
 }
 
 /*
- * Rack backdrop — solid app chrome (no top-band feather into the hand).
+ * Rack backdrop — send it behind the neighbouring tile shadows.
+ *
+ * `.app-rack-stage` is raised to `z-index: 2` so the hand tiles / Seat / Charleston row paint
+ * above the discard-tracker band. That also lifted this opaque backdrop above the tracker, so it
+ * covered the downward shadows of the discard-tracker + bot-exposure lit tiles AND the upward
+ * shadows at the tops of the main-rack lit tiles — the dark-gray divider between the two bands
+ * "ate" both. Keep it transparent instead: the identical `--app-bg-base` (#23282e) app-main layer
+ * sits below the raised rack (and below the tracker's shadow layer), so the chrome colour is
+ * unchanged while the neighbouring tile shadows now render through the divider.
  */
 .app-dnd-frame:has(> .app-play-split.app-top-exposure-container)
   .panel.panel--hand
@@ -2567,7 +2587,7 @@ html[data-home-screen-app]:not([data-native-app])
   left: var(--app-bg-side-bleed-left);
   right: auto;
   width: var(--app-bg-side-bleed-width);
-  background-color: var(--app-bg-paint-color);
+  background-color: transparent;
   background-image: none;
   -webkit-mask-image: none;
   mask-image: none;

@@ -2870,6 +2870,24 @@ html
   z-index: auto !important;
 }
 
+/*
+ * Exception: the hands-identifier *selected* row must keep its lift (part-0083 `z-index: 6`)
+ * so the yellow halo (::after) paints over the row below. Without this, the blanket
+ * `z-index: auto` above lets the lower (opaque-background) sibling — the bottom/North row —
+ * cover the selected middle/West row's downward glow edge. Higher specificity + !important
+ * beats the coach-lift reset while leaving unselected rows at `auto` for cross-row lit stacking.
+ */
+html.app-dnd-frame
+  .app-play-split.app-top-exposure-container
+  .discard-tracker__overlay-grid
+  > .discard-tracker__overlay-row.discard-tracker__overlay-row--bot-hands-active,
+html
+  .app-dnd-frame
+  > .app-play-split.app-top-exposure-container
+  .discard-tracker__overlay-row.discard-tracker__overlay-row--bot-hands-active {
+  z-index: 6 !important;
+}
+
 html
   .app-dnd-frame
   > .app-play-split.app-top-exposure-container
