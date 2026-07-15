@@ -2019,6 +2019,10 @@ export default function App() {
     })
   }, [])
 
+  const clearBotHandsIdentifierFocus = useCallback(() => {
+    setBotHandsIdentifierFocusSeat(null)
+  }, [])
+
   const toggleConcealedHandReminder = useCallback(() => {
     setConcealedHandReminderEnabled((v) => {
       const next = !v
@@ -4873,6 +4877,7 @@ export default function App() {
               seat={botHandsIdentifierFocusSeat}
               patterns={botHandsIdentifierPatterns}
               discardTraySurface
+              onClose={clearBotHandsIdentifierFocus}
             />
           ) : (
             <SuggestedHandsPanel
@@ -4904,6 +4909,7 @@ export default function App() {
     suggestedDiscardOverlayBounds,
     botHandsIdentifierFocusSeat,
     botHandsIdentifierPatterns,
+    clearBotHandsIdentifierFocus,
     toggleSuggestedPinnedHandKey,
     eastSuggestedHands,
     suggestedFocusHandKey,

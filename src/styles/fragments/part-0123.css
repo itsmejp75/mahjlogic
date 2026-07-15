@@ -3663,12 +3663,21 @@ html .app-dnd-frame > .app-play-split.app-top-exposure-container:has(
   overflow: visible !important;
 }
 
-/* Bot hands-identifier selection: same stack-above-rack treatment as joker-swap glow. */
+/*
+ * Bot hands-identifier selection (hands tray is open → part-0103 sets `.app-play-split` to
+ * z-index 100 and `.app-rack-stage` to 0, which puts the yellow halo over Discard>).
+ *
+ * Desired paint order: dark seam < glow < green discard slot; hands sheet stays on top.
+ * - Top band stays at 100 (glow over dark gray / rack tray paint).
+ * - Rack rises to 101 so green Discard> chrome covers the halo where they overlap.
+ * - Bottom discard tray rises to 102 so the bot-hands sheet is not buried under the rack.
+ * - Rack tray ::before skips the top divider so the halo still shows through the seam.
+ */
 html .app-dnd-frame > .app-play-split.app-top-exposure-container:has(
     .discard-tracker__overlay-row--bot-hands-active
   ) {
   position: relative;
-  z-index: 30 !important;
+  z-index: 100 !important;
   overflow: visible !important;
 }
 
@@ -3678,7 +3687,19 @@ html .app-dnd-frame:has(
     )
   )
   > .app-rack-stage {
-  z-index: 1 !important;
+  position: relative;
+  z-index: 101 !important;
+  overflow: visible !important;
+}
+
+html .app-dnd-frame:has(
+    > .app-play-split.app-top-exposure-container:has(
+      .discard-tracker__overlay-row--bot-hands-active
+    )
+  )
+  > .app-discard-bottom-container {
+  position: relative;
+  z-index: 102 !important;
 }
 
 html .app-dnd-frame > .app-play-split.app-top-exposure-container:has(
@@ -3695,6 +3716,16 @@ html .app-dnd-frame > .app-play-split.app-top-exposure-container:has(
     .app-opponents-rail__cell
   ) {
   overflow: visible !important;
+}
+
+html .app-dnd-frame:has(
+    > .app-play-split.app-top-exposure-container:has(
+      .discard-tracker__overlay-row--bot-hands-active
+    )
+  )
+  .panel.panel--hand
+  > .panel-hand-rack::before {
+  top: var(--play-tray-h-divider);
 }
 
 html .app-dnd-frame:has(

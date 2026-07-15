@@ -8,6 +8,7 @@ type Props = {
   seat: BotSeat
   patterns: readonly PracticePattern[]
   discardTraySurface?: boolean
+  onClose?: () => void
 }
 
 function patternCardRef(p: PracticePattern): string {
@@ -18,6 +19,7 @@ export const BotExposureHandsPanel = memo(function BotExposureHandsPanel({
   seat,
   patterns,
   discardTraySurface = false,
+  onClose,
 }: Props) {
   const rootClassName = [
     'panel',
@@ -36,6 +38,23 @@ export const BotExposureHandsPanel = memo(function BotExposureHandsPanel({
         <div className="bot-exposure-hands-panel__toolbar">
           <p className="bot-exposure-hands-panel__title">{title}</p>
         </div>
+        {onClose ? (
+          <button
+            type="button"
+            className="bot-exposure-hands-panel__close"
+            aria-label={`Hide ${seat} possible hands`}
+            onClick={onClose}
+          >
+            <svg
+              className="bot-exposure-hands-panel__close-x"
+              viewBox="0 0 12 12"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path d="M3 3l6 6M9 3L3 9" />
+            </svg>
+          </button>
+        ) : null}
         <div className="hands-panel__list-column">
           <div className="hands-list-scroll bot-exposure-hands-panel__scroll">
             {patterns.length === 0 ? (

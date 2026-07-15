@@ -73,8 +73,13 @@
 
 /*
  * Selected bot exposure (hands-identifier): same soft yellow/orange outer glow as joker-swap /
- * blank-exchange drop frames (part-0123). Raised so the halo paints over Discard> below.
+ * blank-exchange drop frames (part-0123). Row z-index lifts the halo over sibling overlay rows.
+ * Vs Discard> while the hands tray is open (part-0123): beat part-0103’s play-split@100 /
+ * rack@0 so paint order is dark seam < glow < green discard (hands sheet stays above).
  * Single ::after frame (border + glow) — avoid a separate box-shadow ring that reads as a double border.
+ *
+ * Frame stays behind cell content (z-index: 0). Raising only the bouncing slot fails because the
+ * role=button / rack / meld wrappers flatten into a layer under a higher ::after.
  */
 .discard-tracker__overlay-row--bot-hands-active {
   position: relative;
@@ -86,6 +91,11 @@
   z-index: 1;
   outline: none;
   box-shadow: none;
+}
+
+.discard-tracker__overlay-row--bot-hands-active .app-opponents-rail__cell > * {
+  position: relative;
+  z-index: 1;
 }
 
 .discard-tracker__overlay-row--bot-hands-active .app-opponents-rail__cell::after {
@@ -105,11 +115,14 @@
   box-shadow: 0 0 var(--_glow-blur) var(--_glow-spread)
     color-mix(in srgb, var(--_drop-frame-color) 55%, transparent);
   pointer-events: none;
-  z-index: 2;
+  z-index: 0;
 }
 
 /* Slim category | hand sheet replacing Suggested Hands while inspecting a bot. */
 .bot-exposure-hands-panel .hands-panel__content {
+  position: relative;
+  /* Size close control from panel width so resize keeps size + inset ratios. */
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -145,6 +158,56 @@
   text-overflow: ellipsis;
 }
 
+/* Orange boxed × — floats just under the title, right edge; above header glow stroke. */
+.bot-exposure-hands-panel__close {
+  --_bot-hands-close: var(--simple-joker-yellow, #ffc107);
+  /* Same width scale as bot hands list type — size/insets track panel resize. */
+  --_bot-hands-close-u: calc(100cqi * 0.0235);
+  position: absolute;
+  /* Clear the toolbar band, then a panel-proportional gap below the glow. */
+  top: calc(
+    1.4 * var(--hands-metric-column-header-fs, var(--app-ui-control-fs-sm, 0.75rem))
+    + var(--hands-sheet-grid-line-w, 0.5px)
+    + var(--_bot-hands-close-u) * 0.3
+  );
+  right: calc(var(--_bot-hands-close-u) * 0.4);
+  z-index: 4;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  width: calc(var(--_bot-hands-close-u) * 1.4);
+  height: calc(var(--_bot-hands-close-u) * 1.4);
+  margin: 0;
+  padding: 0;
+  border: 0.5px solid var(--_bot-hands-close);
+  border-radius: calc(var(--_bot-hands-close-u) * 0.2);
+  background: color-mix(in srgb, var(--app-bg-base, #0a0a0a) 72%, transparent);
+  color: var(--_bot-hands-close);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.bot-exposure-hands-panel__close-x {
+  display: block;
+  width: 72%;
+  height: 72%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 0.5px;
+  stroke-linecap: square;
+  vector-effect: non-scaling-stroke;
+  overflow: visible;
+}
+
+.bot-exposure-hands-panel__close:hover {
+  background: color-mix(in srgb, var(--_bot-hands-close) 18%, var(--app-bg-base, #0a0a0a) 82%);
+}
+
+.bot-exposure-hands-panel__close:focus-visible {
+  outline: 2px solid var(--_bot-hands-close);
+  outline-offset: 2px;
+}
+
 .bot-exposure-hands-panel__empty {
   margin: 0.75rem 0.6rem;
   color: color-mix(in srgb, var(--text-h) 70%, transparent);
@@ -155,6 +218,15 @@
   min-height: 0;
   flex: 1 1 auto;
   overflow: auto;
+  /* Match suggested-hands body: keep wheel scroll, hide the track. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.bot-exposure-hands-panel__scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .bot-exposure-hands-list {
