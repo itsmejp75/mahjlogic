@@ -277,6 +277,15 @@ function branchesSuitLocked(g: Extract<PatternGroup, { kind: 'suit-locked' }>): 
     }
     if (g.opposingDragons) {
       const [d1, d2] = opposingForSuit[s]
+      if (g.opposingDragons.eitherType) {
+        // One kong/pung of either opposing type — two embedding branches per number suit.
+        for (const d of [d1, d2]) {
+          const branch = new Map(m)
+          inc(branch, `d:${d}`, g.opposingDragons.need)
+          out.push(branch)
+        }
+        continue
+      }
       inc(m, `d:${d1}`, g.opposingDragons.need)
       inc(m, `d:${d2}`, g.opposingDragons.need)
     }

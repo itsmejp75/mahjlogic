@@ -290,15 +290,24 @@ function buildRankGroups(row: Nmjl2026CsvHandRow, rankSlots: RankSlot[]): Patter
         ...dragonOrphanRankGroups(row, rankSlots),
       ]
     }
+    const opposingOrphans = rankSlots.filter((s) => s.ranks.size === 0 && s.dragonCount > 0)
     const opposingNeed = isOpposingDragonParenthetical(row)
       ? opposingDragonNeedFromSlots(rankSlots, slot)
       : 0
+    // Two orphan dragon melds (DDD DDD) → need of each opposing type.
+    // One orphan meld (DDD / DDDD) → either opposing type, not 2×need (that blew past 14).
+    const opposingDragons =
+      opposingNeed > 0
+        ? opposingOrphans.length >= 2
+          ? { need: opposingOrphans[0]!.dragonCount }
+          : { need: opposingNeed, eitherType: true as const }
+        : undefined
     return [
       {
         kind: 'suit-locked',
         rankNeeds,
         dragonCount: anyDragon ? 0 : slot.dragonCount,
-        opposingDragons: opposingNeed > 0 ? { need: opposingNeed } : undefined,
+        opposingDragons,
       },
       ...(anyDragon && !isOpposingDragonParenthetical(row) && slot.dragonCount > 0
         ? ([{ kind: 'fixed', need: slot.dragonCount, test: dragon }] as PatternGroup[])

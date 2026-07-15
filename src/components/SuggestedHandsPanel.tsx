@@ -11,12 +11,14 @@ import {
   type MouseEvent,
   type PointerEvent,
 } from 'react'
+import type { ExposureMeld } from '../analysis/botExposureHandStrip'
 import {
   buildConsecRanksTierStripRow,
   buildSuggestedStripSlotRowsWithVariants,
   compareSuggestedHandsByProximity,
   focusKeyPatternId,
   greedyPatternMatchDetail,
+  realignSuggestedStripToClaimMelds,
   suggestedHandShownInPanelList,
   type GreedyPatternMatchOpts,
   type SuggestedStripSlot,
@@ -547,6 +549,28 @@ const SuggestedHandDeadCauseIcon = memo(function SuggestedHandDeadCauseIcon({
   )
 })
 
+/** Contiguous strip runs; non-null {@link SuggestedStripSlot.exposureMeldId} is boxed like bot hands. */
+type SuggestedStripRun = {
+  exposureMeldId: number | null
+  slots: SuggestedStripSlot[]
+  startIndex: number
+}
+
+function segmentSuggestedStripIntoRuns(slots: readonly SuggestedStripSlot[]): SuggestedStripRun[] {
+  const runs: SuggestedStripRun[] = []
+  for (let i = 0; i < slots.length; i++) {
+    const slot = slots[i]!
+    const meldId = slot.exposureMeldId ?? null
+    const last = runs[runs.length - 1]
+    if (!last || last.exposureMeldId !== meldId) {
+      runs.push({ exposureMeldId: meldId, slots: [slot], startIndex: i })
+    } else {
+      last.slots.push(slot)
+    }
+  }
+  return runs
+}
+
 const SuggestedHandStripTileCell = memo(function SuggestedHandStripTileCell({
   slot,
   showJokerGuide,
@@ -659,6 +683,61 @@ type PatternRowInteractionProps = {
   onClick: (e: MouseEvent<HTMLButtonElement>) => void
 }
 
+function renderSuggestedStripRuns({
+  slots,
+  isActiveRow,
+  keyPrefix,
+  deadCause,
+  gridClassName,
+  runClassPrefix,
+  cellClassPrefix,
+}: {
+  slots: SuggestedStripSlot[]
+  isActiveRow: boolean
+  keyPrefix: string
+  deadCause: DeadCauseHint | null
+  gridClassName: string
+  runClassPrefix: 'hands-sheet__tile-run' | 'hands-list__pattern-tile-run'
+  cellClassPrefix: 'hands-sheet__tile-cell' | 'hands-list__pattern-tile-cell'
+}) {
+  const runs = segmentSuggestedStripIntoRuns(slots)
+  return (
+    <div className={gridClassName} role="presentation">
+      {runs.map((run, runIdx) => (
+        <div
+          key={`${keyPrefix}-run-${runIdx}`}
+          className={[
+            runClassPrefix,
+            run.exposureMeldId !== null ? `${runClassPrefix}--exposure` : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          style={{ ['--_run-tiles' as string]: run.slots.length }}
+        >
+          {run.slots.map((slot, j) => {
+            const i = run.startIndex + j
+            const showJokerGuide = isActiveRow && slot.jokerSuggested
+            const suggestBest = isActiveRow && slot.highlight
+            const dim = isActiveRow && !slot.highlight && !slot.jokerSuggested
+            const deadCauseSlot = isActiveRow && stripSlotMatchesDeadCause(slot, deadCause)
+            return (
+              <SuggestedHandStripTileCell
+                key={`${keyPrefix}-${i}`}
+                slot={slot}
+                showJokerGuide={showJokerGuide}
+                suggestBest={suggestBest}
+                dim={dim}
+                deadCauseSlot={deadCauseSlot}
+                classPrefix={cellClassPrefix}
+              />
+            )
+          })}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 const SuggestedHandSheetTileGrid = memo(function SuggestedHandSheetTileGrid({
   slots,
   isActiveRow,
@@ -670,27 +749,37 @@ const SuggestedHandSheetTileGrid = memo(function SuggestedHandSheetTileGrid({
   keyPrefix: string
   deadCause: DeadCauseHint | null
 }) {
-  return (
-    <div className="hands-sheet__tiles-grid" role="presentation">
-      {slots.map((slot, i) => {
-        const showJokerGuide = isActiveRow && slot.jokerSuggested
-        const suggestBest = isActiveRow && slot.highlight
-        const dim = isActiveRow && !slot.highlight && !slot.jokerSuggested
-        const deadCauseSlot = isActiveRow && stripSlotMatchesDeadCause(slot, deadCause)
-        return (
-          <SuggestedHandStripTileCell
-            key={`${keyPrefix}-${i}`}
-            slot={slot}
-            showJokerGuide={showJokerGuide}
-            suggestBest={suggestBest}
-            dim={dim}
-            deadCauseSlot={deadCauseSlot}
-            classPrefix="hands-sheet__tile-cell"
-          />
-        )
-      })}
-    </div>
-  )
+  return renderSuggestedStripRuns({
+    slots,
+    isActiveRow,
+    keyPrefix,
+    deadCause,
+    gridClassName: 'hands-sheet__tiles-grid',
+    runClassPrefix: 'hands-sheet__tile-run',
+    cellClassPrefix: 'hands-sheet__tile-cell',
+  })
+})
+
+const SuggestedHandListTileGrid = memo(function SuggestedHandListTileGrid({
+  slots,
+  isActiveRow,
+  keyPrefix,
+  deadCause,
+}: {
+  slots: SuggestedStripSlot[]
+  isActiveRow: boolean
+  keyPrefix: string
+  deadCause: DeadCauseHint | null
+}) {
+  return renderSuggestedStripRuns({
+    slots,
+    isActiveRow,
+    keyPrefix,
+    deadCause,
+    gridClassName: 'hands-list__pattern-tiles-grid',
+    runClassPrefix: 'hands-list__pattern-tile-run',
+    cellClassPrefix: 'hands-list__pattern-tile-cell',
+  })
 })
 
 const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
@@ -1030,27 +1119,12 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
           <div className="hands-list__cell hands-list__cell--tiles">
             <div className="hands-list__pattern-tiles">
               {rowStripSlots.length > 0 ? (
-                <div className="hands-list__pattern-tiles-grid" role="presentation">
-                  {rowStripSlots.map((slot, i) => {
-                    const showJokerGuide = rowIsFocused && slot.jokerSuggested
-                    const suggestBestRing = rowIsFocused && slot.highlight
-                    const dimPatternSlot =
-                      rowIsFocused && !slot.highlight && !slot.jokerSuggested
-                    const deadCauseSlot =
-                      rowIsFocused && stripSlotMatchesDeadCause(slot, rowDeadCause)
-                    return (
-                      <SuggestedHandStripTileCell
-                        key={`${row.reactKey}-${i}`}
-                        slot={slot}
-                        showJokerGuide={showJokerGuide}
-                        suggestBest={suggestBestRing}
-                        dim={dimPatternSlot}
-                        deadCauseSlot={deadCauseSlot}
-                        classPrefix="hands-list__pattern-tile-cell"
-                      />
-                    )
-                  })}
-                </div>
+                <SuggestedHandListTileGrid
+                  slots={rowStripSlots}
+                  isActiveRow={rowIsFocused}
+                  keyPrefix={row.reactKey}
+                  deadCause={rowDeadCause}
+                />
               ) : null}
             </div>
           </div>
@@ -1117,6 +1191,8 @@ type Props = {
   rackTilesForPatternMatch?: TileInstance[]
   /** This seat’s exposure tile ids — fixes like-numbers rank for strip layout when set. */
   exposureTileIdsForSuggestedStrip?: ReadonlySet<string>
+  /** Claim melds for boxing exposed runs on the tile strip (same placement as bot possible-hands). */
+  exposureMeldsForSuggestedStrip?: readonly ExposureMeld[]
   /** Section names turned off in the app menu (not listed here ⇒ all sections from the card may show). */
   uncheckedSections: Set<string>
   /** When true, omit hands marked concealed (C) from the suggested list. */
@@ -1151,6 +1227,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   rackTilesForSuggestedStrip,
   rackTilesForPatternMatch,
   exposureTileIdsForSuggestedStrip,
+  exposureMeldsForSuggestedStrip,
   uncheckedSections,
   hideConcealedHands,
   cardPatterns,
@@ -1649,9 +1726,16 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     if (!tilesStripSlotsOn || !stripKeysNeeded || rackTilesForSuggestedStrip.length === 0) {
       return new Map<string, StripRowsEntry>()
     }
-    const exposureKey = exposureTileIdsForSuggestedStrip
-      ? [...exposureTileIdsForSuggestedStrip].join('\0')
-      : ''
+    const exposureKey = [
+      exposureTileIdsForSuggestedStrip
+        ? [...exposureTileIdsForSuggestedStrip].join('\0')
+        : '',
+      exposureMeldsForSuggestedStrip
+        ? exposureMeldsForSuggestedStrip
+            .map((m) => m.tiles.map((t) => t.id).join(','))
+            .join('|')
+        : '',
+    ].join('#')
     const cache = stripCacheRef.current
     if (
       cache.rackSig !== stripRackSignature ||
@@ -1675,6 +1759,9 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     for (const h of filtered) {
       lineByKey.set(handEntryKey(h), h)
     }
+    const boxMelds = exposureMeldsForSuggestedStrip?.length
+      ? exposureMeldsForSuggestedStrip
+      : undefined
 
     for (const key of stripKeysNeeded) {
       if (cache.map.has(key)) continue
@@ -1692,7 +1779,25 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
         const rows: SuggestedStripSlot[][] = []
         for (const { perm, base } of h.consecRanksTier.combos) {
           const row = buildConsecRanksTierStripRow(p, rackMatch, perm, base, rackDisplay)
-          if (row) rows.push(row)
+          if (!row) continue
+          if (boxMelds) {
+            const detail = greedyPatternMatchDetail(rackMatch, p, greedyOpts)
+            const bestIdsForAssign = new Set(detail.usedOrder.filter((id) => rackIdSet.has(id)))
+            rows.push(
+              realignSuggestedStripToClaimMelds(
+                row,
+                p,
+                boxMelds,
+                rackDisplay,
+                detail.usedOrder,
+                bestIdsForAssign,
+                detail.usedMeta,
+                exposureTileIdsForSuggestedStrip,
+              ),
+            )
+          } else {
+            rows.push(row)
+          }
         }
         cache.map.set(key, { rows, ocVariantSuffixes: [] })
         continue
@@ -1711,6 +1816,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
         bestIdsForAssign,
         detail.usedMeta,
         exposureTileIdsForSuggestedStrip,
+        boxMelds,
       )
       cache.map.set(key, {
         rows: result.rows,
@@ -1732,6 +1838,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     stripRackSignature,
     stripPatternMatchRackSignature,
     exposureTileIdsForSuggestedStrip,
+    exposureMeldsForSuggestedStrip,
     handEntryKey,
     cardPatternsById,
     rackTilesForSuggestedStrip,

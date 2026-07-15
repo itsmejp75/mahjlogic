@@ -2631,11 +2631,15 @@ export default function App() {
     ],
   )
 
-  const suggestedHandsExposureTileIds = useMemo((): ReadonlySet<string> | undefined => {
+  const suggestedHandsExposureMelds = useMemo(() => {
     const exposuresForUi = callStagingSuggestedPreview?.eastMelds ?? eastExposures
-    const ids = exposuresForUi.flatMap((e) => e.tiles).map((t) => t.id)
-    return ids.length > 0 ? new Set(ids) : undefined
+    return exposuresForUi.length > 0 ? exposuresForUi : undefined
   }, [callStagingSuggestedPreview, eastExposures])
+
+  const suggestedHandsExposureTileIds = useMemo((): ReadonlySet<string> | undefined => {
+    if (!suggestedHandsExposureMelds?.length) return undefined
+    return new Set(suggestedHandsExposureMelds.flatMap((e) => e.tiles).map((t) => t.id))
+  }, [suggestedHandsExposureMelds])
 
   /**
    * Discarded tile defs (with multiplicity — one entry per copy) a blank in hand could be redeemed
@@ -4894,6 +4898,7 @@ export default function App() {
               rackTilesForSuggestedStrip={deferredRackForSuggestedStrip}
               rackTilesForPatternMatch={deferredRackForSuggestedPatternMatch}
               exposureTileIdsForSuggestedStrip={suggestedHandsExposureTileIds}
+              exposureMeldsForSuggestedStrip={suggestedHandsExposureMelds}
               uncheckedSections={suggestedHandsUncheckedSections}
               hideConcealedHands={suggestedHandsHideConcealed}
               cardPatterns={cardPatterns}
@@ -4922,6 +4927,7 @@ export default function App() {
     deferredRackForSuggestedStrip,
     deferredRackForSuggestedPatternMatch,
     suggestedHandsExposureTileIds,
+    suggestedHandsExposureMelds,
     suggestedHandsUncheckedSections,
     suggestedHandsHideConcealed,
     cardPatterns,

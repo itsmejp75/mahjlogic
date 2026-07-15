@@ -195,6 +195,17 @@ function expandGroup(
         }
         if (g.opposingDragons) {
           const opp = SUITS.filter((x) => x !== s).map((x) => dragonKeyForSuit(x))
+          if (g.opposingDragons.eitherType) {
+            for (const dk of opp) {
+              out.push(
+                appendPartial(partial, [
+                  ...slots,
+                  { tileType: dk, targetCount: g.opposingDragons.need },
+                ]),
+              )
+            }
+            continue
+          }
           for (const dk of opp) {
             slots.push({ tileType: dk, targetCount: g.opposingDragons.need })
           }

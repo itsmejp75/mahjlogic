@@ -11,13 +11,14 @@
 /*
  * Wall-draw / Charleston / opening-deal fly-in.
  *
- * `.rack-stage__rack-bottom` is normally z-index 1 under `.rack-stage__rack-top` (z-index 2),
- * so a just-drawn tile’s z-index:10 cannot clear the green discard / pass strip.
+ * Green Discard> / Charleston wells live on `.rack-stage__rack-top` (z-index 2; staged discard
+ * lifts it to 5). The hand is a *sibling* `.panel-hand-rack__hand-tray`, not a child of rack-top —
+ * so lifting only `.rack-stage__rack-bottom` can still lose when the tray forms a stacking context
+ * (`position: relative` for Seat:, transforms on call-meld inset, etc.). Bot-hands glow stacking
+ * (rack above the top band so green covers the halo) made that more likely to show.
  *
- * Use z-index: 3 (not `auto`): after an exposure, call-meld inset applies `transform: translateX`
- * on `.hand-row`, which creates a stacking context and traps tile z-index inside the hand.
- * `auto` then leaves the whole hand under rack-top — fly-in slides in *behind* the green slot.
- * z-index: 3 lifts the hand above rack-top for the animation (same idea as joker-swap bounce).
+ * Lift the hand-tray itself above rack-top for the animation (z-index 6 beats staged rack-top 5).
+ * Also lift rack-bottom so tile z-index:10 still clears within the tray (same idea as joker-swap).
  *
  * Exception — pinned call melds: that lift buries owned-meld vignettes under the hand for the
  * whole fly-in. Keep the hand under rack-top so the meld stay lifted; the green slot may sit
@@ -25,9 +26,24 @@
  */
 .app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
   .panel--hand
+  .rack-stage__rack-col
+  > .panel-hand-rack__hand-tray {
+  position: relative;
+  z-index: 6;
+}
+
+.app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
+  .panel--hand
   .panel-hand-rack__hand-tray
   .rack-stage__rack-bottom {
   z-index: 3;
+}
+
+.app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
+  .panel--hand
+  .rack-stage__rack-col:has(.exposure-rack--has-call-melds)
+  > .panel-hand-rack__hand-tray {
+  z-index: auto;
 }
 
 .app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))

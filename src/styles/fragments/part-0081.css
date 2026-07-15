@@ -2613,6 +2613,15 @@
   padding-block: calc(0.08em + var(--hands-pattern-lift-pad-block, 0.28rem) / 2);
 }
 
+/* Boxed exposure runs are taller (real pad like bot hands) — don't clip the frame. */
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2).hands-sheet--detail-tiles
+  .hands-sheet__cell--hand.hands-sheet__cell--detail-pad
+  .hands-sheet__tiles-grid:has(.hands-sheet__tile-run--exposure) {
+  overflow: visible;
+}
+
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) .hands-sheet__hand-title-line {
   /*
    * inline-flex keeps the card hand, boxed C, and dead-cause icon on one vertical rhythm.
@@ -2856,6 +2865,89 @@
   justify-content: flex-start;
   flex-wrap: nowrap;
   min-width: 0;
+}
+
+/*
+ * Suggested-hands strip runs: non-exposure runs use `display: contents` so the 14-col grid
+ * stays intact. Exposed melds use the same padded frame + inter-run gap as bot possible-hands.
+ */
+.hands-sheet__tile-run,
+.hands-list__pattern-tile-run {
+  display: contents;
+}
+
+.hands-sheet__tile-run--exposure,
+.hands-list__pattern-tile-run--exposure {
+  --_suggested-exposure-frame: color-mix(in srgb, var(--text-h) 45%, var(--border));
+  --_suggested-exposure-pad: calc(var(--hands-sheet-tile-w, var(--hands-preview-tile-w, 0.9rem)) * 0.08);
+  --_suggested-exposure-tile-radius: calc(
+    0.116 * var(--hands-sheet-tile-w, var(--hands-preview-tile-w, 0.9rem))
+  );
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--hands-sheet-tile-gap, var(--hands-row-pattern-gap, var(--rack-tile-gap)));
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  z-index: 1;
+  /* Real pad (not overlay) so neighbors clear the frame — same as bot possible-hands. */
+  padding: var(--_suggested-exposure-pad);
+  border-radius: calc(var(--_suggested-exposure-tile-radius) + var(--_suggested-exposure-pad));
+  border: 1px solid var(--_suggested-exposure-frame);
+  box-sizing: border-box;
+  background: color-mix(in srgb, var(--_suggested-exposure-frame) 12%, transparent);
+}
+
+/* Tray sheet: when a meld is boxed, flex runs with fixed tile size (pad stays additive). */
+.hands-panel__list-column .hands-sheet__tiles-grid:has(.hands-sheet__tile-run--exposure) {
+  display: flex;
+  width: max-content;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.hands-panel__list-column
+  .hands-sheet__tiles-grid:has(.hands-sheet__tile-run--exposure)
+  .hands-sheet__tile-run {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--hands-sheet-tile-gap);
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.hands-panel__list-column
+  .hands-sheet__tiles-grid:has(.hands-sheet__tile-run--exposure)
+  .hands-sheet__tile-cell {
+  flex: 0 0 auto;
+  width: var(--hands-sheet-tile-w);
+  height: var(--hands-sheet-tile-h);
+}
+
+/* Compact list strip — same flex + padded exposure runs as bot hands. */
+.hands-list__pattern-tiles-grid:has(.hands-list__pattern-tile-run--exposure),
+.hands-list__row-hit--with-tiles
+  .hands-list__pattern-tiles-grid:has(.hands-list__pattern-tile-run--exposure) {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--hands-row-pattern-gap, var(--rack-tile-gap));
+  width: max-content;
+  grid-template-columns: none;
+}
+
+.hands-list__pattern-tiles-grid:has(.hands-list__pattern-tile-run--exposure)
+  .hands-list__pattern-tile-run {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--hands-row-pattern-gap, var(--rack-tile-gap));
+  flex: 0 0 auto;
+  flex-shrink: 0;
 }
 
 .hands-sheet__tile-cell {

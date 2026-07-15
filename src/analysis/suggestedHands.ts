@@ -23,6 +23,10 @@ import type { SuggestedHandLine } from '../training/types'
 import { suggestedHandSectionMenuLabel } from '../suggestedHands/filterSettings'
 import type { BotExposure } from './types'
 import {
+  placeExposureMeldsOnCardLine,
+  type ExposureMeld,
+} from './botExposureHandStrip'
+import {
   claimMeldsFitPracticePattern,
   tileInstancesWithClaimMeldJokersResolved,
   tileInstancesWithClaimMeldJokersResolvedForTilesAway,
@@ -426,7 +430,11 @@ function countGroupPreviewSlots(g: PatternGroup): number {
     case 'suit-locked': {
       let s = g.rankNeeds.reduce((acc, x) => acc + x.need, 0)
       s += g.dragonCount
-      if (g.opposingDragons) s += 2 * g.opposingDragons.need
+      if (g.opposingDragons) {
+        s += g.opposingDragons.eitherType
+          ? g.opposingDragons.need
+          : 2 * g.opposingDragons.need
+      }
       return s
     }
     case 'suit-permute':
@@ -1093,14 +1101,21 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
           }
           if (g.opposingDragons) {
             const [drg1, drg2] = opposingForSuit[s]
-            fill += Math.min(
-              remaining.filter(t => t.def.cat === 'dragon' && t.def.dragon === drg1).length,
-              g.opposingDragons.need
-            )
-            fill += Math.min(
-              remaining.filter(t => t.def.cat === 'dragon' && t.def.dragon === drg2).length,
-              g.opposingDragons.need
-            )
+            const need = g.opposingDragons.need
+            if (g.opposingDragons.eitherType) {
+              const c1 = remaining.filter(t => t.def.cat === 'dragon' && t.def.dragon === drg1).length
+              const c2 = remaining.filter(t => t.def.cat === 'dragon' && t.def.dragon === drg2).length
+              fill += Math.min(Math.max(c1, c2), need)
+            } else {
+              fill += Math.min(
+                remaining.filter(t => t.def.cat === 'dragon' && t.def.dragon === drg1).length,
+                need,
+              )
+              fill += Math.min(
+                remaining.filter(t => t.def.cat === 'dragon' && t.def.dragon === drg2).length,
+                need,
+              )
+            }
           }
           if (fill > bestFill) { bestFill = fill; bestSuit = s }
         }
@@ -1116,12 +1131,21 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
           if (g.opposingDragons) {
             const [drg1, drg2] = opposingForSuit[s]
             const need = g.opposingDragons.need
-            const mo1 = take(d => d.cat === 'dragon' && d.dragon === drg1, need)
-            total += mo1
-            noteJokerSlots(need, mo1)
-            const mo2 = take(d => d.cat === 'dragon' && d.dragon === drg2, need)
-            total += mo2
-            noteJokerSlots(need, mo2)
+            if (g.opposingDragons.eitherType) {
+              const c1 = remaining.filter(t => t.def.cat === 'dragon' && t.def.dragon === drg1).length
+              const c2 = remaining.filter(t => t.def.cat === 'dragon' && t.def.dragon === drg2).length
+              const pick = c2 > c1 ? drg2 : drg1
+              const mo = take(d => d.cat === 'dragon' && d.dragon === pick, need)
+              total += mo
+              noteJokerSlots(need, mo)
+            } else {
+              const mo1 = take(d => d.cat === 'dragon' && d.dragon === drg1, need)
+              total += mo1
+              noteJokerSlots(need, mo1)
+              const mo2 = take(d => d.cat === 'dragon' && d.dragon === drg2, need)
+              total += mo2
+              noteJokerSlots(need, mo2)
+            }
           }
           for (const { rank, need } of g.rankNeeds) {
             const m = take(d => d.cat === 'suit' && d.suit === s && d.rank === rank, need)
@@ -1132,7 +1156,7 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
           if (g.dragonCount > 0) noteJokerSlots(g.dragonCount, 0)
           if (g.opposingDragons) {
             noteJokerSlots(g.opposingDragons.need, 0)
-            noteJokerSlots(g.opposingDragons.need, 0)
+            if (!g.opposingDragons.eitherType) noteJokerSlots(g.opposingDragons.need, 0)
           }
           for (const { need } of g.rankNeeds) noteJokerSlots(need, 0)
         }
@@ -2852,14 +2876,21 @@ function resolveStripTargetDefsForGreedyMatch(
           }
           if (g.opposingDragons) {
             const [drg1, drg2] = opposingForSuit[s]
-            fill += Math.min(
-              rem.filter((t) => t.def.cat === 'dragon' && t.def.dragon === drg1).length,
-              g.opposingDragons.need,
-            )
-            fill += Math.min(
-              rem.filter((t) => t.def.cat === 'dragon' && t.def.dragon === drg2).length,
-              g.opposingDragons.need,
-            )
+            const need = g.opposingDragons.need
+            if (g.opposingDragons.eitherType) {
+              const c1 = rem.filter((t) => t.def.cat === 'dragon' && t.def.dragon === drg1).length
+              const c2 = rem.filter((t) => t.def.cat === 'dragon' && t.def.dragon === drg2).length
+              fill += Math.min(Math.max(c1, c2), need)
+            } else {
+              fill += Math.min(
+                rem.filter((t) => t.def.cat === 'dragon' && t.def.dragon === drg1).length,
+                need,
+              )
+              fill += Math.min(
+                rem.filter((t) => t.def.cat === 'dragon' && t.def.dragon === drg2).length,
+                need,
+              )
+            }
           }
           if (fill > bestFill) {
             bestFill = fill
@@ -2885,8 +2916,15 @@ function resolveStripTargetDefsForGreedyMatch(
         if (g.opposingDragons) {
           const [drg1, drg2] = opposingForSuit[bestSuit]
           const need = g.opposingDragons.need
-          for (let k = 0; k < need && idx < b; k++) out[idx++] = { cat: 'dragon', dragon: drg1 }
-          for (let k = 0; k < need && idx < b; k++) out[idx++] = { cat: 'dragon', dragon: drg2 }
+          if (g.opposingDragons.eitherType) {
+            const c1 = rem.filter((t) => t.def.cat === 'dragon' && t.def.dragon === drg1).length
+            const c2 = rem.filter((t) => t.def.cat === 'dragon' && t.def.dragon === drg2).length
+            const pick = c2 > c1 ? drg2 : drg1
+            for (let k = 0; k < need && idx < b; k++) out[idx++] = { cat: 'dragon', dragon: pick }
+          } else {
+            for (let k = 0; k < need && idx < b; k++) out[idx++] = { cat: 'dragon', dragon: drg1 }
+            for (let k = 0; k < need && idx < b; k++) out[idx++] = { cat: 'dragon', dragon: drg2 }
+          }
         }
         break
       }
@@ -2986,6 +3024,11 @@ export type SuggestedStripSlot = {
   highlight: boolean
   /** True when this cell is the next legal joker fill target in the suggested meld. */
   jokerSuggested: boolean
+  /**
+   * Pattern group index when this cell belongs to a claim meld that is fully on the table
+   * (boxed on the suggested-hands tile strip, same idea as bot possible-hands).
+   */
+  exposureMeldId?: number | null
 }
 
 /**
@@ -3156,8 +3199,8 @@ export function finalizeExposureMeldStripHighlights(
 ): SuggestedStripSlot[] {
   if (!exposureTileIds.size || !p.groups) return slots
   const spans = groupPreviewIndexSpans(p)
+  if (!spans) return slots
   const cardLineMap = p.cardLineFromGroupSlotMap ?? inferCardLineFromGroupSlotMap(p)
-  if (!spans || !cardLineMap) return slots
   const out = slots.map((s) => ({ ...s }))
   for (let gi = 0; gi < p.groups.length; gi++) {
     const span = spans[gi]
@@ -3168,13 +3211,101 @@ export function finalizeExposureMeldStripHighlights(
       (m) => m.groupIdx === gi && exposureTileIds.has(m.id),
     ).length
     if (expInGroup < meldLen) continue
-    for (let d = 0; d < cardLineMap.length; d++) {
-      const g = cardLineMap[d]!
-      if (g < a || g >= b || d >= out.length) continue
-      out[d] = { ...out[d]!, highlight: true, jokerSuggested: false }
+    const cardIndices: number[] = []
+    if (cardLineMap) {
+      for (let d = 0; d < cardLineMap.length; d++) {
+        const g = cardLineMap[d]!
+        if (g >= a && g < b) cardIndices.push(d)
+      }
+    } else {
+      for (let si = a; si < b; si++) cardIndices.push(si)
+    }
+    for (const si of cardIndices) {
+      if (si >= out.length) continue
+      out[si] = {
+        ...out[si]!,
+        highlight: true,
+        jokerSuggested: false,
+      }
     }
   }
   return out
+}
+
+/**
+ * Box claim melds on the suggested-hands strip the same way bot possible-hands does:
+ * park each exposure on a same-size printed run (`placeExposureMeldsOnCardLine`), never by
+ * pattern-group fill (suit-permute groups are too wide and pairs must not steal a pung).
+ */
+export function applyExposureMeldBoxesToStrip(
+  slots: SuggestedStripSlot[],
+  claimMelds: readonly ExposureMeld[],
+): SuggestedStripSlot[] {
+  if (!claimMelds.length || slots.length === 0) {
+    return slots.map((s) => ({ ...s, exposureMeldId: s.exposureMeldId ?? null }))
+  }
+  const placed = placeExposureMeldsOnCardLine(
+    slots.map((s) => s.displayDef),
+    claimMelds,
+  )
+  return slots.map((s, i) => {
+    const exposureMeldId = placed.meldRunId[i] ?? null
+    if (exposureMeldId == null) return { ...s, exposureMeldId }
+    // Full expose run lights up — including joker stand-ins that never got a rack highlight id.
+    return {
+      ...s,
+      exposureMeldId,
+      highlight: true,
+      jokerSuggested: false,
+    }
+  })
+}
+
+/**
+ * After a claim meld is exposed, remapping the strip to the same concrete card line bot
+ * possible-hands uses (exact meld sizes — a pung never parks on a kong), then re-apply rack
+ * highlights and exposure boxes. Without this, greedy fill keeps a hand-biased base (e.g. Runs
+ * starting at 4) and only lights the natural copies of the expose.
+ */
+export function realignSuggestedStripToClaimMelds(
+  slots: SuggestedStripSlot[],
+  p: PracticePattern,
+  claimMelds: readonly ExposureMeld[],
+  rack: TileInstance[],
+  usedOrder: readonly string[],
+  bestIdsForAssignment: ReadonlySet<string>,
+  usedMeta: readonly GroupUsedMeta[] | null,
+  exposureTileIds?: ReadonlySet<string>,
+): SuggestedStripSlot[] {
+  if (!claimMelds.length || slots.length === 0) return slots
+  const aligned = resolveCardLineDefsForClaimMelds(p, claimMelds)
+  if (aligned.length !== slots.length) {
+    return applyExposureMeldBoxesToStrip(slots, claimMelds)
+  }
+  // `aligned` is already card/title order; skip title reorder so assignment stays on that line.
+  const rebuilt = buildSuggestedStripSlotsFromStripDefs(
+    p,
+    rack,
+    usedOrder,
+    bestIdsForAssignment,
+    usedMeta,
+    aligned,
+    true,
+    true,
+    undefined,
+    exposureTileIds,
+  )
+  const base =
+    rebuilt.length === slots.length
+      ? rebuilt
+      : slots.map((s, i) => ({
+          ...s,
+          displayDef: aligned[i]!,
+          highlight: false,
+          jokerSuggested: false,
+          exposureMeldId: null,
+        }))
+  return applyExposureMeldBoxesToStrip(base, claimMelds)
 }
 
 /**
@@ -4153,6 +4284,48 @@ function firstSuitPermutePlanFittingClaimMelds(
 }
 
 /**
+ * Write a concrete (perm, base) into the suit-permute group span only — leaves neighboring
+ * groups (e.g. `dragon-meld-permute` DDD DDD DDDD) as printed preview stand-ins.
+ */
+function applySuitPermutePlanToPreviewSpan(
+  preview: readonly TileDef[],
+  p: PracticePattern,
+  spGi: number,
+  g: Extract<PatternGroup, { kind: 'suit-permute' }>,
+  plan: { perm: Suit[]; base: number },
+): TileDef[] | null {
+  const spans = groupPreviewIndexSpans(p)
+  const span = spans?.[spGi]
+  if (!span || preview.length < span[1]) return null
+  const out = [...preview]
+  const [a, b] = span
+  let idx = a
+  for (let ci = 0; ci < g.colorGroups.length && idx < b; ci++) {
+    const s = plan.perm[ci]!
+    for (const sg of g.colorGroups[ci]!) {
+      const rank = g.consecRanks ? sg.rank - 1 + plan.base : sg.rank
+      for (let k = 0; k < sg.need && idx < b; k++) {
+        out[idx++] = { cat: 'suit', suit: s, rank }
+      }
+    }
+    const dc = g.colorGroupDragonCounts?.[ci] ?? 0
+    for (let k = 0; k < dc && idx < b; k++) {
+      out[idx++] = { cat: 'dragon', dragon: DRAGON_FOR_SUIT[s] }
+    }
+  }
+  const tdc = g.trailingDragonCount ?? 0
+  if (tdc > 0) {
+    const trailSuit = SUITS.find((s) => !plan.perm.includes(s))
+    if (trailSuit) {
+      for (let k = 0; k < tdc && idx < b; k++) {
+        out[idx++] = { cat: 'dragon', dragon: DRAGON_FOR_SUIT[trailSuit] }
+      }
+    }
+  }
+  return out
+}
+
+/**
  * Concrete card-line tile defs for a pattern given only claim melds (bot possible-hands strip).
  * Shifts consecRanks / suit assignments so relative lines (e.g. Runs `11 22 333`) show the ranks
  * that actually fit the exposures (e.g. `77 88 999` for a pung of 9s), then falls back to the
@@ -4160,6 +4333,9 @@ function firstSuitPermutePlanFittingClaimMelds(
  *
  * Suit-permute plans require **exact** meld sizes (pung≠kong) so a pung of 7s cannot paint a
  * kong of 7s just because greedy fill scored a partial match.
+ *
+ * Patterns with `dragon-meld-permute` (W&D #2) keep the printed distinct dragon melds — never
+ * rebuild the whole title through suit-permute ink (that collapses every DDD to one type).
  */
 export function resolveCardLineDefsForClaimMelds(
   p: PracticePattern,
@@ -4168,47 +4344,27 @@ export function resolveCardLineDefsForClaimMelds(
   const preview = patternLinePreviewSlots(p).map((s) => s.def)
   if (claimMelds.length === 0 || preview.length === 0) return preview
 
+  const hasDragonMeldPermute =
+    p.groups?.some((g) => g.kind === 'dragon-meld-permute') ?? false
+
   const spGi = p.groups?.findIndex((g) => g.kind === 'suit-permute') ?? -1
   if (spGi >= 0) {
     const g = p.groups![spGi]! as Extract<PatternGroup, { kind: 'suit-permute' }>
     const plan = firstSuitPermutePlanFittingClaimMelds(g, claimMelds)
     if (plan) {
-      const title = cardTitleOrderDefsForSuitPermute(p, g, plan.perm, plan.base)
-      if (title && title.length === preview.length) return title
-
-      // Title rebuild failed — fill the suit-permute span in group/preview order from the plan.
-      const spans = groupPreviewIndexSpans(p)
-      const span = spans?.[spGi]
-      if (span && preview.length >= span[1]) {
-        const out = [...preview]
-        const [a, b] = span
-        let idx = a
-        for (let ci = 0; ci < g.colorGroups.length && idx < b; ci++) {
-          const s = plan.perm[ci]!
-          for (const sg of g.colorGroups[ci]!) {
-            const rank = g.consecRanks ? sg.rank - 1 + plan.base : sg.rank
-            for (let k = 0; k < sg.need && idx < b; k++) {
-              out[idx++] = { cat: 'suit', suit: s, rank }
-            }
-          }
-          const dc = g.colorGroupDragonCounts?.[ci] ?? 0
-          for (let k = 0; k < dc && idx < b; k++) {
-            out[idx++] = { cat: 'dragon', dragon: DRAGON_FOR_SUIT[s] }
-          }
-        }
-        const tdc = g.trailingDragonCount ?? 0
-        if (tdc > 0) {
-          const trailSuit = SUITS.find((s) => !plan.perm.includes(s))
-          if (trailSuit) {
-            for (let k = 0; k < tdc && idx < b; k++) {
-              out[idx++] = { cat: 'dragon', dragon: DRAGON_FOR_SUIT[trailSuit] }
-            }
-          }
-        }
-        return out
+      // Full title rebuild is fine for pure suit-permute lines (Runs). When a separate
+      // dragon-meld-permute group follows (W&D #2), only patch the suit span.
+      if (!hasDragonMeldPermute) {
+        const title = cardTitleOrderDefsForSuitPermute(p, g, plan.perm, plan.base)
+        if (title && title.length === preview.length) return title
       }
+      const patched = applySuitPermutePlanToPreviewSpan(preview, p, spGi, g, plan)
+      if (patched) return patched
     }
   }
+
+  // Keep printed G/R/Soap melds; placeExposureMeldsOnCardLine boxes the exposed dragon run.
+  if (hasDragonMeldPermute) return preview
 
   const rack = tileInstancesWithClaimMeldJokersResolved([], claimMelds)
   if (rack.length === 0) return preview
@@ -4357,12 +4513,30 @@ export function buildSuggestedStripSlotRowsWithVariants(
   bestIdsForAssignment: ReadonlySet<string>,
   usedMeta: readonly GroupUsedMeta[] | null,
   exposureTileIds?: ReadonlySet<string>,
+  exposureMelds?: readonly ExposureMeld[],
 ): SuggestedStripRowsResult {
   const um = usedMeta ?? []
-  const finalizeRows = (rows: SuggestedStripSlot[][]): SuggestedStripSlot[][] =>
-    usedMeta && exposureTileIds?.size
-      ? rows.map((row) => finalizeExposureMeldStripHighlights(row, usedMeta, exposureTileIds, p))
-      : rows
+  const finalizeRows = (rows: SuggestedStripSlot[][]): SuggestedStripSlot[][] => {
+    let out = rows
+    if (usedMeta && exposureTileIds?.size) {
+      out = out.map((row) => finalizeExposureMeldStripHighlights(row, usedMeta, exposureTileIds, p))
+    }
+    if (exposureMelds?.length) {
+      out = out.map((row) =>
+        realignSuggestedStripToClaimMelds(
+          row,
+          p,
+          exposureMelds,
+          rack,
+          usedOrder,
+          bestIdsForAssignment,
+          usedMeta,
+          exposureTileIds,
+        ),
+      )
+    }
+    return out
+  }
   const stripResolved = resolveStripTargetDefsForGreedyMatch(p, rack, um, exposureTileIds)
   const altConsec = buildConsecOpposingSuitStripVariantRows(
     p,
@@ -4437,6 +4611,7 @@ export function buildSuggestedStripSlotRows(
   bestIdsForAssignment: ReadonlySet<string>,
   usedMeta: readonly GroupUsedMeta[] | null,
   exposureTileIds?: ReadonlySet<string>,
+  exposureMelds?: readonly ExposureMeld[],
 ): SuggestedStripSlot[][] {
   return buildSuggestedStripSlotRowsWithVariants(
     p,
@@ -4445,6 +4620,7 @@ export function buildSuggestedStripSlotRows(
     bestIdsForAssignment,
     usedMeta,
     exposureTileIds,
+    exposureMelds,
   ).rows
 }
 
@@ -4455,6 +4631,7 @@ export function buildSuggestedStripSlots(
   bestIdsForAssignment: ReadonlySet<string>,
   usedMeta: readonly GroupUsedMeta[] | null,
   exposureTileIds?: ReadonlySet<string>,
+  exposureMelds?: readonly ExposureMeld[],
 ): SuggestedStripSlot[] {
   const rows = buildSuggestedStripSlotRows(
     p,
@@ -4463,6 +4640,7 @@ export function buildSuggestedStripSlots(
     bestIdsForAssignment,
     usedMeta,
     exposureTileIds,
+    exposureMelds,
   )
   return rows[0] ?? []
 }

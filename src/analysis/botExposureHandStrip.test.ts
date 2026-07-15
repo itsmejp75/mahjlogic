@@ -123,4 +123,24 @@ describe('resolveCardLineDefsForClaimMelds', () => {
       expect(any7c, `${code}: ${labs.join(' ')}`).toHaveLength(3)
     }
   })
+
+  it('keeps W&D #2 dragon melds as three distinct types when a soap pung is exposed', () => {
+    const melds = [{ tiles: [soap('s1'), soap('s2'), soap('s3')] }]
+    const p = listOpenHandsFittingClaimMelds(melds, NMJL_2026_PATTERNS).find((x) =>
+      x.title.includes('1234 DDD DDD DDDD'),
+    )!
+    const resolved = resolveCardLineDefsForClaimMelds(p, melds)
+    const dragons = resolved.filter((d) => d.cat === 'dragon').map((d) => d.dragon)
+    expect(dragons).toHaveLength(10)
+    expect(new Set(dragons).size, dragons.join(' ')).toBe(3)
+
+    const placed = placeExposureMeldsOnCardLine(resolved, melds)
+    const labs = placed.defs.map((d, i) => `${label(d)}${placed.meldRunId[i] != null ? '*' : ''}`)
+    expect(labs.filter((x) => x === 'sD*')).toHaveLength(3)
+    // Unboxed dragons still include the other two card types (not all soap).
+    const unboxedDragons = placed.defs
+      .map((d, i) => (placed.meldRunId[i] == null && d.cat === 'dragon' ? d.dragon : null))
+      .filter((d): d is NonNullable<typeof d> => d != null)
+    expect(new Set(unboxedDragons).size, labs.join(' ')).toBeGreaterThanOrEqual(2)
+  })
 })

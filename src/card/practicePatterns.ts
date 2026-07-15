@@ -36,14 +36,15 @@ export type PatternGroup =
    * `rankNeeds`     – which ranks are needed and how many of each
    * `dragonCount`   – how many matching-suit dragons needed (bam→green, dot→soap, crak→red).
    *                   Set to 0 if the hand uses opposing dragons or no dragons.
-   * `opposingDragons` – if set, instead of the matching dragon, count `need` tiles each of the
-   *                     two dragon types that do NOT match the chosen suit.
+   * `opposingDragons` – if set, instead of the matching dragon:
+   *   - default: `need` tiles **each** of the two non-matching dragon types (e.g. DDD DDD)
+   *   - `eitherType: true`: one meld of `need` tiles of **either** non-matching type (e.g. DDDD)
    */
   | {
       kind: 'suit-locked'
       rankNeeds: Array<{ rank: number; need: number }>
       dragonCount: number
-      opposingDragons?: { need: number }
+      opposingDragons?: { need: number; eitherType?: boolean }
       /** When true, dragons appear before rank tiles in the strip (e.g. "DDDD 3333…"). Default: false. */
       dragonsFirst?: boolean
     }

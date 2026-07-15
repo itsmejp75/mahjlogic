@@ -403,10 +403,15 @@ function appendGroupWithJokerFlags(out: TileDef[], flags: boolean[], p: Practice
       if (g.opposingDragons) {
         const [d1, d2] = OPPOSING_FOR_SUIT[suit]
         const need = g.opposingDragons.need
-        pushDragon(out, d1, need)
-        pushJokerFlagRun(flags, need, need >= 3)
-        pushDragon(out, d2, need)
-        pushJokerFlagRun(flags, need, need >= 3)
+        if (g.opposingDragons.eitherType) {
+          pushDragon(out, d1, need)
+          pushJokerFlagRun(flags, need, need >= 3)
+        } else {
+          pushDragon(out, d1, need)
+          pushJokerFlagRun(flags, need, need >= 3)
+          pushDragon(out, d2, need)
+          pushJokerFlagRun(flags, need, need >= 3)
+        }
       }
       return
     }
@@ -660,8 +665,12 @@ function appendGroup(out: TileDef[], p: PracticePattern, g: PatternGroup) {
       if (g.opposingDragons) {
         const [d1, d2] = OPPOSING_FOR_SUIT[suit]
         const need = g.opposingDragons.need
-        pushDragon(out, d1, need)
-        pushDragon(out, d2, need)
+        if (g.opposingDragons.eitherType) {
+          pushDragon(out, d1, need)
+        } else {
+          pushDragon(out, d1, need)
+          pushDragon(out, d2, need)
+        }
       }
       break
     }
@@ -935,7 +944,11 @@ function groupPreviewSlotCountForPatternLine(g: PatternGroup): number {
     case 'suit-locked': {
       let s = g.rankNeeds.reduce((acc, x) => acc + x.need, 0)
       s += g.dragonCount
-      if (g.opposingDragons) s += 2 * g.opposingDragons.need
+      if (g.opposingDragons) {
+        s += g.opposingDragons.eitherType
+          ? g.opposingDragons.need
+          : 2 * g.opposingDragons.need
+      }
       return s
     }
     case 'suit-permute':
