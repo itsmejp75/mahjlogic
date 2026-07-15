@@ -7,6 +7,7 @@ import {
   placeExposureMeldsOnCardLine,
   type ExposureMeld,
 } from '../analysis/botExposureHandStrip'
+import { resolveCardLineDefsForClaimMelds } from '../analysis/suggestedHands'
 import type { BotSeat } from '../analysis/types'
 import { suggestedHandSectionMenuLabel } from '../suggestedHands/filterSettings'
 import { CardColoredText } from './CardColoredText'
@@ -69,12 +70,13 @@ function stripCellsForPattern(
   const preview = patternLinePreviewSlots(pattern)
   if (preview.length === 0) return []
 
-  const baseDefs = preview.map((s) => s.def)
   if (exposureMelds.length === 0) {
     return preview.map((s) => ({ def: s.def, cardInk: s.cardInk, meldRunId: null }))
   }
 
-  const placed = placeExposureMeldsOnCardLine(baseDefs, exposureMelds)
+  // Resolve consec / suit stand-ins from exposures (Runs 11 22 333 → 77 88 999 for 9s), then box.
+  const resolvedDefs = resolveCardLineDefsForClaimMelds(pattern, exposureMelds)
+  const placed = placeExposureMeldsOnCardLine(resolvedDefs, exposureMelds)
   return preview.map((s, i) => ({
     def: placed.defs[i]!,
     cardInk: s.cardInk,

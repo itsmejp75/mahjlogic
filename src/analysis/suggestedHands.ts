@@ -24,6 +24,7 @@ import { suggestedHandSectionMenuLabel } from '../suggestedHands/filterSettings'
 import type { BotExposure } from './types'
 import {
   claimMeldsFitPracticePattern,
+  tileInstancesWithClaimMeldJokersResolved,
   tileInstancesWithClaimMeldJokersResolvedForTilesAway,
 } from './eastExposurePatternFit'
 import {
@@ -4060,6 +4061,170 @@ function buildSuitPermuteStripVariantRows(
   return rows.length > 0
     ? { rows, maxFill, combos: sorted.map(({ perm, base }) => ({ perm, base })) }
     : null
+}
+
+/**
+ * Exact (key, need) assignment for claim melds — same rule as eastExposurePatternFit’s
+ * meld-to-slot check. Partial fills (pung on a kong) are rejected.
+ */
+function claimMeldsExactMatchSlots(
+  melds: ReadonlyArray<{ tiles: TileInstance[] }>,
+  slots: readonly { key: string; need: number }[],
+): boolean {
+  const sigs: { key: string; count: number }[] = []
+  for (const meld of melds) {
+    const naturals = meld.tiles.filter((t) => t.def.cat !== 'joker')
+    if (naturals.length === 0) return false
+    const anchor = naturals[0]!.def
+    const key = fullDefKey(anchor)
+    // Flower keys differ between helpers (`f` vs `flower`); normalize to eastExposure’s `flower`.
+    const normKey =
+      anchor.cat === 'flower'
+        ? 'flower'
+        : key
+    if (
+      !naturals.every((t) => {
+        if (anchor.cat === 'flower') return t.def.cat === 'flower'
+        return fullDefKey(t.def) === key
+      })
+    ) {
+      return false
+    }
+    sigs.push({ key: normKey, count: meld.tiles.length })
+  }
+  if (sigs.length > slots.length) return false
+  const used = new Array(slots.length).fill(false)
+  const dfs = (i: number): boolean => {
+    if (i >= sigs.length) return true
+    const s = sigs[i]!
+    for (let j = 0; j < slots.length; j++) {
+      if (used[j]) continue
+      const sl = slots[j]!
+      const slKey = sl.key === 'f' ? 'flower' : sl.key
+      if (s.key === slKey && s.count === sl.need) {
+        used[j] = true
+        if (dfs(i + 1)) return true
+        used[j] = false
+      }
+    }
+    return false
+  }
+  return dfs(0)
+}
+
+/**
+ * First (perm, base) for a suit-permute group where every claim meld lands on an exact-size slot.
+ * Avoids greedy partial fills that paint a pung onto a kong of the same rank.
+ */
+function firstSuitPermutePlanFittingClaimMelds(
+  g: Extract<PatternGroup, { kind: 'suit-permute' }>,
+  claimMelds: ReadonlyArray<{ tiles: TileInstance[] }>,
+): { perm: Suit[]; base: number } | null {
+  if (claimMelds.length === 0) return null
+  const n = g.colorGroups.length
+  const maxRankOff =
+    Math.max(...g.colorGroups.flatMap((cg) => cg.map((sg) => sg.rank))) - 1
+  const searchBases = g.consecRanks
+    ? Array.from({ length: 9 - maxRankOff }, (_, i) => i + 1)
+    : [1]
+  for (const base of searchBases) {
+    for (const perm of suitPermutations(n)) {
+      const slots: { key: string; need: number }[] = []
+      for (let ci = 0; ci < n; ci++) {
+        const s = perm[ci]!
+        for (const sg of g.colorGroups[ci]!) {
+          const rank = g.consecRanks ? sg.rank - 1 + base : sg.rank
+          slots.push({ key: `s:${s}:${rank}`, need: sg.need })
+        }
+        const dc = g.colorGroupDragonCounts?.[ci] ?? 0
+        if (dc > 0) slots.push({ key: `d:${DRAGON_FOR_SUIT[s]}`, need: dc })
+      }
+      const tdc = g.trailingDragonCount ?? 0
+      if (tdc > 0) {
+        const trailSuit = SUITS.find((s) => !perm.includes(s))
+        if (trailSuit) slots.push({ key: `d:${DRAGON_FOR_SUIT[trailSuit]}`, need: tdc })
+      }
+      if (claimMeldsExactMatchSlots(claimMelds, slots)) {
+        return { perm: [...perm], base }
+      }
+    }
+  }
+  return null
+}
+
+/**
+ * Concrete card-line tile defs for a pattern given only claim melds (bot possible-hands strip).
+ * Shifts consecRanks / suit assignments so relative lines (e.g. Runs `11 22 333`) show the ranks
+ * that actually fit the exposures (e.g. `77 88 999` for a pung of 9s), then falls back to the
+ * printed preview when nothing can be resolved.
+ *
+ * Suit-permute plans require **exact** meld sizes (pung≠kong) so a pung of 7s cannot paint a
+ * kong of 7s just because greedy fill scored a partial match.
+ */
+export function resolveCardLineDefsForClaimMelds(
+  p: PracticePattern,
+  claimMelds: ReadonlyArray<{ tiles: TileInstance[] }>,
+): TileDef[] {
+  const preview = patternLinePreviewSlots(p).map((s) => s.def)
+  if (claimMelds.length === 0 || preview.length === 0) return preview
+
+  const spGi = p.groups?.findIndex((g) => g.kind === 'suit-permute') ?? -1
+  if (spGi >= 0) {
+    const g = p.groups![spGi]! as Extract<PatternGroup, { kind: 'suit-permute' }>
+    const plan = firstSuitPermutePlanFittingClaimMelds(g, claimMelds)
+    if (plan) {
+      const title = cardTitleOrderDefsForSuitPermute(p, g, plan.perm, plan.base)
+      if (title && title.length === preview.length) return title
+
+      // Title rebuild failed — fill the suit-permute span in group/preview order from the plan.
+      const spans = groupPreviewIndexSpans(p)
+      const span = spans?.[spGi]
+      if (span && preview.length >= span[1]) {
+        const out = [...preview]
+        const [a, b] = span
+        let idx = a
+        for (let ci = 0; ci < g.colorGroups.length && idx < b; ci++) {
+          const s = plan.perm[ci]!
+          for (const sg of g.colorGroups[ci]!) {
+            const rank = g.consecRanks ? sg.rank - 1 + plan.base : sg.rank
+            for (let k = 0; k < sg.need && idx < b; k++) {
+              out[idx++] = { cat: 'suit', suit: s, rank }
+            }
+          }
+          const dc = g.colorGroupDragonCounts?.[ci] ?? 0
+          for (let k = 0; k < dc && idx < b; k++) {
+            out[idx++] = { cat: 'dragon', dragon: DRAGON_FOR_SUIT[s] }
+          }
+        }
+        const tdc = g.trailingDragonCount ?? 0
+        if (tdc > 0) {
+          const trailSuit = SUITS.find((s) => !plan.perm.includes(s))
+          if (trailSuit) {
+            for (let k = 0; k < tdc && idx < b; k++) {
+              out[idx++] = { cat: 'dragon', dragon: DRAGON_FOR_SUIT[trailSuit] }
+            }
+          }
+        }
+        return out
+      }
+    }
+  }
+
+  const rack = tileInstancesWithClaimMeldJokersResolved([], claimMelds)
+  if (rack.length === 0) return preview
+
+  const exposureTileIds = new Set(rack.map((t) => t.id))
+  const { usedMeta } = greedyPatternMatchDetail(rack, p, { exposureTileIds })
+  const resolved = resolveStripTargetDefsForGreedyMatch(p, rack, usedMeta, exposureTileIds)
+
+  const titleOrder =
+    suitPermuteTitleOrderDefsFromResolvedStrip(p, resolved) ??
+    sharedRankSuitsTitleOrderDefsFromResolvedStrip(p, resolved) ??
+    suitLockedConsecTitleOrderDefsFromResolvedStrip(p, resolved)
+
+  if (titleOrder && titleOrder.length === preview.length) return titleOrder
+  if (resolved.length === preview.length) return resolved
+  return preview
 }
 
 /**

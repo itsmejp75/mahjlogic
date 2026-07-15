@@ -3,6 +3,7 @@ import { NMJL_2026_PATTERNS } from '../card/nmjl2026Patterns'
 import { patternLinePreviewSlots } from '../card/patternLinePreview'
 import { listOpenHandsFittingClaimMelds } from './eastExposurePatternFit'
 import { placeExposureMeldsOnCardLine } from './botExposureHandStrip'
+import { resolveCardLineDefsForClaimMelds } from './suggestedHands'
 import type { TileInstance } from '../mahjong/types'
 
 function dragon(d: 'green' | 'red' | 'soap', id: string): TileInstance {
@@ -13,9 +14,14 @@ function soap(id: string): TileInstance {
   return dragon('soap', id)
 }
 
+function dots(rank: number, ids: string[]): TileInstance[] {
+  return ids.map((id) => ({ id, def: { cat: 'suit' as const, suit: 'dot' as const, rank } }))
+}
+
 function label(def: { cat: string; dragon?: string; suit?: string; rank?: number }) {
   if (def.cat === 'dragon') return `${(def.dragon ?? '?')[0]}D`
   if (def.cat === 'suit') return `${def.rank}${def.suit![0]}`
+  if (def.cat === 'flower') return 'F'
   return def.cat
 }
 
@@ -63,6 +69,58 @@ describe('placeExposureMeldsOnCardLine', () => {
           .slice(boxed[0], boxed[0]! + 3)
           .every((d) => d.cat === 'dragon' && d.dragon === 'soap'),
       ).toBe(true)
+    }
+  })
+})
+
+describe('resolveCardLineDefsForClaimMelds', () => {
+  it('shifts Runs 11 22 333 to 77 88 999 for an exposed pung of 9 dots', () => {
+    const melds = [{ tiles: dots(9, ['a', 'b', 'c']) }]
+    const fitting = listOpenHandsFittingClaimMelds(melds, NMJL_2026_PATTERNS)
+    const runs5a = fitting.find((p) => p.cardHandCode === '5a' && /11 22 333/.test(p.title))
+    expect(runs5a).toBeTruthy()
+
+    const resolved = resolveCardLineDefsForClaimMelds(runs5a!, melds)
+    expect(resolved.map(label).join(' ')).toBe('F F F 7d 7d 8d 8d 9d 9d 9d sD sD sD sD')
+
+    const placed = placeExposureMeldsOnCardLine(resolved, melds)
+    const labs = placed.defs.map((d, i) => `${label(d)}${placed.meldRunId[i] != null ? '*' : ''}`)
+    expect(labs.join(' ')).toBe('F F F 7d 7d 8d 8d 9d* 9d* 9d* sD sD sD sD')
+  })
+
+  it('keeps literal 13579 999 boxed on the printed 9s', () => {
+    const melds = [{ tiles: dots(9, ['a', 'b', 'c']) }]
+    const p = listOpenHandsFittingClaimMelds(melds, NMJL_2026_PATTERNS).find((x) =>
+      x.title.includes('55 77 999'),
+    )!
+    const resolved = resolveCardLineDefsForClaimMelds(p, melds)
+    const placed = placeExposureMeldsOnCardLine(resolved, melds)
+    const labs = placed.defs.map((d, i) => `${label(d)}${placed.meldRunId[i] != null ? '*' : ''}`)
+    expect(labs.join(' ')).toContain('9d* 9d* 9d*')
+  })
+
+  it('maps a pung of 7 craks onto pung slots, not kongs, for Runs 3 / 4a / 4b', () => {
+    const melds = [
+      {
+        tiles: [
+          { id: 'a', def: { cat: 'suit', suit: 'crak', rank: 7 } },
+          { id: 'b', def: { cat: 'joker' } },
+          { id: 'c', def: { cat: 'suit', suit: 'crak', rank: 7 } },
+        ] as TileInstance[],
+      },
+    ]
+    const fitting = listOpenHandsFittingClaimMelds(melds, NMJL_2026_PATTERNS)
+    for (const code of ['3', '4a', '4b'] as const) {
+      const p = fitting.find((x) => x.cardHandCode === code && /3333/.test(x.title))
+      expect(p, code).toBeTruthy()
+      const resolved = resolveCardLineDefsForClaimMelds(p!, melds)
+      const placed = placeExposureMeldsOnCardLine(resolved, melds)
+      const labs = placed.defs.map((d, i) => `${label(d)}${placed.meldRunId[i] != null ? '*' : ''}`)
+      // Exactly three boxed 7c tiles — never a fourth unboxed 7c from a kong stand-in.
+      const boxed7c = labs.filter((x) => x === '7c*')
+      const any7c = labs.filter((x) => x.startsWith('7c'))
+      expect(boxed7c, `${code}: ${labs.join(' ')}`).toHaveLength(3)
+      expect(any7c, `${code}: ${labs.join(' ')}`).toHaveLength(3)
     }
   })
 })
