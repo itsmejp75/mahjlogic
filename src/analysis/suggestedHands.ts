@@ -1816,23 +1816,96 @@ function buildPreviewSlotKindsFromGroups(
     }
 
     const usedNatIds = new Set<string>()
+    const placeNaturalAt = (si: number, m: GroupUsedMeta, t: TileInstance) => {
+      if (t.def.cat === 'joker' && bestIds.has(m.id)) {
+        kinds[si] = 'joker'
+      } else {
+        kinds[si] = bestIds.has(m.id) ? 'best' : null
+      }
+      slotTileIdByStripIndex[si] = m.id
+      usedNatIds.add(m.id)
+    }
+    const slotAccepts = (si: number, t: TileInstance): boolean => {
+      const target = defs[si]
+      if (!target) return false
+      return tileDefsEqual(t.def, target) || stripSlotAcceptsNatural(p, target, t.def)
+    }
+    const naturalKey = (def: TileDef): string => {
+      if (def.cat === 'suit') return `s:${def.suit}:${def.rank}`
+      if (def.cat === 'dragon') return `d:${def.dragon}`
+      if (def.cat === 'wind') return `w:${def.wind}`
+      if (def.cat === 'flower') return 'flower'
+      return def.cat
+    }
+
+    /*
+     * Pass 1 — complete-run placement: if we hold exactly N matching naturals and the strip has a
+     * contiguous N-slot run that accepts them (e.g. soap pung vs year “0” + soap DDD), fill that
+     * run first so a claimed pung doesn’t get split onto a single and a short pung.
+     */
+    const pendingByKey = new Map<string, GroupUsedMeta[]>()
+    for (const m of nat) {
+      const t = byId.get(m.id)
+      if (!t || t.def.cat === 'joker') continue
+      const key = naturalKey(t.def)
+      const arr = pendingByKey.get(key) ?? []
+      arr.push(m)
+      pendingByKey.set(key, arr)
+    }
+    for (const [, metas] of pendingByKey) {
+      const n = metas.length
+      if (n < 2) continue
+      const sample = byId.get(metas[0]!.id)
+      if (!sample) continue
+      let runStart = -1
+      let runExact = -1
+      for (let si = a; si <= b - n; si++) {
+        let ok = true
+        for (let k = 0; k < n; k++) {
+          if (kinds[si + k] != null || !slotAccepts(si + k, sample)) {
+            ok = false
+            break
+          }
+        }
+        if (!ok) continue
+        let exact = true
+        for (let k = 0; k < n; k++) {
+          if (!tileDefsEqual(defs[si + k]!, sample.def)) {
+            exact = false
+            break
+          }
+        }
+        if (exact) {
+          runExact = si
+          break
+        }
+        if (runStart < 0) runStart = si
+      }
+      const placeAt = runExact >= 0 ? runExact : runStart
+      if (placeAt < 0) continue
+      for (let k = 0; k < n; k++) {
+        const m = metas[k]!
+        const t = byId.get(m.id)
+        if (!t) continue
+        placeNaturalAt(placeAt + k, m, t)
+      }
+    }
+
+    // Pass 2 — left-to-right for leftovers (and jokers).
     for (let si = a; si < b; si++) {
+      if (kinds[si] != null) continue
       const target = defs[si]!
       for (const m of nat) {
         if (usedNatIds.has(m.id)) continue
         const t = byId.get(m.id)
         if (!t) continue
         if (tileDefsEqual(t.def, target) || stripSlotAcceptsNatural(p, target, t.def)) {
-          kinds[si] = bestIds.has(m.id) ? 'best' : null
-          slotTileIdByStripIndex[si] = m.id
-          usedNatIds.add(m.id)
+          placeNaturalAt(si, m, t)
           break
         }
         // Exposure jokers are resolved to naturals for greedy match but stay jokers on the display rack.
         if (t.def.cat === 'joker' && bestIds.has(m.id)) {
-          kinds[si] = 'joker'
-          slotTileIdByStripIndex[si] = m.id
-          usedNatIds.add(m.id)
+          placeNaturalAt(si, m, t)
           break
         }
       }
@@ -2248,16 +2321,22 @@ function pickBestDragonMeldPermuteTypes(
 ): Array<'green' | 'red' | 'soap'> | null {
   if (needs.length !== 3) return null
   let bestFill = -1
+  let bestComplete = -1
   let bestTypes: Array<'green' | 'red' | 'soap'> | null = null
   for (const typePerm of permuteThreeDragonTypes()) {
     let fill = 0
+    let complete = 0
     for (let i = 0; i < 3; i++) {
       const dr = typePerm[i]!
       const have = rem.filter((t) => t.def.cat === 'dragon' && t.def.dragon === dr).length
-      fill += Math.min(have, needs[i]!)
+      const take = Math.min(have, needs[i]!)
+      fill += take
+      // Prefer parking a pung on a pung slot (exact complete meld) over a short kong.
+      if (have >= needs[i]!) complete++
     }
-    if (fill > bestFill) {
+    if (fill > bestFill || (fill === bestFill && complete > bestComplete)) {
       bestFill = fill
+      bestComplete = complete
       bestTypes = [...typePerm]
     }
   }

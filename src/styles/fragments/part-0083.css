@@ -158,9 +158,9 @@
   text-overflow: ellipsis;
 }
 
-/* Orange boxed × — floats just under the title, right edge; above header glow stroke. */
+/* Light-gray boxed × — floats just under the title, right edge; above header glow stroke. */
 .bot-exposure-hands-panel__close {
-  --_bot-hands-close: var(--simple-joker-yellow, #ffc107);
+  --_bot-hands-close: color-mix(in srgb, var(--text-h) 45%, var(--border));
   /* Same width scale as bot hands list type — size/insets track panel resize. */
   --_bot-hands-close-u: calc(100cqi * 0.0235);
   position: absolute;
@@ -230,9 +230,16 @@
 }
 
 .bot-exposure-hands-list {
-  --bot-hands-cat-w: minmax(7.2em, 28%);
-  display: flex;
-  flex-direction: column;
+  /*
+   * One shared column template for the whole sheet (same idea as `--hands-sheet-grid-cols`):
+   * category + card-hand hug content; tiles column fills and sizes a 14-tile strip.
+   * Rows use `display: contents` so every cell participates in this grid — vertical rules stay straight.
+   */
+  --bot-hands-grid-line: 1px solid color-mix(in srgb, var(--window-border) 55%, transparent);
+  --bot-hands-tile-gap: var(--player-rack-face-gap, var(--rack-tile-gap, 0.125rem));
+  --bot-hands-grid-cols: max-content max-content minmax(0, 1fr);
+  display: grid;
+  grid-template-columns: var(--bot-hands-grid-cols);
   width: 100%;
   min-width: 0;
   font-size: clamp(
@@ -244,28 +251,116 @@
 }
 
 .bot-exposure-hands-list__row {
-  display: grid;
-  grid-template-columns: var(--bot-hands-cat-w) minmax(0, 1fr);
-  border-block-end: 1px solid color-mix(in srgb, var(--window-border) 55%, transparent);
-  min-width: 0;
+  display: contents;
 }
 
 .bot-exposure-hands-list__cat,
-.bot-exposure-hands-list__hand {
+.bot-exposure-hands-list__hand,
+.bot-exposure-hands-list__tiles {
   box-sizing: border-box;
   padding: 0.4em 0.65em;
   display: flex;
   align-items: center;
   min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   color: inherit;
   font: inherit;
+  border-block-end: var(--bot-hands-grid-line);
+}
+
+.bot-exposure-hands-list__cat,
+.bot-exposure-hands-list__hand {
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .bot-exposure-hands-list__cat {
-  border-inline-end: 1px solid color-mix(in srgb, var(--window-border) 55%, transparent);
+  border-inline-end: var(--bot-hands-grid-line);
+  /* Keep category + hand tight — less pad on the shared edge. */
+  padding-inline-end: 0.35em;
+}
+
+.bot-exposure-hands-list__hand {
+  border-inline-end: var(--bot-hands-grid-line);
+  padding-inline-start: 0.35em;
+}
+
+.bot-exposure-hands-list__tiles {
+  /* Size the 14-tile strip from this column’s live width. */
+  container-type: inline-size;
+  padding-inline: 0.35em;
+  /* Leave clear air before the tray’s right edge. */
+  padding-inline-end: 0.85em;
+  overflow: hidden;
+}
+
+/*
+ * Same structure as mahjong / wall-game review racks:
+ * flex row of tile runs; each exposed meld is one bordered run.
+ */
+.bot-exposure-hands-list__tiles-row {
+  --bot-hands-tile-w: max(
+    0.35rem,
+    calc((100cqi * 0.88 - 13 * var(--bot-hands-tile-gap)) / 14)
+  );
+  --bot-hands-tile-h: calc(var(--bot-hands-tile-w) * 4 / 3);
+  /* Same corner proportion as rack / strip faces (~0.116 of tile width). */
+  --bot-hands-tile-radius: calc(0.116 * var(--bot-hands-tile-w));
+  --bot-hands-exposure-pad: calc(var(--bot-hands-tile-w) * 0.08);
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--bot-hands-tile-gap);
+  width: max-content;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+
+.bot-exposure-hands-list__tile-run {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--bot-hands-tile-gap);
+  flex-shrink: 0;
+}
+
+.bot-exposure-hands-list__tile-run--exposure {
+  /* Outer radius = tile radius + pad so the frame follows the tile corners. */
+  --_bot-hands-exposure-frame: color-mix(in srgb, var(--text-h) 45%, var(--border));
+  padding: var(--bot-hands-exposure-pad);
+  border-radius: calc(var(--bot-hands-tile-radius) + var(--bot-hands-exposure-pad));
+  border: 1px solid var(--_bot-hands-exposure-frame);
+  box-sizing: border-box;
+  background: color-mix(in srgb, var(--_bot-hands-exposure-frame) 12%, transparent);
+}
+
+.bot-exposure-hands-list__tile-cell {
+  box-sizing: border-box;
+  width: var(--bot-hands-tile-w);
+  height: var(--bot-hands-tile-h);
+  flex-shrink: 0;
+  min-width: 0;
+  border-radius: var(--bot-hands-tile-radius);
+  overflow: hidden;
+  container-type: size;
+  display: grid;
+  grid-template: 1fr / 1fr;
+  place-items: stretch;
+}
+
+.bot-exposure-hands-list__tile-cell .tile-face {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  --rack-tile-w: 100cqw;
+  --rack-tile-h: 100cqh;
+  --tile-face-border-radius: var(--bot-hands-tile-radius);
+  border-radius: var(--bot-hands-tile-radius);
+  overflow: hidden;
+  border: none;
 }
 
 /* Replaced first empty cell: wrapper must not add an extra flex item */

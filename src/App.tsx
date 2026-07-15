@@ -4876,6 +4876,7 @@ export default function App() {
             <BotExposureHandsPanel
               seat={botHandsIdentifierFocusSeat}
               patterns={botHandsIdentifierPatterns}
+              exposureMelds={botHandsIdentifierFocusMelds}
               discardTraySurface
               onClose={clearBotHandsIdentifierFocus}
             />
@@ -4909,6 +4910,7 @@ export default function App() {
     suggestedDiscardOverlayBounds,
     botHandsIdentifierFocusSeat,
     botHandsIdentifierPatterns,
+    botHandsIdentifierFocusMelds,
     clearBotHandsIdentifierFocus,
     toggleSuggestedPinnedHandKey,
     eastSuggestedHands,
