@@ -165,6 +165,17 @@ describe('coachLitNeighborClip', () => {
     })
   })
 
+  it('clips bottom/top for vertically stacked lit rank tiles (e.g. 2D above 2C)', () => {
+    const twoDot = rect('2d', 120, 40, 32, 42)
+    const twoCrak = rect('2c', 120, 86, 32, 42)
+    expect(areVerticallyAdjacentLitSlots(twoDot, twoCrak, 12)).toBe(true)
+    const clips = computeLitSlotClipEdges([twoDot, twoCrak], 12)
+    expect(clips.get('2d')?.bottom).toBe(true)
+    expect(clips.get('2c')?.top).toBe(true)
+    expect(clips.get('2d')?.top).toBe(false)
+    expect(clips.get('2c')?.bottom).toBe(false)
+  })
+
   it('ignores tiles that are too far apart vertically or on different columns', () => {
     const slots = [
       rect('left', 10, 10, 40, 52),

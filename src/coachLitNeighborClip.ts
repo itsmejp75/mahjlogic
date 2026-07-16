@@ -155,6 +155,8 @@ function readMaxCoachGapPx(scope: ParentNode): number {
   const rowGap = parseFloat(style.rowGap || style.gap || '')
   const faceGap = parseFloat(style.getPropertyValue('--player-rack-face-gap').trim() || '')
   const botRowGap = parseFloat(style.getPropertyValue('--discard-bot-row-gap-y').trim() || '')
+  // Top-exposure overlay uses `gap: max(bot-row, face)` — include both so vertical
+  // sorted lit↔lit (B/C/D) still counts as adjacent when the used gap is the larger one.
   const gaps = [rowGap, faceGap, botRowGap].filter(Number.isFinite)
   if (gaps.length === 0) return 24
   return Math.max(Math.max(...gaps) + 6, 12)

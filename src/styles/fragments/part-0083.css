@@ -91,7 +91,8 @@
 
 /*
  * Selected bot exposure (hands-identifier): soft outer glow in Mahj logo glyph blue (#00B4D8).
- * Row z-index lifts the halo over sibling overlay rows.
+ * Elevate only the bot cell — not the whole overlay row — so sorted B/C/D lit tiles stay in the
+ * shared overlay-grid stack (same apparent height as lit tiles in the rows above/below).
  * Vs Discard> while the hands tray is open (part-0123): beat part-0103’s play-split@100 /
  * rack@0 so paint order is dark seam < glow < green discard (hands sheet stays above).
  * Single ::after frame (border + glow) — avoid a separate box-shadow ring that reads as a double border.
@@ -101,12 +102,12 @@
  */
 .discard-tracker__overlay-row--bot-hands-active {
   position: relative;
-  z-index: 6;
+  z-index: auto;
 }
 
 .discard-tracker__overlay-row--bot-hands-active .app-opponents-rail__cell {
   position: relative;
-  z-index: 1;
+  z-index: 6;
   outline: none;
   box-shadow: none;
 }

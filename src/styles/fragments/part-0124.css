@@ -975,6 +975,16 @@
   --coach-lift-clip-top: var(--coach-lit-seam-inset-y);
 }
 
+/*
+ * Sorted B/C/D lit↔lit (e.g. 2D above 2C): later overlay rows paint above earlier ones at the
+ * same slot z-index, so a soft gap-center clip still lets the lower tile’s upward glow darken
+ * the upper face. Inset 1px into each tile so both reads as the same lift height with no cast.
+ */
+.discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suggest-need.coach-lit-clip-top {
+  --coach-lift-clip-top: 1px;
+}
+
 .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot--suggest-dim[data-coach-vabove='1'] {
@@ -986,6 +996,11 @@
 .panel--bot-exposures .exposure-rack__slot--suggest-best.coach-lit-clip-bottom {
   --coach-vignette-clip-bottom: var(--coach-vignette-seam-inset);
   --coach-lift-clip-bottom: var(--coach-lit-seam-inset-y);
+}
+
+.discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--suggest-need.coach-lit-clip-bottom {
+  --coach-lift-clip-bottom: 1px;
 }
 
 .discard-tracker__overlay-grid
@@ -2630,7 +2645,10 @@ html
   --coach-centered-lift-clip-outset: calc(var(--coach-lift-tile-w, var(--rack-tile-w)) * -0.92);
   /* Lit→lit seams: extend glow/rim to gap center (negative inset expands clip outward). */
   --coach-lit-seam-inset-x: calc(var(--player-rack-face-gap, 1px) / -2);
-  --coach-lit-seam-inset-y: calc(var(--discard-bot-row-gap-y, var(--player-rack-face-gap, 1px)) / -2);
+  /* Match top-exposure overlay `gap: max(bot-row, face)` so seam clips track the real row gap. */
+  --coach-lit-seam-inset-y: calc(
+    max(var(--discard-bot-row-gap-y, 2px), var(--player-rack-face-gap, 1px)) / -2
+  );
 }
 
 :is(.panel--discard-tracker, html .app-top-exposure-container) .discard-tracker__overlay-grid {
@@ -2871,11 +2889,9 @@ html
 }
 
 /*
- * Exception: the hands-identifier *selected* row must keep its lift (part-0083 `z-index: 6`)
- * so the yellow halo (::after) paints over the row below. Without this, the blanket
- * `z-index: auto` above lets the lower (opaque-background) sibling — the bottom/North row —
- * cover the selected middle/West row's downward glow edge. Higher specificity + !important
- * beats the coach-lift reset while leaving unselected rows at `auto` for cross-row lit stacking.
+ * Exception: the hands-identifier *selected* bot cell keeps z-index 6 (part-0083) so its blue
+ * halo paints over the row below. Do not elevate the whole overlay row — that lifted sorted
+ * B/C/D lit tiles above the next suit row and made one coach lift cast onto the other.
  */
 html.app-dnd-frame
   .app-play-split.app-top-exposure-container
@@ -2885,13 +2901,29 @@ html
   .app-dnd-frame
   > .app-play-split.app-top-exposure-container
   .discard-tracker__overlay-row.discard-tracker__overlay-row--bot-hands-active {
+  z-index: auto !important;
+}
+
+html.app-dnd-frame
+  .app-play-split.app-top-exposure-container
+  .discard-tracker__overlay-grid
+  > .discard-tracker__overlay-row.discard-tracker__overlay-row--bot-hands-active
+  > .app-opponents-rail__cell,
+html
+  .app-dnd-frame
+  > .app-play-split.app-top-exposure-container
+  .discard-tracker__overlay-row.discard-tracker__overlay-row--bot-hands-active
+  > .app-opponents-rail__cell {
   z-index: 6 !important;
 }
 
 html
   .app-dnd-frame
   > .app-play-split.app-top-exposure-container
-  .discard-tracker__overlay-row:has(.exposure-rack__slot--suggest-best) {
+  .discard-tracker__overlay-row:has(
+    .exposure-rack__slot--suggest-best,
+    .sorted-discard-tray__slot--suggest-need
+  ) {
   background-color: transparent;
   background-image: none;
   overflow: visible;

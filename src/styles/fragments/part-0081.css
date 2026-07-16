@@ -1171,8 +1171,8 @@
   --hands-strip-tile-radius: calc(0.116 * var(--hands-preview-tile-w));
   border-radius: var(--hands-strip-tile-radius);
   overflow: hidden;
-  /* Grid + size container: face fills the slot so row fill does not show as a “frame”. */
-  container-type: size;
+  /* Frozen tile metrics (not `100cqw`) — invalid/late cqw on mobile dropped rim vignette a frame
+   * after lift. Face still fills via grid stretch. */
   display: grid;
   grid-template: 1fr / 1fr;
   place-items: stretch;
@@ -1184,8 +1184,8 @@
   height: 100%;
   min-width: 0;
   min-height: 0;
-  --rack-tile-w: 100cqw;
-  --rack-tile-h: 100cqh;
+  --rack-tile-w: var(--hands-preview-tile-w);
+  --rack-tile-h: var(--hands-preview-tile-h);
   --tile-face-border-radius: var(--hands-strip-tile-radius);
   border-radius: var(--hands-strip-tile-radius);
   overflow: hidden;
@@ -1223,14 +1223,9 @@
   box-shadow: none;
 }
 
-.hands-list__row-hit--with-tiles
-  :is(
-    .hands-list__pattern-tile-cell--suggest-best,
-    .hands-list__pattern-tile-cell--suggest-joker
-  )
-  .tile-face,
-.hands-sheet__tile-cell--suggest-best .tile-face,
-.hands-sheet__tile-cell--suggest-joker .tile-face {
+/* Face above the always-on lift `::after` (z-index 0) on every strip cell. */
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell .tile-face,
+.hands-sheet__tile-cell .tile-face {
   position: relative;
   z-index: 1;
 }
@@ -1260,7 +1255,19 @@
 /*
  * Suggested-hands tray: same centered lift vignette as discard tracker (part-0124). Glow on the
  * cell `::after`, rim on the face `::before` (shared coach block). Lit→lit seams clip to gap center.
+ *
+ * Keep the lift `::after` mounted on every strip cell (transparent until lit) so iOS WKWebView
+ * does not create the pseudo a frame after the face lights up. Same idea as dim `::after` opacity
+ * toggles on the main rack (part-0123).
  */
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell {
+  --coach-lift-tile-w: var(--hands-preview-tile-w);
+}
+
+.hands-sheet__tile-cell {
+  --coach-lift-tile-w: var(--hands-sheet-tile-w);
+}
+
 .hands-list__row-hit--with-tiles
   :is(
     .hands-list__pattern-tile-cell--suggest-best,
@@ -1270,19 +1277,6 @@
 .hands-sheet__tile-cell--suggest-joker {
   overflow: visible;
   z-index: 3;
-}
-
-.hands-list__row-hit--with-tiles
-  :is(
-    .hands-list__pattern-tile-cell--suggest-best,
-    .hands-list__pattern-tile-cell--suggest-joker
-  ) {
-  --coach-lift-tile-w: var(--hands-preview-tile-w);
-}
-
-.hands-sheet__tile-cell--suggest-best,
-.hands-sheet__tile-cell--suggest-joker {
-  --coach-lift-tile-w: var(--hands-sheet-tile-w);
 }
 
 /* A higher-specificity panel rule (see `.hands-panel__content .hands-list--tiles-excel ...
@@ -1321,6 +1315,24 @@
   overflow: visible;
 }
 
+/* Always-on lift layer: transparent until suggest-best/joker (avoids mobile create-pseudo lag). */
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell::after,
+.hands-sheet__tile-cell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  /* Above cell bg; face stays z-index 1. Avoid z-index:-1 — WebKit can drop the glow a frame
+   * (or behind an ancestor fill) so tiles read lit-but-flat before the vignette appears. */
+  z-index: 0;
+  pointer-events: none;
+  border-radius: var(--tile-face-border-radius, var(--hands-sheet-tile-radius, var(--hands-strip-tile-radius)));
+  box-shadow: none;
+  clip-path: inset(
+    var(--coach-centered-lift-clip-outset) var(--coach-centered-lift-clip-outset)
+      var(--coach-centered-lift-clip-outset) var(--coach-centered-lift-clip-outset)
+  );
+}
+
 .hands-list__row-hit--with-tiles
   :is(
     .hands-list__pattern-tile-cell--suggest-best,
@@ -1328,17 +1340,7 @@
   )::after,
 .hands-sheet__tile-cell--suggest-best::after,
 .hands-sheet__tile-cell--suggest-joker::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  border-radius: var(--tile-face-border-radius);
   box-shadow: var(--coach-centered-lift-shadow);
-  clip-path: inset(
-    var(--coach-centered-lift-clip-outset) var(--coach-centered-lift-clip-outset)
-      var(--coach-centered-lift-clip-outset) var(--coach-centered-lift-clip-outset)
-  );
 }
 
 /* Highlighted tile with a highlighted tile to its RIGHT: clip glow to the gap center. */
@@ -3011,8 +3013,7 @@
   --hands-sheet-tile-radius: calc(0.116 * var(--hands-sheet-tile-w));
   border-radius: var(--hands-sheet-tile-radius);
   overflow: hidden;
-  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  container-type: size;
+  /* No opacity transition — it delayed the coach lift/rim read vs the face lighting up. */
   display: grid;
   grid-template: 1fr / 1fr;
   place-items: stretch;
@@ -3025,8 +3026,8 @@
 }
 
 /*
- * Hand TileFace internally derives ALL paint (digits, letters, dots) from `--rack-tile-w` /
- * `--rack-tile-h`. Size queries tie glyphs to the actual cell so the face fills the slot.
+ * Hand TileFace derives paint from `--rack-tile-w` / `--rack-tile-h`. Use the sheet’s frozen
+ * tile size (not `100cqw`) so rim vignette metrics are valid on the same frame as lift.
  */
 .hands-sheet__tile-cell .tile-face {
   grid-area: 1 / 1;
@@ -3034,8 +3035,8 @@
   height: 100%;
   min-width: 0;
   min-height: 0;
-  --rack-tile-w: 100cqw;
-  --rack-tile-h: 100cqh;
+  --rack-tile-w: var(--hands-sheet-tile-w);
+  --rack-tile-h: var(--hands-sheet-tile-h);
   --tile-face-border-radius: var(--hands-sheet-tile-radius);
   border-radius: var(--hands-sheet-tile-radius);
   border: none;
