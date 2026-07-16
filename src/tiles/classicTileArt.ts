@@ -30,20 +30,39 @@ export const ALL_CLASSIC_TILE_ART_URLS: readonly string[] = Array.from(
 
 let tileArtPreloadStarted = false
 
+const PRELOAD_MAX_ATTEMPTS = 4
+
+function preloadClassicTileArtUrl(url: string, attempt = 0): void {
+  const img = new Image()
+  img.onload = () => {
+    // decode() moves the decode off the first render path so later paints are instant.
+    void img.decode?.().catch(() => undefined)
+  }
+  img.onerror = () => {
+    if (attempt + 1 >= PRELOAD_MAX_ATTEMPTS) return
+    const next = attempt + 1
+    window.setTimeout(() => preloadClassicTileArtUrl(url, next), 60 * next)
+  }
+  img.src = url
+}
+
 /**
  * Fetch + decode every Illustrative Classic tile SVG up front (called during the launch splash) so
  * the first time a tile appears it paints synchronously from the WebView cache instead of flashing a
  * blank face while the file is fetched/decoded — the main cause of tile "pop-in" inside Capacitor.
+ * Retries failed URLs: mobile Safari sometimes drops concurrent SVG loads under memory pressure.
  */
 export function preloadClassicTileArt(): void {
   if (tileArtPreloadStarted || typeof Image === 'undefined') return
   tileArtPreloadStarted = true
   for (const url of ALL_CLASSIC_TILE_ART_URLS) {
-    const img = new Image()
-    img.src = url
-    // decode() moves the decode off the first render path so later paints are instant.
-    img.decode?.().catch(() => undefined)
+    preloadClassicTileArtUrl(url)
   }
+}
+
+// Warm the HTTP cache as soon as this module loads — don't wait for React mount / splash effect.
+if (typeof window !== 'undefined') {
+  preloadClassicTileArt()
 }
 
 /** SVG URL for the Illustrative Classic tile set, or null when no art exists (e.g. blank). */

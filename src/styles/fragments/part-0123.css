@@ -2872,9 +2872,9 @@ html[data-home-screen-app]:not([data-native-app])
 }
 
 .panel--hand .east-discard-staging__tile--dragging > div {
+  /* Hide without collapsing — zero-height can purge tile SVG bitmaps on iOS Safari. */
   opacity: 0;
-  height: 0;
-  min-height: 0;
+  visibility: hidden;
   overflow: hidden;
   pointer-events: none;
 }

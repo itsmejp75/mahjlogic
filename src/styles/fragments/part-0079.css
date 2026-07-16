@@ -314,11 +314,16 @@
 }
 
 .mahjong-win__bots-review-tile-run--exposure {
-  padding: 0.1rem 0.22rem;
-  border-radius: 0.35rem;
-  border: 1px solid color-mix(in srgb, var(--window-fg, #e8eaf0) 24%, var(--border, #445) 76%);
+  /* Match bot possible-hands: pad + radius scale with tile width; soft frame wash. */
+  --_review-exposure-tile-w: var(--hand-rack-tile-w);
+  --_review-exposure-pad: calc(var(--_review-exposure-tile-w) * 0.08);
+  --_review-exposure-tile-radius: calc(0.116 * var(--_review-exposure-tile-w));
+  --_review-exposure-frame: color-mix(in srgb, var(--text-h) 45%, var(--border));
+  padding: var(--_review-exposure-pad);
+  border-radius: calc(var(--_review-exposure-tile-radius) + var(--_review-exposure-pad));
+  border: 1px solid var(--_review-exposure-frame);
   box-sizing: border-box;
-  background: color-mix(in srgb, var(--color-black) 10%, transparent);
+  background: color-mix(in srgb, var(--_review-exposure-frame) 12%, transparent);
 }
 
 .mahjong-win__bots-review-tile {
@@ -365,7 +370,7 @@
 }
 
 .wall-game-dialog__review .mahjong-win__bots-review-tile-run--exposure {
-  padding: 0.06rem 0.14rem;
+  --_review-exposure-tile-w: calc(var(--hand-rack-tile-w) * 0.35);
 }
 
 .wall-game-dialog__review .mahjong-win__bots-review-tile {
@@ -376,4 +381,8 @@
 .wall-game-dialog--wall-seats .wall-game-dialog__review .mahjong-win__bots-review-tile {
   --rack-tile-w: var(--wall-game-player-tile-w);
   --rack-tile-h: var(--wall-game-player-tile-h);
+}
+
+.wall-game-dialog--wall-seats .wall-game-dialog__review .mahjong-win__bots-review-tile-run--exposure {
+  --_review-exposure-tile-w: var(--wall-game-player-tile-w);
 }

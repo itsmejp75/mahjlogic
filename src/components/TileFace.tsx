@@ -1,4 +1,4 @@
-import { memo, type ReactNode } from 'react'
+import { memo, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { TileDef } from '../mahjong/types'
 import type { CardInk } from '../card/cardText'
 import { CARD_INK_TO_TILE_SKIN_CLASS } from '../card/cardInkTileSkin'
@@ -9,6 +9,49 @@ import {
   type TileGraphics,
 } from '../tiles/tileGraphics'
 import { useTileGraphics } from '../tiles/TileGraphicsContext'
+
+/** Mobile Safari can fail a concurrent SVG load and keep the broken-image icon forever. */
+const TILE_ART_LOAD_MAX_ATTEMPTS = 4
+
+/**
+ * Classic tile SVG with load recovery. Remounts on error (same URL — no cache-bust query that
+ * can 404 on Capacitor) and stays invisible until `onLoad` so the blue question-mark placeholder
+ * never flashes. Explains "looks fine while dragging": DragOverlay mounts a fresh `<img>` that
+ * loads while the broken source stays parked at opacity 0.
+ */
+function TileArtImage({ src }: { src: string }) {
+  const [attempt, setAttempt] = useState(0)
+  const [loaded, setLoaded] = useState(false)
+  const retryTimerRef = useRef(0)
+
+  useEffect(() => {
+    setAttempt(0)
+    setLoaded(false)
+    return () => window.clearTimeout(retryTimerRef.current)
+  }, [src])
+
+  return (
+    <img
+      key={`${src}:${attempt}`}
+      className="tile-face__art"
+      src={src}
+      alt=""
+      aria-hidden="true"
+      draggable={false}
+      decoding="async"
+      // Keep layout; hide until decode succeeds so Safari's broken-image icon never shows.
+      style={loaded ? undefined : { opacity: 0 }}
+      onLoad={() => setLoaded(true)}
+      onError={() => {
+        setLoaded(false)
+        if (attempt + 1 >= TILE_ART_LOAD_MAX_ATTEMPTS) return
+        const next = attempt + 1
+        window.clearTimeout(retryTimerRef.current)
+        retryTimerRef.current = window.setTimeout(() => setAttempt(next), 50 * next)
+      }}
+    />
+  )
+}
 
 type Props = {
   def: TileDef
@@ -147,13 +190,7 @@ export const TileFace = memo(function TileFace({
       aria-label={tileAriaLabel(def)}
     >
       {artUrl != null ? (
-        <img
-          className="tile-face__art"
-          src={artUrl}
-          alt=""
-          aria-hidden="true"
-          draggable={false}
-        />
+        <TileArtImage src={artUrl} />
       ) : stackedSuit ? (
         <>
           <span className="tile-face__rank">{def.rank}</span>

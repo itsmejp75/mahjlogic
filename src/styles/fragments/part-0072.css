@@ -108,9 +108,12 @@
   position: absolute;
   inset: 0;
   width: var(--rack-tile-w);
-  height: 0;
-  min-height: 0;
+  /* Keep full tile size while hidden — iOS WKWebView can drop decoded <img> bitmaps when
+   * the element collapses to height:0, which shows Safari's broken-image icon after drop. */
+  height: var(--rack-tile-h);
+  min-height: var(--rack-tile-h);
   opacity: 0;
+  visibility: hidden;
   padding: 0;
   border: 0;
   overflow: hidden;
