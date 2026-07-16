@@ -17,12 +17,10 @@
  * (`position: relative` for Seat:, transforms on call-meld inset, etc.). Bot-hands glow stacking
  * (rack above the top band so green covers the halo) made that more likely to show.
  *
- * Lift the hand-tray itself above rack-top for the animation (z-index 6 beats staged rack-top 5).
+ * Always lift the hand-tray above rack-top for the animation (z-index 6 beats staged rack-top 5),
+ * including when call melds are pinned — drawn tiles must clear the green Discard> well. Owned-meld
+ * vignettes may tuck under the hand for the ~0.34s flight; green-slot clearance wins.
  * Also lift rack-bottom so tile z-index:10 still clears within the tray (same idea as joker-swap).
- *
- * Exception — pinned call melds: that lift buries owned-meld vignettes under the hand for the
- * whole fly-in. Keep the hand under rack-top so the meld stay lifted; the green slot may sit
- * above the flying tile while melds are exposed (vignette > green-slot clearance).
  */
 .app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
   .panel--hand
@@ -37,21 +35,6 @@
   .panel-hand-rack__hand-tray
   .rack-stage__rack-bottom {
   z-index: 3;
-}
-
-.app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
-  .panel--hand
-  .rack-stage__rack-col:has(.exposure-rack--has-call-melds)
-  > .panel-hand-rack__hand-tray {
-  z-index: auto;
-}
-
-.app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
-  .panel--hand
-  .rack-stage__rack-col:has(.exposure-rack--has-call-melds)
-  .panel-hand-rack__hand-tray
-  .rack-stage__rack-bottom {
-  z-index: 1;
 }
 
 .app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
@@ -74,21 +57,8 @@
   .panel--hand
   .panel-hand-rack__hand-tray
   > .panel-hand-rack__seat-label {
-  /* Seat chip is z-index 10 in part-0084 — keep it under Charleston (2) and flying tiles (10). */
+  /* Seat chip is z-index 10 in part-0084 — keep it under flying tiles (10) within the lifted tray. */
   z-index: 1;
-}
-
-/*
- * With call melds the hand stays under rack-top (vignette fix above). Dropping the seat to
- * z-index 1 would tuck it under that exposure for the fly-in — keep the normal lift so Seat:
- * stays readable below the meld.
- */
-.app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
-  .panel--hand
-  .rack-stage__rack-col:has(.exposure-rack--has-call-melds)
-  .panel-hand-rack__hand-tray
-  > .panel-hand-rack__seat-label {
-  z-index: 10;
 }
 
 /*

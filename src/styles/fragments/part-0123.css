@@ -1183,6 +1183,26 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   z-index: 1;
 }
 
+/*
+ * Drawn-tile / Charleston fly-in: hand tray must clear the green Discard> / pass wells on
+ * sibling `.rack-stage__rack-top` (including when call melds are pinned). Late-cascade twin of
+ * part-0035 so later rack stacking rules cannot bury the flight again.
+ */
+.app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
+  .panel--hand
+  .rack-stage__rack-col
+  > .panel-hand-rack__hand-tray {
+  position: relative;
+  z-index: 6;
+}
+
+.app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .rack-stage__rack-bottom {
+  z-index: 3;
+}
+
 .panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass),
 .panel--hand .rack-stage__rack-top .exposure-rack.exposure-rack--charleston-pass {
   background: transparent;
