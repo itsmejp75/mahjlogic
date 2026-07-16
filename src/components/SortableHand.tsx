@@ -476,6 +476,11 @@ type Props = {
    * slide one column left so the rack previews the removed/compacted state (no snap-back to home).
    */
   passStageTileId?: string | null
+  /**
+   * When true, skip the post-removal neighbour-slide. Used during call-staging: the hand inset
+   * already shifts right as the meld grows, and the slide would fight that and read as a juke.
+   */
+  suppressRemovalShift?: boolean
 }
 
 /**
@@ -516,6 +521,7 @@ export const SortableHand = memo(
   charlestonPassPhantomTile = null,
   externalInsertPreviewIndex = null,
   passStageTileId = null,
+  suppressRemovalShift = false,
 }: Props) {
   const renderIds = sortableOrder ?? tiles.map((t) => t.id)
   const passStageIndex = passStageTileId != null ? renderIds.indexOf(passStageTileId) : -1
@@ -564,6 +570,12 @@ export const SortableHand = memo(
     prevRenderIdsRef.current = renderIds
     if (!animationsEnabled) return
     if (externalPreviewActive) return
+    // Call-staging inset already shifts the hand right when a tile joins the meld; the
+    // neighbour-slide would pull the same tiles left and read as a quick juke.
+    if (suppressRemovalShift) {
+      setRemovalShift(null)
+      return
+    }
     if (prev.length === renderIds.length + 1) {
       const removedIndex = prev.findIndex((id) => !renderIds.includes(id))
       const removedId = prev.find((id) => !renderIds.includes(id)) ?? null
@@ -584,7 +596,7 @@ export const SortableHand = memo(
       // Length changed in some other way (e.g. multiple tiles added/removed) — drop the shift.
       setRemovalShift(null)
     }
-  }, [renderIds, animationsEnabled, externalPreviewActive])
+  }, [renderIds, animationsEnabled, externalPreviewActive, suppressRemovalShift])
 
   // After the "pre" state is committed and painted, schedule the flip to "post" so the
   // browser can transition `transform: translateX(+col)` -> `translateX(0)`.
@@ -746,7 +758,8 @@ export const SortableHand = memo(
       sameStringIdOrder(prev.sortableOrder, next.sortableOrder) &&
       prev.charlestonPassPhantomTile === next.charlestonPassPhantomTile &&
       prev.externalInsertPreviewIndex === next.externalInsertPreviewIndex &&
-      prev.passStageTileId === next.passStageTileId
+      prev.passStageTileId === next.passStageTileId &&
+      prev.suppressRemovalShift === next.suppressRemovalShift
     )
   },
 )

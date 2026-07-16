@@ -755,6 +755,7 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                     animationsEnabled={animationsEnabled}
                                     jokerSwapHintBounceTileIds={jokerSwapHintBounceIds?.hand ?? null}
                                     jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
+                                    suppressRemovalShift={mainPhase === 'call-staging'}
                                   />
                                 </HandBank>
                             </div>

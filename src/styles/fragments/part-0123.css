@@ -2149,7 +2149,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   );
 }
 
-/* Bot hands-identifier: glow on tray (::before, behind text); orange stroke on ::after. */
+/* Bot hands-identifier: glow on tray (::before, behind text); Mahj-blue stroke on ::after. */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
   .bot-exposure-hands-panel {
@@ -2176,7 +2176,8 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
   .bot-exposure-hands-panel
   .hands-panel__content::before {
-  --_drop-frame-color: var(--simple-joker-yellow, #ffc107);
+  /* Same blue as bot-exposure selection glow / Mahj logo glyph. */
+  --_drop-frame-color: #00B4D8;
   /* Header glow — behind list text; must stay above any solid list-column band. */
   z-index: 1;
   background-image: linear-gradient(
@@ -2217,7 +2218,8 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
   .bot-exposure-hands-panel
   .hands-panel__content::after {
-  --_drop-frame-color: var(--simple-joker-yellow, #ffc107);
+  /* Same blue as bot-exposure selection glow / Mahj logo glyph. */
+  --_drop-frame-color: #00B4D8;
   --_frame-radius: var(--suggested-popup-radius);
   z-index: 3;
   left: 0;

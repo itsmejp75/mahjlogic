@@ -64,16 +64,34 @@
   cursor: pointer;
 }
 
+/*
+ * Same overlay-row siblings (sorted B/C/D + S/W/N seat chip) share the row and can sit above the
+ * bot cell in hit-testing — especially coach-lit sorted tiles (`z-index: 12`) on the right edge of
+ * the BAM band (N/S winds), which abut the top bot seat. Those targets do nothing on tap, so the
+ * exposure row feels dead until a later tap lands on the cell itself. Pass hits through; blank
+ * exchange uses its own overlay, not these on-board sorted slots.
+ */
+.discard-tracker__overlay-row--bot-hands-clickable
+  > .exposure-rack--discard-tracker-sorted-row,
+.discard-tracker__overlay-row--bot-hands-clickable
+  > .exposure-rack--discard-tracker-bot-seat-label {
+  pointer-events: none;
+}
+
 .discard-tracker__overlay-row--bot-hands-clickable .app-opponents-rail__cell > [role='button'] {
   display: block;
   width: 100%;
   min-width: 0;
+  min-height: 100%;
+  height: 100%;
   outline: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /*
- * Selected bot exposure (hands-identifier): same soft yellow/orange outer glow as joker-swap /
- * blank-exchange drop frames (part-0123). Row z-index lifts the halo over sibling overlay rows.
+ * Selected bot exposure (hands-identifier): soft outer glow in Mahj logo glyph blue (#00B4D8).
+ * Row z-index lifts the halo over sibling overlay rows.
  * Vs Discard> while the hands tray is open (part-0123): beat part-0103’s play-split@100 /
  * rack@0 so paint order is dark seam < glow < green discard (hands sheet stays above).
  * Single ::after frame (border + glow) — avoid a separate box-shadow ring that reads as a double border.
@@ -99,7 +117,8 @@
 }
 
 .discard-tracker__overlay-row--bot-hands-active .app-opponents-rail__cell::after {
-  --_drop-frame-color: var(--simple-joker-yellow, #ffc107);
+  /* Same blue as `.rack-logo-watermark__mahj` / mahj-logo.svg glyph fill. */
+  --_drop-frame-color: #00B4D8;
   /* Keep glow/outset proportional to tile size (was fixed 10px/3px/2px). */
   --_frame-outset: max(1px, calc(var(--rack-tile-w) * 0.0625));
   --_glow-blur: max(2px, calc(var(--rack-tile-w) * 0.3125));
@@ -179,7 +198,10 @@
   height: calc(var(--_bot-hands-close-u) * 1.4);
   margin: 0;
   padding: 0;
-  border: 0.5px solid var(--_bot-hands-close);
+  /* 1px (not 0.5px): a sub-pixel hairline border antialiases away on HiDPI (iOS DPR 2/3) when the
+     cqi-sized box lands on a fractional device-pixel row — the bottom/right edge would vanish on
+     mobile. 1px always covers a full device row on every side (matches the exposure-run frame). */
+  border: 1px solid var(--_bot-hands-close);
   border-radius: calc(var(--_bot-hands-close-u) * 0.2);
   background: color-mix(in srgb, var(--app-bg-base, #0a0a0a) 72%, transparent);
   color: var(--_bot-hands-close);

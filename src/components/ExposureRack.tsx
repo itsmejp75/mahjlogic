@@ -1177,15 +1177,29 @@ export const ExposureRack = memo(
   possibleOpenHandsCount = null,
 }: Props) {
   const totalExposed = melds.reduce((n, m) => n + m.tiles.length, 0)
+  const callMelds = melds.filter((meld) => meld.calledTileId)
+  const flowMelds = melds.filter((meld) => !meld.calledTileId)
+  // DOM order is call anchor first, then flow melds — ids must match for dnd-kit reorder previews.
+  const sortableMeldIds = [...callMelds, ...flowMelds]
+    .map((meld) => meld.sortableMeldId)
+    .filter((id): id is string => id != null)
+  const callMeldTileCount = callMelds.reduce((n, m) => n + m.tiles.length, 0)
+  // Staging melds use `onTileClick` — hide empty/discard green wells until Done commits the call.
+  const callStagingActive = callMelds.some((meld) => meld.onTileClick != null)
   const passStripShift = Math.max(0, shiftPassStripLeftSlots)
   const tailReserved = reserveTrailingSlots + (reserveLastSlotForDiscard ? 1 : 0)
   const freeAfterMelds = slotCount - totalExposed - suffixSlotCount - tailReserved - passStripShift
   const showPossibleOpenHandsHint =
-    possibleOpenHandsCount != null && totalExposed > 0 && freeAfterMelds >= 2
+    possibleOpenHandsCount != null && totalExposed > 0 && freeAfterMelds >= 2 && !callStagingActive
   const possibleOpenHandsHintSlots = showPossibleOpenHandsHint ? 2 : 0
   const emptyCount = Math.max(0, freeAfterMelds - possibleOpenHandsHintSlots)
   const callInitiateShown = firstEmptyOverride != null
-  const emptySlotCount = callInitiateShown ? Math.max(0, emptyCount - 1) : emptyCount
+  // No trailing green empty wells while staging a call — discard green returns after commit.
+  const emptySlotCount = callStagingActive
+    ? 0
+    : callInitiateShown
+      ? Math.max(0, emptyCount - 1)
+      : emptyCount
 
   const gLast = suggestedTileGuide
   const lastSlotIsBest = lastSlotTile
@@ -1205,13 +1219,6 @@ export const ExposureRack = memo(
   const lastSlotSuggestDim =
     lastSlotIsDeadSuggested ||
     (!!gLast && !!lastSlotTile && !lastSlotIsBest && !lastSlotBlankExchange)
-  const callMelds = melds.filter((meld) => meld.calledTileId)
-  const flowMelds = melds.filter((meld) => !meld.calledTileId)
-  // DOM order is call anchor first, then flow melds — ids must match for dnd-kit reorder previews.
-  const sortableMeldIds = [...callMelds, ...flowMelds]
-    .map((meld) => meld.sortableMeldId)
-    .filter((id): id is string => id != null)
-  const callMeldTileCount = callMelds.reduce((n, m) => n + m.tiles.length, 0)
 
   // Count every meld that actually shows tiles (including joker-swap droppables: they still cover the watermark).
   const filledMeldCount = melds.filter((m) => m.tiles.length > 0).length
@@ -1271,6 +1278,7 @@ export const ExposureRack = memo(
         <CallMeldStrip {...callStripCommon} locked={false} staging />,
         Math.max(1, ordered.length),
       )
+      // Keep the staging “+” well; trailing empty/discard greens stay hidden until Done.
       if (ordered.length >= 6) return strip
       return (
         <Fragment key={meld.calledTileId ?? `call-staging-${gi}`}>
