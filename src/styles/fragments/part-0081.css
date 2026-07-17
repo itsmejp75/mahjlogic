@@ -2298,13 +2298,22 @@
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2).hands-sheet--detail-tiles
   .hands-sheet__row {
+  /*
+   * Card track uses the same outer top pad + 1em line as tiles-off (not the old 1.5em+0.4em
+   * budget, which stretched the track and floated extra air around the card hand).
+   */
   --_hands-row-h: round(
     up,
-    calc(1.5em + 0.4em + var(--hands-sheet-tile-h) + var(--hands-pattern-lift-pad-block, 0.28rem) + 2px),
+    calc(
+      var(--hands-sheet-row-outer-pad-y) + 1em + var(--hands-sheet-tile-h) +
+        var(--hands-pattern-lift-pad-block, 0.14rem) + var(--hands-sheet-row-pad-y) + 2px
+    ),
     1px
   );
   min-block-size: var(--_hands-row-h);
   contain-intrinsic-size: auto var(--_hands-row-h);
+  /* Don’t let leftover min-height stretch the card-hand track. */
+  align-content: start;
 }
 
 /*
@@ -2654,7 +2663,8 @@
  */
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2).hands-sheet--detail-tiles {
   --hands-sheet-tile-gap: var(--player-rack-face-gap);
-  --hands-pattern-lift-pad-block: max(0.28rem, calc(var(--hands-sheet-tile-w) * 0.2));
+  /* Tighter than the default lift pad — scrunch tile rows a little. */
+  --hands-pattern-lift-pad-block: max(0.14rem, calc(var(--hands-sheet-tile-w) * 0.12));
   --hands-sheet-tile-col: calc(
     var(--suggest-hands-panel-cqw-resolved) - var(--hands-sheet-pin-w) - var(--hands-sheet-category-w) -
       3 * var(--hands-sheet-metric-col-w) - 4 * var(--hands-sheet-cell-pad-x)
@@ -2674,7 +2684,8 @@
   flex-wrap: nowrap;
   max-width: 100%;
   overflow: hidden;
-  padding-block: calc(0.08em + var(--hands-pattern-lift-pad-block, 0.28rem) / 2);
+  /* Small gap under the card hand, then air below the strip. */
+  padding-block: 0.1em calc(var(--hands-sheet-row-pad-y) + var(--hands-pattern-lift-pad-block, 0.14rem) / 2);
 }
 
 /* Boxed exposure runs are taller (real pad like bot hands) — don't clip the frame. */
