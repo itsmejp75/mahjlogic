@@ -54,8 +54,8 @@ const DRAG_SCROLL_CLASS = 'hands-list-scroll--drag-scrolling'
 const HANDS_LIST_VIRTUAL_OVERSCAN = 8
 /** Minimum mounted window before scroll metrics are known. */
 const HANDS_LIST_VIRTUAL_MIN_WINDOW = 28
-/** Hands-only fallback until the first real row is measured (matches ~2.615em + borders). */
-const HANDS_LIST_ROW_H_FALLBACK = 42
+/** Hands-only fallback until the first real row is measured (matches ~2.27em + borders). */
+const HANDS_LIST_ROW_H_FALLBACK = 37
 /** Tiles-mode fallback until measured (card line + tile strip). */
 const HANDS_LIST_ROW_H_TILES_FALLBACK = 56
 

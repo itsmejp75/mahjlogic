@@ -135,7 +135,8 @@
   min-height: 0;
   /* Selected suggested-hand row fill: #334155 at ~64% opacity (rgba — reliable over dark scroll areas). */
   --hands-row-active-fill: rgba(51, 65, 85, 0.64);
-  --hands-pin-ink: color-mix(in srgb, var(--hands-row-active-fill) 72%, #161d26 28%);
+  /* Inactive pins on unhighlighted rows: same dark as the selected-row fill. */
+  --hands-pin-ink: var(--hands-row-active-fill);
   /* Highlighted row: slightly lighter than shell bg for contrast on the selection fill. */
   --hands-pin-ink-active: color-mix(in srgb, var(--app-bg-base) 80%, #ffffff 20%);
   --hands-sheet-cell-bg: transparent;
@@ -1506,8 +1507,11 @@
   --hands-sheet-cell-pad-x: 0.65em;
   /* Tighter horizontal pad only for Odds / Away / Points so fixed tracks can stay narrow without clipping. */
   --hands-sheet-metric-pad-x: 0.32em;
-  --hands-sheet-grid-line-color: color-mix(in srgb, var(--window-border) 55%, transparent);
+  /* Spreadsheet rules (vertical + horizontal) — light enough to stay quiet in the tray. */
+  --hands-sheet-grid-line-color: color-mix(in srgb, var(--window-border) 28%, transparent);
+  --hands-sheet-h-grid-line-color: var(--hands-sheet-grid-line-color);
   --hands-sheet-border: 1px solid var(--hands-sheet-grid-line-color);
+  --hands-sheet-h-border: 1px solid var(--hands-sheet-h-grid-line-color);
   --hands-sheet-grid-line-w: 0.5px;
   /*
    * Header-row grid lines (vertical + horizontal). Transparent for now — restore with:
@@ -1692,7 +1696,7 @@
   box-sizing: border-box;
   padding: var(--hands-sheet-cell-pad-y) var(--hands-sheet-cell-pad-x);
   border-inline-end: var(--hands-sheet-border);
-  border-block-end: var(--hands-sheet-border);
+  border-block-end: var(--hands-sheet-h-border, var(--hands-sheet-border));
   background: var(--hands-sheet-cell-bg, transparent);
   color: inherit;
   font: inherit;
@@ -2305,21 +2309,22 @@
 
 /*
  * Tiles off: pin every row to a whole-pixel height. The card line + parenthesis line come to a
- * fractional ~55.3px, so each row started on a different sub-pixel. When the list re-ranks the
+ * fractional height, so each row started on a different sub-pixel. When the list re-ranks the
  * selected row is held in place while the surrounding rows nudge by that leftover fraction, which
  * dragged the 1px seam above the selected row onto a new sub-pixel and smeared it into a
  * thicker / "doubled" line. `round(up, …)` snaps the row height to whole CSS pixels so the grid
  * lines stay on the device-pixel grid and the seam stays a crisp, unchanging 1px through re-ranks.
  * `min-block-size` (not a fixed height) still lets a rare wrapping title / parenthesis grow.
- * `--_hands-row-h` models the natural height: card line (1.5em line box + 1px cell border) plus
- * parenthesis line (1.115em box + 1px cell border); the 2px of borders are constant so this
- * tracks the fluid sheet font correctly.
+ * `--_hands-row-h` models the natural height after the compact card-hand scale: card line
+ * (~1.22em with matched outer top pad + 1px border) plus parenthesis line (~1.05em with
+ * descender pad + 1px border). Keep this tight so extra track space does not open a gap
+ * between the card hand and parenthesis.
  */
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2):not(.hands-sheet--detail-tiles)
   .hands-sheet__row {
-  --_hands-row-h: round(up, calc(2.615em + 2px), 1px);
+  --_hands-row-h: round(up, calc(2.27em + 2px), 1px);
   min-block-size: var(--_hands-row-h);
   contain-intrinsic-size: auto var(--_hands-row-h);
 }
@@ -2610,33 +2615,37 @@
 /*
  * Tray row height: pack more hands into view. Every body cell zeroes its own vertical padding
  * and takes its height from the line box, so first collapse the line-height so each line hugs
- * its text, then add a small symmetric `padding-block` for a little air above/below the text on
- * both the card-hand line and the parenthesis/detail line. Dial `--hands-sheet-row-pad-y` for
- * more/less breathing room. (Selector is intentionally very specific so it wins over the
- * per-cell `padding: 0` rules above.)
+ * its text. Card-hand track keeps outer pad above only; detail/paren track keeps pad below
+ * only — no gap between the card hand and the parenthesis. `--hands-sheet-row-outer-pad-y`
+ * matches the visual air under the parenthesis (paren descender pad + detail cell pad).
  */
 .hands-panel__content .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2) {
   --hands-sheet-row-pad-y: 0.06em;
+  /* Sheet-em: ~paren 0.2em×0.58×1.25 + detail-cell 0.06em×1.25 */
+  --hands-sheet-row-outer-pad-y: 0.22em;
   line-height: 1;
 }
 
+/* Card-hand line: match outer air above to the space under the parenthesis; flush below. */
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)
   .hands-sheet__rows
   .hands-sheet__row-btn
-  > .hands-sheet__cell:not(.hands-sheet__cell--header):not(.hands-sheet__cell--tiles) {
-  padding-block: var(--hands-sheet-row-pad-y);
+  > .hands-sheet__cell:not(.hands-sheet__cell--header):not(.hands-sheet__cell--tiles):not(
+    .hands-sheet__cell--detail-pad
+  ) {
+  padding-block: var(--hands-sheet-row-outer-pad-y) 0;
 }
 
-/* Parenthesis/detail line sits flush under the card-hand line — no gap above it. */
+/* Parenthesis/detail line: flush under the card hand; keep a little air under the row. */
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)
   .hands-sheet__rows
   .hands-sheet__row-btn
   > .hands-sheet__cell--detail-pad:not(.hands-sheet__cell--header):not(.hands-sheet__cell--tiles) {
-  padding-block-start: 0;
+  padding-block: 0 var(--hands-sheet-row-pad-y);
 }
 
 /*
@@ -2756,10 +2765,11 @@
   display: block;
   width: 100%;
   margin-inline-start: 0;
-  padding-block-end: 0.18em;
+  /* Room for descenders (g, y, etc.) above the row seam — keep top flush to the card hand. */
+  padding-block: 0 0.2em;
   /* Fixed cell-relative size — same on every row; not tied to per-hand title shrink. */
   font-size: 0.58em;
-  line-height: 1;
+  line-height: 1.15;
   opacity: 0.72;
   text-align: left;
   white-space: nowrap;

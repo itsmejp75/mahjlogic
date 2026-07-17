@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react'
+import { memo, useLayoutEffect, useMemo, useRef } from 'react'
 import type { PracticePattern } from '../card/practicePatterns'
 import type { TileDef } from '../mahjong/types'
 import type { CardInk } from '../card/cardText'
@@ -130,6 +130,28 @@ export const BotExposureHandsPanel = memo(function BotExposureHandsPanel({
   discardTraySurface = false,
   onClose,
 }: Props) {
+  const listColumnRef = useRef<HTMLDivElement>(null)
+
+  /** Freeze list-column width for tile math (same token as SuggestedHandsPanel). */
+  useLayoutEffect(() => {
+    const el = listColumnRef.current
+    if (!el) return
+
+    const refresh = () => {
+      const w = el.clientWidth
+      if (!Number.isFinite(w) || w < 1) return
+      const next = `${w}px`
+      if (el.style.getPropertyValue('--suggest-hands-panel-cqw') !== next) {
+        el.style.setProperty('--suggest-hands-panel-cqw', next)
+      }
+    }
+
+    refresh()
+    const ro = new ResizeObserver(refresh)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   const rootClassName = [
     'panel',
     'panel--hands',
@@ -164,7 +186,7 @@ export const BotExposureHandsPanel = memo(function BotExposureHandsPanel({
             </svg>
           </button>
         ) : null}
-        <div className="hands-panel__list-column">
+        <div ref={listColumnRef} className="hands-panel__list-column">
           <div className="hands-list-scroll bot-exposure-hands-panel__scroll">
             {patterns.length === 0 ? (
               <p className="bot-exposure-hands-panel__empty">No open card hands fit these exposures.</p>

@@ -255,16 +255,46 @@
 .bot-exposure-hands-list {
   /*
    * One shared column template for the whole sheet (same idea as `--hands-sheet-grid-cols`):
-   * pin category + hand title to fixed tracks so switching bots can’t resize the tiles column
-   * (tile size is derived from that column’s `cqi`). Long labels ellipsis in place.
-   * Rows use `display: contents` so every cell participates in this grid — vertical rules stay straight.
+   * pin category + hand title to fixed tracks so switching bots can’t resize the tiles column.
+   * Long labels ellipsis in place. Rows use `display: contents` so every cell participates in
+   * this grid — vertical rules stay straight.
+   *
+   * Tile size is derived from the list-column width minus the two fixed tracks (same approach as
+   * suggested-hands `--hands-sheet-tile-w`) — NOT from the tiles cell’s nested `cqi`, which can
+   * resolve against a wider ancestor and blow tiles past the column.
    */
-  --bot-hands-grid-line: 1px solid color-mix(in srgb, var(--window-border) 55%, transparent);
+  /* Same lightness as suggested-hands `--hands-sheet-grid-line-color`. */
+  --bot-hands-grid-line: 1px solid
+    var(--hands-sheet-grid-line-color, color-mix(in srgb, var(--window-border) 28%, transparent));
   --bot-hands-tile-gap: var(--player-rack-face-gap, var(--rack-tile-gap, 0.125rem));
-  /* Match suggested-hands category track; hand title is a fixed strip (not max-content). */
+  /* Fixed tracks: category fits labels at card-hand size; hand stays wide (tiles sit to the right). */
   --bot-hands-cat-w: 7.2em;
-  --bot-hands-hand-w: 14em;
+  --bot-hands-hand-w: 10.5em;
   --bot-hands-grid-cols: var(--bot-hands-cat-w) var(--bot-hands-hand-w) minmax(0, 1fr);
+  /*
+   * Inline pad inside the tiles track (start + end), including clearance for the floating
+   * close control on the trailing edge.
+   */
+  --bot-hands-tiles-pad-x: 1.6em;
+  /*
+   * Fit a full 14-tile strip (plus exposure-run chrome) in the remaining track.
+   * Underfill a little so pad/border/X don’t clip the last tile.
+   */
+  --bot-hands-tile-w: max(
+    0.35rem,
+    calc(
+      (
+        (
+            var(--suggest-hands-panel-cqw-resolved, 100cqi) - var(--bot-hands-cat-w) -
+              var(--bot-hands-hand-w) - var(--bot-hands-tiles-pad-x)
+          ) *
+          0.94 - 13 * var(--bot-hands-tile-gap)
+      ) / 14
+    )
+  );
+  --bot-hands-tile-h: calc(var(--bot-hands-tile-w) * 4 / 3);
+  --bot-hands-tile-radius: calc(0.116 * var(--bot-hands-tile-w));
+  --bot-hands-exposure-pad: calc(var(--bot-hands-tile-w) * 0.08);
   display: grid;
   grid-template-columns: var(--bot-hands-grid-cols);
   width: 100%;
@@ -285,7 +315,7 @@
 .bot-exposure-hands-list__hand,
 .bot-exposure-hands-list__tiles {
   box-sizing: border-box;
-  padding: 0.4em 0.65em;
+  padding: 0.35em 0.4em;
   display: flex;
   align-items: center;
   min-width: 0;
@@ -301,39 +331,39 @@
   white-space: nowrap;
 }
 
+/* Match card-hand size — base `.hands-sheet__category` is 0.78em for the suggested-hands sheet. */
+.bot-exposure-hands-list__cat .hands-sheet__category {
+  font-size: 1em;
+}
+
 .bot-exposure-hands-list__cat {
   border-inline-end: var(--bot-hands-grid-line);
   /* Keep category + hand tight — less pad on the shared edge. */
-  padding-inline-end: 0.35em;
+  padding-inline-end: 0.25em;
 }
 
 .bot-exposure-hands-list__hand {
   border-inline-end: var(--bot-hands-grid-line);
-  padding-inline-start: 0.35em;
+  padding-inline-start: 0.25em;
+  padding-inline-end: 0.3em;
 }
 
 .bot-exposure-hands-list__tiles {
-  /* Size the 14-tile strip from this column’s live width. */
-  container-type: inline-size;
-  padding-inline: 0.35em;
-  /* Leave clear air before the tray’s right edge. */
-  padding-inline-end: 0.85em;
-  overflow: hidden;
+  padding-inline: 0.25em;
+  /* Clear the floating × — keep in sync with `--bot-hands-tiles-pad-x`. */
+  padding-inline-end: 1.35em;
+  /* Don’t clip exposure-run frames that sit slightly taller than the bare tile. */
+  overflow-x: hidden;
+  overflow-y: visible;
+  padding-block: 0.45em;
 }
 
 /*
  * Same structure as mahjong / wall-game review racks:
  * flex row of tile runs; each exposed meld is one bordered run.
+ * Tile face size inherits `--bot-hands-tile-w` from `.bot-exposure-hands-list`.
  */
 .bot-exposure-hands-list__tiles-row {
-  --bot-hands-tile-w: max(
-    0.35rem,
-    calc((100cqi * 0.88 - 13 * var(--bot-hands-tile-gap)) / 14)
-  );
-  --bot-hands-tile-h: calc(var(--bot-hands-tile-w) * 4 / 3);
-  /* Same corner proportion as rack / strip faces (~0.116 of tile width). */
-  --bot-hands-tile-radius: calc(0.116 * var(--bot-hands-tile-w));
-  --bot-hands-exposure-pad: calc(var(--bot-hands-tile-w) * 0.08);
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
