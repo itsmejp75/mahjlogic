@@ -100,10 +100,14 @@
    */
   --hands-header-bottom-blur-h: 0.55rem;
   --hands-header-bottom-blur-color: color-mix(in srgb, var(--app-bg-base) 80%, #000 20%);
+  /*
+   * `in oklab` uses premultiplied alpha so the fade doesn’t interpolate through black
+   * (bare `transparent` in srgb leaves a hairline at the end of the wash on pale tiles).
+   */
   --hands-header-bottom-blur: linear-gradient(
-    to bottom,
+    to bottom in oklab,
     var(--hands-header-bottom-blur-color) 0%,
-    color-mix(in srgb, var(--hands-header-bottom-blur-color) 45%, transparent) 45%,
+    color-mix(in oklab, var(--hands-header-bottom-blur-color) 45%, transparent) 45%,
     transparent 100%
   );
 

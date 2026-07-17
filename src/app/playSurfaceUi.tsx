@@ -16,6 +16,7 @@ import type { BotExposure, BotSeat } from '../analysis/types'
 import { useAppMenuOpen } from './AppMenuOpenContext'
 import { useSuggestedHandsTray } from './SuggestedHandsTrayContext'
 import logicLogoSrc from '../assets/logic-logo.svg?url'
+import mahjBirdSrc from '../assets/mahj-bird.svg?url'
 import { ExposureRack } from '../components/ExposureRack'
 import { TileFace } from '../components/TileFace'
 import { discardedDefsForBlankExchange } from '../mahjong/blankExchange'
@@ -1030,6 +1031,9 @@ export function DiscardTrackerSlotGrid({
         } as CSSProperties
       }
     >
+      <div className="discard-tracker__bot-band-bird" aria-hidden="true">
+        <img className="bot-exposure-rack__logo" src={mahjBirdSrc} alt="" draggable={false} />
+      </div>
       {botExposureSeats.map((seat, rowIdx) => {
         const melds = botRowMelds[rowIdx] ?? []
         const rowClickable =
