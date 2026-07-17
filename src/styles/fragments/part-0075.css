@@ -650,8 +650,9 @@
 .hands-list__dead-cause-warn {
   display: inline-block;
   vertical-align: middle;
-  width: 1.05em;
-  height: 1.05em;
+  /* Match card-hand line-height so focus chrome cannot grow the row. */
+  width: 1em;
+  height: 1em;
   margin-left: 0.2em;
   flex-shrink: 0;
   filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.45));
@@ -681,15 +682,21 @@
   fill: var(--hands-row-active-fill, #334155);
 }
 
+/*
+ * Dead-cause digit boxes: paint with inset shadow (not border/padding) so selecting a
+ * dead line cannot grow the card-hand track and shove the parenthesis/detail row down.
+ */
 .hands-list__title-dead-cause-run {
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  height: 1em;
   line-height: 1;
-  padding: 0.02em 0.1em 0.04em;
-  border: 1px solid var(--dead-cause-warning, #f97316);
+  padding: 0 0.1em;
+  border: none;
   border-radius: 0.18em;
+  box-shadow: inset 0 0 0 1px var(--dead-cause-warning, #f97316);
   vertical-align: baseline;
   flex-shrink: 0;
 }

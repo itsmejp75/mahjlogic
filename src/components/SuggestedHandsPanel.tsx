@@ -297,25 +297,18 @@ function resolveRowDeadCause(
   return null
 }
 
-/** Card-hand dead-cause chrome (boxed run + warning icon) for the active suggested line. */
+/**
+ * Card-hand dead-cause chrome (boxed run + warning icon) for one suggested row.
+ * Only the focused variant — never broadcast a sibling tier's cause across every row that
+ * shares the same card pattern id (e.g. all ten Runs-8 suit/base permutations).
+ */
 function cardHandDeadCauseForRow(
-  linePatternId: string,
-  rowFocusKey: string,
-  activePatternId: string | null,
-  effectiveFocusRowKey: string | null,
   rowIsFocused: boolean,
-  tilesGuideOn: boolean,
   focusedHandDeadCause: DeadCauseHint | null,
   rowDeadCause: DeadCauseHint | null,
 ): DeadCauseHint | null {
-  const cause = focusedHandDeadCause ?? rowDeadCause
-  if (!cause || activePatternId == null) return null
-  if (tilesGuideOn) {
-    return rowIsFocused ? cause : null
-  }
-  if (linePatternId === focusKeyPatternId(activePatternId)) return cause
-  if (effectiveFocusRowKey != null && rowFocusKey === effectiveFocusRowKey) return cause
-  return rowIsFocused ? cause : null
+  if (!rowIsFocused) return null
+  return focusedHandDeadCause ?? rowDeadCause
 }
 
 type StripRowsEntry = {
@@ -2279,12 +2272,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                           )
                         : null
                       const cardHandDeadCause = cardHandDeadCauseForRow(
-                        row.line.id,
-                        focusKey,
-                        activePatternId,
-                        effectiveFocusRowKey,
                         rowIsFocused,
-                        tilesGuideOn,
                         focusedHandDeadCause,
                         rowDeadCause,
                       )
@@ -2488,12 +2476,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                     )
                   : null
                 const cardHandDeadCause = cardHandDeadCauseForRow(
-                  row.line.id,
-                  focusKey,
-                  activePatternId,
-                  effectiveFocusRowKey,
                   rowIsFocused,
-                  tilesGuideOn,
                   focusedHandDeadCause,
                   rowDeadCause,
                 )

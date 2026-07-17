@@ -2747,10 +2747,14 @@
   flex-shrink: 0;
 }
 
+/*
+ * Dead-cause chrome must not depend on row selection for overflow — active and idle
+ * rows share the same card-hand height (inset boxes + 1em warn icon).
+ */
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2):not(.hands-sheet--detail-tiles)
-  .hands-sheet__row--active
+  .hands-sheet__row
   > .hands-sheet__row-btn
   > .hands-sheet__cell--hand:not(.hands-sheet__cell--detail-pad):has(.hands-sheet__hand-title-line--dead-cause) {
   overflow: visible;
@@ -2793,8 +2797,9 @@
   font-size: 0.85em;
   font-weight: 600;
   line-height: 1;
-  width: 1.02em;
-  height: 1.02em;
+  /* Exact 1em box — avoid growing the card-hand track past line-height: 1. */
+  width: 1em;
+  height: 1em;
   margin-inline-start: 0.35em;
   padding: 0;
   border: 1px solid currentColor;
