@@ -221,7 +221,7 @@
 
 /* Tray spreadsheet grid line color — shared by `.hands-sheet` and `.hands-list__freeze-header`. */
 .suggested-hands-popup .hands-panel__content .hands-list-scroll {
-  --hands-sheet-grid-line-color: color-mix(in srgb, var(--window-border) 28%, transparent);
+  --hands-sheet-grid-line-color: color-mix(in srgb, var(--window-border) 18%, transparent);
   --hands-sheet-h-grid-line-color: var(--hands-sheet-grid-line-color);
   --hands-sheet-border: 1px solid var(--hands-sheet-grid-line-color);
   --hands-sheet-h-border: 1px solid var(--hands-sheet-h-grid-line-color);
@@ -230,7 +230,7 @@
 }
 
 .suggested-hands-popup .hands-panel__content .hands-list-scroll > .hands-sheet {
-  --hands-sheet-grid-line-color: color-mix(in srgb, var(--window-border) 28%, transparent);
+  --hands-sheet-grid-line-color: color-mix(in srgb, var(--window-border) 18%, transparent);
   --hands-sheet-h-grid-line-color: var(--hands-sheet-grid-line-color);
   --hands-sheet-border: 1px solid var(--hands-sheet-grid-line-color);
   --hands-sheet-h-border: 1px solid var(--hands-sheet-h-grid-line-color);

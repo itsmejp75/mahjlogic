@@ -263,9 +263,9 @@
    * suggested-hands `--hands-sheet-tile-w`) — NOT from the tiles cell’s nested `cqi`, which can
    * resolve against a wider ancestor and blow tiles past the column.
    */
-  /* Same lightness as suggested-hands `--hands-sheet-grid-line-color`. */
+  /* Match suggested-hands `--hands-sheet-grid-line-color`. */
   --bot-hands-grid-line: 1px solid
-    var(--hands-sheet-grid-line-color, color-mix(in srgb, var(--window-border) 28%, transparent));
+    var(--hands-sheet-grid-line-color, color-mix(in srgb, var(--window-border) 18%, transparent));
   --bot-hands-tile-gap: var(--player-rack-face-gap, var(--rack-tile-gap, 0.125rem));
   /* Fixed tracks: category fits labels at card-hand size; hand stays wide (tiles sit to the right). */
   --bot-hands-cat-w: 7.2em;
@@ -355,7 +355,7 @@
   /* Don’t clip exposure-run frames that sit slightly taller than the bare tile. */
   overflow-x: hidden;
   overflow-y: visible;
-  padding-block: 0.45em;
+  padding-block: 0.22em;
 }
 
 /*

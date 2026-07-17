@@ -161,7 +161,7 @@ export const BotExposureHandsPanel = memo(function BotExposureHandsPanel({
     .filter(Boolean)
     .join(' ')
 
-  const title = `${seat} - ${patterns.length} possible hand${patterns.length === 1 ? '' : 's'}`
+  const title = `${seat}'s ${patterns.length} possible hand${patterns.length === 1 ? '' : 's'}`
 
   return (
     <section className={rootClassName} aria-label={title}>

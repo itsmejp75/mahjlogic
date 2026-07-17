@@ -1508,7 +1508,7 @@
   /* Tighter horizontal pad only for Odds / Away / Points so fixed tracks can stay narrow without clipping. */
   --hands-sheet-metric-pad-x: 0.32em;
   /* Spreadsheet rules (vertical + horizontal) — light enough to stay quiet in the tray. */
-  --hands-sheet-grid-line-color: color-mix(in srgb, var(--window-border) 28%, transparent);
+  --hands-sheet-grid-line-color: color-mix(in srgb, var(--window-border) 18%, transparent);
   --hands-sheet-h-grid-line-color: var(--hands-sheet-grid-line-color);
   --hands-sheet-border: 1px solid var(--hands-sheet-grid-line-color);
   --hands-sheet-h-border: 1px solid var(--hands-sheet-h-grid-line-color);
