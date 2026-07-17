@@ -190,7 +190,7 @@
     + var(--hands-sheet-grid-line-w, 0.5px)
     + var(--_bot-hands-close-u) * 0.3
   );
-  right: calc(var(--_bot-hands-close-u) * 0.4);
+  right: calc(var(--_bot-hands-close-u) * 0.3);
   z-index: 4;
   box-sizing: border-box;
   display: grid;

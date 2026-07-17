@@ -1957,6 +1957,16 @@ html body .app .dead-hand-overlay
   transform: none;
 }
 
+/* Blank-exchange Cancel/Confirm — same transient press restore as wall-game / action row. */
+.blank-exchange-overlay__panel
+  .btn.blank-exchange-overlay__action-btn:active:not(:disabled):not(.btn--pointer-down) {
+  background: var(--rack-action-face);
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
+  box-shadow: var(--rack-action-shadow-rest);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+  transform: none;
+}
+
 .charleston-error-dialog.charleston-error-dialog--new-game-warning
   .charleston-error-dialog__actions--spread
   .charleston-error-dialog__rack-action:active:not(:disabled):not(.btn--pointer-down),
@@ -1990,7 +2000,7 @@ html body .app .dead-hand-overlay
     .panel--bot-exposures__hint
   ):not(.app-menu-tray__item):not(.app-menu-tray__diff-btn):not(.app-menu-modal__suggested-filters-reset):not(
     .app-menu-modal__blank-tile-count-btn
-  ):not(.wall-game-dialog__action-btn):not(.charleston-error-dialog__rack-action):not(.blank-exchange-overlay__cancel) {
+  ):not(.wall-game-dialog__action-btn):not(.charleston-error-dialog__rack-action):not(.blank-exchange-overlay__action-btn) {
   transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
   transform: none;
   box-shadow:

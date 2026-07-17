@@ -2484,8 +2484,8 @@ html .app-top-exposure-container .discard-tracker__bot-band-bird {
   display: block;
   flex: 0 0 auto;
   box-sizing: border-box;
-  width: calc(var(--bot-bird-grid-h) * 1.12);
-  height: calc(var(--bot-bird-grid-h) * 1.12);
+  width: calc(var(--bot-bird-grid-h) * 1.18);
+  height: calc(var(--bot-bird-grid-h) * 1.18);
   max-width: none;
   max-height: none;
   object-fit: contain;
@@ -2493,7 +2493,7 @@ html .app-top-exposure-container .discard-tracker__bot-band-bird {
   pointer-events: none;
   /* Soft white bird, slightly lighter than the 5% slot wells. */
   filter: brightness(0) saturate(100%) invert(1);
-  opacity: var(--bot-exposure-bird-logo-opacity, 0.09);
+  opacity: var(--bot-exposure-bird-logo-opacity, 0.07);
 }
 
 /* Empty wells stay under the bird; tiles / open-hands counts paint above it. */
@@ -3924,7 +3924,7 @@ html .app-dnd-frame .app-top-exposure-container .exposure-rack__meld-drop--over 
 /* Tray surface matches the on-board discard tracker (its dark felt) — opaque so the dimmed board
    never shows through. (`--app-wrapper-surface` is transparent; the on-board tracker is see-through
    on purpose and shows the app felt behind it — the popup floats, so it needs its own fill.)
-   Action-button tokens match `.panel--hand` action wells (part-0123) for the Cancel control. */
+   Action-button tokens: full hand-rack action-well set (same as `.panel--hand` / wall-game). */
 .blank-exchange-overlay__panel {
   display: flex;
   flex-direction: column;
@@ -3943,12 +3943,17 @@ html .app-dnd-frame .app-top-exposure-container .exposure-rack__meld-drop--over 
   );
   background: var(--app-bg-base, #2b2f37);
   box-shadow: var(--shadow, 0 18px 60px rgba(0, 0, 0, 0.55));
+  /* Same PokerStars gray-pill tokens as `.panel--hand` action wells (part-0123 above). */
   --rack-action-label-color: var(--app-action-btn-label);
   --rack-action-label-color-disabled: var(--app-action-btn-label-disabled);
   --rack-action-label-color-disabled-text: var(--app-action-btn-label-disabled-text);
   --rack-action-face: var(--app-action-btn-face);
   --rack-action-face-pressed: var(--app-action-btn-face-pressed);
   --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed-chrome);
+  --rack-action-shadow-rest: var(--app-action-btn-shadow-rest);
+  --rack-action-border-rest: var(--app-action-btn-border-rest);
+  --rack-action-border-hold: var(--app-action-btn-border-hold);
+  --rack-action-flat-surface: var(--app-action-btn-bottom);
   --rack-action-border-color: var(--app-action-btn-border);
   --rack-action-press-shadow-dark: var(--app-action-btn-press-shadow-dark);
   --rack-action-press-shadow-light: var(--app-action-btn-press-shadow-light);
@@ -3977,6 +3982,10 @@ html .app-dnd-frame .app-top-exposure-container .exposure-rack__meld-drop--over 
   flex-shrink: 0;
   position: relative;
   box-sizing: border-box;
+  /* Confirm layer is absolutely centered over this host (red-box spot on the tracker). */
+  isolation: isolate;
+  /* Let the coach lift vignette paint past the preview face. */
+  overflow: visible;
 }
 .blank-exchange-overlay__tracker-mirror {
   flex: none;
@@ -4219,14 +4228,168 @@ html
   outline: none;
 }
 
-/* Cancel matches the action-row Call/Swap button: same gradient face, border, label color, press depth. */
-.blank-exchange-overlay__panel .blank-exchange-overlay__cancel {
-  margin-top: 0.6vmin;
+/* Staged pick: no border — confirmation preview carries the selection cue. */
+.blank-exchange-overlay__tracker-mirror .sorted-discard-tray__slot--selected .tile-face {
+  transform: none;
+  box-shadow: none;
+}
+
+/*
+ * Confirm preview: real rack tile centered over the tracker band (red-box spot).
+ * Sibling of the tracker mirror so blur on the band never softens this face.
+ * Uses the shared coach centered-lift vignette (`--coach-centered-lift-shadow`, part-0124).
+ * Footer Cancel/Confirm stay in the original bottom button row — popup size does not grow.
+ */
+.blank-exchange-overlay__preview {
+  --rack-tile-w: var(--hand-rack-tile-w, 2.65rem);
+  --rack-tile-h: var(--hand-rack-tile-h, calc(var(--rack-tile-w) * 1.3333));
+  /* Same corner ratio as main rack / DragOverlay (part-0003, part-0075): scales with tile width. */
+  --tile-face-border-radius: calc(var(--rack-tile-w) * 0.132);
+  --coach-lift-tile-w: var(--rack-tile-w);
+  --coach-discard-bottom-shadow-fade: calc(var(--tile-shadow-fade, 6.5%) * 0.92);
+  /* A touch stronger than shared coach lift — not as heavy as the prior confirm pass. */
+  --blank-exchange-lift-shadow:
+    0 0 calc(var(--coach-lift-tile-w) * 0.2) calc(var(--coach-lift-tile-w) * 0.04) rgba(0, 0, 0, 0.72),
+    0 0 calc(var(--coach-lift-tile-w) * 0.36) calc(var(--coach-lift-tile-w) * 0.07) rgba(0, 0, 0, 0.52),
+    0 0 calc(var(--coach-lift-tile-w) * 0.55) calc(var(--coach-lift-tile-w) * 0.1) rgba(0, 0, 0, 0.32);
+  --blank-exchange-lift-clip-outset: calc(var(--coach-lift-tile-w) * -1.1);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  width: var(--rack-tile-w);
+  height: var(--rack-tile-h);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  filter: none;
+  overflow: visible;
+}
+/* Centered lift glow — wider/stronger than rack suggest-best so it reads over the blurred band. */
+.blank-exchange-overlay__preview::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: var(--tile-face-border-radius);
+  box-shadow: var(--blank-exchange-lift-shadow);
+  clip-path: inset(
+    var(--blank-exchange-lift-clip-outset) var(--blank-exchange-lift-clip-outset)
+      var(--blank-exchange-lift-clip-outset) var(--blank-exchange-lift-clip-outset)
+  );
+}
+.blank-exchange-overlay__preview .tile-face {
+  position: relative;
+  z-index: 1;
+  width: var(--rack-tile-w);
+  height: var(--rack-tile-h);
+  border-radius: var(--tile-face-border-radius);
+  --tile-face-highlight-inset: 0 0 0 0 transparent;
+  --tile-face-highlight-shadow: 0 0 0 0 transparent;
+  --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+  filter: none;
+}
+/* Coach rim vignette on the face (matches suggest-best hand / exposure lit tiles). */
+.blank-exchange-overlay__preview .tile-face::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  display: block;
+  border-radius: inherit;
+  --tile-rim-fade: 8%;
+  --tile-shadow-fade: 6.5%;
+  background:
+    linear-gradient(
+      to bottom,
+      var(--tile-rim-top-peak) 0%,
+      var(--tile-rim-top-mid) calc(var(--tile-rim-fade) * 0.4),
+      var(--tile-rim-top-tail) calc(var(--tile-rim-fade) * 0.75),
+      transparent var(--tile-rim-fade)
+    ),
+    linear-gradient(
+      to top,
+      rgba(28, 25, 22, 0.48) 0%,
+      rgba(28, 25, 22, 0.17) calc(var(--coach-discard-bottom-shadow-fade, var(--tile-shadow-fade)) * 0.4),
+      rgba(28, 25, 22, 0.04) calc(var(--coach-discard-bottom-shadow-fade, var(--tile-shadow-fade)) * 0.75),
+      transparent var(--coach-discard-bottom-shadow-fade, var(--tile-shadow-fade))
+    ),
+    linear-gradient(
+      to right,
+      rgba(28, 25, 22, 0.4) 0%,
+      rgba(28, 25, 22, 0.12) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.025) calc(var(--tile-shadow-fade) * 0.75),
+      transparent calc(var(--tile-shadow-fade) * 0.92)
+    ),
+    linear-gradient(
+      to left,
+      rgba(28, 25, 22, 0.4) 0%,
+      rgba(28, 25, 22, 0.12) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.025) calc(var(--tile-shadow-fade) * 0.75),
+      transparent calc(var(--tile-shadow-fade) * 0.92)
+    );
+  box-shadow:
+    inset calc(var(--rack-tile-w) * 0.04) 0 calc(var(--rack-tile-w) * 0.09) calc(var(--rack-tile-w) * -0.3)
+      rgba(28, 25, 22, 0.32),
+    inset calc(var(--rack-tile-w) * -0.04) calc(var(--rack-tile-w) * -0.04) calc(var(--rack-tile-w) * 0.09)
+      calc(var(--rack-tile-w) * -0.3) rgba(28, 25, 22, 0.34);
+}
+.blank-exchange-overlay__preview .tile-face:not(.tile--joker)::after {
+  box-shadow: none;
+}
+
+/*
+ * Bottom action row — same vertical slot as the original Cancel (Confirm joins after a pick).
+ * `width: 0; min-width: 100%` lets the row fill the panel without contributing to its intrinsic
+ * width, so adding Confirm never widens the popup past the tracker band.
+ */
+.blank-exchange-overlay__actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: 1.4vmin;
+  width: 0;
+  min-width: 100%;
+  margin-top: 0;
+  min-height: var(--hand-button-row-h, var(--rack-action-touch-min-h, 2.4rem));
+  filter: none;
+}
+
+/*
+ * While confirming: blur title + tracker only. Footer actions stay sharp and tappable.
+ * Tracker picks are disabled via pointer-events so only Cancel/Confirm respond.
+ */
+.blank-exchange-overlay__panel--confirming .blank-exchange-overlay__title,
+.blank-exchange-overlay__panel--confirming .blank-exchange-overlay__tracker-mirror {
+  filter: blur(5px);
+  opacity: 0.65;
+  pointer-events: none;
+  user-select: none;
+  transition:
+    filter 0.16s ease,
+    opacity 0.16s ease;
+}
+
+/*
+ * Cancel / Confirm: same PokerStars gray pill + press-in as the main hand action row and
+ * `.wall-game-dialog__action-btn` (part-0091). Classes: `btn btn--primary rack-bottom-tile-cell`.
+ * Size is measured from Call/Swap in JS; chrome below matches Sort / Call / Pass exactly.
+ */
+.blank-exchange-overlay__panel .btn.blank-exchange-overlay__action-btn {
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 0.4em;
-  box-sizing: border-box;
+  margin-top: 0;
+  padding: var(--rack-control-pad-block, 0) var(--rack-control-pad-inline, 0.4em);
   border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
   border-radius: var(--rack-tile-btn-border-radius, max(0.36rem, calc(var(--hand-rack-tile-w, 2.65rem) * 0.128)));
   font-family: 'Figtree', var(--sans);
@@ -4239,6 +4402,7 @@ html
   );
   line-height: 1.08;
   text-transform: none;
+  white-space: nowrap;
   color: var(--rack-action-label-color, #e2e4e8);
   background: var(--rack-action-face);
   box-shadow: var(--rack-action-shadow-rest);
@@ -4246,27 +4410,33 @@ html
   filter: none;
   text-shadow: none;
   cursor: pointer;
-  transition: box-shadow 0.12s ease;
+  transition: box-shadow 0.12s ease, background 0.12s ease;
 }
-/* No hover treatment — the resting gradient/border is the only non-pressed state (matches Sort/Hands). */
-.blank-exchange-overlay__panel .blank-exchange-overlay__cancel:hover {
+.blank-exchange-overlay__panel .btn.blank-exchange-overlay__action-btn:hover:not(:disabled):not(:active) {
   background: var(--rack-action-face);
   border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
   box-shadow: var(--rack-action-shadow-rest);
   color: var(--rack-action-label-color, #e2e4e8);
   transform: none;
 }
-/* Pressed: keep the resting gradient face and add only the inset depth — identical to Sort/Hands. */
-.blank-exchange-overlay__panel .blank-exchange-overlay__cancel:active {
-  background: var(--rack-action-face-pressed-chrome, var(--app-action-btn-face-pressed-chrome));
-  border: 1px solid var(--rack-action-border-color, #636870);
+/* Pointer down — same pressed chrome as Sort / Call / Pass (part-0123 action row). */
+.blank-exchange-overlay__panel .btn.blank-exchange-overlay__action-btn:active:not(:disabled) {
+  background: var(--rack-action-face-pressed-chrome);
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
   box-shadow: var(--rack-action-pressed);
   color: var(--rack-action-label-color, #e2e4e8);
+  transition: none;
   transform: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .blank-exchange-overlay__tracker-mirror .sorted-discard-tray__slot--pickable .tile-face {
+  .blank-exchange-overlay__tracker-mirror .sorted-discard-tray__slot--pickable .tile-face,
+  .blank-exchange-overlay__tracker-mirror .sorted-discard-tray__slot--selected .tile-face {
+    transition: none;
+    transform: none;
+  }
+  .blank-exchange-overlay__panel--confirming .blank-exchange-overlay__title,
+  .blank-exchange-overlay__panel--confirming .blank-exchange-overlay__tracker-mirror {
     transition: none;
   }
 }

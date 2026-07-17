@@ -485,6 +485,7 @@ export function SortedDiscardTrayRow({
   suggestedNeedDefs = null,
   onSlotActivate = null,
   pickableDefs = null,
+  selectedDef = null,
 }: {
   tiles: readonly TileInstance[]
   slotCount: number
@@ -504,6 +505,8 @@ export function SortedDiscardTrayRow({
   onSlotActivate?: ((def: TileDef) => void) | null
   /** Blank-exchange popup: defs eligible to pick (present in the discard pile). */
   pickableDefs?: readonly TileDef[] | null
+  /** Blank-exchange popup: currently staged pick awaiting Confirm. */
+  selectedDef?: TileDef | null
 }) {
   const leadingSlots = (leadingSuitLabel ? 1 : 0) + leadingEmptySlots
   const emptyCount = Math.max(0, slotCount - leadingSlots - tiles.length - trailingGlyphSlots.length)
@@ -575,6 +578,8 @@ export function SortedDiscardTrayRow({
           !blankReplacedByJoker &&
           (pickableDefs?.some((d) => tileDefsEqual(d, trackerDef)) ?? false)
         const isUnpickable = exchangeMode && !isPickable
+        const isSelected =
+          isPickable && selectedDef != null && tileDefsEqual(selectedDef, trackerDef)
         return (
           <div
             key={tile.id}
@@ -588,11 +593,13 @@ export function SortedDiscardTrayRow({
               suggestNeed ? 'sorted-discard-tray__slot--suggest-need' : '',
               isPickable ? 'sorted-discard-tray__slot--pickable' : '',
               isUnpickable ? 'sorted-discard-tray__slot--unpickable' : '',
+              isSelected ? 'sorted-discard-tray__slot--selected' : '',
             ]
               .filter(Boolean)
               .join(' ')}
             role={isPickable ? 'button' : 'listitem'}
             tabIndex={isPickable ? 0 : undefined}
+            aria-pressed={isPickable ? isSelected : undefined}
             onClick={isPickable ? () => onSlotActivate?.(trackerDef) : undefined}
             onKeyDown={
               isPickable
@@ -606,7 +613,7 @@ export function SortedDiscardTrayRow({
             }
             aria-label={
               isPickable
-                ? `Exchange blank for ${tileAriaLabel(trackerDef)}${
+                ? `${isSelected ? 'Selected — ' : ''}Exchange blank for ${tileAriaLabel(trackerDef)}${
                     discardCount > 0 ? `, ${discardCount} discarded` : ''
                   }`
                 : suggestNeed
@@ -735,8 +742,8 @@ function computeBlankExchangePopupBandWidth(): number {
 
 /**
  * Centered, enlarged copy of the sorted discard tracker, shown after a blank is dropped on the
- * tracker. It keeps the exact look of the on-board tracker; each already-discarded tile type can
- * be tapped to redeem the blank for it.
+ * tracker. Tapping a discarded type stages a pick: a real rack tile + Cancel/Confirm float over
+ * the center of the band while the rest of the popup blurs.
  */
 export function BlankExchangeOverlay({
   discardPile,
@@ -756,12 +763,17 @@ export function BlankExchangeOverlay({
     () => discardedDefsForBlankExchange(discardPile),
     [discardPile],
   )
+  /** Staged tracker pick — Confirm commits; Cancel closes the whole exchange. */
+  const [pendingDef, setPendingDef] = useState<TileDef | null>(null)
   /** Width handed to the band grid; the `top-exposure-band` @container sizes tiles to fill it. */
   const [bandW, setBandW] = useState<number | null>(null)
-  /** Width/height of the action-row Call/Swap button so Cancel matches its shape. */
+  /** Width/height of the action-row Call/Swap button so Cancel/Confirm match its shape. */
   const [actionBtnSize, setActionBtnSize] = useState<{ w: number; h: number } | null>(null)
+  /** Main-rack face size so the confirmation preview matches a real hand tile. */
+  const [previewTileSize, setPreviewTileSize] = useState<{ w: number; h: number } | null>(null)
   /** Horizontal shift (px) so the panel centers on the playing area, not the whole viewport. */
   const [centerOffsetX, setCenterOffsetX] = useState(0)
+  const confirming = pendingDef != null
 
   useLayoutEffect(() => {
     const measure = () => {
@@ -774,6 +786,20 @@ export function BlankExchangeOverlay({
       if (actionBtn) {
         const r = actionBtn.getBoundingClientRect()
         if (r.width > 1 && r.height > 1) setActionBtnSize({ w: r.width, h: r.height })
+      }
+
+      const handFace = document.querySelector(
+        '.panel--hand .panel-hand-rack__hand-tray .sortable-tile-wrap .tile-face',
+      )
+      if (handFace) {
+        const r = handFace.getBoundingClientRect()
+        if (r.width > 1 && r.height > 1) {
+          setPreviewTileSize((prev) =>
+            prev && Math.abs(prev.w - r.width) < 0.5 && Math.abs(prev.h - r.height) < 0.5
+              ? prev
+              : { w: r.width, h: r.height },
+          )
+        }
       }
 
       // Center on the main rack / action-button area (shifted right by the device cutout's safe
@@ -822,6 +848,29 @@ export function BlankExchangeOverlay({
   // in-line (override the absolute board-mirror positioning) so the panel sizes to the band. Zero the
   // padding so the board's `.app-play-split` horizontal inset doesn't pad the popup wider than its band.
   const mirrorStyle: CSSProperties = { position: 'static', padding: 0 }
+  const actionBtnStyle: CSSProperties | undefined = actionBtnSize
+    ? {
+        width: actionBtnSize.w,
+        height: actionBtnSize.h,
+        minHeight: actionBtnSize.h,
+      }
+    : undefined
+  // Confirmation face ~2.2× a rack tile so it fills the center of the blurred tracker band.
+  // Width drives height + corner radius (0.132×w, same as main rack) so resize keeps the ratio.
+  const PREVIEW_SCALE = 2.2
+  const previewStyle: CSSProperties | undefined = previewTileSize
+    ? (() => {
+        const w = previewTileSize.w * PREVIEW_SCALE
+        const h = w * (4 / 3)
+        return {
+          width: w,
+          height: h,
+          ['--rack-tile-w' as string]: `${w}px`,
+          ['--rack-tile-h' as string]: `${h}px`,
+          ['--tile-face-border-radius' as string]: `${w * 0.132}px`,
+        }
+      })()
+    : undefined
 
   return (
     <div
@@ -832,7 +881,12 @@ export function BlankExchangeOverlay({
       onClick={onCancel}
     >
       <div
-        className="blank-exchange-overlay__panel"
+        className={[
+          'blank-exchange-overlay__panel',
+          confirming ? 'blank-exchange-overlay__panel--confirming' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         onClick={(e) => e.stopPropagation()}
         style={centerOffsetX ? { transform: `translateX(${centerOffsetX}px)` } : undefined}
       >
@@ -861,8 +915,9 @@ export function BlankExchangeOverlay({
                         ariaLabel="Exchange row 1"
                         discardPile={discardPile}
                         suggestedNeedDefs={suggestedNeedDefs}
-                        onSlotActivate={onPick}
+                        onSlotActivate={setPendingDef}
                         pickableDefs={pickableDefs}
+                        selectedDef={pendingDef}
                       />
                     </div>
                     <div className="discard-tracker__overlay-row">
@@ -874,8 +929,9 @@ export function BlankExchangeOverlay({
                         ariaLabel="Exchange row 2"
                         discardPile={discardPile}
                         suggestedNeedDefs={suggestedNeedDefs}
-                        onSlotActivate={onPick}
+                        onSlotActivate={setPendingDef}
                         pickableDefs={pickableDefs}
+                        selectedDef={pendingDef}
                       />
                     </div>
                     <div className="discard-tracker__overlay-row">
@@ -888,8 +944,9 @@ export function BlankExchangeOverlay({
                         discardPile={discardPile}
                         blankTilesEnabled={blankTilesEnabled}
                         suggestedNeedDefs={suggestedNeedDefs}
-                        onSlotActivate={onPick}
+                        onSlotActivate={setPendingDef}
                         pickableDefs={pickableDefs}
+                        selectedDef={pendingDef}
                       />
                     </div>
                   </div>
@@ -897,23 +954,36 @@ export function BlankExchangeOverlay({
               </div>
             </div>
           </div>
+          {pendingDef ? (
+            <div
+              className="blank-exchange-overlay__preview"
+              style={previewStyle}
+              aria-label={`Selected ${tileAriaLabel(pendingDef)}`}
+            >
+              <TileFace def={pendingDef} rackSuitStacked />
+            </div>
+          ) : null}
         </div>
-        <button
-          type="button"
-          className="btn btn--joker-swap-action blank-exchange-overlay__cancel"
-          onClick={onCancel}
-          style={
-            actionBtnSize
-              ? {
-                  width: actionBtnSize.w,
-                  height: actionBtnSize.h,
-                  minHeight: actionBtnSize.h,
-                }
-              : undefined
-          }
-        >
-          Cancel
-        </button>
+        <div className="blank-exchange-overlay__actions">
+          <button
+            type="button"
+            className="btn btn--primary rack-bottom-tile-cell blank-exchange-overlay__action-btn blank-exchange-overlay__cancel"
+            onClick={confirming ? () => setPendingDef(null) : onCancel}
+            style={actionBtnStyle}
+          >
+            Cancel
+          </button>
+          {pendingDef ? (
+            <button
+              type="button"
+              className="btn btn--primary rack-bottom-tile-cell blank-exchange-overlay__action-btn blank-exchange-overlay__confirm"
+              onClick={() => onPick(pendingDef)}
+              style={actionBtnStyle}
+            >
+              Confirm
+            </button>
+          ) : null}
+        </div>
       </div>
     </div>
   )

@@ -6,7 +6,7 @@
   /* Empty bot exposure slots — same luminance as the Mahj Logic tray watermark. */
   --table-watermark-slot-fill: rgb(255 255 255 / var(--table-watermark-opacity));
   /* Bird mark in bot exposure wells — a touch lighter than the slot fill (0.05). */
-  --bot-exposure-bird-logo-opacity: 0.09;
+  --bot-exposure-bird-logo-opacity: 0.07;
   /* Undiscarded discard-tracker ranks — readable muted gray on the dark tray (brighter than wells). */
   --sorted-discard-inactive-glyph: rgb(255 255 255 / 0.32);
 }

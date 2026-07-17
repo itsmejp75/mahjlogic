@@ -1,0 +1,34 @@
+---
+description: New pressable buttons must match the main hand action row look and press-in
+alwaysApply: true
+---
+
+# Action-row button chrome (required)
+
+Any new pressable control that looks like a game action button (dialogs, overlays, popups, menus, confirms) **must** match the main hand action row (Sort / Call / Pass / Swap / Menu):
+
+- Resting: PokerStars gray pill (`--rack-action-face`, `--rack-action-border-rest`, `--rack-action-shadow-rest`)
+- Hover: **no** tint / wash / scale — identical to resting
+- Press-in: `--rack-action-face-pressed-chrome` + `--rack-action-pressed`, `transition: none`, `transform: none`
+- Wire `.btn--pointer-down` restore (see `buttonPointerPress.ts` + part-0124): `:active:not(.btn--pointer-down)` returns to resting chrome
+
+## Do this
+
+1. Prefer existing opt-in classes already used in the app:
+   - `btn btn--primary rack-bottom-tile-cell …__action-btn` (wall-game pattern), or
+   - `btn … charleston-error-dialog__rack-action` / menu pill patterns that already share the tokens
+2. Copy the **full** action-well token set onto the parent (same as `.panel--hand` action wells in part-0123):
+   - `--rack-action-face`, `--rack-action-face-pressed`, `--rack-action-face-pressed-chrome`
+   - `--rack-action-shadow-rest`, `--rack-action-pressed`
+   - `--rack-action-border-rest`, `--rack-action-border-hold`, `--rack-action-border-color`
+   - label colors (`--rack-action-label-color` (+ disabled variants))
+3. Opt out of global `.btn:hover` / `.btn:active` wash rules (add the new class next to `wall-game-dialog__action-btn` / `charleston-error-dialog__rack-action` / `blank-exchange-overlay__action-btn` exclusions).
+4. Add the part-0124 `:active:not(.btn--pointer-down)` resting restore for the new class.
+
+## Do not
+
+- Invent a one-off gradient, flat gray, or neumorphic inset for “dialog buttons”
+- Use only `:active` without the pointer-down restore (press chrome will stick after drag-off)
+- Forget `--rack-action-shadow-rest` / `--rack-action-border-rest` on the parent (resting raised look breaks)
+
+Reference implementations: wall-game `wall-game-dialog__action-btn`, blank-exchange `blank-exchange-overlay__action-btn`, menu pills in part-0124.
