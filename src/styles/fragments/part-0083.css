@@ -255,12 +255,16 @@
 .bot-exposure-hands-list {
   /*
    * One shared column template for the whole sheet (same idea as `--hands-sheet-grid-cols`):
-   * category + card-hand hug content; tiles column fills and sizes a 14-tile strip.
+   * pin category + hand title to fixed tracks so switching bots can’t resize the tiles column
+   * (tile size is derived from that column’s `cqi`). Long labels ellipsis in place.
    * Rows use `display: contents` so every cell participates in this grid — vertical rules stay straight.
    */
   --bot-hands-grid-line: 1px solid color-mix(in srgb, var(--window-border) 55%, transparent);
   --bot-hands-tile-gap: var(--player-rack-face-gap, var(--rack-tile-gap, 0.125rem));
-  --bot-hands-grid-cols: max-content max-content minmax(0, 1fr);
+  /* Match suggested-hands category track; hand title is a fixed strip (not max-content). */
+  --bot-hands-cat-w: 7.2em;
+  --bot-hands-hand-w: 14em;
+  --bot-hands-grid-cols: var(--bot-hands-cat-w) var(--bot-hands-hand-w) minmax(0, 1fr);
   display: grid;
   grid-template-columns: var(--bot-hands-grid-cols);
   width: 100%;

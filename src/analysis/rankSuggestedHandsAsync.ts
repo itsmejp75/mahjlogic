@@ -21,17 +21,21 @@ type Pending = {
 }
 
 let sharedWorker: Worker | null = null
-let workerUnavailable = false
+/** Only true when `Worker` itself is missing — transient load errors must be retryable. */
+let workerUnsupported = false
+let workerCreateFailures = 0
+const WORKER_CREATE_RETRY_LIMIT = 4
 let nextRequestId = 1
 const pendingById = new Map<number, Pending>()
 
 function getSharedWorker(): Worker | null {
-  if (workerUnavailable) return null
+  if (workerUnsupported) return null
   if (sharedWorker) return sharedWorker
   if (typeof Worker === 'undefined') {
-    workerUnavailable = true
+    workerUnsupported = true
     return null
   }
+  if (workerCreateFailures >= WORKER_CREATE_RETRY_LIMIT) return null
   try {
     sharedWorker = new Worker(new URL('./rankSuggestedHands.worker.ts', import.meta.url), {
       type: 'module',
@@ -48,8 +52,9 @@ function getSharedWorker(): Worker | null {
       }
     }
     sharedWorker.onerror = () => {
-      // Permanent fallback after a hard worker failure (bad URL, parse error, etc.).
-      workerUnavailable = true
+      // Do not permanently disable: first boot on mobile often races the worker script against
+      // fonts/tiles. Fall back for in-flight requests, then allow a later recreate.
+      workerCreateFailures += 1
       for (const [, p] of pendingById) {
         p.reject(new Error('rank worker failed'))
       }
@@ -59,7 +64,7 @@ function getSharedWorker(): Worker | null {
     }
     return sharedWorker
   } catch {
-    workerUnavailable = true
+    workerCreateFailures += 1
     return null
   }
 }

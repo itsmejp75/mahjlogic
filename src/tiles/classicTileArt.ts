@@ -28,41 +28,83 @@ export const ALL_CLASSIC_TILE_ART_URLS: readonly string[] = Array.from(
   new Set(classicTileUrlByStem.values()),
 )
 
+/** URLs that have successfully loaded/decoded at least once in this session. */
+const classicTileArtReady = new Set<string>()
+
+export function isClassicTileArtReady(url: string): boolean {
+  return classicTileArtReady.has(url)
+}
+
+export function markClassicTileArtReady(url: string): void {
+  classicTileArtReady.add(url)
+}
+
 let tileArtPreloadStarted = false
 
-const PRELOAD_MAX_ATTEMPTS = 4
+/** Keep mobile Safari’s ~6-connection pool free for JS chunks + the suggested-hands worker. */
+const PRELOAD_CONCURRENCY = 2
+const PRELOAD_RETRY_LIMIT = 2
 
-function preloadClassicTileArtUrl(url: string, attempt = 0): void {
-  const img = new Image()
-  img.onload = () => {
-    // decode() moves the decode off the first render path so later paints are instant.
-    void img.decode?.().catch(() => undefined)
-  }
-  img.onerror = () => {
-    if (attempt + 1 >= PRELOAD_MAX_ATTEMPTS) return
-    const next = attempt + 1
-    window.setTimeout(() => preloadClassicTileArtUrl(url, next), 60 * next)
-  }
-  img.src = url
+type PreloadOptions = {
+  /**
+   * Native Capacitor splash can afford an immediate warm. Mobile Safari / PWA must wait —
+   * flooding ~45 SVGs at module load starves JS chunks and the rank worker (empty Logic panel +
+   * broken tile faces).
+   */
+  immediate?: boolean
 }
 
 /**
- * Fetch + decode every Illustrative Classic tile SVG up front (called during the launch splash) so
- * the first time a tile appears it paints synchronously from the WebView cache instead of flashing a
- * blank face while the file is fetched/decoded — the main cause of tile "pop-in" inside Capacitor.
- * Retries failed URLs: mobile Safari sometimes drops concurrent SVG loads under memory pressure.
+ * Fetch + decode Illustrative Classic tile SVGs with a small concurrency cap.
+ * Called after first paint (web) or during splash (native) so the first rack paint can hit cache
+ * without blocking boot.
  */
-export function preloadClassicTileArt(): void {
+export function preloadClassicTileArt(options?: PreloadOptions): void {
   if (tileArtPreloadStarted || typeof Image === 'undefined') return
   tileArtPreloadStarted = true
-  for (const url of ALL_CLASSIC_TILE_ART_URLS) {
-    preloadClassicTileArtUrl(url)
-  }
-}
 
-// Warm the HTTP cache as soon as this module loads — don't wait for React mount / splash effect.
-if (typeof window !== 'undefined') {
-  preloadClassicTileArt()
+  const run = () => {
+    const queue = ALL_CLASSIC_TILE_ART_URLS.map((url) => ({ url, attempts: 0 }))
+    let active = 0
+
+    const pump = () => {
+      while (active < PRELOAD_CONCURRENCY && queue.length > 0) {
+        const item = queue.shift()!
+        active += 1
+        const img = new Image()
+        const finish = () => {
+          active -= 1
+          pump()
+        }
+        img.onload = () => {
+          markClassicTileArtReady(item.url)
+          void img.decode?.().catch(() => undefined).finally(finish)
+        }
+        img.onerror = () => {
+          if (item.attempts + 1 < PRELOAD_RETRY_LIMIT) {
+            queue.push({ url: item.url, attempts: item.attempts + 1 })
+          }
+          finish()
+        }
+        img.src = item.url
+      }
+    }
+
+    pump()
+  }
+
+  if (options?.immediate) {
+    run()
+    return
+  }
+
+  // Let the main bundle, CSS, fonts, and rank worker claim connections first.
+  const start = () => run()
+  if (typeof window.requestIdleCallback === 'function') {
+    window.requestIdleCallback(start, { timeout: 2500 })
+  } else {
+    window.setTimeout(start, 600)
+  }
 }
 
 /** SVG URL for the Illustrative Classic tile set, or null when no art exists (e.g. blank). */

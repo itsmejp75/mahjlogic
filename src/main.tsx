@@ -47,9 +47,9 @@ function hidePwaSplashAfterFirstPaint() {
 export function AppWithNativeSplashHandoff() {
   useEffect(() => {
     hidePwaSplashAfterFirstPaint()
-    // Warm the tile-art cache while the splash is still covering the screen so tiles never
-    // flash blank on their first appearance (Charleston / discard / draw).
-    preloadClassicTileArt()
+    // Native: warm SVGs under the splash. Web/PWA: idle + low concurrency so we do not starve
+    // the suggested-hands worker / JS chunks (mobile Safari ~6 connections).
+    preloadClassicTileArt({ immediate: Capacitor.isNativePlatform() })
 
     if (!Capacitor.isNativePlatform()) {
       return

@@ -1,9 +1,13 @@
-import { memo, useEffect, useRef, useState, type ReactNode } from 'react'
+import { memo, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import type { TileDef } from '../mahjong/types'
 import type { CardInk } from '../card/cardText'
 import { CARD_INK_TO_TILE_SKIN_CLASS } from '../card/cardInkTileSkin'
 import { tileAriaLabel, tileShortLabel, tileSuitRackWord } from '../mahjong/labels'
-import { classicTileArtUrl } from '../tiles/classicTileArt'
+import {
+  classicTileArtUrl,
+  isClassicTileArtReady,
+  markClassicTileArtReady,
+} from '../tiles/classicTileArt'
 import {
   isIllustrativeTileGraphics,
   type TileGraphics,
@@ -11,28 +15,51 @@ import {
 import { useTileGraphics } from '../tiles/TileGraphicsContext'
 
 /** Mobile Safari can fail a concurrent SVG load and keep the broken-image icon forever. */
-const TILE_ART_LOAD_MAX_ATTEMPTS = 4
+const TILE_ART_LOAD_MAX_ATTEMPTS = 3
+
+function imgHasDecodedPixels(img: HTMLImageElement | null): boolean {
+  return img != null && img.complete && img.naturalWidth > 0
+}
 
 /**
- * Classic tile SVG with load recovery. Remounts on error (same URL — no cache-bust query that
- * can 404 on Capacitor) and stays invisible until `onLoad` so the blue question-mark placeholder
- * never flashes. Explains "looks fine while dragging": DragOverlay mounts a fresh `<img>` that
- * loads while the broken source stays parked at opacity 0.
+ * Classic tile SVG with load recovery. Stays invisible until pixels are ready so Safari's
+ * broken-image icon never flashes.
+ *
+ * Important: cached SVGs can be `complete` before React attaches `onLoad`. Without a sync
+ * `complete` check, those faces stay at opacity 0 (blank ivory) while DragOverlay mounts a
+ * fresh `<img>` that does fire `onLoad` — exactly "face shows while dragging, blank when dropped".
  */
-function TileArtImage({ src }: { src: string }) {
+function TileArtImage({ src, onFailed }: { src: string; onFailed: () => void }) {
   const [attempt, setAttempt] = useState(0)
-  const [loaded, setLoaded] = useState(false)
+  const [loaded, setLoaded] = useState(() => isClassicTileArtReady(src))
   const retryTimerRef = useRef(0)
+  const imgRef = useRef<HTMLImageElement | null>(null)
+  const onFailedRef = useRef(onFailed)
+  onFailedRef.current = onFailed
 
   useEffect(() => {
     setAttempt(0)
-    setLoaded(false)
+    setLoaded(isClassicTileArtReady(src))
     return () => window.clearTimeout(retryTimerRef.current)
   }, [src])
+
+  const markLoaded = () => {
+    markClassicTileArtReady(src)
+    setLoaded(true)
+  }
+
+  // Cache hits often skip `onLoad`; sync after each mount/retry so we never park at opacity 0.
+  useLayoutEffect(() => {
+    if (imgHasDecodedPixels(imgRef.current)) markLoaded()
+  }, [src, attempt])
 
   return (
     <img
       key={`${src}:${attempt}`}
+      ref={(node) => {
+        imgRef.current = node
+        if (imgHasDecodedPixels(node)) markLoaded()
+      }}
       className="tile-face__art"
       src={src}
       alt=""
@@ -41,13 +68,19 @@ function TileArtImage({ src }: { src: string }) {
       decoding="async"
       // Keep layout; hide until decode succeeds so Safari's broken-image icon never shows.
       style={loaded ? undefined : { opacity: 0 }}
-      onLoad={() => setLoaded(true)}
+      onLoad={(e) => {
+        if (e.currentTarget.naturalWidth > 0) markLoaded()
+      }}
       onError={() => {
         setLoaded(false)
-        if (attempt + 1 >= TILE_ART_LOAD_MAX_ATTEMPTS) return
+        if (attempt + 1 >= TILE_ART_LOAD_MAX_ATTEMPTS) {
+          onFailedRef.current()
+          return
+        }
         const next = attempt + 1
         window.clearTimeout(retryTimerRef.current)
-        retryTimerRef.current = window.setTimeout(() => setAttempt(next), 50 * next)
+        // Stagger retries so a rack of failed faces does not re-flood the connection pool.
+        retryTimerRef.current = window.setTimeout(() => setAttempt(next), 200 * next)
       }}
     />
   )
@@ -157,7 +190,12 @@ export const TileFace = memo(function TileFace({
   const skinCardInk = cardInkForTileFace(def, cardInk, tileGraphics)
   const illustrativeMode =
     skinCardInk == null && isIllustrativeTileGraphics(tileGraphics) && !sortedDiscardGlyph
-  const artUrl = illustrativeMode ? classicTileArtUrl(def) : null
+  const desiredArtUrl = illustrativeMode ? classicTileArtUrl(def) : null
+  const [artFailed, setArtFailed] = useState(false)
+  useEffect(() => {
+    setArtFailed(false)
+  }, [desiredArtUrl, tileGraphics])
+  const artUrl = desiredArtUrl != null && !artFailed ? desiredArtUrl : null
   // Blanks have no art image, but in illustrative mode they should still wear the illustrative
   // ivory face + rim bevel (the `::before` highlight/shadow) so they match every other rack tile
   // instead of falling back to a flat solid fill that reads as a different white.
@@ -190,7 +228,7 @@ export const TileFace = memo(function TileFace({
       aria-label={tileAriaLabel(def)}
     >
       {artUrl != null ? (
-        <TileArtImage src={artUrl} />
+        <TileArtImage src={artUrl} onFailed={() => setArtFailed(true)} />
       ) : stackedSuit ? (
         <>
           <span className="tile-face__rank">{def.rank}</span>
