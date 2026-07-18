@@ -1067,7 +1067,7 @@
 
 .discard-tracker__overlay-grid .sorted-discard-tray__seat-label {
   font-family: var(--mono-sometype);
-  font-weight: 500;
+  font-weight: 400;
   font-size: calc(var(--rack-tile-w) * 1.2);
   line-height: 1;
   width: auto;
@@ -1099,7 +1099,8 @@
   .sorted-discard-tray__slot--seat-label.sorted-discard-tray__slot--seat-turn
   .sorted-discard-tray__seat-label {
   z-index: 3;
-  color: #ffffff;
+  /* Same off-black as active discard-tracker rank/count glyphs + lit Seat: chip. */
+  color: #080808;
   opacity: 1;
 }
 

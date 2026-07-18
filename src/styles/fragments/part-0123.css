@@ -828,7 +828,7 @@ html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-
 
 html .app-top-exposure-container .discard-tracker__overlay-grid .sorted-discard-tray__seat-label {
   font-size: calc(var(--rack-tile-w) * 0.48);
-  font-weight: 500;
+  font-weight: 400;
 }
 
 html

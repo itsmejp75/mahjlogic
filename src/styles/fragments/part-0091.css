@@ -1049,7 +1049,7 @@
   );
   --hand-button-row-h: max(
     27px,
-    calc((var(--rack-action-touch-min-h) - var(--hand-top-rack-height-delta-mirror)) * 0.75)
+    calc((var(--rack-action-touch-min-h) - var(--hand-top-rack-height-delta-mirror)) * 0.70)
   );
   gap: var(--rack-stack-gap-y, 0.28rem) 0.4rem;
   margin-top: 0;

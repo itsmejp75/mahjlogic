@@ -2,8 +2,11 @@
  * Keep the player seat label vertically centered between the top discard tracker and the hand
  * rack (or below a call meld when one is pinned in the exposure area).
  */
-import { useCallback, useLayoutEffect, type RefObject } from 'react'
+import { useCallback, useLayoutEffect, useRef, type RefObject } from 'react'
 import type { MainPhase } from './playSurfaceUi'
+
+/** After Charleston→main remount, skip `top` easing while layout settle timers run. */
+const CHARLESTON_SETTLE_MS = 400
 
 export function usePlayerSeatLabelLayout(args: {
   playerHandRackBottomRef: RefObject<HTMLDivElement | null>
@@ -31,6 +34,11 @@ export function usePlayerSeatLabelLayout(args: {
     incomingBotDiscardCallDragActive,
   } = args
 
+  const lastTopRef = useRef<string | null>(null)
+  const meldPinnedRef = useRef(false)
+  const prevCharlestonDoneRef = useRef(charlestonDone)
+  const suppressTransitionUntilRef = useRef(0)
+
   const updatePlayerSeatLabelPosition = useCallback(() => {
     const rackBottom = playerHandRackBottomRef.current
     if (!rackBottom) return
@@ -50,7 +58,8 @@ export function usePlayerSeatLabelLayout(args: {
           .top ?? handTop
     const bandH = Math.max(0, handTop - bandTop)
 
-    const setLabelTop = (topPx: string) => {
+    const setLabelTop = (topPx: string, animate: boolean) => {
+      lastTopRef.current = topPx
       // Label lives on the hand-tray (above rack-top stacking); keep the token there.
       const host = handTray ?? rackBottom
       host.style.setProperty('--player-seat-label-top', topPx)
@@ -59,7 +68,23 @@ export function usePlayerSeatLabelLayout(args: {
       const label = host.querySelector(
         ':scope > .panel-hand-rack__seat-label',
       ) as HTMLElement | null
-      if (label) label.style.top = topPx
+      if (!label) return
+
+      // `transition: top` is only for call-meld pin/unpin. Charleston remount + settle/resize
+      // passes must snap — otherwise the label eases down on a bad mid-layout sample, then up.
+      const allowAnimate =
+        animate && performance.now() >= suppressTransitionUntilRef.current
+      if (!allowAnimate) {
+        label.style.transition = 'none'
+      } else {
+        label.style.removeProperty('transition')
+      }
+      label.style.top = topPx
+      if (!allowAnimate) {
+        requestAnimationFrame(() => {
+          label.style.removeProperty('transition')
+        })
+      }
     }
 
     // Call meld pinned in the exposure area (staged during call-staging or committed): it sits at
@@ -73,7 +98,11 @@ export function usePlayerSeatLabelLayout(args: {
     const meldSlots = rackTop?.querySelectorAll(
       '.exposure-rack__call-meld-strip__tile',
     )
-    if (meldSlots && meldSlots.length > 0) {
+    const meldPinned = Boolean(meldSlots && meldSlots.length > 0)
+    const animateForMeld = meldPinned !== meldPinnedRef.current
+    meldPinnedRef.current = meldPinned
+
+    if (meldPinned && meldSlots) {
       let meldBottom = -Infinity
       meldSlots.forEach((el) => {
         meldBottom = Math.max(meldBottom, el.getBoundingClientRect().bottom)
@@ -87,16 +116,34 @@ export function usePlayerSeatLabelLayout(args: {
       const belowMeldMid = (meldBottom + bandBottom) / 2
       // Offset from hand-tray top (label is absolutely positioned on the tray).
       const trayTop = (handTray ?? rackBottom).getBoundingClientRect().top
-      setLabelTop(`${belowMeldMid - trayTop}px`)
+      setLabelTop(`${belowMeldMid - trayTop}px`, animateForMeld)
       return
     }
 
     const centerOffset = bandH > 0 ? -bandH / 2 : -8
     // Same visual as before: offset from rack-bottom top ≈ hand-tray top (label is out of flow).
-    setLabelTop(`${centerOffset}px`)
+    setLabelTop(`${centerOffset}px`, animateForMeld)
   }, [playerHandRackBottomRef, topDiscardTrackerPanelRef, eastExposureRackTopRef])
 
   useLayoutEffect(() => {
+    if (prevCharlestonDoneRef.current !== charlestonDone) {
+      // Charleston and main racks use separate hand-tray trees — the label remounts and would
+      // otherwise start at the CSS fallback (-0.35rem) then ease through settle samples.
+      suppressTransitionUntilRef.current = performance.now() + CHARLESTON_SETTLE_MS
+      prevCharlestonDoneRef.current = charlestonDone
+
+      const rackBottom = playerHandRackBottomRef.current
+      const handTray = rackBottom?.closest('.panel-hand-rack__hand-tray') as HTMLElement | null
+      const label = handTray?.querySelector(
+        ':scope > .panel-hand-rack__seat-label',
+      ) as HTMLElement | null
+      if (label && lastTopRef.current) {
+        label.style.transition = 'none'
+        handTray?.style.setProperty('--player-seat-label-top', lastTopRef.current)
+        label.style.top = lastTopRef.current
+      }
+    }
+
     updatePlayerSeatLabelPosition()
 
     const rackBottom = playerHandRackBottomRef.current
