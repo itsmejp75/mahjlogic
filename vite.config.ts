@@ -7,8 +7,8 @@ import react from '@vitejs/plugin-react'
 const rootDir = path.dirname(fileURLToPath(import.meta.url))
 
 /**
- * Public web must not ship card books (NMJL / mock hands). Native + local use full books.
- * `MAHJLOGIC_CARD_CONTENT=0` → stub; unset or any other value → full.
+ * PWA / default builds ship full card books. Optional locked marketing build:
+ * `MAHJLOGIC_CARD_CONTENT=0` → empty stub (`npm run build:web-locked`).
  */
 const includeCardContent = process.env.MAHJLOGIC_CARD_CONTENT !== '0'
 

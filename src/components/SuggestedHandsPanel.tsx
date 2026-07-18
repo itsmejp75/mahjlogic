@@ -2223,8 +2223,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
           <div ref={listColumnRef} className="hands-panel__list-column">
             {!cardContentAvailable ? (
               <p className="hands-panel__card-locked" data-nosnippet>
-                Card hands stay in the MahjLogic app — they are not published or downloadable from
-                the website.
+                Card hands are unavailable in this build.
               </p>
             ) : null}
             <div
