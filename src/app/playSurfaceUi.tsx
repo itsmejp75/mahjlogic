@@ -31,6 +31,7 @@ import {
   EAST_SEAT_SWAP_ID,
   botExposureSwapDropId,
   botSeatSwapDropId,
+  type TopBandDropFrame,
 } from '../mahjong/jokerSwapTarget'
 import { tileAriaLabel, tileSuitRackWord } from '../mahjong/labels'
 import { seatLabel, type BotSlotSeats } from '../mahjong/seats'
@@ -997,6 +998,7 @@ export function DiscardTrackerSlotGrid({
   activeBotIndex,
   calledThrowerRowIdx,
   jokerSwapUiActive,
+  topBandDropFrame = null,
   animationsEnabled,
   botExposureFlyInTileIds,
   exposureJokerSwapFlyInTileIds,
@@ -1018,6 +1020,8 @@ export function DiscardTrackerSlotGrid({
   /** Seat row (0=South, 1=West, 2=North) that threw the tile currently being called. */
   calledThrowerRowIdx: number | null
   jokerSwapUiActive: boolean
+  /** Yellow drop frame while dragging a blank / joker-swap natural over the top band. */
+  topBandDropFrame?: TopBandDropFrame | null
   animationsEnabled: boolean
   botExposureFlyInTileIds: ReadonlySet<string> | null
   exposureJokerSwapFlyInTileIds: ReadonlySet<string> | null
@@ -1092,7 +1096,12 @@ export function DiscardTrackerSlotGrid({
   return (
     <div
       ref={overlayGridRef}
-      className="discard-tracker__overlay-grid"
+      className={[
+        'discard-tracker__overlay-grid',
+        topBandDropFrame ? 'discard-tracker__overlay-grid--drop-frame-lit' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       aria-label="Discard tracker slot grid"
       style={
         {
@@ -1215,6 +1224,17 @@ export function DiscardTrackerSlotGrid({
           </div>
         )
       })}
+      {topBandDropFrame ? (
+        <div
+          className={[
+            'discard-tracker__drop-frame',
+            topBandDropFrame === 'joker-swap'
+              ? 'discard-tracker__drop-frame--joker-swap'
+              : 'discard-tracker__drop-frame--blank-exchange',
+          ].join(' ')}
+          aria-hidden="true"
+        />
+      ) : null}
     </div>
   )
 }

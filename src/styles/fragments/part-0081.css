@@ -269,6 +269,33 @@
   min-width: 0;
 }
 
+/* Menu “Hand Probability %” off — collapse Prob column (cells kept so grid placement stays aligned). */
+.panel--hands.panel--hands-hide-prob {
+  --hands-sheet-odds-w: 0px;
+  --hands-grid-odds-w: 0px;
+}
+
+.panel--hands.panel--hands-hide-prob
+  .hands-list-scroll
+  > .hands-sheet.hands-sheet--tiles2:not(.hands-sheet--tilesHands) {
+  --hands-sheet-tile-col: calc(
+    var(--suggest-hands-panel-cqw-resolved) - var(--hands-sheet-pin-w, 1.25em) -
+      2 * var(--hands-sheet-metric-col-w) - 2 * var(--hands-sheet-cell-pad-x)
+  );
+}
+
+.panel--hands.panel--hands-hide-prob :is(
+  .hands-sheet__cell--odds,
+  .hands-list__cell--odds,
+  .hands-list__cell--tiles-odds-pad
+) {
+  padding: 0;
+  border: none;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .hands-list__freeze-header .hands-list__cell--away {
   padding-left: 0;
   padding-right: 0;

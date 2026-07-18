@@ -102,8 +102,6 @@
   --app-menu-diff-btn-border-hold: var(--app-action-btn-border-hold);
   --app-menu-diff-btn-label-pressed: var(--app-action-btn-label);
   --app-menu-diff-btn-border-pressed: var(--app-action-btn-border-hold);
-  /* Suggested-hand filter pills: uniform width sized to “Concealed (C)”. */
-  --app-menu-sh-filter-btn-w: calc(13.25ch + 0.9rem);
   --app-menu-rim-hover-bright: color-mix(in srgb, var(--color-white) 50%, #94a3b8 50%);
   /* Space between menu rows / sections (slightly under one-third touch target height) */
   --app-menu-body-gap: max(0.36rem, calc(var(--rack-action-touch-min-h) / 3.5));

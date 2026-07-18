@@ -1,10 +1,15 @@
 import type { BotExposure, BotSeat } from '../analysis/types'
 import type { EastExposure } from './types'
 import type { TileDef, TileInstance } from './types'
+import { BLANK_EXCHANGE_DROP_ID } from './jokerSwapIds'
 import { tileDefsEqual } from './tileUtils'
 
-/** Clockwise from East: South, West, North, then East’s own exposures. */
-const JOKER_SWAP_SEAT_ORDER: BotSeat[] = ['South', 'West', 'North']
+/**
+ * Compass play order for bot exposure rows. When the player is not East, a bot sits East —
+ * that seat must be included or joker swaps against East’s exposures never resolve.
+ * After bots, {@link findNextJokerSwapTarget} also checks the player’s own East exposures.
+ */
+const JOKER_SWAP_SEAT_ORDER: BotSeat[] = ['East', 'South', 'West', 'North']
 
 /**
  * Tile type that every joker in this exposure represents: all non-jokers in the meld must match.
@@ -68,6 +73,7 @@ export function botSeatSwapDropId(seat: BotSeat): string {
 export function parseBotSeatSwapDropId(oid: string): BotSeat | null {
   if (!oid.startsWith(BOT_SEAT_SWAP_PREFIX)) return null
   const raw = oid.slice(BOT_SEAT_SWAP_PREFIX.length).toLowerCase()
+  if (raw === 'east') return 'East'
   if (raw === 'south') return 'South'
   if (raw === 'west') return 'West'
   if (raw === 'north') return 'North'
@@ -89,6 +95,23 @@ export function parseEastExposureSwapDropId(oid: string): number | null {
 
 /** Single drop id for the whole East exposure rail (swap anywhere on your own rack). */
 export const EAST_SEAT_SWAP_ID = 'east-joker-swap-seat'
+
+export type TopBandDropFrame = 'joker-swap' | 'blank-exchange'
+
+/** Map the active dnd-kit `over` id to the yellow top-band drop frame (bot exposures vs sorted tray). */
+export function topBandDropFrameForOverId(overId: string | null | undefined): TopBandDropFrame | null {
+  if (!overId) return null
+  if (overId === BLANK_EXCHANGE_DROP_ID) return 'blank-exchange'
+  if (
+    overId === EAST_SEAT_SWAP_ID ||
+    parseBotSeatSwapDropId(overId) != null ||
+    parseBotExposureSwapDropId(overId) != null ||
+    parseEastExposureSwapDropId(overId) != null
+  ) {
+    return 'joker-swap'
+  }
+  return null
+}
 
 /**
  * Finds a swap target within a specific bot exposure meld (for drag-to-exposure).
@@ -146,7 +169,7 @@ export function findJokerSwapTargetAtSeat(
   return null
 }
 
-/** First legal bot joker swap in the visible rack order: South, then West, then North. */
+/** First legal bot joker swap in compass order: East, South, West, North. */
 export function findNextBotJokerSwapTarget(
   botExposures: BotExposure[],
   naturalDef: TileDef,

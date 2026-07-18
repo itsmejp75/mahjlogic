@@ -3729,65 +3729,68 @@ html body .app .panel--discard-tracker :is(
   border-radius: var(--discard-tray-tile-corner-r, var(--tile-face-border-radius));
 }
 /*
- * Drop frames (blank exchange + joker swap): same soft outer glow as rack Swap / MAHJ hints
- * (part-0124), tinted with `--simple-joker-yellow`. Same border, outset, radius, and halo for both.
+ * Drop frames (blank exchange + joker swap): real DOM node inside the overlay grid.
+ * Driven by `topBandDropFrame` from onDragOver (same collision path as a successful drop).
  *
- * Drawn on `.discard-tracker__tile-groups-container` (avoids overlay-grid `container-type` clip).
- * While lit, the top band is forced above `.app-rack-stage` so the bottom halo paints over Discard>.
+ * Positioning uses simple % of the grid (15/29 ≈ start of bot band after 14 sorted + 1 seat
+ * label). Soft outer glow — trial green (`#22c55e`), same weight as selected-bot blue.
  */
-html .app-dnd-frame .app-top-exposure-container
-  .blank-exchange-dropzone--over
-  .discard-tracker__tile-groups-container::after,
-html .app-dnd-frame .app-top-exposure-container
-  .discard-tracker__tile-groups-container:has(
-    .app-opponents-rail__cell--swap-over,
-    .exposure-rack__meld-drop--over
-  )::before {
-  --_drop-frame-color: var(--simple-joker-yellow, #ffc107);
-  --_tracker-tile-w: max(1px, calc((100% - 28 * var(--player-rack-face-gap)) / 29));
-  /* Keep glow/outset proportional to tile size (was fixed 10px/3px/2px). */
-  --_frame-outset: max(1px, calc(var(--_tracker-tile-w) * 0.0625));
-  --_glow-blur: max(2px, calc(var(--_tracker-tile-w) * 0.3125));
-  --_glow-spread: max(1px, calc(var(--_tracker-tile-w) * 0.09375));
-  content: '';
+html .app-dnd-frame .app-top-exposure-container .discard-tracker__overlay-grid--drop-frame-lit {
+  overflow: visible !important;
+}
+
+html .app-dnd-frame .app-top-exposure-container .discard-tracker__drop-frame {
+  /* Same stroke / glow weight as selected bot-exposure blue frame (part-0083). */
+  --_drop-frame-color: #22c55e;
+  --_frame-tile: var(--rack-tile-w, calc(100% / 29));
+  --_frame-outset: max(1px, calc(var(--_frame-tile) * 0.0625));
+  --_glow-blur: max(2px, calc(var(--_frame-tile) * 0.3125));
+  --_glow-spread: max(1px, calc(var(--_frame-tile) * 0.09375));
   position: absolute;
   top: calc(-1 * var(--_frame-outset));
   bottom: calc(-1 * var(--_frame-outset));
   box-sizing: border-box;
-  border: max(1px, calc(var(--_tracker-tile-w) * 0.03125)) solid var(--_drop-frame-color);
+  border: 0.5px solid var(--_drop-frame-color);
   border-radius: calc(
     var(--discard-tray-tile-corner-r, var(--tile-face-border-radius)) + var(--_frame-outset)
   );
-  box-shadow:
-    0 0 0 max(1px, calc(var(--_tracker-tile-w) * 0.03125))
-      color-mix(in srgb, var(--_drop-frame-color) 85%, transparent),
-    0 0 var(--_glow-blur) var(--_glow-spread)
-      color-mix(in srgb, var(--_drop-frame-color) 55%, transparent);
+  box-shadow: 0 0 var(--_glow-blur) var(--_glow-spread)
+    color-mix(in srgb, var(--_drop-frame-color) 55%, transparent);
   pointer-events: none;
-  z-index: 8;
+  z-index: 30;
 }
 
-/* Blank exchange: sorted band only (grid cols 1–14) — never seat labels / bot exposures. */
-html .app-dnd-frame .app-top-exposure-container
-  .blank-exchange-dropzone--over
-  .discard-tracker__tile-groups-container::after {
+/* Blank exchange: left sorted band (~cols 1–14 of 29). */
+html .app-dnd-frame .app-top-exposure-container .discard-tracker__drop-frame--blank-exchange {
   left: calc(-1 * var(--_frame-outset));
+  width: calc(100% * 14 / 29 + var(--_frame-outset));
   right: auto;
-  width: calc(
-    14 * var(--_tracker-tile-w) + 13 * var(--player-rack-face-gap) + 2 * var(--_frame-outset)
-  );
 }
 
-/* Joker swap: bot exposures only (grid cols 16–29, after 14 sorted + 1 seat-label). */
-html .app-dnd-frame .app-top-exposure-container
-  .discard-tracker__tile-groups-container:has(
-    .app-opponents-rail__cell--swap-over,
-    .exposure-rack__meld-drop--over
-  )::before {
+/* Joker swap: right bot-exposure band (~cols 16–29 of 29). */
+html .app-dnd-frame .app-top-exposure-container .discard-tracker__drop-frame--joker-swap {
+  left: calc(100% * 15 / 29 - var(--_frame-outset));
   right: calc(-1 * var(--_frame-outset));
-  left: calc(
-    15 * var(--_tracker-tile-w) + 15 * var(--player-rack-face-gap) - var(--_frame-outset)
-  );
+}
+
+/*
+ * Fallback if the unified frame node is missing: restore a visible orange outer glow on the
+ * seat / meld being hovered. (A prior rule set `box-shadow: none` here and killed all glow.)
+ */
+html .app-dnd-frame .app-top-exposure-container .app-opponents-rail__cell--swap-over {
+  /* Match selected-bot blue frame weight when the unified drop frame is not mounted. */
+  --_frame-outset: max(1px, calc(var(--rack-tile-w) * 0.0625));
+  --_glow-blur: max(2px, calc(var(--rack-tile-w) * 0.3125));
+  --_glow-spread: max(1px, calc(var(--rack-tile-w) * 0.09375));
+  box-shadow:
+    0 0 0 0.5px #22c55e,
+    0 0 var(--_glow-blur) var(--_glow-spread)
+      color-mix(in srgb, #22c55e 55%, transparent) !important;
+}
+html .app-dnd-frame
+  .app-top-exposure-container:has(.discard-tracker__drop-frame)
+  .app-opponents-rail__cell--swap-over {
+  box-shadow: none !important;
 }
 
 /*
@@ -3795,6 +3798,9 @@ html .app-dnd-frame .app-top-exposure-container
  * open overflow on the tray chain so the outer glow can spill into the Discard> strip.
  */
 html .app-dnd-frame > .app-play-split.app-top-exposure-container:has(
+    .discard-tracker__drop-frame,
+    .discard-tracker__tile-groups-container--drop-frame-joker-swap,
+    .discard-tracker__tile-groups-container--drop-frame-blank-exchange,
     .blank-exchange-dropzone--over,
     .app-opponents-rail__cell--swap-over,
     .exposure-rack__meld-drop--over
@@ -3871,6 +3877,9 @@ html .app-dnd-frame:has(
 
 html .app-dnd-frame:has(
     > .app-play-split.app-top-exposure-container:has(
+      .discard-tracker__drop-frame,
+      .discard-tracker__tile-groups-container--drop-frame-joker-swap,
+      .discard-tracker__tile-groups-container--drop-frame-blank-exchange,
       .blank-exchange-dropzone--over,
       .app-opponents-rail__cell--swap-over,
       .exposure-rack__meld-drop--over
@@ -3881,6 +3890,9 @@ html .app-dnd-frame:has(
 }
 
 html .app-dnd-frame > .app-play-split.app-top-exposure-container:has(
+    .discard-tracker__drop-frame,
+    .discard-tracker__tile-groups-container--drop-frame-joker-swap,
+    .discard-tracker__tile-groups-container--drop-frame-blank-exchange,
     .blank-exchange-dropzone--over,
     .app-opponents-rail__cell--swap-over,
     .exposure-rack__meld-drop--over
@@ -3891,16 +3903,14 @@ html .app-dnd-frame > .app-play-split.app-top-exposure-container:has(
     .discard-tracker__content,
     .discard-tracker__content--tile-groups-only,
     .discard-tracker__tile-groups-container,
+    .discard-tracker__overlay-grid,
     .blank-exchange-dropzone
   ) {
   position: relative;
   overflow: visible !important;
 }
 
-/* The unified frame above replaces the per-row (seat cell) and per-meld (tile) joker-swap rings. */
-html .app-dnd-frame .app-top-exposure-container .app-opponents-rail__cell--swap-over {
-  box-shadow: none;
-}
+/* Unified frame replaces per-meld tile rings (seat glow handled above). */
 html .app-dnd-frame .app-top-exposure-container .exposure-rack__meld-drop--over .exposure-rack__slot {
   box-shadow: none;
 }

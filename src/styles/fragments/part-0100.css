@@ -40,12 +40,14 @@
   --_menu-switch-h: 1.55rem;
   --_menu-switch-thumb: 1.1rem;
   --_menu-switch-pad: 0.2rem;
+  /* Match blank-tile count / menu action button corners (not a full pill). */
+  --_menu-switch-radius: var(--rack-tile-btn-border-radius);
   position: relative;
   display: block;
   width: var(--_menu-switch-w);
   height: var(--_menu-switch-h);
   box-sizing: border-box;
-  border-radius: 999px;
+  border-radius: var(--_menu-switch-radius);
   background: #d1d5db;
   border: 1px solid color-mix(in srgb, #6b7280 55%, #9ca3af 45%);
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-white) 50%, transparent);
@@ -64,8 +66,8 @@
   top: 50%;
   left: var(--_menu-switch-pad);
   width: var(--_menu-switch-thumb);
-  height: var(--_menu-switch-thumb);
-  border-radius: 50%;
+  height: calc(var(--_menu-switch-h) - 2 * var(--_menu-switch-pad));
+  border-radius: max(0.2rem, calc(var(--_menu-switch-radius) - var(--_menu-switch-pad)));
   background: var(--color-white);
   box-shadow:
     0 0.5px 1px color-mix(in srgb, var(--color-black) 8%, transparent),

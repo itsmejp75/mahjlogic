@@ -1790,11 +1790,10 @@ html body .app .dead-hand-overlay
 html body .app .app-menu-modal-layer .app-menu-modal :is(
   .app-menu-tray__diff-btn:not(:disabled),
   .app-menu-tray__item:not(.app-menu-tray__item--switch):not(:disabled),
-  .app-menu-modal__blank-tile-count-btn.btn:not(:disabled),
   .suggested-hands-popup__header-controls .hands-panel__display-toggle:not(:disabled),
   .app-menu-modal__suggested-filters-reset:not(:disabled),
   .app-menu-modal__close:not(:disabled)
-):not(:active):not(.app-menu-tray__diff-btn--on):not(.app-menu-modal__blank-tile-count-btn--on):not(
+):not(:active):not(.app-menu-tray__diff-btn--on):not(
     .hands-panel__display-toggle--on
   ):hover,
 html body .app .charleston-error-overlay :is(
@@ -1845,13 +1844,11 @@ html body .app .dead-hand-overlay
 html body .app .app-menu-modal-layer .app-menu-modal :is(
   .app-menu-tray__diff-btn:not(:disabled),
   .app-menu-tray__item:not(.app-menu-tray__item--switch):not(:disabled),
-  .app-menu-modal__blank-tile-count-btn.btn:not(:disabled),
   .suggested-hands-popup__header-controls .hands-panel__display-toggle:not(:disabled),
   .app-menu-modal__suggested-filters-reset:not(:disabled),
   .app-menu-modal__close:not(:disabled)
 ):is(
   .app-menu-tray__diff-btn--on,
-  .app-menu-modal__blank-tile-count-btn--on,
   .hands-panel__display-toggle--on
 ):hover:not(:disabled) {
   background: var(--rack-action-face, var(--app-action-btn-face));
@@ -1863,6 +1860,22 @@ html body .app .app-menu-modal-layer .app-menu-modal :is(
   text-shadow: none;
   transition: none;
   transform: none;
+}
+
+/* Blank-tile count selected: green fill + same raised 3D chrome as inactive; no hover change. */
+html body .app .app-menu-modal-layer .app-menu-modal
+  .app-menu-modal__blank-tile-count-btn.btn.app-menu-modal__blank-tile-count-btn--on:not(:disabled),
+html body .app .app-menu-modal-layer .app-menu-modal
+  .app-menu-modal__blank-tile-count-btn.btn.app-menu-modal__blank-tile-count-btn--on:not(:disabled):hover:not(:disabled),
+html body .app .app-menu-modal-layer .app-menu-modal
+  .app-menu-modal__blank-tile-count-btn.btn.app-menu-modal__blank-tile-count-btn--on:not(:disabled):active {
+  background:
+    var(--app-action-btn-face-overlay),
+    #22c55e;
+  border: 1px solid var(--rack-action-border-rest, var(--app-action-btn-border-rest));
+  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
+  /* Soft off-black on the lit green fill (pure black reads too sharp). */
+  color: #1a1f24;
 }
 
 /* Disabled — same flat face, no inset (matches rack-bottom-tile-cell :disabled, part-0123). */
@@ -2184,6 +2197,9 @@ html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-t
  * the frame itself on `.app-top-exposure-container:has(...)`).
  */
 html .app-dnd-frame > .app-play-split.app-top-exposure-container:has(
+    .discard-tracker__drop-frame,
+    .discard-tracker__tile-groups-container--drop-frame-joker-swap,
+    .discard-tracker__tile-groups-container--drop-frame-blank-exchange,
     .blank-exchange-dropzone--over,
     .app-opponents-rail__cell--swap-over,
     .exposure-rack__meld-drop--over
@@ -2195,6 +2211,9 @@ html .app-dnd-frame > .app-play-split.app-top-exposure-container:has(
 
 html .app-dnd-frame:has(
     > .app-play-split.app-top-exposure-container:has(
+      .discard-tracker__drop-frame,
+      .discard-tracker__tile-groups-container--drop-frame-joker-swap,
+      .discard-tracker__tile-groups-container--drop-frame-blank-exchange,
       .blank-exchange-dropzone--over,
       .app-opponents-rail__cell--swap-over,
       .exposure-rack__meld-drop--over
@@ -2202,6 +2221,16 @@ html .app-dnd-frame:has(
   )
   > .app-rack-stage {
   z-index: 1 !important;
+}
+
+/* Last word: never clip the yellow drop-frame halo on the top B/C/D + S/W/N band. */
+html .app-dnd-frame
+  > .app-play-split.app-top-exposure-container
+  .discard-tracker__tile-groups-container,
+html .app-dnd-frame
+  > .app-play-split.app-top-exposure-container
+  .discard-tracker__overlay-grid--drop-frame-lit {
+  overflow: visible !important;
 }
 
 /*

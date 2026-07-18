@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { flushSync } from 'react-dom'
 import { americanDeckTileCount, BLANK_TILE_COUNT_OPTIONS, buildAmericanDeck, dealOpeningFour, DEFAULT_BLANK_TILE_COUNT, isBlankTileCount, shuffle, STANDARD_JOKER_COUNT, TEN_JOKERS_COUNT } from './mahjong/deck'
 import type { BlankTileCount } from './mahjong/deck'
@@ -129,8 +129,10 @@ const LS_KEY_BLANK_TILE_COUNT = 'mahjlogic.blankTileCount'
 const LS_KEY_TEN_JOKERS = 'mahjlogic.tenJokersEnabled'
 const LS_KEY_RANDOM_SEAT = 'mahjlogic.randomSeatEnabled'
 const LS_KEY_SUGGESTED_HANDS_TRAY = 'mahjlogic.suggestedHandsTrayDefaultOpen'
+const LS_KEY_HAND_PROBABILITY = 'mahjlogic.handProbabilityEnabled'
 const BLANK_TILES_LABEL = 'Blank tiles'
-const SUGGESTED_HANDS_TRAY_LABEL = 'Suggested hands tray'
+const SUGGESTED_HANDS_TRAY_LABEL = 'Suggested hands'
+const HAND_PROBABILITY_LABEL = 'Hand Probability %'
 const TEN_JOKERS_LABEL = '10 Jokers'
 const RANDOM_SEAT_LABEL = 'Random seat'
 const CONCEALED_HAND_REMINDER_LABEL = 'Concealed hand reminder'
@@ -365,6 +367,16 @@ function readRandomSeatEnabledFromStorage(): boolean {
 function readSuggestedHandsTrayDefaultOpenFromStorage(): boolean {
   try {
     const v = localStorage.getItem(LS_KEY_SUGGESTED_HANDS_TRAY)
+    if (v === null) return true
+    return v === 'true' || v === '1'
+  } catch {
+    return true
+  }
+}
+
+function readHandProbabilityEnabledFromStorage(): boolean {
+  try {
+    const v = localStorage.getItem(LS_KEY_HAND_PROBABILITY)
     if (v === null) return true
     return v === 'true' || v === '1'
   } catch {
@@ -1636,38 +1648,6 @@ async function applySkipBotDiscard(
   return advanceToNextActorAfter(r, fromSeat, botsNext, botWinsEnabled, botDifficulty, cardId)
 }
 
-/** Suggested-hand filter row: pressable pill with label inside (matches menu radio chips). */
-function AppMenuFilterToggleButton({
-  pressed,
-  dimmed = false,
-  onToggle,
-  children,
-}: {
-  pressed: boolean
-  dimmed?: boolean
-  onToggle: () => void
-  children: ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      className={[
-        'btn',
-        'app-menu-tray__diff-btn',
-        'app-menu-modal__sh-filter-btn',
-        pressed ? 'app-menu-tray__diff-btn--on' : '',
-        dimmed ? 'app-menu-modal__sh-filter-btn--dimmed' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-      aria-pressed={pressed}
-      onClick={onToggle}
-    >
-      {children}
-    </button>
-  )
-}
-
 /** Settings menu: horizontal on/off switch (see `.app-menu-tray__toggle-slider` in `src/styles`). */
 function AppMenuSettingSwitch({
   labelId,
@@ -1768,6 +1748,9 @@ export default function App() {
   const [suggestedHandsTrayDefaultOpen, setSuggestedHandsTrayDefaultOpen] = useState(() =>
     readSuggestedHandsTrayDefaultOpenFromStorage(),
   )
+  const [handProbabilityEnabled, setHandProbabilityEnabled] = useState(() =>
+    readHandProbabilityEnabledFromStorage(),
+  )
   const suggestedHandsPopupRef = useRef<HTMLDivElement>(null)
   const eastExposureRackTopRef = useRef<HTMLDivElement>(null)
   const playerHandRackBottomRef = useRef<HTMLDivElement>(null)
@@ -1813,6 +1796,17 @@ export default function App() {
       suggestedHandsTrayApiRef.current.setTrayOpen(next)
       try {
         localStorage.setItem(LS_KEY_SUGGESTED_HANDS_TRAY, next ? 'true' : 'false')
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }, [])
+  const toggleHandProbability = useCallback(() => {
+    setHandProbabilityEnabled((v) => {
+      const next = !v
+      try {
+        localStorage.setItem(LS_KEY_HAND_PROBABILITY, next ? 'true' : 'false')
       } catch {
         /* ignore */
       }
@@ -2235,6 +2229,10 @@ export default function App() {
         const on = e.newValue === 'true' || e.newValue === '1'
         setSuggestedHandsTrayDefaultOpen(on)
         suggestedHandsTrayApiRef.current.setTrayOpen(on)
+      } else if (e.key === LS_KEY_HAND_PROBABILITY) {
+        if (e.newValue == null) return
+        const on = e.newValue === 'true' || e.newValue === '1'
+        setHandProbabilityEnabled(on)
       }
     }
     window.addEventListener('storage', onStorage)
@@ -4395,7 +4393,6 @@ export default function App() {
 
   const eastPlayerExposureRackMelds = useMemo(() => {
     if (mainPhase === 'mahjong-declared') return EMPTY_EXPOSURE_RACK_MELDS
-    if (mainPhase === 'bot-mahjong') return [{ tiles: hand }]
     const allowSort =
       (mainPhase === 'east-discard' || mainPhase === 'bot-turn') &&
       playerExposureMelds.length > 1
@@ -4566,13 +4563,13 @@ export default function App() {
   /** Discard tracker + suggested hands row below rack (always on so layout is visible during Charleston). */
   const showPlaySplitRow = true
 
-  /** Suggested-hands tab + popup shell: hidden only on dead hand / bot Mah Jongg (no rack action row). */
-  const showSuggestedHandsPanel =
-    mainPhase !== 'dead-hand' && mainPhase !== 'bot-mahjong'
+  /** Suggested-hands tab + popup shell: hidden only on dead hand. */
+  const showSuggestedHandsPanel = mainPhase !== 'dead-hand'
 
   const showReviewNewGameBelowDiscard =
     (mainPhase === 'wall-game' && wallGameReviewing) ||
-    (mainPhase === 'mahjong-declared' && mahjongWinReviewing)
+    (mainPhase === 'mahjong-declared' && mahjongWinReviewing) ||
+    (mainPhase === 'bot-mahjong' && botMahjongWinReviewing)
 
   const playSurfaceSeatLabel = useMemo(
     () =>
@@ -4895,6 +4892,7 @@ export default function App() {
               onPatternClick={onSuggestedPatternClick}
               onFocusKeyMigrate={onSuggestedFocusKeyMigrate}
               tilesGuideOn={suggestedPanelTilesOn}
+              showHandProbability={handProbabilityEnabled}
               rackTilesForSuggestedStrip={deferredRackForSuggestedStrip}
               rackTilesForPatternMatch={deferredRackForSuggestedPatternMatch}
               exposureTileIdsForSuggestedStrip={suggestedHandsExposureTileIds}
@@ -4924,6 +4922,7 @@ export default function App() {
     onSuggestedPatternClick,
     onSuggestedFocusKeyMigrate,
     suggestedPanelTilesOn,
+    handProbabilityEnabled,
     deferredRackForSuggestedStrip,
     deferredRackForSuggestedPatternMatch,
     suggestedHandsExposureTileIds,
@@ -5133,36 +5132,66 @@ export default function App() {
                           )
                           const dimmed =
                             !shown || !suggestedHandsExposureAvailableSections.has(section)
+                          const labelId = `app-menu-label-sh-filter-${section
+                            .replace(/[^a-zA-Z0-9]+/g, '-')
+                            .toLowerCase()}`
                           return (
-                            <AppMenuFilterToggleButton
+                            <div
                               key={section}
-                              pressed={shown}
-                              dimmed={dimmed}
-                              onToggle={() =>
-                                setSuggestedHandsUncheckedSections((prev) =>
-                                  toggledSuggestedHandSectionFilter(section, prev, !shown),
-                                )
-                              }
+                              className="app-menu-modal__row app-menu-modal__row--toggle app-menu-modal__row--sh-filter"
                             >
-                              {suggestedHandSectionMenuLabel(section)}
-                            </AppMenuFilterToggleButton>
+                              <AppMenuSettingSwitch
+                                labelId={labelId}
+                                pressed={shown}
+                                onToggle={() =>
+                                  setSuggestedHandsUncheckedSections((prev) =>
+                                    toggledSuggestedHandSectionFilter(section, prev, !shown),
+                                  )
+                                }
+                              />
+                              <span
+                                className={[
+                                  'app-menu-modal__label',
+                                  dimmed ? 'app-menu-modal__label--exposure-unavailable' : '',
+                                ]
+                                  .filter(Boolean)
+                                  .join(' ')}
+                                id={labelId}
+                              >
+                                {suggestedHandSectionMenuLabel(section)}
+                              </span>
+                            </div>
                           )
                         })}
                         {ci === suggestedHandsFilterColumns.length - 1 ? (
-                          <AppMenuFilterToggleButton
-                            pressed={!suggestedHandsHideConcealed}
-                            onToggle={() => setSuggestedHandsHideConcealed((v) => !v)}
-                          >
-                            Concealed (C)
-                          </AppMenuFilterToggleButton>
+                          <div className="app-menu-modal__row app-menu-modal__row--toggle app-menu-modal__row--sh-filter">
+                            <AppMenuSettingSwitch
+                              labelId="app-menu-label-sh-filter-concealed"
+                              pressed={!suggestedHandsHideConcealed}
+                              onToggle={() => setSuggestedHandsHideConcealed((v) => !v)}
+                            />
+                            <span
+                              className={[
+                                'app-menu-modal__label',
+                                suggestedHandsHideConcealed
+                                  ? 'app-menu-modal__label--exposure-unavailable'
+                                  : '',
+                              ]
+                                .filter(Boolean)
+                                .join(' ')}
+                              id="app-menu-label-sh-filter-concealed"
+                            >
+                              Concealed (C)
+                            </span>
+                          </div>
                         ) : null}
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
-              <div className="app-menu-tray__divider app-menu-modal__section-rule" role="separator" />
-              <div className="app-menu-modal__body-footer app-menu-modal__body-footer--settings-toggles">
+              <div className="app-menu-modal__diff-block app-menu-modal__diff-block--settings-toggles">
+                <div className="app-menu-modal__body-footer app-menu-modal__body-footer--settings-toggles">
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
                   <AppMenuSettingSwitch
                     labelId="app-menu-label-undo"
@@ -5204,6 +5233,16 @@ export default function App() {
                   />
                   <span className="app-menu-modal__label" id="app-menu-label-suggested-hands-tray">
                     {SUGGESTED_HANDS_TRAY_LABEL}
+                  </span>
+                </div>
+                <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                  <AppMenuSettingSwitch
+                    labelId="app-menu-label-hand-probability"
+                    pressed={handProbabilityEnabled}
+                    onToggle={toggleHandProbability}
+                  />
+                  <span className="app-menu-modal__label" id="app-menu-label-hand-probability">
+                    {HAND_PROBABILITY_LABEL}
                   </span>
                 </div>
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
@@ -5332,6 +5371,7 @@ export default function App() {
                       ))}
                     </div>
                   </div>
+                </div>
                 </div>
               </div>
             </div>

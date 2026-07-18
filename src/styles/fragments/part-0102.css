@@ -98,7 +98,7 @@
   padding: 0;
 }
 
-/* Match menu toggle pill size (2.8rem × 1.55rem) — landscape press targets, not diff-row tiles. */
+/* Same footprint as before (2.8rem × 1.55rem); rectangle corners match menu action buttons. */
 .app-menu-modal .app-menu-modal__blank-tile-count-btn.btn {
   --_blank-count-btn-w: 2.8rem;
   --_blank-count-btn-h: 1.55rem;
@@ -115,7 +115,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
+  border-radius: var(--rack-tile-btn-border-radius);
   font-family: 'Figtree', var(--sans);
   font-size: 1rem;
   font-weight: 600;
@@ -159,39 +159,25 @@
 
 .app-menu-modal__suggested-hand-filters-cols {
   display: grid;
-  grid-template-columns: max-content max-content;
-  column-gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 1.1rem;
   row-gap: 0;
   align-items: start;
-  width: max-content;
+  width: 100%;
   max-width: 100%;
 }
 
 .app-menu-modal__suggested-hand-filters-col {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 0.4rem;
+  align-items: stretch;
+  gap: 0;
   min-width: 0;
 }
 
-.app-menu-modal__sh-filter-btn {
-  box-sizing: border-box;
-  width: var(--app-menu-sh-filter-btn-w);
-  min-width: var(--app-menu-sh-filter-btn-w);
-  max-width: 100%;
-  flex: none;
-  padding-inline: 0.45rem;
-  white-space: nowrap;
-  text-align: center;
-}
-
-.app-menu-modal__sh-filter-btn--dimmed:not(.app-menu-tray__diff-btn--on) {
-  opacity: 0.58;
-}
-
-.app-menu-modal__sh-filter-btn--dimmed.app-menu-tray__diff-btn--on {
-  color: color-mix(in srgb, var(--rack-action-label-color, var(--app-action-btn-label)) 72%, transparent 28%);
+.app-menu-modal__row--sh-filter {
+  column-gap: 0.55rem;
+  padding-block: 0.18rem;
 }
 
 .app-menu-modal__suggested-filters-reset {

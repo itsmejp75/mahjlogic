@@ -9,7 +9,7 @@
 
 
 /* Slider: the <button> is an invisible hit pad — only .app-menu-tray__toggle-slider paints (thumb moves).
-   No outer box, outline, radius, or .btn shadow on the host. Keyboard focus rings the pill only. */
+   No outer box, outline, radius, or .btn shadow on the host. Keyboard focus rings the track only. */
 .app-menu-modal .app-menu-tray__item--switch.app-menu-modal__toggle {
   padding: 0;
   margin: 0;

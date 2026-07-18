@@ -72,12 +72,14 @@
   margin-top: var(--app-menu-body-gap, max(0.36rem, calc(var(--rack-action-touch-min-h) / 3.5)));
 }
 
-/* Remember size + bot wins / animations / color / joker — one column so every row has the same gap */
-.app-menu-modal__body > .app-menu-modal__body-footer--settings-toggles {
+/* Undo and lower — same raised tray as other menu sections; row spacing matches category filters. */
+.app-menu-modal__diff-block--settings-toggles > .app-menu-modal__body-footer--settings-toggles {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  margin-top: auto;
-  /* ~30% tighter than the standard menu block gap */
-  gap: calc(0.7 * var(--app-menu-body-gap, max(0.36rem, calc(var(--rack-action-touch-min-h) / 3.5))));
+  gap: 0;
+}
+
+.app-menu-modal__diff-block--settings-toggles .app-menu-modal__row--toggle {
+  padding-block: 0.18rem;
 }

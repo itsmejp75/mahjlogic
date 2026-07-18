@@ -236,6 +236,7 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
     dragOverlayTile,
     dragOverlayMeldTiles,
     dragOverlayRackSuitStacked,
+    topBandDropFrame,
     blankExchangeDragArmed,
     blankExchangeOpen,
     closeBlankExchange,
@@ -439,7 +440,7 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
           <div
             className={[
               'app-main__scroll',
-              charlestonDone && mainPhase !== 'east-discard' && mainPhase !== 'bot-mahjong'
+              charlestonDone && mainPhase !== 'east-discard'
                 ? ''
                 : 'app-main__scroll--collapsed',
             ]
@@ -460,7 +461,20 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                     <div className="discard-tracker__shell">
                       <div className="discard-tracker__content discard-tracker__content--tile-groups-only">
                         <BlankExchangeDropZone active={!!blankExchangeDragArmed}>
-                        <div className="discard-tracker__tile-groups-container">
+                        <div
+                          className={[
+                            'discard-tracker__tile-groups-container',
+                            topBandDropFrame === 'joker-swap'
+                              ? 'discard-tracker__tile-groups-container--drop-frame-joker-swap'
+                              : '',
+                            topBandDropFrame === 'blank-exchange'
+                              ? 'discard-tracker__tile-groups-container--drop-frame-blank-exchange'
+                              : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' ')}
+                          data-drop-frame={topBandDropFrame ?? undefined}
+                        >
                         <DiscardTrackerSlotGrid
                           discardPile={displayedDiscardPile}
                           botExposures={botExposures}
@@ -472,6 +486,7 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                               : botTurnBannerDiscarderBotIndex
                           }
                           jokerSwapUiActive={jokerSwapUiActive}
+                          topBandDropFrame={topBandDropFrame}
                           animationsEnabled={animationsEnabled}
                           botExposureFlyInTileIds={botExposureFlyInTileIds}
                           exposureJokerSwapFlyInTileIds={exposureJokerSwapFlyInTileIds}
@@ -719,8 +734,7 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                             </StagingMeldDropZone>
                           </div>
                           <div className="panel-hand-rack__hand-tray">
-                            {mainPhase !== 'bot-mahjong' &&
-                            mainPhase !== 'dead-hand' &&
+                            {mainPhase !== 'dead-hand' &&
                             !hidePlayerSeatLabelForCallSlot ? (
                               <PlayerRackSeatLabel
                                 seat={playerSeat}
@@ -728,7 +742,6 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                 isCalledThrower={playerSeatLabelCalledThrower}
                               />
                             ) : null}
-                            {mainPhase !== 'bot-mahjong' && (
                             <div ref={playerHandRackBottomRef} className="rack-stage__rack-bottom">
                                 <HandBank>
                                   <SortableHand
@@ -759,8 +772,7 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                   />
                                 </HandBank>
                             </div>
-                            )}
-                            {mainPhase !== 'bot-mahjong' && mainPhase !== 'dead-hand' ? (
+                            {mainPhase !== 'dead-hand' ? (
                               <div
                                 className="panel-hand-rack__action-well"
                               >

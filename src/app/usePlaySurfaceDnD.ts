@@ -40,12 +40,15 @@ import {
 import {
   EAST_SEAT_SWAP_ID,
   findJokerSwapTargetAtEastExposure,
+  findJokerSwapTargetAtExposure,
+  findJokerSwapTargetAtSeat,
   findJokerSwapTargetInEastRack,
-  findNextBotJokerSwapTarget,
   parseBotExposureSwapDropId,
   parseBotSeatSwapDropId,
   parseEastExposureSwapDropId,
+  topBandDropFrameForOverId,
   type JokerSwapTargetPick,
+  type TopBandDropFrame,
 } from '../mahjong/jokerSwapTarget'
 import {
   PASS_BOX_ID,
@@ -162,6 +165,8 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
   const [dragOverlayTile, setDragOverlayTile] = useState<TileInstance | null>(null)
   const [dragOverlayMeldTiles, setDragOverlayMeldTiles] = useState<TileInstance[] | null>(null)
   const [dragOverlayRackSuitStacked, setDragOverlayRackSuitStacked] = useState(false)
+  /** Yellow top-band drop frame while a blank / joker-swap natural is over its target. */
+  const [topBandDropFrame, setTopBandDropFrame] = useState<TopBandDropFrame | null>(null)
   /** Set when a blank is dropped on the tracker: the centered tracker becomes tappable to pick a discard. */
   const blankExchangeDragArmed =
     charlestonDone &&
@@ -621,6 +626,7 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
   const onDragStart = useCallback(
     (e: DragStartEvent) => {
       pinHandRackGeometryForMobileDrag()
+      setTopBandDropFrame(null)
       setCharlestonPassIntoHandPreview(null)
       setEastDiscardIntoHandPreview(null)
       globalDragPointerCleanupRef.current?.()
@@ -725,6 +731,8 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
   const onDragOver = useCallback(
     (e: DragOverEvent) => {
       const aid = String(e.active.id)
+      const nextFrame = topBandDropFrameForOverId(e.over ? String(e.over.id) : null)
+      setTopBandDropFrame((prev) => (prev === nextFrame ? prev : nextFrame))
       if (charlestonDone) {
         if (mainPhase === 'east-discard' && pendingEastDiscardTile && aid === pendingEastDiscardTile.id) {
           const over = e.over
@@ -811,6 +819,7 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
   const onDragCancel = useCallback(() => {
     releaseHandRackGeometryAfterMobileDrag()
     setIncomingBotDiscardCallDragActive(false)
+    setTopBandDropFrame(null)
     setCharlestonPassIntoHandPreview(null)
     setEastDiscardIntoHandPreview(null)
     setCharlestonHandPassStageTileId(null)
@@ -821,6 +830,7 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
 
   const onDragEnd = useCallback(
     (e: DragEndEvent) => {
+      setTopBandDropFrame(null)
       const { active, over } = e
       const aid = String(active.id)
       const passTileStillOverPassBox =
@@ -978,9 +988,13 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
             } else if (eastSeat) {
               pick = findJokerSwapTargetInEastRack(r.eastExposures, natural.def)
             } else if (exposureSwapIdx !== null) {
-              pick = findNextBotJokerSwapTarget(r.botExposures, natural.def)
+              pick = findJokerSwapTargetAtExposure(
+                r.botExposures,
+                exposureSwapIdx,
+                natural.def,
+              )
             } else if (seatSwap) {
-              pick = findNextBotJokerSwapTarget(r.botExposures, natural.def)
+              pick = findJokerSwapTargetAtSeat(r.botExposures, seatSwap, natural.def)
             }
             if (!pick) return r
             return applyEastNaturalForExposedJoker(r, { ...pick, eastTileId: aid })
@@ -1166,6 +1180,7 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
 
   const resetDragUi = useCallback(() => {
     setIncomingBotDiscardCallDragActive(false)
+    setTopBandDropFrame(null)
     setDragOverlayTile(null)
     setDragOverlayMeldTiles(null)
     setDragOverlayRackSuitStacked(false)
@@ -1189,6 +1204,7 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
     dragOverlayTile,
     dragOverlayMeldTiles,
     dragOverlayRackSuitStacked,
+    topBandDropFrame,
     blankExchangeDragArmed,
     blankExchangeOpen,
     openBlankExchange,

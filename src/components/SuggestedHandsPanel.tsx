@@ -783,6 +783,7 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
   cardHandDeadCause,
   tilesGuideOn,
   tilesDetailActive,
+  showHandProbability,
   isPinned,
   showPinColumn,
   bindPatternRowInteraction,
@@ -796,6 +797,7 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
   tilesGuideOn: boolean
   /** Tile strip layout + tall row height — only after deferred strip slots are ready. */
   tilesDetailActive: boolean
+  showHandProbability: boolean
   isPinned: boolean
   showPinColumn: boolean
   bindPatternRowInteraction: (focusKey: string) => PatternRowInteractionProps
@@ -807,7 +809,15 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
   const rowStripSlots = row.stripSlots ?? []
   const rowLit = tilesGuideOn && rowIsFocused
   const cardRef = suggestedHandCardRefDisplay(h)
-  const ariaLabel = `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}${h.closed ? ', concealed' : ''}, ${h.tilesNeededRough} tiles away, ${suggestedHandCompletionProbabilityLabel(h.completionProbability)}, ${formatSuggestedHandValue(h.points)}`
+  const ariaLabel = [
+    `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}`,
+    h.title + (h.closed ? ', concealed' : ''),
+    `${h.tilesNeededRough} tiles away`,
+    showHandProbability ? suggestedHandCompletionProbabilityLabel(h.completionProbability) : null,
+    formatSuggestedHandValue(h.points),
+  ]
+    .filter(Boolean)
+    .join(', ')
   const parenText = !tilesDetailActive ? suggestedHandParenText(h) : null
   const showTileDetail = tilesDetailActive && rowStripSlots.length > 0
   // Hands-only rows always reserve the parenthesis line so every suggested hand has the same
@@ -935,9 +945,14 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
             .filter(Boolean)
             .join(' ')}
           role="cell"
-          aria-label={suggestedHandCompletionProbabilityLabel(h.completionProbability)}
+          aria-hidden={!showHandProbability}
+          aria-label={
+            showHandProbability
+              ? suggestedHandCompletionProbabilityLabel(h.completionProbability)
+              : undefined
+          }
         >
-          {formatCompletionProbability(h.completionProbability)}
+          {showHandProbability ? formatCompletionProbability(h.completionProbability) : null}
         </div>
         <div
           className={[
@@ -1005,6 +1020,7 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
   tilesDetailActive,
   handsListOn,
   showHandCategoryLabels,
+  showHandProbability,
   rowHitGridStyle,
   isPinned,
   showPinColumn,
@@ -1019,6 +1035,7 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
   tilesDetailActive: boolean
   handsListOn: boolean
   showHandCategoryLabels: boolean
+  showHandProbability: boolean
   rowHitGridStyle: CSSProperties
   isPinned: boolean
   showPinColumn: boolean
@@ -1031,7 +1048,17 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
   const cardRef = suggestedHandCardRefDisplay(h)
   const rowAriaLabel =
     !handsListOn || !showHandCategoryLabels
-      ? `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}, ${h.title}${h.closed ? ', concealed' : ''}, ${h.tilesNeededRough} tiles away, ${suggestedHandCompletionProbabilityLabel(h.completionProbability)}, ${formatSuggestedHandValue(h.points)}`
+      ? [
+          `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}`,
+          h.title + (h.closed ? ', concealed' : ''),
+          `${h.tilesNeededRough} tiles away`,
+          showHandProbability
+            ? suggestedHandCompletionProbabilityLabel(h.completionProbability)
+            : null,
+          formatSuggestedHandValue(h.points),
+        ]
+          .filter(Boolean)
+          .join(', ')
       : undefined
   const outerClass = [
     'hands-list__row-hit',
@@ -1138,13 +1165,18 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
             />
           </>
         ) : null}
-        <div className="hands-list__cell hands-list__cell--odds">
-          <span
-            className="hands-list__pressure"
-            aria-label={suggestedHandCompletionProbabilityLabel(h.completionProbability)}
-          >
-            {formatCompletionProbability(h.completionProbability)}
-          </span>
+        <div
+          className="hands-list__cell hands-list__cell--odds"
+          aria-hidden={!showHandProbability}
+        >
+          {showHandProbability ? (
+            <span
+              className="hands-list__pressure"
+              aria-label={suggestedHandCompletionProbabilityLabel(h.completionProbability)}
+            >
+              {formatCompletionProbability(h.completionProbability)}
+            </span>
+          ) : null}
         </div>
         <div className="hands-list__cell hands-list__cell--away">
           <span
@@ -1176,6 +1208,8 @@ type Props = {
   /** Rerank changed variant keys — migrate selection when the row key goes stale; clear when the pattern leaves the list. */
   onFocusKeyMigrate?: (nextKey: string | null) => void
   tilesGuideOn: boolean
+  /** When false, hide the Prob % column in the suggested-hands list (default true). */
+  showHandProbability?: boolean
   rackTilesForSuggestedStrip: TileInstance[]
   /**
    * Same ids as `rackTilesForSuggestedStrip`, but jokers in open melds use their stand-in `TileDef`
@@ -1217,6 +1251,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   onPatternClick,
   onFocusKeyMigrate,
   tilesGuideOn,
+  showHandProbability = true,
   rackTilesForSuggestedStrip,
   rackTilesForPatternMatch,
   exposureTileIdsForSuggestedStrip,
@@ -2136,6 +2171,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   const rootClassName = [
     'panel',
     'panel--hands',
+    !showHandProbability ? 'panel--hands-hide-prob' : '',
     discardTraySurface ? 'suggested-hands-popup__user-shift' : '',
   ]
     .filter(Boolean)
@@ -2235,12 +2271,20 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                     {hasHandsAboveView ? <SuggestedHandsScrollAboveHint /> : null}
                     Away
                   </div>
+                {showHandProbability ? (
                   <div
                     className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--odds"
                     role="columnheader"
                   >
                     Prob %
                   </div>
+                ) : (
+                  <div
+                    className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--odds"
+                    role="columnheader"
+                    aria-hidden
+                  />
+                )}
                   <div
                     className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--values"
                     role="columnheader"
@@ -2286,6 +2330,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                           cardHandDeadCause={cardHandDeadCause}
                           tilesGuideOn={tilesGuideOn}
                           tilesDetailActive={tilesDetailActive}
+                          showHandProbability={showHandProbability}
                           isPinned={pinnedKeySet.has(row.pinKey)}
                           showPinColumn={showPinColumn}
                           bindPatternRowInteraction={bindPatternRowInteraction}
@@ -2425,8 +2470,11 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                   ]
                     .filter(Boolean)
                     .join(' ')}
+                  aria-hidden={!showHandProbability}
                 >
-                  <div className="hands-list__header-meta">Prob %</div>
+                  {showHandProbability ? (
+                    <div className="hands-list__header-meta">Prob %</div>
+                  ) : null}
                 </div>
                 <div
                   className={[
@@ -2491,6 +2539,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                     tilesDetailActive={tilesDetailActive}
                     handsListOn={handsListOn}
                     showHandCategoryLabels={showHandCategoryLabels}
+                    showHandProbability={showHandProbability}
                     rowHitGridStyle={rowHitGridStyle}
                     isPinned={pinnedKeySet.has(row.pinKey)}
                     showPinColumn={showPinColumn}
