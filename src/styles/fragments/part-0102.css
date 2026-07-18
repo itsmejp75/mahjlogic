@@ -69,6 +69,12 @@
   color: color-mix(in srgb, var(--text-h, var(--fg)) 36%, var(--border, #999));
 }
 
+/* Hint delay rows reuse blank-tiles trail + count chips; unit label sits after 0 / 3 / 5. */
+.app-menu-modal__label--hint-delay-unit {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 /* Blank tiles: switch, then label with 2 / 4 / 6 chips inline immediately after. */
 .app-menu-modal__row--blank-tiles {
   grid-template-columns: auto minmax(0, 1fr);

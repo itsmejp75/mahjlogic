@@ -79,6 +79,8 @@ export type { PlaySurfaceDnDApi }
 export type PlaySurfaceProps = {
   animationsEnabled: boolean
   jokerSwapHintEnabled: boolean
+  /** Dock-bounce CSS/JS wait before the joker-swap hint animation starts. */
+  jokerSwapHintBounceDelayMs: number
   jokerSwapHandHintSingleBounce: boolean
   botHandsIdentifierEnabled: boolean
   botHandsIdentifierFocusSeat: BotSeat | null
@@ -161,6 +163,7 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
   const {
     animationsEnabled,
     jokerSwapHintEnabled,
+    jokerSwapHintBounceDelayMs,
     jokerSwapHandHintSingleBounce,
     botHandsIdentifierEnabled,
     botHandsIdentifierFocusSeat,
@@ -435,6 +438,11 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
         }
         data-joker-swap-hint={jokerSwapHintEnabled ? 'on' : 'off'}
         data-joker-swap-hint-iter={jokerSwapHandHintSingleBounce ? '1' : '4'}
+        style={
+          {
+            '--joker-swap-hint-bounce-delay': `${jokerSwapHintBounceDelayMs}ms`,
+          } as CSSProperties
+        }
       >
         <div className="app-main">
           <div

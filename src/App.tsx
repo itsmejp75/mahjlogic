@@ -118,6 +118,20 @@ const DEAD_HAND_WARNINGS_LABEL = 'Dead hand warnings'
 /** Highlight the Mah Jongg rack button when a declaration would succeed (self-draw or on a live discard). */
 const LS_KEY_MAHJONG_HINT = 'mahjlogic.mahjongHintEnabled'
 const MAHJONG_HINT_LABEL = 'Mah Jongg hint'
+/** Seconds to wait before showing each hint (0 / 3 / 5; blank-tiles-style chips in the menu). */
+const LS_KEY_MAHJONG_HINT_DELAY_SECONDS = 'mahjlogic.mahjongHintDelaySeconds'
+const LS_KEY_JOKER_SWAP_HINT_DELAY_SECONDS = 'mahjlogic.jokerSwapHintDelaySeconds'
+/** Former boolean delay toggles; read once to seed the seconds keys if missing. */
+const LS_KEY_MAHJONG_HINT_DELAY_3S_LEGACY = 'mahjlogic.mahjongHintDelay3SecondsEnabled'
+const LS_KEY_JOKER_SWAP_HINT_DELAY_3S_LEGACY = 'mahjlogic.jokerSwapHintDelay3SecondsEnabled'
+const LS_KEY_HINT_DELAY_3S_LEGACY = 'mahjlogic.hintDelay3SecondsEnabled'
+const HINT_DELAY_SECONDS_OPTIONS = [0, 3, 5] as const
+type HintDelaySeconds = (typeof HINT_DELAY_SECONDS_OPTIONS)[number]
+const DEFAULT_HINT_DELAY_SECONDS: HintDelaySeconds = 0
+
+function isHintDelaySeconds(n: number): n is HintDelaySeconds {
+  return (HINT_DELAY_SECONDS_OPTIONS as readonly number[]).includes(n)
+}
 const LS_KEY_DEAD_TILE_HINT = 'mahjlogic.deadTileHintEnabled'
 const DEAD_TILE_HINT_LABEL = 'Dead tile(s) hint'
 const LS_KEY_BOT_HANDS_IDENTIFIER = 'mahjlogic.botHandsIdentifierEnabled'
@@ -269,6 +283,76 @@ function readMahjongHintFromStorage(): boolean {
   } catch {
     return true
   }
+}
+
+function readLegacyHintDelayEnabled(key: string): boolean | null {
+  try {
+    const v = localStorage.getItem(key)
+    if (v == null) return null
+    return v === 'true' || v === '1'
+  } catch {
+    return null
+  }
+}
+
+function migrateLegacyHintDelaySeconds(perHintKey: string): HintDelaySeconds | null {
+  const perHint = readLegacyHintDelayEnabled(perHintKey)
+  if (perHint != null) return perHint ? 3 : 0
+  const shared = readLegacyHintDelayEnabled(LS_KEY_HINT_DELAY_3S_LEGACY)
+  if (shared != null) return shared ? 3 : 0
+  return null
+}
+
+function readMahjongHintDelaySecondsFromStorage(): HintDelaySeconds {
+  try {
+    const v = localStorage.getItem(LS_KEY_MAHJONG_HINT_DELAY_SECONDS)
+    if (v != null) {
+      const n = Number(v)
+      if (isHintDelaySeconds(n)) return n
+    }
+    const migrated = migrateLegacyHintDelaySeconds(LS_KEY_MAHJONG_HINT_DELAY_3S_LEGACY)
+    if (migrated != null) {
+      localStorage.setItem(LS_KEY_MAHJONG_HINT_DELAY_SECONDS, String(migrated))
+      return migrated
+    }
+  } catch {
+    /* ignore */
+  }
+  return DEFAULT_HINT_DELAY_SECONDS
+}
+
+function readJokerSwapHintDelaySecondsFromStorage(): HintDelaySeconds {
+  try {
+    const v = localStorage.getItem(LS_KEY_JOKER_SWAP_HINT_DELAY_SECONDS)
+    if (v != null) {
+      const n = Number(v)
+      if (isHintDelaySeconds(n)) return n
+    }
+    const migrated = migrateLegacyHintDelaySeconds(LS_KEY_JOKER_SWAP_HINT_DELAY_3S_LEGACY)
+    if (migrated != null) {
+      localStorage.setItem(LS_KEY_JOKER_SWAP_HINT_DELAY_SECONDS, String(migrated))
+      return migrated
+    }
+  } catch {
+    /* ignore */
+  }
+  return DEFAULT_HINT_DELAY_SECONDS
+}
+
+/** When `delayMs` is 0, mirrors `active` immediately; otherwise becomes true after the wait. */
+function useDelayedReady(active: boolean, delayMs: number): boolean {
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    if (!active || delayMs <= 0) {
+      setReady(false)
+      return
+    }
+    setReady(false)
+    const t = window.setTimeout(() => setReady(true), delayMs)
+    return () => window.clearTimeout(t)
+  }, [active, delayMs])
+  if (delayMs <= 0) return active
+  return active && ready
 }
 
 function readDeadTileHintFromStorage(): boolean {
@@ -1859,6 +1943,12 @@ export default function App() {
     readDeadHandWarningsFromStorage(),
   )
   const [mahjongHintEnabled, setMahjongHintEnabled] = useState<boolean>(() => readMahjongHintFromStorage())
+  const [mahjongHintDelaySeconds, setMahjongHintDelaySeconds] = useState<HintDelaySeconds>(() =>
+    readMahjongHintDelaySecondsFromStorage(),
+  )
+  const [jokerSwapHintDelaySeconds, setJokerSwapHintDelaySeconds] = useState<HintDelaySeconds>(() =>
+    readJokerSwapHintDelaySecondsFromStorage(),
+  )
   const [deadTileHintEnabled, setDeadTileHintEnabled] = useState<boolean>(() =>
     readDeadTileHintFromStorage(),
   )
@@ -1978,6 +2068,28 @@ export default function App() {
       }
       return next
     })
+  }, [])
+
+  const setMahjongHintDelaySecondsLevel = useCallback((seconds: HintDelaySeconds) => {
+    setMahjongHintDelaySeconds(seconds)
+    setMahjongHintEnabled(true)
+    try {
+      localStorage.setItem(LS_KEY_MAHJONG_HINT_DELAY_SECONDS, String(seconds))
+      localStorage.setItem(LS_KEY_MAHJONG_HINT, 'true')
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  const setJokerSwapHintDelaySecondsLevel = useCallback((seconds: HintDelaySeconds) => {
+    setJokerSwapHintDelaySeconds(seconds)
+    setJokerSwapHintEnabled(true)
+    try {
+      localStorage.setItem(LS_KEY_JOKER_SWAP_HINT_DELAY_SECONDS, String(seconds))
+      localStorage.setItem(LS_KEY_JOKER_SWAP_HINT, 'true')
+    } catch {
+      /* ignore */
+    }
   }, [])
 
   const toggleDeadTileHint = useCallback(() => {
@@ -2116,6 +2228,14 @@ export default function App() {
       const m = readMahjongHintFromStorage()
       return prev === m ? prev : m
     })
+    setMahjongHintDelaySeconds((prev) => {
+      const d = readMahjongHintDelaySecondsFromStorage()
+      return prev === d ? prev : d
+    })
+    setJokerSwapHintDelaySeconds((prev) => {
+      const d = readJokerSwapHintDelaySecondsFromStorage()
+      return prev === d ? prev : d
+    })
     setDeadTileHintEnabled((prev) => {
       const d = readDeadTileHintFromStorage()
       return prev === d ? prev : d
@@ -2181,6 +2301,14 @@ export default function App() {
       } else if (e.key === LS_KEY_MAHJONG_HINT) {
         if (e.newValue == null) return
         setMahjongHintEnabled(e.newValue === 'true' || e.newValue === '1')
+      } else if (e.key === LS_KEY_MAHJONG_HINT_DELAY_SECONDS) {
+        if (e.newValue == null) return
+        const n = Number(e.newValue)
+        if (isHintDelaySeconds(n)) setMahjongHintDelaySeconds(n)
+      } else if (e.key === LS_KEY_JOKER_SWAP_HINT_DELAY_SECONDS) {
+        if (e.newValue == null) return
+        const n = Number(e.newValue)
+        if (isHintDelaySeconds(n)) setJokerSwapHintDelaySeconds(n)
       } else if (e.key === LS_KEY_DEAD_TILE_HINT) {
         if (e.newValue == null) return
         setDeadTileHintEnabled(e.newValue === 'true' || e.newValue === '1')
@@ -2683,6 +2811,21 @@ export default function App() {
     eastExposures,
   ])
 
+  const mahjongHintDelayMs = mahjongHintDelaySeconds * 1000
+  const jokerSwapHintDelayMs = jokerSwapHintDelaySeconds * 1000
+  const jokerSwapHintBounceDelayMs =
+    jokerSwapHintDelaySeconds > 0
+      ? jokerSwapHintDelayMs
+      : JOKER_SWAP_HINT_BOUNCE_DELAY_MS
+  /** Rack Swap button purple border waits for the chosen joker-swap delay. */
+  const jokerSwapHintTargetsReady = useDelayedReady(
+    !!jokerSwapHintTargetIds,
+    jokerSwapHintDelayMs,
+  )
+  const jokerSwapHintTargetIdsForRackHint = jokerSwapHintTargetsReady
+    ? jokerSwapHintTargetIds
+    : null
+
   /** Joker swap hint (dock-bounce): same targets as `jokerSwapHintTargetIds`, animations only. */
   const activeJokerSwapHintBounceIds = useMemo(() => {
     if (!jokerSwapHintTargetIds || !animationsEnabled) return null
@@ -2754,7 +2897,7 @@ export default function App() {
 
     const startedAt = activeJokerSwapHintBounceStartedAtRef.current
     const elapsed = startedAt == null ? Number.POSITIVE_INFINITY : performance.now() - startedAt
-    const afterDelay = elapsed - JOKER_SWAP_HINT_BOUNCE_DELAY_MS
+    const afterDelay = elapsed - jokerSwapHintBounceDelayMs
     const phase =
       afterDelay >= 0
         ? afterDelay % JOKER_SWAP_HINT_BOUNCE_DURATION_MS
@@ -2780,7 +2923,7 @@ export default function App() {
       setSettlingJokerSwapHintBounceIds((cur) => (cur === prior ? null : cur))
     }, settleMs)
     return () => window.clearTimeout(t)
-  }, [activeJokerSwapHintBounceIds])
+  }, [activeJokerSwapHintBounceIds, jokerSwapHintBounceDelayMs])
 
   const rawJokerSwapHintBounceIds = activeJokerSwapHintBounceIds ?? settlingJokerSwapHintBounceIds
 
@@ -2803,11 +2946,11 @@ export default function App() {
   useEffect(() => {
     if (!jokerSwapBounceIsActive) return
     const totalMs =
-      JOKER_SWAP_HINT_BOUNCE_DELAY_MS +
+      jokerSwapHintBounceDelayMs +
       JOKER_SWAP_HINT_BOUNCE_DURATION_MS * jokerSwapHintBounceIterationCount
     const t = window.setTimeout(() => setJokerSwapBounceAnimDone(true), totalMs)
     return () => window.clearTimeout(t)
-  }, [jokerSwapBounceIsActive, jokerSwapHintBounceIterationCount])
+  }, [jokerSwapBounceIsActive, jokerSwapHintBounceIterationCount, jokerSwapHintBounceDelayMs])
 
   useEffect(() => {
     setJokerSwapBounceAnimDone(false)
@@ -4523,7 +4666,7 @@ export default function App() {
     jokerSwapHintBounceEpoch,
   ])
 
-  const showMahjongRackHint = useMemo(() => {
+  const showMahjongRackHintRaw = useMemo(() => {
     if (!mahjongHintEnabled || !charlestonDone) return false
     if (mainPhase === 'east-discard') {
       return isSelfDrawMahjongWin(suggestedRankInput)
@@ -4559,6 +4702,7 @@ export default function App() {
     discardPile,
     round,
   ])
+  const showMahjongRackHint = useDelayedReady(showMahjongRackHintRaw, mahjongHintDelayMs)
 
   /** Discard tracker + suggested hands row below rack (always on so layout is visible during Charleston). */
   const showPlaySplitRow = true
@@ -4595,7 +4739,7 @@ export default function App() {
         discardPile,
         showCallStagingDoneButton,
         canCommitStagedCallDone,
-        jokerSwapHintTargetIds,
+        jokerSwapHintTargetIds: jokerSwapHintTargetIdsForRackHint,
         showMahjongRackHint,
         showSuggestedHandsPanel,
         suggestedPanelTilesOn,
@@ -4617,7 +4761,7 @@ export default function App() {
       discardPile,
       showCallStagingDoneButton,
       canCommitStagedCallDone,
-      jokerSwapHintTargetIds,
+      jokerSwapHintTargetIdsForRackHint,
       showMahjongRackHint,
       showSuggestedHandsPanel,
       suggestedPanelTilesOn,
@@ -5258,28 +5402,94 @@ export default function App() {
                     {DEAD_HAND_WARNINGS_LABEL}
                   </span>
                 </div>
-                <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                <div className="app-menu-modal__row app-menu-modal__row--toggle app-menu-modal__row--blank-tiles">
                   <AppMenuSettingSwitch
                     labelId="app-menu-label-mahjong-hint"
                     pressed={mahjongHintEnabled}
                     onToggle={toggleMahjongHint}
                   />
-                  <span className="app-menu-modal__label" id="app-menu-label-mahjong-hint">
-                    {MAHJONG_HINT_LABEL}
-                  </span>
+                  <div className="app-menu-modal__blank-tiles-trail">
+                    <span className="app-menu-modal__label" id="app-menu-label-mahjong-hint">
+                      {MAHJONG_HINT_LABEL} - delay
+                    </span>
+                    <div
+                      className="app-menu-modal__blank-tile-counts"
+                      role="radiogroup"
+                      aria-label="Mah Jongg hint delay in seconds"
+                    >
+                      {HINT_DELAY_SECONDS_OPTIONS.map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          className={[
+                            'btn',
+                            'app-menu-modal__blank-tile-count-btn',
+                            mahjongHintEnabled && mahjongHintDelaySeconds === n
+                              ? 'app-menu-modal__blank-tile-count-btn--on'
+                              : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' ')}
+                          role="radio"
+                          aria-checked={mahjongHintEnabled && mahjongHintDelaySeconds === n}
+                          disabled={!mahjongHintEnabled}
+                          onClick={() => setMahjongHintDelaySecondsLevel(n)}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                    <span className="app-menu-modal__label app-menu-modal__label--hint-delay-unit">
+                      seconds
+                    </span>
+                  </div>
                 </div>
-                <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                <div className="app-menu-modal__row app-menu-modal__row--toggle app-menu-modal__row--blank-tiles">
                   <AppMenuSettingSwitch
                     labelId="app-menu-label-joker-swap-hint"
                     pressed={jokerSwapHintEnabled}
                     onToggle={toggleJokerSwapHint}
                   />
-                  <span
-                    className="app-menu-modal__label"
-                    id="app-menu-label-joker-swap-hint"
-                  >
-                    {JOKER_SWAP_HINT_LABEL}
-                  </span>
+                  <div className="app-menu-modal__blank-tiles-trail">
+                    <span
+                      className="app-menu-modal__label"
+                      id="app-menu-label-joker-swap-hint"
+                    >
+                      {JOKER_SWAP_HINT_LABEL} - delay
+                    </span>
+                    <div
+                      className="app-menu-modal__blank-tile-counts"
+                      role="radiogroup"
+                      aria-label="Joker swap hint delay in seconds"
+                    >
+                      {HINT_DELAY_SECONDS_OPTIONS.map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          className={[
+                            'btn',
+                            'app-menu-modal__blank-tile-count-btn',
+                            jokerSwapHintEnabled && jokerSwapHintDelaySeconds === n
+                              ? 'app-menu-modal__blank-tile-count-btn--on'
+                              : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' ')}
+                          role="radio"
+                          aria-checked={
+                            jokerSwapHintEnabled && jokerSwapHintDelaySeconds === n
+                          }
+                          disabled={!jokerSwapHintEnabled}
+                          onClick={() => setJokerSwapHintDelaySecondsLevel(n)}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                    <span className="app-menu-modal__label app-menu-modal__label--hint-delay-unit">
+                      seconds
+                    </span>
+                  </div>
                 </div>
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
                   <AppMenuSettingSwitch
@@ -6029,6 +6239,7 @@ export default function App() {
       <PlaySurface
         animationsEnabled={animationsEnabled}
         jokerSwapHintEnabled={jokerSwapHintEnabled}
+        jokerSwapHintBounceDelayMs={jokerSwapHintBounceDelayMs}
         jokerSwapHandHintSingleBounce={jokerSwapHandHintSingleBounce}
         botHandsIdentifierEnabled={botHandsIdentifierEnabled}
         botHandsIdentifierFocusSeat={botHandsIdentifierFocusSeat}
