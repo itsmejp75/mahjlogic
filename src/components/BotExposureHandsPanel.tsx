@@ -9,6 +9,7 @@ import {
 } from '../analysis/botExposureHandStrip'
 import { resolveCardLineDefsForClaimMelds } from '../analysis/suggestedHands'
 import type { BotSeat } from '../analysis/types'
+import { CardHandNotation, showCardHandNotation } from '../card/CardHandNotation'
 import { suggestedHandSectionMenuLabel } from '../suggestedHands/filterSettings'
 import { CardColoredText } from './CardColoredText'
 import { TileFace } from './TileFace'
@@ -164,7 +165,7 @@ export const BotExposureHandsPanel = memo(function BotExposureHandsPanel({
   const title = `${seat}'s ${patterns.length} possible hand${patterns.length === 1 ? '' : 's'}`
 
   return (
-    <section className={rootClassName} aria-label={title}>
+    <section className={rootClassName} aria-label={title} data-nosnippet>
       <div className="hands-panel__content">
         <div className="bot-exposure-hands-panel__toolbar">
           <p className="bot-exposure-hands-panel__title">{title}</p>
@@ -199,6 +200,7 @@ export const BotExposureHandsPanel = memo(function BotExposureHandsPanel({
               >
                 {patterns.map((p) => {
                   const cardRef = patternCardRef(p)
+                  const handNotationOn = showCardHandNotation()
                   return (
                     <div key={p.id} className="bot-exposure-hands-list__row" role="listitem">
                       <div className="bot-exposure-hands-list__cat">
@@ -207,13 +209,18 @@ export const BotExposureHandsPanel = memo(function BotExposureHandsPanel({
                           <span className="hands-sheet__section-num"> - {cardRef}</span>
                         </span>
                       </div>
-                      <div className="bot-exposure-hands-list__hand" aria-label={p.title}>
+                      <div
+                        className="bot-exposure-hands-list__hand"
+                        aria-label={handNotationOn ? p.title : `Hand ${cardRef}`}
+                      >
                         <span className="hands-sheet__hand-title-line">
-                          {p.titleSegments?.length ? (
-                            <CardColoredText segments={p.titleSegments} />
-                          ) : (
-                            p.title
-                          )}
+                          <CardHandNotation>
+                            {p.titleSegments?.length ? (
+                              <CardColoredText segments={p.titleSegments} />
+                            ) : (
+                              p.title
+                            )}
+                          </CardHandNotation>
                         </span>
                       </div>
                       <div className="bot-exposure-hands-list__tiles">

@@ -6,6 +6,7 @@ import {
   type RankSuggestedHandsInput,
 } from '../analysis/suggestedHands'
 import type { TileInstance } from '../mahjong/types'
+import { CardHandNotation } from '../card/CardHandNotation'
 import type { SuggestedHandLine } from '../training/types'
 import { TileFace } from './TileFace'
 import { CardColoredText } from './CardColoredText'
@@ -37,12 +38,16 @@ function TiedLineHandLabel({ line }: { line: SuggestedHandLine }) {
   return (
     <>
       <span className="post-game-tied__ref">{suggestedHandCategoryDashCardRef(line)}</span>
-      <span className="post-game-tied__sep"> — </span>
-      {line.titleSegments?.length ? (
-        <CardColoredText segments={line.titleSegments} />
-      ) : (
-        line.title
-      )}
+      <CardHandNotation
+        fallback={null}
+      >
+        <span className="post-game-tied__sep"> — </span>
+        {line.titleSegments?.length ? (
+          <CardColoredText segments={line.titleSegments} />
+        ) : (
+          line.title
+        )}
+      </CardHandNotation>
     </>
   )
 }
@@ -193,7 +198,10 @@ export function PostGameLoserRackRow({
       {line.section ? (
         <span className="mahjong-win__bots-review-ref">{suggestedHandCategoryDashCardRef(line)}</span>
       ) : null}
-      <div className="post-game-tied__pattern-line mahjong-win__bots-review-pattern">
+      <div
+        className="post-game-tied__pattern-line mahjong-win__bots-review-pattern"
+        data-nosnippet
+      >
         {showTiedLinePicker && safe.length > 1 ? (
           <PostGameTiedLinePicker
             rowId={rowId}
@@ -201,10 +209,14 @@ export function PostGameLoserRackRow({
             selectedIndex={tiedIndex}
             onSelect={setTiedIndex}
           />
-        ) : line.titleSegments ? (
-          <CardColoredText segments={line.titleSegments} />
         ) : (
-          line.title
+          <CardHandNotation>
+            {line.titleSegments ? (
+              <CardColoredText segments={line.titleSegments} />
+            ) : (
+              line.title
+            )}
+          </CardHandNotation>
         )}
       </div>
       {trailingLabel === 'bot-mj-loss-pts' ? (

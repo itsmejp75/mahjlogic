@@ -1,4 +1,7 @@
-import { PRACTICE_CARD_SECTION_ORDER } from '../card/practicePatterns'
+import {
+  CARD_SECTION_DISPLAY_LABEL,
+  PRACTICE_CARD_SECTION_ORDER,
+} from '@mahjlogic/card-books'
 import type { PracticePattern } from '../card/practicePatterns'
 import { claimMeldsFitPracticePattern } from '../analysis/eastExposurePatternFit'
 import type { TileInstance } from '../mahjong/types'
@@ -6,20 +9,9 @@ import type { TileInstance } from '../mahjong/types'
 /**
  * Canonical `PracticePattern.section` / CSV category keys → short labels for the suggested-hands
  * menu and the suggested-hands list (storage and filters still use the canonical keys).
+ * Labels live in `@mahjlogic/card-books` so public web stubs omit them.
  */
-const SUGGESTED_HAND_SECTION_DISPLAY_LABEL: Readonly<Record<string, string>> = {
-  '2026': 'Year',
-  '2468': '2468',
-  'ANY LIKE NUMBERS': 'Like #s',
-  'QUINTS': 'Quints',
-  'CONSECUTIVE RUN': 'Runs',
-  'CONSECUTIVE RUNS': 'Runs',
-  '13579': '13579',
-  'WINDS - DRAGONS': 'W&Ds',
-  'WINDS-DRAGONS': 'W&Ds',
-  '369': '369',
-  'SINGLES AND PAIRS': 'S&Ps',
-}
+const SUGGESTED_HAND_SECTION_DISPLAY_LABEL = CARD_SECTION_DISPLAY_LABEL
 
 /** When `'1'`, hands marked concealed (C) are omitted from the suggested list. */
 export const HIDE_CONCEALED_HANDS_STORAGE_KEY = 'mahjlogic:suggested-hands-hide-concealed'

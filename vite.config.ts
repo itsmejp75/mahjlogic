@@ -1,6 +1,16 @@
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { Plugin } from 'vite'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+
+const rootDir = path.dirname(fileURLToPath(import.meta.url))
+
+/**
+ * Public web must not ship card books (NMJL / mock hands). Native + local use full books.
+ * `MAHJLOGIC_CARD_CONTENT=0` → stub; unset or any other value → full.
+ */
+const includeCardContent = process.env.MAHJLOGIC_CARD_CONTENT !== '0'
 
 /** Capacitor WKWebView: first paint used module-before-CSS order and missed `data-native-app` timing — keep stylesheet first. */
 function cssLinkBeforeModuleScript(): Plugin {
@@ -37,6 +47,17 @@ function cssLinkBeforeModuleScript(): Plugin {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), cssLinkBeforeModuleScript()],
+  resolve: {
+    alias: {
+      '@mahjlogic/card-books': path.resolve(
+        rootDir,
+        includeCardContent ? 'src/card/cardBooks.full.ts' : 'src/card/cardBooks.stub.ts',
+      ),
+    },
+  },
+  define: {
+    'import.meta.env.VITE_CARD_CONTENT': JSON.stringify(includeCardContent ? '1' : '0'),
+  },
   build: {
     // Keep each emitted JS chunk under Vite’s 500 kB warning threshold (monolithic App + suggestedHands).
     rollupOptions: {
@@ -46,7 +67,9 @@ export default defineConfig({
             if (id.includes('/analysis/suggestedHands')) return 'suggested-hands'
             if (
               id.includes('/card/practicePatterns') ||
-              id.includes('/card/nmjl2026Patterns')
+              id.includes('/card/nmjl2026Patterns') ||
+              id.includes('/card/nmjl2026CardBook') ||
+              id.includes('/card/cardBooks.full')
             ) {
               return 'patterns'
             }

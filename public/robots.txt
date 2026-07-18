@@ -1,0 +1,4 @@
+# MahjLogic — allow indexing of the app shell; snippets must use the meta description
+# (see index.html). Card hand notation is not for republication in search results.
+User-agent: *
+Allow: /

@@ -4,8 +4,14 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "card:pack": "node scripts/encrypt-nmjl-card.mjs",
+    "predev": "npm run card:pack",
+    "prebuild": "npm run card:pack",
+    "pretest": "npm run card:pack",
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && MAHJLOGIC_CARD_CONTENT=0 vite build",
+    "build:web": "tsc -b && MAHJLOGIC_CARD_CONTENT=0 vite build",
+    "build:native": "tsc -b && MAHJLOGIC_CARD_CONTENT=1 vite build",
     "lint": "eslint .",
     "test": "vitest run",
     "preview": "vite preview",
@@ -18,8 +24,8 @@
     "split-css": "node scripts/split-app-css.mjs",
     "export-css-backup": "node scripts/export-css-backup-from-barrels.mjs",
     "dedupe-flex": "node scripts/dedupe-flex-clusters.mjs",
-    "ios:sim": "npm run build && npx cap sync ios && cd ios/App && xcodebuild -project App.xcodeproj -scheme App -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17' -derivedDataPath /tmp/MahjLogicXcodeBuild build && xcrun simctl boot \"iPhone 17\" 2>/dev/null || true && open -a Simulator && xcrun simctl install booted /tmp/MahjLogicXcodeBuild/Build/Products/Debug-iphonesimulator/App.app && xcrun simctl launch booted com.jason.mahjlogic",
-    "sync:all": "bash scripts/sync-splash-native.sh && npx cap sync && npm run ios:sim"
+    "ios:sim": "npm run build:native && npx cap sync ios && cd ios/App && xcodebuild -project App.xcodeproj -scheme App -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17' -derivedDataPath /tmp/MahjLogicXcodeBuild build && xcrun simctl boot \"iPhone 17\" 2>/dev/null || true && open -a Simulator && xcrun simctl install booted /tmp/MahjLogicXcodeBuild/Build/Products/Debug-iphonesimulator/App.app && xcrun simctl launch booted com.jason.mahjlogic",
+    "sync:all": "bash scripts/sync-splash-native.sh && npm run build:native && npx cap sync && npm run ios:sim"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.1",

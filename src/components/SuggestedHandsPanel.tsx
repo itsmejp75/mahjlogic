@@ -28,6 +28,8 @@ import {
 } from '../analysis/suggestedHands'
 import type { CardInk } from '../card/cardText'
 import { patternByIdLookup } from '../card/activeCardPatternsScope'
+import { isCardContentAvailable } from '../card/cardCatalog'
+import { CardHandNotation, showCardHandNotation } from '../card/CardHandNotation'
 import type { PracticePattern } from '../card/practicePatterns'
 import type { TileDef, TileInstance } from '../mahjong/types'
 import {
@@ -809,16 +811,17 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
   const rowStripSlots = row.stripSlots ?? []
   const rowLit = tilesGuideOn && rowIsFocused
   const cardRef = suggestedHandCardRefDisplay(h)
+  const handNotationOn = showCardHandNotation()
   const ariaLabel = [
     `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}`,
-    h.title + (h.closed ? ', concealed' : ''),
+    handNotationOn ? h.title + (h.closed ? ', concealed' : '') : h.closed ? 'concealed' : null,
     `${h.tilesNeededRough} tiles away`,
     showHandProbability ? suggestedHandCompletionProbabilityLabel(h.completionProbability) : null,
     formatSuggestedHandValue(h.points),
   ]
     .filter(Boolean)
     .join(', ')
-  const parenText = !tilesDetailActive ? suggestedHandParenText(h) : null
+  const parenText = handNotationOn && !tilesDetailActive ? suggestedHandParenText(h) : null
   const showTileDetail = tilesDetailActive && rowStripSlots.length > 0
   // Hands-only rows always reserve the parenthesis line so every suggested hand has the same
   // total height *and* keeps its card line at the same vertical position. Without this,
@@ -888,7 +891,7 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
             .filter(Boolean)
             .join(' ')}
           role="cell"
-          aria-label={h.title}
+          aria-label={handNotationOn ? h.title : `Hand ${cardRef}`}
         >
           <span
             className={[
@@ -898,24 +901,33 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
               .filter(Boolean)
               .join(' ')}
           >
-            {h.titleSegments?.length ? (
-              <>
-                <CardColoredTextWithDeadCause
-                  segments={h.titleSegments}
-                  deadCause={cardHandDeadCause}
-                />
-                {h.closed ? <SuggestedHandConcealedMark variant="sheet" /> : null}
-              </>
-            ) : (
-              <>
-                <PlainHandTitleWithDeadCause
-                  title={parenText ? suggestedHandPlainTitleWithoutParen(h) : h.title}
-                  deadCause={cardHandDeadCause}
-                />
-                {h.closed ? <SuggestedHandConcealedMark variant="sheet" /> : null}
-              </>
-            )}
-            {cardHandDeadCause ? <SuggestedHandDeadCauseIcon cause={cardHandDeadCause} /> : null}
+            <CardHandNotation
+              fallback={
+                <>
+                  {h.closed ? <SuggestedHandConcealedMark variant="sheet" /> : null}
+                  {cardHandDeadCause ? <SuggestedHandDeadCauseIcon cause={cardHandDeadCause} /> : null}
+                </>
+              }
+            >
+              {h.titleSegments?.length ? (
+                <>
+                  <CardColoredTextWithDeadCause
+                    segments={h.titleSegments}
+                    deadCause={cardHandDeadCause}
+                  />
+                  {h.closed ? <SuggestedHandConcealedMark variant="sheet" /> : null}
+                </>
+              ) : (
+                <>
+                  <PlainHandTitleWithDeadCause
+                    title={parenText ? suggestedHandPlainTitleWithoutParen(h) : h.title}
+                    deadCause={cardHandDeadCause}
+                  />
+                  {h.closed ? <SuggestedHandConcealedMark variant="sheet" /> : null}
+                </>
+              )}
+              {cardHandDeadCause ? <SuggestedHandDeadCauseIcon cause={cardHandDeadCause} /> : null}
+            </CardHandNotation>
           </span>
         </div>
         {showDetailRow ? (
@@ -1046,11 +1058,16 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
   const focusKey = row.focusKey
   const rowStripSlots = row.stripSlots ?? []
   const cardRef = suggestedHandCardRefDisplay(h)
+  const handNotationOn = showCardHandNotation()
   const rowAriaLabel =
     !handsListOn || !showHandCategoryLabels
       ? [
           `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}`,
-          h.title + (h.closed ? ', concealed' : ''),
+          handNotationOn
+            ? h.title + (h.closed ? ', concealed' : '')
+            : h.closed
+              ? 'concealed'
+              : null,
           `${h.tilesNeededRough} tiles away`,
           showHandProbability
             ? suggestedHandCompletionProbabilityLabel(h.completionProbability)
@@ -1107,30 +1124,44 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
               <span className="hands-list__section-num"> - {cardRef}</span>
             </span>
             {handsListOn ? (
-              <span className="hands-list__category-inline-hand" aria-label={h.title}>
-                {h.titleSegments?.length ? (
-                  <>
-                    <CardColoredTextWithDeadCause
-                      segments={h.titleSegments}
-                      deadCause={cardHandDeadCause}
-                    />
-                    {h.closed ? <SuggestedHandConcealedMark variant="list" /> : null}
-                    {(() => {
-                      const paren = h.cardParenthesis?.trim()
-                      if (paren) {
-                        return <span className="hands-list__paren">{paren}</span>
-                      }
-                      const m = h.title.match(/(\([^)]+\))/)
-                      return m ? <span className="hands-list__paren">{m[1]}</span> : null
-                    })()}
-                  </>
-                ) : (
-                  <>
-                    <PlainHandTitleWithDeadCause title={h.title} deadCause={cardHandDeadCause} />
-                    {h.closed ? <SuggestedHandConcealedMark variant="list" /> : null}
-                  </>
-                )}
-                {cardHandDeadCause ? <SuggestedHandDeadCauseIcon cause={cardHandDeadCause} /> : null}
+              <span
+                className="hands-list__category-inline-hand"
+                aria-label={handNotationOn ? h.title : `Hand ${cardRef}`}
+              >
+                <CardHandNotation
+                  fallback={
+                    <>
+                      {h.closed ? <SuggestedHandConcealedMark variant="list" /> : null}
+                      {cardHandDeadCause ? (
+                        <SuggestedHandDeadCauseIcon cause={cardHandDeadCause} />
+                      ) : null}
+                    </>
+                  }
+                >
+                  {h.titleSegments?.length ? (
+                    <>
+                      <CardColoredTextWithDeadCause
+                        segments={h.titleSegments}
+                        deadCause={cardHandDeadCause}
+                      />
+                      {h.closed ? <SuggestedHandConcealedMark variant="list" /> : null}
+                      {(() => {
+                        const paren = h.cardParenthesis?.trim()
+                        if (paren) {
+                          return <span className="hands-list__paren">{paren}</span>
+                        }
+                        const m = h.title.match(/(\([^)]+\))/)
+                        return m ? <span className="hands-list__paren">{m[1]}</span> : null
+                      })()}
+                    </>
+                  ) : (
+                    <>
+                      <PlainHandTitleWithDeadCause title={h.title} deadCause={cardHandDeadCause} />
+                      {h.closed ? <SuggestedHandConcealedMark variant="list" /> : null}
+                    </>
+                  )}
+                  {cardHandDeadCause ? <SuggestedHandDeadCauseIcon cause={cardHandDeadCause} /> : null}
+                </CardHandNotation>
               </span>
             ) : null}
           </div>
@@ -1276,7 +1307,11 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   const listColumnRef = useRef<HTMLDivElement>(null)
   const selectedAwayKeyRef = useRef<string | null>(null)
   const selectedAwayLastValueRef = useRef<number | null>(null)
-  const [activeAwayTrend, setActiveAwayTrend] = useState<SelectedHandAwayTrend>(null)
+  /** Trend is keyed to the row that earned it so a focus change never paints the prior arrow. */
+  const [activeAwayTrend, setActiveAwayTrend] = useState<{
+    focusKey: string
+    trend: Exclude<SelectedHandAwayTrend, null>
+  } | null>(null)
   const [hasHandsAboveView, setHasHandsAboveView] = useState(false)
 
   const getTrayScrollTarget = useCallback((): HTMLElement | null => {
@@ -1961,7 +1996,10 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     const prevAway = selectedAwayLastValueRef.current
     if (prevAway == null || currentAway === prevAway) return
     selectedAwayLastValueRef.current = currentAway
-    setActiveAwayTrend(currentAway < prevAway ? 'improved' : 'behind-best')
+    setActiveAwayTrend({
+      focusKey: effectiveFocusRowKey,
+      trend: currentAway < prevAway ? 'improved' : 'behind-best',
+    })
   }, [effectiveFocusRowKey, expandedHandsMeta])
 
   useEffect(() => {
@@ -2177,13 +2215,22 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     .filter(Boolean)
     .join(' ')
 
+  const cardContentAvailable = isCardContentAvailable()
+
   return (
-    <section className={rootClassName} aria-label="Suggested hands">
+    <section className={rootClassName} aria-label="Suggested hands" data-nosnippet>
       <div className="hands-panel__content">
           <div ref={listColumnRef} className="hands-panel__list-column">
+            {!cardContentAvailable ? (
+              <p className="hands-panel__card-locked" data-nosnippet>
+                Card hands stay in the MahjLogic app — they are not published or downloadable from
+                the website.
+              </p>
+            ) : null}
             <div
               ref={handsListScrollRef}
               className="hands-list-scroll"
+              hidden={!cardContentAvailable}
               onClick={handleTrayHeaderClick}
               {...(discardTraySurface
                 ? {
@@ -2325,7 +2372,11 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                           key={row.reactKey}
                           row={row}
                           rowIsFocused={rowIsFocused}
-                          awayTrend={rowIsFocused ? activeAwayTrend : null}
+                          awayTrend={
+                            rowIsFocused && activeAwayTrend?.focusKey === focusKey
+                              ? activeAwayTrend.trend
+                              : null
+                          }
                           rowDeadCause={rowDeadCause}
                           cardHandDeadCause={cardHandDeadCause}
                           tilesGuideOn={tilesGuideOn}

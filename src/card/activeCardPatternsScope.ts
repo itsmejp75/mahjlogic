@@ -1,12 +1,15 @@
+import { NMJL_2026_PATTERNS, PRACTICE_PATTERNS } from '@mahjlogic/card-books'
 import type { PracticePattern } from './practicePatterns'
-import { NMJL_2026_PATTERNS } from './nmjl2026Patterns'
 
 /**
  * Whichever card pack is active (`PRACTICE_PATTERNS` mock vs `NMJL_2026_PATTERNS` league).
  * League pattern ids are always prefixed — see `nmjl2026PatternId` — so they never equal mock ids.
+ * Public web builds resolve empty stub books — see `@mahjlogic/card-books`.
  */
-let activeCardPatterns: PracticePattern[] = NMJL_2026_PATTERNS
-let activeCardPatternsById = buildPatternByIdMap(NMJL_2026_PATTERNS)
+const defaultCardPatterns =
+  NMJL_2026_PATTERNS.length > 0 ? NMJL_2026_PATTERNS : PRACTICE_PATTERNS
+let activeCardPatterns: PracticePattern[] = defaultCardPatterns
+let activeCardPatternsById = buildPatternByIdMap(defaultCardPatterns)
 
 /** Cache Maps for stable card-book arrays (`PRACTICE_PATTERNS` / `NMJL_2026_PATTERNS`). */
 const patternListByIdCache = new WeakMap<

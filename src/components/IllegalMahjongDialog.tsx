@@ -7,6 +7,7 @@ import {
   suggestedHandCategoryDashCardRef,
   type RankSuggestedHandsInput,
 } from '../analysis/suggestedHands'
+import { CardHandNotation, showCardHandNotation } from '../card/CardHandNotation'
 import { suggestedHandSectionMenuLabel } from '../suggestedHands/filterSettings'
 import type { SuggestedHandLine } from '../training/types'
 import { CardColoredText } from './CardColoredText'
@@ -149,7 +150,8 @@ export function IllegalMahjongDialog({ rankInput, onDismiss }: Props) {
                 >
                   {handsInActiveSection.map((l) => (
                     <option key={l.id} value={l.id}>
-                      {suggestedHandCategoryDashCardRef(l)} — {l.title}
+                      {suggestedHandCategoryDashCardRef(l)}
+                      {showCardHandNotation() ? ` — ${l.title}` : ''}
                       {l.closed ? ' (C)' : ''}
                     </option>
                   ))}
@@ -164,17 +166,41 @@ export function IllegalMahjongDialog({ rankInput, onDismiss }: Props) {
                   {selected.closed ? 'Concealed' : 'Exposed'}, {selected.points}
                   pt)
                 </p>
-                <div className="mahjong-blocked-modal__pattern-title" aria-label={selected.title}>
-                  {selected.titleSegments?.length ? (
-                    <CardColoredText segments={selected.titleSegments} />
-                  ) : (
-                    selected.title
-                  )}
-                  {selected.closed ? (
-                    <span className="mahjong-blocked-modal__c-mark" aria-label="Concealed line on card">
-                      C
-                    </span>
-                  ) : null}
+                <div
+                  className="mahjong-blocked-modal__pattern-title"
+                  aria-label={
+                    showCardHandNotation()
+                      ? selected.title
+                      : suggestedHandCategoryDashCardRef(selected)
+                  }
+                  data-nosnippet
+                >
+                  <CardHandNotation
+                    fallback={
+                      selected.closed ? (
+                        <span
+                          className="mahjong-blocked-modal__c-mark"
+                          aria-label="Concealed line on card"
+                        >
+                          C
+                        </span>
+                      ) : null
+                    }
+                  >
+                    {selected.titleSegments?.length ? (
+                      <CardColoredText segments={selected.titleSegments} />
+                    ) : (
+                      selected.title
+                    )}
+                    {selected.closed ? (
+                      <span
+                        className="mahjong-blocked-modal__c-mark"
+                        aria-label="Concealed line on card"
+                      >
+                        C
+                      </span>
+                    ) : null}
+                  </CardHandNotation>
                 </div>
                 <p className="mahjong-blocked-modal__unused-label">
                   Tiles in your rack that do not increase this line’s greedy match (heuristic — not league

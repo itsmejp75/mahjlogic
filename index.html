@@ -142,6 +142,12 @@
       })();
     </script>
     <title>MahjLogic: Smart American Mah Jongg Console</title>
+    <meta
+      name="description"
+      content="MahjLogic is a smart American Mah Jongg console — practice play and discard tracking. Card hands are available only inside the app, not on the public website."
+    />
+    <meta name="robots" content="index, follow, max-snippet:160, max-image-preview:large, noarchive" />
+    <meta name="googlebot" content="index, follow, max-snippet:160, max-image-preview:large, noarchive" />
     <!--
       Installed PWA windows (Chrome on macOS, etc.) often show "{manifest short_name} - {document.title}".
       Keep browser-tab bookmarks reading "Mahj Logic", but clear the title in standalone so the window
@@ -169,7 +175,8 @@
     <div id="pwa-splash" aria-hidden="true">
       <img src="/Splash%20page%20-%20MahjLogic.png?v=14" alt="" />
     </div>
-    <div id="root"></div>
+    <!-- data-nosnippet: do not use app UI (incl. card hands) in search result snippets -->
+    <div id="root" data-nosnippet></div>
     <!--
       Removed the previous `document.body.style.height = window.innerHeight + 'px'` boot script.
       On iOS WKWebView with `viewport-fit=cover`, `window.innerHeight` returns the layout viewport

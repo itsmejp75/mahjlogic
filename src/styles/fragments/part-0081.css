@@ -121,6 +121,15 @@
   box-shadow: none;
 }
 
+.hands-panel__card-locked {
+  margin: 0;
+  padding: 1rem 1.1rem;
+  max-width: 28rem;
+  color: var(--text-muted, #a8b0ba);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
 .hands-panel__list-off {
   margin: 0.45rem 0 0;
   flex: 1;

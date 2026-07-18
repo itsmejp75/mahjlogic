@@ -1,6 +1,9 @@
+import {
+  NMJL_2026_PATTERNS,
+  PRACTICE_PATTERNS,
+} from '@mahjlogic/card-books'
 import type { PracticePattern } from './practicePatterns'
-import { PRACTICE_PATTERNS } from './practicePatterns'
-import { NMJL_2026_PATTERNS } from './nmjl2026Patterns'
+import { isCardBookBundled } from './cardContentAccess'
 
 export type PlayableCardId = 'mock' | '2026'
 
@@ -20,6 +23,11 @@ export function isPlayableCardId(s: string | null | undefined): s is PlayableCar
 export function patternsForCard(id: PlayableCardId): PracticePattern[] {
   // Mock vs league are separate arrays; league ids are prefixed (`nmjl2026:…`) — see `nmjl2026PatternId`.
   return id === 'mock' ? PRACTICE_PATTERNS : NMJL_2026_PATTERNS
+}
+
+/** False on public web builds that omit card books from the bundle. */
+export function isCardContentAvailable(): boolean {
+  return isCardBookBundled() && (PRACTICE_PATTERNS.length > 0 || NMJL_2026_PATTERNS.length > 0)
 }
 
 /** Section order for filters / suggested-hands list — first occurrence per section in card array order. */
