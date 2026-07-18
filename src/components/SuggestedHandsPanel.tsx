@@ -440,8 +440,8 @@ const SuggestedHandAwayTrendIndicator = memo(function SuggestedHandAwayTrendIndi
     trend === 'improved'
       ? 'Selected hand is fewer tiles away'
       : 'Another suggested hand is fewer tiles away'
-  // Solid triangles, top-aligned in viewBox so the detail-row glyph sits flush to the cell top.
-  const points = trend === 'improved' ? '12 0 19 13 5 13' : '5 0 19 0 12 13'
+  // Solid triangles, centered in viewBox so the detail-row glyph centers in its cell.
+  const points = trend === 'improved' ? '12 5 19 19 5 19' : '5 5 19 5 12 19'
   return (
     <span className="hands-sheet__away-trend-wrap" role="img" aria-label={label}>
       <svg

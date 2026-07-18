@@ -2556,8 +2556,8 @@
 }
 
 /*
- * Detail-row trend arrow: anchor to the top of the away cell. Keep the cell stretched so grid
- * borders stay straight; only the glyph position changes (not `inset: 0` centering).
+ * Detail-row trend arrow: vertically center in the away detail cell. Keep the cell stretched so
+ * grid borders stay straight; only the glyph position changes.
  */
 .hands-panel__content
   .hands-list-scroll
@@ -2565,14 +2565,9 @@
   .hands-sheet__cell--away.hands-sheet__cell--detail-pad
   .hands-sheet__away-trend-overlay {
   position: absolute;
-  inset: unset;
-  top: 0;
-  right: 0;
-  bottom: auto;
-  left: 0;
-  height: auto;
+  inset: 0;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   padding: 0;
   margin: 0;
@@ -2585,7 +2580,7 @@
   .hands-sheet__cell--away.hands-sheet__cell--detail-pad
   .hands-sheet__away-trend-wrap {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   margin: 0;
   padding: 0;
   line-height: 0;

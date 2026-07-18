@@ -1099,8 +1099,7 @@
   .sorted-discard-tray__slot--seat-label.sorted-discard-tray__slot--seat-turn
   .sorted-discard-tray__seat-label {
   z-index: 3;
-  /* Same off-black as active discard-tracker rank/count glyphs + lit Seat: chip. */
-  color: #080808;
+  color: #ffffff;
   opacity: 1;
 }
 

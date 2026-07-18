@@ -453,10 +453,8 @@
  * (part-0061 discard-tracker suit-label / seat-turn block).
  */
 .panel--hand .panel-hand-rack__seat-label__chip--turn {
-  --sorted-discard-rim-inset-w: 1.2em;
   background-color: var(--card-ink-green, #52b147);
-  /* Same off-black as active discard-tracker rank/count glyphs. */
-  color: #080808;
+  color: #ffffff;
   opacity: 1;
 }
 
@@ -483,6 +481,8 @@
   pointer-events: none;
   --tile-rim-fade: 9%;
   --tile-shadow-fade: 7.5%;
+  /* Gradients only — BAM-scale inset box-shadows flash as a large outer shadow for a frame
+   * when this pseudo mounts on the small Seat: chip (WebKit). */
   background:
     linear-gradient(
       to bottom,
@@ -512,12 +512,7 @@
       rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
       transparent calc(var(--tile-shadow-fade) * 0.92)
     );
-  box-shadow:
-    inset calc(var(--sorted-discard-rim-inset-w) * 0.045) 0 calc(var(--sorted-discard-rim-inset-w) * 0.1)
-      calc(var(--sorted-discard-rim-inset-w) * -0.3) rgba(28, 25, 22, 0.38),
-    inset calc(var(--sorted-discard-rim-inset-w) * -0.045) calc(var(--sorted-discard-rim-inset-w) * -0.045)
-      calc(var(--sorted-discard-rim-inset-w) * 0.1) calc(var(--sorted-discard-rim-inset-w) * -0.3)
-      rgba(28, 25, 22, 0.4);
+  box-shadow: none;
 }
 
 .panel--hand .panel-hand-rack__seat-label__chip--called {
