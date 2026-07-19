@@ -1988,18 +1988,6 @@ export default function App() {
     })
   }, [])
 
-  const togglePlayAsEast = useCallback(() => {
-    setPlayAsEastEnabled((v) => {
-      const next = !v
-      try {
-        localStorage.setItem(LS_KEY_PLAY_AS_EAST, next ? 'true' : 'false')
-      } catch {
-        /* ignore */
-      }
-      return next
-    })
-  }, [])
-
   const toggleDeadHandWarnings = useCallback(() => {
     setDeadHandWarningsEnabled((v) => {
       const next = !v
@@ -4214,7 +4202,19 @@ export default function App() {
     setRound(nextRound)
   }, [])
 
-  /** Deck-size prefs: redeal a fresh rack behind the open menu (do not close it). */
+  /** Seat / deck prefs: redeal a fresh rack behind the open menu (do not close it). */
+  const togglePlayAsEast = useCallback(() => {
+    const next = !playAsEastEnabledRef.current
+    try {
+      localStorage.setItem(LS_KEY_PLAY_AS_EAST, next ? 'true' : 'false')
+    } catch {
+      /* ignore */
+    }
+    setPlayAsEastEnabled(next)
+    playAsEastEnabledRef.current = next
+    performNewHandDeal()
+  }, [performNewHandDeal])
+
   const toggleTenJokers = useCallback(() => {
     const next = !tenJokersEnabledRef.current
     try {
