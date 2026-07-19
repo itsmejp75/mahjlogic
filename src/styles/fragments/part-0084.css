@@ -425,10 +425,10 @@
   width: var(--rack-tile-w, var(--hand-rack-tile-w));
   min-width: var(--rack-tile-w, var(--hand-rack-tile-w));
   padding: 0.22em 0;
-  /* Same corner radius as Sort / action-row pills. */
+  /* Same corner radius as made-rack / hand-tray tile faces. */
   border-radius: var(
-    --rack-tile-btn-border-radius,
-    max(0.36rem, calc(var(--hand-rack-tile-w, var(--rack-tile-w)) * 0.128))
+    --tile-face-border-radius,
+    calc(var(--rack-tile-w, var(--hand-rack-tile-w)) * 0.132)
   );
   /* Same ink as the inactive `Seat:` prefix (not `--window-fg`). */
   color: #c2c2c8;
