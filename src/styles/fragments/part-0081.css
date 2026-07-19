@@ -144,10 +144,9 @@
   min-height: 0;
   /* Selected suggested-hand row fill: #334155 at ~64% opacity (rgba — reliable over dark scroll areas). */
   --hands-row-active-fill: rgba(51, 65, 85, 0.64);
-  /* Inactive pins on unhighlighted rows: same dark as the selected-row fill. */
-  --hands-pin-ink: var(--hands-row-active-fill);
-  /* Highlighted row: slightly lighter than shell bg for contrast on the selection fill. */
-  --hands-pin-ink-active: color-mix(in srgb, var(--app-bg-base) 80%, #ffffff 20%);
+  /* Unpinned pins: same light ink on highlighted and unhighlighted rows. */
+  --hands-pin-ink: color-mix(in srgb, var(--app-bg-base) 80%, #ffffff 20%);
+  --hands-pin-ink-active: var(--hands-pin-ink);
   --hands-sheet-cell-bg: transparent;
   /* Sticky title row: no shell paint — only the selected data row is filled. */
   --hands-header-bg: transparent;
@@ -3330,8 +3329,8 @@
 
 .hands-suggested-pin__svg {
   display: block;
-  width: 0.95em;
-  height: 0.95em;
+  width: 1.12em;
+  height: 1.12em;
   flex: 0 0 auto;
   overflow: visible;
 }

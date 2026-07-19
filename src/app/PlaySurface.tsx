@@ -156,7 +156,6 @@ export type PlaySurfaceProps = {
   commitStagedCall: () => void
   commitEastDiscard: () => void
   skipBotDiscard: () => void
-  newHand: () => void
 }
 
 function PlaySurfaceInner(p: PlaySurfaceProps) {
@@ -226,7 +225,6 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
     commitStagedCall,
     commitEastDiscard,
     skipBotDiscard,
-    newHand,
   } = p
 
   const {
@@ -357,7 +355,6 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
     mainGamePrimaryIsDone,
     mainGamePrimaryDisabled,
     mainGamePrimaryLabel,
-    showReviewNewGameBelowDiscard,
     mahjongWinReviewing,
     undoEnabled,
     canUndo,
@@ -397,10 +394,6 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
     },
     [undoAction],
   )
-
-  const onNewHandClick = useCallback(() => {
-    void newHand()
-  }, [newHand])
 
   const callInitiateFirstEmptyOverride = useMemo(() => {
     if (
@@ -928,29 +921,6 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                   </span>
                                 ) : null}
                               </div>
-                              {showReviewNewGameBelowDiscard ? (
-                                <div
-                                  className="rack-bottom-bar rack-bottom-bar--main rack-bottom-bar--tile-grid panel-hand-rack__review-new-game-row"
-                                  role="group"
-                                  aria-label={
-                                    mainPhase === 'wall-game'
-                                      ? 'Wall game review actions'
-                                      : 'Mah Jongg review actions'
-                                  }
-                                >
-                                  <div
-                                    className="panel-hand-rack__review-new-game-spacer"
-                                    aria-hidden
-                                  />
-                                  <button
-                                    type="button"
-                                    className="btn btn--rack-neutral rack-bottom-tile-cell rack-bottom-tile-cell--c12-14"
-                                    onClick={onNewHandClick}
-                                  >
-                                    New Game
-                                  </button>
-                                </div>
-                              ) : null}
                               </div>
                             ) : null}
                           </div>

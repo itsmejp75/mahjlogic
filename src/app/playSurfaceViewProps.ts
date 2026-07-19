@@ -49,7 +49,6 @@ export type PlaySurfaceActionBarProps = {
   mainGamePrimaryIsDone: boolean
   mainGamePrimaryDisabled: boolean
   mainGamePrimaryLabel: string
-  showReviewNewGameBelowDiscard: boolean
   mahjongWinReviewing: boolean
   undoEnabled: boolean
   canUndo: boolean
@@ -107,7 +106,6 @@ export function buildPlaySurfaceActionBarProps(args: {
   suggestedPanelTilesOn: boolean
   concealedHandReminderEnabled: boolean
   focusedHandIsConcealed: boolean
-  showReviewNewGameBelowDiscard: boolean
   mahjongWinReviewing: boolean
   undoEnabled: boolean
   canUndo: boolean
@@ -129,7 +127,6 @@ export function buildPlaySurfaceActionBarProps(args: {
     suggestedPanelTilesOn,
     concealedHandReminderEnabled,
     focusedHandIsConcealed,
-    showReviewNewGameBelowDiscard,
     mahjongWinReviewing,
     undoEnabled,
     canUndo,
@@ -184,7 +181,6 @@ export function buildPlaySurfaceActionBarProps(args: {
     mainGamePrimaryIsDone,
     mainGamePrimaryDisabled,
     mainGamePrimaryLabel,
-    showReviewNewGameBelowDiscard,
     mahjongWinReviewing,
     undoEnabled,
     canUndo,

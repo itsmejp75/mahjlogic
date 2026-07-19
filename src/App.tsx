@@ -4720,11 +4720,6 @@ export default function App() {
   /** Suggested-hands tab + popup shell: hidden only on dead hand. */
   const showSuggestedHandsPanel = mainPhase !== 'dead-hand'
 
-  const showReviewNewGameBelowDiscard =
-    (mainPhase === 'wall-game' && wallGameReviewing) ||
-    (mainPhase === 'mahjong-declared' && mahjongWinReviewing) ||
-    (mainPhase === 'bot-mahjong' && botMahjongWinReviewing)
-
   const playSurfaceSeatLabel = useMemo(
     () =>
       buildPlayerSeatLabelProps({
@@ -4755,7 +4750,6 @@ export default function App() {
         suggestedPanelTilesOn,
         concealedHandReminderEnabled,
         focusedHandIsConcealed,
-        showReviewNewGameBelowDiscard,
         mahjongWinReviewing,
         undoEnabled,
         canUndo,
@@ -4777,7 +4771,6 @@ export default function App() {
       suggestedPanelTilesOn,
       concealedHandReminderEnabled,
       focusedHandIsConcealed,
-      showReviewNewGameBelowDiscard,
       mahjongWinReviewing,
       undoEnabled,
       canUndo,
@@ -6324,7 +6317,6 @@ export default function App() {
         commitStagedCall={commitStagedCall}
         commitEastDiscard={commitEastDiscard}
         skipBotDiscard={skipBotDiscard}
-        newHand={newHand}
       />
     </div>
     </SuggestedHandsTrayProvider>
