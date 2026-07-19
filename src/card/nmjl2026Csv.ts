@@ -93,19 +93,26 @@ export function nmjl2026RowKey(row: Nmjl2026CsvHandRow): string {
  */
 export const NMJL_2026_PATTERN_ID_PREFIX = 'nmjl2026:' as const
 
+/** 2025 league hand id prefix — disjoint from mock and from `nmjl2026:…`. */
+export const NMJL_2025_PATTERN_ID_PREFIX = 'nmjl2025:' as const
+
 export function isNmjl2026LeaguePatternId(id: string): boolean {
   return id.startsWith(NMJL_2026_PATTERN_ID_PREFIX)
 }
 
-/**
- * Stable id for one CSV row. Always prefixed — mock card and 2026 league stay disjoint.
- */
-export function nmjl2026PatternId(row: Nmjl2026CsvHandRow): string {
+export function isNmjl2025LeaguePatternId(id: string): boolean {
+  return id.startsWith(NMJL_2025_PATTERN_ID_PREFIX)
+}
+
+/** Stable id for one CSV row. Always year-prefixed so mock and league cards stay disjoint. */
+export function nmjlLeaguePatternId(row: Nmjl2026CsvHandRow, year: '2025' | '2026'): string {
+  const prefix = year === '2025' ? NMJL_2025_PATTERN_ID_PREFIX : NMJL_2026_PATTERN_ID_PREFIX
   const h = row.handNum.replace(/[^a-zA-Z0-9]/g, '') || row.handNum
   let base: string
   switch (row.category) {
+    case '2025':
     case '2026':
-      base = `2026-${row.handNum}`
+      base = `${row.category}-${row.handNum}`
       break
     case '2468':
       base = `2468-${row.handNum}`
@@ -134,5 +141,13 @@ export function nmjl2026PatternId(row: Nmjl2026CsvHandRow): string {
     default:
       base = `nmjl-${h}`
   }
-  return `${NMJL_2026_PATTERN_ID_PREFIX}${base}`
+  return `${prefix}${base}`
+}
+
+export function nmjl2026PatternId(row: Nmjl2026CsvHandRow): string {
+  return nmjlLeaguePatternId(row, '2026')
+}
+
+export function nmjl2025PatternId(row: Nmjl2026CsvHandRow): string {
+  return nmjlLeaguePatternId(row, '2025')
 }

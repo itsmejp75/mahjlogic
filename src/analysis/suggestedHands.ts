@@ -3713,11 +3713,12 @@ function suitPermuteComboScoreBetter(
   return candidate.slotSquareFill > current.slotSquareFill
 }
 
-/** 2026 NMJL card: soap zero is neutral — adjoining 2s/6s may also be dots when matching. */
+/** NMJL cards: soap zero is neutral — adjoining 2s/6s may also be dots when matching. */
 function isNmjl2026NeutralZeroPattern(p: PracticePattern): boolean {
-  // This card-specific rule applies anywhere the 2026 NMJL card prints a zero, including
-  // Year, Winds-Dragons, and Singles & Pairs. Do not apply it to the mock card.
-  return p.id.startsWith('nmjl2026:') && p.title.includes('0')
+  // Applies anywhere an NMJL card prints a zero (Year, Winds-Dragons, S&P). Not mock.
+  return (
+    (p.id.startsWith('nmjl2026:') || p.id.startsWith('nmjl2025:')) && p.title.includes('0')
+  )
 }
 
 function isNmjl2026ZeroColorGroup(colorGroup: readonly { rank: number; need: number }[]): boolean {

@@ -247,7 +247,7 @@
   padding: 0.1rem 0.1rem 0.25rem;
 }
 
-/* Tile graphics row: Classic + Prism — centered pair; gap/padding match other diff-block rows (part-0096). */
+/* Tile graphics row: Classic + Large + Simple — centered; gap/padding match other diff-block rows (part-0096). */
 .app-menu-modal .app-menu-modal__tile-graphics-modes.app-menu-tray__diff-row {
   display: flex;
   flex-wrap: nowrap;

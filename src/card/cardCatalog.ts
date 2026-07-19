@@ -1,33 +1,39 @@
 import {
+  NMJL_2025_PATTERNS,
   NMJL_2026_PATTERNS,
   PRACTICE_PATTERNS,
 } from '@mahjlogic/card-books'
 import type { PracticePattern } from './practicePatterns'
 import { isCardBookBundled } from './cardContentAccess'
 
-export type PlayableCardId = 'mock' | '2026'
+export type PlayableCardId = 'mock' | '2025' | '2026'
 
-export const PLAYABLE_CARD_IDS: readonly PlayableCardId[] = ['mock', '2026'] as const
+export const PLAYABLE_CARD_IDS: readonly PlayableCardId[] = ['mock', '2025', '2026'] as const
 
 export const PLAYABLE_CARD_LABEL: Record<PlayableCardId, string> = {
   mock: 'Mock',
+  '2025': '2025',
   '2026': '2026',
 }
 
 export const LS_KEY_PLAYABLE_CARD = 'mahjlogic.playableCardId.v1'
 
 export function isPlayableCardId(s: string | null | undefined): s is PlayableCardId {
-  return s === 'mock' || s === '2026'
+  return s === 'mock' || s === '2025' || s === '2026'
 }
 
 export function patternsForCard(id: PlayableCardId): PracticePattern[] {
-  // Mock vs league are separate arrays; league ids are prefixed (`nmjl2026:…`) — see `nmjl2026PatternId`.
-  return id === 'mock' ? PRACTICE_PATTERNS : NMJL_2026_PATTERNS
+  if (id === 'mock') return PRACTICE_PATTERNS
+  if (id === '2025') return NMJL_2025_PATTERNS
+  return NMJL_2026_PATTERNS
 }
 
 /** False on public web builds that omit card books from the bundle. */
 export function isCardContentAvailable(): boolean {
-  return isCardBookBundled() && (PRACTICE_PATTERNS.length > 0 || NMJL_2026_PATTERNS.length > 0)
+  return (
+    isCardBookBundled() &&
+    (PRACTICE_PATTERNS.length > 0 || NMJL_2025_PATTERNS.length > 0 || NMJL_2026_PATTERNS.length > 0)
+  )
 }
 
 /** Section order for filters / suggested-hands list — first occurrence per section in card array order. */
@@ -62,10 +68,10 @@ export function writePlayableCardToStorage(id: PlayableCardId): void {
 
 /** Short label for in-game copy (dead hand, warnings). */
 export function playableCardShortLabel(id: PlayableCardId): string {
-  return id === 'mock' ? 'Mock practice card' : '2026 NMJL card'
+  return id === 'mock' ? 'Mock practice card' : `${id} NMJL card`
 }
 
 /** Title-style label for post-game overlays (Mah Jongg win, etc.). */
 export function playableCardHeadingLabel(id: PlayableCardId): string {
-  return id === 'mock' ? 'Practice Card' : '2026 NMJL Card'
+  return id === 'mock' ? 'Practice Card' : `${id} NMJL Card`
 }

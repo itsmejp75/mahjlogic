@@ -67,6 +67,8 @@ export default defineConfig({
             if (id.includes('/analysis/suggestedHands')) return 'suggested-hands'
             if (
               id.includes('/card/practicePatterns') ||
+              id.includes('/card/nmjl2025Patterns') ||
+              id.includes('/card/nmjl2025CardBook') ||
               id.includes('/card/nmjl2026Patterns') ||
               id.includes('/card/nmjl2026CardBook') ||
               id.includes('/card/cardBooks.full')

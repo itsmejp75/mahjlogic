@@ -38,7 +38,7 @@ import { deadHandExplanation } from './mahjong/deadHandReason'
 import { incomingBotDiscardDragId } from './mahjong/jokerSwapIds'
 import { discardedDefsForBlankExchange } from './mahjong/blankExchange'
 import { eastExposureSwapDropId, findNextJokerSwapTarget, collectHandTileIdsSwappableForJokers, collectSwappableJokerTileIds } from './mahjong/jokerSwapTarget'
-import { DEFAULT_TILE_GRAPHICS, isTileGraphics, MENU_TILE_GRAPHICS, TILE_GRAPHICS_LABEL, type TileGraphics } from './tiles/tileGraphics'
+import { DEFAULT_TILE_GRAPHICS, isTileGraphics, MENU_TILE_GRAPHICS_ITEMS, TILE_GRAPHICS_LABEL, type TileGraphics } from './tiles/tileGraphics'
 import { TileGraphicsProvider } from './tiles/TileGraphicsContext'
 import { AppMenuOpenGate, AppMenuOpenProvider, appMenuOpenApiRef, useAppMenuOpen } from './app/AppMenuOpenContext'
 import { SuggestedHandsTrayProvider, suggestedHandsTrayApiRef } from './app/SuggestedHandsTrayContext'
@@ -141,14 +141,14 @@ const LS_KEY_CONCEALED_HAND_REMINDER = 'mahjlogic.concealedHandReminderEnabled'
 const LS_KEY_BLANK_TILES = 'mahjlogic.blankTilesEnabled'
 const LS_KEY_BLANK_TILE_COUNT = 'mahjlogic.blankTileCount'
 const LS_KEY_TEN_JOKERS = 'mahjlogic.tenJokersEnabled'
-const LS_KEY_RANDOM_SEAT = 'mahjlogic.randomSeatEnabled'
+const LS_KEY_PLAY_AS_EAST = 'mahjlogic.playAsEastEnabled'
 const LS_KEY_SUGGESTED_HANDS_TRAY = 'mahjlogic.suggestedHandsTrayDefaultOpen'
 const LS_KEY_HAND_PROBABILITY = 'mahjlogic.handProbabilityEnabled'
 const BLANK_TILES_LABEL = 'Blank tiles'
 const SUGGESTED_HANDS_TRAY_LABEL = 'Suggested hands'
 const HAND_PROBABILITY_LABEL = 'Hand Probability %'
 const TEN_JOKERS_LABEL = '10 Jokers'
-const RANDOM_SEAT_LABEL = 'Random seat'
+const PLAY_AS_EAST_LABEL = 'Play as East'
 const CONCEALED_HAND_REMINDER_LABEL = 'Concealed hand reminder'
 const JOKER_SWAP_HINT_BOUNCE_DELAY_MS = 500
 const JOKER_SWAP_HINT_BOUNCE_DURATION_MS = 1700
@@ -438,13 +438,14 @@ function readTenJokersEnabledFromStorage(): boolean {
   }
 }
 
-function readRandomSeatEnabledFromStorage(): boolean {
+/** Default on: always sit East unless the player turns this off (random seat). */
+function readPlayAsEastEnabledFromStorage(): boolean {
   try {
-    const v = localStorage.getItem(LS_KEY_RANDOM_SEAT)
-    if (v === null) return false
+    const v = localStorage.getItem(LS_KEY_PLAY_AS_EAST)
+    if (v === null) return true
     return v === 'true' || v === '1'
   } catch {
-    return false
+    return true
   }
 }
 
@@ -1783,7 +1784,7 @@ export default function App() {
     botSlotSeats: DEFAULT_BOT_SLOT_SEATS,
   })
   const [round, setRound] = useState<RoundState>(() => {
-    const randomSeatOn = readRandomSeatEnabledFromStorage()
+    const randomSeatOn = !readPlayAsEastEnabledFromStorage()
     const r = createNewRound(
       readTenJokersEnabledFromStorage(),
       readBlankTilesEnabledFromStorage(),
@@ -1866,7 +1867,7 @@ export default function App() {
     readBlankTileCountFromStorage(),
   )
   const [tenJokersEnabled, setTenJokersEnabled] = useState(() => readTenJokersEnabledFromStorage())
-  const [randomSeatEnabled, setRandomSeatEnabled] = useState(() => readRandomSeatEnabledFromStorage())
+  const [playAsEastEnabled, setPlayAsEastEnabled] = useState(() => readPlayAsEastEnabledFromStorage())
   const [wallGameReviewing, setWallGameReviewing] = useState(false)
   const [mahjongWinReviewing, setMahjongWinReviewing] = useState(false)
   const [botMahjongWinReviewing, setBotMahjongWinReviewing] = useState(false)
@@ -1999,11 +2000,11 @@ export default function App() {
     })
   }, [])
 
-  const toggleRandomSeat = useCallback(() => {
-    setRandomSeatEnabled((v) => {
+  const togglePlayAsEast = useCallback(() => {
+    setPlayAsEastEnabled((v) => {
       const next = !v
       try {
-        localStorage.setItem(LS_KEY_RANDOM_SEAT, next ? 'true' : 'false')
+        localStorage.setItem(LS_KEY_PLAY_AS_EAST, next ? 'true' : 'false')
       } catch {
         /* ignore */
       }
@@ -2170,7 +2171,7 @@ export default function App() {
   const blankTilesEnabledRef = useRef(blankTilesEnabled)
   const blankTileCountRef = useRef(blankTileCount)
   const tenJokersEnabledRef = useRef(tenJokersEnabled)
-  const randomSeatEnabledRef = useRef(randomSeatEnabled)
+  const playAsEastEnabledRef = useRef(playAsEastEnabled)
   useEffect(() => {
     botWinsEnabledRef.current = botWinsEnabled
   }, [botWinsEnabled])
@@ -2184,8 +2185,8 @@ export default function App() {
     tenJokersEnabledRef.current = tenJokersEnabled
   }, [tenJokersEnabled])
   useEffect(() => {
-    randomSeatEnabledRef.current = randomSeatEnabled
-  }, [randomSeatEnabled])
+    playAsEastEnabledRef.current = playAsEastEnabled
+  }, [playAsEastEnabled])
 
   const deadHandWarningsEnabledRef = useRef(deadHandWarningsEnabled)
   useEffect(() => {
@@ -2330,11 +2331,11 @@ export default function App() {
       } else if (e.key === HIDE_CONCEALED_HANDS_STORAGE_KEY) {
         if (e.newValue == null) return
         setSuggestedHandsHideConcealed(readHideConcealedHandsFromStorage())
-      } else if (e.key === LS_KEY_RANDOM_SEAT) {
+      } else if (e.key === LS_KEY_PLAY_AS_EAST) {
         if (e.newValue == null) return
         const on = e.newValue === 'true' || e.newValue === '1'
-        setRandomSeatEnabled(on)
-        randomSeatEnabledRef.current = on
+        setPlayAsEastEnabled(on)
+        playAsEastEnabledRef.current = on
       } else if (e.key === LS_KEY_TEN_JOKERS) {
         if (e.newValue == null) return
         const on = e.newValue === 'true' || e.newValue === '1'
@@ -4207,9 +4208,10 @@ export default function App() {
     const w = readBotWinsEnabledFromStorage()
     setBotWinsEnabled((prev) => (prev === w ? prev : w))
     botWinsEnabledRef.current = w
-    const randomSeatOn = readRandomSeatEnabledFromStorage()
-    setRandomSeatEnabled((prev) => (prev === randomSeatOn ? prev : randomSeatOn))
-    randomSeatEnabledRef.current = randomSeatOn
+    const playAsEastOn = readPlayAsEastEnabledFromStorage()
+    setPlayAsEastEnabled((prev) => (prev === playAsEastOn ? prev : playAsEastOn))
+    playAsEastEnabledRef.current = playAsEastOn
+    const randomSeatOn = !playAsEastOn
     const tenJokersOn = readTenJokersEnabledFromStorage()
     setTenJokersEnabled((prev) => (prev === tenJokersOn ? prev : tenJokersOn))
     tenJokersEnabledRef.current = tenJokersOn
@@ -5216,24 +5218,36 @@ export default function App() {
                   role="radiogroup"
                   aria-labelledby="tile-graphics-menu-label"
                 >
-                  {MENU_TILE_GRAPHICS.map((g) => (
-                    <button
-                      key={g}
-                      type="button"
-                      className={[
-                        'btn',
-                        'app-menu-tray__diff-btn',
-                        tileGraphics === g ? 'app-menu-tray__diff-btn--on' : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                      role="radio"
-                      aria-checked={tileGraphics === g}
-                      onClick={() => setTileGraphicsMode(g)}
-                    >
-                      {TILE_GRAPHICS_LABEL[g]}
-                    </button>
-                  ))}
+                  {MENU_TILE_GRAPHICS_ITEMS.map((item) =>
+                    item.kind === 'mode' ? (
+                      <button
+                        key={item.graphics}
+                        type="button"
+                        className={[
+                          'btn',
+                          'app-menu-tray__diff-btn',
+                          tileGraphics === item.graphics ? 'app-menu-tray__diff-btn--on' : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ')}
+                        role="radio"
+                        aria-checked={tileGraphics === item.graphics}
+                        onClick={() => setTileGraphicsMode(item.graphics)}
+                      >
+                        {TILE_GRAPHICS_LABEL[item.graphics]}
+                      </button>
+                    ) : (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className="btn app-menu-tray__diff-btn"
+                        aria-label={`${item.label} tile graphics (coming soon)`}
+                        onClick={() => {}}
+                      >
+                        {item.label}
+                      </button>
+                    ),
+                  )}
                 </div>
                 <div
                   key={tileGraphics}
@@ -5523,12 +5537,12 @@ export default function App() {
                 </div>
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
                   <AppMenuSettingSwitch
-                    labelId="app-menu-label-random-seat"
-                    pressed={randomSeatEnabled}
-                    onToggle={toggleRandomSeat}
+                    labelId="app-menu-label-play-as-east"
+                    pressed={playAsEastEnabled}
+                    onToggle={togglePlayAsEast}
                   />
-                  <span className="app-menu-modal__label" id="app-menu-label-random-seat">
-                    {RANDOM_SEAT_LABEL}
+                  <span className="app-menu-modal__label" id="app-menu-label-play-as-east">
+                    {PLAY_AS_EAST_LABEL}
                   </span>
                 </div>
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
@@ -5796,7 +5810,7 @@ export default function App() {
                 </h2>
                 <p id="game-blocking-error-body" className="charleston-error-dialog__body">
                   Your current tiles do not complete any legal hand on the{' '}
-                  <strong>2026 NMJL card</strong>. If you proceed with this Mah Jongg declaration,
+                  <strong>{playableCardShortLabel(committedCardId)}</strong>. If you proceed with this Mah Jongg declaration,
                   your hand will be officially dead and the game will end immediately.
                 </p>
                 <div className="charleston-error-dialog__actions charleston-error-dialog__actions--spread">
@@ -5913,8 +5927,8 @@ export default function App() {
                 </h2>
                 <p id="game-blocking-error-body" className="charleston-error-dialog__body">
                   {blockingDialog.variant === 'call-exposure-dead-warning'
-                    ? 'Calling this tile would expose a meld that does not fit any remaining playable hand on the 2026 NMJL card. If you proceed, your hand will be officially dead and the game will end immediately.'
-                    : 'Your current exposures do not fit any remaining playable hand on the 2026 NMJL card. Proceeding will end the game with a dead hand.'}
+                    ? `Calling this tile would expose a meld that does not fit any remaining playable hand on the ${playableCardShortLabel(committedCardId)}. If you proceed, your hand will be officially dead and the game will end immediately.`
+                    : `Your current exposures do not fit any remaining playable hand on the ${playableCardShortLabel(committedCardId)}. Proceeding will end the game with a dead hand.`}
                 </p>
                 <div className="charleston-error-dialog__actions charleston-error-dialog__actions--spread">
                   <button

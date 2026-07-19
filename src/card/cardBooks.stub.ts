@@ -6,6 +6,8 @@ import type { PracticePattern } from './practicePatterns'
 
 export const PRACTICE_PATTERNS: PracticePattern[] = []
 export const PRACTICE_CARD_SECTION_ORDER: readonly string[] = []
+export const NMJL_2025_PATTERNS: PracticePattern[] = []
+export const NMJL_2025_CARD_SECTION_ORDER: readonly string[] = []
 export const NMJL_2026_PATTERNS: PracticePattern[] = []
 export const NMJL_2026_CARD_SECTION_ORDER: readonly string[] = []
 
