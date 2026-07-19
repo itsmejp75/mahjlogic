@@ -2416,6 +2416,7 @@ export default function App() {
   const historyRef = useRef<HistoryEntry[]>([])
   const [canUndo, setCanUndo] = useState(false)
 
+  /** Commit a game move — snapshots current round onto the undo stack. */
   const pushRound = useCallback(
     (updater: RoundState | ((prev: RoundState) => RoundState)) => {
       historyRef.current = [
@@ -2423,6 +2424,14 @@ export default function App() {
         { round: roundRef.current, sortMode: sortModeRef.current },
       ]
       setCanUndo(true)
+      setRound(updater)
+    },
+    [],
+  )
+
+  /** Rack / staging edits that should not create undo history. */
+  const updateRound = useCallback(
+    (updater: RoundState | ((prev: RoundState) => RoundState)) => {
       setRound(updater)
     },
     [],
@@ -4332,6 +4341,7 @@ export default function App() {
   } = useRoundActions({
     roundRef,
     pushRound,
+    updateRound,
     pushRoundAsync,
     applyCharlestonDoneIfNeeded,
     commitEastDiscardAfterStaged,
@@ -4421,9 +4431,9 @@ export default function App() {
 
   const onToggleStagedCallTile = useCallback(
     (id: string) => {
-      pushRound((r) => applyToggleStagedCallTile(r, id))
+      updateRound((r) => applyToggleStagedCallTile(r, id))
     },
-    [pushRound],
+    [updateRound],
   )
 
 
@@ -5867,7 +5877,7 @@ export default function App() {
                     onClick={() => {
                       const n = blockingDialog.neededHandTiles
                       setBlockingDialog(null)
-                      pushRound((r) =>
+                      updateRound((r) =>
                         applyAutoSelectCallTiles(r, n),
                       )
                     }}
@@ -6300,6 +6310,7 @@ export default function App() {
         passReady={passReady}
         suggestedHandsPopup={suggestedHandsPopup}
         pushRound={pushRound}
+        updateRound={updateRound}
         setPendingJokerSwapTileId={setPendingJokerSwapTileId}
         setCharlestonPassError={setCharlestonPassError}
         applyToggleStagedCallTile={applyToggleStagedCallTile}

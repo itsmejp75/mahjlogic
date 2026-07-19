@@ -135,6 +135,7 @@ export type PlaySurfaceProps = {
   suggestedHandsPopup: ReactNode
 
   pushRound: (updater: (prev: RoundState) => RoundState) => void
+  updateRound: (updater: (prev: RoundState) => RoundState) => void
   setPendingJokerSwapTileId: Dispatch<SetStateAction<string | null>>
   setCharlestonPassError: Dispatch<SetStateAction<string | null>>
   applyToggleStagedCallTile: (r: RoundState, tileId: string) => RoundState
@@ -208,6 +209,7 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
     passReady,
     suggestedHandsPopup,
     pushRound,
+    updateRound,
     setPendingJokerSwapTileId,
     setCharlestonPassError,
     applyToggleStagedCallTile,
@@ -257,6 +259,7 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
     eastExposures,
     jokerSwapUiActive,
     pushRound,
+    updateRound,
     setPendingJokerSwapTileId,
     setCharlestonPassError,
     applyToggleStagedCallTile,

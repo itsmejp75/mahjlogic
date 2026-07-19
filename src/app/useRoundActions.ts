@@ -71,7 +71,10 @@ import {
 export interface UseRoundActionsArgs {
   // Core round ref + push functions
   roundRef: MutableRefObject<RoundState>
+  /** Game commits (pass / ignore / discard / call / exposure / swaps) — undoable. */
   pushRound: (updater: RoundState | ((prev: RoundState) => RoundState)) => void
+  /** Rack / staging edits — not undoable. */
+  updateRound: (updater: RoundState | ((prev: RoundState) => RoundState)) => void
   pushRoundAsync: (compute: (r: RoundState) => Promise<RoundState>) => Promise<void>
 
   // Complex async helpers — kept in App.tsx; passed through to avoid circular imports
@@ -162,6 +165,7 @@ export function useRoundActions(args: UseRoundActionsArgs): UseRoundActionsResul
   const {
     roundRef,
     pushRound,
+    updateRound,
     pushRoundAsync,
     applyCharlestonDoneIfNeeded,
     commitEastDiscardAfterStaged: commitEastDiscardAfterStagedFn,
@@ -498,7 +502,7 @@ export function useRoundActions(args: UseRoundActionsArgs): UseRoundActionsResul
   ])
 
   const returnStagedEastDiscard = useCallback(() => {
-    pushRound((r) => {
+    updateRound((r) => {
       if (!r.pendingEastDiscardTile) return r
       const t = r.pendingEastDiscardTile
       return {
@@ -509,7 +513,7 @@ export function useRoundActions(args: UseRoundActionsArgs): UseRoundActionsResul
         selectedHandTileId: null,
       }
     })
-  }, [pushRound])
+  }, [updateRound])
 
   // ── Mah Jongg declaration ─────────────────────────────────────────────────────
 
@@ -773,7 +777,7 @@ export function useRoundActions(args: UseRoundActionsArgs): UseRoundActionsResul
       const patternId =
         variantSep >= 0 ? focusKey.slice(0, variantSep) : focusKey
       sortModeRef.current = null
-      pushRound((r) => ({
+      updateRound((r) => ({
         ...r,
         hand: sortHandForSuggestedPattern(
           r.hand,
@@ -794,8 +798,8 @@ export function useRoundActions(args: UseRoundActionsArgs): UseRoundActionsResul
     }
     const nextMode: SortMode = sortModeRef.current === 'suit' ? 'number' : 'suit'
     sortModeRef.current = nextMode
-    pushRound((r) => ({ ...r, hand: sortTiles(r.hand, nextMode) }))
-  }, [pushRound, suggestedSuppressedHandKey, suggestedFocusHandKeyRef, sortModeRef])
+    updateRound((r) => ({ ...r, hand: sortTiles(r.hand, nextMode) }))
+  }, [updateRound, suggestedSuppressedHandKey, suggestedFocusHandKeyRef, sortModeRef])
 
   // ── Call initiation ───────────────────────────────────────────────────────────
 
@@ -955,7 +959,7 @@ export function useRoundActions(args: UseRoundActionsArgs): UseRoundActionsResul
 
   const onHandTileActivate = useCallback((id: string) => {
     let passBlockedCat: 'joker' | 'blank' | null = null
-    pushRound((r) => {
+    updateRound((r) => {
       if (r.charlestonPhase === 'done') {
         if (r.mainPhase === 'east-discard') {
           const handIdx = r.hand.findIndex((t) => t.id === id)
@@ -1012,11 +1016,11 @@ export function useRoundActions(args: UseRoundActionsArgs): UseRoundActionsResul
     if (passBlockedCat) {
       setCharlestonPassError(charlestonPassBlockedMessage(passBlockedCat))
     }
-  }, [setCharlestonPassError, pushRound, lastPassReturnTileIdRef])
+  }, [setCharlestonPassError, updateRound, lastPassReturnTileIdRef])
 
   const onPassBoxClick = useCallback(() => {
     let passBlockedCat: 'joker' | 'blank' | null = null
-    pushRound((r) => {
+    updateRound((r) => {
       if (r.charlestonPhase === 'done') return r
       const emptyIdx = firstEmptyPassSlotIndex(r.passSlots)
       if (emptyIdx < 0) return r
@@ -1045,10 +1049,10 @@ export function useRoundActions(args: UseRoundActionsArgs): UseRoundActionsResul
     if (passBlockedCat) {
       setCharlestonPassError(charlestonPassBlockedMessage(passBlockedCat))
     }
-  }, [setCharlestonPassError, pushRound, lastPassReturnTileIdRef])
+  }, [setCharlestonPassError, updateRound, lastPassReturnTileIdRef])
 
   const onPassTileClickReturn = useCallback((slotIndex: number) => {
-    pushRound((r) => {
+    updateRound((r) => {
       if (r.charlestonPhase === 'done') return r
       const t = r.passSlots[slotIndex]
       if (!t) return r
@@ -1071,7 +1075,7 @@ export function useRoundActions(args: UseRoundActionsArgs): UseRoundActionsResul
             : null,
       }
     })
-  }, [pushRound, lastPassReturnTileIdRef])
+  }, [updateRound, lastPassReturnTileIdRef])
 
   return {
     sendCharlestonPass,

@@ -90,7 +90,10 @@ export type UsePlaySurfaceDnDArgs = {
   stagedCallTileIds: readonly string[]
   eastExposures: readonly EastExposure[]
   jokerSwapUiActive: boolean
+  /** Game commits (blank / joker swap) — undoable. */
   pushRound: (updater: (prev: RoundState) => RoundState) => void
+  /** Rack / staging edits — not undoable. */
+  updateRound: (updater: (prev: RoundState) => RoundState) => void
   setPendingJokerSwapTileId: Dispatch<SetStateAction<string | null>>
   setCharlestonPassError: Dispatch<SetStateAction<string | null>>
   applyToggleStagedCallTile: (r: RoundState, tileId: string) => RoundState
@@ -117,6 +120,7 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
     eastExposures,
     jokerSwapUiActive,
     pushRound,
+    updateRound,
     setPendingJokerSwapTileId,
     setCharlestonPassError,
     applyToggleStagedCallTile,
@@ -867,7 +871,7 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
             return
           }
           if (!charlestonDone && passSlots.some((s) => s?.id === aid)) {
-            pushRound((r) => {
+            updateRound((r) => {
               if (r.charlestonPhase === 'done') return r
               const passFromIdx = r.passSlots.findIndex((s) => s?.id === aid)
               if (passFromIdx < 0) return r
@@ -891,7 +895,7 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
           }
           /* Charleston: release outside any droppable → park tile on the right end of the rack. */
           if (!charlestonDone && hand.some((t) => t.id === aid)) {
-            pushRound((r) => {
+            updateRound((r) => {
               if (r.charlestonPhase === 'done') return r
               const idx = r.hand.findIndex((t) => t.id === aid)
               if (idx < 0) return r
@@ -909,7 +913,7 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
         const exposureToIdx = parseEastExposureMeldSortId(oid)
         if (exposureFromIdx != null && exposureToIdx != null) {
           if (exposureFromIdx !== exposureToIdx) {
-            pushRound((r) => {
+            updateRound((r) => {
               if (exposureFromIdx >= r.eastExposures.length || exposureToIdx >= r.eastExposures.length) {
                 return r
               }
@@ -941,7 +945,7 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
 
           // Staged tile dragged down to a hand tile position → un-stage + reorder
           if (aidStaged && oidIsHandTile) {
-            pushRound((r) => {
+            updateRound((r) => {
               const unstagedR = applyToggleStagedCallTile(r, aid)
               const fromIdx = unstagedR.hand.findIndex((t) => t.id === aid)
               const toIdx = unstagedR.hand.findIndex((t) => t.id === oid)
@@ -954,12 +958,12 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
           }
           // Staged tile dropped on hand bank (no specific tile target) → un-stage in place
           if (aidStaged && oid === HAND_BANK_ID) {
-            pushRound((r) => applyToggleStagedCallTile(r, aid))
+            updateRound((r) => applyToggleStagedCallTile(r, aid))
             return
           }
           // Hand tile dragged up to a staged slot or exposure zone → stage it
           if (!aidStaged && (oidStaged || oid === CALL_STAGING_DROP_ID)) {
-            pushRound((r) => applyToggleStagedCallTile(r, aid))
+            updateRound((r) => applyToggleStagedCallTile(r, aid))
             return
           }
         }
@@ -1004,7 +1008,7 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
         }
 
         let passBlockedCat: 'joker' | 'blank' | null = null
-        pushRound((r) => {
+        updateRound((r) => {
       const passSlotsNext: PassSlots = [...r.passSlots]
       const handNext = [...r.hand]
       const handIdx = handNext.findIndex((t) => t.id === aid)
@@ -1166,6 +1170,7 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
       openBlankExchange,
       stagedCallTileIds,
       pushRound,
+      updateRound,
       initiateCallRef,
       activeBotDiscard?.id,
       handInsertIndexFromOver,
