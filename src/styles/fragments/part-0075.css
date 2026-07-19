@@ -192,7 +192,10 @@
 }
 
 /* Suggested-hand dim: uniform `::after` cover. Overlay is always present (opacity 0) so
-   dim on/off cross-fades instead of snapping when the parent class toggles. */
+   dim on/off cross-fades instead of snapping when the parent class toggles.
+   Background / inset shadow delay 0.2s on the way out so lit (--suggest-best) tiles that leave
+   with opacity:1 + transparent paint don't flash the dim wash while opacity fades. Active
+   coach / dim states override with a 0s paint transition so enter + best→dim stay immediate. */
 .sortable-tile-wrap .tile-face,
 .pass-strip__tile-wrap .tile-face,
 .east-discard-staging__tile .tile-face,
@@ -231,7 +234,10 @@
   background: var(--suggest-dim-overlay);
   box-shadow: var(--suggest-dim-inset-shadow);
   opacity: 0;
-  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    background 0s linear 0.2s,
+    box-shadow 0s linear 0.2s;
 }
 
 .sortable-tile-wrap .tile-face.tile--joker,
@@ -261,6 +267,11 @@
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--inactive .tile-face:not(.tile--joker)::after,
 .mahjong-win__bots-review-tile--dim .tile-face:not(.tile--joker)::after {
   opacity: 1;
+  /* Snap wash on (incl. best→dim hand switches); don't inherit resting's delayed paint. */
+  transition:
+    opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    background 0s,
+    box-shadow 0s;
 }
 
 .sortable-tile-wrap--suggest-dim .tile-face.tile--joker,
@@ -362,6 +373,10 @@
   background: transparent;
   box-shadow: none;
   opacity: 1;
+  transition:
+    opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    background 0s,
+    box-shadow 0s;
 }
 
 .sortable-tile-wrap--suggest-dim.sortable-tile-wrap--blank-exchange-hint .tile-face {
@@ -407,6 +422,11 @@
   border-radius: max(var(--tile-face-border-radius), var(--hands-coaching-ring-radius-min, 0.22rem));
   pointer-events: none;
   opacity: 1;
+  /* Clear wash/ring paint immediately on enter; resting rule delays paint on exit (no deselect flash). */
+  transition:
+    opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    background 0s,
+    box-shadow 0s;
 }
 
 :is(
