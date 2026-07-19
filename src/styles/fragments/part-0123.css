@@ -1187,10 +1187,18 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
  * Drawn-tile / Charleston fly-in: hand tray must clear the green Discard> / pass wells on
  * sibling `.rack-stage__rack-top` (including when call melds are pinned). Late-cascade twin of
  * part-0035 so later rack stacking rules cannot bury the flight again.
+ *
+ * Skip the tray/rack-bottom lift when owned melds are present — rest stacking already keeps
+ * Seat > melds > hand lit tiles (see part-0035).
  */
 .app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
   .panel--hand
-  .rack-stage__rack-col
+  .rack-stage__rack-col:not(
+    :has(
+      .exposure-rack__slot--owned-meld,
+      .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld
+    )
+  )
   > .panel-hand-rack__hand-tray {
   position: relative;
   z-index: 6;
@@ -1198,6 +1206,12 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 .app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
   .panel--hand
+  .rack-stage__rack-col:not(
+    :has(
+      .exposure-rack__slot--owned-meld,
+      .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld
+    )
+  )
   .panel-hand-rack__hand-tray
   .rack-stage__rack-bottom {
   z-index: 3;
@@ -1782,17 +1796,69 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   );
 }
 
+/*
+ * Inter-meld owned lift seams + equal stacking.
+ * Intra-meld sibling selectors cannot see across meld wrappers, so facing edges kept a full
+ * outer glow into the shared `--player-rack-face-gap` and the shadows stacked. Elevating each
+ * meld’s last tile (z-index 4) made that worse — one meld read as floating above the next.
+ * Clip facing edges to the gap center (same token as lit↔lit) and leave all owned tiles at
+ * the base z-index so multiple melds sit on one plane.
+ */
 .panel--hand
   .rack-stage__rack-top
-  .exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim):not(
-    :has(+ .exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim))
-  ):not(.exposure-rack__slot--suggest-dying),
+  .exposure-rack__call-meld-anchor
+  > *:has(
+    + *
+  )
+  :is(
+    .exposure-rack__slot--owned-meld,
+    .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld
+  ):last-child:not(.exposure-rack__slot--suggest-dim),
 .panel--hand
   .rack-stage__rack-top
-  .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim):not(
-    :has(+ .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim))
-  ):not(.exposure-rack__slot--suggest-dying) {
-  z-index: 4;
+  .exposure-rack:not(.exposure-rack--charleston-pass)
+  > :is(
+    .exposure-rack__meld-sortable,
+    .exposure-rack__meld-group,
+    .exposure-rack__meld-drop,
+    .exposure-rack__call-meld-anchor
+  ):has(
+    + :is(
+      .exposure-rack__meld-sortable,
+      .exposure-rack__meld-group,
+      .exposure-rack__meld-drop
+    )
+  )
+  :is(
+    .exposure-rack__slot--owned-meld,
+    .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld
+  ):last-child:not(.exposure-rack__slot--suggest-dim) {
+  --coach-lift-clip-right: var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2));
+}
+
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__call-meld-anchor
+  > * + *
+  :is(
+    .exposure-rack__slot--owned-meld,
+    .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld
+  ):first-child:not(.exposure-rack__slot--suggest-dim),
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack:not(.exposure-rack--charleston-pass)
+  > :is(
+    .exposure-rack__meld-sortable,
+    .exposure-rack__meld-group,
+    .exposure-rack__meld-drop,
+    .exposure-rack__call-meld-anchor
+  )
+  + :is(.exposure-rack__meld-sortable, .exposure-rack__meld-group, .exposure-rack__meld-drop)
+  :is(
+    .exposure-rack__slot--owned-meld,
+    .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld
+  ):first-child:not(.exposure-rack__slot--suggest-dim) {
+  --coach-lift-clip-left: var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2));
 }
 
 .app[data-tile-graphics='illustrative-classic']

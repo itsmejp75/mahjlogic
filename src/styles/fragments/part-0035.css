@@ -17,14 +17,23 @@
  * (`position: relative` for Seat:, transforms on call-meld inset, etc.). Bot-hands glow stacking
  * (rack above the top band so green covers the halo) made that more likely to show.
  *
- * Always lift the hand-tray above rack-top for the animation (z-index 6 beats staged rack-top 5),
- * including when call melds are pinned — drawn tiles must clear the green Discard> well. Owned-meld
- * vignettes may tuck under the hand for the ~0.34s flight; green-slot clearance wins.
- * Also lift rack-bottom so tile z-index:10 still clears within the tray (same idea as joker-swap).
+ * Without owned melds: lift the hand-tray above rack-top (z-index 6 beats staged rack-top 5) so
+ * drawn tiles clear the green Discard> well, and lift rack-bottom so tile z-index:10 clears within
+ * the tray. Seat drops under the flying tile inside that lifted tray.
+ *
+ * With committed owned melds: do not lift tray/rack-bottom — rest stacking already keeps
+ * Seat (z-index 10) > owned melds / rack-top (2) > hand lit tiles (rack-bottom 1). Lifting the
+ * tray put hand vignettes over melds; raising rack-top above the tray to fix that buried Seat
+ * under the meld shadow. Flying tile may pass under Discard> / melds for ~0.34s.
  */
 .app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
   .panel--hand
-  .rack-stage__rack-col
+  .rack-stage__rack-col:not(
+    :has(
+      .exposure-rack__slot--owned-meld,
+      .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld
+    )
+  )
   > .panel-hand-rack__hand-tray {
   position: relative;
   z-index: 6;
@@ -32,6 +41,12 @@
 
 .app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
   .panel--hand
+  .rack-stage__rack-col:not(
+    :has(
+      .exposure-rack__slot--owned-meld,
+      .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld
+    )
+  )
   .panel-hand-rack__hand-tray
   .rack-stage__rack-bottom {
   z-index: 3;
@@ -55,6 +70,12 @@
 
 .app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
   .panel--hand
+  .rack-stage__rack-col:not(
+    :has(
+      .exposure-rack__slot--owned-meld,
+      .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld
+    )
+  )
   .panel-hand-rack__hand-tray
   > .panel-hand-rack__seat-label {
   /* Seat chip is z-index 10 in part-0084 — keep it under flying tiles (10) within the lifted tray. */
