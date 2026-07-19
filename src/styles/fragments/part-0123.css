@@ -2177,7 +2177,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 }
 
 /*
- * Hands tray body — starts under the header, top corners match the shell bottom radii.
+ * Hands tray body fill — behind the list. Rim + lip wash paint on ::after (above rows).
  */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
@@ -2190,56 +2190,41 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   bottom: 0;
   left: 0;
   width: 100%;
-  border-radius: var(--suggested-popup-radius) var(--suggested-popup-radius) 0 0;
+  box-sizing: border-box;
+  border-radius: var(--suggested-popup-radius);
+  border: none;
   pointer-events: none;
   background-color: var(--app-bg-hands-tray);
   background-image: none;
 }
 
 /*
- * Suggested Hands: lip wash under the header (above the scroller so rows pass under it).
- * Top/side hairline only — no bottom edge (a full inset stroke drew a line across tiles).
- * Tip ends soften via mask (same idea as the bot-hands frame).
+ * Suggested Hands: 1px tray rim in front of scrolling rows + recess wash (header lip + sides).
+ * Full-height frame so strokes/side wash stay above list text; wash layers sized via tokens.
  */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
   .hands-panel__content::after {
   content: '';
   position: absolute;
-  z-index: 2;
+  z-index: 5;
   font-size: var(--hands-metric-column-header-fs, var(--app-ui-control-fs-sm));
   top: calc(2 * 0.2em + 1em + var(--hands-sheet-grid-line-w, 0.5px));
+  bottom: 0;
   left: 0;
   right: 0;
   width: auto;
-  height: max(var(--hands-header-bottom-blur-h), var(--suggested-popup-radius));
-  border-radius: var(--suggested-popup-radius) var(--suggested-popup-radius) 0 0;
+  height: auto;
+  border-radius: var(--suggested-popup-radius);
   pointer-events: none;
   box-sizing: border-box;
   background-color: transparent;
   background-image: var(--hands-header-bottom-blur);
   background-repeat: no-repeat;
-  background-position: top center;
-  background-size: 100% var(--hands-header-bottom-blur-h);
-  border: 0.5px solid color-mix(in srgb, #000 62%, var(--app-bg-base));
-  border-bottom-width: 0;
+  background-position: var(--hands-header-bottom-blur-position);
+  background-size: var(--hands-header-bottom-blur-size);
+  border: 1px solid color-mix(in srgb, #000 62%, var(--app-bg-base));
   box-shadow: none;
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    #000 0%,
-    #000 78%,
-    rgb(0 0 0 / 0.55) 90%,
-    rgb(0 0 0 / 0.18) 96%,
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    #000 0%,
-    #000 78%,
-    rgb(0 0 0 / 0.55) 90%,
-    rgb(0 0 0 / 0.18) 96%,
-    transparent 100%
-  );
 }
 
 /* Bot hands-identifier: glow on tray (::before, behind text); Mahj-blue stroke on ::after. */
@@ -2273,6 +2258,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   --_drop-frame-color: #00B4D8;
   /* Header glow — behind list text; must stay above any solid list-column band. */
   z-index: 1;
+  border-radius: var(--suggested-popup-radius) var(--suggested-popup-radius) 0 0;
   background-image: linear-gradient(
     to bottom,
     color-mix(in srgb, var(--_drop-frame-color) 55%, transparent) 0%,
@@ -2314,9 +2300,10 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   /* Same blue as bot-exposure selection glow / Mahj logo glyph. */
   --_drop-frame-color: #00B4D8;
   --_frame-radius: var(--suggested-popup-radius);
-  z-index: 3;
+  z-index: 6;
   left: 0;
   right: 0;
+  bottom: auto;
   width: auto;
   height: max(var(--_frame-radius), var(--_bot-header-glow-h));
   border-radius: var(--_frame-radius) var(--_frame-radius) 0 0;
@@ -2376,7 +2363,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 /*
  * Full-bleed title-row band on `.hands-panel__list-column` (not clipped by scroll overflow-x).
- * Solid `--app-bg-base`. Lip wash + top/side stroke on `::after` (bot uses blue glow/stroke).
+ * Solid `--app-bg-base`. Tray rim + lip wash on content `::after` (bot: blue glow/stroke).
  */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
