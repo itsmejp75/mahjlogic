@@ -347,10 +347,7 @@
   .charleston-error-dialog__rack-action.btn--primary:active:not(:disabled) {
   transition: none;
   transform: none;
-  box-shadow:
-    inset 4px 4px 11px rgba(0, 0, 0, 0.48),
-    inset -3px -3px 8px rgba(255, 255, 255, 0.1),
-    inset 0 0 0 2px rgba(255, 255, 255, 0.24);
+  box-shadow: var(--rack-action-pressed, var(--app-action-btn-shadow-pressed-deep));
 }
 
 .charleston-error-dialog__actions {
@@ -635,7 +632,8 @@
   --rack-action-face: var(--app-action-btn-face);
   --rack-action-shadow-rest: var(--app-action-btn-shadow-rest);
   --rack-action-border-rest: var(--app-action-btn-border-rest);
-  --rack-action-pressed: var(--app-action-btn-shadow-pressed);
+  --rack-action-press-shadow-dark: var(--app-action-btn-press-shadow-dark-deep);
+  --rack-action-pressed: var(--app-action-btn-shadow-pressed-deep);
 }
 
 .dead-hand-dialog {
@@ -1040,9 +1038,9 @@
   --rack-action-shadow-rest: var(--app-action-btn-shadow-rest);
   --rack-action-flat-surface: var(--app-action-btn-bottom);
   --rack-action-border-color: var(--app-action-btn-border);
-  --rack-action-press-shadow-dark: var(--app-action-btn-press-shadow-dark);
   --rack-action-press-shadow-light: var(--app-action-btn-press-shadow-light);
-  --rack-action-pressed: var(--app-action-btn-shadow-pressed);
+  --rack-action-press-shadow-dark: var(--app-action-btn-press-shadow-dark-deep);
+  --rack-action-pressed: var(--app-action-btn-shadow-pressed-deep);
   /* Mirror .panel--hand --hand-top-rack-height-delta (part-0117 + rim zeroed in part-0123). */
   --hand-top-rack-height-delta-mirror: calc(
     2 * var(--hand-rack-tray-inset-inline, var(--bot-exposure-inner-pad, 4px)) / 14 * 1.3333

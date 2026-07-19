@@ -309,7 +309,6 @@ export function PlayerRackSeatLabel({
       className="panel-hand-rack__seat-label"
       aria-hidden
     >
-      <span className="panel-hand-rack__seat-label__prefix">Seat:</span>
       <span
         className={[
           'panel-hand-rack__seat-label__chip',

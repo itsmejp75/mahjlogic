@@ -1988,18 +1988,6 @@ export default function App() {
     })
   }, [])
 
-  const toggleTenJokers = useCallback(() => {
-    setTenJokersEnabled((v) => {
-      const next = !v
-      try {
-        localStorage.setItem(LS_KEY_TEN_JOKERS, next ? 'true' : 'false')
-      } catch {
-        /* ignore */
-      }
-      return next
-    })
-  }, [])
-
   const togglePlayAsEast = useCallback(() => {
     setPlayAsEastEnabled((v) => {
       const next = !v
@@ -2010,29 +1998,6 @@ export default function App() {
       }
       return next
     })
-  }, [])
-
-  const toggleBlankTiles = useCallback(() => {
-    setBlankTilesEnabled((v) => {
-      const next = !v
-      try {
-        localStorage.setItem(LS_KEY_BLANK_TILES, next ? 'true' : 'false')
-      } catch {
-        /* ignore */
-      }
-      return next
-    })
-  }, [])
-
-  const setBlankTileCountLevel = useCallback((count: BlankTileCount) => {
-    setBlankTileCount(count)
-    setBlankTilesEnabled(true)
-    try {
-      localStorage.setItem(LS_KEY_BLANK_TILE_COUNT, String(count))
-      localStorage.setItem(LS_KEY_BLANK_TILES, 'true')
-    } catch {
-      /* ignore */
-    }
   }, [])
 
   const toggleDeadHandWarnings = useCallback(() => {
@@ -4248,6 +4213,49 @@ export default function App() {
         })()
     setRound(nextRound)
   }, [])
+
+  /** Deck-size prefs: redeal a fresh rack behind the open menu (do not close it). */
+  const toggleTenJokers = useCallback(() => {
+    const next = !tenJokersEnabledRef.current
+    try {
+      localStorage.setItem(LS_KEY_TEN_JOKERS, next ? 'true' : 'false')
+    } catch {
+      /* ignore */
+    }
+    setTenJokersEnabled(next)
+    tenJokersEnabledRef.current = next
+    performNewHandDeal()
+  }, [performNewHandDeal])
+
+  const toggleBlankTiles = useCallback(() => {
+    const next = !blankTilesEnabledRef.current
+    try {
+      localStorage.setItem(LS_KEY_BLANK_TILES, next ? 'true' : 'false')
+    } catch {
+      /* ignore */
+    }
+    setBlankTilesEnabled(next)
+    blankTilesEnabledRef.current = next
+    performNewHandDeal()
+  }, [performNewHandDeal])
+
+  const setBlankTileCountLevel = useCallback(
+    (count: BlankTileCount) => {
+      if (count === blankTileCountRef.current && blankTilesEnabledRef.current) return
+      setBlankTileCount(count)
+      setBlankTilesEnabled(true)
+      blankTileCountRef.current = count
+      blankTilesEnabledRef.current = true
+      try {
+        localStorage.setItem(LS_KEY_BLANK_TILE_COUNT, String(count))
+        localStorage.setItem(LS_KEY_BLANK_TILES, 'true')
+      } catch {
+        /* ignore */
+      }
+      performNewHandDeal()
+    },
+    [performNewHandDeal],
+  )
 
   /** @returns true (menu may close); card-change warning is shown from `requestPlayableCard` when needed. */
   const newHand = useCallback((): boolean => {

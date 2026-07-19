@@ -1988,9 +1988,7 @@ html body .app .dead-hand-overlay
   .charleston-error-dialog__rack-action.btn--primary:active:not(:disabled):not(.btn--pointer-down) {
   transition: box-shadow 0.14s ease, transform 0.12s ease;
   transform: none;
-  box-shadow:
-    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
-    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
 }
 
 .suggested-hands-filter-tray__item.btn:active:not(:disabled):not(.btn--pointer-down) {
@@ -2234,6 +2232,21 @@ html .app-dnd-frame
 }
 
 /*
+ * All popup / dialog shells — darker press inset (same as menu pills).
+ * Wall game + Mah Jongg share `.wall-game-overlay`.
+ */
+:is(
+  .app-menu-modal,
+  .wall-game-overlay,
+  .dead-hand-overlay,
+  .charleston-error-overlay,
+  .blank-exchange-overlay__panel
+) {
+  --rack-action-press-shadow-dark: var(--app-action-btn-press-shadow-dark-deep);
+  --rack-action-pressed: var(--app-action-btn-shadow-pressed-deep);
+}
+
+/*
  * Menu-styled blocking dialogs — fixed menu type scale + rack-action tokens.
  */
 .charleston-error-overlay:has(.charleston-error-dialog--menu-shell) {
@@ -2258,7 +2271,8 @@ html .app-dnd-frame
   --rack-action-shadow-rest: var(--app-action-btn-shadow-rest);
   --rack-action-border-rest: var(--app-action-btn-border-rest);
   --rack-action-border-hold: var(--app-action-btn-border-hold);
-  --rack-action-pressed: var(--app-action-btn-shadow-pressed);
+  --rack-action-press-shadow-dark: var(--app-action-btn-press-shadow-dark-deep);
+  --rack-action-pressed: var(--app-action-btn-shadow-pressed-deep);
 
   width: 100%;
   max-width: min(38rem, 100%);

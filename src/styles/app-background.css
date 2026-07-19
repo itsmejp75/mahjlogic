@@ -213,7 +213,7 @@
   );
   --app-action-btn-press-shadow-dark: color-mix(
     in srgb,
-    #000 28%,
+    #000 45%,
     var(--app-action-btn-bottom)
   );
   --app-action-btn-press-shadow-light: color-mix(
@@ -248,6 +248,20 @@
   --app-action-btn-shadow-pressed:
     inset 4px 4px 8px var(--app-action-btn-press-shadow-dark),
     inset -4px 0 8px var(--app-action-btn-press-shadow-dark),
+    inset 0 -1px 2px 0 color-mix(in srgb, var(--app-action-btn-press-shadow-light-edge) 55%, transparent 45%),
+    inset 0 -2px 10px -4px color-mix(in srgb, var(--app-action-btn-press-shadow-light-fade) 65%, transparent 35%);
+  /*
+   * Popup / dialog press inset — same structure as --app-action-btn-shadow-pressed with a touch
+   * more black (menu / wall-game / mahjong / blank-exchange / charleston).
+   */
+  --app-action-btn-press-shadow-dark-deep: color-mix(
+    in srgb,
+    #000 22%,
+    var(--app-action-btn-press-shadow-dark)
+  );
+  --app-action-btn-shadow-pressed-deep:
+    inset 4px 4px 8px var(--app-action-btn-press-shadow-dark-deep),
+    inset -4px 0 8px var(--app-action-btn-press-shadow-dark-deep),
     inset 0 -1px 2px 0 color-mix(in srgb, var(--app-action-btn-press-shadow-light-edge) 55%, transparent 45%),
     inset 0 -2px 10px -4px color-mix(in srgb, var(--app-action-btn-press-shadow-light-fade) 65%, transparent 35%);
 }

@@ -1683,16 +1683,20 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
     var(--tile-face-suggest-dim-inset);
 }
 
+/*
+ * Clear natural-face dim/coach `::after` on owned melds. Exclude jokers — their inscribed
+ * ring owns `::after` (part-0075); wiping it left committed exposure J’s ringless.
+ */
 .panel--hand
   .rack-stage__rack-top
   .exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim):not(.exposure-rack__slot--suggest-best)
-  .tile-face::after,
+  .tile-face:not(.tile--joker)::after,
 .panel--hand
   .rack-stage__rack-top
   .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim):not(
     .exposure-rack__slot--suggest-best
   )
-  .tile-face::after {
+  .tile-face:not(.tile--joker)::after {
   content: none;
   display: none;
   box-shadow: none;
@@ -3965,9 +3969,9 @@ html .app-dnd-frame .app-top-exposure-container .exposure-rack__meld-drop--over 
   --rack-action-border-hold: var(--app-action-btn-border-hold);
   --rack-action-flat-surface: var(--app-action-btn-bottom);
   --rack-action-border-color: var(--app-action-btn-border);
-  --rack-action-press-shadow-dark: var(--app-action-btn-press-shadow-dark);
   --rack-action-press-shadow-light: var(--app-action-btn-press-shadow-light);
-  --rack-action-pressed: var(--app-action-btn-shadow-pressed);
+  --rack-action-press-shadow-dark: var(--app-action-btn-press-shadow-dark-deep);
+  --rack-action-pressed: var(--app-action-btn-shadow-pressed-deep);
 }
 
 .blank-exchange-overlay__title {

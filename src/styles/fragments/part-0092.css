@@ -85,9 +85,10 @@
   --rack-action-border-hold: var(--app-action-btn-border-hold);
   --rack-action-border-color: var(--app-action-btn-border);
   --rack-action-flat-surface: var(--app-action-btn-bottom);
-  --rack-action-press-shadow-dark: var(--app-action-btn-press-shadow-dark);
   --rack-action-press-shadow-light: var(--app-action-btn-press-shadow-light);
-  --rack-action-pressed: var(--app-action-btn-shadow-pressed);
+  /* Darker popup press inset — token from app-background; also set on popup shells in part-0124. */
+  --rack-action-press-shadow-dark: var(--app-action-btn-press-shadow-dark-deep);
+  --rack-action-pressed: var(--app-action-btn-shadow-pressed-deep);
   --app-menu-sort-surface: var(--rack-action-face);
   --app-menu-sort-surface-hover: var(--rack-action-face);
   --app-menu-sort-surface-emphasis: var(--rack-action-face-pressed);
@@ -96,7 +97,7 @@
   --app-menu-rim-active: #22c55e;
   /* Selected / pressed-in menu pills: same gray chrome as hand rack action row. */
   --app-menu-diff-btn-face-pressed-chrome: var(--app-action-btn-face-pressed-chrome);
-  --app-menu-diff-btn-pressed: var(--app-action-btn-shadow-pressed);
+  --app-menu-diff-btn-pressed: var(--rack-action-pressed);
   --app-menu-diff-btn-rest: var(--app-action-btn-shadow-rest);
   --app-menu-diff-btn-border-rest: var(--app-action-btn-border-rest);
   --app-menu-diff-btn-border-hold: var(--app-action-btn-border-hold);

@@ -415,20 +415,21 @@
   font-size: var(--player-seat-label-fs);
 }
 
-.panel--hand .panel-hand-rack__seat-label__prefix {
-  display: inline-block;
-  line-height: 1;
-  vertical-align: baseline;
-}
-
 /* Player seat name chip — green fill/border only on the compass name (matches discard-tracker S/W/N). */
 .panel--hand .panel-hand-rack__seat-label__chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  padding: 0.22em;
-  border-radius: calc(0.06 * var(--rack-tile-w, var(--hand-top-rack-tile-w)));
+  /* Match main-rack tile face width (hand-tray sets --rack-tile-w → --hand-rack-tile-w). */
+  width: var(--rack-tile-w, var(--hand-rack-tile-w));
+  min-width: var(--rack-tile-w, var(--hand-rack-tile-w));
+  padding: 0.22em 0;
+  /* Same corner radius as Sort / action-row pills. */
+  border-radius: var(
+    --rack-tile-btn-border-radius,
+    max(0.36rem, calc(var(--hand-rack-tile-w, var(--rack-tile-w)) * 0.128))
+  );
   /* Same ink as the inactive `Seat:` prefix (not `--window-fg`). */
   color: #c2c2c8;
   opacity: 0.92;
