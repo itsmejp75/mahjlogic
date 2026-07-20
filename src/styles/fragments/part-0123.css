@@ -2227,7 +2227,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   box-shadow: none;
 }
 
-/* Bot hands-identifier: glow on tray (::before, behind text); Mahj-blue stroke on ::after. */
+/* Bot hands-identifier: glow on tray (::before); full-height Mahj-blue rim + side wash on ::after. */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
   .bot-exposure-hands-panel {
@@ -2247,7 +2247,28 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   --_glow-blur: max(2px, calc(var(--_bot-glow-tile) * 0.3125));
   --_glow-spread: max(1px, calc(var(--_bot-glow-tile) * 0.09375));
   --_bot-header-glow-h: calc(var(--_glow-blur) + var(--_glow-spread));
-  --_bot-header-stroke-w: 0.5px;
+  --_bot-header-stroke-w: 1px;
+  /* Same blue as selection glow / Mahj logo — side wash mirrors suggested-hands recess. */
+  --_drop-frame-color: #00B4D8;
+  --_bot-tray-side-blur-color: color-mix(in srgb, var(--_drop-frame-color) 40%, transparent);
+  --_bot-tray-side-blur: linear-gradient(
+      to bottom in oklab,
+      var(--_bot-tray-side-blur-color) 0%,
+      color-mix(in oklab, var(--_bot-tray-side-blur-color) 55%, transparent) 42%,
+      transparent 100%
+    ),
+    linear-gradient(
+      to right in oklab,
+      var(--_bot-tray-side-blur-color) 0%,
+      color-mix(in oklab, var(--_bot-tray-side-blur-color) 55%, transparent) 42%,
+      transparent 100%
+    ),
+    linear-gradient(
+      to left in oklab,
+      var(--_bot-tray-side-blur-color) 0%,
+      color-mix(in oklab, var(--_bot-tray-side-blur-color) 55%, transparent) 42%,
+      transparent 100%
+    );
 }
 
 .app
@@ -2293,43 +2314,35 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   background: transparent;
 }
 
+/*
+ * Bot Possible Hands: full-height Mahj-blue rim + recess wash (header lip + sides),
+ * matching Suggested Hands geometry so the blue frame continues around the tray.
+ * Header glow stays on ::before; stroke/wash paint here above scrolling rows.
+ */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
   .bot-exposure-hands-panel
   .hands-panel__content::after {
-  /* Same blue as bot-exposure selection glow / Mahj logo glyph. */
-  --_drop-frame-color: #00B4D8;
-  --_frame-radius: var(--suggested-popup-radius);
   z-index: 6;
   left: 0;
   right: 0;
-  bottom: auto;
+  bottom: 0;
   width: auto;
-  height: max(var(--_frame-radius), var(--_bot-header-glow-h));
-  border-radius: var(--_frame-radius) var(--_frame-radius) 0 0;
-  background: transparent;
-  border: var(--_bot-header-stroke-w) solid var(--_drop-frame-color);
-  border-bottom-width: 0;
+  height: auto;
+  border-radius: var(--suggested-popup-radius);
+  background-color: transparent;
+  background-image: var(--_bot-tray-side-blur);
+  background-repeat: no-repeat;
+  background-position: var(--hands-header-bottom-blur-position);
+  background-size: var(--hands-header-bottom-blur-size);
+  /* Match Suggested Hands rim; blue recess wash stays via `--_bot-tray-side-blur`. */
+  border: var(--_bot-header-stroke-w) solid
+    color-mix(in srgb, #000 62%, var(--app-bg-base));
   box-sizing: border-box;
   box-shadow: none;
   filter: none;
-  /* Soften vertical tip ends only (glow lives on ::before, so it is not masked). */
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    #000 0%,
-    #000 55%,
-    rgb(0 0 0 / 0.55) 78%,
-    rgb(0 0 0 / 0.15) 92%,
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    #000 0%,
-    #000 55%,
-    rgb(0 0 0 / 0.55) 78%,
-    rgb(0 0 0 / 0.15) 92%,
-    transparent 100%
-  );
+  -webkit-mask-image: none;
+  mask-image: none;
   clip-path: none;
 }
 
@@ -2363,7 +2376,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 /*
  * Full-bleed title-row band on `.hands-panel__list-column` (not clipped by scroll overflow-x).
- * Solid `--app-bg-base`. Tray rim + lip wash on content `::after` (bot: blue glow/stroke).
+ * Solid `--app-bg-base`. Tray rim + lip wash on content `::after` (bot: full-height blue rim/wash).
  */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open

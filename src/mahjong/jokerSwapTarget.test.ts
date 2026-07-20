@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest'
 import type { BotExposure } from '../analysis/types'
 import type { TileDef, TileInstance } from './types'
 import {
+  botExposureSwapDropId,
   botSeatSwapDropId,
   collectSwappableJokerTileIds,
+  EAST_SEAT_SWAP_ID,
   findNextBotJokerSwapTarget,
   findNextJokerSwapTarget,
+  jokerSwapDropIdAcceptsNatural,
   parseBotSeatSwapDropId,
   topBandDropFrameForOverId,
 } from './jokerSwapTarget'
@@ -61,5 +64,39 @@ describe('joker swap against East-seated bots', () => {
     expect(topBandDropFrameForOverId('bot-exp-swap-0')).toBe('joker-swap')
     expect(topBandDropFrameForOverId('blank-exchange-tracker')).toBe('blank-exchange')
     expect(topBandDropFrameForOverId('hand-bank')).toBeNull()
+    // East rack / discard slot must not paint the top-right bot band.
+    expect(topBandDropFrameForOverId(EAST_SEAT_SWAP_ID)).toBeNull()
+    expect(topBandDropFrameForOverId('east-exp-swap-0')).toBeNull()
+  })
+
+  it('only accepts swap drop ids that match the dragged natural', () => {
+    const bam1: TileDef = { cat: 'suit', suit: 'bam', rank: 1 }
+    expect(
+      jokerSwapDropIdAcceptsNatural(
+        botSeatSwapDropId('East'),
+        crak4,
+        [eastBotExposure, southBotExposure],
+        [],
+      ),
+    ).toBe(true)
+    expect(
+      jokerSwapDropIdAcceptsNatural(
+        botExposureSwapDropId(0),
+        crak4,
+        [eastBotExposure, southBotExposure],
+        [],
+      ),
+    ).toBe(true)
+    expect(
+      jokerSwapDropIdAcceptsNatural(
+        botSeatSwapDropId('East'),
+        bam1,
+        [eastBotExposure, southBotExposure],
+        [],
+      ),
+    ).toBe(false)
+    expect(
+      jokerSwapDropIdAcceptsNatural(EAST_SEAT_SWAP_ID, crak4, [eastBotExposure], []),
+    ).toBe(false)
   })
 })

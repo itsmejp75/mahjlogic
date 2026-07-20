@@ -98,16 +98,17 @@ export const EAST_SEAT_SWAP_ID = 'east-joker-swap-seat'
 
 export type TopBandDropFrame = 'joker-swap' | 'blank-exchange'
 
-/** Map the active dnd-kit `over` id to the yellow top-band drop frame (bot exposures vs sorted tray). */
+/**
+ * Map the active dnd-kit `over` id to the top-band drop frame (bot exposures vs sorted tray).
+ * East seat/meld swap ids intentionally do **not** light this frame — that DOM lives in the
+ * top-right bot band, and East’s discard slot nests inside `EAST_SEAT_SWAP_ID`, so mapping East
+ * over → joker-swap falsely framed the bot exposures when dragging to Discard.
+ * East uses `east-own-exposure-swap-wrap--over` / meld `--over` on the player rack instead.
+ */
 export function topBandDropFrameForOverId(overId: string | null | undefined): TopBandDropFrame | null {
   if (!overId) return null
   if (overId === BLANK_EXCHANGE_DROP_ID) return 'blank-exchange'
-  if (
-    overId === EAST_SEAT_SWAP_ID ||
-    parseBotSeatSwapDropId(overId) != null ||
-    parseBotExposureSwapDropId(overId) != null ||
-    parseEastExposureSwapDropId(overId) != null
-  ) {
+  if (parseBotSeatSwapDropId(overId) != null || parseBotExposureSwapDropId(overId) != null) {
     return 'joker-swap'
   }
   return null
@@ -152,6 +153,33 @@ export function findJokerSwapTargetInEastRack(
     if (p) return p
   }
   return null
+}
+
+/**
+ * True when dropping `naturalDef` on this swap droppable would actually redeem a joker.
+ * Collision/highlight use this so a discard-bound drag over the East seat wrap (which nests the
+ * discard slot) does not light the bot-band green frame for unmatched tiles.
+ */
+export function jokerSwapDropIdAcceptsNatural(
+  overId: string,
+  naturalDef: TileDef,
+  botExposures: BotExposure[],
+  eastExposures: EastExposure[],
+): boolean {
+  if (overId === EAST_SEAT_SWAP_ID) {
+    return findJokerSwapTargetInEastRack(eastExposures, naturalDef) != null
+  }
+  const seat = parseBotSeatSwapDropId(overId)
+  if (seat) return findJokerSwapTargetAtSeat(botExposures, seat, naturalDef) != null
+  const botExp = parseBotExposureSwapDropId(overId)
+  if (botExp != null) {
+    return findJokerSwapTargetAtExposure(botExposures, botExp, naturalDef) != null
+  }
+  const eastExp = parseEastExposureSwapDropId(overId)
+  if (eastExp != null) {
+    return findJokerSwapTargetAtEastExposure(eastExposures, eastExp, naturalDef) != null
+  }
+  return false
 }
 
 /** Finds the first legal joker swap target in a specific bot seat's exposures. */

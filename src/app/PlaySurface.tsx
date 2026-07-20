@@ -256,6 +256,7 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
     pendingEastDiscardTile,
     activeBotDiscard,
     stagedCallTileIds,
+    botExposures,
     eastExposures,
     jokerSwapUiActive,
     pushRound,

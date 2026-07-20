@@ -37,12 +37,14 @@ import {
   CALL_INITIATE_FIRST_SLOT_ID,
   EAST_DISCARD_STAGING_ID,
 } from '../mahjong/jokerSwapIds'
+import type { BotExposure } from '../analysis/types'
 import {
   EAST_SEAT_SWAP_ID,
   findJokerSwapTargetAtEastExposure,
   findJokerSwapTargetAtExposure,
   findJokerSwapTargetAtSeat,
   findJokerSwapTargetInEastRack,
+  jokerSwapDropIdAcceptsNatural,
   parseBotExposureSwapDropId,
   parseBotSeatSwapDropId,
   parseEastExposureSwapDropId,
@@ -88,6 +90,7 @@ export type UsePlaySurfaceDnDArgs = {
   pendingEastDiscardTile: TileInstance | null
   activeBotDiscard: TileInstance | null
   stagedCallTileIds: readonly string[]
+  botExposures: readonly BotExposure[]
   eastExposures: readonly EastExposure[]
   jokerSwapUiActive: boolean
   /** Game commits (blank / joker swap) — undoable. */
@@ -117,6 +120,7 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
     pendingEastDiscardTile,
     activeBotDiscard,
     stagedCallTileIds,
+    botExposures,
     eastExposures,
     jokerSwapUiActive,
     pushRound,
@@ -273,9 +277,12 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
       const fromBotDiscardForCall = isActiveBotDiscardDrag(aid, activeBotDiscard ?? null)
 
       /**
-       * Joker swap: any overlap of the *dragged tile* with a bot/East exposure drop zone wins
-       * (seat-wide or meld). Pointer may still be over the hand — same idea as blank→tracker.
+       * Joker swap: overlap of the *dragged tile* with a bot/East exposure drop zone wins
+       * (seat-wide or meld) only when that zone can actually redeem a joker for this natural.
+       * Pointer may still be over the hand — same idea as blank→tracker.
        * Prefer seat-wide targets so the unified yellow frame (`--swap-over`) lights consistently.
+       * The East discard slot nests inside `EAST_SEAT_SWAP_ID`, so while the tile overlaps discard
+       * staging we skip East seat/meld swap hits and let staging win.
        */
       const jokerSwapTileOverlapHits = (): ReturnType<CollisionDetection> => {
         if (!charlestonDone || !jokerSwapUiActive || (!fromHandTile && !fromStagedDiscard)) return []
@@ -283,14 +290,25 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
           (fromHandTile ? hand.find((t) => t.id === aid) : null) ??
           (fromStagedDiscard ? pendingEastDiscardTile : null)
         if (!dragged || dragged.def.cat === 'joker' || dragged.def.cat === 'blank') return []
+        const discardStagingOverlaps =
+          mainPhase === 'east-discard' &&
+          fromHandTile &&
+          collisionHitsForTileOverlappingZones(args, [EAST_DISCARD_STAGING_ID]).length > 0
         const swapContainers = args.droppableContainers.filter((c) => {
           const id = String(c.id)
-          return (
+          const isSwapZone =
             parseBotSeatSwapDropId(id) !== null ||
             parseBotExposureSwapDropId(id) !== null ||
             parseEastExposureSwapDropId(id) !== null ||
             id === EAST_SEAT_SWAP_ID
-          )
+          if (!isSwapZone) return false
+          if (
+            discardStagingOverlaps &&
+            (id === EAST_SEAT_SWAP_ID || parseEastExposureSwapDropId(id) !== null)
+          ) {
+            return false
+          }
+          return jokerSwapDropIdAcceptsNatural(id, dragged.def, botExposures, eastExposures)
         })
         if (swapContainers.length === 0) return []
         const overlapHits = rectIntersection({ ...args, droppableContainers: swapContainers })
@@ -512,16 +530,37 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
         ) {
           return [pick(CALL_STAGING_DROP_ID)!]
         }
-        // Prefer bot/East exposure melds over the discard-tray staging zone (full-area droppable under the overlay).
+        // Prefer bot/East exposure melds over the discard-tray staging zone (full-area droppable under the overlay),
+        // but only for zones that can redeem this natural — and never over the East discard slot itself.
         if (charlestonDone && jokerSwapUiActive) {
-          const eastMeldHit = hits.find((h) => parseEastExposureSwapDropId(String(h.id)) !== null)
-          if (eastMeldHit) return [eastMeldHit]
-          const eastSeatHit = hits.find((h) => String(h.id) === EAST_SEAT_SWAP_ID)
-          if (eastSeatHit) return [eastSeatHit]
-          const meldHit = hits.find((h) => parseBotExposureSwapDropId(String(h.id)) !== null)
-          if (meldHit) return [meldHit]
-          const seatHit = hits.find((h) => parseBotSeatSwapDropId(String(h.id)) !== null)
-          if (seatHit) return [seatHit]
+          const draggedNatural =
+            (fromHandTile ? hand.find((t) => t.id === aid) : null) ??
+            (fromStagedDiscard ? pendingEastDiscardTile : null)
+          const discardStagingHit =
+            mainPhase === 'east-discard' && fromHandTile
+              ? hits.find((h) => String(h.id) === EAST_DISCARD_STAGING_ID)
+              : undefined
+          if (discardStagingHit) return [discardStagingHit]
+          if (draggedNatural && draggedNatural.def.cat !== 'joker' && draggedNatural.def.cat !== 'blank') {
+            const accepts = (id: string) =>
+              jokerSwapDropIdAcceptsNatural(id, draggedNatural.def, botExposures, eastExposures)
+            const eastMeldHit = hits.find(
+              (h) => parseEastExposureSwapDropId(String(h.id)) !== null && accepts(String(h.id)),
+            )
+            if (eastMeldHit) return [eastMeldHit]
+            const eastSeatHit = hits.find(
+              (h) => String(h.id) === EAST_SEAT_SWAP_ID && accepts(String(h.id)),
+            )
+            if (eastSeatHit) return [eastSeatHit]
+            const meldHit = hits.find(
+              (h) => parseBotExposureSwapDropId(String(h.id)) !== null && accepts(String(h.id)),
+            )
+            if (meldHit) return [meldHit]
+            const seatHit = hits.find(
+              (h) => parseBotSeatSwapDropId(String(h.id)) !== null && accepts(String(h.id)),
+            )
+            if (seatHit) return [seatHit]
+          }
         }
         const botSeatOverlap = jokerSwapTileOverlapHits()
         if (botSeatOverlap.length > 0) return [botSeatOverlap[0]!]
@@ -610,6 +649,8 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
       pendingEastDiscardTile,
       stagedCallTileIds,
       activeBotDiscard?.id,
+      botExposures,
+      eastExposures,
     ],
   )
 
