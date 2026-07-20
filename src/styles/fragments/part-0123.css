@@ -2178,20 +2178,19 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 /*
  * Recess wash depth tracks overlay width so lip/side shadowing keeps a constant tray
- * fraction across window sizes (fixed rem looked too heavy on narrow viewports).
- * 1.1% ≈ 0.55rem at ~800px overlay width; inherits into Suggested Hands + bot trays.
+ * fraction across window sizes. ~1.8% gives a longer feather than the old 0.55rem lip.
  */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open {
   --hands-header-side-blur-w: max(
     2px,
-    calc(var(--suggested-overlay-viewport-width, 100vw) * 0.011)
+    calc(var(--suggested-overlay-viewport-width, 100vw) * 0.018)
   );
   --hands-header-bottom-blur-h: var(--hands-header-side-blur-w);
 }
 
 /*
- * Hands tray body fill — behind the list. Rim + lip wash paint on ::after (above rows).
+ * Hands tray body fill — behind the list. Lip wash paints on ::after (above rows).
  */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
@@ -2213,8 +2212,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 }
 
 /*
- * Suggested Hands: 1px tray rim in front of scrolling rows + recess wash (header lip + sides).
- * Full-height frame so strokes/side wash stay above list text; wash layers sized via tokens.
+ * Suggested Hands: recess wash (header lip + sides); no tray rim border.
  */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
@@ -2233,24 +2231,19 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   pointer-events: none;
   box-sizing: border-box;
   background-color: transparent;
-  /* Softer rim + recess wash than the near-black default (base is already #23282e). */
   --hands-header-bottom-blur-color: color-mix(in srgb, var(--app-bg-base) 78%, #000 22%);
   background-image: var(--hands-header-bottom-blur);
   background-repeat: no-repeat;
   background-position: var(--hands-header-bottom-blur-position);
   background-size: var(--hands-header-bottom-blur-size);
-  border: 1px solid color-mix(in srgb, #000 22%, var(--app-bg-base));
+  border: none;
   box-shadow: none;
 }
 
-/* Bot hands-identifier: glow on tray (::before); full-height Mahj-blue rim + side wash on ::after. */
+/* Bot hands-identifier: header glow + side wash (no rim border). */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
   .bot-exposure-hands-panel {
-  /*
-   * Same tile math as the bot-exposure row glow (`--rack-tile-w` in the top band), derived from
-   * the overlay’s live viewport width so the wash shrinks with the window — no rem floor.
-   */
   --_bot-glow-tile: max(
     1px,
     calc(
@@ -2263,26 +2256,34 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   --_glow-blur: max(2px, calc(var(--_bot-glow-tile) * 0.3125));
   --_glow-spread: max(1px, calc(var(--_bot-glow-tile) * 0.09375));
   --_bot-header-glow-h: calc(var(--_glow-blur) + var(--_glow-spread));
-  --_bot-header-stroke-w: 1px;
-  /* Same blue as selection glow / Mahj logo — side wash mirrors suggested-hands recess. */
   --_drop-frame-color: #00B4D8;
   --_bot-tray-side-blur-color: color-mix(in srgb, var(--_drop-frame-color) 40%, transparent);
+  /* Same multi-stop feather as `--hands-header-bottom-blur` (suggested-hands recess). */
   --_bot-tray-side-blur: linear-gradient(
       to bottom in oklab,
       var(--_bot-tray-side-blur-color) 0%,
-      color-mix(in oklab, var(--_bot-tray-side-blur-color) 55%, transparent) 42%,
+      color-mix(in oklab, var(--_bot-tray-side-blur-color) 62%, transparent) 22%,
+      color-mix(in oklab, var(--_bot-tray-side-blur-color) 32%, transparent) 48%,
+      color-mix(in oklab, var(--_bot-tray-side-blur-color) 12%, transparent) 72%,
+      color-mix(in oklab, var(--_bot-tray-side-blur-color) 3%, transparent) 90%,
       transparent 100%
     ),
     linear-gradient(
       to right in oklab,
       var(--_bot-tray-side-blur-color) 0%,
-      color-mix(in oklab, var(--_bot-tray-side-blur-color) 55%, transparent) 42%,
+      color-mix(in oklab, var(--_bot-tray-side-blur-color) 62%, transparent) 22%,
+      color-mix(in oklab, var(--_bot-tray-side-blur-color) 32%, transparent) 48%,
+      color-mix(in oklab, var(--_bot-tray-side-blur-color) 12%, transparent) 72%,
+      color-mix(in oklab, var(--_bot-tray-side-blur-color) 3%, transparent) 90%,
       transparent 100%
     ),
     linear-gradient(
       to left in oklab,
       var(--_bot-tray-side-blur-color) 0%,
-      color-mix(in oklab, var(--_bot-tray-side-blur-color) 55%, transparent) 42%,
+      color-mix(in oklab, var(--_bot-tray-side-blur-color) 62%, transparent) 22%,
+      color-mix(in oklab, var(--_bot-tray-side-blur-color) 32%, transparent) 48%,
+      color-mix(in oklab, var(--_bot-tray-side-blur-color) 12%, transparent) 72%,
+      color-mix(in oklab, var(--_bot-tray-side-blur-color) 3%, transparent) 90%,
       transparent 100%
     );
 }
@@ -2291,9 +2292,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
   .bot-exposure-hands-panel
   .hands-panel__content::before {
-  /* Same blue as bot-exposure selection glow / Mahj logo glyph. */
   --_drop-frame-color: #00B4D8;
-  /* Header glow — behind list text; must stay above any solid list-column band. */
   z-index: 1;
   border-radius: var(--suggested-popup-radius) var(--suggested-popup-radius) 0 0;
   background-image: linear-gradient(
@@ -2331,14 +2330,14 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 }
 
 /*
- * Bot Possible Hands: full-height Mahj-blue rim + recess wash (header lip + sides),
- * matching Suggested Hands geometry so the blue frame continues around the tray.
- * Header glow stays on ::before; stroke/wash paint here above scrolling rows.
+ * Bot Possible Hands: recess wash (header lip + sides); no tray rim border.
  */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
   .bot-exposure-hands-panel
   .hands-panel__content::after {
+  content: '';
+  position: absolute;
   z-index: 6;
   left: 0;
   right: 0;
@@ -2351,9 +2350,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   background-repeat: no-repeat;
   background-position: var(--hands-header-bottom-blur-position);
   background-size: var(--hands-header-bottom-blur-size);
-  /* Match Suggested Hands rim; blue recess wash stays via `--_bot-tray-side-blur`. */
-  border: var(--_bot-header-stroke-w) solid
-    color-mix(in srgb, #000 22%, var(--app-bg-base));
+  border: none;
   box-sizing: border-box;
   box-shadow: none;
   filter: none;

@@ -97,9 +97,7 @@
   /*
    * Hands tray recess wash — same darkness as selected-row fill (`--app-bg-row-active`),
    * under the header and continued down the left/right edges (3D lip / inset).
-   * Depth defaults are a reference at ~800px tray width; the open suggested-hands /
-   * bot-possible-hands overlay overrides these to track `--suggested-overlay-viewport-width`
-   * so the wash stays the same fraction of the tray on small windows (part-0123).
+   * Open suggested-hands / bot trays override depth to track overlay width (part-0123).
    */
   --hands-header-bottom-blur-h: 0.55rem;
   --hands-header-side-blur-w: 0.55rem;
@@ -107,24 +105,34 @@
   /*
    * `in oklab` uses premultiplied alpha so the fade doesn’t interpolate through black
    * (bare `transparent` in srgb leaves a hairline at the end of the wash on pale tiles).
-   * Layers: top lip, left edge, right edge.
+   * Layers: top lip, left edge, right edge. Extra stops soften the falloff so the wash
+   * feathers out instead of cutting off abruptly.
    */
   --hands-header-bottom-blur: linear-gradient(
       to bottom in oklab,
       var(--hands-header-bottom-blur-color) 0%,
-      color-mix(in oklab, var(--hands-header-bottom-blur-color) 55%, transparent) 42%,
+      color-mix(in oklab, var(--hands-header-bottom-blur-color) 62%, transparent) 22%,
+      color-mix(in oklab, var(--hands-header-bottom-blur-color) 32%, transparent) 48%,
+      color-mix(in oklab, var(--hands-header-bottom-blur-color) 12%, transparent) 72%,
+      color-mix(in oklab, var(--hands-header-bottom-blur-color) 3%, transparent) 90%,
       transparent 100%
     ),
     linear-gradient(
       to right in oklab,
       var(--hands-header-bottom-blur-color) 0%,
-      color-mix(in oklab, var(--hands-header-bottom-blur-color) 55%, transparent) 42%,
+      color-mix(in oklab, var(--hands-header-bottom-blur-color) 62%, transparent) 22%,
+      color-mix(in oklab, var(--hands-header-bottom-blur-color) 32%, transparent) 48%,
+      color-mix(in oklab, var(--hands-header-bottom-blur-color) 12%, transparent) 72%,
+      color-mix(in oklab, var(--hands-header-bottom-blur-color) 3%, transparent) 90%,
       transparent 100%
     ),
     linear-gradient(
       to left in oklab,
       var(--hands-header-bottom-blur-color) 0%,
-      color-mix(in oklab, var(--hands-header-bottom-blur-color) 55%, transparent) 42%,
+      color-mix(in oklab, var(--hands-header-bottom-blur-color) 62%, transparent) 22%,
+      color-mix(in oklab, var(--hands-header-bottom-blur-color) 32%, transparent) 48%,
+      color-mix(in oklab, var(--hands-header-bottom-blur-color) 12%, transparent) 72%,
+      color-mix(in oklab, var(--hands-header-bottom-blur-color) 3%, transparent) 90%,
       transparent 100%
     );
   --hands-header-bottom-blur-size: 100% var(--hands-header-bottom-blur-h),
