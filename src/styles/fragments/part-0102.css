@@ -289,6 +289,59 @@
   border-radius: var(--rack-tile-btn-border-radius);
 }
 
+/* Select card → Mock: Mahj Logic bird mark before the label. */
+.app-menu-modal .app-menu-tray__diff-btn.app-menu-modal__playable-card-btn--mock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Same pill size as 2025/2026 — label scale must not grow the button. */
+  height: 2.5rem;
+  min-height: 2.5rem;
+  max-height: 2.5rem;
+  box-sizing: border-box;
+  font-weight: 500;
+}
+
+.app-menu-modal
+  .app-menu-tray__diff-btn.app-menu-modal__playable-card-btn--mock.app-menu-tray__diff-btn--on:not(
+    :disabled
+  ) {
+  font-weight: 500;
+}
+
+.app-menu-modal__playable-card-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Visual-only scale so bird + “ock” grow without expanding the pill. */
+  transform: scale(1.18);
+  transform-origin: center;
+  /* Bird stands in for the leading M — pull “ock” into the mark. */
+  gap: 0;
+  line-height: 1;
+}
+
+.app-menu-modal__playable-card-label > span:last-child {
+  margin-left: -0.08em;
+}
+
+.app-menu-modal__playable-card-bird {
+  display: block;
+  flex: 0 0 auto;
+  /* Cap-height letter substitute without growing the pill (2.5rem min-height). */
+  width: 1.55em;
+  height: 1.55em;
+  background-color: currentColor;
+  -webkit-mask-image: url('../../assets/mahj-bird.svg');
+  mask-image: url('../../assets/mahj-bird.svg');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
 .app-menu-modal .app-menu-tray__diff-btn.app-menu-tray__diff-btn--on:not(:disabled),
 .app-menu-modal .app-menu-tray__diff-btn.app-menu-tray__diff-btn--on:hover:not(:disabled),
 .app-menu-modal .app-menu-tray__diff-btn.app-menu-tray__diff-btn--on:active:not(:disabled) {

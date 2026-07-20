@@ -12,10 +12,31 @@
 </script>
     <meta charset="UTF-8" />
     <!-- First paint before bundled CSS (Capacitor WKWebView + splash handoff). -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('mahjlogic.appTheme')
+          var colors = { dark: '#23282e', blue: '#1e2d42', purple: '#2a2438' }
+          if (t === 'tan') t = 'purple'
+          if (t !== 'blue' && t !== 'purple') t = 'dark'
+          document.documentElement.setAttribute('data-app-theme', t)
+          document.documentElement.style.backgroundColor = colors[t]
+        } catch (e) {
+          document.documentElement.setAttribute('data-app-theme', 'dark')
+          document.documentElement.style.backgroundColor = '#23282e'
+        }
+      })()
+    </script>
     <style>
       html {
         /* Match --app-bg-base / --app-bg-page-pad-color (solid app chrome). */
         background-color: #23282e;
+      }
+      html[data-app-theme='blue'] {
+        background-color: #1e2d42;
+      }
+      html[data-app-theme='purple'] {
+        background-color: #2a2438;
       }
       /*
        * iOS PWA: `apple-touch-startup-image` only fires when a media query matches the device

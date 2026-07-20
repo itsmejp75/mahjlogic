@@ -39,6 +39,14 @@ import { incomingBotDiscardDragId } from './mahjong/jokerSwapIds'
 import { discardedDefsForBlankExchange } from './mahjong/blankExchange'
 import { eastExposureSwapDropId, findNextJokerSwapTarget, collectHandTileIdsSwappableForJokers, collectSwappableJokerTileIds } from './mahjong/jokerSwapTarget'
 import { DEFAULT_TILE_GRAPHICS, isTileGraphics, MENU_TILE_GRAPHICS_ITEMS, TILE_GRAPHICS_LABEL, type TileGraphics } from './tiles/tileGraphics'
+import {
+  APP_THEMES,
+  APP_THEME_LABEL,
+  APP_THEME_PAGE_PAD_COLOR,
+  DEFAULT_APP_THEME,
+  isAppTheme,
+  type AppTheme,
+} from './app/appTheme'
 import { TileGraphicsProvider } from './tiles/TileGraphicsContext'
 import { AppMenuOpenGate, AppMenuOpenProvider, appMenuOpenApiRef, useAppMenuOpen } from './app/AppMenuOpenContext'
 import { SuggestedHandsTrayProvider, suggestedHandsTrayApiRef } from './app/SuggestedHandsTrayContext'
@@ -92,6 +100,8 @@ const BOT_WINS_LABEL = 'Bot wins'
 /** When false, rack / table action buttons use neutral gray (like Sort) instead of teal, purple, etc. */
 const LS_KEY_COLOR_BUTTONS = 'mahjlogic.colorButtonsEnabled'
 const LS_KEY_BOT_DIFFICULTY = 'mahjlogic.botDifficulty'
+/** Main chrome / background theme (`APP_THEMES` / `data-app-theme`). Default Dark. */
+const LS_KEY_APP_THEME = 'mahjlogic.appTheme'
 /**
  * Tile face style (`TILE_GRAPHICS` / `data-tile-graphics`). Product default is Illustrative Classic.
  * Today: persisted in localStorage only. When accounts exist, the player’s choice should live in
@@ -247,6 +257,25 @@ function readBotDifficultyFromStorage(): BotDifficulty {
     /* ignore */
   }
   return DEFAULT_BOT_DIFFICULTY
+}
+
+function readAppThemeFromStorage(): AppTheme {
+  try {
+    const v = localStorage.getItem(LS_KEY_APP_THEME)
+    if (v === 'tan') {
+      localStorage.setItem(LS_KEY_APP_THEME, 'purple')
+      return 'purple'
+    }
+    if (v != null && isAppTheme(v)) return v
+  } catch {
+    /* ignore */
+  }
+  return DEFAULT_APP_THEME
+}
+
+function applyAppThemeToDocument(theme: AppTheme): void {
+  document.documentElement.setAttribute('data-app-theme', theme)
+  document.documentElement.style.backgroundColor = APP_THEME_PAGE_PAD_COLOR[theme]
 }
 
 function readJokerSwapHintFromStorage(): boolean {
@@ -1913,6 +1942,7 @@ export default function App() {
   const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>(() => readBotDifficultyFromStorage())
   const botDifficultyRef = useRef(botDifficulty)
   botDifficultyRef.current = botDifficulty
+  const [appTheme, setAppTheme] = useState<AppTheme>(() => readAppThemeFromStorage())
   const [committedCardId, setCommittedCardId] = useState<PlayableCardId>(() => {
     const id = readPlayableCardFromStorage()
     setActiveCardPatterns(patternsForCard(id))
@@ -1975,6 +2005,20 @@ export default function App() {
       /* ignore */
     }
   }, [])
+
+  const setAppThemeMode = useCallback((t: AppTheme) => {
+    setAppTheme(t)
+    applyAppThemeToDocument(t)
+    try {
+      localStorage.setItem(LS_KEY_APP_THEME, t)
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  useLayoutEffect(() => {
+    applyAppThemeToDocument(appTheme)
+  }, [appTheme])
 
   const toggleBotWins = useCallback(() => {
     setBotWinsEnabled((v) => {
@@ -2166,6 +2210,10 @@ export default function App() {
       const b = readBotDifficultyFromStorage()
       return prev === b ? prev : b
     })
+    setAppTheme((prev) => {
+      const t = readAppThemeFromStorage()
+      return prev === t ? prev : t
+    })
     setTileGraphics((prev) => {
       const t = readTileGraphicsFromStorage()
       return prev === t ? prev : t
@@ -2241,6 +2289,9 @@ export default function App() {
         if (e.newValue == null) return
         if (isBotDifficulty(e.newValue)) setBotDifficulty(e.newValue)
         else if (e.newValue === 'unfair') setBotDifficulty('hard')
+      } else if (e.key === LS_KEY_APP_THEME) {
+        if (e.newValue == null || !isAppTheme(e.newValue)) return
+        setAppTheme(e.newValue)
       } else if (e.key === LS_KEY_TILE_GRAPHICS) {
         if (e.newValue == null || !isTileGraphics(e.newValue)) return
         setTileGraphics(e.newValue)
@@ -5106,6 +5157,7 @@ export default function App() {
     <SuggestedHandsBoundsOnTrayChange onChange={updateSuggestedDiscardOverlayBounds} />
     <div
       className="app"
+      data-app-theme={appTheme}
       data-tile-graphics={tileGraphics}
       data-color-buttons={colorButtonsEnabled ? 'on' : 'off'}
       data-animations={animationsEnabled ? 'on' : 'off'}
@@ -5156,15 +5208,24 @@ export default function App() {
                       className={[
                         'btn',
                         'app-menu-tray__diff-btn',
+                        id === 'mock' ? 'app-menu-modal__playable-card-btn--mock' : '',
                         menuCardId === id ? 'app-menu-tray__diff-btn--on' : '',
                       ]
                         .filter(Boolean)
                         .join(' ')}
                       role="radio"
                       aria-checked={menuCardId === id}
+                      aria-label={id === 'mock' ? PLAYABLE_CARD_LABEL[id] : undefined}
                       onClick={() => requestPlayableCard(id)}
                     >
-                      {PLAYABLE_CARD_LABEL[id]}
+                      {id === 'mock' ? (
+                        <span className="app-menu-modal__playable-card-label" aria-hidden="true">
+                          <span className="app-menu-modal__playable-card-bird" />
+                          <span>ock</span>
+                        </span>
+                      ) : (
+                        PLAYABLE_CARD_LABEL[id]
+                      )}
                     </button>
                   ))}
                 </div>
@@ -5209,6 +5270,35 @@ export default function App() {
                       onClick={() => setBotDifficultyLevel(d)}
                     >
                       {BOT_DIFFICULTY_LABEL[d]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="app-menu-modal__diff-block">
+                <div className="app-menu-modal__subhead" id="app-theme-menu-label">
+                  Theme
+                </div>
+                <div
+                  className="app-menu-tray__diff-row app-menu-modal__diff-row"
+                  role="radiogroup"
+                  aria-labelledby="app-theme-menu-label"
+                >
+                  {APP_THEMES.map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      className={[
+                        'btn',
+                        'app-menu-tray__diff-btn',
+                        appTheme === t ? 'app-menu-tray__diff-btn--on' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      role="radio"
+                      aria-checked={appTheme === t}
+                      onClick={() => setAppThemeMode(t)}
+                    >
+                      {APP_THEME_LABEL[t]}
                     </button>
                   ))}
                 </div>
