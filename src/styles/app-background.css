@@ -97,6 +97,9 @@
   /*
    * Hands tray recess wash — same darkness as selected-row fill (`--app-bg-row-active`),
    * under the header and continued down the left/right edges (3D lip / inset).
+   * Depth defaults are a reference at ~800px tray width; the open suggested-hands /
+   * bot-possible-hands overlay overrides these to track `--suggested-overlay-viewport-width`
+   * so the wash stays the same fraction of the tray on small windows (part-0123).
    */
   --hands-header-bottom-blur-h: 0.55rem;
   --hands-header-side-blur-w: 0.55rem;

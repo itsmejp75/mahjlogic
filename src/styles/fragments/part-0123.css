@@ -2177,6 +2177,20 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 }
 
 /*
+ * Recess wash depth tracks overlay width so lip/side shadowing keeps a constant tray
+ * fraction across window sizes (fixed rem looked too heavy on narrow viewports).
+ * 1.1% ≈ 0.55rem at ~800px overlay width; inherits into Suggested Hands + bot trays.
+ */
+.app
+  .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open {
+  --hands-header-side-blur-w: max(
+    2px,
+    calc(var(--suggested-overlay-viewport-width, 100vw) * 0.011)
+  );
+  --hands-header-bottom-blur-h: var(--hands-header-side-blur-w);
+}
+
+/*
  * Hands tray body fill — behind the list. Rim + lip wash paint on ::after (above rows).
  */
 .app
@@ -2219,11 +2233,13 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   pointer-events: none;
   box-sizing: border-box;
   background-color: transparent;
+  /* Softer rim + recess wash than the near-black default (base is already #23282e). */
+  --hands-header-bottom-blur-color: color-mix(in srgb, var(--app-bg-base) 78%, #000 22%);
   background-image: var(--hands-header-bottom-blur);
   background-repeat: no-repeat;
   background-position: var(--hands-header-bottom-blur-position);
   background-size: var(--hands-header-bottom-blur-size);
-  border: 1px solid color-mix(in srgb, #000 62%, var(--app-bg-base));
+  border: 1px solid color-mix(in srgb, #000 22%, var(--app-bg-base));
   box-shadow: none;
 }
 
@@ -2337,7 +2353,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   background-size: var(--hands-header-bottom-blur-size);
   /* Match Suggested Hands rim; blue recess wash stays via `--_bot-tray-side-blur`. */
   border: var(--_bot-header-stroke-w) solid
-    color-mix(in srgb, #000 62%, var(--app-bg-base));
+    color-mix(in srgb, #000 22%, var(--app-bg-base));
   box-sizing: border-box;
   box-shadow: none;
   filter: none;

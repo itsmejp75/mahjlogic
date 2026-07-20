@@ -119,7 +119,7 @@ export function topBandDropFrameForOverId(overId: string | null | undefined): To
  * Returns null if the exposure has no joker or the natural tile doesn't match.
  */
 export function findJokerSwapTargetAtExposure(
-  botExposures: BotExposure[],
+  botExposures: readonly BotExposure[],
   exposureIdx: number,
   naturalDef: TileDef,
 ): JokerSwapTargetPick | null {
@@ -132,7 +132,7 @@ export function findJokerSwapTargetAtExposure(
 
 /** Redeem a joker in your own (East) exposure. */
 export function findJokerSwapTargetAtEastExposure(
-  eastExposures: EastExposure[],
+  eastExposures: readonly EastExposure[],
   exposureIdx: number,
   naturalDef: TileDef,
 ): JokerSwapTargetPick | null {
@@ -145,7 +145,7 @@ export function findJokerSwapTargetAtEastExposure(
 
 /** First legal joker swap on your own rack (seat-wide drop). */
 export function findJokerSwapTargetInEastRack(
-  eastExposures: EastExposure[],
+  eastExposures: readonly EastExposure[],
   naturalDef: TileDef,
 ): JokerSwapTargetPick | null {
   for (let i = 0; i < eastExposures.length; i++) {
@@ -163,8 +163,8 @@ export function findJokerSwapTargetInEastRack(
 export function jokerSwapDropIdAcceptsNatural(
   overId: string,
   naturalDef: TileDef,
-  botExposures: BotExposure[],
-  eastExposures: EastExposure[],
+  botExposures: readonly BotExposure[],
+  eastExposures: readonly EastExposure[],
 ): boolean {
   if (overId === EAST_SEAT_SWAP_ID) {
     return findJokerSwapTargetInEastRack(eastExposures, naturalDef) != null
@@ -184,7 +184,7 @@ export function jokerSwapDropIdAcceptsNatural(
 
 /** Finds the first legal joker swap target in a specific bot seat's exposures. */
 export function findJokerSwapTargetAtSeat(
-  botExposures: BotExposure[],
+  botExposures: readonly BotExposure[],
   seat: BotSeat,
   naturalDef: TileDef,
 ): JokerSwapTargetPick | null {
@@ -199,7 +199,7 @@ export function findJokerSwapTargetAtSeat(
 
 /** First legal bot joker swap in compass order: East, South, West, North. */
 export function findNextBotJokerSwapTarget(
-  botExposures: BotExposure[],
+  botExposures: readonly BotExposure[],
   naturalDef: TileDef,
 ): JokerSwapTargetPick | null {
   for (const seat of JOKER_SWAP_SEAT_ORDER) {
@@ -213,8 +213,8 @@ export function findNextBotJokerSwapTarget(
  * Picks one exposed joker East may reclaim with `naturalDef`, preferring earlier seats in turn order.
  */
 export function findNextJokerSwapTarget(
-  botExposures: BotExposure[],
-  eastExposures: EastExposure[],
+  botExposures: readonly BotExposure[],
+  eastExposures: readonly EastExposure[],
   naturalDef: TileDef,
 ): JokerSwapTargetPick | null {
   for (const seat of JOKER_SWAP_SEAT_ORDER) {
@@ -252,9 +252,9 @@ function uniqueNaturalDefs(tiles: TileInstance[]): TileDef[] {
  * train stays on it until the discard is committed.
  */
 export function collectHandTileIdsSwappableForJokers(
-  hand: TileInstance[],
-  botExposures: BotExposure[],
-  eastExposures: EastExposure[],
+  hand: readonly TileInstance[],
+  botExposures: readonly BotExposure[],
+  eastExposures: readonly EastExposure[],
   pendingDiscard?: TileInstance | null,
 ): Set<string> {
   const ids = new Set<string>()
@@ -282,10 +282,10 @@ export function collectHandTileIdsSwappableForJokers(
  * bot rows and your own East exposures.
  */
 export function collectSwappableJokerTileIds(
-  hand: TileInstance[],
+  hand: readonly TileInstance[],
   pendingEastDiscard: TileInstance | null,
-  botExposures: BotExposure[],
-  eastExposures: EastExposure[],
+  botExposures: readonly BotExposure[],
+  eastExposures: readonly EastExposure[],
 ): Set<string> {
   const fromPlayer: TileInstance[] = hand.filter((t) => t.def.cat !== 'joker')
   if (pendingEastDiscard && pendingEastDiscard.def.cat !== 'joker') {
