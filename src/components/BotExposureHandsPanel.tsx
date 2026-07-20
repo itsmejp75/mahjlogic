@@ -206,7 +206,12 @@ export const BotExposureHandsPanel = memo(function BotExposureHandsPanel({
                       <div className="bot-exposure-hands-list__cat">
                         <span className="hands-sheet__category">
                           {suggestedHandSectionMenuLabel(p.section)}
-                          <span className="hands-sheet__section-num"> - {cardRef}</span>
+                          <span className="hands-sheet__section-num">
+                            <span className="hands-sheet__section-hash" aria-hidden="true">
+                              #
+                            </span>
+                            {cardRef}
+                          </span>
                         </span>
                       </div>
                       <div

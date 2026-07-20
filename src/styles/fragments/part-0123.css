@@ -2154,7 +2154,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 }
 
 /*
- * Below the hands header: same dark gray as main app chrome (`--app-bg-hands-tray`).
+ * Below the hands header: slightly darker than main app chrome (`--app-bg-hands-tray`).
  * Top corners use `--suggested-popup-radius` (same as the tray foot) so the list curves
  * down from the header. Paint on non-scrolling ancestors — never on `.hands-sheet__rows`
  * / `.hands-list` (those are overflow-y scrollers; a 100vw absolute ::before there creates

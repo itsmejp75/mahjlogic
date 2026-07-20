@@ -315,6 +315,17 @@ code {
 
 .card-ink {
   font-weight: 600;
+  /* Extra air between space-separated melds / pairs / singles (not within a group). */
+  word-spacing: 0.18em;
+}
+
+/*
+ * Between color runs: title segments used a trailing regular space, but that collapses at the
+ * end of a flex item (hands-tray hand line), so red/green/navy groups could sit flush. Margin
+ * keeps the same visual gap as a word-spaced space (~0.25em + word-spacing).
+ */
+.card-ink + .card-ink {
+  margin-inline-start: 0.43em;
 }
 
 .card-ink--neutral {

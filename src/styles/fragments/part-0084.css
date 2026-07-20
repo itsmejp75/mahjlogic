@@ -372,7 +372,7 @@
       calc(var(--pass-strip-box-w) * 0.1308),
       calc(var(--pass-strip-box-w) / 8.25),
       calc(var(--rack-tile-h) / 4.15)
-    ) * 0.9
+    ) * 0.8
   );
 }
 
@@ -425,11 +425,8 @@
   width: var(--rack-tile-w, var(--hand-rack-tile-w));
   min-width: var(--rack-tile-w, var(--hand-rack-tile-w));
   padding: 0.22em 0;
-  /* Same corner radius as made-rack / hand-tray tile faces. */
-  border-radius: var(
-    --tile-face-border-radius,
-    calc(var(--rack-tile-w, var(--hand-rack-tile-w)) * 0.132)
-  );
+  /* Full capsule ends (semicircle left/right), not tile-face corners. */
+  border-radius: 9999px;
   /* Same ink as the inactive `Seat:` prefix (not `--window-fg`). */
   color: #c2c2c8;
   opacity: 0.92;
@@ -469,51 +466,29 @@
     inset 0 -1px 0 color-mix(in srgb, var(--color-black) 26%, transparent);
 }
 
+/*
+ * Rounded lip (no hard chamfer ring): soft inset shadows follow the capsule.
+ * Keep blur high enough that the edge feathers — no visible inner cut line.
+ */
+.app[data-tile-graphics='classic'] .panel--hand .panel-hand-rack__seat-label__chip--turn,
+.app[data-tile-graphics='solid-color'] .panel--hand .panel-hand-rack__seat-label__chip--turn,
+.app[data-tile-graphics='light'] .panel--hand .panel-hand-rack__seat-label__chip--turn,
+.app[data-tile-graphics='dark'] .panel--hand .panel-hand-rack__seat-label__chip--turn,
+.app[data-tile-graphics='illustrative-classic'] .panel--hand .panel-hand-rack__seat-label__chip--turn {
+  box-shadow:
+    inset 0 1.5px 3px color-mix(in srgb, #ffffff 36%, transparent),
+    inset 0 -2px 3.5px color-mix(in srgb, #1c1916 34%, transparent),
+    inset 1.5px 0 3px color-mix(in srgb, #1c1916 12%, transparent),
+    inset -1.5px 0 3px color-mix(in srgb, #1c1916 12%, transparent);
+}
+
+/* No ::before rim on the seat chip — hard masked rings read as a chamfer line. */
 .app[data-tile-graphics='classic'] .panel--hand .panel-hand-rack__seat-label__chip--turn::before,
 .app[data-tile-graphics='solid-color'] .panel--hand .panel-hand-rack__seat-label__chip--turn::before,
 .app[data-tile-graphics='light'] .panel--hand .panel-hand-rack__seat-label__chip--turn::before,
 .app[data-tile-graphics='dark'] .panel--hand .panel-hand-rack__seat-label__chip--turn::before,
 .app[data-tile-graphics='illustrative-classic'] .panel--hand .panel-hand-rack__seat-label__chip--turn::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  border-radius: inherit;
-  pointer-events: none;
-  --tile-rim-fade: 9%;
-  --tile-shadow-fade: 7.5%;
-  /* Gradients only — BAM-scale inset box-shadows flash as a large outer shadow for a frame
-   * when this pseudo mounts on the small Seat: chip (WebKit). */
-  background:
-    linear-gradient(
-      to bottom,
-      var(--tile-rim-top-peak) 0%,
-      var(--tile-rim-top-mid) calc(var(--tile-rim-fade) * 0.4),
-      var(--tile-rim-top-tail) calc(var(--tile-rim-fade) * 0.75),
-      transparent var(--tile-rim-fade)
-    ),
-    linear-gradient(
-      to top,
-      rgba(28, 25, 22, 0.55) 0%,
-      rgba(28, 25, 22, 0.2) calc(var(--tile-shadow-fade) * 0.4),
-      rgba(28, 25, 22, 0.05) calc(var(--tile-shadow-fade) * 0.75),
-      transparent var(--tile-shadow-fade)
-    ),
-    linear-gradient(
-      to right,
-      rgba(28, 25, 22, 0.45) 0%,
-      rgba(28, 25, 22, 0.14) calc(var(--tile-shadow-fade) * 0.4),
-      rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
-      transparent calc(var(--tile-shadow-fade) * 0.92)
-    ),
-    linear-gradient(
-      to left,
-      rgba(28, 25, 22, 0.45) 0%,
-      rgba(28, 25, 22, 0.14) calc(var(--tile-shadow-fade) * 0.4),
-      rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
-      transparent calc(var(--tile-shadow-fade) * 0.92)
-    );
-  box-shadow: none;
+  content: none;
 }
 
 .panel--hand .panel-hand-rack__seat-label__chip--called {

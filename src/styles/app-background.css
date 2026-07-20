@@ -9,12 +9,12 @@
  * Where it is applied: part-0123.css block “Main app background surfaces”.
  * Suggested-hands shell stays transparent so this paint shows through.
  * Main app chrome is a solid `--app-bg-base` (matches page footer pad).
- * Hands tray body matches `--app-bg-base` (same dark gray as main chrome).
+ * Hands tray body is a touch darker than `--app-bg-base`.
  * Discard lower band stays solid chrome. Excluded on purpose: slot wells (`--app-bg-slot-well`).
  *
  * Quick tweaks:
  *   --app-bg-base       solid app chrome / footer pad color (also sync index.html)
- *   --app-bg-hands-tray hands tray body (same as `--app-bg-base`)
+ *   --app-bg-hands-tray hands tray body (slightly darker than `--app-bg-base`)
  *   --app-bg-lower-*    lower play band (matches `--app-bg-base`)
  *   --hands-row-active-fill / --app-bg-row-active / --app-bg-top-band-*
  *                       selected hands row + top B/C/D·S/W/N band
@@ -36,8 +36,8 @@
   --app-bg-flat: #5c6066;
   --app-bg-slot-well: #5c6066;
 
-  /* Hands tray body — same solid dark gray as main app chrome. */
-  --app-bg-hands-tray: var(--app-bg-base);
+  /* Hands tray body — a touch darker than main app chrome. */
+  --app-bg-hands-tray: color-mix(in srgb, var(--app-bg-base) 88%, #000 12%);
 
   /* --- Vignette (flattened — solid app bg) --- */
   --app-bg-vignette-shape: ellipse 140% 115% at 50% 42%;

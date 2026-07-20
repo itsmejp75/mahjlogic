@@ -1498,8 +1498,8 @@
   font-weight: 400;
   letter-spacing: 0;
   opacity: 0.75;
-  /* Flex row: explicit gap before “#n” so it never reads as SECTION#n */
-  margin-left: 0.35em;
+  /* ~two spaces between category name and hand # (no dash). */
+  margin-left: 0.55em;
 }
 
 /* Suggested-hands list typography; tile metrics follow list column width (see @container below). */
@@ -1769,15 +1769,19 @@
   padding-inline: var(--hands-sheet-metric-pad-x);
 }
 
-/* Away / Points numerals — same ink as rack `Hands` (`.suggested-hands-tab`, part-0103 / 0064). */
+/* Category + Odds / Away / Points body — a touch brighter than metric column titles. */
+.panel--hands .hands-sheet__category,
+.panel--hands .hands-sheet__cell--odds:not(.hands-sheet__cell--header),
 .panel--hands .hands-sheet__cell--away:not(.hands-sheet__cell--header),
 .panel--hands .hands-sheet__cell--values:not(.hands-sheet__cell--header) {
-  color: #dcdce0;
+  color: #d0d0d6;
 }
 
+.app[data-color-buttons='off'] .panel--hands .hands-sheet__category,
+.app[data-color-buttons='off'] .panel--hands .hands-sheet__cell--odds:not(.hands-sheet__cell--header),
 .app[data-color-buttons='off'] .panel--hands .hands-sheet__cell--away:not(.hands-sheet__cell--header),
 .app[data-color-buttons='off'] .panel--hands .hands-sheet__cell--values:not(.hands-sheet__cell--header) {
-  color: var(--color-white);
+  color: #d0d0d6;
 }
 
 /* Metric columns: never ellipsis long digit strings; clip only if the track is truly too small. */
@@ -2247,9 +2251,10 @@
 .hands-sheet__category {
   display: inline-flex;
   align-items: baseline;
-  gap: 0.3em;
+  /* ~two spaces between category name and hand # (no dash). */
+  gap: 0.55em;
   white-space: nowrap;
-  font-weight: 500;
+  font-weight: 400;
   letter-spacing: 0.04em;
   /* Smaller than hand text but larger than the title row. */
   font-size: 0.78em;
@@ -2258,6 +2263,12 @@
 .hands-sheet__section-num {
   font-weight: 400;
   opacity: 0.75;
+}
+
+.hands-sheet__section-hash,
+.hands-list__section-hash {
+  font-size: 0.72em;
+  margin-inline-end: 0.05em;
 }
 
 .hands-sheet__hand-title {
@@ -2269,7 +2280,7 @@
 
 .hands-sheet__paren {
   margin-inline-start: 0.35em;
-  opacity: 0.7;
+  opacity: 0.55;
 }
 
 /* Hands-only (`:not(.hands-sheet--tiles2)`): single-line cells; sheet `cqi` font scales text down instead of wrapping. */
@@ -2815,7 +2826,7 @@
   /* Fixed cell-relative size — same on every row; not tied to per-hand title shrink. */
   font-size: 0.58em;
   line-height: 1.15;
-  opacity: 0.72;
+  opacity: 0.55;
   text-align: left;
   white-space: nowrap;
   overflow: hidden;
@@ -3407,7 +3418,7 @@
   margin-bottom: 0.18em;
   padding: 0;
   font-size: 0.68em;
-  opacity: 0.72;
+  opacity: 0.55;
   text-align: left;
 }
 

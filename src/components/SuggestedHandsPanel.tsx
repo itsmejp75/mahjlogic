@@ -44,6 +44,7 @@ import {
   isSuggestedHandSectionFilterEnabled,
   suggestedHandSectionMenuLabel,
 } from '../suggestedHands/filterSettings'
+import { cardInkRunText } from './CardColoredText'
 import { DeadCauseWarning } from './DeadCauseWarning'
 import { TileFace } from './TileFace'
 
@@ -486,21 +487,24 @@ const CardColoredTextWithDeadCause = memo(function CardColoredTextWithDeadCause(
 }) {
   return (
     <>
-      {segments.map((s, i) => (
-        <span key={i} className={`card-ink card-ink--${s.ink}`}>
-          {deadCause
-            ? splitTitleTextForDeadCause(s.t, deadCause.defs).map((part, j) =>
-                part.highlight ? (
-                  <span key={j} className="hands-list__title-dead-cause-run">
-                    {part.text}
-                  </span>
-                ) : (
-                  part.text
-                ),
-              )
-            : s.t}
-        </span>
-      ))}
+      {segments.map((s, i) => {
+        const runText = cardInkRunText(s.t)
+        return (
+          <span key={i} className={`card-ink card-ink--${s.ink}`}>
+            {deadCause
+              ? splitTitleTextForDeadCause(runText, deadCause.defs).map((part, j) =>
+                  part.highlight ? (
+                    <span key={j} className="hands-list__title-dead-cause-run">
+                      {part.text}
+                    </span>
+                  ) : (
+                    part.text
+                  ),
+                )
+              : runText}
+          </span>
+        )
+      })}
     </>
   )
 })
@@ -813,7 +817,7 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
   const cardRef = suggestedHandCardRefDisplay(h)
   const handNotationOn = showCardHandNotation()
   const ariaLabel = [
-    `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}`,
+    `${suggestedHandSectionMenuLabel(h.section)} #${cardRef}`,
     handNotationOn ? h.title + (h.closed ? ', concealed' : '') : h.closed ? 'concealed' : null,
     `${h.tilesNeededRough} tiles away`,
     showHandProbability ? suggestedHandCompletionProbabilityLabel(h.completionProbability) : null,
@@ -873,7 +877,12 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
         >
           <span className="hands-sheet__category">
             {suggestedHandSectionMenuLabel(h.section)}
-            <span className="hands-sheet__section-num"> - {cardRef}</span>
+            <span className="hands-sheet__section-num">
+              <span className="hands-sheet__section-hash" aria-hidden="true">
+                #
+              </span>
+              {cardRef}
+            </span>
           </span>
         </div>
         {showDetailRow ? (
@@ -1062,7 +1071,7 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
   const rowAriaLabel =
     !handsListOn || !showHandCategoryLabels
       ? [
-          `${suggestedHandSectionMenuLabel(h.section)} - ${cardRef}`,
+          `${suggestedHandSectionMenuLabel(h.section)} #${cardRef}`,
           handNotationOn
             ? h.title + (h.closed ? ', concealed' : '')
             : h.closed
@@ -1121,7 +1130,12 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
           >
             <span className="hands-list__with-tiles-category">
               {suggestedHandSectionMenuLabel(h.section)}
-              <span className="hands-list__section-num"> - {cardRef}</span>
+              <span className="hands-list__section-num">
+                <span className="hands-list__section-hash" aria-hidden="true">
+                  #
+                </span>
+                {cardRef}
+              </span>
             </span>
             {handsListOn ? (
               <span
