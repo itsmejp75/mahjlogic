@@ -100,7 +100,7 @@ const BOT_WINS_LABEL = 'Bot wins'
 /** When false, rack / table action buttons use neutral gray (like Sort) instead of teal, purple, etc. */
 const LS_KEY_COLOR_BUTTONS = 'mahjlogic.colorButtonsEnabled'
 const LS_KEY_BOT_DIFFICULTY = 'mahjlogic.botDifficulty'
-/** Main chrome / background theme (`APP_THEMES` / `data-app-theme`). Default Grape. */
+/** Main chrome / background theme (`APP_THEMES` / `data-app-theme`). Default Dark. */
 const LS_KEY_APP_THEME = 'mahjlogic.appTheme'
 /**
  * Tile face style (`TILE_GRAPHICS` / `data-tile-graphics`). Product default is Illustrative Classic.
