@@ -2476,13 +2476,18 @@ function stripSlotAcceptsNatural(p: PracticePattern, targetDef: TileDef, natural
   if (targetDef.cat === 'dragon' && targetDef.dragon === 'any' && naturalDef.cat === 'dragon') {
     return true
   }
-  // W&D #2: meld slots are 3+3+4; dragon **type** permutes — any held dragon fits its assigned slot.
+  // W&D #2: meld sizes permute, but printed G/R/Soap cells stay typed — a soap natural must not
+  // occupy a green cell (that stole joker slots and ordered the rack G, Soap, J, J).
   if (
     targetDef.cat === 'dragon' &&
     naturalDef.cat === 'dragon' &&
     p.groups?.some((g) => g.kind === 'dragon-meld-permute')
   ) {
-    return true
+    return (
+      targetDef.dragon === naturalDef.dragon ||
+      targetDef.dragon === 'any' ||
+      naturalDef.dragon === 'any'
+    )
   }
   if (firstOpposingConsecutiveStandInPairFromTitle(p) == null) return false
   if (!p.groups?.some((g) => g.kind === 'consec')) return false
@@ -3025,6 +3030,11 @@ export type SuggestedStripSlot = {
   /** True when this cell is the next legal joker fill target in the suggested meld. */
   jokerSuggested: boolean
   /**
+   * Rack tile id shown in this cell (natural or joker), when assigned. Used so focused Sort
+   * follows the same left-to-right order as the tray strip (including left-anchored jokers).
+   */
+  tileId?: string | null
+  /**
    * Pattern group index when this cell belongs to a claim meld that is fully on the table
    * (boxed on the suggested-hands tile strip, same idea as bot possible-hands).
    */
@@ -3388,7 +3398,7 @@ function buildSuggestedStripSlotsFromStripDefs(
       }
     }
 
-    return { displayDef, cardInk, highlight, jokerSuggested }
+    return { displayDef, cardInk, highlight, jokerSuggested, tileId: tid }
   })
   for (let i = 0; i < provisional.length; i++) {
     const tid = assign.slotTileIdByStripIndex[i]
@@ -3398,6 +3408,7 @@ function buildSuggestedStripSlotsFromStripDefs(
         displayDef: defs[i]!,
         highlight: true,
         jokerSuggested: false,
+        tileId: tid,
       }
     }
   }
@@ -5432,13 +5443,17 @@ function buildResolvedCardLineDefsForFill(
   })
 }
 
-/** Compute the strip-ordered, deduplicated list of hand-tile IDs that the pinned pattern uses. */
+/**
+ * Compute the strip-ordered hand-tile IDs for a focused pattern.
+ * Uses the same tray strip builder as the suggested-hands UI so Sort matches what you see
+ * (including left-anchored jokers within each meld run).
+ */
 function stripOrderedHandIdsForPattern(
   pinnedP: PracticePattern,
   rackForPattern: TileInstance[],
   handIds: Set<string>,
   exposureTileIds?: ReadonlySet<string>,
-  displayPattern: PracticePattern = pinnedP,
+  exposureMelds?: readonly ExposureMeld[],
 ): { orderedIds: string[]; usedIds: Set<string> } {
   const greedyOpts = exposureTileIds?.size ? { exposureTileIds } : undefined
   const detail = greedyPatternMatchDetail(rackForPattern, pinnedP, greedyOpts)
@@ -5449,125 +5464,28 @@ function stripOrderedHandIdsForPattern(
       if (pinnedP.matches(t.def)) bestIds.add(t.id)
     }
   }
-  const stripDefs = resolveStripTargetDefsForGreedyMatch(
-    pinnedP,
-    rackForPattern,
-    detail.usedMeta,
-    exposureTileIds,
-  )
-  const { slotTileIdByStripIndex } = computePreviewStripAssignment(
+
+  // Build the strip from the focused/pinned pattern (same path as the tray row you clicked).
+  const { rows } = buildSuggestedStripSlotRowsWithVariants(
     pinnedP,
     rackForPattern,
     detail.usedOrder,
     bestIds,
     detail.usedMeta,
-    stripDefs,
-    greedyOpts,
+    exposureTileIds,
+    exposureMelds,
   )
-  // `slotTileIdByStripIndex` follows `computePreviewStripAssignment` defs (usually group order,
-  // plus per-pattern permutes like like-2 / consec-6). `patternLinePreviewDefs` is the printed
-  // card line (title segments) — the same read as the strip + double-click rack sort.
-  const displayDefs = patternLinePreviewDefs(pinnedP)
-  const defsByDisplay =
-    displayDefs.length > 0 && displayDefs.length === slotTileIdByStripIndex.length
-      ? displayDefs
-      : stripDefs
-  const byId = new Map(rackForPattern.map((t) => [t.id, t] as const))
-  const titleOrderDefs = resolveTitleOrderDefsFromResolvedStrip(displayPattern, stripDefs)
-  const jokerEli = patternPreviewJokerEligibleBySlot(pinnedP)
-
-  const slots: (string | null)[] =
-    slotTileIdByStripIndex.length > 0
-      ? [...slotTileIdByStripIndex]
-      : defsByDisplay.map(() => null)
-  const slotDefsInAssignmentOrder = (() => {
-    if (stripDefs.length !== slots.length) return defsByDisplay
-    return reorderTileDefsByCardLineFromGroupMap(stripDefs, pinnedP.cardLineFromGroupSlotMap)
-  })()
-
-  if (titleOrderDefs && titleOrderDefs.length === slots.length && slotDefsInAssignmentOrder.length === slots.length) {
-    const used = new Set<number>()
-    const reorderedSlots: (string | null)[] = []
-    for (const d of titleOrderDefs) {
-      const idx = slotDefsInAssignmentOrder.findIndex((candidate, i) => !used.has(i) && tileDefsEqual(candidate, d))
-      if (idx < 0) {
-        reorderedSlots.length = 0
-        break
-      }
-      used.add(idx)
-      reorderedSlots.push(slots[idx] ?? null)
-    }
-    if (reorderedSlots.length === slots.length) {
-      slots.splice(0, slots.length, ...reorderedSlots)
-    }
-  }
-  /* Resolved perm suits in title order — not stand-in preview suits (green→bam, etc.). */
-  const cardLineDefs =
-    titleOrderDefs && titleOrderDefs.length === slots.length ? titleOrderDefs : displayDefs
-  const titlePreviewReorder =
-    pinnedP.skipStripTitleReorder === true
-      ? null
-      : reorderSlotAssignmentsToTitlePreviewSlots(
-          slots,
-          cardLineDefs,
-          rackForPattern,
-          pinnedP,
-          jokerEli,
-          detail.usedOrder.filter((id) => bestIds.has(id)),
-        )
-  if (titlePreviewReorder) {
-    slots.splice(0, slots.length, ...titlePreviewReorder.slots)
-  }
-  const fillDefs = buildResolvedCardLineDefsForFill(
-    pinnedP,
-    stripDefs,
-    displayDefs,
-    titleOrderDefs,
-  )
-  const n = Math.min(slots.length, fillDefs.length)
-  const inSlots = new Set<string>(slots.filter((x): x is string => x != null))
-
-  // Fill any gaps left by `buildPreviewSlotKindsFromGroups` in **card index** order, using
-  // `detail.usedOrder` only as a tie / priority list — not as the final left-to-right order
-  // (the old `usedOrder` tail put greedy match order first and scrambled FF before consec, etc.).
-  for (let i = 0; i < n; i++) {
-    if (slots[i] != null) continue
-    const d = fillDefs[i]!
-    for (const id of detail.usedOrder) {
-      if (inSlots.has(id) || !handIds.has(id) || !bestIds.has(id)) continue
-      const t = byId.get(id)
-      if (!t) continue
-      if (tileDefsEqual(t.def, d) || stripSlotAcceptsNatural(pinnedP, d, t.def)) {
-        slots[i] = id
-        inSlots.add(id)
-        break
-      }
-    }
-  }
-  for (let i = 0; i < n; i++) {
-    if (slots[i] != null) continue
-    const d = fillDefs[i]!
-    if (!previewSlotAllowsJoker(d, pinnedP, i, jokerEli)) continue
-    for (const id of detail.usedOrder) {
-      if (inSlots.has(id) || !handIds.has(id) || !bestIds.has(id)) continue
-      const t = byId.get(id)
-      if (t?.def.cat === 'joker') {
-        slots[i] = id
-        inSlots.add(id)
-        break
-      }
-    }
-  }
+  const row = rows[0] ?? []
 
   const orderedIds: string[] = []
   const seen = new Set<string>()
-  for (let i = 0; i < n; i++) {
-    const id = slots[i]
+  for (const slot of row) {
+    const id = slot.tileId
     if (id == null || !handIds.has(id) || seen.has(id)) continue
     orderedIds.push(id)
     seen.add(id)
   }
-  return { orderedIds, usedIds: new Set(orderedIds) }
+  return { orderedIds, usedIds: seen }
 }
 
 /** Blanks never occupy strip slots; group them after pattern-sorted tiles (rack order preserved). */
@@ -5622,7 +5540,7 @@ export function sortHandForSuggestedPattern(
     rackForPattern,
     handIds,
     exposureTileIds,
-    basePattern,
+    playerClaimMelds.length > 0 ? playerClaimMelds : undefined,
   )
   for (const id of orderedIds) {
     if (seen.has(id)) continue
@@ -5681,7 +5599,7 @@ export function sortFullRackTilesForPattern(
     rackForPattern,
     rackIds,
     exposureTileIds,
-    basePattern,
+    playerClaimMelds.length > 0 ? playerClaimMelds : undefined,
   )
   for (const id of orderedIds) {
     if (seen.has(id)) continue

@@ -26,15 +26,15 @@
 
 :root {
   /* --- Color --- */
-  /* Solid app chrome — same as page footer pad. */
-  --app-bg-page-pad-color: #23282e;
+  /* Solid app chrome — same as page footer pad. Default Grape. */
+  --app-bg-page-pad-color: #2a2438;
   --app-bg-base: var(--app-bg-page-pad-color);
   --app-bg-highlight: var(--app-bg-page-pad-color);
   --app-bg-shadow: var(--app-bg-page-pad-color);
 
   /* Surfaces that intentionally stay flat (not the textured main background). */
-  --app-bg-flat: #5c6066;
-  --app-bg-slot-well: #5c6066;
+  --app-bg-flat: #564a6a;
+  --app-bg-slot-well: #564a6a;
 
   /* Hands tray body — a touch darker than main app chrome. */
   --app-bg-hands-tray: color-mix(in srgb, var(--app-bg-base) 84%, #000 16%);
@@ -63,7 +63,7 @@
   );
   /* Legacy alias */
   --app-bg-lower-darken-end: var(--app-bg-lower-band-shadow);
-  --app-bg-page-pad-color: #23282e;
+  --app-bg-page-pad-color: #2a2438;
   --app-bg-lower-band-paint-color: var(--app-bg-base);
   --app-bg-lower-band-paint-image: none;
   --app-bg-lower-band-paint-size: auto;
@@ -296,18 +296,18 @@
 
 /*
  * App background themes — `data-app-theme` on `html` (and mirrored on `.app`).
- * Dark is the `:root` default above. Blue / Purple retint the main chrome pad.
+ * Grape (purple) is the `:root` default above. Denim / Chalkboard retint the main chrome pad.
  * Keep solid pad colors in sync with `APP_THEME_PAGE_PAD_COLOR` in `src/app/appTheme.ts`
  * and the first-paint script in `index.html`.
  */
-html[data-app-theme='dark'],
+html[data-app-theme='purple'],
 html:not([data-app-theme]) {
-  --app-bg-page-pad-color: #23282e;
+  --app-bg-page-pad-color: #2a2438;
   --app-bg-base: var(--app-bg-page-pad-color);
   --app-bg-highlight: var(--app-bg-page-pad-color);
   --app-bg-shadow: var(--app-bg-page-pad-color);
-  --app-bg-flat: #5c6066;
-  --app-bg-slot-well: #5c6066;
+  --app-bg-flat: #564a6a;
+  --app-bg-slot-well: #564a6a;
 }
 
 html[data-app-theme='blue'] {
@@ -319,13 +319,13 @@ html[data-app-theme='blue'] {
   --app-bg-slot-well: #4a5f78;
 }
 
-html[data-app-theme='purple'] {
-  --app-bg-page-pad-color: #2a2438;
+html[data-app-theme='dark'] {
+  --app-bg-page-pad-color: #23282e;
   --app-bg-base: var(--app-bg-page-pad-color);
   --app-bg-highlight: var(--app-bg-page-pad-color);
   --app-bg-shadow: var(--app-bg-page-pad-color);
-  --app-bg-flat: #564a6a;
-  --app-bg-slot-well: #564a6a;
+  --app-bg-flat: #5c6066;
+  --app-bg-slot-well: #5c6066;
 }
 
 /*
