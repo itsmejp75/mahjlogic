@@ -774,7 +774,8 @@
   flex-direction: row;
   align-items: center;
   flex-wrap: nowrap;
-  gap: 0.18rem;
+  /* Same as hand-title-line: color-run gaps come from `.card-ink + .card-ink`, not flex gap. */
+  gap: 0;
   white-space: nowrap;
   overflow: hidden;
   font-size: clamp(0.93rem, 2.4vw, 1.2rem);
@@ -2742,11 +2743,13 @@
   /*
    * inline-flex keeps the card hand, boxed C, and dead-cause icon on one vertical rhythm.
    * Card-ink runs must not flex-shrink (WebKit overlap).
+   * gap: 0 — between-run spacing is only `.card-ink + .card-ink` margin (matches word-spacing);
+   * stacking a flex gap made color-boundary gaps wider than same-ink group gaps.
    */
   display: inline-flex;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 0.18rem;
+  gap: 0;
   min-width: 0;
   max-width: 100%;
   width: 100%;

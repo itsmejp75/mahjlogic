@@ -37,7 +37,7 @@
   --app-bg-slot-well: #5c6066;
 
   /* Hands tray body — a touch darker than main app chrome. */
-  --app-bg-hands-tray: color-mix(in srgb, var(--app-bg-base) 88%, #000 12%);
+  --app-bg-hands-tray: color-mix(in srgb, var(--app-bg-base) 84%, #000 16%);
 
   /* --- Vignette (flattened — solid app bg) --- */
   --app-bg-vignette-shape: ellipse 140% 115% at 50% 42%;

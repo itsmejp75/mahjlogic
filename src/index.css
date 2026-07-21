@@ -315,17 +315,16 @@ code {
 
 .card-ink {
   font-weight: 600;
-  /* Extra air between space-separated melds / pairs / singles (not within a group). */
+  /*
+   * Group gap: word-spacing widens spaces within a color run; adjacent runs use the same
+   * measure via margin (trailing spaces collapse at the end of flex items).
+   */
+  --card-ink-group-gap: 0.43em;
   word-spacing: 0.18em;
 }
 
-/*
- * Between color runs: title segments used a trailing regular space, but that collapses at the
- * end of a flex item (hands-tray hand line), so red/green/navy groups could sit flush. Margin
- * keeps the same visual gap as a word-spaced space (~0.25em + word-spacing).
- */
 .card-ink + .card-ink {
-  margin-inline-start: 0.43em;
+  margin-inline-start: var(--card-ink-group-gap);
 }
 
 .card-ink--neutral {
