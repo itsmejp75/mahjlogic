@@ -194,6 +194,18 @@ function isFlexibleLikeNumber(row: Nmjl2026CsvHandRow): boolean {
   )
 }
 
+/**
+ * “Any Like Even/Odd Nos.” must not accept every suit rank. The printed digit (2 vs 1) is only a
+ * stand-in; legality and strip previews need the parity set so unresolved claims don’t fall back
+ * to rank 1 on even hands (e.g. W&Ds #4).
+ */
+function flexibleLikeNumberSuitTest(row: Nmjl2026CsvHandRow): Test {
+  const text = `${row.parenthesis} ${row.hand}`.toLowerCase()
+  if (/\beven\b/.test(text)) return suit(2, 4, 6, 8)
+  if (/\bodd\b/.test(text)) return suit(1, 3, 5, 7, 9)
+  return anySuit
+}
+
 function usesAnyOrOpposingDragon(row: Nmjl2026CsvHandRow): boolean {
   const p = row.parenthesis.toLowerCase()
   return /\bany(?: \d+)? dragons?\b/.test(p) || p.includes('opposing dragon')
@@ -257,10 +269,11 @@ function buildRankGroups(row: Nmjl2026CsvHandRow, rankSlots: RankSlot[]): Patter
     const needs = slotsWithRanks.map((slot) =>
       [...slot.ranks.values()].reduce((sum, n) => sum + n, 0),
     )
+    const likeSuit = flexibleLikeNumberSuitTest(row)
     const groups: PatternGroup[] =
       needs.length >= 2
-        ? [{ kind: 'shared-rank-suits', needs, test: anySuit }]
-        : [{ kind: 'suit-locked-rank', need: needs[0] ?? 0, test: anySuit }]
+        ? [{ kind: 'shared-rank-suits', needs, test: likeSuit }]
+        : [{ kind: 'suit-locked-rank', need: needs[0] ?? 0, test: likeSuit }]
     const dragonOnRankSlots = slotsWithRanks.reduce((sum, slot) => sum + slot.dragonCount, 0)
     if (dragonOnRankSlots > 0) groups.push({ kind: 'fixed', need: dragonOnRankSlots, test: dragon })
     groups.push(...dragonOrphanRankGroups(row, rankSlots))
@@ -440,9 +453,10 @@ function buildGroupsAndMatches(row: Nmjl2026CsvHandRow): { groups: PatternGroup[
   }
 
   const exactRanks = rankSlots.flatMap((slot) => [...slot.ranks.keys()])
-  const suitMatch =
-    isFlexibleConsecutive(row) || isFlexibleLikeNumber(row)
-      ? anySuit
+  const suitMatch = isFlexibleConsecutive(row)
+    ? anySuit
+    : isFlexibleLikeNumber(row)
+      ? flexibleLikeNumberSuitTest(row)
       : exactRanks.length
         ? suit(...exactRanks)
         : anySuit

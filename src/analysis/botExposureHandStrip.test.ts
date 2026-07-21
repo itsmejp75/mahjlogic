@@ -143,4 +143,28 @@ describe('resolveCardLineDefsForClaimMelds', () => {
       .filter((d): d is NonNullable<typeof d> => d != null)
     expect(new Set(unboxedDragons).size, labs.join(' ')).toBeGreaterThanOrEqual(2)
   })
+
+  it('shows even like-number stand-ins for W&Ds #4 when only an East pung is exposed', () => {
+    const melds = [
+      {
+        tiles: [
+          { id: 'a', def: { cat: 'wind' as const, wind: 'E' as const } },
+          { id: 'b', def: { cat: 'joker' as const } },
+          { id: 'c', def: { cat: 'joker' as const } },
+        ] as TileInstance[],
+      },
+    ]
+    const p = listOpenHandsFittingClaimMelds(melds, NMJL_2026_PATTERNS).find(
+      (x) => x.cardHandCode === '4' && /EEE 2222 2222 WWW/.test(x.title),
+    )
+    expect(p).toBeTruthy()
+
+    const resolved = resolveCardLineDefsForClaimMelds(p!, melds)
+    const suitRanks = resolved
+      .filter((d): d is Extract<(typeof resolved)[number], { cat: 'suit' }> => d.cat === 'suit')
+      .map((d) => d.rank)
+    expect(suitRanks).toHaveLength(8)
+    expect(suitRanks.every((r) => r % 2 === 0), suitRanks.join(',')).toBe(true)
+    expect(new Set(suitRanks).size).toBe(1)
+  })
 })
