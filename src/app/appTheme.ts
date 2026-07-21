@@ -6,7 +6,7 @@ export type AppTheme = (typeof APP_THEMES)[number]
 export const APP_THEME_LABEL: Record<AppTheme, string> = {
   dark: 'Chalkboard',
   blue: 'Denim',
-  purple: 'Plum',
+  purple: 'Grape',
 }
 
 /** Product default: current dark gray chrome (`#23282e`). */

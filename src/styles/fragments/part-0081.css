@@ -277,31 +277,161 @@
   min-width: 0;
 }
 
-/* Menu “Hand Probability %” off — collapse Prob column (cells kept so grid placement stays aligned). */
-.panel--hands.panel--hands-hide-prob {
-  --hands-sheet-odds-w: 0px;
-  --hands-grid-odds-w: 0px;
-}
-
-.panel--hands.panel--hands-hide-prob
-  .hands-list-scroll
-  > .hands-sheet.hands-sheet--tiles2:not(.hands-sheet--tilesHands) {
-  --hands-sheet-tile-col: calc(
-    var(--suggest-hands-panel-cqw-resolved) - var(--hands-sheet-pin-w, 1.25em) -
-      2 * var(--hands-sheet-metric-col-w) - 2 * var(--hands-sheet-cell-pad-x)
-  );
+/*
+ * Menu “Hand Probability %” off — keep all three metric track widths (hand/tile spacing
+ * unchanged). Hide Prob, slide Away into the Prob track, and leave the old Away track as an
+ * invisible spacer so Points stays put.
+ */
+.panel--hands.panel--hands-hide-prob :is(
+  .hands-sheet__cell--odds,
+  .hands-list__cell--odds,
+  .hands-list__cell--tiles-odds-pad
+) {
+  /* Keep block borders so row seams continue through the invisible spacer track. */
+  padding: 0;
+  border-inline-end: none;
+  overflow: hidden;
+  color: transparent;
+  pointer-events: none;
 }
 
 .panel--hands.panel--hands-hide-prob :is(
   .hands-sheet__cell--odds,
   .hands-list__cell--odds,
   .hands-list__cell--tiles-odds-pad
-) {
-  padding: 0;
-  border: none;
-  overflow: hidden;
+) > * {
   visibility: hidden;
-  pointer-events: none;
+}
+
+/* Away → Prob column (track 5). Hidden Prob cells stay in track 4 as the invisible spacer. */
+.panel--hands.panel--hands-hide-prob
+  .hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  > .hands-sheet__cell--header.hands-sheet__cell--away {
+  grid-column: 5;
+  grid-row: 1;
+}
+
+.panel--hands.panel--hands-hide-prob
+  .hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row-btn
+  > .hands-sheet__cell--away:not(.hands-sheet__cell--header) {
+  grid-column: 5;
+}
+
+.panel--hands.panel--hands-hide-prob
+  .hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  > .hands-sheet__cell--header.hands-sheet__cell--odds {
+  grid-column: 4;
+  grid-row: 1;
+}
+
+.panel--hands.panel--hands-hide-prob
+  .hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row-btn
+  > .hands-sheet__cell--odds:not(.hands-sheet__cell--header) {
+  grid-column: 4;
+}
+
+.panel--hands.panel--hands-hide-prob
+  .hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  > .hands-sheet__cell--header.hands-sheet__cell--values {
+  grid-column: 6;
+  grid-row: 1;
+}
+
+.panel--hands.panel--hands-hide-prob
+  .hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet.hands-sheet--tiles2:not(.hands-sheet--tilesHands)
+  > .hands-sheet__cell--away,
+.panel--hands.panel--hands-hide-prob
+  .hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet.hands-sheet--tiles2:not(.hands-sheet--tilesHands)
+  > .hands-sheet__rows
+  .hands-sheet__cell--away,
+.panel--hands.panel--hands-hide-prob .hands-sheet--tilesHands > .hands-sheet__cell--header.hands-sheet__cell--away,
+.panel--hands.panel--hands-hide-prob
+  .hands-sheet--tilesHands
+  > .hands-sheet__rows
+  .hands-sheet__row
+  > *
+  > .hands-sheet__cell--away,
+.panel--hands.panel--hands-hide-prob
+  .hands-sheet--tilesHands
+  > .hands-sheet__rows
+  .hands-sheet__row
+  > .hands-sheet__cell--away {
+  grid-column: 5 / 6;
+}
+
+.panel--hands.panel--hands-hide-prob
+  .hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet.hands-sheet--tiles2:not(.hands-sheet--tilesHands)
+  > .hands-sheet__cell--odds,
+.panel--hands.panel--hands-hide-prob
+  .hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet.hands-sheet--tiles2:not(.hands-sheet--tilesHands)
+  > .hands-sheet__rows
+  .hands-sheet__cell--odds,
+.panel--hands.panel--hands-hide-prob .hands-sheet--tilesHands > .hands-sheet__cell--header.hands-sheet__cell--odds,
+.panel--hands.panel--hands-hide-prob
+  .hands-sheet--tilesHands
+  > .hands-sheet__rows
+  .hands-sheet__row
+  > *
+  > .hands-sheet__cell--odds,
+.panel--hands.panel--hands-hide-prob
+  .hands-sheet--tilesHands
+  > .hands-sheet__rows
+  .hands-sheet__row
+  > .hands-sheet__cell--odds {
+  grid-column: 4 / 5;
+}
+
+.panel--hands.panel--hands-hide-prob
+  .hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet.hands-sheet--tiles2:not(.hands-sheet--tilesHands)
+  > .hands-sheet__cell--values,
+.panel--hands.panel--hands-hide-prob .hands-sheet--tilesHands > .hands-sheet__cell--header.hands-sheet__cell--values {
+  grid-column: 6 / 7;
+  grid-row: 1;
+}
+
+/* Compact excel list: Away in Prob track; hidden Prob cells keep the old Away track. */
+.panel--hands.panel--hands-hide-prob
+  .hands-list--tiles-excel
+  .hands-list__row-hit--with-tiles
+  > .hands-list__cell--away,
+.panel--hands.panel--hands-hide-prob
+  .hands-panel__content
+  .hands-list__freeze-header.hands-list__row-hit--with-tiles
+  > .hands-list__cell--away {
+  grid-column: -3 / -2;
+}
+
+.panel--hands.panel--hands-hide-prob
+  .hands-list--tiles-excel
+  .hands-list__row-hit--with-tiles
+  > .hands-list__cell--odds,
+.panel--hands.panel--hands-hide-prob
+  .hands-panel__content
+  .hands-list__freeze-header.hands-list__row-hit--with-tiles
+  > .hands-list__cell--odds {
+  grid-column: -4 / -3;
 }
 
 .hands-list__freeze-header .hands-list__cell--away {
@@ -1569,7 +1699,7 @@
    */
   --hands-sheet-rail: var(--hands-panel-pad-x, 1rem);
   --hands-sheet-pin-w: 1.65em;
-  --hands-sheet-category-w: 7.2em;
+  --hands-sheet-category-w: 6.5em;
   /*
    * SINGLE SOURCE OF TRUTH for the spreadsheet columns. Pin | category | hands (remaining width) |
    * odds | away | values — min 0 so lines wrap instead of forcing the sheet wider than the viewport.
@@ -2012,6 +2142,23 @@
     calc(var(--hands-sheet-pin-w) - var(--hands-sheet-grid-line-w)) 0,
     calc(var(--hands-sheet-pin-w) + var(--hands-sheet-category-w) - var(--hands-sheet-grid-line-w)) 0,
     calc(100% - 3 * var(--hands-sheet-metric-col-w) - var(--hands-sheet-grid-line-w)) 0,
+    calc(100% - 2 * var(--hands-sheet-metric-col-w) - var(--hands-sheet-grid-line-w)) 0,
+    calc(100% - var(--hands-sheet-metric-col-w) - var(--hands-sheet-grid-line-w)) 0;
+}
+
+/* Prob off: hide the tiles|spacer rule so the old Away track doesn’t read as an empty column. */
+.panel--hands.panel--hands-hide-prob
+  .hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)::after {
+  background-image:
+    var(--_hands-sheet-v-rule),
+    var(--_hands-sheet-v-rule),
+    var(--_hands-sheet-v-rule),
+    var(--_hands-sheet-v-rule);
+  background-position:
+    calc(var(--hands-sheet-pin-w) - var(--hands-sheet-grid-line-w)) 0,
+    calc(var(--hands-sheet-pin-w) + var(--hands-sheet-category-w) - var(--hands-sheet-grid-line-w)) 0,
     calc(100% - 2 * var(--hands-sheet-metric-col-w) - var(--hands-sheet-grid-line-w)) 0,
     calc(100% - var(--hands-sheet-metric-col-w) - var(--hands-sheet-grid-line-w)) 0;
 }
@@ -2535,6 +2682,16 @@
   overflow: hidden;
 }
 
+/* Prob off: Away detail pad (row seam) must follow Away into the Prob track. */
+.panel--hands.panel--hands-hide-prob
+  .hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row-btn
+  > .hands-sheet__cell--away.hands-sheet__cell--detail-pad {
+  grid-column: 5;
+}
+
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)
@@ -2543,6 +2700,16 @@
   grid-column: 5;
   padding: 0;
   overflow: hidden;
+}
+
+/* Prob off: keep the hidden Prob detail pad in the invisible Away spacer track. */
+.panel--hands.panel--hands-hide-prob
+  .hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  .hands-sheet__row-btn
+  > .hands-sheet__cell--odds.hands-sheet__cell--detail-pad {
+  grid-column: 4;
 }
 
 /* Detail row (parenthesis / trend arrow / tile strip): top-align content on track 2 only. */
