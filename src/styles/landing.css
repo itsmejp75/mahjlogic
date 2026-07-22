@@ -29,8 +29,15 @@
   position: relative;
   isolation: isolate;
   box-sizing: border-box;
+  /* Fill #root (flex column). Avoid 100svh — on iOS PWA it can undershoot the
+   * covered visual viewport and leave a dark html/#root strip below login. */
+  flex: 1 1 auto;
+  align-self: stretch;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
   min-height: 100dvh;
-  min-height: 100svh;
+  min-height: -webkit-fill-available;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -40,6 +47,16 @@
   color: var(--landing-ink);
   font-family: var(--sans);
   background: #0d1522;
+}
+
+/*
+ * Auth start URL paints landing navy; index.html theme script leaves html at
+ * #23282e. Match shell paint so any residual home-indicator gap is invisible.
+ */
+html:has(.landing),
+#root:has(.landing) {
+  background-color: #0d1522 !important;
+  background: #0d1522 !important;
 }
 
 .landing--callback {
