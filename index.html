@@ -16,21 +16,21 @@
       (function () {
         try {
           var t = localStorage.getItem('mahjlogic.appTheme')
-          var colors = { dark: '#23282e', blue: '#0d1522', purple: '#2a2438' }
+          var colors = { dark: '#101418', blue: '#0d1522', purple: '#2a2438' }
           if (t === 'tan') t = 'purple'
           if (t !== 'blue' && t !== 'purple') t = 'dark'
           document.documentElement.setAttribute('data-app-theme', t)
           document.documentElement.style.backgroundColor = colors[t]
         } catch (e) {
           document.documentElement.setAttribute('data-app-theme', 'dark')
-          document.documentElement.style.backgroundColor = '#23282e'
+          document.documentElement.style.backgroundColor = '#101418'
         }
       })()
     </script>
     <style>
       html {
         /* Match --app-bg-base / --app-bg-page-pad-color (solid app chrome). */
-        background-color: #23282e;
+        background-color: #101418;
       }
       html[data-app-theme='blue'] {
         background-color: #0d1522;

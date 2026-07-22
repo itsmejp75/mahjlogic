@@ -44,6 +44,7 @@ import {
   isSuggestedHandSectionFilterEnabled,
   suggestedHandSectionMenuLabel,
 } from '../suggestedHands/filterSettings'
+import selectedHandCheckSrc from '../assets/selected-hand-check.png?url'
 import { cardInkRunText } from './CardColoredText'
 import { DeadCauseWarning } from './DeadCauseWarning'
 import { TileFace } from './TileFace'
@@ -860,20 +861,13 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
         >
           {rowIsFocused ? (
             <span className="hands-sheet__selected-check">
-              <svg
-                className="hands-sheet__selected-check__svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  d="M4.75 12.5l5.1 5.1L19.25 7.5"
-                  stroke="currentColor"
-                  strokeWidth="3.25"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              <span
+                className="hands-sheet__selected-check__mark"
+                style={{
+                  WebkitMaskImage: `url(${selectedHandCheckSrc})`,
+                  maskImage: `url(${selectedHandCheckSrc})`,
+                }}
+              />
             </span>
           ) : null}
         </div>

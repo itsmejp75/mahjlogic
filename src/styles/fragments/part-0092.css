@@ -75,7 +75,8 @@
 
 .app-menu-modal {
   /* Pressables: same PokerStars gray pill as hand rack action row (part-0123 / app-background.css). */
-  --app-menu-bg: var(--app-bg-base);
+  /* Solid pad for raised menu trays / previews; shell uses full app atmosphere paint. */
+  --app-menu-bg: var(--app-bg-paint-color, var(--app-bg-base));
   --rack-action-label-color: var(--app-action-btn-label);
   --rack-action-face: var(--app-action-btn-face);
   --rack-action-face-pressed: var(--app-action-btn-face-pressed);
@@ -132,20 +133,34 @@
   overflow: hidden;
   border-radius: 0.9rem;
   border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
-  background: var(--app-menu-bg);
+  /* Same atmosphere paint as main app chrome (fixed = continuous with shell behind backdrop). */
+  background-color: var(--app-bg-paint-color, var(--app-menu-bg));
+  background-image: var(--app-bg-paint-image);
+  background-size: var(--app-bg-paint-size);
+  background-repeat: var(--app-bg-paint-repeat);
+  background-blend-mode: var(--app-bg-paint-blend);
+  background-attachment: var(--app-bg-paint-attachment);
   box-shadow:
     var(--shadow, 0 8px 32px rgba(0, 0, 0, 0.28)),
     0 0 0 1px color-mix(in srgb, var(--border) 50%, transparent);
   animation: app-menu-modal-in 0.2s cubic-bezier(0.34, 1.2, 0.64, 1) both;
 }
 
-/* Solid underpaint so WKWebView scroll repaints inside rounded clip do not flash white. */
+/*
+ * Underpaint so WKWebView scroll repaints inside rounded clip do not flash white.
+ * Same app atmosphere as the shell (paint-color base + layered image).
+ */
 .app-menu-modal::before {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: var(--app-menu-bg);
+  background-color: var(--app-bg-paint-color, var(--app-menu-bg));
+  background-image: var(--app-bg-paint-image);
+  background-size: var(--app-bg-paint-size);
+  background-repeat: var(--app-bg-paint-repeat);
+  background-blend-mode: var(--app-bg-paint-blend);
+  background-attachment: var(--app-bg-paint-attachment);
   pointer-events: none;
   z-index: 0;
 }

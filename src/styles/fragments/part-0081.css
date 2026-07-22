@@ -2601,12 +2601,18 @@
   line-height: 0;
 }
 
-.hands-sheet__selected-check__svg {
+.hands-sheet__selected-check__mark {
   display: block;
-  width: 1.05em;
-  height: 1.05em;
+  width: 0.95em;
+  aspect-ratio: 96 / 79;
   flex: none;
-  color: var(--tg-bam, var(--card-ink-green));
+  background-color: var(--tg-bam, var(--card-ink-green));
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
 }
 
 .hands-panel__content

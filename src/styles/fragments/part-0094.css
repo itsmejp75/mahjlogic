@@ -17,7 +17,8 @@
   justify-content: flex-end;
   padding: 0.75rem 0.75rem 0.6rem;
   border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
-  background: var(--app-menu-bg, var(--app-bg-base));
+  /* Transparent so the modal atmosphere paint shows through. */
+  background: transparent;
 }
 
 .app-menu-modal__close {
@@ -59,7 +60,8 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  background: var(--app-menu-bg, var(--app-bg-base));
+  /* Transparent so the modal atmosphere paint shows through while scrolling. */
+  background: transparent;
   /* Flex `gap` + some hosts: use sibling margins so toggle rows never stack/overlap */
 }
 

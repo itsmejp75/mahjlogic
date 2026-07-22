@@ -9,12 +9,12 @@ export const APP_THEME_LABEL: Record<AppTheme, string> = {
   purple: 'Grape',
 }
 
-/** Product default: current dark gray chrome (`#23282e`). */
+/** Product default: chalkboard gray chrome (`#101418`). */
 export const DEFAULT_APP_THEME: AppTheme = 'dark'
 
 /** Solid first-paint / page-pad colors (keep in sync with `app-background.css`). */
 export const APP_THEME_PAGE_PAD_COLOR: Record<AppTheme, string> = {
-  dark: '#23282e',
+  dark: '#101418',
   blue: '#0d1522',
   purple: '#2a2438',
 }

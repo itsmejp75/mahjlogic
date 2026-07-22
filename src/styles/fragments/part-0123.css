@@ -2437,7 +2437,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 /*
  * Main app background surfaces — paint recipe lives in src/styles/app-background.css.
- * Themes with `--app-bg-paint-image: none` stay solid; Denim uses fixed landing paint.
+ * Textured themes (Chalkboard / Denim / Grape) use fixed landing-style paint.
  */
 :is(html, body, #root) {
   background-color: var(--app-bg-page-pad-color, var(--app-bg-paint-color, var(--app-bg-base)));
