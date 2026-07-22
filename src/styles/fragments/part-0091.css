@@ -177,7 +177,12 @@
   padding: 1.1rem 1.25rem 1rem;
   border-radius: 0.5rem;
   border: 1px solid var(--border);
-  background: var(--bg-elevated);
+  background-color: var(--app-bg-paint-color, var(--app-bg-base));
+  background-image: var(--app-bg-paint-image);
+  background-size: var(--app-bg-paint-size);
+  background-repeat: var(--app-bg-paint-repeat);
+  background-blend-mode: var(--app-bg-paint-blend);
+  background-attachment: var(--app-bg-paint-attachment);
   box-shadow:
     var(--shadow),
     0 0 0 1px color-mix(in srgb, var(--border) 60%, transparent);
@@ -195,7 +200,12 @@
   padding: 1rem 1.2rem 1.15rem;
   border-radius: 0.9rem;
   border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
-  background: var(--bg-elevated);
+  background-color: var(--app-bg-paint-color, var(--app-bg-base));
+  background-image: var(--app-bg-paint-image);
+  background-size: var(--app-bg-paint-size);
+  background-repeat: var(--app-bg-paint-repeat);
+  background-blend-mode: var(--app-bg-paint-blend);
+  background-attachment: var(--app-bg-paint-attachment);
   box-shadow:
     var(--shadow, 0 8px 32px rgba(0, 0, 0, 0.28)),
     0 0 0 1px color-mix(in srgb, var(--border) 50%, transparent);
@@ -225,7 +235,7 @@
 }
 
 /*
- * Dead-hand / illegal MJ / discard-dead confirmations — same elevated shell as menu modals
+ * Dead-hand / illegal MJ / discard-dead confirmations — same atmosphere shell as menu modals
  * (not coach felt + gold from --table).
  */
 .charleston-error-dialog--blocking-neutral {
@@ -233,7 +243,12 @@
   padding: 1rem 1.2rem 1.15rem;
   border-radius: 0.9rem;
   border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
-  background: var(--bg-elevated);
+  background-color: var(--app-bg-paint-color, var(--app-bg-base));
+  background-image: var(--app-bg-paint-image);
+  background-size: var(--app-bg-paint-size);
+  background-repeat: var(--app-bg-paint-repeat);
+  background-blend-mode: var(--app-bg-paint-blend);
+  background-attachment: var(--app-bg-paint-attachment);
   box-shadow:
     var(--shadow, 0 8px 32px rgba(0, 0, 0, 0.28)),
     0 0 0 1px color-mix(in srgb, var(--border) 50%, transparent);
@@ -289,8 +304,19 @@
     0 2px 6px color-mix(in srgb, var(--color-black) 20%, transparent);
 }
 
-/* New-game confirm / card swap: same max width as `.app-menu-modal`; rack pills like menu rows (no hover wash). */
+/* New-game confirm / card swap: same max width as `.app-menu-modal`; action-row gray pills. */
 .charleston-error-dialog.charleston-error-dialog--new-game-warning {
+  --rack-action-label-color: var(--app-action-btn-label);
+  --rack-action-face: var(--app-action-btn-face);
+  --rack-action-face-pressed: var(--app-action-btn-face-pressed);
+  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed-chrome);
+  --rack-action-shadow-rest: var(--app-action-btn-shadow-rest);
+  --rack-action-border-rest: var(--app-action-btn-border-rest);
+  --rack-action-border-hold: var(--app-action-btn-border-hold);
+  --rack-action-border-color: var(--app-action-btn-border);
+  --rack-action-press-shadow-dark: var(--app-action-btn-press-shadow-dark-deep);
+  --rack-action-pressed: var(--app-action-btn-shadow-pressed-deep);
+
   width: 100%;
   max-width: min(38rem, 100%);
   margin-inline: auto;
@@ -306,16 +332,14 @@
   .charleston-error-dialog__actions--spread
   .charleston-error-dialog__rack-action.btn--primary {
   min-width: 7rem;
-  border: none;
+  border: 1px solid var(--rack-action-border-rest, var(--app-action-btn-border-rest));
   border-radius: var(--rack-tile-btn-border-radius);
-  background: var(--color-slate-mid);
-  color: #dcdce0;
+  background: var(--rack-action-face, var(--app-action-btn-face));
+  color: var(--rack-action-label-color, var(--app-action-btn-label));
   text-shadow: none;
   filter: none;
-  box-shadow:
-    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
-    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
-  transition: box-shadow 0.14s ease, transform 0.12s ease;
+  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
+  transition: box-shadow 0.12s ease, background 0.12s ease;
 }
 
 /* Different-card prompt: sentence-case Cancel (global `.btn` is uppercase). */
@@ -331,11 +355,10 @@
 .charleston-error-dialog.charleston-error-dialog--new-game-warning
   .charleston-error-dialog__actions--spread
   .charleston-error-dialog__rack-action.btn--primary:hover:not(:disabled) {
-  background: var(--color-slate-mid);
-  color: #dcdce0;
-  box-shadow:
-    inset 2px 2px 5px rgba(255, 255, 255, 0.12),
-    inset -3px -3px 7px rgba(0, 0, 0, 0.35);
+  background: var(--rack-action-face, var(--app-action-btn-face));
+  border-color: var(--rack-action-border-rest, var(--app-action-btn-border-rest));
+  color: var(--rack-action-label-color, var(--app-action-btn-label));
+  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
   transform: none;
 }
 
@@ -345,6 +368,8 @@
 .charleston-error-dialog.charleston-error-dialog--new-game-warning
   .charleston-error-dialog__actions--spread
   .charleston-error-dialog__rack-action.btn--primary:active:not(:disabled) {
+  background: var(--rack-action-face-pressed-chrome, var(--app-action-btn-face-pressed-chrome));
+  border: 1px solid var(--rack-action-border-rest, var(--app-action-btn-border-rest));
   transition: none;
   transform: none;
   box-shadow: var(--rack-action-pressed, var(--app-action-btn-shadow-pressed-deep));
@@ -643,7 +668,12 @@
   box-sizing: border-box;
   padding: 1.35rem 1.25rem 1.45rem;
   border-radius: 0.9rem;
-  background: var(--app-bg-base);
+  background-color: var(--app-bg-paint-color, var(--app-bg-base));
+  background-image: var(--app-bg-paint-image);
+  background-size: var(--app-bg-paint-size);
+  background-repeat: var(--app-bg-paint-repeat);
+  background-blend-mode: var(--app-bg-paint-blend);
+  background-attachment: var(--app-bg-paint-attachment);
   border: 1px solid #c0392b;
   box-shadow:
     var(--shadow, 0 8px 32px rgba(0, 0, 0, 0.28)),
@@ -766,7 +796,13 @@
   margin-block: 0.2rem 0.45rem;
   padding: 0.85rem 0.9rem 0.75rem;
   border-radius: 0.75rem;
-  background: var(--window-surface, #16202e);
+  /* Atmosphere paint (theme override in part-0124 keeps this in sync with menu / app shell). */
+  background-color: var(--app-bg-paint-color, var(--app-bg-base));
+  background-image: var(--app-bg-paint-image);
+  background-size: var(--app-bg-paint-size);
+  background-repeat: var(--app-bg-paint-repeat);
+  background-blend-mode: var(--app-bg-paint-blend);
+  background-attachment: var(--app-bg-paint-attachment);
   border: 2px solid var(--border, #334);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
   text-align: center;
@@ -1037,6 +1073,8 @@
   --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed-chrome);
   --rack-action-shadow-rest: var(--app-action-btn-shadow-rest);
   --rack-action-flat-surface: var(--app-action-btn-bottom);
+  --rack-action-border-rest: var(--app-action-btn-border-rest);
+  --rack-action-border-hold: var(--app-action-btn-border-hold);
   --rack-action-border-color: var(--app-action-btn-border);
   --rack-action-press-shadow-light: var(--app-action-btn-press-shadow-light);
   --rack-action-press-shadow-dark: var(--app-action-btn-press-shadow-dark-deep);
@@ -1092,7 +1130,7 @@
   .wall-game-dialog__actions
   .btn.wall-game-dialog__action-btn {
   background: var(--rack-action-face);
-  border: 1px solid var(--rack-action-border-color, #636870);
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
   color: var(--rack-action-label-color, #e2e4e8);
   opacity: 1;
   filter: none;

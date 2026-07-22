@@ -16,24 +16,24 @@
       (function () {
         try {
           var t = localStorage.getItem('mahjlogic.appTheme')
-          var colors = { dark: '#101418', blue: '#0d1522', purple: '#2a2438' }
+          var colors = { dark: '#151a20', blue: '#0d1522', purple: '#2a2438' }
           if (t === 'tan') t = 'purple'
-          if (t !== 'blue' && t !== 'purple') t = 'dark'
+          if (t !== 'dark' && t !== 'blue' && t !== 'purple') t = 'blue'
           document.documentElement.setAttribute('data-app-theme', t)
           document.documentElement.style.backgroundColor = colors[t]
         } catch (e) {
-          document.documentElement.setAttribute('data-app-theme', 'dark')
-          document.documentElement.style.backgroundColor = '#101418'
+          document.documentElement.setAttribute('data-app-theme', 'blue')
+          document.documentElement.style.backgroundColor = '#0d1522'
         }
       })()
     </script>
     <style>
       html {
-        /* Match --app-bg-base / --app-bg-page-pad-color (solid app chrome). */
-        background-color: #101418;
-      }
-      html[data-app-theme='blue'] {
+        /* Match --app-bg-base / --app-bg-page-pad-color (solid app chrome). Default Abyss. */
         background-color: #0d1522;
+      }
+      html[data-app-theme='dark'] {
+        background-color: #151a20;
       }
       html[data-app-theme='purple'] {
         background-color: #2a2438;

@@ -2218,7 +2218,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 /*
  * Hands tray body fill — behind the list. Lip wash paints on ::after (above rows).
- * Uses shell paint so textured themes (Denim) stay continuous; solid themes keep a flat fill.
+ * Uses shell paint so textured themes (Abyss) stay continuous; solid themes keep a flat fill.
  */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
@@ -2437,7 +2437,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 /*
  * Main app background surfaces — paint recipe lives in src/styles/app-background.css.
- * Textured themes (Chalkboard / Denim / Grape) use fixed landing-style paint.
+ * Textured themes (Phantom / Abyss / Mystic) use fixed landing-style paint.
  */
 :is(html, body, #root) {
   background-color: var(--app-bg-page-pad-color, var(--app-bg-paint-color, var(--app-bg-base)));
@@ -4070,7 +4070,12 @@ html .app-dnd-frame .app-top-exposure-container .exposure-rack__meld-drop--over 
     --rack-tile-btn-border-radius,
     max(0.36rem, calc(var(--hand-rack-tile-w, 2.65rem) * 0.128))
   );
-  background: var(--app-bg-base, #2b2f37);
+  background-color: var(--app-bg-paint-color, var(--app-bg-base, #2b2f37));
+  background-image: var(--app-bg-paint-image);
+  background-size: var(--app-bg-paint-size);
+  background-repeat: var(--app-bg-paint-repeat);
+  background-blend-mode: var(--app-bg-paint-blend);
+  background-attachment: var(--app-bg-paint-attachment);
   box-shadow: var(--shadow, 0 18px 60px rgba(0, 0, 0, 0.55));
   /* Same PokerStars gray-pill tokens as `.panel--hand` action wells (part-0123 above). */
   --rack-action-label-color: var(--app-action-btn-label);

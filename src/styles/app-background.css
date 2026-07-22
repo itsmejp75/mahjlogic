@@ -27,18 +27,18 @@
 :root {
   /* --- Color --- */
   /* Solid app chrome — same as page footer pad. */
-  --app-bg-page-pad-color: #101418;
+  --app-bg-page-pad-color: #151a20;
   --app-bg-base: var(--app-bg-page-pad-color);
   --app-bg-highlight: var(--app-bg-page-pad-color);
   --app-bg-shadow: var(--app-bg-page-pad-color);
 
   /* Surfaces that intentionally stay flat (not the textured main background). */
-  --app-bg-flat: #3d434a;
-  --app-bg-slot-well: #3d434a;
+  --app-bg-flat: #454b53;
+  --app-bg-slot-well: #454b53;
 
   /* Hands tray body — a touch darker than main app chrome. */
   --app-bg-hands-tray: color-mix(in srgb, var(--app-bg-base) 84%, #000 16%);
-  /* Optional wash over shell paint (Denim); transparent = no wash. */
+  /* Optional wash over shell paint (Abyss); transparent = no wash. */
   --app-bg-hands-tray-dim: transparent;
 
   /* --- Vignette (flattened — solid app bg) --- */
@@ -65,7 +65,7 @@
   );
   /* Legacy alias */
   --app-bg-lower-darken-end: var(--app-bg-lower-band-shadow);
-  --app-bg-page-pad-color: #101418;
+  --app-bg-page-pad-color: #151a20;
   --app-bg-lower-band-paint-color: var(--app-bg-base);
   --app-bg-lower-band-paint-image: none;
   --app-bg-lower-band-paint-size: auto;
@@ -300,27 +300,27 @@
 /*
  * App background themes — `data-app-theme` on `html` (and mirrored on `.app`).
  * Each theme uses the login-style layered atmosphere (soft accent glows + mid
- * radials + angled base gradient), retinted to chalkboard / denim / grape.
+ * radials + angled base gradient), retinted to Phantom / Abyss / Mystic.
  * Keep solid pad colors in sync with `APP_THEME_PAGE_PAD_COLOR` in `src/app/appTheme.ts`
  * and the first-paint script in `index.html`.
  */
 html[data-app-theme='dark'],
 html:not([data-app-theme]) {
-  /* Same layered atmosphere recipe as Denim / login, retinted to chalkboard gray. */
-  --app-bg-page-pad-color: #101418;
+  /* Same layered atmosphere recipe as Abyss / login, retinted to Phantom gray. */
+  --app-bg-page-pad-color: #151a20;
   --app-bg-base: var(--app-bg-page-pad-color);
   --app-bg-highlight: var(--app-bg-page-pad-color);
   --app-bg-shadow: var(--app-bg-page-pad-color);
-  --app-bg-flat: #3d434a;
-  --app-bg-slot-well: #3d434a;
+  --app-bg-flat: #454b53;
+  --app-bg-slot-well: #454b53;
 
-  --app-bg-paint-color: #101418;
+  --app-bg-paint-color: #151a20;
   --app-bg-paint-image:
     radial-gradient(circle at 8% 48%, color-mix(in srgb, #8a96a4 14%, transparent) 0%, transparent 40%),
     radial-gradient(circle at 94% 86%, color-mix(in srgb, #c4a46a 10%, transparent) 0%, transparent 36%),
-    radial-gradient(90% 70% at 18% 40%, color-mix(in srgb, #252b33 55%, transparent) 0%, transparent 60%),
-    radial-gradient(80% 60% at 82% 30%, color-mix(in srgb, #1c2228 50%, transparent) 0%, transparent 55%),
-    linear-gradient(145deg, #14191f 0%, #1a2027 45%, #101418 100%);
+    radial-gradient(90% 70% at 18% 40%, color-mix(in srgb, #2a3038 55%, transparent) 0%, transparent 60%),
+    radial-gradient(80% 60% at 82% 30%, color-mix(in srgb, #21272e 50%, transparent) 0%, transparent 55%),
+    linear-gradient(145deg, #1a1f26 0%, #20262e 45%, #151a20 100%);
   --app-bg-paint-size: auto;
   --app-bg-paint-repeat: no-repeat;
   --app-bg-paint-blend: normal;
@@ -383,7 +383,7 @@ html[data-app-theme='blue'] {
 }
 
 html[data-app-theme='purple'] {
-  /* Same layered atmosphere recipe as Denim / login, retinted to grape purple. */
+  /* Same layered atmosphere recipe as Abyss / login, retinted to Mystic purple. */
   --app-bg-page-pad-color: #2a2438;
   --app-bg-base: var(--app-bg-page-pad-color);
   --app-bg-highlight: var(--app-bg-page-pad-color);
@@ -422,6 +422,9 @@ html[data-app-theme='purple'] {
 /*
  * Utility class — same paint as the main selector block in part-0123.css.
  * Prefer the centralized tokens above; use this only if a new surface needs the background.
+ *
+ * Popup / dialog shells (menu, wall game, Mah Jongg, warnings, blank exchange, dead hand)
+ * also use this recipe — enforced late in part-0124 so theme paint wins over solid fills.
  */
 .app-bg-paint {
   background-color: var(--app-bg-paint-color);

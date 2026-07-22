@@ -26,6 +26,6 @@
   /* Lock all four container edges to the same distance as the inter-tile gap. */
   padding: var(--menu-tile-g);
   border-radius: 0.45rem;
-  background: var(--app-menu-bg, var(--app-bg-base));
-  border: 1px solid color-mix(in srgb, var(--border) 45%, var(--color-black) 25%);
+  background: transparent;
+  border: 0;
 }
