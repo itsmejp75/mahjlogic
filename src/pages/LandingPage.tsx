@@ -114,15 +114,16 @@ export function LandingPage() {
       return
     }
     setBusy(true)
-    try {
-      const { error: googleError } = await signInWithGoogle()
-      if (googleError) {
-        setError(googleError)
-        return
-      }
-      navigate('/play', { replace: true })
-    } finally {
+    const { error: googleError, redirected } = await signInWithGoogle()
+    if (googleError) {
+      setError(googleError)
       setBusy(false)
+      return
+    }
+    // OAuth leaves this page; keep "Please wait…" until the browser navigates.
+    if (!redirected) {
+      setBusy(false)
+      navigate('/play', { replace: true })
     }
   }
 
@@ -304,6 +305,8 @@ export function LandingPage() {
           </p>
 
           <p className="landing__legal-links">
+            <a href="mailto:support@mahjlogic.com">support@mahjlogic.com</a>
+            <span aria-hidden="true">·</span>
             <Link to="/privacy">Privacy</Link>
             <span aria-hidden="true">·</span>
             <Link to="/terms">Terms</Link>

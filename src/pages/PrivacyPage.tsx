@@ -69,6 +69,32 @@ export function PrivacyPage() {
         information from children under 13.
       </p>
 
+      <h2>Cookies and similar technologies</h2>
+      <p>
+        We use cookies and similar technologies (such as local storage) to run Mahj Logic and
+        understand how it is used. These may include:
+      </p>
+      <ul>
+        <li>
+          <strong>Essential / account</strong> — to keep you signed in and secure your session
+          (including through our auth provider, Supabase).
+        </li>
+        <li>
+          <strong>Preferences</strong> — to remember settings on your device (for example theme and
+          game options) via local storage.
+        </li>
+        <li>
+          <strong>Analytics</strong> — Google Analytics may set cookies or use similar tech to
+          collect aggregated usage information (such as pages visited and approximate location
+          derived from IP) so we can improve the product.
+        </li>
+      </ul>
+      <p>
+        You can control cookies through your browser settings and clear site data / local storage at
+        any time. Blocking essential cookies may prevent sign-in or other core features from working.
+        Analytics may also be limited by browser controls or extensions that block tracking.
+      </p>
+
       <h2>Contact</h2>
       <p>
         Questions about this policy: <a href="mailto:support@mahjlogic.com">support@mahjlogic.com</a>

@@ -453,56 +453,6 @@
   }
 }
 
-/* GIS fallback when One Tap / FedCM is unavailable */
-.landing-google-fallback {
-  position: fixed;
-  inset: 0;
-  z-index: 10000;
-  display: grid;
-  place-items: center;
-  padding: 1rem;
-  background: rgba(8, 12, 18, 0.72);
-}
-
-.landing-google-fallback__panel {
-  width: min(100%, 22rem);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.85rem;
-  padding: 1.25rem 1.15rem;
-  border-radius: 1rem;
-  background: #152033;
-  border: 1px solid color-mix(in srgb, #6f859e 34%, transparent);
-  box-shadow: 0 18px 40px -16px rgba(0, 0, 0, 0.7);
-}
-
-.landing-google-fallback__title {
-  margin: 0;
-  font-weight: 700;
-  color: #f2f4f7;
-}
-
-.landing-google-fallback__btn-host {
-  display: flex;
-  justify-content: center;
-  min-height: 2.75rem;
-}
-
-.landing-google-fallback__cancel {
-  appearance: none;
-  border: 0;
-  background: none;
-  color: color-mix(in srgb, #d7dde6 58%, #1b2430 42%);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.landing-google-fallback__cancel:hover {
-  color: #00b4d8;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .landing__frame,
   .landing__glow {

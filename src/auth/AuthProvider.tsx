@@ -6,7 +6,6 @@ import {
   type ReactNode,
 } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
-import { isGoogleIdentityConfigured, requestGoogleIdToken } from '../lib/googleIdentity'
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase'
 
 type OAuthProvider = 'google' | 'apple'
@@ -19,7 +18,7 @@ type AuthContextValue = {
   signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>
   signUpWithEmail: (email: string, password: string) => Promise<{ error: string | null; needsConfirmation: boolean }>
   signInWithProvider: (provider: OAuthProvider) => Promise<{ error: string | null }>
-  signInWithGoogle: () => Promise<{ error: string | null }>
+  signInWithGoogle: () => Promise<{ error: string | null; redirected: boolean }>
   resetPasswordForEmail: (email: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
 }
@@ -35,40 +34,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(isSupabaseConfigured)
   const [session, setSession] = useState<Session | null>(null)
 
-  async function signInWithGoogleOAuthRedirect(): Promise<{ error: string | null }> {
+  /** Full-page Google OAuth (no One Tap / no custom overlay). */
+  async function signInWithGoogleOAuthRedirect(): Promise<{ error: string | null; redirected: boolean }> {
     const supabase = getSupabase()
-    if (!supabase) return { error: 'Supabase is not configured.' }
+    if (!supabase) return { error: 'Supabase is not configured.', redirected: false }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: authRedirectTo('/auth/callback'),
       },
     })
-    return { error: error?.message ?? null }
-  }
-
-  async function signInWithGoogleIdToken(): Promise<{ error: string | null }> {
-    const supabase = getSupabase()
-    if (!supabase) return { error: 'Supabase is not configured.' }
-    if (!isGoogleIdentityConfigured()) {
-      return signInWithGoogleOAuthRedirect()
-    }
-    try {
-      const { credential, nonce } = await requestGoogleIdToken()
-      const { data, error } = await supabase.auth.signInWithIdToken({
-        provider: 'google',
-        token: credential,
-        nonce,
-      })
-      if (error) return { error: error.message }
-      if (data.session) setSession(data.session)
-      return { error: null }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Google sign-in failed'
-      if (message.includes('cancelled')) return { error: null }
-      // GIS misconfig (e.g. missing JS origins) → fall back to redirect OAuth.
-      return signInWithGoogleOAuthRedirect()
-    }
+    if (error) return { error: error.message, redirected: false }
+    return { error: null, redirected: true }
   }
 
   useEffect(() => {
@@ -124,9 +101,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async signInWithProvider(provider) {
       const supabase = getSupabase()
       if (!supabase) return { error: 'Supabase is not configured.' }
-      if (provider === 'google' && isGoogleIdentityConfigured()) {
-        return signInWithGoogleIdToken()
-      }
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
@@ -136,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: error?.message ?? null }
     },
     signInWithGoogle() {
-      return signInWithGoogleIdToken()
+      return signInWithGoogleOAuthRedirect()
     },
     async resetPasswordForEmail(email) {
       const supabase = getSupabase()

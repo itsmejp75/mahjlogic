@@ -12,6 +12,7 @@ import type { HandTileFlyInFrom } from './mahjong/handTileFlyIn'
 import { handTileFlyInFromBotSeat } from './mahjong/handTileFlyIn'
 import { assignOpeningHands, botIndicesAfterCompassSeat, botIndicesAfterPlayerDiscard, botIndicesInCompassPlayOrder, botIndexForCompassSeat, DEFAULT_BOT_SLOT_SEATS, nextCompassSeat, playerYouLabel, seatLabel, toFourHands as fourHandsFromRound, type BotSlotSeats } from './mahjong/seats'
 import { type PassStripFlyOutFrom } from './components/PassStrip'
+import { AppMenuAccountFooter } from './components/AppMenuAccountFooter'
 import { TileFace } from './components/TileFace'
 import { PLAYABLE_CARD_IDS, PLAYABLE_CARD_LABEL, type PlayableCardId, cardSectionOrderFromPatterns, patternsForCard, playableCardShortLabel, readPlayableCardFromStorage, writePlayableCardToStorage } from './card/cardCatalog'
 import type { PracticePattern } from './card/practicePatterns'
@@ -5699,6 +5700,7 @@ export default function App() {
                 </div>
                 </div>
               </div>
+              <AppMenuAccountFooter />
             </div>
           </div>
         </div>
