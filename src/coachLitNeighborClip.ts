@@ -1,4 +1,4 @@
-/** Clip rim / lift at lit→lit seams so each tile's glow meets at the gap center. */
+/** Mark lit→lit seam edges so CSS can clip lift (and dim rim) where glows meet at the gap center. */
 export const COACH_LIT_CLIP_TOP = 'coach-lit-clip-top'
 export const COACH_LIT_CLIP_RIGHT = 'coach-lit-clip-right'
 export const COACH_LIT_CLIP_BOTTOM = 'coach-lit-clip-bottom'
@@ -324,7 +324,8 @@ function updateBotExposureTrackerLitClip(grid: ParentNode) {
 }
 
 /**
- * Clip coach rim + lift on every edge that faces another lit tile.
+ * Mark coach seam edges on every side that faces another lit (or dim, vertically) tile.
+ * CSS clips lift on lit seams and rim on dim seams; lit face bevel stays intact.
  * Per-rack scopes handle horizontal + within-rack seams; overlay-grid passes clip B/C/D and
  * S/W/N columns across adjacent seats.
  */

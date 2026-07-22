@@ -1312,8 +1312,14 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   --tile-face-highlight-shadow: 0 0 0 0 transparent;
 }
 
-/* Lit hand tiles: lift shadow on the fly wrapper; keep face `::after` clear so rim vignette reads. */
-.app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap--suggest-best .tile-face::after {
+/* Lit hand tiles: lift shadow on the fly wrapper; clear coaching `::after` on non-jokers so rim
+ * vignette reads. Jokers keep the inscribed J circle on `::after`. */
+.app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap--suggest-best
+  .tile-face:not(.tile--joker)::after {
   box-shadow: none;
 }
 
@@ -1587,8 +1593,8 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
 }
 
-.panel--hand .rack-stage__rack-top .pass-strip__tile-wrap--suggest-best .tile-face::after,
-.panel--hand .rack-stage__rack-top .east-discard-staging__tile--suggest-best .tile-face::after {
+.panel--hand .rack-stage__rack-top .pass-strip__tile-wrap--suggest-best .tile-face:not(.tile--joker)::after,
+.panel--hand .rack-stage__rack-top .east-discard-staging__tile--suggest-best .tile-face:not(.tile--joker)::after {
   box-shadow: none;
 }
 

@@ -673,33 +673,18 @@
 }
 
 /*
- * Bot exposure coach rows (side panel + discard-tracker S/W/N): lit/dim parity with main rack /
- * hands strip. Side-panel lit tiles keep rim vignette; discard-tracker lit tiles are lift-only.
- * Lit tiles use slot lift shadow — no highlight inset rings.
- *
- * Side panel: size container + `100cqw` on the face (same as hands strip).
- * Tracker bot row: meld wrappers are flex — keep overlay-grid `--rack-tile-w` (no `100cqw`;
- * invalid `cqw` was dropping rim inset metrics on illustrative `::before`).
+ * Bot exposure coach rows (side panel + discard-tracker S/W/N): lit/dim keep face rim vignette;
+ * lift glow lives on the slot. Do not override lit faces to `100cqw` — invalid/late cqw dropped
+ * illustrative `::before` inset depth (same as hands strip → frozen tile metrics).
+ * Side-panel faces inherit `--rack-tile-w` / `--rack-tile-h` from `.panel--bot-exposures`.
  */
-.panel--bot-exposures
-  .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim) {
-  container-type: size;
-}
-
-.panel--bot-exposures
-  .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
-  .tile-face {
-  --rack-tile-w: 100cqw;
-  --rack-tile-h: 100cqh;
-}
-
 .panel--discard-tracker
   .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
   .tile-face {
   --rack-tile-w: var(--discard-tray-rack-tile-w);
-  --rack-tile-h: var(--rack-tile-h);
+  --rack-tile-h: calc(var(--discard-tray-rack-tile-w) * 4 / 3);
 }
 
 :is(
@@ -816,8 +801,7 @@
 
 /*
  * Lit bot-row jokers: keep the prism rim inset. Suggest-best clears `--tile-face-suggest-dim-inset`
- * above and kills face `::after` (inscribed ring), which left jokers lit-but-flat when the slot
- * lift glow was clipped or hard to read on a bright face.
+ * above; without this restore, bright lifted faces read flatter when lift glow is soft/clipped.
  */
 :is(
   .panel--bot-exposures .exposure-rack__slot--suggest-best,
@@ -853,24 +837,52 @@
   animation: none;
 }
 
+/* Lift-only coaching: drop face coaching `::after` on non-jokers. Jokers keep the
+ * inscribed J ring below (part-0075 would otherwise stretch `::after` to a full-tile ring). */
 :is(
   .panel--bot-exposures .exposure-rack__slot--suggest-best,
   .panel--discard-tracker
     .discard-tracker__overlay-grid
     .exposure-rack--discard-tracker-bot-row
     .exposure-rack__slot--suggest-best
-) .tile-face::after,
-:is(
-  .panel--bot-exposures .exposure-rack__slot--suggest-best,
-  .panel--discard-tracker
-    .discard-tracker__overlay-grid
-    .exposure-rack--discard-tracker-bot-row
-    .exposure-rack__slot--suggest-best
-) .tile-face.tile--joker::after {
+) .tile-face:not(.tile--joker)::after {
   content: none;
   display: none;
   box-shadow: none;
   background: transparent;
+}
+
+:is(
+  .panel--bot-exposures .exposure-rack__slot--suggest-best,
+  .panel--discard-tracker
+    .discard-tracker__overlay-grid
+    .exposure-rack--discard-tracker-bot-row
+    .exposure-rack__slot--suggest-best,
+  html
+    .app-top-exposure-container
+    .discard-tracker__overlay-grid
+    .exposure-rack--discard-tracker-bot-row
+    .exposure-rack__slot--suggest-best
+) .tile-face.tile--joker:not(.tile-face--illustrative-art)::after {
+  content: '';
+  display: block;
+  position: absolute;
+  z-index: 0;
+  left: 50%;
+  top: 50%;
+  right: auto;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  width: 62%;
+  height: 0;
+  padding-bottom: 62%;
+  border-radius: 50%;
+  border: 2px solid var(--tg-joker-ring, var(--color-black));
+  box-sizing: content-box;
+  box-shadow: none;
+  background: transparent;
+  pointer-events: none;
+  opacity: 1;
 }
 
 .panel--bot-exposures .exposure-rack__slot--suggest-best:not(.exposure-rack__slot--suggest-dying)::after {
@@ -1006,20 +1018,21 @@
 }
 
 /*
- * Coach lit→lit seams (all directions): rim `::before` + slot lift `::after`.
+ * Coach lit→lit seams (all directions): clip slot lift `::after` only.
+ * Keep face rim `::before` (inner tile bevel) on every lit tile — same as the main hand
+ * rack. Clipping the rim at seams made stacked lit exposures (e.g. joker under joker) look
+ * flat on the shared edge. Dim tiles still seam-clip their softer rim via data attrs below.
  * Edge classes from `coachLitNeighborClip.ts`, plus sibling `:has(+)` / `+` fallbacks so
- * same-meld neighbors (e.g. two lit jokers) clip even if the JS pass is late or misses.
- * Rim uses a positive inset (fade width); lift meets at gap center (negative seam inset).
+ * same-meld neighbors clip lift even if the JS pass is late or misses.
  */
 .app {
   --coach-vignette-seam-inset: calc(var(--tile-shadow-fade, 6.5%) * 0.92);
 }
 
-/* Lit↔lit: clip lift + rim. Dim data attrs: rim only (never chop lit lift over a dim row). */
+/* Lit↔lit: clip lift only. Dim data attrs: rim only (never chop lit lift over a dim row). */
 .discard-tracker__overlay-grid
   :is(.exposure-rack__slot--suggest-best, .sorted-discard-tray__slot--suggest-need).coach-lit-clip-top,
 .panel--bot-exposures .exposure-rack__slot--suggest-best.coach-lit-clip-top {
-  --coach-vignette-clip-top: var(--coach-vignette-seam-inset);
   --coach-lift-clip-top: var(--coach-lit-seam-inset-y);
 }
 
@@ -1042,7 +1055,6 @@
 .discard-tracker__overlay-grid
   :is(.exposure-rack__slot--suggest-best, .sorted-discard-tray__slot--suggest-need).coach-lit-clip-bottom,
 .panel--bot-exposures .exposure-rack__slot--suggest-best.coach-lit-clip-bottom {
-  --coach-vignette-clip-bottom: var(--coach-vignette-seam-inset);
   --coach-lift-clip-bottom: var(--coach-lit-seam-inset-y);
 }
 
@@ -1069,7 +1081,6 @@
 .discard-tracker__overlay-grid
   .sorted-discard-tray__slot--suggest-need
   + .sorted-discard-tray__slot--suggest-need {
-  --coach-vignette-clip-left: var(--coach-vignette-seam-inset);
   --coach-lift-clip-left: var(--coach-lit-seam-inset-x);
 }
 
@@ -1083,13 +1094,12 @@
   .exposure-rack__slot--suggest-best:has(+ .exposure-rack__slot--suggest-best),
 .discard-tracker__overlay-grid
   .sorted-discard-tray__slot--suggest-need:has(+ .sorted-discard-tray__slot--suggest-need) {
-  --coach-vignette-clip-right: var(--coach-vignette-seam-inset);
   --coach-lift-clip-right: var(--coach-lit-seam-inset-x);
 }
 
 /*
  * Bot exposure grid rows — CSS fallback (adjacent `+` only):
- * - Lit↔lit: clip lift + rim (same height).
+ * - Lit↔lit: clip lift only (keep face rim bevel on every lit tile).
  * - Lit↔dim: clip dim rim only; lit lift stays full so it paints over the dim row.
  * - Dim↔dim: clip facing dim rims.
  */
@@ -1098,7 +1108,6 @@
   :is(.exposure-rack__meld-drop, .exposure-rack__meld-grid-span):has(.exposure-rack__slot--suggest-best)
   + :is(.exposure-rack__meld-drop, .exposure-rack__meld-grid-span)
   .exposure-rack__slot--suggest-best {
-  --coach-vignette-clip-top: var(--coach-vignette-seam-inset);
   --coach-lift-clip-top: var(--coach-lit-seam-inset-y);
 }
 
@@ -1108,7 +1117,6 @@
     + :is(.exposure-rack__meld-drop, .exposure-rack__meld-grid-span) .exposure-rack__slot--suggest-best
   )
   .exposure-rack__slot--suggest-best {
-  --coach-vignette-clip-bottom: var(--coach-vignette-seam-inset);
   --coach-lift-clip-bottom: var(--coach-lit-seam-inset-y);
 }
 
@@ -2613,7 +2621,7 @@ html
   --tile-face-highlight-shadow: 0 0 0 0 transparent;
   --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
   --rack-tile-w: var(--discard-tray-rack-tile-w);
-  --rack-tile-h: var(--rack-tile-h);
+  --rack-tile-h: calc(var(--discard-tray-rack-tile-w) * 4 / 3);
   filter: none;
 }
 
@@ -2631,7 +2639,7 @@ html
     inset calc(var(--rack-tile-w) * -0.045) calc(var(--rack-tile-w) * -0.045) calc(var(--rack-tile-w) * 0.1)
       calc(var(--rack-tile-w) * -0.3) rgba(28, 25, 22, 0.4);
   --rack-tile-w: var(--discard-tray-rack-tile-w);
-  --rack-tile-h: var(--rack-tile-h);
+  --rack-tile-h: calc(var(--discard-tray-rack-tile-w) * 4 / 3);
   filter: none;
 }
 
@@ -2640,13 +2648,7 @@ html
   .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot--suggest-best
-  .tile-face::after,
-html
-  .app-top-exposure-container
-  .discard-tracker__overlay-grid
-  .exposure-rack--discard-tracker-bot-row
-  .exposure-rack__slot--suggest-best
-  .tile-face.tile--joker::after {
+  .tile-face:not(.tile--joker)::after {
   content: none;
   display: none;
   box-shadow: none;
@@ -2711,7 +2713,7 @@ html
   );
 }
 
-/* Lit bot-row illustrative faces keep rim ::before (seam clip via coach-lit-clip / lit↔lit). */
+/* Lit bot-row illustrative faces keep full rim ::before (lift seams clip; face bevel does not). */
 html
   .app-top-exposure-container
   .discard-tracker__overlay-grid
@@ -2791,22 +2793,23 @@ html
 }
 
 /*
- * Small-tile coach vignette — discard-tracker bot lit+dim + side-panel bot exposures: thin rim
- * with corner radials + symmetric edge fades. Sorted-band suggest-need stays lift-only (no rim).
+ * Small-tile coach vignette — dim bot exposures only: thin rim so darkened faces don’t pick up a
+ * heavy bevel. Lit (`suggest-best`) keeps the full Classic/simple rim from the coach blocks above
+ * (`--tile-shadow-fade` ~6.5–8% + inset depth). Sorted-band suggest-need stays lift-only (no rim).
  */
 html body .app
   :is(.panel--discard-tracker, html .app-top-exposure-container)
   .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
-  .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
+  .exposure-rack__slot--suggest-dim:not(.exposure-rack__slot--suggest-best)
   .tile-face::before,
 html body .app[data-tile-graphics]
   .panel--bot-exposures
-  .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
+  .exposure-rack__slot--suggest-dim:not(.exposure-rack__slot--suggest-best)
   .tile-face:not(.tile-face--illustrative-art)::before,
 html body .app[data-tile-graphics]
   .panel--bot-exposures
-  .exposure-rack__slot:is(.exposure-rack__slot--suggest-best, .exposure-rack__slot--suggest-dim)
+  .exposure-rack__slot--suggest-dim:not(.exposure-rack__slot--suggest-best)
   .tile-face.tile-face--illustrative-art::before {
   content: '';
   position: absolute;

@@ -387,22 +387,28 @@
  * Coaching rings (suggest-best / joker / dead-cause): inset shadow on face `::after`
  * (z-index 5) — above rim/art/glyphs/dim. Coached tiles use a minimum radius so
  * the highlighted strip tiles don't show square tile corners inside the ring.
+ *
+ * Jokers keep the inscribed J circle on suggest-best / suggest-joker — coaching is
+ * lift-only (green face ring is transparent), so replacing `::after` left them ringless.
+ * Dead-cause still borrows `::after` for the full-tile warning ring.
  */
 :is(
   .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-best,
   .hands-sheet__tile-cell--suggest-best,
   .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
   .hands-sheet__tile-cell--suggest-joker,
-  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--dead-cause,
-  .hands-sheet__tile-cell--dead-cause,
   .sortable-tile-wrap--suggest-best,
-  .sortable-tile-wrap--suggest-dead-cause,
   .drag-overlay-tile.sortable-tile-wrap--suggest-best,
-  .drag-overlay-tile.sortable-tile-wrap--suggest-dead-cause,
   .pass-strip__tile-wrap--suggest-best,
   .east-discard-staging__tile--suggest-best,
   .exposure-rack__slot--suggest-best,
   .exposure-rack__call-meld-strip__tile.exposure-rack__slot--suggest-best
+) .tile-face:not(.tile--joker)::after,
+:is(
+  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--dead-cause,
+  .hands-sheet__tile-cell--dead-cause,
+  .sortable-tile-wrap--suggest-dead-cause,
+  .drag-overlay-tile.sortable-tile-wrap--suggest-dead-cause
 ) .tile-face::after {
   content: '';
   display: block;
@@ -438,16 +444,16 @@
   .east-discard-staging__tile--suggest-best,
   .exposure-rack__slot--suggest-best,
   .exposure-rack__call-meld-strip__tile.exposure-rack__slot--suggest-best
-) .tile-face::after {
+) .tile-face:not(.tile--joker)::after {
   box-shadow: var(--hands-coaching-ring-green-front);
   background: transparent;
 }
 
-/* Joker slot: no ring / overlay (yellow joker ring removed). */
+/* Joker slot: no coaching overlay (yellow face ring removed); inscribed J circle stays. */
 :is(
   .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
   .hands-sheet__tile-cell--suggest-joker
-) .tile-face::after {
+) .tile-face:not(.tile--joker)::after {
   box-shadow: none;
   background: transparent;
 }
@@ -475,22 +481,14 @@
     .hands-list__pattern-tile-cell--dead-cause:not(.hands-list__pattern-tile-cell--suggest-dim),
   .hands-sheet__tile-cell--dead-cause:not(.hands-sheet__tile-cell--suggest-dim),
   .sortable-tile-wrap--suggest-dead-cause:not(.sortable-tile-wrap--suggest-dim)
-) .tile-face::after {
+) .tile-face:not(.tile--joker)::after {
   background: transparent;
 }
 
-/* Joker coaching slots: replace inscribed circle ring with full-tile inset shadow ring. */
+/* Dead-cause jokers: replace inscribed circle with full-tile warning ring. */
 :is(
-  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
-  .hands-sheet__tile-cell--suggest-joker,
-  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-best,
-  .hands-sheet__tile-cell--suggest-best,
-  .sortable-tile-wrap--suggest-best,
-  .drag-overlay-tile.sortable-tile-wrap--suggest-best,
-  .pass-strip__tile-wrap--suggest-best,
-  .east-discard-staging__tile--suggest-best,
-  .exposure-rack__slot--suggest-best,
-  .exposure-rack__call-meld-strip__tile.exposure-rack__slot--suggest-best,
+  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--dead-cause,
+  .hands-sheet__tile-cell--dead-cause,
   .sortable-tile-wrap--suggest-dead-cause,
   .drag-overlay-tile.sortable-tile-wrap--suggest-dead-cause
 ) .tile-face.tile--joker::after {
@@ -502,32 +500,8 @@
   width: auto;
   height: auto;
   padding-bottom: 0;
-}
-
-:is(
-  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-best,
-  .hands-sheet__tile-cell--suggest-best,
-  .sortable-tile-wrap--suggest-best,
-  .drag-overlay-tile.sortable-tile-wrap--suggest-best,
-  .pass-strip__tile-wrap--suggest-best,
-  .east-discard-staging__tile--suggest-best,
-  .exposure-rack__slot--suggest-best,
-  .exposure-rack__call-meld-strip__tile.exposure-rack__slot--suggest-best
-) .tile-face.tile--joker::after {
-  box-shadow: var(--hands-coaching-ring-green-front);
-  background: transparent;
-}
-
-:is(
-  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
-  .hands-sheet__tile-cell--suggest-joker
-) .tile-face.tile--joker::after {
-  box-shadow: none;
-  background: transparent;
-}
-
-.sortable-tile-wrap--suggest-dead-cause .tile-face.tile--joker::after,
-.drag-overlay-tile.sortable-tile-wrap--suggest-dead-cause .tile-face.tile--joker::after {
+  border: none;
+  border-radius: max(var(--tile-face-border-radius), var(--hands-coaching-ring-radius-min, 0.22rem));
   box-shadow: var(--dead-cause-border-front);
   background: transparent;
 }
