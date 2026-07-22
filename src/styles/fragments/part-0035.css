@@ -100,6 +100,17 @@
 }
 
 /*
+ * Seat chip is z-index 10 in part-0084 — same as fly-in: drop it under the lifted
+ * rack-bottom (5) so the dock-bounce paints over the seat label.
+ */
+.app-layout[data-joker-swap-hint='on'][data-animations='on']
+  .panel--hand
+  .panel-hand-rack__hand-tray:has(.sortable-tile-wrap__fly--joker-swap-hint-bounce)
+  > .panel-hand-rack__seat-label {
+  z-index: 1;
+}
+
+/*
  * Hand tray / rack-bottom lifts to z-index 5 during bounce (above rack-top) but that also
  * sends lit-tile lift/vignette shadows over the action row (z-index 1). Keep buttons on top.
  */

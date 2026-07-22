@@ -15,7 +15,7 @@ export const DEFAULT_APP_THEME: AppTheme = 'dark'
 /** Solid first-paint / page-pad colors (keep in sync with `app-background.css`). */
 export const APP_THEME_PAGE_PAD_COLOR: Record<AppTheme, string> = {
   dark: '#23282e',
-  blue: '#1e2d42',
+  blue: '#0d1522',
   purple: '#2a2438',
 }
 

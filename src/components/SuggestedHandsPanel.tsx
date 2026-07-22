@@ -857,7 +857,26 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
           className="hands-sheet__cell hands-sheet__cell--pin hands-sheet__cell--detail-pad"
           role="cell"
           aria-hidden="true"
-        />
+        >
+          {rowIsFocused ? (
+            <span className="hands-sheet__selected-check">
+              <svg
+                className="hands-sheet__selected-check__svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M4.75 12.5l5.1 5.1L19.25 7.5"
+                  stroke="currentColor"
+                  strokeWidth="3.25"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+          ) : null}
+        </div>
       ) : null}
       <button
         type="button"

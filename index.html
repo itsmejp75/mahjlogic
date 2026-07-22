@@ -16,7 +16,7 @@
       (function () {
         try {
           var t = localStorage.getItem('mahjlogic.appTheme')
-          var colors = { dark: '#23282e', blue: '#1e2d42', purple: '#2a2438' }
+          var colors = { dark: '#23282e', blue: '#0d1522', purple: '#2a2438' }
           if (t === 'tan') t = 'purple'
           if (t !== 'blue' && t !== 'purple') t = 'dark'
           document.documentElement.setAttribute('data-app-theme', t)
@@ -33,7 +33,7 @@
         background-color: #23282e;
       }
       html[data-app-theme='blue'] {
-        background-color: #1e2d42;
+        background-color: #0d1522;
       }
       html[data-app-theme='purple'] {
         background-color: #2a2438;

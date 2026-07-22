@@ -2588,6 +2588,27 @@
   grid-column: 2;
 }
 
+/* Selected-row check: absolute overlay so pin detail-pad size stays unchanged. */
+.hands-sheet__selected-check {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+  line-height: 0;
+}
+
+.hands-sheet__selected-check__svg {
+  display: block;
+  width: 1.05em;
+  height: 1.05em;
+  flex: none;
+  color: var(--tg-bam, var(--card-ink-green));
+}
+
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2)
@@ -2810,6 +2831,7 @@
   .hands-sheet__cell--pin.hands-sheet__cell--detail-pad {
   grid-column: 1;
   padding-inline: 0;
+  position: relative;
 }
 
 .hands-panel__content

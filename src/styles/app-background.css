@@ -38,6 +38,8 @@
 
   /* Hands tray body — a touch darker than main app chrome. */
   --app-bg-hands-tray: color-mix(in srgb, var(--app-bg-base) 84%, #000 16%);
+  /* Optional wash over shell paint (Denim); transparent = no wash. */
+  --app-bg-hands-tray-dim: transparent;
 
   /* --- Vignette (flattened — solid app bg) --- */
   --app-bg-vignette-shape: ellipse 140% 115% at 50% 42%;
@@ -95,13 +97,14 @@
   --app-bg-top-band-paint-color: var(--app-bg-base);
 
   /*
-   * Hands tray recess wash — same darkness as selected-row fill (`--app-bg-row-active`),
-   * under the header and continued down the left/right edges (3D lip / inset).
+   * Hands tray recess wash (header lip + side inset). Kept separate from row highlight
+   * so themes can lighten `--app-bg-row-active` without washing out the dark shadow.
    * Open suggested-hands / bot trays override depth to track overlay width (part-0123).
    */
+  --app-bg-tray-recess-shadow: color-mix(in srgb, var(--app-bg-base) 58%, #000 42%);
   --hands-header-bottom-blur-h: 0.55rem;
   --hands-header-side-blur-w: 0.55rem;
-  --hands-header-bottom-blur-color: var(--app-bg-row-active);
+  --hands-header-bottom-blur-color: var(--app-bg-tray-recess-shadow);
   /*
    * `in oklab` uses premultiplied alpha so the fade doesn’t interpolate through black
    * (bare `transparent` in srgb leaves a hairline at the end of the wash on pale tiles).
@@ -311,12 +314,43 @@ html:not([data-app-theme]) {
 }
 
 html[data-app-theme='blue'] {
-  --app-bg-page-pad-color: #1e2d42;
+  /* Login landing atmosphere (see `.landing__atmosphere` + soft glow approx). */
+  --app-bg-page-pad-color: #0d1522;
   --app-bg-base: var(--app-bg-page-pad-color);
   --app-bg-highlight: var(--app-bg-page-pad-color);
   --app-bg-shadow: var(--app-bg-page-pad-color);
-  --app-bg-flat: #4a5f78;
-  --app-bg-slot-well: #4a5f78;
+  --app-bg-flat: #3d5168;
+  --app-bg-slot-well: #3d5168;
+
+  --app-bg-paint-color: #0d1522;
+  --app-bg-paint-image:
+    radial-gradient(circle at 8% 48%, color-mix(in srgb, #00b4d8 14%, transparent) 0%, transparent 40%),
+    radial-gradient(circle at 94% 86%, color-mix(in srgb, #ffb800 10%, transparent) 0%, transparent 36%),
+    radial-gradient(90% 70% at 18% 40%, color-mix(in srgb, #1e3a5f 55%, transparent) 0%, transparent 60%),
+    radial-gradient(80% 60% at 82% 30%, color-mix(in srgb, #243447 50%, transparent) 0%, transparent 55%),
+    linear-gradient(145deg, #101826 0%, #152033 45%, #0d1522 100%);
+  --app-bg-paint-size: auto;
+  --app-bg-paint-repeat: no-repeat;
+  --app-bg-paint-blend: normal;
+  --app-bg-paint-attachment: fixed;
+
+  --app-bg-lower-band-paint-color: var(--app-bg-paint-color);
+  --app-bg-lower-band-paint-image: var(--app-bg-paint-image);
+  --app-bg-lower-band-paint-size: var(--app-bg-paint-size);
+  --app-bg-lower-band-paint-position: center;
+  --app-bg-lower-band-paint-repeat: var(--app-bg-paint-repeat);
+  --app-bg-lower-band-paint-blend: var(--app-bg-paint-blend);
+  --app-bg-lower-band-paint-attachment: var(--app-bg-paint-attachment);
+
+  /* Match shell atmosphere with a light dim so the tray reads slightly recessed. */
+  --app-bg-hands-tray: var(--app-bg-base);
+  --app-bg-hands-tray-dim: color-mix(in srgb, #000 14%, transparent);
+  /* Selected row — dark fill for readable type. Recess shadow stays on its own token. */
+  --app-bg-row-active: color-mix(in srgb, #000 24%, transparent);
+  --hands-row-active-fill: var(--app-bg-row-active);
+  /* Keep the original dark lip / side recess (do not follow the lighter row fill). */
+  --app-bg-tray-recess-shadow: color-mix(in srgb, var(--app-bg-base) 58%, #000 42%);
+  --hands-header-bottom-blur-color: var(--app-bg-tray-recess-shadow);
 }
 
 html[data-app-theme='purple'] {

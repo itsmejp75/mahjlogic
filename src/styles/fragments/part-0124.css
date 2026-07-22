@@ -722,6 +722,11 @@
   box-shadow: none;
 }
 
+/*
+ * Unused bot-row jokers: one dim shade, same as neighboring dimmed naturals.
+ * - Illustrative: SVG already owns the face (no prism ring on ::after) → same flat wash.
+ * - Prism: ring owns ::after → brightness only (never face opacity; that read double-dim).
+ */
 :is(
   .panel--bot-exposures .exposure-rack__slot--suggest-dim,
   .panel--discard-tracker
@@ -729,9 +734,52 @@
     .exposure-rack--discard-tracker-bot-row
     .exposure-rack__slot--suggest-dim
 ) .tile-face.tile--joker {
-  filter: none;
-  opacity: 0.48;
+  opacity: 1;
   --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
+}
+
+:is(
+  .panel--bot-exposures .exposure-rack__slot--suggest-dim,
+  .panel--discard-tracker
+    .discard-tracker__overlay-grid
+    .exposure-rack--discard-tracker-bot-row
+    .exposure-rack__slot--suggest-dim
+) .tile-face.tile--joker:not(.tile-face--illustrative-art) {
+  filter: brightness(var(--suggest-dim-joker-brightness));
+}
+
+:is(
+  .panel--bot-exposures .exposure-rack__slot--suggest-dim,
+  .panel--discard-tracker
+    .discard-tracker__overlay-grid
+    .exposure-rack--discard-tracker-bot-row
+    .exposure-rack__slot--suggest-dim
+) .tile-face.tile--joker.tile-face--illustrative-art {
+  filter: none;
+}
+
+:is(
+  .panel--bot-exposures .exposure-rack__slot--suggest-dim,
+  .panel--discard-tracker
+    .discard-tracker__overlay-grid
+    .exposure-rack--discard-tracker-bot-row
+    .exposure-rack__slot--suggest-dim
+) .tile-face.tile--joker.tile-face--illustrative-art::after {
+  content: '';
+  display: block;
+  position: absolute;
+  inset: calc(-1 * var(--rack-tile-face-bw));
+  border-radius: var(--tile-face-border-radius);
+  pointer-events: none;
+  z-index: 1;
+  background: var(--suggest-dim-overlay);
+  box-shadow: none;
+  opacity: 1;
+  border: none;
+  transform: none;
+  width: auto;
+  height: auto;
+  padding-bottom: 0;
 }
 
 :is(

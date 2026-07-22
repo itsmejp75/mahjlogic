@@ -370,12 +370,17 @@ html .app-dnd-frame > .app-play-split.app-top-exposure-container {
   overflow: visible;
   position: relative;
   z-index: 0;
-  /* Solid app chrome (same as footer pad / rack). */
-  background: var(--app-bg-base);
+  /* App chrome paint (same as footer pad / rack; textured themes use fixed paint). */
+  background-color: var(--app-bg-paint-color, var(--app-bg-base));
+  background-image: var(--app-bg-paint-image);
+  background-size: var(--app-bg-paint-size);
+  background-repeat: var(--app-bg-paint-repeat);
+  background-blend-mode: var(--app-bg-paint-blend);
+  background-attachment: var(--app-bg-paint-attachment);
 }
 
 /*
- * Full-bleed solid chrome for the tracker. No darker top wash.
+ * Full-bleed chrome for the tracker. No darker top wash.
  */
 html .app-dnd-frame > .app-play-split.app-top-exposure-container::before {
   content: '';
@@ -386,8 +391,12 @@ html .app-dnd-frame > .app-play-split.app-top-exposure-container::before {
   left: var(--app-bg-side-bleed-left);
   width: var(--app-bg-side-bleed-width);
   pointer-events: none;
-  background-color: var(--app-bg-base);
-  background-image: none;
+  background-color: var(--app-bg-paint-color, var(--app-bg-base));
+  background-image: var(--app-bg-paint-image);
+  background-size: var(--app-bg-paint-size);
+  background-repeat: var(--app-bg-paint-repeat);
+  background-blend-mode: var(--app-bg-paint-blend);
+  background-attachment: var(--app-bg-paint-attachment);
 }
 
 html .app-dnd-frame > .app-play-split.app-top-exposure-container::after {
@@ -401,8 +410,12 @@ html .app-dnd-frame > .app-play-split.app-top-exposure-container::after {
 html .app-dnd-frame > .app-play-split.app-top-exposure-container .discard-tracker__overlay-row {
   position: relative;
   z-index: 1;
-  background-color: var(--app-bg-base);
-  background-image: none;
+  background-color: var(--app-bg-paint-color, var(--app-bg-base));
+  background-image: var(--app-bg-paint-image);
+  background-size: var(--app-bg-paint-size);
+  background-repeat: var(--app-bg-paint-repeat);
+  background-blend-mode: var(--app-bg-paint-blend);
+  background-attachment: var(--app-bg-paint-attachment);
   border-radius: calc(var(--tile-face-border-radius, 0.35rem) + 2px);
 }
 
@@ -2010,8 +2023,8 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 .app .suggested-hands-popup .hands-panel__content {
   /* Beat part-0081 rgba fallback — same dark fill as the top discard/bot band. */
   --hands-row-active-fill: var(--app-bg-row-active);
-  /* Title row + body share solid app chrome. */
-  --hands-header-bg: var(--app-bg-base);
+  /* Title row fill comes from the full-bleed header ::before bands (paint tokens). */
+  --hands-header-bg: transparent;
 }
 
 /*
@@ -2055,7 +2068,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 /*
  * Full-bleed band for the hands header — covers side gutters through the title row.
- * Solid app chrome (`--app-bg-base`). Lip shadow lives on the list top (follows corner radii).
+ * Same app chrome paint as the rest of the shell. Lip shadow lives on the list top.
  * Header labels stay above (transparent cells, higher z-index).
  */
 .app .suggested-hands-popup .hands-panel__content .hands-list__freeze-header.hands-list__row-hit {
@@ -2072,13 +2085,22 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   width: var(--app-bg-side-bleed-width);
   border-radius: 0;
   pointer-events: none;
-  background-color: var(--app-bg-base);
-  background-image: none;
+  background: transparent;
 }
 
 .app .suggested-hands-popup .hands-panel__content .hands-list__freeze-header .hands-list__header-cell {
   position: relative;
   z-index: 1;
+  background-color: transparent;
+  background-image: none;
+}
+
+/* Beat part-0081 solid `--hands-header-bg` on the freeze-header row (band ::before paints). */
+.app .suggested-hands-popup .hands-panel__content :is(
+  .hands-list__freeze-header.hands-list__row-hit,
+  .hands-list__freeze-header.hands-list__row-hit:focus,
+  .hands-list__freeze-header.hands-list__row-hit:focus-visible
+) {
   background-color: transparent;
   background-image: none;
 }
@@ -2108,8 +2130,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   box-sizing: border-box;
   pointer-events: none;
   border-radius: 0;
-  background-color: var(--app-bg-base);
-  background-image: none;
+  background: transparent;
 }
 
 .app
@@ -2128,8 +2149,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .hands-panel__content
   .hands-list-scroll
   > .hands-sheet.hands-sheet--tilesHands::before {
-  background-color: var(--app-bg-base);
-  background-image: none;
+  background: transparent;
 }
 
 .app
@@ -2172,8 +2192,9 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
   .hands-panel__content {
   position: relative;
-  /* Dark chrome shows through the clipped list-corner wedges (matches header). */
-  background-color: var(--app-bg-base);
+  /* Header stays fully clear (0 opacity); body dim lives on ::before below the title row. */
+  background-color: transparent;
+  background-image: none;
 }
 
 /*
@@ -2191,6 +2212,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 /*
  * Hands tray body fill — behind the list. Lip wash paints on ::after (above rows).
+ * Uses shell paint so textured themes (Denim) stay continuous; solid themes keep a flat fill.
  */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
@@ -2208,7 +2230,13 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   border: none;
   pointer-events: none;
   background-color: var(--app-bg-hands-tray);
-  background-image: none;
+  background-image:
+    linear-gradient(var(--app-bg-hands-tray-dim, transparent), var(--app-bg-hands-tray-dim, transparent)),
+    var(--app-bg-paint-image);
+  background-size: auto, var(--app-bg-paint-size);
+  background-repeat: no-repeat, var(--app-bg-paint-repeat);
+  background-blend-mode: normal, var(--app-bg-paint-blend);
+  background-attachment: scroll, var(--app-bg-paint-attachment);
 }
 
 /*
@@ -2231,7 +2259,10 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   pointer-events: none;
   box-sizing: border-box;
   background-color: transparent;
-  --hands-header-bottom-blur-color: color-mix(in srgb, var(--app-bg-base) 78%, #000 22%);
+  --hands-header-bottom-blur-color: var(
+    --app-bg-tray-recess-shadow,
+    color-mix(in srgb, var(--app-bg-base) 78%, #000 22%)
+  );
   background-image: var(--hands-header-bottom-blur);
   background-repeat: no-repeat;
   background-position: var(--hands-header-bottom-blur-position);
@@ -2240,25 +2271,12 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   box-shadow: none;
 }
 
-/* Bot hands-identifier: header glow + side wash (no rim border). */
+/* Bot cyan identity wash (same thickness on top lip + sides). */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
   .bot-exposure-hands-panel {
-  --_bot-glow-tile: max(
-    1px,
-    calc(
-      (
-        var(--suggested-overlay-viewport-width, 100%)
-        - 28 * var(--player-rack-face-gap, 0.125rem)
-      ) / 29
-    )
-  );
-  --_glow-blur: max(2px, calc(var(--_bot-glow-tile) * 0.3125));
-  --_glow-spread: max(1px, calc(var(--_bot-glow-tile) * 0.09375));
-  --_bot-header-glow-h: calc(var(--_glow-blur) + var(--_glow-spread));
-  --_drop-frame-color: #00B4D8;
+  --_drop-frame-color: #00b4d8;
   --_bot-tray-side-blur-color: color-mix(in srgb, var(--_drop-frame-color) 40%, transparent);
-  /* Same multi-stop feather as `--hands-header-bottom-blur` (suggested-hands recess). */
   --_bot-tray-side-blur: linear-gradient(
       to bottom in oklab,
       var(--_bot-tray-side-blur-color) 0%,
@@ -2288,28 +2306,28 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
     );
 }
 
+/*
+ * Bot body: same paint + dim as Suggested Hands.
+ * Cyan edge wash is only on ::after (same thickness on top and sides).
+ */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
   .bot-exposure-hands-panel
   .hands-panel__content::before {
-  --_drop-frame-color: #00B4D8;
-  z-index: 1;
-  border-radius: var(--suggested-popup-radius) var(--suggested-popup-radius) 0 0;
-  background-image: linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--_drop-frame-color) 55%, transparent) 0%,
-    color-mix(in srgb, var(--_drop-frame-color) 32%, transparent) 18%,
-    color-mix(in srgb, var(--_drop-frame-color) 14%, transparent) 42%,
-    color-mix(in srgb, var(--_drop-frame-color) 5%, transparent) 68%,
-    color-mix(in srgb, var(--_drop-frame-color) 1.5%, transparent) 88%,
-    transparent 100%
-  );
-  background-repeat: no-repeat;
-  background-position: top center;
-  background-size: 100% var(--_bot-header-glow-h);
+  z-index: 0;
+  border-radius: var(--suggested-popup-radius);
+  background-color: var(--app-bg-hands-tray);
+  background-image:
+    linear-gradient(var(--app-bg-hands-tray-dim, transparent), var(--app-bg-hands-tray-dim, transparent)),
+    var(--app-bg-paint-image);
+  background-size: auto, var(--app-bg-paint-size);
+  background-repeat: no-repeat, var(--app-bg-paint-repeat);
+  background-blend-mode: normal, var(--app-bg-paint-blend);
+  background-attachment: scroll, var(--app-bg-paint-attachment);
+  background-position: center;
 }
 
-/* Bot title lives in the toolbar — don't paint the Suggested Hands header band over the glow. */
+/* Bot title lives in the toolbar — no Suggested Hands header band. */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
   .bot-exposure-hands-panel
@@ -2330,7 +2348,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 }
 
 /*
- * Bot Possible Hands: recess wash (header lip + sides); no tray rim border.
+ * Bot Possible Hands: cyan recess wash (header lip + sides).
  */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
@@ -2345,13 +2363,14 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   width: auto;
   height: auto;
   border-radius: var(--suggested-popup-radius);
+  pointer-events: none;
+  box-sizing: border-box;
   background-color: transparent;
   background-image: var(--_bot-tray-side-blur);
   background-repeat: no-repeat;
   background-position: var(--hands-header-bottom-blur-position);
   background-size: var(--hands-header-bottom-blur-size);
   border: none;
-  box-sizing: border-box;
   box-shadow: none;
   filter: none;
   -webkit-mask-image: none;
@@ -2389,7 +2408,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 /*
  * Full-bleed title-row band on `.hands-panel__list-column` (not clipped by scroll overflow-x).
- * Solid `--app-bg-base`. Tray rim + lip wash on content `::after` (bot: full-height blue rim/wash).
+ * Same app chrome paint as the shell. Tray rim + lip wash on content `::after`.
  */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
@@ -2407,26 +2426,37 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   box-sizing: border-box;
   pointer-events: none;
   border-radius: 0;
-  background-color: var(--app-bg-base);
-  background-image: none;
+  background: transparent;
 }
 
 /*
  * Main app background surfaces — paint recipe lives in src/styles/app-background.css.
- * Solid `--app-bg-base` everywhere in the upper chrome (no top-band dark wash).
+ * Themes with `--app-bg-paint-image: none` stay solid; Denim uses fixed landing paint.
  */
 :is(html, body, #root) {
   background-color: var(--app-bg-page-pad-color, var(--app-bg-paint-color, var(--app-bg-base)));
-  background-image: none;
+  background-image: var(--app-bg-paint-image);
+  background-size: var(--app-bg-paint-size);
+  background-repeat: var(--app-bg-paint-repeat);
+  background-blend-mode: var(--app-bg-paint-blend);
+  background-attachment: var(--app-bg-paint-attachment);
 }
 
 .app .app-main {
-  background-color: var(--app-bg-page-pad-color, var(--app-bg-base));
-  background-image: none;
+  background-color: var(--app-bg-page-pad-color, var(--app-bg-paint-color, var(--app-bg-base)));
+  background-image: var(--app-bg-paint-image);
+  background-size: var(--app-bg-paint-size);
+  background-repeat: var(--app-bg-paint-repeat);
+  background-blend-mode: var(--app-bg-paint-blend);
+  background-attachment: var(--app-bg-paint-attachment);
 }
 
 .app .app-main:has(.app-play-split.app-top-exposure-container) {
-  background-image: none;
+  background-image: var(--app-bg-paint-image);
+  background-size: var(--app-bg-paint-size);
+  background-repeat: var(--app-bg-paint-repeat);
+  background-blend-mode: var(--app-bg-paint-blend);
+  background-attachment: var(--app-bg-paint-attachment);
 }
 
 :is(

@@ -145,7 +145,7 @@ export function LandingPage() {
             decoding="async"
             draggable={false}
           />
-          <p className="landing__tagline">Smart American Mah Jongg Console</p>
+          <p className="landing__tagline">American Mah Jongg Intelligence</p>
           <p className="landing__description">
             Practice play, discard tracking, and hand guidance — built for landscape play.
           </p>
