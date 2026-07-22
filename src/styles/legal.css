@@ -1,0 +1,133 @@
+.legal {
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+  min-height: 100dvh;
+  min-height: 100svh;
+  padding: max(1rem, env(safe-area-inset-top)) max(1.25rem, env(safe-area-inset-right))
+    max(1.25rem, env(safe-area-inset-bottom)) max(1.25rem, env(safe-area-inset-left));
+  color: #e8eef6;
+  font-family: var(--sans);
+  background: #0d1522;
+  overflow: auto;
+}
+
+.legal__atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(70% 50% at 15% 0%, color-mix(in srgb, #1e3a5f 45%, transparent), transparent 60%),
+    linear-gradient(160deg, #101826 0%, #0d1522 100%);
+}
+
+.legal__shell {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 42rem);
+  margin: 0 auto;
+}
+
+.legal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.legal__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: #f2f4f7;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.legal__brand img {
+  border-radius: 22%;
+}
+
+.legal__nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.legal__nav a,
+.legal__back a,
+.legal__doc a {
+  color: #00b4d8;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.legal__nav a:hover,
+.legal__back a:hover,
+.legal__doc a:hover {
+  color: color-mix(in srgb, #00b4d8 70%, #fff 30%);
+}
+
+.legal__doc {
+  padding: 1.35rem 1.4rem 1.5rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, #152033 94%, #000 6%);
+  border: 1px solid color-mix(in srgb, #6f859e 34%, transparent);
+  box-shadow: 0 16px 36px -18px rgba(0, 0, 0, 0.55);
+}
+
+.legal__doc h1 {
+  margin: 0 0 0.35rem;
+  font-family: 'Noto Serif', var(--heading), serif;
+  font-weight: 900;
+  font-size: clamp(1.55rem, 3vw, 1.9rem);
+  line-height: 1.15;
+  color: #f2f4f7;
+}
+
+.legal__updated {
+  margin: 0 0 1.1rem;
+  font-size: 0.86rem;
+  color: color-mix(in srgb, #d7dde6 58%, #1b2430 42%);
+}
+
+.legal__doc h2 {
+  margin: 1.35rem 0 0.45rem;
+  font-size: 1.05rem;
+  font-weight: 750;
+  color: #f2f4f7;
+}
+
+.legal__doc p,
+.legal__doc li {
+  margin: 0 0 0.7rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: color-mix(in srgb, #e8eef6 86%, #8b93a1 14%);
+}
+
+.legal__doc ul {
+  margin: 0 0 0.7rem;
+  padding-left: 1.2rem;
+}
+
+.legal__doc li {
+  margin-bottom: 0.4rem;
+}
+
+.legal__back {
+  margin: 1rem 0 0;
+  text-align: center;
+  font-size: 0.92rem;
+}
+
+@media (orientation: landscape) and (max-height: 480px) {
+  .legal__doc {
+    padding: 1rem 1.1rem;
+  }
+
+  .legal__doc h1 {
+    font-size: 1.35rem;
+  }
+}

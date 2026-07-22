@@ -1,0 +1,511 @@
+/*
+ * Auth landing — landscape-first (Capacitor / App Store), Backgammon-Galaxy-style card.
+ * Action buttons use PokerStars gray / press chrome (--app-action-btn-*).
+ */
+
+.landing {
+  --landing-ink: #f2f4f7;
+  --landing-muted: color-mix(in srgb, #d7dde6 58%, #1b2430 42%);
+  --landing-cyan: #00b4d8;
+  --landing-cyan-deep: #0891b2;
+  --landing-gold: #ffb800;
+  --landing-panel: #152033;
+  --landing-panel-edge: color-mix(in srgb, #6f859e 34%, transparent);
+  --landing-field: #ffffff;
+  --landing-field-ink: #1f2937;
+  --landing-field-placeholder: #8b93a1;
+
+  --rack-action-face: var(--app-action-btn-face);
+  --rack-action-face-pressed: var(--app-action-btn-face-pressed);
+  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed-chrome);
+  --rack-action-shadow-rest: var(--app-action-btn-shadow-rest);
+  --rack-action-pressed: var(--app-action-btn-shadow-pressed);
+  --rack-action-border-rest: var(--app-action-btn-border-rest);
+  --rack-action-border-hold: var(--app-action-btn-border-hold);
+  --rack-action-border-color: var(--app-action-btn-border);
+  --rack-action-label-color: var(--app-action-btn-label);
+  --rack-action-label-color-disabled: var(--app-action-btn-label-disabled);
+
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+  min-height: 100dvh;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(0.75rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+    max(0.75rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  overflow: hidden;
+  color: var(--landing-ink);
+  font-family: var(--sans);
+  background: #0d1522;
+}
+
+.landing--callback {
+  flex-direction: column;
+  gap: 1rem;
+  text-align: center;
+}
+
+.landing__atmosphere {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(90% 70% at 18% 40%, color-mix(in srgb, #1e3a5f 55%, transparent) 0%, transparent 60%),
+    radial-gradient(80% 60% at 82% 30%, color-mix(in srgb, #243447 50%, transparent) 0%, transparent 55%),
+    linear-gradient(145deg, #101826 0%, #152033 45%, #0d1522 100%);
+}
+
+.landing__glow {
+  position: absolute;
+  z-index: 0;
+  border-radius: 50%;
+  filter: blur(72px);
+  pointer-events: none;
+  opacity: 0.35;
+  animation: landing-glow-drift 16s ease-in-out infinite alternate;
+}
+
+.landing__glow--cyan {
+  width: min(48vw, 26rem);
+  height: min(48vw, 26rem);
+  left: -6%;
+  top: 22%;
+  background: color-mix(in srgb, var(--landing-cyan) 45%, transparent);
+}
+
+.landing__glow--gold {
+  width: min(42vw, 22rem);
+  height: min(42vw, 22rem);
+  right: -4%;
+  bottom: 10%;
+  background: color-mix(in srgb, var(--landing-gold) 32%, transparent);
+  animation-delay: -5s;
+}
+
+@keyframes landing-glow-drift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(2.5%, -2%, 0) scale(1.06);
+  }
+}
+
+/* Landscape-first: brand | auth side-by-side */
+.landing__frame {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 68rem);
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(17rem, 22rem);
+  align-items: center;
+  gap: clamp(1.5rem, 4.5vw, 3.5rem);
+  animation: landing-rise 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.landing__brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-width: 0;
+  min-height: min(70vh, 28rem);
+  padding-inline: 0.5rem;
+}
+
+.landing__logo {
+  display: block;
+  width: min(100%, 36rem);
+  max-height: min(42vh, 14rem);
+  height: auto;
+  margin: 0 auto 1rem;
+  object-fit: contain;
+  object-position: center;
+  user-select: none;
+  filter: drop-shadow(0 12px 32px rgba(0, 0, 0, 0.45));
+}
+
+.landing__tagline {
+  margin: 0 0 0.5rem;
+  font-family: 'Noto Serif', var(--heading), serif;
+  font-weight: 900;
+  font-size: clamp(1.2rem, 3.2vh, 1.75rem);
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  color: var(--landing-ink);
+}
+
+.landing__description {
+  margin: 0 auto;
+  max-width: 28rem;
+  font-size: clamp(0.95rem, 2.2vh, 1.1rem);
+  line-height: 1.45;
+  color: var(--landing-muted);
+}
+
+.landing__auth-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.landing-auth {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  padding: clamp(0.95rem, 2.4vh, 1.35rem) clamp(1rem, 2vw, 1.35rem);
+  border-radius: 1.15rem;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, #243552 40%, transparent) 0%, transparent 46%),
+    var(--landing-panel);
+  border: 1px solid var(--landing-panel-edge);
+  box-shadow:
+    0 18px 40px -16px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 color-mix(in srgb, #fff 7%, transparent);
+}
+
+.landing-auth__forgot-lead {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  color: var(--landing-muted);
+}
+
+.landing-auth__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.landing-auth__divider {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--landing-muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+}
+
+.landing-auth__divider::before,
+.landing-auth__divider::after {
+  content: '';
+  height: 1px;
+  background: color-mix(in srgb, #8ea0b8 28%, transparent);
+}
+
+.landing-auth__field {
+  position: relative;
+  display: block;
+}
+
+.landing-auth__field-icon {
+  position: absolute;
+  left: 0.8rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  color: var(--landing-field-placeholder);
+  pointer-events: none;
+}
+
+.landing-auth__field input {
+  appearance: none;
+  box-sizing: border-box;
+  width: 100%;
+  border: 0;
+  border-radius: 0.7rem;
+  padding: 0.78rem 0.9rem 0.78rem 2.55rem;
+  font: inherit;
+  font-weight: 500;
+  font-size: 0.95rem;
+  color: var(--landing-field-ink);
+  background: var(--landing-field);
+  outline: none;
+}
+
+.landing-auth__field input::placeholder {
+  color: var(--landing-field-placeholder);
+}
+
+.landing-auth__field input:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--landing-cyan) 40%, transparent);
+}
+
+.landing-auth__row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -0.15rem;
+}
+
+.landing-auth__text-btn,
+.landing__switch-link {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  font-weight: 650;
+  font-size: 0.9rem;
+  color: var(--landing-cyan);
+  cursor: pointer;
+}
+
+.landing-auth__text-btn:hover,
+.landing__switch-link:hover {
+  color: color-mix(in srgb, var(--landing-cyan) 70%, #fff 30%);
+}
+
+.landing-auth__error,
+.landing-auth__info,
+.landing__status {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.landing-auth__error {
+  color: #ff8b8b;
+}
+
+.landing-auth__info,
+.landing__status {
+  color: color-mix(in srgb, var(--landing-cyan) 72%, #fff 28%);
+}
+
+.btn.landing-auth__action-btn {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0.65rem 1rem;
+  border-radius: 0.75rem;
+  font: inherit;
+  font-weight: 650;
+  font-size: 0.95rem;
+  letter-spacing: 0.015em;
+  cursor: pointer;
+  color: var(--rack-action-label-color);
+  background: var(--rack-action-face);
+  border: 1px solid var(--rack-action-border-color, #636870);
+  box-shadow: var(--rack-action-shadow-rest);
+  opacity: 1;
+  filter: none;
+  text-shadow: none;
+  transition: box-shadow 0.12s ease, background 0.12s ease;
+  transform: none;
+}
+
+.btn.landing-auth__action-btn:hover:not(:disabled):not(:active) {
+  background: var(--rack-action-face);
+  box-shadow: var(--rack-action-shadow-rest);
+  transform: none;
+}
+
+.btn.landing-auth__action-btn:active:not(:disabled),
+.btn.landing-auth__action-btn.btn--pointer-down:not(:disabled) {
+  background: var(--rack-action-face-pressed-chrome);
+  box-shadow: var(--rack-action-pressed);
+  transition: none;
+  transform: none;
+}
+
+.btn.landing-auth__action-btn:active:not(:disabled):not(.btn--pointer-down) {
+  background: var(--rack-action-face);
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
+  box-shadow: var(--rack-action-shadow-rest);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+  transform: none;
+}
+
+.btn.landing-auth__action-btn:disabled {
+  color: var(--rack-action-label-color-disabled);
+  cursor: default;
+  box-shadow: none;
+  opacity: 1;
+  filter: none;
+}
+
+.landing-auth__google-mark {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: 0 0 auto;
+}
+
+.btn.landing-auth__action-btn--primary {
+  --rack-action-face: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--landing-cyan) 88%, #fff 12%) 0%,
+    var(--landing-cyan-deep) 100%
+  );
+  --rack-action-face-pressed: #0e7490;
+  --rack-action-face-pressed-chrome: linear-gradient(
+      0deg,
+      color-mix(in srgb, #7dd3fc 28%, transparent) 0%,
+      transparent 22%
+    ),
+    var(--rack-action-face-pressed);
+  --rack-action-border-color: color-mix(in srgb, var(--landing-cyan) 55%, #fff 20%);
+  --rack-action-border-rest: color-mix(in srgb, var(--landing-cyan) 45%, #0e7490 55%);
+  --rack-action-label-color: #ffffff;
+  color: #fff;
+  font-weight: 700;
+}
+
+.landing__switch {
+  margin: 0;
+  text-align: center;
+  font-size: 0.92rem;
+  color: var(--landing-muted);
+}
+
+.landing__legal-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--landing-muted);
+}
+
+.landing__legal-links a {
+  color: var(--landing-muted);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.landing__legal-links a:hover {
+  color: var(--landing-cyan);
+}
+
+@keyframes landing-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Short landscape phones / iPad mini landscape — tighten vertical budget */
+@media (orientation: landscape) and (max-height: 480px) {
+  .landing__frame {
+    gap: 1rem;
+  }
+
+  .landing__brand {
+    min-height: 0;
+  }
+
+  .landing__logo {
+    max-height: min(38vh, 7.5rem);
+    width: min(100%, 22rem);
+    margin-bottom: 0.5rem;
+  }
+
+  .landing__tagline {
+    font-size: 1.05rem;
+  }
+
+  .landing__description {
+    font-size: 0.88rem;
+    max-width: 22rem;
+  }
+
+  .landing-auth {
+    gap: 0.55rem;
+    padding: 0.75rem 0.9rem;
+  }
+
+  .landing-auth__field input,
+  .btn.landing-auth__action-btn {
+    min-height: 2.35rem;
+    padding-block: 0.55rem;
+  }
+}
+
+/* Portrait fallback — stack brand over auth (browser only; native is landscape) */
+@media (orientation: portrait) {
+  .landing__frame {
+    width: min(100%, 24rem);
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .landing__brand {
+    min-height: 0;
+  }
+
+  .landing__logo {
+    max-height: none;
+    width: min(100%, 20rem);
+  }
+}
+
+/* GIS fallback when One Tap / FedCM is unavailable */
+.landing-google-fallback {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(8, 12, 18, 0.72);
+}
+
+.landing-google-fallback__panel {
+  width: min(100%, 22rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1.25rem 1.15rem;
+  border-radius: 1rem;
+  background: #152033;
+  border: 1px solid color-mix(in srgb, #6f859e 34%, transparent);
+  box-shadow: 0 18px 40px -16px rgba(0, 0, 0, 0.7);
+}
+
+.landing-google-fallback__title {
+  margin: 0;
+  font-weight: 700;
+  color: #f2f4f7;
+}
+
+.landing-google-fallback__btn-host {
+  display: flex;
+  justify-content: center;
+  min-height: 2.75rem;
+}
+
+.landing-google-fallback__cancel {
+  appearance: none;
+  border: 0;
+  background: none;
+  color: color-mix(in srgb, #d7dde6 58%, #1b2430 42%);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.landing-google-fallback__cancel:hover {
+  color: #00b4d8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing__frame,
+  .landing__glow {
+    animation: none;
+  }
+}

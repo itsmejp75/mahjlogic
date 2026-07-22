@@ -47,6 +47,14 @@ function cssLinkBeforeModuleScript(): Plugin {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), cssLinkBeforeModuleScript()],
+  /*
+   * Keep auth redirect URLs stable in Supabase. Without strictPort, Vite hops
+   * 5173 → 5174 → … when the port is busy and OAuth callbacks break.
+   */
+  server: {
+    port: 5173,
+    strictPort: true,
+  },
   resolve: {
     alias: {
       '@mahjlogic/card-books': path.resolve(

@@ -2,8 +2,10 @@ import { Capacitor } from '@capacitor/core'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { StrictMode, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
 import './index.css'
-import App from './App.tsx'
+import { AppRoutes } from './app/AppRoutes.tsx'
+import { AuthProvider } from './auth/AuthProvider'
 import { initButtonPointerPress } from './buttonPointerPress'
 import { preloadClassicTileArt } from './tiles/classicTileArt'
 
@@ -82,11 +84,15 @@ export function AppWithNativeSplashHandoff() {
     }
   }, [])
 
-  return <App />
+  return <AppRoutes />
 }
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AppWithNativeSplashHandoff />
+    <BrowserRouter>
+      <AuthProvider>
+        <AppWithNativeSplashHandoff />
+      </AuthProvider>
+    </BrowserRouter>
   </StrictMode>,
 )
