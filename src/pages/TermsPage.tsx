@@ -60,7 +60,7 @@ export function TermsPage() {
 
       <h2>Contact</h2>
       <p>
-        Questions about these Terms: <a href="mailto:jpmessina75@gmail.com">jpmessina75@gmail.com</a>
+        Questions about these Terms: <a href="mailto:support@mahjlogic.com">support@mahjlogic.com</a>
       </p>
       <p>These Terms are a plain-language starting point and are not a substitute for legal advice.</p>
     </LegalDocPage>

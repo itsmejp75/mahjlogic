@@ -71,7 +71,7 @@ export function PrivacyPage() {
 
       <h2>Contact</h2>
       <p>
-        Questions about this policy: <a href="mailto:jpmessina75@gmail.com">jpmessina75@gmail.com</a>
+        Questions about this policy: <a href="mailto:support@mahjlogic.com">support@mahjlogic.com</a>
       </p>
       <p>
         This summary is provided for transparency and is not legal advice. We may update this page as
