@@ -145,7 +145,7 @@
   /* Selected suggested-hand row fill: #334155 at ~64% opacity (rgba — reliable over dark scroll areas). */
   --hands-row-active-fill: rgba(51, 65, 85, 0.64);
   /* Unpinned pins: same light ink on highlighted and unhighlighted rows. */
-  --hands-pin-ink: color-mix(in srgb, var(--app-bg-base) 80%, #ffffff 20%);
+  --hands-pin-ink: color-mix(in srgb, var(--app-bg-base) 62%, #ffffff 38%);
   --hands-pin-ink-active: var(--hands-pin-ink);
   --hands-sheet-cell-bg: transparent;
   /* Sticky title row: no shell paint — only the selected data row is filled. */

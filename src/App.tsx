@@ -53,6 +53,7 @@ import { TileGraphicsProvider } from './tiles/TileGraphicsContext'
 import { AppMenuOpenGate, AppMenuOpenProvider, appMenuOpenApiRef, useAppMenuOpen } from './app/AppMenuOpenContext'
 import { SuggestedHandsTrayProvider, suggestedHandsTrayApiRef } from './app/SuggestedHandsTrayContext'
 import { EastDiscardStagingSlot, SuggestedHandsBoundsOnTrayChange, SuggestedHandsPinOnTrayClose, SuggestedHandsPopupChrome, WALL_GAME_MAX_EXPOSURE_MELD_TILES, type MainPhase } from './app/playSurfaceUi'
+import { createResizeScheduler } from './lib/resizeSchedule'
 import type { RoundState } from './app/roundState'
 import { eastExposureMeldSortId } from './app/playSurfaceDnDHelpers'
 import { PlaySurface, type PlaySurfaceDnDApi } from './app/PlaySurface'
@@ -1876,15 +1877,6 @@ export default function App() {
   const handPanelCqwFrozenRef = useRef(false)
   const refreshHandPanelCqwRef = useRef<() => void>(() => {})
   const playSurfaceDnDApiRef = useRef<PlaySurfaceDnDApi | null>(null)
-  const [suggestedDiscardOverlayBounds, setSuggestedDiscardOverlayBounds] = useState({
-    topExtendPx: 0,
-    bottomExtendPx: 0,
-    contentHeightPx: 0,
-    viewportTopPx: 0,
-    viewportLeftPx: 0,
-    viewportWidthPx: 0,
-    viewportBottomPx: 0,
-  })
   const [suggestedPinnedHandKeys, setSuggestedPinnedHandKeys] = useState<string[]>([])
   const toggleSuggestedPinnedHandKey = useCallback((key: string) => {
     setSuggestedPinnedHandKeys((prev) =>
@@ -4507,11 +4499,16 @@ export default function App() {
    * ResizeObserver only fires on a REAL box change (resize / orientation / sibling-panel relayout),
    * never during a transient transform, so the frozen px stays put and the dip can't happen. The
    * measured content-box inline size equals what `100cqi` resolves to at rest → pixel-identical.
+   *
+   * Updates are rAF-coalesced and quantized to whole px so continuous window-drag resize does not
+   * rewrite the full rack/action calc tree on every observer tick.
    */
   useLayoutEffect(() => {
     const el = handPanelRef.current
     if (!el) return
     const dndFrame = el.closest('.app-dnd-frame') as HTMLElement | null
+    const scheduler = createResizeScheduler(120)
+    let lastAppliedPx = Number.NaN
     // Content-box inline size == what `100cqi` used to resolve to. Written on `.panel--hand` (rack
     // tile math) and `.app-dnd-frame` (DragOverlay sizing). Neither element uses `container-type`
     // anymore — live cqi + per-frame drag transforms caused the mobile rack vertical jog on WKWebView.
@@ -4524,7 +4521,10 @@ export default function App() {
     const setVar = (w: number) => {
       if (handPanelCqwFrozenRef.current) return
       if (!Number.isFinite(w) || w < 1) return
-      const next = `${w}px`
+      const px = Math.round(w)
+      if (px === lastAppliedPx) return
+      lastAppliedPx = px
+      const next = `${px}px`
       for (const target of [el, dndFrame]) {
         if (!target) continue
         if (target.style.getPropertyValue('--hand-panel-cqw') !== next) {
@@ -4535,24 +4535,32 @@ export default function App() {
     const refresh = () => setVar(contentWidth())
     refreshHandPanelCqwRef.current = refresh
     refresh()
-    const onViewportChange = () => refresh()
+    const scheduleRefresh = () => scheduler.live(refresh)
+    let pendingInline: number | null = null
     let ro: ResizeObserver | null = null
     if (typeof ResizeObserver !== 'undefined') {
       ro = new ResizeObserver((entries) => {
         const inline = entries[0]?.contentBoxSize?.[0]?.inlineSize
-        setVar(inline ?? contentWidth())
+        pendingInline = inline ?? null
+        scheduler.live(() => {
+          setVar(pendingInline ?? contentWidth())
+          pendingInline = null
+        })
       })
       ro.observe(el)
     } else {
-      window.addEventListener('resize', onViewportChange)
+      window.addEventListener('resize', scheduleRefresh)
     }
-    window.addEventListener('orientationchange', onViewportChange)
-    window.visualViewport?.addEventListener('resize', onViewportChange)
+    // Orientation / visualViewport can change without a content-box RO tick (mobile chrome).
+    // Coalesce; do not also run sync work on every desktop window-drag pixel.
+    window.addEventListener('orientationchange', scheduleRefresh)
+    window.visualViewport?.addEventListener('resize', scheduleRefresh)
     return () => {
+      scheduler.cancel()
       ro?.disconnect()
-      window.removeEventListener('resize', onViewportChange)
-      window.removeEventListener('orientationchange', onViewportChange)
-      window.visualViewport?.removeEventListener('resize', onViewportChange)
+      window.removeEventListener('resize', scheduleRefresh)
+      window.removeEventListener('orientationchange', scheduleRefresh)
+      window.visualViewport?.removeEventListener('resize', scheduleRefresh)
     }
   }, [])
 
@@ -4909,32 +4917,27 @@ export default function App() {
     winHandSortedTiles,
   ])
 
+  /** Write overlay CSS vars on the popup node — avoids App setState / re-render on every resize tick. */
   const updateSuggestedDiscardOverlayBounds = useCallback(() => {
     const popup = suggestedHandsPopupRef.current
     const exposureTopEl = eastExposureRackTopRef.current
     const discardPanel = discardTrackerPanelRef.current
 
+    const clearOverlayVars = () => {
+      if (!popup) return
+      popup.style.setProperty('--suggested-overlay-top-peek', '0px')
+      popup.style.setProperty('--suggested-overlay-content-h', '100%')
+      popup.style.setProperty('--suggested-overlay-top-extend', '0px')
+      popup.style.setProperty('--suggested-overlay-bottom-extend', '0px')
+      popup.style.setProperty('--suggested-overlay-viewport-top', '0px')
+      popup.style.setProperty('--suggested-overlay-viewport-left', '0px')
+      popup.style.setProperty('--suggested-overlay-viewport-width', 'auto')
+      popup.style.setProperty('--suggested-overlay-viewport-bottom', '0px')
+    }
+
     const content = popup?.parentElement
-    if (!content || !exposureTopEl || !discardPanel) {
-      setSuggestedDiscardOverlayBounds((prev) =>
-        prev.topExtendPx === 0 &&
-          prev.bottomExtendPx === 0 &&
-          prev.contentHeightPx === 0 &&
-          prev.viewportTopPx === 0 &&
-          prev.viewportLeftPx === 0 &&
-          prev.viewportWidthPx === 0 &&
-          prev.viewportBottomPx === 0
-          ? prev
-          : {
-              topExtendPx: 0,
-              bottomExtendPx: 0,
-              contentHeightPx: 0,
-              viewportTopPx: 0,
-              viewportLeftPx: 0,
-              viewportWidthPx: 0,
-              viewportBottomPx: 0,
-            },
-      )
+    if (!popup || !content || !exposureTopEl || !discardPanel) {
+      clearOverlayVars()
       return
     }
 
@@ -4949,59 +4952,38 @@ export default function App() {
       return
     }
     const viewportH = window.visualViewport?.height ?? window.innerHeight
-    const next = {
-      topExtendPx: Math.max(0, Math.ceil(contentRect.top - exposureRect.top)),
-      bottomExtendPx: Math.max(0, Math.ceil(discardRect.bottom - contentRect.bottom)),
-      contentHeightPx: Math.max(1, Math.ceil(contentRect.height)),
-      viewportTopPx: Math.max(0, Math.floor(exposureRect.top)),
-      viewportLeftPx: Math.max(0, Math.floor(contentRect.left)),
-      viewportWidthPx: Math.max(1, Math.ceil(contentRect.width)),
-      viewportBottomPx: Math.max(0, Math.ceil(viewportH - discardRect.bottom)),
-    }
-    setSuggestedDiscardOverlayBounds((prev) =>
-      prev.topExtendPx === next.topExtendPx &&
-        prev.bottomExtendPx === next.bottomExtendPx &&
-        prev.contentHeightPx === next.contentHeightPx &&
-        prev.viewportTopPx === next.viewportTopPx &&
-        prev.viewportLeftPx === next.viewportLeftPx &&
-        prev.viewportWidthPx === next.viewportWidthPx &&
-        prev.viewportBottomPx === next.viewportBottomPx
-        ? prev
-        : next,
-    )
+    const topExtendPx = Math.max(0, Math.ceil(contentRect.top - exposureRect.top))
+    const bottomExtendPx = Math.max(0, Math.ceil(discardRect.bottom - contentRect.bottom))
+    const contentHeightPx = Math.max(1, Math.ceil(contentRect.height))
+    const viewportTopPx = Math.max(0, Math.floor(exposureRect.top))
+    const viewportLeftPx = Math.max(0, Math.floor(contentRect.left))
+    const viewportWidthPx = Math.max(1, Math.ceil(contentRect.width))
+    const viewportBottomPx = Math.max(0, Math.ceil(viewportH - discardRect.bottom))
+
+    popup.style.setProperty('--suggested-overlay-top-peek', '0px')
+    /*
+     * Never publish `0px` — that makes `.panel--hands` height 0 (flex-end), so only the
+     * Away / Prob % / Points header strip paints at the bottom of an empty discard tray.
+     */
+    popup.style.setProperty('--suggested-overlay-content-h', `${contentHeightPx}px`)
+    popup.style.setProperty('--suggested-overlay-top-extend', `${topExtendPx}px`)
+    popup.style.setProperty('--suggested-overlay-bottom-extend', `${bottomExtendPx}px`)
+    popup.style.setProperty('--suggested-overlay-viewport-top', `${viewportTopPx}px`)
+    popup.style.setProperty('--suggested-overlay-viewport-left', `${viewportLeftPx}px`)
+    popup.style.setProperty('--suggested-overlay-viewport-width', `${viewportWidthPx}px`)
+    popup.style.setProperty('--suggested-overlay-viewport-bottom', `${viewportBottomPx}px`)
   }, [])
 
   useLayoutEffect(() => {
     if (!showSuggestedHandsPanel || !showPlaySplitRow) {
-      setSuggestedDiscardOverlayBounds((prev) =>
-        prev.topExtendPx === 0 &&
-          prev.bottomExtendPx === 0 &&
-          prev.contentHeightPx === 0 &&
-          prev.viewportTopPx === 0 &&
-          prev.viewportLeftPx === 0 &&
-          prev.viewportWidthPx === 0 &&
-          prev.viewportBottomPx === 0
-          ? prev
-          : {
-              topExtendPx: 0,
-              bottomExtendPx: 0,
-              contentHeightPx: 0,
-              viewportTopPx: 0,
-              viewportLeftPx: 0,
-              viewportWidthPx: 0,
-              viewportBottomPx: 0,
-            },
-      )
+      updateSuggestedDiscardOverlayBounds()
       return
     }
 
+    const scheduler = createResizeScheduler(120)
     updateSuggestedDiscardOverlayBounds()
-    let raf = 0
     const settleTimers: number[] = []
-    const scheduleUpdate = () => {
-      window.cancelAnimationFrame(raf)
-      raf = window.requestAnimationFrame(updateSuggestedDiscardOverlayBounds)
-    }
+    const scheduleUpdate = () => scheduler.live(updateSuggestedDiscardOverlayBounds)
     const scheduleSettledUpdate = () => {
       scheduleUpdate()
       for (const delay of [80, 180, 360]) {
@@ -5022,7 +5004,7 @@ export default function App() {
     window.addEventListener('orientationchange', scheduleSettledUpdate)
     window.visualViewport?.addEventListener('resize', scheduleUpdate)
     return () => {
-      window.cancelAnimationFrame(raf)
+      scheduler.cancel()
       for (const t of settleTimers) window.clearTimeout(t)
       ro?.disconnect()
       window.removeEventListener('resize', scheduleUpdate)
@@ -5066,22 +5048,12 @@ export default function App() {
   const suggestedHandsPopup = useMemo(() => {
     if (!showSuggestedHandsPanel) return null
 
+    // Dynamic overlay geometry is written as CSS vars on the popup DOM node in
+    // `updateSuggestedDiscardOverlayBounds` (rAF-coalesced) so window resize does not
+    // re-render App. Do not put measured vars in React `style` — a later commit would
+    // overwrite DOM writes with stale defaults.
     const overlayStyle: CSSProperties = {
       ['--suggested-overlay-top-peek' as string]: '0px',
-      /*
-       * Never publish `0px` — that makes `.panel--hands` height 0 (flex-end), so only the
-       * Away / Prob % / Points header strip paints at the bottom of an empty discard tray.
-       */
-      ['--suggested-overlay-content-h' as string]:
-        suggestedDiscardOverlayBounds.contentHeightPx > 0
-          ? `${suggestedDiscardOverlayBounds.contentHeightPx}px`
-          : '100%',
-      ['--suggested-overlay-top-extend' as string]: `${suggestedDiscardOverlayBounds.topExtendPx}px`,
-      ['--suggested-overlay-bottom-extend' as string]: `${suggestedDiscardOverlayBounds.bottomExtendPx}px`,
-      ['--suggested-overlay-viewport-top' as string]: `${suggestedDiscardOverlayBounds.viewportTopPx}px`,
-      ['--suggested-overlay-viewport-left' as string]: `${suggestedDiscardOverlayBounds.viewportLeftPx}px`,
-      ['--suggested-overlay-viewport-width' as string]: `${suggestedDiscardOverlayBounds.viewportWidthPx}px`,
-      ['--suggested-overlay-viewport-bottom' as string]: `${suggestedDiscardOverlayBounds.viewportBottomPx}px`,
     }
 
     return (
@@ -5128,7 +5100,6 @@ export default function App() {
     )
   }, [
     showSuggestedHandsPanel,
-    suggestedDiscardOverlayBounds,
     botHandsIdentifierFocusSeat,
     botHandsIdentifierPatterns,
     botHandsIdentifierFocusMelds,

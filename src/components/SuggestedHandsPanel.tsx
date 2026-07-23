@@ -45,6 +45,7 @@ import {
   suggestedHandSectionMenuLabel,
 } from '../suggestedHands/filterSettings'
 import selectedHandCheckSrc from '../assets/selected-hand-check.png?url'
+import { createResizeScheduler } from '../lib/resizeSchedule'
 import { cardInkRunText } from './CardColoredText'
 import { DeadCauseWarning } from './DeadCauseWarning'
 import { TileFace } from './TileFace'
@@ -1440,19 +1441,21 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     }
   }, [])
 
+  /**
+   * Update frozen panel width. Returns whether the token changed.
+   * Content-visibility bust is separate — it forces layout over all rows and must only run
+   * after a resize stream settles (not on every live tick).
+   */
   const refreshSuggestHandsPanelCqw = useCallback(() => {
     const el = listColumnRef.current
-    if (!el) return
-    const w = el.clientWidth
-    if (!Number.isFinite(w) || w < 1) return
+    if (!el) return false
+    const w = Math.round(el.clientWidth)
+    if (!Number.isFinite(w) || w < 1) return false
     const next = `${w}px`
-    const cqwChanged = el.style.getPropertyValue('--suggest-hands-panel-cqw') !== next
-    if (cqwChanged) {
-      el.style.setProperty('--suggest-hands-panel-cqw', next)
-      bustHandsSheetRowIntrinsicCache(el)
-      void el.offsetHeight
-    }
-  }, [bustHandsSheetRowIntrinsicCache])
+    if (el.style.getPropertyValue('--suggest-hands-panel-cqw') === next) return false
+    el.style.setProperty('--suggest-hands-panel-cqw', next)
+    return true
+  }, [])
 
   useLayoutEffect(() => {
     const el = listColumnRef.current
@@ -1463,49 +1466,59 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     const el = listColumnRef.current
     if (!el) return
 
-    refreshSuggestHandsPanelCqw()
-
-    let raf = 0
-    const scheduleUpdate = () => {
-      window.cancelAnimationFrame(raf)
-      raf = window.requestAnimationFrame(refreshSuggestHandsPanelCqw)
+    const scheduler = createResizeScheduler(140)
+    let cqwDirty = false
+    const applyLive = () => {
+      if (refreshSuggestHandsPanelCqw()) cqwDirty = true
     }
+    const applySettled = () => {
+      applyLive()
+      if (!cqwDirty) return
+      cqwDirty = false
+      bustHandsSheetRowIntrinsicCache(el)
+      void el.offsetHeight
+    }
+
+    applySettled()
+
     const settleTimers: number[] = []
-    const scheduleSettledUpdate = () => {
-      scheduleUpdate()
+    const scheduleLive = () => scheduler.live(applyLive)
+    const scheduleSettled = () => scheduler.liveAndSettle(applyLive, applySettled)
+    const scheduleSettledBurst = () => {
+      scheduleSettled()
       for (const delay of [80, 180, 360, 400]) {
-        settleTimers.push(window.setTimeout(scheduleUpdate, delay))
+        settleTimers.push(window.setTimeout(applySettled, delay))
       }
     }
 
     let ro: ResizeObserver | null = null
     if (typeof ResizeObserver !== 'undefined') {
-      ro = new ResizeObserver(scheduleUpdate)
+      ro = new ResizeObserver(scheduleSettled)
       ro.observe(el)
     } else {
-      window.addEventListener('resize', scheduleUpdate)
+      window.addEventListener('resize', scheduleSettled)
     }
-    window.addEventListener('orientationchange', scheduleSettledUpdate)
-    window.visualViewport?.addEventListener('resize', scheduleUpdate)
+    window.addEventListener('orientationchange', scheduleSettledBurst)
+    window.visualViewport?.addEventListener('resize', scheduleLive)
 
     const panel = el.closest('.panel--hands')
     const onTransitionEnd = (ev: Event) => {
-      if (ev instanceof TransitionEvent && ev.propertyName === 'transform') scheduleSettledUpdate()
+      if (ev instanceof TransitionEvent && ev.propertyName === 'transform') scheduleSettledBurst()
     }
     panel?.addEventListener('transitionend', onTransitionEnd)
 
-    if (trayOpen) scheduleSettledUpdate()
+    if (trayOpen) scheduleSettledBurst()
 
     return () => {
-      window.cancelAnimationFrame(raf)
+      scheduler.cancel()
       for (const t of settleTimers) window.clearTimeout(t)
       ro?.disconnect()
-      window.removeEventListener('resize', scheduleUpdate)
-      window.removeEventListener('orientationchange', scheduleSettledUpdate)
-      window.visualViewport?.removeEventListener('resize', scheduleUpdate)
+      window.removeEventListener('resize', scheduleSettled)
+      window.removeEventListener('orientationchange', scheduleSettledBurst)
+      window.visualViewport?.removeEventListener('resize', scheduleLive)
       panel?.removeEventListener('transitionend', onTransitionEnd)
     }
-  }, [refreshSuggestHandsPanelCqw, trayOpen])
+  }, [refreshSuggestHandsPanelCqw, bustHandsSheetRowIntrinsicCache, trayOpen])
 
   const handleListScrollPointerDown = useCallback(
     (e: PointerEvent<HTMLDivElement>) => {

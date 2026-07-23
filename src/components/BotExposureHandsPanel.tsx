@@ -2,6 +2,7 @@ import { memo, useLayoutEffect, useMemo, useRef } from 'react'
 import type { PracticePattern } from '../card/practicePatterns'
 import type { TileDef } from '../mahjong/types'
 import type { CardInk } from '../card/cardText'
+import { createResizeScheduler } from '../lib/resizeSchedule'
 import { patternLinePreviewSlots } from '../card/patternLinePreview'
 import {
   placeExposureMeldsOnCardLine,
@@ -138,9 +139,12 @@ export const BotExposureHandsPanel = memo(function BotExposureHandsPanel({
     const el = listColumnRef.current
     if (!el) return
 
+    const scheduler = createResizeScheduler(120)
+    let lastPx = Number.NaN
     const refresh = () => {
-      const w = el.clientWidth
-      if (!Number.isFinite(w) || w < 1) return
+      const w = Math.round(el.clientWidth)
+      if (!Number.isFinite(w) || w < 1 || w === lastPx) return
+      lastPx = w
       const next = `${w}px`
       if (el.style.getPropertyValue('--suggest-hands-panel-cqw') !== next) {
         el.style.setProperty('--suggest-hands-panel-cqw', next)
@@ -148,9 +152,13 @@ export const BotExposureHandsPanel = memo(function BotExposureHandsPanel({
     }
 
     refresh()
-    const ro = new ResizeObserver(refresh)
+    const schedule = () => scheduler.live(refresh)
+    const ro = new ResizeObserver(schedule)
     ro.observe(el)
-    return () => ro.disconnect()
+    return () => {
+      scheduler.cancel()
+      ro.disconnect()
+    }
   }, [])
 
   const rootClassName = [

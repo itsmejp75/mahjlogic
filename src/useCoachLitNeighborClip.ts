@@ -1,5 +1,6 @@
 import { useLayoutEffect, type RefObject } from 'react'
 import { updateCoachLitNeighborClip } from './coachLitNeighborClip'
+import { createResizeScheduler } from './lib/resizeSchedule'
 
 /** Recompute lit→lit vignette/lift clips when bot exposure layout changes. */
 export function useCoachLitNeighborClip(
@@ -15,6 +16,7 @@ export function useCoachLitNeighborClip(
     let raf = 0
     let raf2 = 0
     let applying = false
+    const resizeScheduler = createResizeScheduler(140)
     const run = () => {
       applying = true
       try {
@@ -26,7 +28,8 @@ export function useCoachLitNeighborClip(
         })
       }
     }
-    const schedule = () => {
+    /** Immediate double-rAF — for class toggles / first paint (not window-drag streams). */
+    const scheduleImmediate = () => {
       if (applying) return
       cancelAnimationFrame(raf)
       cancelAnimationFrame(raf2)
@@ -36,13 +39,18 @@ export function useCoachLitNeighborClip(
         raf2 = requestAnimationFrame(run)
       })
     }
+    /** Trailing settle during continuous resize — avoid O(n) rect work every pixel. */
+    const scheduleResizeSettled = () => {
+      if (applying) return
+      resizeScheduler.settle(scheduleImmediate)
+    }
 
     // Sync before paint so same-frame lit neighbors are not briefly double-rimmed; rAF
     // catches late layout (fonts, fly-in settle) without waiting on a resize.
     run()
-    schedule()
+    scheduleImmediate()
 
-    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(schedule) : null
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(scheduleResizeSettled) : null
     ro?.observe(root)
 
     // suggest-need / suggest-best class toggles can land without a resize — keep vertical
@@ -66,7 +74,7 @@ export function useCoachLitNeighborClip(
                 (record.oldValue?.includes('suggest-dim') ?? false)
               )
             })
-            if (coachRelevant) schedule()
+            if (coachRelevant) scheduleImmediate()
           })
         : null
     mo?.observe(root, {
@@ -77,14 +85,15 @@ export function useCoachLitNeighborClip(
       attributeOldValue: true,
     })
 
-    window.addEventListener('resize', schedule)
+    window.addEventListener('resize', scheduleResizeSettled)
 
     return () => {
       cancelAnimationFrame(raf)
       cancelAnimationFrame(raf2)
+      resizeScheduler.cancel()
       ro?.disconnect()
       mo?.disconnect()
-      window.removeEventListener('resize', schedule)
+      window.removeEventListener('resize', scheduleResizeSettled)
     }
   }, [active, rootRef, ...deps])
 }
