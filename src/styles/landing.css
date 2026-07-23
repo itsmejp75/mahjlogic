@@ -357,6 +357,33 @@ html:has(.landing),
   flex: 0 0 auto;
 }
 
+/* Invisible Google Identity button over our chrome — real click brands this origin. */
+.landing-auth__google-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.landing-auth__google-gsi {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  opacity: 0;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  pointer-events: none;
+}
+
+.landing-auth__google-gsi--ready {
+  pointer-events: auto;
+}
+
+.landing-auth__google-gsi > div,
+.landing-auth__google-gsi iframe {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 100% !important;
+}
+
 .btn.landing-auth__action-btn--primary {
   --rack-action-face: linear-gradient(
     180deg,

@@ -1,7 +1,12 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import watermarkSrc from '../assets/mahjlogic-watermark.svg?url'
 import { useAuth } from '../auth/AuthProvider'
+import {
+  isGoogleIdentityConfigured,
+  loadGoogleIdentityScript,
+  mountGoogleContinueButton,
+} from '../lib/googleIdentity'
 import '../styles/landing.css'
 
 type Mode = 'sign-in' | 'sign-up' | 'forgot'
@@ -38,6 +43,7 @@ export function LandingPage() {
     signInWithEmail,
     signUpWithEmail,
     signInWithGoogle,
+    signInWithGoogleIdToken,
     resetPasswordForEmail,
   } = useAuth()
   const [mode, setMode] = useState<Mode>('sign-in')
@@ -46,14 +52,70 @@ export function LandingPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
-
-  if (!loading && user) {
-    return <Navigate to="/play" replace />
-  }
+  const [gisReady, setGisReady] = useState(false)
+  const googleHostRef = useRef<HTMLDivElement>(null)
+  const useGis = configured && isGoogleIdentityConfigured()
 
   function clearMessages() {
     setError(null)
     setInfo(null)
+  }
+
+  useEffect(() => {
+    if (!useGis || mode === 'forgot' || user) {
+      setGisReady(false)
+      return
+    }
+    const host = googleHostRef.current
+    if (!host) return
+
+    let disposed = false
+    let unmount: (() => void) | undefined
+
+    void (async () => {
+      try {
+        await loadGoogleIdentityScript()
+        if (disposed || !googleHostRef.current) return
+        unmount = await mountGoogleContinueButton(googleHostRef.current, {
+          onCredential: (credential, nonce) => {
+            void (async () => {
+              clearMessages()
+              setBusy(true)
+              try {
+                const { error: googleError } = await signInWithGoogleIdToken(credential, nonce)
+                if (googleError) {
+                  setError(googleError)
+                  return
+                }
+                navigate('/play', { replace: true })
+              } finally {
+                setBusy(false)
+              }
+            })()
+          },
+          onError: (message) => {
+            setError(message)
+            setBusy(false)
+          },
+        })
+        if (!disposed) setGisReady(true)
+      } catch (err) {
+        if (!disposed) {
+          setGisReady(false)
+          console.warn(err instanceof Error ? err.message : err)
+        }
+      }
+    })()
+
+    return () => {
+      disposed = true
+      unmount?.()
+      setGisReady(false)
+    }
+  }, [useGis, mode, user, navigate, signInWithGoogleIdToken])
+
+  if (!loading && user) {
+    return <Navigate to="/play" replace />
   }
 
   async function onSubmit(e: FormEvent) {
@@ -113,6 +175,14 @@ export function LandingPage() {
       setError('Add Supabase keys in .env.local to enable accounts.')
       return
     }
+    // GIS brands this origin on Google’s screen. Do not fall back to Supabase OAuth
+    // (that path always says “continue to *.supabase.co”).
+    if (useGis) {
+      setError(
+        `Google button didn’t load. In Google Cloud → Credentials → your Web client, add Authorized JavaScript origin: ${window.location.origin}`,
+      )
+      return
+    }
     setBusy(true)
     const { error: googleError, redirected } = await signInWithGoogle()
     if (googleError) {
@@ -155,15 +225,30 @@ export function LandingPage() {
           <section className="landing-auth" aria-label="Account">
             {mode !== 'forgot' ? (
               <>
-                <button
-                  type="button"
-                  className="btn landing-auth__action-btn landing-auth__social-btn"
-                  disabled={busy || loading}
-                  onClick={() => void onGoogle()}
-                >
-                  <GoogleMark />
-                  Continue with Google
-                </button>
+                <div className="landing-auth__google-wrap">
+                  <button
+                    type="button"
+                    className="btn landing-auth__action-btn landing-auth__social-btn"
+                    disabled={busy || loading}
+                    onClick={() => void onGoogle()}
+                    tabIndex={gisReady ? -1 : 0}
+                    aria-hidden={gisReady || undefined}
+                  >
+                    <GoogleMark />
+                    Continue with Google
+                  </button>
+                  {useGis ? (
+                    <div
+                      ref={googleHostRef}
+                      className={
+                        gisReady && !busy && !loading
+                          ? 'landing-auth__google-gsi landing-auth__google-gsi--ready'
+                          : 'landing-auth__google-gsi'
+                      }
+                      aria-label="Continue with Google"
+                    />
+                  ) : null}
+                </div>
 
                 <div className="landing-auth__divider">
                   <span>Or sign in with</span>

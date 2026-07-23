@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
@@ -19,6 +20,10 @@ type AuthContextValue = {
   signUpWithEmail: (email: string, password: string) => Promise<{ error: string | null; needsConfirmation: boolean }>
   signInWithProvider: (provider: OAuthProvider) => Promise<{ error: string | null }>
   signInWithGoogle: () => Promise<{ error: string | null; redirected: boolean }>
+  signInWithGoogleIdToken: (
+    credential: string,
+    nonce: string,
+  ) => Promise<{ error: string | null }>
   resetPasswordForEmail: (email: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
 }
@@ -34,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(isSupabaseConfigured)
   const [session, setSession] = useState<Session | null>(null)
 
-  /** Full-page Google OAuth (no One Tap / no custom overlay). */
+  /** Full-page Google OAuth via Supabase (brands *.supabase.co on Google’s screen). */
   async function signInWithGoogleOAuthRedirect(): Promise<{ error: string | null; redirected: boolean }> {
     const supabase = getSupabase()
     if (!supabase) return { error: 'Supabase is not configured.', redirected: false }
@@ -47,6 +52,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) return { error: error.message, redirected: false }
     return { error: null, redirected: true }
   }
+
+  const signInWithGoogleIdToken = useCallback(
+    async (credential: string, nonce: string): Promise<{ error: string | null }> => {
+      const supabase = getSupabase()
+      if (!supabase) return { error: 'Supabase is not configured.' }
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: credential,
+        nonce,
+      })
+      if (error) return { error: error.message }
+      if (data.session) setSession(data.session)
+      return { error: null }
+    },
+    [],
+  )
 
   useEffect(() => {
     const supabase = getSupabase()
@@ -110,8 +131,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: error?.message ?? null }
     },
     signInWithGoogle() {
+      // Prefer GIS on the landing page (see LandingPage). This redirect path is the fallback
+      // when VITE_GOOGLE_CLIENT_ID is missing — Google will show *.supabase.co.
       return signInWithGoogleOAuthRedirect()
     },
+    signInWithGoogleIdToken,
     async resetPasswordForEmail(email) {
       const supabase = getSupabase()
       if (!supabase) return { error: 'Supabase is not configured.' }
