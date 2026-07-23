@@ -7,28 +7,26 @@ export type GoogleCredentialResponse = {
   select_by?: string
 }
 
+type GooglePromptNotification = {
+  isDisplayMoment: () => boolean
+  isDisplayed: () => boolean
+  isNotDisplayed: () => boolean
+  isSkippedMoment: () => boolean
+  isDismissedMoment: () => boolean
+  getNotDisplayedReason: () => string
+  getSkippedReason: () => string
+}
+
 type GoogleAccountsId = {
   initialize: (config: {
     client_id: string
     callback: (response: GoogleCredentialResponse) => void
     nonce?: string
     context?: 'signin' | 'signup' | 'use'
-    ux_mode?: 'popup' | 'redirect'
     use_fedcm_for_prompt?: boolean
     auto_select?: boolean
   }) => void
-  renderButton: (
-    parent: HTMLElement,
-    options: {
-      type?: 'standard' | 'icon'
-      theme?: 'outline' | 'filled_blue' | 'filled_black'
-      size?: 'large' | 'medium' | 'small'
-      text?: 'signin_with' | 'signup_with' | 'continue_with' | 'signin'
-      shape?: 'rectangular' | 'pill' | 'circle' | 'square'
-      logo_alignment?: 'left' | 'center'
-      width?: number | string
-    },
-  ) => void
+  prompt: (momentListener?: (notification: GooglePromptNotification) => void) => void
   cancel: () => void
 }
 
@@ -51,6 +49,7 @@ export function isGoogleIdentityConfigured(): boolean {
 }
 
 let gsiLoadPromise: Promise<void> | null = null
+let primedNonce: { nonce: string; hashedNonce: string } | null = null
 
 export function loadGoogleIdentityScript(): Promise<void> {
   if (typeof window === 'undefined') return Promise.reject(new Error('No window'))
@@ -93,75 +92,93 @@ export async function createGoogleNonce(): Promise<{ nonce: string; hashedNonce:
   return { nonce, hashedNonce }
 }
 
-export type MountGoogleButtonOptions = {
-  onCredential: (credential: string, nonce: string) => void
-  onError?: (message: string) => void
+/** Load GIS + precompute nonce so a click can call prompt() without awaiting first. */
+export async function primeGoogleIdentity(): Promise<void> {
+  if (!isGoogleIdentityConfigured()) return
+  await loadGoogleIdentityScript()
+  primedNonce = await createGoogleNonce()
 }
 
+function takeNonce(): { nonce: string; hashedNonce: string } | null {
+  const pair = primedNonce
+  primedNonce = null
+  void createGoogleNonce()
+    .then((next) => {
+      primedNonce = next
+    })
+    .catch(() => undefined)
+  return pair
+}
+
+export type GoogleIdTokenResult =
+  | { status: 'credential'; credential: string; nonce: string }
+  | { status: 'cancelled' }
+  | { status: 'unavailable'; reason: string }
+
 /**
- * Renders Google’s real button into `host` (typically an opacity-0 overlay).
- * Clicks hit Google’s control, so the account picker brands this page’s origin
- * (e.g. mahjlogic.com) instead of *.supabase.co.
+ * FedCM / One Tap from a real user click — no popup windows, no invisible overlay.
+ * Google brands this page’s origin. If the prompt cannot show, caller should use
+ * full-page Supabase OAuth redirect (also no popup).
  */
-export async function mountGoogleContinueButton(
-  host: HTMLElement,
-  options: MountGoogleButtonOptions,
-): Promise<() => void> {
+export async function promptGoogleIdToken(): Promise<GoogleIdTokenResult> {
   const clientId = getGoogleClientId()
   if (!clientId) {
-    throw new Error('Missing VITE_GOOGLE_CLIENT_ID')
+    return { status: 'unavailable', reason: 'Missing VITE_GOOGLE_CLIENT_ID' }
   }
 
-  await loadGoogleIdentityScript()
+  if (!window.google?.accounts?.id) {
+    await loadGoogleIdentityScript()
+  }
   const googleId = window.google?.accounts?.id
   if (!googleId) {
-    throw new Error('Google Identity failed to initialize')
+    return { status: 'unavailable', reason: 'Google Identity failed to initialize' }
   }
 
-  let cancelled = false
-  let nonce = ''
+  // Prefer primed nonce so we don't await crypto during the click (keeps user gesture).
+  const pair = takeNonce() ?? (await createGoogleNonce())
 
-  const paint = async () => {
-    if (cancelled) return
-    const pair = await createGoogleNonce()
-    if (cancelled) return
-    nonce = pair.nonce
-    host.replaceChildren()
+  return new Promise((resolve) => {
+    let settled = false
+    const finish = (result: GoogleIdTokenResult) => {
+      if (settled) return
+      settled = true
+      try {
+        googleId.cancel()
+      } catch {
+        /* ignore */
+      }
+      resolve(result)
+    }
+
     googleId.initialize({
       client_id: clientId,
       callback: (response) => {
         if (!response.credential) {
-          options.onError?.('Google did not return a credential')
+          finish({ status: 'unavailable', reason: 'Google did not return a credential' })
           return
         }
-        options.onCredential(response.credential, nonce)
-        void paint()
+        finish({ status: 'credential', credential: response.credential, nonce: pair.nonce })
       },
       nonce: pair.hashedNonce,
       context: 'signin',
-      ux_mode: 'popup',
+      use_fedcm_for_prompt: true,
       auto_select: false,
     })
-    googleId.renderButton(host, {
-      type: 'standard',
-      theme: 'outline',
-      size: 'large',
-      text: 'continue_with',
-      shape: 'rectangular',
-      width: Math.max(host.clientWidth || 320, 240),
-      logo_alignment: 'left',
+
+    googleId.prompt((notification) => {
+      if (notification.isDisplayMoment() || notification.isDisplayed()) {
+        return
+      }
+      if (notification.isDismissedMoment()) {
+        finish({ status: 'cancelled' })
+        return
+      }
+      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+        const reason = notification.isNotDisplayed()
+          ? notification.getNotDisplayedReason()
+          : notification.getSkippedReason()
+        finish({ status: 'unavailable', reason: reason || 'prompt_unavailable' })
+      }
     })
-  }
-
-  await paint()
-
-  return () => {
-    cancelled = true
-    try {
-      googleId.cancel()
-    } catch {
-      /* ignore */
-    }
-    host.replaceChildren()
-  }
+  })
 }
