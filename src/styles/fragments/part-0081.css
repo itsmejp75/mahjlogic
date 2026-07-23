@@ -4191,8 +4191,8 @@
   justify-content: center;
   font-size: min(
     var(--rack-hand-action-label-fs),
-    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.52),
-    calc(var(--rack-tile-btn-inner-3) / 7.6)
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.56),
+    calc(var(--rack-tile-btn-inner-3) / 7.1)
   );
   white-space: nowrap;
   font-weight: 600;

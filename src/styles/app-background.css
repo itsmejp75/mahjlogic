@@ -179,7 +179,7 @@
   --app-action-btn-bottom-pressed: #363d44;
   --app-action-btn-border: color-mix(in srgb, #6c757e 78%, #ffffff 22%);
   --app-action-btn-highlight: rgba(255, 255, 255, 0.16);
-  --app-action-btn-label: #e2e4e8;
+  --app-action-btn-label: #ffffff;
   /*
    * Inactive: just below the pill face — unlit indicator on the button (active label = lit).
    * Slightly darker than `--app-action-btn-bottom`, not a faded mix of the bright label.
@@ -340,6 +340,15 @@ html:not([data-app-theme]) {
   --hands-row-active-fill: var(--app-bg-row-active);
   --app-bg-tray-recess-shadow: color-mix(in srgb, var(--app-bg-base) 58%, #000 42%);
   --hands-header-bottom-blur-color: var(--app-bg-tray-recess-shadow);
+
+  /* Action pills — bold luminous steel (login SIGN IN energy, Phantom slate). */
+  --app-action-btn-top: color-mix(in srgb, #9aabbc 82%, #fff 18%);
+  --app-action-btn-bottom: #5a6b7d;
+  --app-action-btn-top-pressed: #4e5f71;
+  --app-action-btn-bottom-pressed: #3f4f60;
+  --app-action-btn-border: color-mix(in srgb, #a8b8c8 68%, #fff 32%);
+  --app-action-btn-label: #ffffff;
+  --rack-action-hint-border: #c4a46a;
 }
 
 html[data-app-theme='blue'] {
@@ -380,6 +389,15 @@ html[data-app-theme='blue'] {
   /* Keep the original dark lip / side recess (do not follow the lighter row fill). */
   --app-bg-tray-recess-shadow: color-mix(in srgb, var(--app-bg-base) 58%, #000 42%);
   --hands-header-bottom-blur-color: var(--app-bg-tray-recess-shadow);
+
+  /* Action pills — bold cyan (same recipe as login SIGN IN). */
+  --app-action-btn-top: color-mix(in srgb, #00b4d8 88%, #fff 12%);
+  --app-action-btn-bottom: #0a7a98;
+  --app-action-btn-top-pressed: #0c6480;
+  --app-action-btn-bottom-pressed: #0c6480;
+  --app-action-btn-border: color-mix(in srgb, #00b4d8 55%, #fff 20%);
+  --app-action-btn-label: #ffffff;
+  --rack-action-hint-border: #00b4d8;
 }
 
 html[data-app-theme='purple'] {
@@ -417,6 +435,15 @@ html[data-app-theme='purple'] {
   --hands-row-active-fill: var(--app-bg-row-active);
   --app-bg-tray-recess-shadow: color-mix(in srgb, var(--app-bg-base) 58%, #000 42%);
   --hands-header-bottom-blur-color: var(--app-bg-tray-recess-shadow);
+
+  /* Action pills — bold orchid (login SIGN IN energy, Mystic violet). */
+  --app-action-btn-top: color-mix(in srgb, #b56fd0 82%, #fff 18%);
+  --app-action-btn-bottom: #7e3a9c;
+  --app-action-btn-top-pressed: #6b3088;
+  --app-action-btn-bottom-pressed: #582872;
+  --app-action-btn-border: color-mix(in srgb, #b56fd0 55%, #fff 25%);
+  --app-action-btn-label: #ffffff;
+  --rack-action-hint-border: #b56fd0;
 }
 
 /*

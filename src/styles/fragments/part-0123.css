@@ -3417,13 +3417,15 @@ html[data-home-screen-app]:not([data-native-app])
   transition: box-shadow 0.12s ease, background 0.12s ease;
 }
 
-/* Wall count: heat fill + same resting chrome as Sort / Menu (top overlay on fill in part-0021). */
+/* Wall count: white edge so the heat fill doesn’t blend into theme chrome. */
 .app
   .panel--hand
   .rack-bottom-bar--tile-grid
   .rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell {
-  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
+  border: 1px solid color-mix(in srgb, #ffffff 72%, #8a96a4 28%);
   box-shadow: var(--rack-action-shadow-rest);
+  background-clip: padding-box;
+  overflow: hidden;
 }
 
 .app .panel--hand :is(.rack-bottom-bar--tile-grid, .hand-bank__mj-review-actions, .panel-hand-rack__review-new-game-row) :is(
@@ -4527,12 +4529,12 @@ html
   border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
   border-radius: var(--rack-tile-btn-border-radius, max(0.36rem, calc(var(--hand-rack-tile-w, 2.65rem) * 0.128)));
   font-family: 'Figtree', var(--sans);
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: max(0.028em, calc(0.042em + 0.026rem));
   font-size: min(
     var(--rack-hand-action-label-fs, var(--rack-control-label-fs, 0.72rem)),
-    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h, 2.4rem)) * 0.52),
-    calc(var(--rack-tile-btn-inner-2, 5rem) / 5.9)
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h, 2.4rem)) * 0.56),
+    calc(var(--rack-tile-btn-inner-2, 5rem) / 5.5)
   );
   line-height: 1.08;
   text-transform: none;

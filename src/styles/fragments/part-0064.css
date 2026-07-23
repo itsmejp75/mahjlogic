@@ -77,7 +77,7 @@
 .app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open:not(:disabled),
 .app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open:disabled {
   background: var(--color-slate-mid);
-  color: #dcdce0;
+  color: #ffffff;
   text-shadow: none;
   box-shadow:
     inset 4px 4px 11px rgba(0, 0, 0, 0.48),
@@ -87,7 +87,7 @@
 
 .app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open:hover:not(:disabled) {
   background: var(--color-slate-mid);
-  color: #dcdce0;
+  color: #ffffff;
   box-shadow:
     inset 4px 4px 11px rgba(0, 0, 0, 0.48),
     inset -3px -3px 8px rgba(255, 255, 255, 0.1),

@@ -257,10 +257,10 @@
   font-family: 'Figtree', var(--sans);
   font-size: min(
     var(--rack-hand-action-label-fs),
-    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.52),
-    calc(var(--rack-tile-btn-inner-2) / 5.9)
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.56),
+    calc(var(--rack-tile-btn-inner-2) / 5.5)
   );
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: max(0.028em, calc(0.042em + 0.026rem));
   line-height: 1;
   text-transform: none;

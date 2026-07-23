@@ -256,8 +256,8 @@
    * above bot `--rack-control-label-fs`; may exceed `--rack-bottom-action-fs` when that caps icons.
    * Hamburger stays `--rack-menu-hamburger-fs` (part-0020). */
   --rack-hand-action-label-fs: min(
-    calc(var(--rack-bottom-action-fs) * 1.18),
-    calc(var(--hand-rack-tile-w) * 0.58)
+    calc(var(--rack-bottom-action-fs) * 1.26),
+    calc(var(--hand-rack-tile-w) * 0.62)
   );
   --rack-control-pad-inline: max(0.08rem, min(0.2rem, calc(var(--hand-rack-tile-w) * 0.07)));
   --rack-control-pad-block: max(0.08rem, min(0.16rem, calc(var(--hand-rack-tile-w) * 0.042)));

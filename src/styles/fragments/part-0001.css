@@ -52,7 +52,7 @@
 .panel--bot-exposures__toolbar-well .panel--bot-exposures__hint {
   font-size: min(
     var(--rack-hand-action-label-fs),
-    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.52)
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.56)
   );
 }
 
@@ -77,8 +77,8 @@
 .panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn {
   font-size: min(
     var(--rack-hand-action-label-fs),
-    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.52),
-    calc(var(--hand-rack-tile-w) * 0.34)
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.56),
+    calc(var(--hand-rack-tile-w) * 0.37)
   );
   line-height: 1.08;
   text-transform: none;
@@ -100,8 +100,8 @@
 .panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c13-14 {
   font-size: min(
     var(--rack-hand-action-label-fs),
-    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.52),
-    calc(var(--rack-tile-btn-inner-2) / 5.9)
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.56),
+    calc(var(--rack-tile-btn-inner-2) / 5.5)
   );
   line-height: 1.08;
   text-transform: none;
@@ -117,8 +117,8 @@
 .panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14 {
   font-size: min(
     var(--rack-hand-action-label-fs),
-    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.52),
-    calc(var(--rack-tile-btn-inner-3) / 7.6)
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.56),
+    calc(var(--rack-tile-btn-inner-3) / 7.1)
   );
   white-space: nowrap;
 }
@@ -131,7 +131,7 @@
 .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell,
 .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid
   .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn {
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: max(0.028em, calc(0.042em + 0.026rem));
 }
 
@@ -139,6 +139,6 @@
 .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell,
 .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
   .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn {
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: max(0.028em, calc(0.042em + 0.026rem));
 }

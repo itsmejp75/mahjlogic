@@ -44,7 +44,7 @@ export const MSG_SWAP_NO_EXPOSED_JOKERS =
  * “Placemat” matches on-table language (exposure row + discard-adjacent staging).
  */
 export const MSG_SWAP_PICK_TILE_FIRST =
-  'On your turn: move the natural tile you want to give up from your hand to the placemat — the staging slot next to the discard tracker or the reserved slot on your exposure row — then press Swap. You must have exactly one tile in the placemat. You can also drag that tile directly onto your own melds or another player’s exposed meld that contains a joker you may redeem.'
+  'Put a natural tile in the green discard slot and press Swap — or drag it onto a meld with a joker you can redeem.'
 
 /** Swap error: staged tile cannot legally replace any exposed joker. */
 export const MSG_SWAP_NO_LEGAL_FOR_TILE =

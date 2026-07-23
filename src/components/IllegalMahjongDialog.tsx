@@ -239,7 +239,11 @@ export function IllegalMahjongDialog({ rankInput, onDismiss }: Props) {
         ) : null}
       </div>
       <div className="charleston-error-dialog__actions charleston-error-dialog__actions--center">
-        <button type="button" className="btn game-blocking-dialog__ok-btn" onClick={onDismiss}>
+        <button
+          type="button"
+          className="btn charleston-error-dialog__rack-action game-blocking-dialog__ok-btn"
+          onClick={onDismiss}
+        >
           OK
         </button>
       </div>

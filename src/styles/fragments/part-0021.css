@@ -106,7 +106,7 @@
   font-family: 'Figtree', var(--sans);
   font-size: min(
     var(--rack-hand-action-label-fs),
-    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.52),
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.56),
     calc(var(--rack-tile-btn-inner-1) * 0.72)
   );
   font-weight: 500;
@@ -143,15 +143,19 @@
   );
   position: relative;
   isolation: isolate;
+  /* Clip heat to the padding box so the 1px border matches Menu (no under-fill fringe). */
+  overflow: hidden;
+  background-color: transparent;
   background-image: var(--wall-heat-paint);
   background-size: 100% 400%;
   background-repeat: no-repeat;
   background-position: 0 calc(var(--wall-t, 1) * 100%);
+  background-clip: padding-box;
   box-shadow: none;
-  transition: background-position 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-position 0.5s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Top-light resting face — above heat fill, below opening / empty masks. */
+/* Top-light resting face — same overlay recipe as colored action fills; stays inside the border. */
 .rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell::before {
   content: '';
   position: absolute;
@@ -159,12 +163,12 @@
   border-radius: inherit;
   background-image: var(--app-action-btn-face-overlay);
   pointer-events: none;
-  z-index: 2;
+  z-index: 1;
 }
 
 .rack-bottom-wall__num {
   position: relative;
-  z-index: 3;
+  z-index: 2;
   font-size: 0.95em;
   line-height: 1;
   display: block;
@@ -178,32 +182,20 @@
   opacity: 0.9;
 }
 
-/* Opening wall (99 tiles): uniform green — heat stays mounted at 0% so the first discard sweeps to green. */
+/*
+ * Opening / empty: paint the solid color on the element itself (like Menu’s face), not a
+ * masked ::after over the heat gradient — that left a red heat fringe inside the border.
+ */
 .rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell.rack-bottom-wall--full {
+  background-image: none;
+  background-color: var(--card-ink-green);
+  background-size: auto;
   background-position: 0 0;
 }
 
-.rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell.rack-bottom-wall--full::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: var(--card-ink-green);
-  pointer-events: none;
-  z-index: 1;
-}
-
-/* Wall dry (0 tiles): full card red — heat pinned at 0% under a red mask. */
 .rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell.rack-bottom-wall--empty {
+  background-image: none;
+  background-color: var(--card-ink-red);
+  background-size: auto;
   background-position: 0 0;
-}
-
-.rack-bottom-wall.rack-hand-tools__wall.rack-bottom-tile-cell.rack-bottom-wall--empty::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: var(--card-ink-red);
-  pointer-events: none;
-  z-index: 1;
 }

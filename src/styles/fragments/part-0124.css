@@ -1474,16 +1474,38 @@
   color: color-mix(in srgb, #e2e4e8 88%, var(--app-container-surface, #5c6066));
 }
 
-.charleston-error-dialog--mahjong-blocked .game-blocking-dialog__ok-btn {
-  background: #484c52;
-  border: 1px solid #636870;
-  color: #e2e4e8;
+.charleston-error-dialog--mahjong-blocked .game-blocking-dialog__ok-btn.charleston-error-dialog__rack-action {
+  background: var(--rack-action-face, var(--app-action-btn-face));
+  border: 1px solid var(--rack-action-border-rest, var(--app-action-btn-border-rest));
+  color: var(--rack-action-label-color, var(--app-action-btn-label));
+  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
 }
 
-.charleston-error-dialog--mahjong-blocked .game-blocking-dialog__ok-btn:hover {
-  box-shadow:
-    inset 4px 4px 8px color-mix(in srgb, #000 28%, #484c52),
-    inset -4px -4px 8px color-mix(in srgb, #636870 72%, #484c52);
+.charleston-error-dialog--mahjong-blocked
+  .game-blocking-dialog__ok-btn.charleston-error-dialog__rack-action:hover:not(:disabled):not(:active) {
+  background: var(--rack-action-face, var(--app-action-btn-face));
+  border-color: var(--rack-action-border-rest, var(--app-action-btn-border-rest));
+  color: var(--rack-action-label-color, var(--app-action-btn-label));
+  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
+  transform: none;
+}
+
+.charleston-error-dialog--mahjong-blocked
+  .game-blocking-dialog__ok-btn.charleston-error-dialog__rack-action:is(:active, .btn--pointer-down):not(:disabled) {
+  background: var(--rack-action-face-pressed-chrome, var(--app-action-btn-face-pressed-chrome));
+  border: 1px solid var(--rack-action-border-rest, var(--app-action-btn-border-rest));
+  box-shadow: var(--rack-action-pressed, var(--app-action-btn-shadow-pressed-deep));
+  transition: none;
+  transform: none;
+}
+
+.charleston-error-dialog--mahjong-blocked
+  .game-blocking-dialog__ok-btn.charleston-error-dialog__rack-action:active:not(:disabled):not(.btn--pointer-down) {
+  background: var(--rack-action-face, var(--app-action-btn-face));
+  border: 1px solid var(--rack-action-border-rest, var(--app-action-btn-border-rest));
+  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
+  transition: background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  transform: none;
 }
 
 .charleston-error-dialog--mahjong-blocked .charleston-error-dialog__dismiss {
@@ -1815,7 +1837,9 @@ html body .app .app-menu-modal-layer .app-menu-modal :is(
 html body .app .charleston-error-overlay :is(
   .charleston-error-dialog--menu-shell,
   .charleston-error-dialog--new-game-warning,
-  .charleston-error-dialog--blocking-neutral
+  .charleston-error-dialog--blocking-neutral,
+  .charleston-error-dialog--call-warning,
+  .charleston-error-dialog--mahjong-blocked
 ),
 html body .app .dead-hand-overlay .dead-hand-dialog .charleston-error-dialog__rack-action:not(:disabled) {
   position: relative;
@@ -1840,7 +1864,9 @@ html body .app .app-menu-modal-layer .app-menu-modal :is(
 html body .app .charleston-error-overlay :is(
   .charleston-error-dialog--menu-shell,
   .charleston-error-dialog--new-game-warning,
-  .charleston-error-dialog--blocking-neutral
+  .charleston-error-dialog--blocking-neutral,
+  .charleston-error-dialog--call-warning,
+  .charleston-error-dialog--mahjong-blocked
 )
   .charleston-error-dialog__rack-action:not(:disabled):not(:active),
 html body .app .dead-hand-overlay
@@ -1867,7 +1893,9 @@ html body .app .app-menu-modal-layer .app-menu-modal :is(
 html body .app .charleston-error-overlay :is(
   .charleston-error-dialog--menu-shell,
   .charleston-error-dialog--new-game-warning,
-  .charleston-error-dialog--blocking-neutral
+  .charleston-error-dialog--blocking-neutral,
+  .charleston-error-dialog--call-warning,
+  .charleston-error-dialog--mahjong-blocked
 )
   .charleston-error-dialog__rack-action:not(:disabled):not(:active):hover,
 html body .app .dead-hand-overlay
@@ -1896,7 +1924,9 @@ html body .app .app-menu-modal-layer .app-menu-modal :is(
 html body .app .charleston-error-overlay :is(
   .charleston-error-dialog--menu-shell,
   .charleston-error-dialog--new-game-warning,
-  .charleston-error-dialog--blocking-neutral
+  .charleston-error-dialog--blocking-neutral,
+  .charleston-error-dialog--call-warning,
+  .charleston-error-dialog--mahjong-blocked
 )
   .charleston-error-dialog__rack-action:not(:disabled):is(:active, .btn--pointer-down),
 html body .app .dead-hand-overlay
@@ -2021,7 +2051,9 @@ html body .app .app-menu-modal-layer .app-menu-modal :is(
 html body .app .charleston-error-overlay :is(
   .charleston-error-dialog--menu-shell,
   .charleston-error-dialog--new-game-warning,
-  .charleston-error-dialog--blocking-neutral
+  .charleston-error-dialog--blocking-neutral,
+  .charleston-error-dialog--call-warning,
+  .charleston-error-dialog--mahjong-blocked
 )
   .charleston-error-dialog__rack-action:not(:disabled):active:not(.btn--pointer-down),
 html body .app .dead-hand-overlay
@@ -2133,8 +2165,8 @@ html body .app .dead-hand-overlay
   ) {
   font-size: min(
     var(--rack-hand-action-label-fs),
-    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.52),
-    calc(var(--hand-rack-tile-w) * 0.34)
+    calc(var(--hand-button-row-h, var(--rack-action-touch-min-h)) * 0.56),
+    calc(var(--hand-rack-tile-w) * 0.37)
   );
   line-height: 1.08;
   padding: 0.14rem 0.05rem;
@@ -2149,6 +2181,16 @@ html body .app .dead-hand-overlay
   letter-spacing: max(0.014em, calc(0.024em + 0.012rem));
 }
 
+/* Enabled rack labels: pure white (match MAHJ glyph; beats older #e2e4e8 / #dcdce0 rules). */
+.app .panel--hand :is(.rack-bottom-bar--tile-grid, .hand-bank__mj-review-actions, .panel-hand-rack__review-new-game-row) :is(
+    .btn.rack-bottom-tile-cell,
+    .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn
+  ):not(:disabled),
+.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong-rack-pressed-in.rack-bottom-tile-cell--c5-6:disabled,
+.app .panel--hand .rack-bottom-bar--tile-grid .btn.suggested-hands-tab--open.rack-bottom-tile-cell:disabled {
+  color: #ffffff;
+}
+
 /* Inactive rack + menu action buttons: gray label, default cursor (beats part-0103 enabled+disabled pairs). */
 .app .panel--hand :is(.rack-bottom-bar--tile-grid, .hand-bank__mj-review-actions, .panel-hand-rack__review-new-game-row) :is(
     .btn.rack-bottom-tile-cell,
@@ -2158,18 +2200,18 @@ html body .app .dead-hand-overlay
   cursor: default;
 }
 
-.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong.rack-bottom-tile-cell--c5-6:disabled:not(
-    .btn--mahjong-rack-pressed-in
-  )
+/* MAHJ glyph follows action label tokens (SVG fill is brand cyan — hide it). */
+.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong.rack-bottom-tile-cell--c5-6
   .btn--mahj__logo-stack::after {
   content: '';
   position: absolute;
   inset: 0;
-  background-color: var(--rack-action-label-color-disabled, var(--app-action-btn-label-disabled));
+  background-color: var(--rack-action-label-color, var(--app-action-btn-label));
   -webkit-mask-image: url('../../assets/mahj-logo.svg');
   mask-image: url('../../assets/mahj-logo.svg');
-  -webkit-mask-size: contain;
-  mask-size: contain;
+  /* Height-sized like the old img (1.6em), nudged smaller — width % blew it up. */
+  -webkit-mask-size: auto 1.35em;
+  mask-size: auto 1.35em;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   -webkit-mask-position: center;
@@ -2180,6 +2222,11 @@ html body .app .dead-hand-overlay
 .app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong.rack-bottom-tile-cell--c5-6:disabled:not(
     .btn--mahjong-rack-pressed-in
   )
+  .btn--mahj__logo-stack::after {
+  background-color: var(--rack-action-label-color-disabled, var(--app-action-btn-label-disabled));
+}
+
+.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong.rack-bottom-tile-cell--c5-6
   .btn--mahj__img {
   opacity: 0;
   filter: none;
@@ -2401,10 +2448,10 @@ html body .app .charleston-error-overlay .charleston-error-dialog--menu-shell .c
   font-size: var(--app-menu-type-body);
   font-weight: 600;
   line-height: var(--btn-line-height);
-  letter-spacing: var(--btn-letter-spacing);
+  letter-spacing: normal;
   text-transform: none;
   text-align: center;
-  color: var(--rack-action-label-color, #dcdce0);
+  color: #dcdce0;
 }
 
 html body .app .charleston-error-overlay .charleston-error-dialog--menu-shell .charleston-error-dialog__body {
@@ -2413,9 +2460,10 @@ html body .app .charleston-error-overlay .charleston-error-dialog--menu-shell .c
   font-size: var(--app-menu-type-body);
   font-weight: 400;
   line-height: 1.35;
-  letter-spacing: var(--btn-letter-spacing);
+  letter-spacing: normal;
   text-align: center;
-  color: var(--rack-action-label-color, #dcdce0);
+  /* Softer than button-white so body copy stays readable on dark shells. */
+  color: #b8bac2;
 }
 
 html body .app .charleston-error-overlay .charleston-error-dialog--menu-shell
@@ -2437,7 +2485,7 @@ html body .app .charleston-error-overlay .charleston-error-dialog--menu-shell
   padding: 0.42rem 0.3rem;
   font-size: 1rem;
   font-family: 'Figtree', var(--sans);
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.2;
   letter-spacing: 0.02em;
   text-transform: none;
@@ -2451,7 +2499,7 @@ html body .app .dead-hand-overlay .dead-hand-dialog .charleston-error-dialog__ra
   padding: 0.42rem 0.3rem;
   font-size: 1rem;
   font-family: 'Figtree', var(--sans);
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.2;
   letter-spacing: 0.02em;
   text-transform: none;
@@ -3105,4 +3153,40 @@ html
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot--suggest-best {
   overflow: visible !important;
+}
+
+/*
+ * Theme picker — faces come from inline `--theme-btn-*` on each button (App.tsx /
+ * APP_THEME_BTN_PREVIEW). !important beats shared menu diff-btn chrome so Abyss /
+ * Phantom / Mystic stay distinct no matter which theme is selected.
+ */
+html body .app .app-menu-modal-layer .app-menu-modal
+  button.app-menu-tray__diff-btn.app-menu-modal__theme-btn:not(:disabled):not(:active):not(
+    .app-menu-tray__diff-btn--on
+  ),
+html body .app .app-menu-modal-layer .app-menu-modal
+  button.app-menu-tray__diff-btn.app-menu-modal__theme-btn:not(:disabled):not(:active):not(
+    .app-menu-tray__diff-btn--on
+  ):hover,
+html body .app .app-menu-modal-layer .app-menu-modal
+  button.app-menu-tray__diff-btn.app-menu-modal__theme-btn:not(:disabled):active:not(
+    .btn--pointer-down
+  ):not(.app-menu-tray__diff-btn--on) {
+  background: var(--theme-btn-face) !important;
+  border: 1px solid var(--theme-btn-border) !important;
+  color: #ffffff !important;
+}
+
+html body .app .app-menu-modal-layer .app-menu-modal
+  button.app-menu-tray__diff-btn.app-menu-modal__theme-btn:not(:disabled):is(
+    :active,
+    .app-menu-tray__diff-btn--on
+  ),
+html body .app .app-menu-modal-layer .app-menu-modal
+  button.app-menu-tray__diff-btn.app-menu-modal__theme-btn.app-menu-tray__diff-btn--on:hover:not(
+    :disabled
+  ) {
+  background: var(--theme-btn-face-pressed) !important;
+  border: 1px solid var(--theme-btn-border) !important;
+  color: #ffffff !important;
 }

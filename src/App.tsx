@@ -42,6 +42,7 @@ import { eastExposureSwapDropId, findNextJokerSwapTarget, collectHandTileIdsSwap
 import { DEFAULT_TILE_GRAPHICS, isTileGraphics, MENU_TILE_GRAPHICS_ITEMS, TILE_GRAPHICS_LABEL, type TileGraphics } from './tiles/tileGraphics'
 import {
   APP_THEMES,
+  APP_THEME_BTN_PREVIEW,
   APP_THEME_LABEL,
   APP_THEME_PAGE_PAD_COLOR,
   DEFAULT_APP_THEME,
@@ -5284,24 +5285,36 @@ export default function App() {
                   role="radiogroup"
                   aria-labelledby="app-theme-menu-label"
                 >
-                  {APP_THEMES.map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      className={[
-                        'btn',
-                        'app-menu-tray__diff-btn',
-                        appTheme === t ? 'app-menu-tray__diff-btn--on' : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                      role="radio"
-                      aria-checked={appTheme === t}
-                      onClick={() => setAppThemeMode(t)}
-                    >
-                      {APP_THEME_LABEL[t]}
-                    </button>
-                  ))}
+                  {APP_THEMES.map((t) => {
+                    const preview = APP_THEME_BTN_PREVIEW[t]
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        className={[
+                          'btn',
+                          'app-menu-tray__diff-btn',
+                          'app-menu-modal__theme-btn',
+                          `app-menu-modal__theme-btn--${t}`,
+                          appTheme === t ? 'app-menu-tray__diff-btn--on' : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ')}
+                        style={
+                          {
+                            '--theme-btn-face': preview.face,
+                            '--theme-btn-face-pressed': preview.facePressed,
+                            '--theme-btn-border': preview.border,
+                          } as CSSProperties
+                        }
+                        role="radio"
+                        aria-checked={appTheme === t}
+                        onClick={() => setAppThemeMode(t)}
+                      >
+                        {APP_THEME_LABEL[t]}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
               <div className="app-menu-modal__diff-block app-menu-modal__diff-block--tile-graphics">
@@ -5730,6 +5743,11 @@ export default function App() {
               blockingDialog?.variant === 'concealed-call-warning' ||
               blockingDialog?.variant === 'dead-hand-warning' ||
               blockingDialog?.variant === 'table' ||
+              blockingDialog?.variant === 'mahjong-dead-warning' ||
+              blockingDialog?.variant === 'call-exposure-dead-warning' ||
+              blockingDialog?.variant === 'call-meld-size-warning' ||
+              blockingDialog?.variant === 'invalid-call-meld-warning' ||
+              blockingDialog?.variant === 'discard-dead-warning' ||
               charlestonPassError
                 ? 'charleston-error-dialog--menu-shell'
                 : '',
@@ -5912,21 +5930,21 @@ export default function App() {
                   ⚠️ Not a legal Mah Jongg hand
                 </h2>
                 <p id="game-blocking-error-body" className="charleston-error-dialog__body">
-                  Your current tiles do not complete any legal hand on the{' '}
-                  <strong>{playableCardShortLabel(committedCardId)}</strong>. If you proceed with this Mah Jongg declaration,
-                  your hand will be officially dead and the game will end immediately.
+                  Your tiles do not complete a winning hand on the{' '}
+                  <strong>{playableCardShortLabel(committedCardId)}</strong>. Proceeding ends the game with a
+                  dead hand.
                 </p>
                 <div className="charleston-error-dialog__actions charleston-error-dialog__actions--spread">
                   <button
                     type="button"
-                    className="btn"
+                    className="btn charleston-error-dialog__rack-action"
                     onClick={() => setBlockingDialog(null)}
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
-                    className="btn btn--danger"
+                    className="btn charleston-error-dialog__rack-action"
                     onClick={() => {
                       setBlockingDialog(null)
                       pushRound((r) =>
@@ -5958,14 +5976,14 @@ export default function App() {
                 <div className="charleston-error-dialog__actions charleston-error-dialog__actions--spread">
                   <button
                     type="button"
-                    className="btn"
+                    className="btn charleston-error-dialog__rack-action"
                     onClick={() => setBlockingDialog(null)}
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
-                    className="btn btn--primary"
+                    className="btn btn--primary charleston-error-dialog__rack-action"
                     onClick={() => {
                       const n = blockingDialog.neededHandTiles
                       setBlockingDialog(null)
@@ -5982,7 +6000,7 @@ export default function App() {
                   </button>
                   <button
                     type="button"
-                    className="btn btn--danger"
+                    className="btn charleston-error-dialog__rack-action"
                     onClick={() => {
                       setBlockingDialog(null)
                       pushRound((r) => applyCommitStagedCall(r, gameModeRef.current))
@@ -6005,14 +6023,14 @@ export default function App() {
                 <div className="charleston-error-dialog__actions charleston-error-dialog__actions--spread">
                   <button
                     type="button"
-                    className="btn"
+                    className="btn charleston-error-dialog__rack-action"
                     onClick={() => setBlockingDialog(null)}
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
-                    className="btn btn--danger"
+                    className="btn charleston-error-dialog__rack-action"
                     onClick={() => {
                       setBlockingDialog(null)
                       pushRound((r) => applyDeadHand(r, 'invalid-call-meld'))
@@ -6036,14 +6054,14 @@ export default function App() {
                 <div className="charleston-error-dialog__actions charleston-error-dialog__actions--spread">
                   <button
                     type="button"
-                    className="btn"
+                    className="btn charleston-error-dialog__rack-action"
                     onClick={() => setBlockingDialog(null)}
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
-                    className="btn btn--danger"
+                    className="btn charleston-error-dialog__rack-action"
                     onClick={() => {
                       setBlockingDialog(null)
                       pushRound((r) =>
@@ -6095,10 +6113,10 @@ export default function App() {
                 <p id="game-blocking-error-msg" className="charleston-error-dialog__message">
                   {callRuleError ?? blockingDialog?.message}
                 </p>
-                <div className="charleston-error-dialog__actions">
+                <div className="charleston-error-dialog__actions charleston-error-dialog__actions--center">
                   <button
                     type="button"
-                    className="btn btn--primary"
+                    className="btn btn--primary charleston-error-dialog__rack-action"
                     onClick={() => {
                       setCharlestonPassError(null)
                       setCallRuleError(null)
