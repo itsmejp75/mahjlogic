@@ -36,12 +36,13 @@ function ruleBulletsForPattern(p: PracticePattern): string[] {
     case '13579':
       out.push('13579 family: odd-numbered suit tiles only, following the ranks and honors on the card line.')
       break
-    case 'MATH':
-      out.push('Addition hands: follow the year / zero / digit arithmetic shown on the card for each line.')
+    case '2019':
+      out.push('Year (2019) family: practice year line — the “0” is soap; follow the suits and dragons on the card.')
       break
     case 'QUINTS':
       out.push('Quints: five identical tiles in a suit group where the card shows quint pungs or kong-like shapes.')
       break
+    case 'CONSECUTIVE RUN':
     case 'CONSECUTIVE RUNS':
       out.push('Consecutive runs: suit runs in the lengths and dragons shown on the card line.')
       break

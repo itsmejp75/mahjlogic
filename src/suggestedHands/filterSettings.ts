@@ -26,6 +26,8 @@ export const SUGGESTED_HANDS_UNCHECKED_SECTIONS_KEY = 'mahjlogic.suggestedHandsU
 const SUGGESTED_HAND_SECTION_FILTER_ALIAS_GROUPS: readonly (readonly string[])[] = [
   ['CONSECUTIVE RUN', 'CONSECUTIVE RUNS'],
   ['WINDS - DRAGONS', 'WINDS-DRAGONS'],
+  // Mock practice year section ↔ league year categories share the “Year” filter toggle.
+  ['2019', '2025', '2026'],
 ]
 
 const suggestedHandSectionFilterAliasKeys = new Map<string, readonly string[]>()

@@ -18,7 +18,7 @@ import {
   type WallCompletionProbabilityInput,
 } from './handCompletion'
 import { computePatternCompletionMetrics } from './handCompletionSlots'
-import { PRACTICE_PATTERNS } from '../card/practicePatterns'
+import { PRACTICE_PATTERNS } from '../card/mockCardBook'
 import { NMJL_2026_PATTERNS } from '../card/nmjl2026Patterns'
 import { rankSuggestedHands, compareSuggestedHandsByProximity, suggestedHandShownInPanelList } from './suggestedHands'
 import { buildAmericanDeck, dealOpeningFour } from '../mahjong/deck'
