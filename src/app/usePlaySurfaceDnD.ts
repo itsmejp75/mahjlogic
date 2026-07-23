@@ -140,8 +140,26 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
 
   const lastDragPointerRef = useRef({ x: 0, y: 0 })
   const globalDragPointerCleanupRef = useRef<(() => void) | null>(null)
+  /**
+   * Coalesce expensive hand-row geometry reads during drag-over. dnd-kit can fire many
+   * over events per frame; re-querying + getBoundingClientRect each time stalls drop on
+   * iOS PWA once the session is warm.
+   */
+  const handCentersCacheRef = useRef<{
+    atMs: number
+    handKey: string
+    centers: { index: number; centerX: number }[]
+  } | null>(null)
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  )
+
+  // Cancelled / interrupted drags must not leave the window pointermove listener attached.
+  useEffect(
+    () => () => {
+      globalDragPointerCleanupRef.current?.()
+    },
+    [],
   )
 
   const [blankExchangeOpen, setBlankExchangeOpen] = useState<{ blankTileId: string } | null>(null)
@@ -671,6 +689,7 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
   const onDragStart = useCallback(
     (e: DragStartEvent) => {
       pinHandRackGeometryForMobileDrag()
+      handCentersCacheRef.current = null
       setTopBandDropFrame(null)
       setCharlestonPassIntoHandPreview(null)
       setEastDiscardIntoHandPreview(null)
@@ -741,21 +760,31 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
   const handVisualInsertIndexFromPointer = useCallback(() => {
     const pointerX = lastDragPointerRef.current.x
     if (!Number.isFinite(pointerX)) return null
-    const elementsById = new Map<string, HTMLElement>()
-    document.querySelectorAll<HTMLElement>('.hand-row [data-hand-tile-id]').forEach((el) => {
-      const id = el.dataset.handTileId
-      if (id) elementsById.set(id, el)
-    })
-    const centers = hand
-      .map((tile, index) => {
-        const el = elementsById.get(tile.id)
-        if (!el) return null
-        const rect = el.getBoundingClientRect()
-        if (rect.width < 1) return null
-        return { index, centerX: rect.left + rect.width / 2 }
+    const handKey = hand.map((t) => t.id).join('\0')
+    const now = performance.now()
+    const cached = handCentersCacheRef.current
+    // Reuse within one frame so neighbour-slide transforms stay fresh enough for insert index,
+    // without re-measuring on every drag-over / collision sample.
+    let centers =
+      cached && cached.handKey === handKey && now - cached.atMs < 16 ? cached.centers : null
+    if (!centers) {
+      const elementsById = new Map<string, HTMLElement>()
+      document.querySelectorAll<HTMLElement>('.hand-row [data-hand-tile-id]').forEach((el) => {
+        const id = el.dataset.handTileId
+        if (id) elementsById.set(id, el)
       })
-      .filter((x): x is { index: number; centerX: number } => x != null)
-      .sort((a, b) => a.centerX - b.centerX)
+      centers = hand
+        .map((tile, index) => {
+          const el = elementsById.get(tile.id)
+          if (!el) return null
+          const rect = el.getBoundingClientRect()
+          if (rect.width < 1) return null
+          return { index, centerX: rect.left + rect.width / 2 }
+        })
+        .filter((x): x is { index: number; centerX: number } => x != null)
+        .sort((a, b) => a.centerX - b.centerX)
+      handCentersCacheRef.current = { atMs: now, handKey, centers }
+    }
     if (centers.length === 0) return null
     return centers.find((x) => pointerX < x.centerX)?.index ?? hand.length
   }, [hand])
@@ -863,6 +892,8 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
 
   const onDragCancel = useCallback(() => {
     releaseHandRackGeometryAfterMobileDrag()
+    globalDragPointerCleanupRef.current?.()
+    handCentersCacheRef.current = null
     setIncomingBotDiscardCallDragActive(false)
     setTopBandDropFrame(null)
     setCharlestonPassIntoHandPreview(null)
@@ -1191,6 +1222,7 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
       } finally {
         releaseHandRackGeometryAfterMobileDrag()
         globalDragPointerCleanupRef.current?.()
+        handCentersCacheRef.current = null
         setIncomingBotDiscardCallDragActive(false)
         setDragOverlayTile(null)
         setDragOverlayMeldTiles(null)
@@ -1225,6 +1257,9 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
 
 
   const resetDragUi = useCallback(() => {
+    releaseHandRackGeometryAfterMobileDrag()
+    globalDragPointerCleanupRef.current?.()
+    handCentersCacheRef.current = null
     setIncomingBotDiscardCallDragActive(false)
     setTopBandDropFrame(null)
     setDragOverlayTile(null)
@@ -1234,7 +1269,7 @@ export function usePlaySurfaceDnD(args: UsePlaySurfaceDnDArgs) {
     setEastDiscardIntoHandPreview(null)
     setCharlestonHandPassStageTileId(null)
     setBlankExchangeOpen(null)
-  }, [])
+  }, [releaseHandRackGeometryAfterMobileDrag])
 
   if (dndApiRef) {
     dndApiRef.current = { resetDragUi, openBlankExchange }
