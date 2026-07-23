@@ -7,26 +7,28 @@ export type GoogleCredentialResponse = {
   select_by?: string
 }
 
-type GooglePromptNotification = {
-  isDisplayMoment: () => boolean
-  isDisplayed: () => boolean
-  isNotDisplayed: () => boolean
-  isSkippedMoment: () => boolean
-  isDismissedMoment: () => boolean
-  getNotDisplayedReason: () => string
-  getSkippedReason: () => string
-}
-
 type GoogleAccountsId = {
   initialize: (config: {
     client_id: string
     callback: (response: GoogleCredentialResponse) => void
     nonce?: string
     context?: 'signin' | 'signup' | 'use'
-    use_fedcm_for_prompt?: boolean
+    ux_mode?: 'popup' | 'redirect'
     auto_select?: boolean
+    itp_support?: boolean
   }) => void
-  prompt: (momentListener?: (notification: GooglePromptNotification) => void) => void
+  renderButton: (
+    parent: HTMLElement,
+    options: {
+      type?: 'standard' | 'icon'
+      theme?: 'outline' | 'filled_blue' | 'filled_black'
+      size?: 'large' | 'medium' | 'small'
+      text?: 'signin_with' | 'signup_with' | 'continue_with' | 'signin'
+      shape?: 'rectangular' | 'pill' | 'circle' | 'square'
+      logo_alignment?: 'left' | 'center'
+      width?: number | string
+    },
+  ) => void
   cancel: () => void
 }
 
@@ -49,7 +51,6 @@ export function isGoogleIdentityConfigured(): boolean {
 }
 
 let gsiLoadPromise: Promise<void> | null = null
-let primedNonce: { nonce: string; hashedNonce: string } | null = null
 
 export function loadGoogleIdentityScript(): Promise<void> {
   if (typeof window === 'undefined') return Promise.reject(new Error('No window'))
@@ -92,93 +93,77 @@ export async function createGoogleNonce(): Promise<{ nonce: string; hashedNonce:
   return { nonce, hashedNonce }
 }
 
-/** Load GIS + precompute nonce so a click can call prompt() without awaiting first. */
-export async function primeGoogleIdentity(): Promise<void> {
-  if (!isGoogleIdentityConfigured()) return
-  await loadGoogleIdentityScript()
-  primedNonce = await createGoogleNonce()
+export type MountGoogleButtonOptions = {
+  onCredential: (credential: string, nonce: string) => void
+  onError?: (message: string) => void
 }
-
-function takeNonce(): { nonce: string; hashedNonce: string } | null {
-  const pair = primedNonce
-  primedNonce = null
-  void createGoogleNonce()
-    .then((next) => {
-      primedNonce = next
-    })
-    .catch(() => undefined)
-  return pair
-}
-
-export type GoogleIdTokenResult =
-  | { status: 'credential'; credential: string; nonce: string }
-  | { status: 'cancelled' }
-  | { status: 'unavailable'; reason: string }
 
 /**
- * FedCM / One Tap from a real user click — no popup windows, no invisible overlay.
- * Google brands this page’s origin. If the prompt cannot show, caller should use
- * full-page Supabase OAuth redirect (also no popup).
+ * Mounts Google’s real Sign-In button into `host` (near-invisible overlay).
+ * Clicks hit Google’s control → Google brands this page origin (mahjlogic.com),
+ * not *.supabase.co. Requires Cross-Origin-Opener-Policy: same-origin-allow-popups.
  */
-export async function promptGoogleIdToken(): Promise<GoogleIdTokenResult> {
+export async function mountGoogleContinueButton(
+  host: HTMLElement,
+  options: MountGoogleButtonOptions,
+): Promise<() => void> {
   const clientId = getGoogleClientId()
   if (!clientId) {
-    return { status: 'unavailable', reason: 'Missing VITE_GOOGLE_CLIENT_ID' }
+    throw new Error('Missing VITE_GOOGLE_CLIENT_ID')
   }
 
-  if (!window.google?.accounts?.id) {
-    await loadGoogleIdentityScript()
-  }
+  await loadGoogleIdentityScript()
   const googleId = window.google?.accounts?.id
   if (!googleId) {
-    return { status: 'unavailable', reason: 'Google Identity failed to initialize' }
+    throw new Error('Google Identity failed to initialize')
   }
 
-  // Prefer primed nonce so we don't await crypto during the click (keeps user gesture).
-  const pair = takeNonce() ?? (await createGoogleNonce())
+  let cancelled = false
+  let nonce = ''
 
-  return new Promise((resolve) => {
-    let settled = false
-    const finish = (result: GoogleIdTokenResult) => {
-      if (settled) return
-      settled = true
-      try {
-        googleId.cancel()
-      } catch {
-        /* ignore */
-      }
-      resolve(result)
-    }
-
+  const paint = async () => {
+    if (cancelled) return
+    const pair = await createGoogleNonce()
+    if (cancelled) return
+    nonce = pair.nonce
+    host.replaceChildren()
     googleId.initialize({
       client_id: clientId,
       callback: (response) => {
         if (!response.credential) {
-          finish({ status: 'unavailable', reason: 'Google did not return a credential' })
+          options.onError?.('Google did not return a credential')
           return
         }
-        finish({ status: 'credential', credential: response.credential, nonce: pair.nonce })
+        options.onCredential(response.credential, nonce)
+        void paint()
       },
       nonce: pair.hashedNonce,
       context: 'signin',
-      use_fedcm_for_prompt: true,
+      ux_mode: 'popup',
       auto_select: false,
+      itp_support: true,
     })
+    const width = Math.max(Math.floor(host.getBoundingClientRect().width) || 320, 240)
+    googleId.renderButton(host, {
+      type: 'standard',
+      theme: 'outline',
+      size: 'large',
+      text: 'continue_with',
+      shape: 'rectangular',
+      width,
+      logo_alignment: 'left',
+    })
+  }
 
-    googleId.prompt((notification) => {
-      if (notification.isDisplayMoment() || notification.isDisplayed()) {
-        return
-      }
-      if (notification.isDismissedMoment()) {
-        finish({ status: 'cancelled' })
-        return
-      }
-      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-        const reason = notification.isNotDisplayed()
-          ? notification.getNotDisplayedReason()
-          : notification.getSkippedReason()
-        finish({ status: 'unavailable', reason: reason || 'prompt_unavailable' })
-      }
-    })
-  })
+  await paint()
+
+  return () => {
+    cancelled = true
+    try {
+      googleId.cancel()
+    } catch {
+      /* ignore */
+    }
+    host.replaceChildren()
+  }
 }

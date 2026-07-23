@@ -1,8 +1,11 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import watermarkSrc from '../assets/mahjlogic-watermark.svg?url'
 import { useAuth } from '../auth/AuthProvider'
-import { isGoogleIdentityConfigured, primeGoogleIdentity } from '../lib/googleIdentity'
+import {
+  isGoogleIdentityConfigured,
+  mountGoogleContinueButton,
+} from '../lib/googleIdentity'
 import '../styles/landing.css'
 
 type Mode = 'sign-in' | 'sign-up' | 'forgot'
@@ -39,28 +42,78 @@ export function LandingPage() {
     signInWithEmail,
     signUpWithEmail,
     signInWithGoogle,
+    signInWithGoogleIdToken,
     resetPasswordForEmail,
   } = useAuth()
   const [mode, setMode] = useState<Mode>('sign-in')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
+  const [googleBusy, setGoogleBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
-
-  // Warm GIS + nonce so the first click can use FedCM/One Tap without a popup.
-  useEffect(() => {
-    if (!configured || !isGoogleIdentityConfigured()) return
-    void primeGoogleIdentity().catch(() => undefined)
-  }, [configured])
-
-  if (!loading && user) {
-    return <Navigate to="/play" replace />
-  }
+  const [gisReady, setGisReady] = useState(false)
+  const googleHostRef = useRef<HTMLDivElement>(null)
+  const useGis = configured && isGoogleIdentityConfigured()
 
   function clearMessages() {
     setError(null)
     setInfo(null)
+  }
+
+  useEffect(() => {
+    if (!useGis || mode === 'forgot' || user) {
+      setGisReady(false)
+      return
+    }
+    const host = googleHostRef.current
+    if (!host) return
+
+    let disposed = false
+    let unmount: (() => void) | undefined
+
+    void (async () => {
+      try {
+        unmount = await mountGoogleContinueButton(host, {
+          onCredential: (credential, nonce) => {
+            void (async () => {
+              clearMessages()
+              setGoogleBusy(true)
+              try {
+                const { error: googleError } = await signInWithGoogleIdToken(credential, nonce)
+                if (googleError) {
+                  setError(googleError)
+                  return
+                }
+                navigate('/play', { replace: true })
+              } finally {
+                setGoogleBusy(false)
+              }
+            })()
+          },
+          onError: (message) => {
+            setError(message)
+            setGoogleBusy(false)
+          },
+        })
+        if (!disposed) setGisReady(true)
+      } catch (err) {
+        if (!disposed) {
+          setGisReady(false)
+          console.warn(err instanceof Error ? err.message : err)
+        }
+      }
+    })()
+
+    return () => {
+      disposed = true
+      unmount?.()
+      setGisReady(false)
+    }
+  }, [useGis, mode, user, navigate, signInWithGoogleIdToken])
+
+  if (!loading && user) {
+    return <Navigate to="/play" replace />
   }
 
   async function onSubmit(e: FormEvent) {
@@ -114,27 +167,33 @@ export function LandingPage() {
     }
   }
 
-  async function onGoogle() {
+  async function onGoogleFallback() {
     clearMessages()
     if (!configured) {
       setError('Add Supabase keys in .env.local to enable accounts.')
       return
     }
-    setBusy(true)
+    if (useGis) {
+      setError(
+        `Google button isn’t ready. In Google Cloud → Credentials → Web client, add Authorized JavaScript origin: ${window.location.origin}`,
+      )
+      return
+    }
+    setGoogleBusy(true)
     const { error: googleError, redirected, signedIn } = await signInWithGoogle()
     if (googleError) {
       setError(googleError)
-      setBusy(false)
+      setGoogleBusy(false)
       return
     }
-    // OAuth leaves this page; keep "Please wait…" until the browser navigates.
     if (redirected) return
-    setBusy(false)
+    setGoogleBusy(false)
     if (signedIn) navigate('/play', { replace: true })
   }
 
   const submitLabel =
     mode === 'forgot' ? 'Send reset link' : mode === 'sign-up' ? 'Create account' : 'Sign In'
+  const formBusy = busy || googleBusy
 
   return (
     <main className="landing">
@@ -161,15 +220,30 @@ export function LandingPage() {
           <section className="landing-auth" aria-label="Account">
             {mode !== 'forgot' ? (
               <>
-                <button
-                  type="button"
-                  className="btn landing-auth__action-btn landing-auth__social-btn"
-                  disabled={busy || loading}
-                  onClick={() => void onGoogle()}
-                >
-                  <GoogleMark />
-                  Continue with Google
-                </button>
+                <div className="landing-auth__google-wrap">
+                  <button
+                    type="button"
+                    className="btn landing-auth__action-btn landing-auth__social-btn"
+                    disabled={formBusy || loading}
+                    onClick={() => void onGoogleFallback()}
+                    tabIndex={gisReady ? -1 : 0}
+                    aria-hidden={gisReady || undefined}
+                  >
+                    <GoogleMark />
+                    Continue with Google
+                  </button>
+                  {useGis ? (
+                    <div
+                      ref={googleHostRef}
+                      className={
+                        gisReady && !googleBusy && !loading
+                          ? 'landing-auth__google-gsi landing-auth__google-gsi--ready'
+                          : 'landing-auth__google-gsi'
+                      }
+                      aria-label="Continue with Google"
+                    />
+                  ) : null}
+                </div>
 
                 <div className="landing-auth__divider">
                   <span>Or sign in with</span>
@@ -199,7 +273,7 @@ export function LandingPage() {
                   placeholder="Email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  disabled={busy || loading}
+                  disabled={formBusy || loading}
                 />
               </label>
 
@@ -222,7 +296,7 @@ export function LandingPage() {
                     placeholder="Password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    disabled={busy || loading}
+                    disabled={formBusy || loading}
                   />
                 </label>
               ) : null}
@@ -232,7 +306,7 @@ export function LandingPage() {
                   <button
                     type="button"
                     className="landing-auth__text-btn"
-                    disabled={busy || loading}
+                    disabled={formBusy || loading}
                     onClick={() => {
                       setMode('forgot')
                       clearMessages()
@@ -257,7 +331,7 @@ export function LandingPage() {
               <button
                 type="submit"
                 className="btn landing-auth__action-btn landing-auth__action-btn--primary"
-                disabled={busy || loading}
+                disabled={formBusy || loading}
               >
                 {busy ? 'Please wait…' : submitLabel}
               </button>

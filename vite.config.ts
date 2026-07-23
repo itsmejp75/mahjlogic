@@ -54,7 +54,12 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    // Required for Google Identity Services popup → opener postMessage.
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+    },
   },
+
   resolve: {
     alias: {
       '@mahjlogic/card-books': path.resolve(

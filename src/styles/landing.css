@@ -357,6 +357,38 @@ html:has(.landing),
   flex: 0 0 auto;
 }
 
+/* Near-invisible Google button over our chrome (opacity 0 blocks clicks in Chrome). */
+.landing-auth__google-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.landing-auth__google-gsi {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  opacity: 0.02;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  pointer-events: none;
+}
+
+.landing-auth__google-gsi--ready {
+  pointer-events: auto;
+}
+
+.landing-auth__google-gsi > div {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 100% !important;
+}
+
+.landing-auth__google-gsi iframe {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+}
+
 .btn.landing-auth__action-btn--primary {
   --rack-action-face: linear-gradient(
     180deg,

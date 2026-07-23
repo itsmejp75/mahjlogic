@@ -7,7 +7,6 @@ import {
   type ReactNode,
 } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
-import { isGoogleIdentityConfigured, promptGoogleIdToken } from '../lib/googleIdentity'
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase'
 
 type OAuthProvider = 'google' | 'apple'
@@ -20,11 +19,16 @@ type AuthContextValue = {
   signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>
   signUpWithEmail: (email: string, password: string) => Promise<{ error: string | null; needsConfirmation: boolean }>
   signInWithProvider: (provider: OAuthProvider) => Promise<{ error: string | null }>
+  /** Fallback only when GIS client ID is missing — Google will show *.supabase.co. */
   signInWithGoogle: () => Promise<{
     error: string | null
     redirected: boolean
     signedIn: boolean
   }>
+  signInWithGoogleIdToken: (
+    credential: string,
+    nonce: string,
+  ) => Promise<{ error: string | null }>
   resetPasswordForEmail: (email: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
 }
@@ -40,7 +44,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(isSupabaseConfigured)
   const [session, setSession] = useState<Session | null>(null)
 
-  /** Full-page redirect through Supabase (one window; Google may show *.supabase.co). */
   const signInWithGoogleOAuthRedirect = useCallback(async (): Promise<{
     error: string | null
     redirected: boolean
@@ -61,38 +64,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: null, redirected: true, signedIn: false }
   }, [])
 
-  const signInWithGoogle = useCallback(async (): Promise<{
-    error: string | null
-    redirected: boolean
-    signedIn: boolean
-  }> => {
-    const supabase = getSupabase()
-    if (!supabase) return { error: 'Supabase is not configured.', redirected: false, signedIn: false }
-
-    if (isGoogleIdentityConfigured()) {
-      try {
-        const result = await promptGoogleIdToken()
-        if (result.status === 'credential') {
-          const { data, error } = await supabase.auth.signInWithIdToken({
-            provider: 'google',
-            token: result.credential,
-            nonce: result.nonce,
-          })
-          if (error) return { error: error.message, redirected: false, signedIn: false }
-          if (data.session) setSession(data.session)
-          return { error: null, redirected: false, signedIn: Boolean(data.session) }
-        }
-        if (result.status === 'cancelled') {
-          return { error: null, redirected: false, signedIn: false }
-        }
-        // FedCM/One Tap unavailable → full-page OAuth (no popup / blank window).
-      } catch {
-        // Fall through to OAuth redirect.
-      }
-    }
-
-    return signInWithGoogleOAuthRedirect()
-  }, [signInWithGoogleOAuthRedirect])
+  const signInWithGoogleIdToken = useCallback(
+    async (credential: string, nonce: string): Promise<{ error: string | null }> => {
+      const supabase = getSupabase()
+      if (!supabase) return { error: 'Supabase is not configured.' }
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: credential,
+        nonce,
+      })
+      if (error) return { error: error.message }
+      if (data.session) setSession(data.session)
+      return { error: null }
+    },
+    [],
+  )
 
   useEffect(() => {
     const supabase = getSupabase()
@@ -148,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const supabase = getSupabase()
       if (!supabase) return { error: 'Supabase is not configured.' }
       if (provider === 'google') {
-        const result = await signInWithGoogle()
+        const result = await signInWithGoogleOAuthRedirect()
         return { error: result.error }
       }
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -162,7 +148,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.url) window.location.assign(data.url)
       return { error: null }
     },
-    signInWithGoogle,
+    signInWithGoogle: signInWithGoogleOAuthRedirect,
+    signInWithGoogleIdToken,
     async resetPasswordForEmail(email) {
       const supabase = getSupabase()
       if (!supabase) return { error: 'Supabase is not configured.' }
