@@ -3276,6 +3276,26 @@ export function applyExposureMeldBoxesToStrip(
  * highlights and exposure boxes. Without this, greedy fill keeps a hand-biased base (e.g. Runs
  * starting at 4) and only lights the natural copies of the expose.
  */
+/**
+ * True when claim melds already land on exact-size runs in the strip's display defs.
+ * Used to skip claim-meld-only consec remapping that can pick a worse window (e.g. exposed
+ * 8888 fitting both 678 and 789 — first-match would steal the hand off 789 onto 678).
+ */
+function stripDisplayDefsFitClaimMelds(
+  slots: readonly SuggestedStripSlot[],
+  claimMelds: readonly ExposureMeld[],
+): boolean {
+  if (slots.length === 0 || claimMelds.length === 0) return false
+  const collapsed: { key: string; need: number }[] = []
+  for (const s of slots) {
+    const key = s.displayDef.cat === 'flower' ? 'flower' : fullDefKey(s.displayDef)
+    const last = collapsed[collapsed.length - 1]
+    if (last && last.key === key) last.need += 1
+    else collapsed.push({ key, need: 1 })
+  }
+  return claimMeldsExactMatchSlots(claimMelds, collapsed)
+}
+
 export function realignSuggestedStripToClaimMelds(
   slots: SuggestedStripSlot[],
   p: PracticePattern,
@@ -3287,6 +3307,12 @@ export function realignSuggestedStripToClaimMelds(
   exposureTileIds?: ReadonlySet<string>,
 ): SuggestedStripSlot[] {
   if (!claimMelds.length || slots.length === 0) return slots
+  // Full-rack greedy already chose a consec window that hosts the exposures — keep it.
+  // Claim-meld-only planning returns the *first* fitting base and can downgrade a better
+  // match (Runs #7b: 789 with four 9s + exposed 8888 → wrongly remapped to 678).
+  if (stripDisplayDefsFitClaimMelds(slots, claimMelds)) {
+    return applyExposureMeldBoxesToStrip(slots, claimMelds)
+  }
   const aligned = resolveCardLineDefsForClaimMelds(p, claimMelds)
   if (aligned.length !== slots.length) {
     return applyExposureMeldBoxesToStrip(slots, claimMelds)
@@ -5363,11 +5389,24 @@ export function sortHandForSuggestedPattern(
   const blanksAfterPattern = blanksAfterPatternSortInHandOrder(hand, seen)
 
   /*
-   * Dim tiles keep their current rack order so repeated double-clicks on different hands
-   * slide the best tiles left without scrambling everything to the right.
+   * Strip `tileId`s can miss some highlighted tiles when strip realign and greedy match
+   * briefly disagree. Pull any remaining usedOrder / best tiles left (stable usedOrder),
+   * then keep true dim tiles in their current rack order so switching focused hands only
+   * slides the best group left without scrambling the rest.
    */
-  const rest = hand.filter((t) => !seen.has(t.id))
-  return [...orderedBest, ...blanksAfterPattern, ...rest]
+  const greedyOpts: GreedyPatternMatchOpts | undefined =
+    exposureTileIds?.size ? { exposureTileIds } : undefined
+  const tailDetail = greedyPatternMatchDetail(rackForPattern, sortPattern, greedyOpts)
+  const usedRank = new Map(tailDetail.usedOrder.map((id, i) => [id, i] as const))
+  const remainingBest: TileInstance[] = []
+  const dimRest: TileInstance[] = []
+  for (const t of hand) {
+    if (seen.has(t.id)) continue
+    if (usedRank.has(t.id)) remainingBest.push(t)
+    else dimRest.push(t)
+  }
+  remainingBest.sort((a, b) => (usedRank.get(a.id) ?? 0) - (usedRank.get(b.id) ?? 0))
+  return [...orderedBest, ...remainingBest, ...blanksAfterPattern, ...dimRest]
 }
 
 /**

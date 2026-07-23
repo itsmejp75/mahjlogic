@@ -3956,10 +3956,17 @@ export default function App() {
     if (isDeselect) clearSuggestedDeadGuidesForHandKey(handKey)
   }, [clearSuggestedDeadGuidesForHandKey])
 
+  const mainPhaseRef = useRef(mainPhase)
+  mainPhaseRef.current = mainPhase
+
   const onSuggestedFocusKeyMigrate = useCallback((nextKey: string | null) => {
     const prevKey = suggestedFocusHandKeyRef.current
     if (nextKey === prevKey) return
     if (nextKey == null) {
+      // Call-staging previews an incomplete meld that can temporarily drop the focused line
+      // (kong size not staged yet). Keep focus + lit tiles until Done / cancel; clear after
+      // commit when the panel reports the pattern is gone for real.
+      if (mainPhaseRef.current === 'call-staging') return
       setSuggestedFocusHandKey(null)
       return
     }
@@ -5101,6 +5108,7 @@ export default function App() {
               pinnedHandKeys={suggestedPinnedHandKeys}
               onPatternClick={onSuggestedPatternClick}
               onFocusKeyMigrate={onSuggestedFocusKeyMigrate}
+              retainFocusWhenPatternMissing={mainPhase === 'call-staging'}
               tilesGuideOn={suggestedPanelTilesOn}
               showHandProbability={handProbabilityEnabled}
               rackTilesForSuggestedStrip={deferredRackForSuggestedStrip}
@@ -5131,6 +5139,7 @@ export default function App() {
     suggestedPinnedHandKeys,
     onSuggestedPatternClick,
     onSuggestedFocusKeyMigrate,
+    mainPhase,
     suggestedPanelTilesOn,
     handProbabilityEnabled,
     deferredRackForSuggestedStrip,

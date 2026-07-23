@@ -1263,8 +1263,17 @@ type Props = {
   /** Pinned suggested row keys (see {@link suggestedRowPinKey}). Toggle via {@link onPinnedPatternChange}. */
   pinnedHandKeys?: readonly string[]
   onPatternClick: (handKey: string) => void
-  /** Rerank changed variant keys — migrate selection when the row key goes stale; clear when the pattern leaves the list. */
+  /**
+   * Rerank changed variant keys — migrate selection when the row key goes stale; clear when the
+   * pattern leaves the list (unless {@link retainFocusWhenPatternMissing}).
+   */
   onFocusKeyMigrate?: (nextKey: string | null) => void
+  /**
+   * When true, keep `activePatternId` even if that pattern is temporarily absent from the ranked
+   * list. Used during call-staging: an incomplete staged meld (e.g. kong not Done yet) can drop
+   * the focused line until the claim is finished — rack highlights should stay until commit.
+   */
+  retainFocusWhenPatternMissing?: boolean
   tilesGuideOn: boolean
   /** When false, hide the Prob % column in the suggested-hands list (default true). */
   showHandProbability?: boolean
@@ -1308,6 +1317,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   pinnedHandKeys = [],
   onPatternClick,
   onFocusKeyMigrate,
+  retainFocusWhenPatternMissing = false,
   tilesGuideOn,
   showHandProbability = true,
   rackTilesForSuggestedStrip,
@@ -2215,10 +2225,19 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
       onFocusKeyMigrate(replacement.focusKey)
       return
     }
-    if (!listRowsForHandsPanel.some((h) => h.id === patternId)) {
+    if (
+      !retainFocusWhenPatternMissing &&
+      !listRowsForHandsPanel.some((h) => h.id === patternId)
+    ) {
       onFocusKeyMigrate(null)
     }
-  }, [activePatternId, expandedHandsRows, listRowsForHandsPanel, onFocusKeyMigrate])
+  }, [
+    activePatternId,
+    expandedHandsRows,
+    listRowsForHandsPanel,
+    onFocusKeyMigrate,
+    retainFocusWhenPatternMissing,
+  ])
 
   const handsListOn = true
   const showHandCategoryLabels = handsListOn
