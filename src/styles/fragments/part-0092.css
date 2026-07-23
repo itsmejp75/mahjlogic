@@ -48,7 +48,9 @@
   text-size-adjust: 100%;
   /* Fixed menu type scale (not rack / viewport derived). */
   --app-menu-type-body: 1.15rem;
-  --app-menu-type-chip: 1rem;
+  /* Same 1.26× step as hand `--rack-hand-action-label-fs` vs `--rack-bottom-action-fs`. */
+  --app-menu-type-action: calc(var(--app-menu-type-body) * 1.26);
+  --app-menu-type-chip: var(--app-menu-type-action);
   --app-ui-control-fs: var(--app-menu-type-body);
   --app-ui-control-fs-sm: var(--app-menu-type-chip);
   --app-ui-control-fs-xs: var(--app-menu-type-body);
@@ -110,7 +112,8 @@
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   --app-menu-type-body: 1.15rem;
-  --app-menu-type-chip: 1rem;
+  --app-menu-type-action: calc(var(--app-menu-type-body) * 1.26);
+  --app-menu-type-chip: var(--app-menu-type-action);
   --app-ui-control-fs: var(--app-menu-type-body);
   --app-ui-control-fs-sm: var(--app-menu-type-chip);
   --app-ui-control-fs-xs: var(--app-menu-type-body);

@@ -295,6 +295,86 @@
     inset -4px 0 8px var(--app-action-btn-press-shadow-dark-deep),
     inset 0 -1px 2px 0 color-mix(in srgb, var(--app-action-btn-press-shadow-light-edge) 55%, transparent 45%),
     inset 0 -2px 10px -4px color-mix(in srgb, var(--app-action-btn-press-shadow-light-fade) 65%, transparent 35%);
+
+  /*
+   * Locked PokerStars gray — never theme-tinted. Menu delay-seconds / blank-tile
+   * count chips use these so inactive options stay gray on Abyss / Mystic.
+   */
+  --app-action-btn-face-neutral: linear-gradient(
+    180deg,
+    #59646e 0%,
+    color-mix(in srgb, #59646e 38%, #434b53 62%) 48%,
+    color-mix(in srgb, #434b53 94%, #000 6%) 100%
+  );
+  --app-action-btn-face-pressed-neutral: #363d44;
+  --app-action-btn-border-rest-neutral: color-mix(
+    in srgb,
+    color-mix(in srgb, #6c757e 78%, #ffffff 22%) 56%,
+    #434b53 44%
+  );
+  --app-action-btn-rest-shadow-light-neutral: color-mix(
+    in srgb,
+    color-mix(
+      in srgb,
+      color-mix(in srgb, #6c757e 78%, #ffffff 22%) 72%,
+      #434b53 28%
+    ) 42%,
+    transparent
+  );
+  --app-action-btn-rest-shadow-dark-neutral: color-mix(
+    in srgb,
+    color-mix(in srgb, #000 30%, #434b53) 42%,
+    transparent
+  );
+  --app-action-btn-shadow-rest-neutral:
+    inset 1px 1px 2px 0 var(--app-action-btn-rest-shadow-light-neutral),
+    inset 2px 2px 10px -3px var(--app-action-btn-rest-shadow-light-neutral),
+    inset -1px -1px 2px 0 var(--app-action-btn-rest-shadow-dark-neutral),
+    inset -2px -2px 10px -3px var(--app-action-btn-rest-shadow-dark-neutral);
+  --app-action-btn-press-shadow-dark-neutral: color-mix(in srgb, #000 45%, #434b53);
+  --app-action-btn-press-shadow-light-neutral: color-mix(
+    in srgb,
+    color-mix(
+      in srgb,
+      color-mix(in srgb, #6c757e 78%, #ffffff 22%) 70%,
+      #434b53 30%
+    ) 72%,
+    #ffffff 28%
+  );
+  --app-action-btn-press-shadow-light-edge-neutral: color-mix(
+    in srgb,
+    var(--app-action-btn-press-shadow-light-neutral) 70%,
+    #363d44 30%
+  );
+  --app-action-btn-press-shadow-light-fade-neutral: color-mix(
+    in srgb,
+    var(--app-action-btn-press-shadow-light-neutral) 42%,
+    #363d44 58%
+  );
+  --app-action-btn-press-bottom-peek-neutral: linear-gradient(
+    0deg,
+    color-mix(in srgb, var(--app-action-btn-press-shadow-light-neutral) 32%, transparent 68%) 0%,
+    color-mix(in srgb, var(--app-action-btn-press-shadow-light-neutral) 11%, transparent 89%) 18%,
+    transparent 48%
+  );
+  --app-action-btn-face-pressed-chrome-neutral:
+    var(--app-action-btn-press-bottom-peek-neutral),
+    var(--app-action-btn-face-pressed-neutral);
+  --app-action-btn-press-shadow-dark-deep-neutral: color-mix(
+    in srgb,
+    #000 22%,
+    var(--app-action-btn-press-shadow-dark-neutral)
+  );
+  --app-action-btn-shadow-pressed-deep-neutral:
+    inset 4px 4px 8px var(--app-action-btn-press-shadow-dark-deep-neutral),
+    inset -4px 0 8px var(--app-action-btn-press-shadow-dark-deep-neutral),
+    inset 0 -1px 2px 0 color-mix(in srgb, var(--app-action-btn-press-shadow-light-edge-neutral) 55%, transparent 45%),
+    inset 0 -2px 10px -4px color-mix(in srgb, var(--app-action-btn-press-shadow-light-fade-neutral) 65%, transparent 35%);
+  --app-action-btn-label-disabled-text-neutral: color-mix(
+    in srgb,
+    color-mix(in srgb, #434b53 28%, #363d44 72%) 16%,
+    #363d44 84%
+  );
 }
 
 /*

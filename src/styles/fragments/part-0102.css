@@ -210,8 +210,8 @@
   font-family: 'Figtree', var(--sans);
   min-height: var(--rack-action-touch-min-h);
   padding: 0.2rem 0.3rem;
-  font-size: 1.15rem;
-  font-weight: 400;
+  font-size: var(--app-menu-type-action, 1.45rem);
+  font-weight: 700;
   border-radius: var(--rack-tile-btn-border-radius);
   white-space: nowrap;
   line-height: var(--btn-line-height);
@@ -271,8 +271,8 @@
   box-sizing: border-box;
   flex: 1 1 20%;
   min-width: 0;
-  font-size: 1rem;
-  font-weight: 500;
+  font-size: var(--app-menu-type-action, 1.45rem);
+  font-weight: 700;
   padding: 0.35rem 0.2rem;
   line-height: 1.2;
   text-transform: none;
@@ -282,10 +282,10 @@
 
 /* In settings modal: layout only — pill chrome in part-0124 (matches rack action row). */
 .app-menu-modal .app-menu-tray__diff-btn {
-  min-height: 2.5rem;
+  min-height: 2.75rem;
   padding: 0.42rem 0.3rem;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: var(--app-menu-type-action, 1.45rem);
+  font-weight: 700;
   border-radius: var(--rack-tile-btn-border-radius);
 }
 
@@ -295,11 +295,11 @@
   align-items: center;
   justify-content: center;
   /* Same pill size as 2025/2026 — label scale must not grow the button. */
-  height: 2.5rem;
-  min-height: 2.5rem;
-  max-height: 2.5rem;
+  height: 2.75rem;
+  min-height: 2.75rem;
+  max-height: 2.75rem;
   box-sizing: border-box;
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .app-menu-modal
