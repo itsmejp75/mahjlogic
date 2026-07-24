@@ -1,6 +1,5 @@
 import type { RankSuggestedHandsInput } from '../analysis/suggestedHands'
 import type { DeadHandReason } from '../mahjong/deadHandReason'
-import type { PlayableCardId } from '../card/cardCatalog'
 
 /**
  * Fixed full-screen overlay: `card` matches Charleston/call; `table` is felt + gold for swap;
@@ -20,5 +19,4 @@ export type GameBlockingDialog =
     }
   | { variant: 'invalid-call-meld-warning' }
   | { variant: 'discard-dead-warning'; rankInput: RankSuggestedHandsInput }
-  | { variant: 'different-card-requires-new-game'; pendingCardId: PlayableCardId }
   | { variant: 'concealed-call-warning' }

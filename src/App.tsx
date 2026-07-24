@@ -13,7 +13,16 @@ import { handTileFlyInFromBotSeat } from './mahjong/handTileFlyIn'
 import { assignOpeningHands, botIndicesAfterCompassSeat, botIndicesAfterPlayerDiscard, botIndicesInCompassPlayOrder, botIndexForCompassSeat, DEFAULT_BOT_SLOT_SEATS, nextCompassSeat, playerYouLabel, seatLabel, toFourHands as fourHandsFromRound, type BotSlotSeats } from './mahjong/seats'
 import { type PassStripFlyOutFrom } from './components/PassStrip'
 import { AppMenuAccountFooter } from './components/AppMenuAccountFooter'
+import { GameHistoryStatsOverlay } from './components/GameHistoryStatsOverlays'
 import { TileFace } from './components/TileFace'
+import { useAuth } from './auth/AuthProvider'
+import { recordGameResult, type GameOutcome, type GameWinMethod } from './lib/gameResults'
+import {
+  createDebouncedPrefsSaver,
+  loadUserPreferences,
+  saveUserPreferences,
+  type SyncedUserPreferences,
+} from './lib/userPreferences'
 import { PLAYABLE_CARD_IDS, PLAYABLE_CARD_LABEL, type PlayableCardId, cardSectionOrderFromPatterns, patternsForCard, playableCardShortLabel, readPlayableCardFromStorage, writePlayableCardToStorage } from './card/cardCatalog'
 import type { PracticePattern } from './card/practicePatterns'
 import { patternByIdLookup, setActiveCardPatterns } from './card/activeCardPatternsScope'
@@ -36,6 +45,11 @@ import type { BotExposure, BotSeat } from './analysis/types'
 import { BOT_DIFFICULTIES, type BotDifficulty, chooseBotDiscard, botCallStrategicProbability, botBestTilesAway, tryBotBlankExchange, DEFAULT_BOT_DIFFICULTY, isBotDifficulty, type BotRankContext } from './analysis/botAI'
 import { hasLegalMahjongOnBotDiscard, isMahjongWinOnLiveBotDiscard, isSelfDrawMahjongWin, type CallValidationRoundSlice } from './mahjong/callValidation'
 import { deadHandExplanation } from './mahjong/deadHandReason'
+import {
+  isPlayerTheDiscarder,
+  nonWinnerPaysPoints,
+  winnerCollectsPoints,
+} from './mahjong/payouts'
 import { incomingBotDiscardDragId } from './mahjong/jokerSwapIds'
 import { discardedDefsForBlankExchange } from './mahjong/blankExchange'
 import { eastExposureSwapDropId, findNextJokerSwapTarget, collectHandTileIdsSwappableForJokers, collectSwappableJokerTileIds } from './mahjong/jokerSwapTarget'
@@ -86,6 +100,9 @@ import './styles/style.css'
 
 /** Conservative floor used while the suggested-hands sheet is remeasured during orientation changes. */
 const SUGGESTED_DISCARD_OVERLAY_MIN_SHEET_PX = 112
+
+/** Survives React Strict Mode remounts so a finished hand is not inserted twice. */
+const recordedGameResultRoundIds = new Set<string>()
 
 /** Stable empty list so blank-exchange inputs keep a constant identity when no blank is held. */
 const EMPTY_TILE_DEF_LIST: readonly TileDef[] = []
@@ -1810,7 +1827,18 @@ function AppMenuSettingSwitch({
 }
 
 export default function App() {
+  const { user } = useAuth()
   const replayOpeningDeckRef = useRef<TileInstance[] | null>(null)
+  const gameResultRecordedRef = useRef(false)
+  const clientRoundIdRef = useRef(
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `round-${Date.now()}`,
+  )
+  const wallGameEndedByRef = useRef<'natural' | 'manual_end'>('natural')
+  const cloudPrefsHydratedRef = useRef(false)
+  const prefsSaverRef = useRef(createDebouncedPrefsSaver(400))
+  const [gameMetaPanel, setGameMetaPanel] = useState<'stats' | 'history' | null>(null)
   const replayOpeningMetaRef = useRef<Pick<OpeningDealMeta, 'playerSeat' | 'botSlotSeats'>>({
     playerSeat: 'east',
     botSlotSeats: DEFAULT_BOT_SLOT_SEATS,
@@ -2415,23 +2443,6 @@ export default function App() {
     }
     return n
   }, [playerExposureMelds, mainPhase, activeBotDiscard, stagedCallTileIds])
-
-  const requestPlayableCard = useCallback((next: PlayableCardId) => {
-    if (next === menuCardId) return
-    const committed = committedCardIdRef.current
-    if (next !== committed) {
-      const roundAlreadyOver =
-        mainPhase === 'wall-game' ||
-        mainPhase === 'mahjong-declared' ||
-        mainPhase === 'bot-mahjong' ||
-        mainPhase === 'dead-hand'
-      if (!roundAlreadyOver) {
-        setBlockingDialog({ variant: 'different-card-requires-new-game', pendingCardId: next })
-        return
-      }
-    }
-    setMenuCardId(next)
-  }, [menuCardId, mainPhase])
 
   const charlestonGlowTileIds = useMemo(() => {
     if (charlestonDone || charlestonNewTileIds.length === 0) return null
@@ -4218,6 +4229,12 @@ export default function App() {
     historyRef.current = []
     sortModeRef.current = null
     setCanUndo(false)
+    gameResultRecordedRef.current = false
+    clientRoundIdRef.current =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `round-${Date.now()}`
+    wallGameEndedByRef.current = 'natural'
     // Most menu prefs persist across hands; suggested-hand category filters + Concealed (C) reset below.
     const w = readBotWinsEnabledFromStorage()
     setBotWinsEnabled((prev) => (prev === w ? prev : w))
@@ -4318,11 +4335,34 @@ export default function App() {
     [performNewHandDeal],
   )
 
-  /** @returns true (menu may close); card-change warning is shown from `requestPlayableCard` when needed. */
+  /** @returns true (menu may close). */
   const newHand = useCallback((): boolean => {
     performNewHandDeal()
     return true
   }, [performNewHandDeal])
+
+  /** Selecting a different card during an active round deals a new hand with that card. */
+  const requestPlayableCard = useCallback(
+    (next: PlayableCardId) => {
+      if (next === menuCardId) return
+      const committed = committedCardIdRef.current
+      if (next !== committed) {
+        const roundAlreadyOver =
+          mainPhase === 'wall-game' ||
+          mainPhase === 'mahjong-declared' ||
+          mainPhase === 'bot-mahjong' ||
+          mainPhase === 'dead-hand'
+        if (!roundAlreadyOver) {
+          setMenuCardId(next)
+          menuCardIdRef.current = next
+          performNewHandDeal()
+          return
+        }
+      }
+      setMenuCardId(next)
+    },
+    [menuCardId, mainPhase, performNewHandDeal],
+  )
 
   const canEndGame =
     charlestonDone &&
@@ -4340,6 +4380,7 @@ export default function App() {
     setWallGameReviewing(false)
     setMahjongWinReviewing(false)
     setBotMahjongWinReviewing(false)
+    wallGameEndedByRef.current = 'manual_end'
     setRound((r) => {
       if (
         r.mainPhase === 'wall-game' ||
@@ -4369,6 +4410,443 @@ export default function App() {
     })
     appMenuOpenApiRef.current.setMenuOpen(false)
   }, [charlestonDone])
+
+  const collectSyncedPrefs = useCallback((): SyncedUserPreferences => {
+    return {
+      playableCardId: menuCardIdRef.current,
+      botDifficulty: botDifficultyRef.current,
+      appTheme,
+      tileGraphics,
+      botWinsEnabled,
+      colorButtonsEnabled,
+      undoEnabled,
+      animationsEnabled,
+      deadHandWarningsEnabled,
+      jokerSwapHintEnabled,
+      mahjongHintEnabled,
+      mahjongHintDelaySeconds,
+      jokerSwapHintDelaySeconds,
+      deadTileHintEnabled,
+      botHandsIdentifierEnabled,
+      concealedHandReminderEnabled,
+      blankTilesEnabled,
+      blankTileCount,
+      tenJokersEnabled,
+      playAsEastEnabled,
+      suggestedHandsTrayDefaultOpen,
+      handProbabilityEnabled,
+    }
+  }, [
+    appTheme,
+    tileGraphics,
+    botWinsEnabled,
+    colorButtonsEnabled,
+    undoEnabled,
+    animationsEnabled,
+    deadHandWarningsEnabled,
+    jokerSwapHintEnabled,
+    mahjongHintEnabled,
+    mahjongHintDelaySeconds,
+    jokerSwapHintDelaySeconds,
+    deadTileHintEnabled,
+    botHandsIdentifierEnabled,
+    concealedHandReminderEnabled,
+    blankTilesEnabled,
+    blankTileCount,
+    tenJokersEnabled,
+    playAsEastEnabled,
+    suggestedHandsTrayDefaultOpen,
+    handProbabilityEnabled,
+  ])
+
+  /** Persist finished hands to Supabase once per round. */
+  useEffect(() => {
+    const terminal =
+      mainPhase === 'mahjong-declared' ||
+      mainPhase === 'bot-mahjong' ||
+      mainPhase === 'dead-hand' ||
+      mainPhase === 'wall-game'
+    if (!terminal || gameResultRecordedRef.current) return
+    const roundKey = clientRoundIdRef.current
+    if (recordedGameResultRoundIds.has(roundKey)) {
+      gameResultRecordedRef.current = true
+      return
+    }
+    recordedGameResultRoundIds.add(roundKey)
+    gameResultRecordedRef.current = true
+
+    let outcome: GameOutcome
+    if (mainPhase === 'mahjong-declared') outcome = 'player_win'
+    else if (mainPhase === 'bot-mahjong') outcome = 'bot_win'
+    else if (mainPhase === 'dead-hand') outcome = 'dead_hand'
+    else outcome = 'wall_game'
+
+    let patternId: string | null = null
+    let handTitle: string | null = null
+    let handSection: string | null = null
+    let cardHandCode: string | null = null
+    let points: number | null = null
+    let closed: boolean | null = null
+    let winMethod: GameWinMethod | null = null
+
+    if (outcome === 'player_win') {
+      const { closestLine } = summarizeRackTowardWin({
+        hand,
+        wallRemaining: wall.length,
+        discards: discardTiles,
+        exposures: botExposures,
+        playerClaimMelds: eastExposures,
+        eastTableClaimMelds: eastExposures,
+        patterns: cardPatterns,
+      })
+      if (playerWinMethod?.type === 'self-draw') winMethod = 'self-draw'
+      else if (playerWinMethod?.type === 'called-discard') winMethod = 'called-discard'
+      if (closestLine) {
+        patternId = closestLine.id
+        handTitle = closestLine.title
+        handSection = closestLine.section
+        cardHandCode = closestLine.cardHandCode ?? null
+        closed = closestLine.closed
+        // Player collects 4× base on discard win, 6× on self-pick.
+        points =
+          winMethod != null ? winnerCollectsPoints(closestLine.points, winMethod) : closestLine.points
+      }
+    } else if (outcome === 'bot_win' && botWin) {
+      const bi = botWin.botIndex
+      const winnerSeat = seatLabel(botSlotSeats[bi]!)
+      const botHand = bots[bi] ?? []
+      const claims = botExposures.filter((e) => e.seat === winnerSeat)
+      const { closestLine } = summarizeRackTowardWin({
+        hand: botHand,
+        wallRemaining: wall.length,
+        discards: discardTiles,
+        exposures: botExposures,
+        playerClaimMelds: claims,
+        eastTableClaimMelds: eastExposures,
+        patterns: cardPatterns,
+      })
+      winMethod = botWin.how === 'self-draw' ? 'self-draw' : 'called-discard'
+      if (closestLine) {
+        patternId = closestLine.id
+        handTitle = closestLine.title
+        handSection = closestLine.section
+        cardHandCode = closestLine.cardHandCode ?? null
+        closed = closestLine.closed
+        const threwWinningTile =
+          botWin.how === 'called-discard' && isPlayerTheDiscarder(botWin.discardFrom, playerSeat)
+        // What this player pays: 2× if self-pick or they discarded; else 1×.
+        points = nonWinnerPaysPoints(closestLine.points, winMethod, threwWinningTile)
+      }
+    } else if (outcome === 'dead_hand') {
+      // Solo app ends the round immediately → no payout. Future multi-player:
+      // if play continues and someone else wins, dead seat pays like any other loser.
+      points = 0
+    }
+
+    void recordGameResult({
+      outcome,
+      cardId: committedCardId,
+      patternId,
+      handTitle,
+      handSection,
+      cardHandCode,
+      points,
+      closed,
+      winMethod,
+      deadHandReason: outcome === 'dead_hand' ? round.deadHandReason : null,
+      botDifficulty,
+      endedBy: outcome === 'wall_game' ? wallGameEndedByRef.current : null,
+    })
+  }, [
+    mainPhase,
+    hand,
+    wall.length,
+    discardTiles,
+    botExposures,
+    eastExposures,
+    cardPatterns,
+    playerWinMethod,
+    botWin,
+    bots,
+    botSlotSeats,
+    playerSeat,
+    committedCardId,
+    botDifficulty,
+    round.deadHandReason,
+  ])
+
+  /** Load cloud prefs on login (cloud wins); upload local prefs when none exist yet. */
+  useEffect(() => {
+    if (!user) {
+      cloudPrefsHydratedRef.current = false
+      prefsSaverRef.current.cancel()
+      return
+    }
+
+    let cancelled = false
+    cloudPrefsHydratedRef.current = false
+
+    void (async () => {
+      const { prefs, error } = await loadUserPreferences()
+      if (cancelled) return
+      if (error) {
+        cloudPrefsHydratedRef.current = true
+        return
+      }
+
+      if (!prefs) {
+        await saveUserPreferences(collectSyncedPrefs())
+        if (!cancelled) cloudPrefsHydratedRef.current = true
+        return
+      }
+
+      let redeal = false
+      const prevCard = committedCardIdRef.current
+      const prevBlank = blankTilesEnabledRef.current
+      const prevBlankCount = blankTileCountRef.current
+      const prevTen = tenJokersEnabledRef.current
+      const prevEast = playAsEastEnabledRef.current
+
+      if (prefs.playableCardId != null && prefs.playableCardId !== prevCard) {
+        writePlayableCardToStorage(prefs.playableCardId)
+        setMenuCardId(prefs.playableCardId)
+        menuCardIdRef.current = prefs.playableCardId
+        setCommittedCardId(prefs.playableCardId)
+        committedCardIdRef.current = prefs.playableCardId
+        setActiveCardPatterns(patternsForCard(prefs.playableCardId))
+        redeal = true
+      }
+      if (prefs.botDifficulty != null) {
+        setBotDifficulty(prefs.botDifficulty)
+        botDifficultyRef.current = prefs.botDifficulty
+        try {
+          localStorage.setItem(LS_KEY_BOT_DIFFICULTY, prefs.botDifficulty)
+        } catch {
+          /* ignore */
+        }
+      }
+      if (prefs.appTheme != null && isAppTheme(prefs.appTheme)) {
+        setAppTheme(prefs.appTheme)
+        applyAppThemeToDocument(prefs.appTheme)
+        try {
+          localStorage.setItem(LS_KEY_APP_THEME, prefs.appTheme)
+        } catch {
+          /* ignore */
+        }
+      }
+      if (prefs.tileGraphics != null && isTileGraphics(prefs.tileGraphics)) {
+        setTileGraphics(prefs.tileGraphics)
+        persistTileGraphicsChoice(prefs.tileGraphics)
+      }
+      if (typeof prefs.botWinsEnabled === 'boolean') {
+        setBotWinsEnabled(prefs.botWinsEnabled)
+        botWinsEnabledRef.current = prefs.botWinsEnabled
+        try {
+          localStorage.setItem(LS_KEY_BOT_WINS, prefs.botWinsEnabled ? 'true' : 'false')
+        } catch {
+          /* ignore */
+        }
+      }
+      if (typeof prefs.colorButtonsEnabled === 'boolean') {
+        setColorButtonsEnabled(prefs.colorButtonsEnabled)
+        try {
+          localStorage.setItem(LS_KEY_COLOR_BUTTONS, prefs.colorButtonsEnabled ? 'true' : 'false')
+        } catch {
+          /* ignore */
+        }
+      }
+      if (typeof prefs.undoEnabled === 'boolean') {
+        setUndoEnabled(prefs.undoEnabled)
+        try {
+          localStorage.setItem(LS_KEY_UNDO, prefs.undoEnabled ? 'true' : 'false')
+        } catch {
+          /* ignore */
+        }
+      }
+      if (typeof prefs.animationsEnabled === 'boolean') {
+        setAnimationsEnabled(prefs.animationsEnabled)
+        try {
+          localStorage.setItem(LS_KEY_ANIMATIONS, prefs.animationsEnabled ? 'true' : 'false')
+        } catch {
+          /* ignore */
+        }
+      }
+      if (typeof prefs.deadHandWarningsEnabled === 'boolean') {
+        setDeadHandWarningsEnabled(prefs.deadHandWarningsEnabled)
+        deadHandWarningsEnabledRef.current = prefs.deadHandWarningsEnabled
+        try {
+          localStorage.setItem(
+            LS_KEY_DEAD_HAND_WARNINGS,
+            prefs.deadHandWarningsEnabled ? 'true' : 'false',
+          )
+        } catch {
+          /* ignore */
+        }
+      }
+      if (typeof prefs.jokerSwapHintEnabled === 'boolean') {
+        setJokerSwapHintEnabled(prefs.jokerSwapHintEnabled)
+        try {
+          localStorage.setItem(LS_KEY_JOKER_SWAP_HINT, prefs.jokerSwapHintEnabled ? 'true' : 'false')
+        } catch {
+          /* ignore */
+        }
+      }
+      if (typeof prefs.mahjongHintEnabled === 'boolean') {
+        setMahjongHintEnabled(prefs.mahjongHintEnabled)
+        try {
+          localStorage.setItem(LS_KEY_MAHJONG_HINT, prefs.mahjongHintEnabled ? 'true' : 'false')
+        } catch {
+          /* ignore */
+        }
+      }
+      if (
+        typeof prefs.mahjongHintDelaySeconds === 'number' &&
+        isHintDelaySeconds(prefs.mahjongHintDelaySeconds)
+      ) {
+        setMahjongHintDelaySeconds(prefs.mahjongHintDelaySeconds)
+        try {
+          localStorage.setItem(
+            LS_KEY_MAHJONG_HINT_DELAY_SECONDS,
+            String(prefs.mahjongHintDelaySeconds),
+          )
+        } catch {
+          /* ignore */
+        }
+      }
+      if (
+        typeof prefs.jokerSwapHintDelaySeconds === 'number' &&
+        isHintDelaySeconds(prefs.jokerSwapHintDelaySeconds)
+      ) {
+        setJokerSwapHintDelaySeconds(prefs.jokerSwapHintDelaySeconds)
+        try {
+          localStorage.setItem(
+            LS_KEY_JOKER_SWAP_HINT_DELAY_SECONDS,
+            String(prefs.jokerSwapHintDelaySeconds),
+          )
+        } catch {
+          /* ignore */
+        }
+      }
+      if (typeof prefs.deadTileHintEnabled === 'boolean') {
+        setDeadTileHintEnabled(prefs.deadTileHintEnabled)
+        try {
+          localStorage.setItem(LS_KEY_DEAD_TILE_HINT, prefs.deadTileHintEnabled ? 'true' : 'false')
+        } catch {
+          /* ignore */
+        }
+      }
+      if (typeof prefs.botHandsIdentifierEnabled === 'boolean') {
+        setBotHandsIdentifierEnabled(prefs.botHandsIdentifierEnabled)
+        try {
+          localStorage.setItem(
+            LS_KEY_BOT_HANDS_IDENTIFIER,
+            prefs.botHandsIdentifierEnabled ? 'true' : 'false',
+          )
+        } catch {
+          /* ignore */
+        }
+      }
+      if (typeof prefs.concealedHandReminderEnabled === 'boolean') {
+        setConcealedHandReminderEnabled(prefs.concealedHandReminderEnabled)
+        concealedHandReminderEnabledRef.current = prefs.concealedHandReminderEnabled
+        try {
+          localStorage.setItem(
+            LS_KEY_CONCEALED_HAND_REMINDER,
+            prefs.concealedHandReminderEnabled ? 'true' : 'false',
+          )
+        } catch {
+          /* ignore */
+        }
+      }
+      if (typeof prefs.blankTilesEnabled === 'boolean' && prefs.blankTilesEnabled !== prevBlank) {
+        setBlankTilesEnabled(prefs.blankTilesEnabled)
+        blankTilesEnabledRef.current = prefs.blankTilesEnabled
+        try {
+          localStorage.setItem(LS_KEY_BLANK_TILES, prefs.blankTilesEnabled ? 'true' : 'false')
+        } catch {
+          /* ignore */
+        }
+        redeal = true
+      }
+      if (
+        typeof prefs.blankTileCount === 'number' &&
+        isBlankTileCount(prefs.blankTileCount) &&
+        prefs.blankTileCount !== prevBlankCount
+      ) {
+        setBlankTileCount(prefs.blankTileCount)
+        blankTileCountRef.current = prefs.blankTileCount
+        try {
+          localStorage.setItem(LS_KEY_BLANK_TILE_COUNT, String(prefs.blankTileCount))
+        } catch {
+          /* ignore */
+        }
+        redeal = true
+      }
+      if (typeof prefs.tenJokersEnabled === 'boolean' && prefs.tenJokersEnabled !== prevTen) {
+        setTenJokersEnabled(prefs.tenJokersEnabled)
+        tenJokersEnabledRef.current = prefs.tenJokersEnabled
+        try {
+          localStorage.setItem(LS_KEY_TEN_JOKERS, prefs.tenJokersEnabled ? 'true' : 'false')
+        } catch {
+          /* ignore */
+        }
+        redeal = true
+      }
+      if (typeof prefs.playAsEastEnabled === 'boolean' && prefs.playAsEastEnabled !== prevEast) {
+        setPlayAsEastEnabled(prefs.playAsEastEnabled)
+        playAsEastEnabledRef.current = prefs.playAsEastEnabled
+        try {
+          localStorage.setItem(LS_KEY_PLAY_AS_EAST, prefs.playAsEastEnabled ? 'true' : 'false')
+        } catch {
+          /* ignore */
+        }
+        redeal = true
+      }
+      if (typeof prefs.suggestedHandsTrayDefaultOpen === 'boolean') {
+        setSuggestedHandsTrayDefaultOpen(prefs.suggestedHandsTrayDefaultOpen)
+        suggestedHandsTrayApiRef.current.setTrayOpen(prefs.suggestedHandsTrayDefaultOpen)
+        try {
+          localStorage.setItem(
+            LS_KEY_SUGGESTED_HANDS_TRAY,
+            prefs.suggestedHandsTrayDefaultOpen ? 'true' : 'false',
+          )
+        } catch {
+          /* ignore */
+        }
+      }
+      if (typeof prefs.handProbabilityEnabled === 'boolean') {
+        setHandProbabilityEnabled(prefs.handProbabilityEnabled)
+        try {
+          localStorage.setItem(
+            LS_KEY_HAND_PROBABILITY,
+            prefs.handProbabilityEnabled ? 'true' : 'false',
+          )
+        } catch {
+          /* ignore */
+        }
+      }
+
+      if (redeal) performNewHandDeal()
+      if (!cancelled) cloudPrefsHydratedRef.current = true
+    })()
+
+    return () => {
+      cancelled = true
+    }
+    // Hydrate once per signed-in user; avoid re-running on every prefs toggle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: user id only
+  }, [user?.id])
+
+  /** Debounced cloud upsert when menu settings change (after hydrate). */
+  useEffect(() => {
+    if (!user || !cloudPrefsHydratedRef.current) return
+    prefsSaverRef.current.schedule(collectSyncedPrefs())
+  }, [user, collectSyncedPrefs])
+
+  useEffect(() => {
+    const saver = prefsSaverRef.current
+    return () => saver.cancel()
+  }, [])
 
   /** Same shuffled deck + opening deal as before Charleston on the last fresh deal (reshuffle only via New Game). */
   const replayHand = useCallback((): boolean => {
@@ -5232,6 +5710,22 @@ export default function App() {
                     New Game
                   </button>
                 </div>
+                <div className="app-menu-modal__game-actions-row app-menu-tray__diff-row app-menu-modal__diff-row app-menu-modal__game-meta-row">
+                  <button
+                    type="button"
+                    className="btn app-menu-tray__diff-btn"
+                    onClick={() => setGameMetaPanel('history')}
+                  >
+                    History
+                  </button>
+                  <button
+                    type="button"
+                    className="btn app-menu-tray__diff-btn"
+                    onClick={() => setGameMetaPanel('stats')}
+                  >
+                    Stats
+                  </button>
+                </div>
               </div>
               <div className="app-menu-modal__diff-block">
                 <div className="app-menu-modal__subhead" id="bot-difficulty-menu-label">
@@ -5698,13 +6192,15 @@ export default function App() {
           </div>
         </div>
       </AppMenuOpenGate>
+      {gameMetaPanel ? (
+        <GameHistoryStatsOverlay kind={gameMetaPanel} onClose={() => setGameMetaPanel(null)} />
+      ) : null}
       {charlestonPassError || callRuleError || blockingDialog ? (
         <div
           className="charleston-error-overlay"
           role="presentation"
           onClick={() => {
             // Warnings that require an explicit choice — backdrop click does nothing
-            if (blockingDialog?.variant === 'different-card-requires-new-game') return
             if (blockingDialog?.variant === 'dead-hand-warning') return
             if (blockingDialog?.variant === 'mahjong-dead-warning') return
             if (blockingDialog?.variant === 'call-exposure-dead-warning') return
@@ -5737,9 +6233,6 @@ export default function App() {
               blockingDialog?.variant === 'dead-hand-warning'
                 ? 'charleston-error-dialog--dead-hand-warning'
                 : '',
-              blockingDialog?.variant === 'different-card-requires-new-game'
-                ? 'charleston-error-dialog--blocking-neutral'
-                : '',
               blockingDialog?.variant === 'mahjong-dead-warning'
                 ? 'charleston-error-dialog--blocking-neutral charleston-error-dialog--mahjong-dead-warning'
                 : '',
@@ -5752,9 +6245,6 @@ export default function App() {
               blockingDialog?.variant === 'mahjong-blocked'
                 ? 'charleston-error-dialog--table charleston-error-dialog--mahjong-blocked'
                 : '',
-              blockingDialog?.variant === 'different-card-requires-new-game'
-                ? 'charleston-error-dialog--new-game-warning'
-                : '',
               callRuleError ? 'charleston-error-dialog--call-warning' : '',
             ]
               .filter(Boolean)
@@ -5763,7 +6253,6 @@ export default function App() {
             aria-modal="true"
             aria-labelledby={
               blockingDialog?.variant === 'table' ||
-              blockingDialog?.variant === 'different-card-requires-new-game' ||
               blockingDialog?.variant === 'dead-hand-warning' ||
               blockingDialog?.variant === 'mahjong-dead-warning' ||
               blockingDialog?.variant === 'call-exposure-dead-warning' ||
@@ -5790,37 +6279,7 @@ export default function App() {
             }
             onClick={(e) => e.stopPropagation()}
           >
-            {blockingDialog?.variant === 'different-card-requires-new-game' ? (
-              <>
-                <h2 id="game-blocking-error-title" className="charleston-error-dialog__title">
-                  Selecting a different card will require a New Game.
-                </h2>
-                <div className="charleston-error-dialog__actions charleston-error-dialog__actions--spread">
-                  <button
-                    type="button"
-                    className="btn charleston-error-dialog__rack-action"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setBlockingDialog(null)
-                      setMenuCardId(committedCardIdRef.current)
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn--primary charleston-error-dialog__rack-action"
-                    onClick={() => {
-                      const id = blockingDialog.pendingCardId
-                      setBlockingDialog(null)
-                      setMenuCardId(id)
-                    }}
-                  >
-                    OK
-                  </button>
-                </div>
-              </>
-            ) : blockingDialog?.variant === 'concealed-call-warning' ? (
+            {blockingDialog?.variant === 'concealed-call-warning' ? (
               <>
                 <h2 id="game-blocking-error-title" className="charleston-error-dialog__title">
                   Concealed Hand Reminder
