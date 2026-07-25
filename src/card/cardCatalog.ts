@@ -11,7 +11,7 @@ export type PlayableCardId = 'mock' | '2025' | '2026'
 export const PLAYABLE_CARD_IDS: readonly PlayableCardId[] = ['mock', '2025', '2026'] as const
 
 export const PLAYABLE_CARD_LABEL: Record<PlayableCardId, string> = {
-  mock: 'Mock',
+  mock: 'Sample',
   '2025': '2025',
   '2026': '2026',
 }
@@ -68,7 +68,7 @@ export function writePlayableCardToStorage(id: PlayableCardId): void {
 
 /** Short label for in-game copy (dead hand, warnings). */
 export function playableCardShortLabel(id: PlayableCardId): string {
-  return id === 'mock' ? 'Mock practice card' : `${id} NMJL card`
+  return id === 'mock' ? 'Sample practice card' : `${id} NMJL card`
 }
 
 /** Title-style label for post-game overlays (Mah Jongg win, etc.). */

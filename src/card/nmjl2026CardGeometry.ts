@@ -82,8 +82,9 @@ function dragonTestForInk(ink: CardInk): Test {
   return dragon
 }
 
-function isAnyThreeDragonsParenthetical(row: Nmjl2026CsvHandRow): boolean {
-  return /\bany 3 dragons\b/i.test(row.parenthesis)
+/** “Any Dragons” / “Any 2 Dragons” / “Any 3 Dragons” — D-only ink rows permute dragon types. */
+function isAnyDragonsMeldPermuteParenthetical(row: Nmjl2026CsvHandRow): boolean {
+  return /\bany(?: \d+)? dragons?\b/i.test(row.parenthesis)
 }
 
 function colorRunHasDigitRanks(run: ColorRun, row: Nmjl2026CsvHandRow): boolean {
@@ -212,13 +213,15 @@ function usesAnyOrOpposingDragon(row: Nmjl2026CsvHandRow): boolean {
 }
 
 function slotColorGroup(slot: RankSlot, flexibleConsec: boolean, minRank: number) {
-  return [...slot.ranks.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .map(([rank, need]) => ({
-      rank: flexibleConsec ? rank - minRank + 1 : rank,
-      need,
-      canUseJoker: need >= 3,
-    }))
+  // Preserve Map insertion order for printed runs (e.g. 2019 → 2,1,9). Only sort when
+  // normalizing flexible consecutive offsets, where numeric order is the run order.
+  const entries = [...slot.ranks.entries()]
+  if (flexibleConsec) entries.sort((a, b) => a[0] - b[0])
+  return entries.map(([rank, need]) => ({
+    rank: flexibleConsec ? rank - minRank + 1 : rank,
+    need,
+    canUseJoker: need >= 3,
+  }))
 }
 
 /**
@@ -241,6 +244,8 @@ function opposingDragonNeedFromSlots(rankSlots: RankSlot[], mainSlot: RankSlot):
  */
 function dragonOrphanRankGroups(row: Nmjl2026CsvHandRow, rankSlots: RankSlot[]): PatternGroup[] {
   if (isOpposingDragonParenthetical(row)) return []
+  // “Any Dragons” orphans are collected into `dragon-meld-permute` later — don’t ink-lock them.
+  if (isAnyDragonsMeldPermuteParenthetical(row)) return []
   return rankSlots
     .filter((s) => s.ranks.size === 0 && s.dragonCount > 0)
     .map((s) => ({ kind: 'rank' as const, need: s.dragonCount, test: dragonTestForInk(s.ink) }))
@@ -287,9 +292,12 @@ function buildRankGroups(row: Nmjl2026CsvHandRow, rankSlots: RankSlot[]): Patter
 
   if (slotsWithRanks.length === 1) {
     const slot = slotsWithRanks[0]!
-    const rankNeeds = [...slot.ranks.entries()]
-      .sort((a, b) => a[0] - b[0])
-      .map(([rank, need]) => ({ rank: flexibleConsec ? rank - minRank + 1 : rank, need }))
+    const rankEntries = [...slot.ranks.entries()]
+    if (flexibleConsec) rankEntries.sort((a, b) => a[0] - b[0])
+    const rankNeeds = rankEntries.map(([rank, need]) => ({
+      rank: flexibleConsec ? rank - minRank + 1 : rank,
+      need,
+    }))
     if (flexibleConsec) {
       return [
         {
@@ -401,8 +409,8 @@ function buildGroupsAndMatches(row: Nmjl2026CsvHandRow): { groups: PatternGroup[
           }
         } else if (/^D+$/.test(part)) {
           const runHasDigitRanks = colorRunHasDigitRanks(run, row)
-          if (isAnyThreeDragonsParenthetical(row) && !runHasDigitRanks) {
-            // W&D #2: three D-only ink rows → consolidated `dragon-meld-permute` at end.
+          if (isAnyDragonsMeldPermuteParenthetical(row) && !runHasDigitRanks) {
+            // W&D #2 / Year #3 / Any-2-Dragons: D-only ink rows → `dragon-meld-permute` at end.
           } else {
             // NMJL ink convention: a dragon run printed in the same color as a number group
             // belongs to that group's suit slot (matching dragons) — even when the card prints the
@@ -435,7 +443,10 @@ function buildGroupsAndMatches(row: Nmjl2026CsvHandRow): { groups: PatternGroup[
   } else {
     groups.push(...rankGroups)
   }
-  if (!rankSlots.some((slot) => slot.ranks.size > 0)) {
+  if (
+    !rankSlots.some((slot) => slot.ranks.size > 0) &&
+    !isAnyDragonsMeldPermuteParenthetical(row)
+  ) {
     const dragonOnlySlots = rankSlots.filter((slot) => slot.dragonCount > 0)
     // NMJL prints separate ink rows for each `DD` (e.g. W&D 7a/7b: green `DD` then red `DD`).
     // One merged `fixed` group of 4 lets the matcher place four naturals as “any four dragons”,
@@ -460,7 +471,7 @@ function buildGroupsAndMatches(row: Nmjl2026CsvHandRow): { groups: PatternGroup[
       : exactRanks.length
         ? suit(...exactRanks)
         : anySuit
-  if (isAnyThreeDragonsParenthetical(row)) {
+  if (isAnyDragonsMeldPermuteParenthetical(row)) {
     const { needs, cardDragons } = dragonMeldsFromAnyThreeDragonsRow(row)
     if (needs.length >= 2 && needs.reduce((a, b) => a + b, 0) > 0) {
       const withoutDragonMelds = groups.filter((g) => !isDragonOnlyMeldGroup(g))

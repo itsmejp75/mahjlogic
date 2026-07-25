@@ -506,6 +506,21 @@ function capCompletionTrials(
     )
   }
 
+  // Away 3 open melds: still call-completable (expose with jokers), but don't treat every
+  // opponent discard as a pickup — keep a dampened slice so late-wall Prob stays low, not 0%.
+  if (
+    !isConcealed &&
+    !isSinglesAndPairs &&
+    tilesNeededRough === 3
+  ) {
+    const callSlack = Math.max(0, rawTrials - physicalPickCap)
+    const dampened = Math.round(physicalPickCap + callSlack * 0.35)
+    return Math.max(
+      tilesNeededRough + 1,
+      Math.min(dampened, wallRemaining),
+    )
+  }
+
   // Endgame: need exceeds realistic wall draws — don't treat every opponent discard as a pickup.
   if (tilesNeededRough > physicalPickCap) {
     return physicalPickCap

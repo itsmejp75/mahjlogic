@@ -212,7 +212,7 @@ export function LandingPage() {
           />
           <p className="landing__tagline">American Mah Jongg Intelligence</p>
           <p className="landing__description">
-            Practice play, discard tracking, and hand guidance — built for landscape play.
+            Practice American Mah Jongg with suggested hands and tiles, probabilities, and stats — guidance in one clear console.
           </p>
         </header>
 

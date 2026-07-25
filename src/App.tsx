@@ -5668,24 +5668,15 @@ export default function App() {
                       className={[
                         'btn',
                         'app-menu-tray__diff-btn',
-                        id === 'mock' ? 'app-menu-modal__playable-card-btn--mock' : '',
                         menuCardId === id ? 'app-menu-tray__diff-btn--on' : '',
                       ]
                         .filter(Boolean)
                         .join(' ')}
                       role="radio"
                       aria-checked={menuCardId === id}
-                      aria-label={id === 'mock' ? PLAYABLE_CARD_LABEL[id] : undefined}
                       onClick={() => requestPlayableCard(id)}
                     >
-                      {id === 'mock' ? (
-                        <span className="app-menu-modal__playable-card-label" aria-hidden="true">
-                          <span className="app-menu-modal__playable-card-bird" />
-                          <span>ock</span>
-                        </span>
-                      ) : (
-                        PLAYABLE_CARD_LABEL[id]
-                      )}
+                      {PLAYABLE_CARD_LABEL[id]}
                     </button>
                   ))}
                 </div>

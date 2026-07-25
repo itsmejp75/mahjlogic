@@ -3883,6 +3883,12 @@ function reorderStripSlotsToCardTitleOrder(
   if (!desiredDefs || desiredDefs.length !== slots.length || stripDefs.length !== slots.length) {
     return slots
   }
+  // `buildSuggestedStripSlotsFromStripDefs` may already have applied an inferred card-line map
+  // (common for pinned suit-permute year hands). Slots are then already in title order — applying
+  // a group-order→title permutation again double-shuffles (e.g. Year #2 → soap/R first).
+  if (desiredDefs.every((d, i) => tileDefsEqual(d, slots[i]!.displayDef))) {
+    return slots
+  }
   // `slots` follow card/display order (post `maybePermuteAssignmentToCardLine`); `stripDefs` are
   // usually still in group-append order. Match against card-ordered defs so indices align with `slots`.
   const stripForMatch = reorderTileDefsByCardLineFromGroupMap(stripDefs, cardLineFromGroupSlotMap)

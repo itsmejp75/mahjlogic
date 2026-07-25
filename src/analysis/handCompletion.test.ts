@@ -587,6 +587,42 @@ describe('calculateWallCompletionProbability', () => {
     ).toBe(0)
   })
 
+  it('keeps Away-3 open melds low but non-zero at wall 11 with a 14-tile rack', () => {
+    // Quints-style: 11111 44444 DDDD — call paths for 1D/4D/G still exist.
+    const slots: CompletionSlot[] = [
+      { tileType: 's:dot:1', targetCount: 5 },
+      { tileType: 's:dot:4', targetCount: 5 },
+      { tileType: 'd:green', targetCount: 4 },
+    ]
+    const shared = {
+      slots,
+      ctx: {
+        naturals: { 's:dot:1': 3, 's:dot:4': 3, 'd:green': 2 },
+        jokersInHand: 3,
+        blanksInHand: 0,
+        discardCounts: {},
+        jokersDisallowed: false,
+      } satisfies HandInventoryContext,
+      completion: { M_nat: 8, M_joker: 3, D: 3, P_base: 79, P: 79 },
+      visibleNaturals: { 's:dot:1': 1, 's:dot:4': 1, 'd:green': 1 },
+      visibleJokers: 3,
+      visibleBlanks: 0,
+      isConcealed: false,
+      isSinglesAndPairs: false,
+      deck: DEFAULT_DECK_COMPOSITION,
+      playerRackTileCount: 14,
+      tilesNeededRough: 3,
+    }
+    const at11 = calculateWallCompletionProbability({ ...shared, wallRemaining: 11 })
+    const at12 = calculateWallCompletionProbability({ ...shared, wallRemaining: 12 })
+    // Previously wall 11 + rack 14 hard-zeroed after stripping call credit.
+    expect(at11).toBeGreaterThan(0)
+    expect(at11).toBeLessThan(25)
+    // Away 3 late-wall should stay dampened (not the old ~38% full call-window band).
+    expect(at12).toBeGreaterThan(0)
+    expect(at12).toBeLessThan(25)
+  })
+
   it('raises completion prob when joker-swap hint relief is available', () => {
     const slots: CompletionSlot[] = [
       { tileType: 'w:west', targetCount: 3 },
