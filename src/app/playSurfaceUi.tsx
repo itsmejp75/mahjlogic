@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
   type ReactNode,
   type RefObject,
 } from 'react'
@@ -20,13 +21,19 @@ import mahjBirdSrc from '../assets/mahj-bird.svg?url'
 import { ExposureRack } from '../components/ExposureRack'
 import { TileFace } from '../components/TileFace'
 import { discardedDefsForBlankExchange } from '../mahjong/blankExchange'
-import { BLANK_TILE_DEF } from '../mahjong/deck'
 import {
   BLANK_EXCHANGE_DROP_ID,
   CALL_INITIATE_FIRST_SLOT_ID,
   EAST_DISCARD_STAGING_ID,
   JOKER_SWAP_STAGING_ID,
 } from '../mahjong/jokerSwapIds'
+import {
+  DISCARD_TRACKER_SORTED_BAND_COLS,
+  DISCARD_TRACKER_SORTED_ROW_SLOTS,
+  SORTED_DISCARD_ROW1_TILES,
+  SORTED_DISCARD_ROW2_TILES,
+  SORTED_DISCARD_ROW3_TILES,
+} from '../mahjong/sortedDiscardTrackerTiles'
 import {
   EAST_SEAT_SWAP_ID,
   botExposureSwapDropId,
@@ -365,75 +372,6 @@ export function DiscardTrackerBotSeatLabel({
 const DISCARD_TRACKER_SLOTS_ACROSS = 29
 const DISCARD_TRACKER_BOT_PREFIX_SLOTS = 1
 const DISCARD_TRACKER_BOT_ROW_SLOTS = 14
-const DISCARD_TRACKER_SORTED_ROW_SLOTS = 13
-/**
- * Sorted B/C/D band width in tile-width units: the suit-label chip is 1.75× a tile + 12 rank tiles
- * = 13.75. Used as the popup's `--discard-tracker-slots-across` divisor so the @container sizes
- * tiles to fill the grid almost exactly (an integer 14 left ~half a tile of centered slack each
- * side, which read as the box being too wide). Popup-only; the on-board grid uses 29.
- */
-const DISCARD_TRACKER_SORTED_BAND_COLS = 13.75
-
-/** Row 1 of sorted discard: bams 1–9, green dragon (G), North, South. */
-const SORTED_DISCARD_ROW1_TILES: readonly TileInstance[] = [
-  ...([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((rank) => ({
-    id: `sorted-discard-r1-b${rank}`,
-    def: { cat: 'suit' as const, suit: 'bam' as const, rank },
-  })),
-  {
-    id: 'sorted-discard-r1-green',
-    def: { cat: 'dragon' as const, dragon: 'green' as const },
-  },
-  {
-    id: 'sorted-discard-r1-n',
-    def: { cat: 'wind' as const, wind: 'N' },
-  },
-  {
-    id: 'sorted-discard-r1-s',
-    def: { cat: 'wind' as const, wind: 'S' },
-  },
-]
-
-/** Row 2 of sorted discard: dots 1–9, soap (0), East, West. */
-const SORTED_DISCARD_ROW2_TILES: readonly TileInstance[] = [
-  ...([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((rank) => ({
-    id: `sorted-discard-r2-d${rank}`,
-    def: { cat: 'suit' as const, suit: 'dot' as const, rank },
-  })),
-  {
-    id: 'sorted-discard-r2-soap',
-    def: { cat: 'dragon' as const, dragon: 'soap' as const },
-  },
-  {
-    id: 'sorted-discard-r2-e',
-    def: { cat: 'wind' as const, wind: 'E' },
-  },
-  {
-    id: 'sorted-discard-r2-w',
-    def: { cat: 'wind' as const, wind: 'W' },
-  },
-]
-
-/** Row 3 of sorted discard: craks 1–9, red dragon (R), flower (F), blank (B) or joker (J) when blanks off. */
-const SORTED_DISCARD_ROW3_TILES: readonly TileInstance[] = [
-  ...([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((rank) => ({
-    id: `sorted-discard-r3-c${rank}`,
-    def: { cat: 'suit' as const, suit: 'crak' as const, rank },
-  })),
-  {
-    id: 'sorted-discard-r3-red',
-    def: { cat: 'dragon' as const, dragon: 'red' as const },
-  },
-  {
-    id: 'sorted-discard-r3-f',
-    def: { cat: 'flower' as const, flower: 1 },
-  },
-  {
-    id: 'sorted-discard-r3-blank',
-    def: BLANK_TILE_DEF,
-  },
-]
-
 function sortedDiscardTrayTileFaceProps(
   def: TileDef,
   hasBeenDiscarded: boolean,
@@ -486,6 +424,8 @@ export function SortedDiscardTrayRow({
   onSlotActivate = null,
   pickableDefs = null,
   selectedDef = null,
+  brightSlots = false,
+  onSlotPointerDown = null,
 }: {
   tiles: readonly TileInstance[]
   slotCount: number
@@ -507,6 +447,10 @@ export function SortedDiscardTrayRow({
   pickableDefs?: readonly TileDef[] | null
   /** Blank-exchange popup: currently staged pick awaiting Confirm. */
   selectedDef?: TileDef | null
+  /** Catalog / rack-checker pickers: keep every slot bright (no awaiting-discard dim). */
+  brightSlots?: boolean
+  /** Optional pointer-down on a pickable slot (drag-from-tracker UIs). */
+  onSlotPointerDown?: ((def: TileDef, e: ReactPointerEvent<HTMLDivElement>) => void) | null
 }) {
   const leadingSlots = (leadingSuitLabel ? 1 : 0) + leadingEmptySlots
   const emptyCount = Math.max(0, slotCount - leadingSlots - tiles.length - trailingGlyphSlots.length)
@@ -571,11 +515,13 @@ export function SortedDiscardTrayRow({
         const suggestNeed =
           suggestGuideOn && sortedDiscardTrackerSlotNeedsHighlight(trackerDef, suggestedNeedDefs)
         const suggestDim = suggestGuideOn && !suggestNeed
-        const awaitingDiscard = !suggestGuideOn && !hasBeenDiscarded
+        const awaitingDiscard = !brightSlots && !suggestGuideOn && !hasBeenDiscarded
         const exchangeMode = onSlotActivate !== null
+        // Blank→joker display slot is not redeemable in blank-exchange, but rack-checker
+        // (`brightSlots`) must still allow picking the joker when blanks are off.
         const isPickable =
           exchangeMode &&
-          !blankReplacedByJoker &&
+          (brightSlots || !blankReplacedByJoker) &&
           (pickableDefs?.some((d) => tileDefsEqual(d, trackerDef)) ?? false)
         const isUnpickable = exchangeMode && !isPickable
         const isSelected =
@@ -587,7 +533,9 @@ export function SortedDiscardTrayRow({
               'exposure-rack__slot',
               'sorted-discard-tray__slot',
               isBlankSlot && blankTilesEnabled ? 'sorted-discard-tray__slot--blank' : '',
-              hasBeenDiscarded ? 'sorted-discard-tray__slot--discarded' : '',
+              hasBeenDiscarded || (brightSlots && isPickable)
+                ? 'sorted-discard-tray__slot--discarded'
+                : '',
               awaitingDiscard ? 'sorted-discard-tray__slot--awaiting-discard' : '',
               suggestDim ? 'sorted-discard-tray__slot--suggest-dim' : '',
               suggestNeed ? 'sorted-discard-tray__slot--suggest-need' : '',
@@ -601,6 +549,11 @@ export function SortedDiscardTrayRow({
             tabIndex={isPickable ? 0 : undefined}
             aria-pressed={isPickable ? isSelected : undefined}
             onClick={isPickable ? () => onSlotActivate?.(trackerDef) : undefined}
+            onPointerDown={
+              isPickable && onSlotPointerDown
+                ? (ev) => onSlotPointerDown(trackerDef, ev)
+                : undefined
+            }
             onKeyDown={
               isPickable
                 ? (ev) => {
@@ -613,9 +566,13 @@ export function SortedDiscardTrayRow({
             }
             aria-label={
               isPickable
-                ? `${isSelected ? 'Selected — ' : ''}Exchange blank for ${tileAriaLabel(trackerDef)}${
-                    discardCount > 0 ? `, ${discardCount} discarded` : ''
-                  }`
+                ? brightSlots
+                  ? `${tileAriaLabel(trackerDef)}${
+                      discardCount > 0 ? `, ${discardCount} on rack` : ''
+                    }`
+                  : `${isSelected ? 'Selected — ' : ''}Exchange blank for ${tileAriaLabel(trackerDef)}${
+                      discardCount > 0 ? `, ${discardCount} discarded` : ''
+                    }`
                 : suggestNeed
                 ? `${tileAriaLabel(trackerDef)}, needed for focused hand${
                     discardCount > 0 ? `, ${discardCount} discarded` : ''
@@ -627,7 +584,10 @@ export function SortedDiscardTrayRow({
           >
             <TileFace
               def={trackerDef}
-              {...sortedDiscardTrayTileFaceProps(trackerDef, hasBeenDiscarded || suggestNeed)}
+              {...sortedDiscardTrayTileFaceProps(
+                trackerDef,
+                hasBeenDiscarded || suggestNeed || (brightSlots && isPickable),
+              )}
             />
             <span className="sorted-discard-tray__count" aria-hidden>
               {discardCount > 0 ? discardCount : null}

@@ -2151,7 +2151,7 @@ html body .app .dead-hand-overlay
     .panel--bot-exposures__hint
   ):not(.app-menu-tray__item):not(.app-menu-tray__diff-btn):not(.app-menu-modal__suggested-filters-reset):not(
     .app-menu-modal__blank-tile-count-btn
-  ):not(.wall-game-dialog__action-btn):not(.charleston-error-dialog__rack-action):not(.blank-exchange-overlay__action-btn):not(.landing-auth__action-btn) {
+  ):not(.wall-game-dialog__action-btn):not(.charleston-error-dialog__rack-action):not(.blank-exchange-overlay__action-btn):not(.rack-checker__action-btn):not(.landing-auth__action-btn) {
   transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
   transform: none;
   box-shadow:

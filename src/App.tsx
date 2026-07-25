@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { flushSync } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
 import { americanDeckTileCount, BLANK_TILE_COUNT_OPTIONS, buildAmericanDeck, dealOpeningFour, DEFAULT_BLANK_TILE_COUNT, isBlankTileCount, shuffle, STANDARD_JOKER_COUNT, TEN_JOKERS_COUNT } from './mahjong/deck'
 import type { BlankTileCount } from './mahjong/deck'
 import type { ClaimType, DiscardEntry, EastExposure, Seat, TileDef, TileInstance } from './mahjong/types'
@@ -1828,6 +1829,7 @@ function AppMenuSettingSwitch({
 
 export default function App() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const replayOpeningDeckRef = useRef<TileInstance[] | null>(null)
   const gameResultRecordedRef = useRef(false)
   const clientRoundIdRef = useRef(
@@ -5715,6 +5717,18 @@ export default function App() {
                     onClick={() => setGameMetaPanel('stats')}
                   >
                     Stats
+                  </button>
+                </div>
+                <div className="app-menu-modal__game-actions-row app-menu-tray__diff-row app-menu-modal__diff-row app-menu-modal__game-meta-row">
+                  <button
+                    type="button"
+                    className="btn app-menu-tray__diff-btn"
+                    onClick={() => {
+                      appMenuOpenApiRef.current.setMenuOpen(false)
+                      navigate('/rack-checker')
+                    }}
+                  >
+                    Rack Checker
                   </button>
                 </div>
               </div>

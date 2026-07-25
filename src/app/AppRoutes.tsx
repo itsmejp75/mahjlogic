@@ -4,6 +4,7 @@ import { RequireAuth } from '../auth/RequireAuth'
 import { AuthCallbackPage } from '../pages/AuthCallbackPage'
 import { LandingPage } from '../pages/LandingPage'
 import { PrivacyPage } from '../pages/PrivacyPage'
+import { RackCheckerPage } from '../pages/RackCheckerPage'
 import { TermsPage } from '../pages/TermsPage'
 
 export function AppRoutes() {
@@ -18,6 +19,14 @@ export function AppRoutes() {
         element={
           <RequireAuth>
             <App />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/rack-checker"
+        element={
+          <RequireAuth>
+            <RackCheckerPage />
           </RequireAuth>
         }
       />

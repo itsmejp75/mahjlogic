@@ -1,0 +1,579 @@
+/* Rack Checker — standalone page (menu → /rack-checker). */
+
+.rack-checker {
+  --rack-action-face: var(--app-action-btn-face, linear-gradient(180deg, #6a727c 0%, #4e555e 48%, #3d444c 100%));
+  --rack-action-face-pressed: var(--app-action-btn-face-pressed, #3a4048);
+  --rack-action-face-pressed-chrome: var(
+    --app-action-btn-face-pressed-chrome,
+    linear-gradient(180deg, #3f464e 0%, #323840 55%, #2a3038 100%)
+  );
+  --rack-action-shadow-rest: var(
+    --app-action-btn-shadow-rest,
+    0 2px 0 #2a2f36,
+    0 3px 6px rgba(0, 0, 0, 0.35)
+  );
+  --rack-action-pressed: var(
+    --app-action-btn-pressed,
+    inset 0 2px 4px rgba(0, 0, 0, 0.45)
+  );
+  --rack-action-border-rest: var(--app-action-btn-border-rest, #636870);
+  --rack-action-border-hold: var(--app-action-btn-border-hold, #636870);
+  --rack-action-border-color: var(--app-action-btn-border, #636870);
+  --rack-action-label-color: var(--app-action-btn-label, #e2e4e8);
+  /* Same column width as the main-game East rack (tiles + tray insets). */
+  --rack-checker-col-w: min(100%, var(--rack-col-outer-w));
+  --rack-tile-w: var(--hand-rack-tile-w);
+  --rack-tile-h: var(--hand-rack-tile-h);
+
+  box-sizing: border-box;
+  height: 100dvh;
+  height: 100svh;
+  max-height: 100dvh;
+  max-height: 100svh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  /* Match main play horizontal inset so `--rack-col-outer-w` / tile size fit the same. */
+  padding-inline: var(--app-h-pad, clamp(10px, 2vmin, 18px));
+  padding-top: clamp(10px, 2vmin, 18px);
+  padding-bottom: max(clamp(10px, 2vmin, 18px), env(safe-area-inset-bottom, 0px));
+  gap: clamp(10px, 1.6vmin, 16px);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  background-color: var(--app-bg-paint-color, var(--app-bg-base, #2b2f37));
+  background-image: var(--app-bg-paint-image);
+  background-size: var(--app-bg-paint-size);
+  background-repeat: var(--app-bg-paint-repeat);
+  background-blend-mode: var(--app-bg-paint-blend);
+  color: var(--text, #e8eaed);
+}
+
+.rack-checker__header {
+  flex: 0 0 auto;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--rack-checker-col-w);
+  max-width: 100%;
+  margin: 0 auto;
+  /* Fixed band — larger title paints inside this without growing the page stack. */
+  height: 1.75rem;
+  overflow: visible;
+}
+
+.rack-checker__title {
+  margin: 0;
+  text-align: center;
+  font-family: 'Figtree', var(--sans);
+  font-weight: 800;
+  font-size: clamp(1.2rem, 3.1vmin, 1.55rem);
+  letter-spacing: 0.02em;
+  line-height: 1;
+  /* Keep layout contribution to the header band; ink can sit larger optically. */
+  height: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rack-checker__close {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
+  border-radius: 0.35rem;
+  background: var(--rack-action-face);
+  box-shadow: var(--rack-action-shadow-rest);
+  color: var(--rack-action-label-color, #e2e4e8);
+  font-family: 'Figtree', var(--sans);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.rack-checker__close:hover {
+  background: var(--rack-action-face);
+  border-color: var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
+  box-shadow: var(--rack-action-shadow-rest);
+  transform: translateY(-50%);
+}
+
+.rack-checker__close:active {
+  background: var(--rack-action-face-pressed-chrome);
+  box-shadow: var(--rack-action-pressed);
+  transform: translateY(-50%);
+}
+
+.rack-checker__close:focus-visible {
+  outline: 2px solid color-mix(in srgb, #f0c36a 75%, transparent);
+  outline-offset: 2px;
+}
+
+/* No tray chrome — same open band as the main-game hand / discard rows. */
+.app.rack-checker .rack-checker__rack-panel.panel.panel--hand {
+  flex: 0 0 auto;
+  width: var(--rack-checker-col-w);
+  max-width: 100%;
+  margin: 0 auto;
+  margin-bottom: 0;
+  box-sizing: border-box;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  background-image: none;
+  box-shadow: none;
+}
+
+/* Kill shared panel steel rim / top highlight (part-0057 / part-0058). */
+.app.rack-checker .rack-checker__rack-panel.panel.panel--hand::before,
+.app.rack-checker .rack-checker__rack-panel.panel.panel--hand::after {
+  content: none;
+}
+
+.rack-checker__rack {
+  --rack-tile-w: var(--hand-rack-tile-w);
+  --rack-tile-h: var(--hand-rack-tile-h);
+  display: grid;
+  grid-template-columns: repeat(14, minmax(0, 1fr));
+  grid-auto-rows: var(--rack-tile-h);
+  gap: var(--player-rack-face-gap);
+  width: 100%;
+  align-items: start;
+  align-content: start;
+}
+
+.rack-checker__slot {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: var(--rack-tile-h);
+  margin: 0;
+  padding: 0;
+  border: 1px dashed color-mix(in srgb, #9aa3ad 35%, transparent);
+  border-radius: calc(var(--rack-tile-w) * 0.132);
+  background: color-mix(in srgb, #000 22%, transparent);
+  cursor: default;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.rack-checker__slot--filled {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--rack-action-border-color, #636870) 55%, transparent);
+  background: transparent;
+  cursor: pointer;
+}
+
+.rack-checker__slot--filled:hover:not(:disabled) {
+  outline: 2px solid color-mix(in srgb, #f0c36a 70%, transparent);
+  outline-offset: 1px;
+}
+
+.rack-checker__slot--drop-target {
+  border-style: solid;
+  border-color: #f0c36a;
+  background: color-mix(in srgb, #f0c36a 18%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #f0c36a 55%, transparent);
+}
+
+.rack-checker__slot .tile-face {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* Match main-game coach dim / lit rings on checker rack slots. */
+.app.rack-checker .rack-checker__slot.sortable-tile-wrap--suggest-dim .tile-face.tile--joker {
+  filter: brightness(var(--suggest-dim-joker-brightness, 0.72));
+}
+
+.app.rack-checker .rack-checker__slot.sortable-tile-wrap--suggest-best {
+  z-index: 3;
+  overflow: visible;
+}
+
+.app.rack-checker .rack-checker__slot.sortable-tile-wrap--suggest-best .tile-face {
+  z-index: 1;
+}
+
+.rack-checker__actions {
+  --rack-checker-action-h: max(1.85rem, calc(var(--hand-rack-tile-h, 3.2rem) * 0.38));
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: 1vmin;
+  width: var(--rack-checker-col-w);
+  max-width: 100%;
+  margin: 0 auto;
+  min-height: var(--rack-checker-action-h);
+}
+
+.rack-checker .btn.rack-checker__action-btn {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 5.6rem;
+  min-height: var(--rack-checker-action-h);
+  height: var(--rack-checker-action-h);
+  margin-top: 0;
+  padding: 0 var(--rack-control-pad-inline, 0.7em);
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
+  border-radius: var(
+    --rack-tile-btn-border-radius,
+    max(0.36rem, calc(var(--hand-rack-tile-w, 2.65rem) * 0.128))
+  );
+  font-family: 'Figtree', var(--sans);
+  font-weight: 700;
+  letter-spacing: max(0.028em, calc(0.042em + 0.026rem));
+  font-size: min(
+    var(--rack-hand-action-label-fs, var(--rack-control-label-fs, 0.72rem)),
+    calc(var(--rack-checker-action-h) * 0.52)
+  );
+  line-height: 1.08;
+  text-transform: none;
+  white-space: nowrap;
+  color: var(--rack-action-label-color, #e2e4e8);
+  background: var(--rack-action-face);
+  box-shadow: var(--rack-action-shadow-rest);
+  opacity: 1;
+  filter: none;
+  text-shadow: none;
+  cursor: pointer;
+  transition: box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.rack-checker .btn.rack-checker__action-btn:hover:not(:disabled):not(:active) {
+  background: var(--rack-action-face);
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
+  box-shadow: var(--rack-action-shadow-rest);
+  color: var(--rack-action-label-color, #e2e4e8);
+  transform: none;
+}
+
+.rack-checker .btn.rack-checker__action-btn:active:not(:disabled),
+.rack-checker .btn.rack-checker__action-btn.btn--pointer-down:not(:disabled) {
+  background: var(--rack-action-face-pressed-chrome);
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
+  box-shadow: var(--rack-action-pressed);
+  color: var(--rack-action-label-color, #e2e4e8);
+  transition: none;
+  transform: none;
+}
+
+.rack-checker .btn.rack-checker__action-btn:active:not(:disabled):not(.btn--pointer-down) {
+  background: var(--rack-action-face);
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
+  box-shadow: var(--rack-action-shadow-rest);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+  transform: none;
+}
+
+.rack-checker .btn.rack-checker__action-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+  filter: grayscale(0.35);
+  box-shadow: none;
+}
+
+.rack-checker__lower {
+  flex: 1 1 auto;
+  width: var(--rack-checker-col-w);
+  max-width: 100%;
+  margin: 0 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  overflow: hidden;
+}
+
+.rack-checker__picker {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.rack-checker__tracker-shell {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  width: 100%;
+  height: auto;
+  padding: 0;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  background-image: none;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+/* Width-sized catalog; shell hugs the 3 packed rows (no stretch / no row gaps). */
+.rack-checker__catalog-fit {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  width: 100%;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  container-type: inline-size;
+  container-name: rack-checker-catalog;
+}
+
+/*
+ * Reuse blank-exchange tracker mirror + top-exposure tile sizing, but strip play-split
+ * flex/max-height and discard-tray overflow so all three catalog rows stay in flow.
+ */
+html .rack-checker .rack-checker__tracker-mirror.blank-exchange-overlay__tracker-mirror.app-play-split {
+  position: static;
+  display: block;
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: auto;
+  max-height: none;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  gap: 0;
+  overflow: visible;
+  background: transparent;
+}
+
+/*
+ * Size catalog tiles from band width. If the picker is height-capped, shrink so all
+ * three rows still fit without scrolling or stretching row gaps.
+ */
+@container rack-checker-catalog (min-width: 0px) {
+  html .rack-checker .rack-checker__catalog-fit .discard-tracker__overlay-row {
+    --player-rack-face-gap: 2px;
+    --discard-tracker-slots-across: 13.75;
+    --rc-catalog-row-gap: var(--player-rack-face-gap);
+    --rc-tile-w-from-width: max(
+      1px,
+      calc(
+        (
+            100cqi
+            - (var(--discard-tracker-slots-across) - 1) * var(--player-rack-face-gap)
+          ) / var(--discard-tracker-slots-across)
+      )
+    );
+    --rack-tile-w: var(--rc-tile-w-from-width);
+    --rack-tile-h: calc(var(--rack-tile-w) * 4 / 3);
+    --exposure-slot-h: var(--rack-tile-h);
+    --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
+    --discard-tray-rack-tile-w: var(--rack-tile-w);
+    --discard-tray-tile-corner-r: var(--tile-face-border-radius);
+    --sorted-discard-suit-label-w-mult: 1.75;
+    --sorted-discard-suit-label-w: calc(var(--rack-tile-w) * var(--sorted-discard-suit-label-w-mult));
+    --sorted-discard-suit-label-h: var(--rack-tile-h);
+    --sorted-discard-suit-label-fs: min(
+      calc(var(--sorted-discard-suit-label-h) * 0.45),
+      calc(var(--sorted-discard-suit-label-w) * 0.35)
+    );
+    --discard-tracker-sorted-band-w: calc(
+      var(--sorted-discard-suit-label-w) + 12 * var(--rack-tile-w) + 12 * var(--player-rack-face-gap)
+    );
+  }
+}
+
+html .rack-checker .rack-checker__tracker-mirror .discard-tracker__shell,
+html .rack-checker .rack-checker__tracker-mirror .discard-tracker__content,
+html .rack-checker .rack-checker__tracker-mirror .discard-tracker__content--tile-groups-only,
+html .rack-checker .rack-checker__tracker-mirror .discard-tracker__tile-groups-container {
+  position: relative !important;
+  inset: auto !important;
+  display: block !important;
+  flex: none !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+  background-image: none !important;
+  border-radius: 0 !important;
+  container-type: normal;
+}
+
+html .rack-checker .rack-checker__tracker-mirror .discard-tracker__overlay-grid {
+  position: relative !important;
+  inset: auto !important;
+  display: flex !important;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: var(--player-rack-face-gap, 2px);
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  max-height: none !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  pointer-events: auto;
+  container-type: normal;
+  box-sizing: border-box;
+}
+
+html
+  .rack-checker
+  .rack-checker__tracker-mirror.app-top-exposure-container
+  .discard-tracker__overlay-row {
+  display: flex !important;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  margin: 0 !important;
+  grid-template-columns: none !important;
+  overflow: visible !important;
+}
+
+html
+  .rack-checker
+  .rack-checker__tracker-mirror
+  .discard-tracker__overlay-row
+  > .exposure-rack--discard-tracker-sorted-row {
+  grid-column: auto !important;
+  display: flex !important;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  flex: 1 1 auto;
+  margin: 0 !important;
+  transform: none !important;
+  overflow: visible !important;
+}
+
+.rack-checker__picker .sorted-discard-tray__slot--pickable {
+  cursor: grab;
+  touch-action: none;
+}
+
+.rack-checker__picker .sorted-discard-tray__slot--pickable:active {
+  cursor: grabbing;
+}
+
+/*
+ * Host for the same discard-tray suggested-hands shell used in the main game
+ * (`.suggested-hands-popup--discard-overlay` + `discardTraySurface` panel).
+ */
+.rack-checker__results {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: transparent;
+  border: none;
+  overflow: hidden;
+}
+
+.rack-checker__hands-tray.suggested-hands-popup.suggested-hands-popup--discard-overlay {
+  position: absolute;
+  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  width: auto;
+  height: auto;
+  max-height: none;
+  transform: none;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  /* Match game tray corner radius without discard-tracker tokens. */
+  --suggested-popup-radius: var(
+    --rack-tile-btn-border-radius,
+    max(0.36rem, calc(var(--hand-rack-tile-w, 2.65rem) * 0.128))
+  );
+  border-radius: var(--suggested-popup-radius);
+  overflow: hidden;
+}
+
+.rack-checker__hands-tray .panel--hands.suggested-hands-popup__user-shift {
+  max-height: none;
+  height: 100%;
+}
+
+.rack-checker__results-tools {
+  position: absolute;
+  right: 0.55rem;
+  bottom: 0.55rem;
+  z-index: 2;
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.rack-checker__results-tools > * {
+  pointer-events: auto;
+}
+
+.rack-checker .btn.rack-checker__tiles-toggle {
+  min-width: 0;
+  min-height: calc(var(--hand-button-row-h, var(--rack-action-touch-min-h, 2.4rem)) * 0.85);
+  padding-inline: 0.75em;
+  font-size: min(
+    var(--rack-hand-action-label-fs, var(--rack-control-label-fs, 0.72rem)),
+    0.78rem
+  );
+}
+
+.rack-checker__tiles-toggle--on {
+  outline: 2px solid color-mix(in srgb, #f0c36a 75%, transparent);
+  outline-offset: 1px;
+}
+
+.rack-checker__drag-ghost {
+  position: fixed;
+  z-index: 2000;
+  width: var(--rack-tile-w, 2.4rem);
+  height: var(--rack-tile-h, 3.2rem);
+  pointer-events: none;
+  transform: translate(-50%, -55%) scale(1.08);
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
+}

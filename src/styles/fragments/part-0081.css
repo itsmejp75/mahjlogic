@@ -1764,6 +1764,25 @@
   );
 }
 
+/*
+ * When the pin column is omitted (no `onPinnedPatternChange`), drop its track so
+ * Away / Prob % / Points headers stay aligned with the metric cells.
+ */
+.panel--hands.panel--hands-no-pin .hands-list-scroll > .hands-sheet:not(.hands-sheet--tiles2),
+.panel--hands.panel--hands-no-pin
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2)
+  > .hands-sheet__rows
+  > .hands-sheet__row {
+  --hands-sheet-pin-w: 0px;
+  --hands-sheet-grid-cols:
+    minmax(0, var(--hands-sheet-category-w))
+    minmax(0, 1fr)
+    var(--hands-sheet-away-w)
+    var(--hands-sheet-odds-w)
+    var(--hands-sheet-values-w);
+}
+
 /* Scroll on the list body only — header row stays fixed above the scrollbar track. */
 .hands-panel__content .hands-list-scroll:has(> .hands-sheet:not(.hands-sheet--tiles2)) {
   overflow-y: visible;

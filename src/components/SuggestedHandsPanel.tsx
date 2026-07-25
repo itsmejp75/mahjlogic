@@ -628,14 +628,23 @@ const SuggestedHandStripTileCell = memo(function SuggestedHandStripTileCell({
  * Compact-mode (2-col) inline grid-template-areas.
  * Leading `pin` column matches `--hands-list-pin-w` on `.hands-list--tiles-excel`.
  */
-function handsRowGridTemplateAreas(cat: boolean, tiles: boolean): string {
+function handsRowGridTemplateAreas(cat: boolean, tiles: boolean, pin: boolean): string {
+  if (pin) {
+    if (cat) {
+      if (tiles) {
+        return "'pin category category away odds values' 'pin tiles tiles awayPad oddsPad valuesPad'"
+      }
+      return "'pin category category away odds values'"
+    }
+    return "'pin tiles tiles away odds values'"
+  }
   if (cat) {
     if (tiles) {
-      return "'pin category category away odds values' 'pin tiles tiles awayPad oddsPad valuesPad'"
+      return "'category category away odds values' 'tiles tiles awayPad oddsPad valuesPad'"
     }
-    return "'pin category category away odds values'"
+    return "'category category away odds values'"
   }
-  return "'pin tiles tiles away odds values'"
+  return "'tiles tiles away odds values'"
 }
 
 const SuggestedHandPinCell = memo(function SuggestedHandPinCell({
@@ -2260,15 +2269,31 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
 
   const rowHitGridStyle = useMemo((): CSSProperties => {
     if (handsListSpreadsheetHands) {
-      return { gridTemplateAreas: "'pin section hand away odds values'" }
+      return {
+        gridTemplateAreas: showPinColumn
+          ? "'pin section hand away odds values'"
+          : "'section hand away odds values'",
+      }
     }
-    return { gridTemplateAreas: handsRowGridTemplateAreas(showHandCategoryLabels, tilesGuideOn) }
-  }, [handsListSpreadsheetHands, showHandCategoryLabels, tilesGuideOn])
+    return {
+      gridTemplateAreas: handsRowGridTemplateAreas(
+        showHandCategoryLabels,
+        tilesGuideOn,
+        showPinColumn,
+      ),
+    }
+  }, [
+    handsListSpreadsheetHands,
+    showHandCategoryLabels,
+    tilesGuideOn,
+    showPinColumn,
+  ])
 
   const rootClassName = [
     'panel',
     'panel--hands',
     !showHandProbability ? 'panel--hands-hide-prob' : '',
+    !showPinColumn ? 'panel--hands-no-pin' : '',
     discardTraySurface ? 'suggested-hands-popup__user-shift' : '',
   ]
     .filter(Boolean)
