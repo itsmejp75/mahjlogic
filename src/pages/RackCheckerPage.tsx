@@ -8,6 +8,17 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import { useNavigate } from 'react-router-dom'
+import {
+  closestCenter,
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core'
+import { arrayMove, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable'
 import { SortedDiscardTrayRow } from '../app/playSurfaceUi'
 import {
   APP_THEME_PAGE_PAD_COLOR,
@@ -32,10 +43,11 @@ import {
   readPlayableCardFromStorage,
   type PlayableCardId,
 } from '../card/cardCatalog'
+import { SortableHand } from '../components/SortableHand'
 import { SuggestedHandsPanel } from '../components/SuggestedHandsPanel'
 import { TileFace } from '../components/TileFace'
 import { STANDARD_JOKER_COUNT, TEN_JOKERS_COUNT } from '../mahjong/deck'
-import { tileAriaLabel, tileSuitRackWord } from '../mahjong/labels'
+import { tileSuitRackWord } from '../mahjong/labels'
 import {
   DISCARD_TRACKER_SORTED_BAND_COLS,
   DISCARD_TRACKER_SORTED_ROW_SLOTS,
@@ -51,7 +63,7 @@ import {
   readUncheckedSectionsFromStorage,
 } from '../suggestedHands/filterSettings'
 import { TileGraphicsProvider } from '../tiles/TileGraphicsContext'
-import { DEFAULT_TILE_GRAPHICS, isTileGraphics, type TileGraphics } from '../tiles/tileGraphics'
+import { DEFAULT_TILE_GRAPHICS } from '../tiles/tileGraphics'
 
 const RACK_SIZE = 14
 /** Neutral wall size so Prob % is usable without a live deal. */
@@ -59,7 +71,6 @@ const RACK_CHECKER_WALL_REMAINING = 72
 const DRAG_SLOP_PX = 8
 
 const LS_KEY_APP_THEME = 'mahjlogic.appTheme'
-const LS_KEY_TILE_GRAPHICS = 'mahjlogic.tileGraphics'
 const LS_KEY_HAND_PROBABILITY = 'mahjlogic.handProbabilityEnabled'
 const LS_KEY_TEN_JOKERS = 'mahjlogic.tenJokersEnabled'
 const LS_KEY_BLANK_TILES = 'mahjlogic.blankTilesEnabled'
@@ -73,16 +84,6 @@ function readTheme(): AppTheme {
     /* ignore */
   }
   return DEFAULT_APP_THEME
-}
-
-function readTileGraphics(): TileGraphics {
-  try {
-    const v = localStorage.getItem(LS_KEY_TILE_GRAPHICS)
-    if (v != null && isTileGraphics(v)) return v
-  } catch {
-    /* ignore */
-  }
-  return DEFAULT_TILE_GRAPHICS
 }
 
 function readBool(key: string, fallback: boolean): boolean {
@@ -107,6 +108,14 @@ function readBlankTileCount(): number {
 
 function emptySlots(): (TileInstance | null)[] {
   return Array.from({ length: RACK_SIZE }, () => null)
+}
+
+function packSlots(tiles: readonly TileInstance[]): (TileInstance | null)[] {
+  const next = emptySlots()
+  for (let i = 0; i < tiles.length && i < RACK_SIZE; i++) {
+    next[i] = tiles[i]!
+  }
+  return next
 }
 
 function makeTile(def: TileDef): TileInstance {
@@ -141,7 +150,8 @@ type DragGhost = {
 export function RackCheckerPage() {
   const navigate = useNavigate()
   const [appTheme] = useState<AppTheme>(() => readTheme())
-  const [tileGraphics] = useState<TileGraphics>(() => readTileGraphics())
+  /** Rack Checker always uses classic faces (picker + rack), independent of menu Simple. */
+  const tileGraphics = DEFAULT_TILE_GRAPHICS
   const [cardId] = useState<PlayableCardId>(() => readPlayableCardFromStorage())
   const [slots, setSlots] = useState<(TileInstance | null)[]>(emptySlots)
   const [showResults, setShowResults] = useState(false)
@@ -149,7 +159,8 @@ export function RackCheckerPage() {
   const [tilesGuideOn, setTilesGuideOn] = useState(false)
   const [pinnedHandKeys, setPinnedHandKeys] = useState<string[]>([])
   const [dragGhost, setDragGhost] = useState<DragGhost | null>(null)
-  const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null)
+  const [catalogDropOverRack, setCatalogDropOverRack] = useState(false)
+  const [activeHandDragTile, setActiveHandDragTile] = useState<TileInstance | null>(null)
 
   const dragRef = useRef<{
     def: TileDef
@@ -160,9 +171,13 @@ export function RackCheckerPage() {
   } | null>(null)
   const suppressClickRef = useRef(false)
   const slotsRef = useRef(slots)
-  const rackSlotElsRef = useRef<(HTMLButtonElement | null)[]>([])
+  const rackPanelRef = useRef<HTMLDivElement | null>(null)
   const focusKeyRef = useRef<string | null>(null)
   const sortModeRef = useRef<SortMode | null>(null)
+
+  const handSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  )
 
   useEffect(() => {
     slotsRef.current = slots
@@ -202,8 +217,10 @@ export function RackCheckerPage() {
     [jokerCount, blankCount],
   )
 
+  const handIds = useMemo(() => hand.map((t) => t.id), [hand])
+
   /** Same as main game: lit tiles for the focused suggested line (independent of Tiles guide). */
-  const suggestedBestIds = useMemo((): ReadonlySet<string> | null => {
+  const suggestedTileGuide = useMemo(() => {
     if (!focusKey) return null
     const patternId = focusKeyPatternId(focusKey)
     const p = cardPatternsById.get(patternId)
@@ -217,7 +234,7 @@ export function RackCheckerPage() {
         bestIds.add(id)
       }
     }
-    return bestIds
+    return { bestIds }
   }, [focusKey, hand, cardPatternsById])
 
   /** Reuse tracker count badges: counts tiles already on the checker rack. */
@@ -276,25 +293,24 @@ export function RackCheckerPage() {
         const filled = prev.filter((t): t is TileInstance => t != null)
         if (filled.length >= RACK_SIZE) return prev
         if (countOnRack(filled, def) >= maxCopiesForDef(def, deckCopyOpts)) return prev
-        const next = [...prev]
-        const idx =
-          atIndex != null && atIndex >= 0 && atIndex < RACK_SIZE && next[atIndex] == null
-            ? atIndex
-            : next.findIndex((s) => s == null)
-        if (idx < 0) return prev
-        next[idx] = makeTile(def)
-        return next
+        const tile = makeTile(def)
+        const insertAt =
+          atIndex != null
+            ? Math.max(0, Math.min(atIndex, filled.length))
+            : filled.length
+        const nextHand = [...filled.slice(0, insertAt), tile, ...filled.slice(insertAt)]
+        return packSlots(nextHand)
       })
     },
     [deckCopyOpts],
   )
 
-  const removeAt = useCallback((index: number) => {
+  const removeTileById = useCallback((tileId: string) => {
     setSlots((prev) => {
-      if (!prev[index]) return prev
-      const next = [...prev]
-      next[index] = null
-      return next
+      const filled = prev.filter((t): t is TileInstance => t != null)
+      const nextHand = filled.filter((t) => t.id !== tileId)
+      if (nextHand.length === filled.length) return prev
+      return packSlots(nextHand)
     })
     setShowResults(false)
     setFocusKey(null)
@@ -306,7 +322,8 @@ export function RackCheckerPage() {
     setFocusKey(null)
     setPinnedHandKeys([])
     setDragGhost(null)
-    setDropTargetIndex(null)
+    setCatalogDropOverRack(false)
+    setActiveHandDragTile(null)
     dragRef.current = null
   }, [])
 
@@ -321,11 +338,7 @@ export function RackCheckerPage() {
   }, [])
 
   const packSortedHand = useCallback((sorted: TileInstance[]) => {
-    const next: (TileInstance | null)[] = Array.from({ length: RACK_SIZE }, () => null)
-    for (let i = 0; i < sorted.length && i < RACK_SIZE; i++) {
-      next[i] = sorted[i]!
-    }
-    setSlots(next)
+    setSlots(packSlots(sorted))
   }, [])
 
   const sortHand = useCallback(() => {
@@ -353,36 +366,32 @@ export function RackCheckerPage() {
     setShowResults(true)
   }, [hand.length, showResults])
 
-  const slotIndexFromPoint = useCallback((clientX: number, clientY: number): number | null => {
-    for (let i = 0; i < RACK_SIZE; i++) {
-      const el = rackSlotElsRef.current[i]
-      if (!el) continue
-      const r = el.getBoundingClientRect()
-      if (clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom) {
-        return i
-      }
+  const insertIndexFromPoint = useCallback((clientX: number, clientY: number): number | null => {
+    const panel = rackPanelRef.current
+    if (!panel) return null
+    const r = panel.getBoundingClientRect()
+    if (clientX < r.left || clientX > r.right || clientY < r.top || clientY > r.bottom) {
+      return null
     }
-    return null
+    const filled = slotsRef.current.filter((t): t is TileInstance => t != null).length
+    const rel = (clientX - r.left) / Math.max(1, r.width)
+    return Math.max(0, Math.min(filled, Math.floor(rel * RACK_SIZE)))
   }, [])
 
-  const endDrag = useCallback(
+  const endCatalogDrag = useCallback(
     (clientX: number, clientY: number, cancelled: boolean) => {
       const state = dragRef.current
       dragRef.current = null
       setDragGhost(null)
-      setDropTargetIndex(null)
+      setCatalogDropOverRack(false)
       if (!state) return
       if (cancelled || !state.dragging) return
       suppressClickRef.current = true
-      const idx = slotIndexFromPoint(clientX, clientY)
-      const current = slotsRef.current
-      if (idx != null && current[idx] == null) {
-        placeDef(state.def, idx)
-      } else if (current.some((s) => s == null)) {
-        placeDef(state.def)
-      }
+      const idx = insertIndexFromPoint(clientX, clientY)
+      if (idx != null) placeDef(state.def, idx)
+      else if (slotsRef.current.some((s) => s == null)) placeDef(state.def)
     },
-    [placeDef, slotIndexFromPoint],
+    [placeDef, insertIndexFromPoint],
   )
 
   useEffect(() => {
@@ -396,19 +405,17 @@ export function RackCheckerPage() {
       }
       if (!state.dragging) return
       setDragGhost({ def: state.def, x: e.clientX, y: e.clientY })
-      const idx = slotIndexFromPoint(e.clientX, e.clientY)
-      const current = slotsRef.current
-      setDropTargetIndex(idx != null && current[idx] == null ? idx : null)
+      setCatalogDropOverRack(insertIndexFromPoint(e.clientX, e.clientY) != null)
     }
     const onUp = (e: PointerEvent) => {
       const state = dragRef.current
       if (!state || e.pointerId !== state.pointerId) return
-      endDrag(e.clientX, e.clientY, false)
+      endCatalogDrag(e.clientX, e.clientY, false)
     }
     const onCancel = (e: PointerEvent) => {
       const state = dragRef.current
       if (!state || e.pointerId !== state.pointerId) return
-      endDrag(e.clientX, e.clientY, true)
+      endCatalogDrag(e.clientX, e.clientY, true)
     }
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
@@ -418,7 +425,33 @@ export function RackCheckerPage() {
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onCancel)
     }
-  }, [endDrag, slotIndexFromPoint])
+  }, [endCatalogDrag, insertIndexFromPoint])
+
+  const onHandDragStart = useCallback(
+    (e: DragStartEvent) => {
+      const id = String(e.active.id)
+      const tile = slotsRef.current.find((t) => t?.id === id) ?? null
+      setActiveHandDragTile(tile)
+    },
+    [],
+  )
+
+  const onHandDragEnd = useCallback((e: DragEndEvent) => {
+    setActiveHandDragTile(null)
+    const { active, over } = e
+    if (!over || active.id === over.id) return
+    setSlots((prev) => {
+      const filled = prev.filter((t): t is TileInstance => t != null)
+      const oldIndex = filled.findIndex((t) => t.id === String(active.id))
+      const newIndex = filled.findIndex((t) => t.id === String(over.id))
+      if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return prev
+      return packSlots(arrayMove(filled, oldIndex, newIndex))
+    })
+  }, [])
+
+  const onHandDragCancel = useCallback(() => {
+    setActiveHandDragTile(null)
+  }, [])
 
   const canPlaceDef = useCallback(
     (def: TileDef) => {
@@ -465,41 +498,50 @@ export function RackCheckerPage() {
           <h1 className="rack-checker__title">Rack Checker</h1>
         </header>
 
-        <div className="rack-checker__rack-panel">
-          <div className="rack-checker__rack" role="list" aria-label="Rack">
-            {slots.map((tile, index) => {
-              const isBest = !!tile && !!suggestedBestIds?.has(tile.id)
-              const suggestDim = !!tile && !!suggestedBestIds && !isBest
-              return (
-                <button
-                  key={tile?.id ?? `empty-${index}`}
-                  type="button"
-                  ref={(el) => {
-                    rackSlotElsRef.current[index] = el
-                  }}
+        <div
+          ref={rackPanelRef}
+          className={[
+            'rack-checker__rack-panel',
+            catalogDropOverRack ? 'rack-checker__rack-panel--drop-target' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
+          <DndContext
+            sensors={handSensors}
+            collisionDetection={closestCenter}
+            onDragStart={onHandDragStart}
+            onDragEnd={onHandDragEnd}
+            onDragCancel={onHandDragCancel}
+          >
+            <SortableContext items={handIds} strategy={rectSortingStrategy}>
+              <SortableHand
+                tiles={hand}
+                sortableOrder={handIds}
+                selectedTileId={null}
+                onTileActivate={removeTileById}
+                suggestedTileGuide={suggestedTileGuide}
+                slotCount={RACK_SIZE}
+                animationsEnabled
+              />
+            </SortableContext>
+            <DragOverlay dropAnimation={null}>
+              {activeHandDragTile ? (
+                <div
                   className={[
-                    'rack-checker__slot',
-                    tile ? 'rack-checker__slot--filled' : 'rack-checker__slot--empty',
-                    dropTargetIndex === index ? 'rack-checker__slot--drop-target' : '',
-                    isBest ? 'sortable-tile-wrap--suggest-best' : '',
-                    suggestDim ? 'sortable-tile-wrap--suggest-dim' : '',
+                    'drag-overlay-tile',
+                    suggestedTileGuide?.bestIds.has(activeHandDragTile.id)
+                      ? 'sortable-tile-wrap--suggest-best'
+                      : '',
                   ]
                     .filter(Boolean)
                     .join(' ')}
-                  aria-label={
-                    tile
-                      ? `${tileAriaLabel(tile.def)}, tap to remove`
-                      : `Empty rack slot ${index + 1}`
-                  }
-                  onClick={() => {
-                    if (tile) removeAt(index)
-                  }}
                 >
-                  {tile ? <TileFace def={tile.def} rackSuitStacked /> : null}
-                </button>
-              )
-            })}
-          </div>
+                  <TileFace def={activeHandDragTile.def} elevated rackSuitStacked />
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
         </div>
 
         <div className="rack-checker__actions">
@@ -518,6 +560,21 @@ export function RackCheckerPage() {
             onClick={onCheck}
           >
             Check
+          </button>
+          <button
+            type="button"
+            className={[
+              'btn btn--primary rack-bottom-tile-cell rack-checker__action-btn',
+              tilesGuideOn ? 'rack-checker__tiles-toggle--on' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            disabled={!showResults}
+            aria-pressed={tilesGuideOn}
+            aria-label="Tiles guide"
+            onClick={() => setTilesGuideOn((v) => !v)}
+          >
+            Tiles
           </button>
           <button
             type="button"
@@ -563,21 +620,6 @@ export function RackCheckerPage() {
                   cardSectionOrder={cardSectionOrder}
                 />
               </div>
-              <div className="rack-checker__results-tools">
-                <button
-                  type="button"
-                  className={[
-                    'btn btn--primary rack-bottom-tile-cell rack-checker__action-btn rack-checker__tiles-toggle',
-                    tilesGuideOn ? 'rack-checker__tiles-toggle--on' : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                  aria-pressed={tilesGuideOn}
-                  onClick={() => setTilesGuideOn((v) => !v)}
-                >
-                  Tiles guide
-                </button>
-              </div>
             </div>
           ) : (
             <div className="rack-checker__picker" aria-label="Tile selection">
@@ -601,6 +643,7 @@ export function RackCheckerPage() {
                               ariaLabel="Bam tiles"
                               discardPile={rackAsDiscardPile}
                               brightSlots
+                              fullTileFaces
                               onSlotActivate={onCatalogActivate}
                               pickableDefs={pickableDefs}
                               onSlotPointerDown={onCatalogPointerDown}
@@ -615,6 +658,7 @@ export function RackCheckerPage() {
                               ariaLabel="Dot tiles"
                               discardPile={rackAsDiscardPile}
                               brightSlots
+                              fullTileFaces
                               onSlotActivate={onCatalogActivate}
                               pickableDefs={pickableDefs}
                               onSlotPointerDown={onCatalogPointerDown}
@@ -630,6 +674,7 @@ export function RackCheckerPage() {
                               discardPile={rackAsDiscardPile}
                               blankTilesEnabled={blankTilesEnabled}
                               brightSlots
+                              fullTileFaces
                               onSlotActivate={onCatalogActivate}
                               pickableDefs={pickableDefs}
                               onSlotPointerDown={onCatalogPointerDown}

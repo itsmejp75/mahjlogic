@@ -1,25 +1,24 @@
 /* Rack Checker — standalone page (menu → /rack-checker). */
 
 .rack-checker {
-  --rack-action-face: var(--app-action-btn-face, linear-gradient(180deg, #6a727c 0%, #4e555e 48%, #3d444c 100%));
-  --rack-action-face-pressed: var(--app-action-btn-face-pressed, #3a4048);
-  --rack-action-face-pressed-chrome: var(
-    --app-action-btn-face-pressed-chrome,
-    linear-gradient(180deg, #3f464e 0%, #323840 55%, #2a3038 100%)
-  );
-  --rack-action-shadow-rest: var(
-    --app-action-btn-shadow-rest,
-    0 2px 0 #2a2f36,
-    0 3px 6px rgba(0, 0, 0, 0.35)
-  );
-  --rack-action-pressed: var(
-    --app-action-btn-pressed,
-    inset 0 2px 4px rgba(0, 0, 0, 0.45)
-  );
-  --rack-action-border-rest: var(--app-action-btn-border-rest, #636870);
-  --rack-action-border-hold: var(--app-action-btn-border-hold, #636870);
-  --rack-action-border-color: var(--app-action-btn-border, #636870);
-  --rack-action-label-color: var(--app-action-btn-label, #e2e4e8);
+  /*
+   * Same PokerStars action tokens as `.panel--hand` wells (part-0123) — no drop-shadow
+   * fallbacks that can replace the soft raised / pressed-in inset stacks.
+   */
+  --rack-action-label-color: var(--app-action-btn-label);
+  --rack-action-label-color-disabled: var(--app-action-btn-label-disabled);
+  --rack-action-label-color-disabled-text: var(--app-action-btn-label-disabled-text);
+  --rack-action-face: var(--app-action-btn-face);
+  --rack-action-face-pressed: var(--app-action-btn-face-pressed);
+  /* Flat pressed fill + deep inset — same press-in as menu pills / hand action row. */
+  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed);
+  --rack-action-shadow-rest: var(--app-action-btn-shadow-rest);
+  --rack-action-border-rest: var(--app-action-btn-border-rest);
+  --rack-action-border-hold: var(--app-action-btn-border-hold);
+  --rack-action-border-color: var(--app-action-btn-border);
+  --rack-action-press-shadow-dark: var(--app-action-btn-press-shadow-dark-deep);
+  --rack-action-press-shadow-light: var(--app-action-btn-press-shadow-light);
+  --rack-action-pressed: var(--app-action-btn-shadow-pressed-deep);
   /*
    * Column = full content box (already inset by page padding). Do NOT use
    * `--rack-col-outer-w` / floored `--hand-rack-tile-w` — those can exceed the
@@ -27,8 +26,11 @@
    */
   --rack-checker-col-w: 100%;
   --player-rack-face-gap: 2px;
-  /* Coach dim tokens (normally from `.panel--hand`). */
+  /* Coach dim tokens (same as `.panel--hand` in part-0026). */
   --suggest-dim-overlay: rgba(0, 0, 0, 0.38);
+  --suggest-dim-inset-vignette: inset 0 0 0.5rem color-mix(in srgb, var(--color-black) 22%, transparent);
+  --suggest-dim-inset-shadow: var(--suggest-dim-inset-vignette),
+    inset 0 0 0 1px color-mix(in srgb, var(--color-black) 14%, transparent);
   --suggest-dim-joker-brightness: 0.64;
 
   box-sizing: border-box;
@@ -42,11 +44,14 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  /* Match main play / PWA horizontal inset. */
+  /* Match main play / PWA horizontal inset; bottom matches side spacing. */
   padding-inline: var(--app-h-pad, clamp(10px, 2vmin, 18px));
-  padding-top: clamp(10px, 2vmin, 18px);
-  padding-bottom: max(clamp(10px, 2vmin, 18px), env(safe-area-inset-bottom, 0px));
-  gap: clamp(10px, 1.6vmin, 16px);
+  padding-top: max(4px, env(safe-area-inset-top, 0px));
+  padding-bottom: max(
+    var(--app-h-pad, clamp(10px, 2vmin, 18px)),
+    env(safe-area-inset-bottom, 0px)
+  );
+  gap: 4px;
   overflow: hidden;
   overflow-x: hidden;
   user-select: none;
@@ -66,19 +71,26 @@
 html[data-home-screen-app]:not([data-native-app]) .rack-checker {
   padding-inline-start: var(--pwa-pad-inline-start, var(--app-h-pad));
   padding-inline-end: var(--pwa-pad-inline-end, var(--app-h-pad));
+  padding-bottom: max(
+    var(--pwa-pad-inline-end, var(--app-h-pad)),
+    env(safe-area-inset-bottom, 0px)
+  );
 }
 
 @media (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) and (display-mode: standalone) {
   html[data-home-screen-app]:not([data-native-app]) .rack-checker {
     padding-inline-start: var(--pwa-landscape-inline-start, var(--pwa-pad-inline-start));
     padding-inline-end: var(--pwa-landscape-inline-end, var(--pwa-pad-inline-end));
+    padding-bottom: max(
+      var(--pwa-landscape-inline-end, var(--pwa-pad-inline-end, var(--app-h-pad))),
+      env(safe-area-inset-bottom, 0px)
+    );
   }
 }
 
 /* 14-tile band from page content width — no rem floors that overflow phones. */
 @container rack-checker-page (min-width: 0px) {
   .rack-checker__rack-panel,
-  .rack-checker__rack,
   .rack-checker__header,
   .rack-checker__actions,
   .rack-checker__lower {
@@ -89,6 +101,8 @@ html[data-home-screen-app]:not([data-native-app]) .rack-checker {
     --hand-rack-tile-h: calc(var(--hand-rack-tile-w) * 1.3333);
     --rack-tile-w: var(--hand-rack-tile-w);
     --rack-tile-h: var(--hand-rack-tile-h);
+    /* Same corner scale as main-game hand tiles (part-0075 / :root). */
+    --tile-face-border-radius: calc(var(--rack-tile-w) * 0.132);
   }
 }
 
@@ -102,9 +116,8 @@ html[data-home-screen-app]:not([data-native-app]) .rack-checker {
   max-width: 100%;
   min-width: 0;
   margin: 0 auto;
-  /* Fixed band — larger title paints inside this without growing the page stack. */
-  height: 1.75rem;
-  overflow: visible;
+  height: 1.15rem;
+  overflow: hidden;
 }
 
 .rack-checker__title {
@@ -112,17 +125,16 @@ html[data-home-screen-app]:not([data-native-app]) .rack-checker {
   text-align: center;
   font-family: 'Figtree', var(--sans);
   font-weight: 800;
-  font-size: clamp(1.2rem, 3.1vmin, 1.55rem);
+  font-size: clamp(0.95rem, 2.4vmin, 1.15rem);
   letter-spacing: 0.02em;
   line-height: 1;
-  /* Keep layout contribution to the header band; ink can sit larger optically. */
-  height: 1.75rem;
+  height: 1.15rem;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-/* No tray chrome — same open band as the main-game hand / discard rows. */
+/* No tray chrome — same open band as the main-game hand row. */
 .rack-checker__rack-panel {
   flex: 0 0 auto;
   width: var(--rack-checker-col-w);
@@ -135,88 +147,94 @@ html[data-home-screen-app]:not([data-native-app]) .rack-checker {
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+  /*
+   * Tile size comes from `@container rack-checker-page` above (100cqi). Do NOT set a
+   * `100%`-based `--rack-tile-h` fallback here — when used as height, that % resolves
+   * against an indefinite block size and collapses the rack to 0.
+   */
 }
 
-.rack-checker__rack {
-  /* Fallback before / without CQ — size from the rack's own width, not viewport floors. */
-  --rack-tile-w: calc((100% - 13 * var(--player-rack-face-gap, 2px)) / 14);
-  --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
+.rack-checker__rack-panel--drop-target {
+  outline: 2px solid color-mix(in srgb, #f0c36a 70%, transparent);
+  outline-offset: 2px;
+  border-radius: 0.35rem;
+}
+
+/* Mirror main-game hand-row grid so SortableHand slides match play. */
+.app.rack-checker .rack-checker__rack-panel .hand-row {
   display: grid;
-  grid-template-columns: repeat(14, minmax(0, 1fr));
+  grid-template-columns: repeat(14, 1fr);
   grid-auto-rows: auto;
   gap: var(--player-rack-face-gap, 2px);
+  align-items: start;
+  align-content: start;
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  align-items: start;
-  align-content: start;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  overflow: visible;
+  position: relative;
+  isolation: isolate;
 }
 
-.rack-checker__slot {
-  position: relative;
-  box-sizing: border-box;
+.app.rack-checker .rack-checker__rack-panel .hand-row > .sortable-tile-wrap,
+.app.rack-checker .rack-checker__rack-panel .hand-row > .hand-slot--empty {
   width: 100%;
   min-width: 0;
+  max-width: none;
   aspect-ratio: 3 / 4;
   height: auto;
-  margin: 0;
-  padding: 0;
-  border: 1px dashed color-mix(in srgb, #9aa3ad 35%, transparent);
-  border-radius: 12.8%;
+  min-height: var(--rack-tile-h, 0px);
+  align-self: start;
+  box-sizing: border-box;
+}
+
+.app.rack-checker .rack-checker__rack-panel .hand-row > .hand-slot--empty {
+  border: 1px solid color-mix(in srgb, #9aa3ad 14%, transparent);
+  border-radius: var(--tile-face-border-radius, calc(var(--rack-tile-w) * 0.132));
   background: color-mix(in srgb, #000 22%, transparent);
-  cursor: default;
-  appearance: none;
-  -webkit-appearance: none;
 }
 
-.rack-checker__slot--filled {
-  border-style: solid;
-  border-color: color-mix(in srgb, var(--rack-action-border-color, #636870) 55%, transparent);
-  background: transparent;
-  cursor: pointer;
+.app.rack-checker .rack-checker__rack-panel .hand-row > .sortable-tile-wrap,
+.app.rack-checker .rack-checker__rack-panel .hand-row > .sortable-tile-wrap .sortable-tile-wrap__fly,
+.app.rack-checker .rack-checker__rack-panel .hand-row > .sortable-tile-wrap .tile-face {
+  border-radius: var(--tile-face-border-radius, calc(var(--rack-tile-w) * 0.132));
 }
 
-.rack-checker__slot--filled:hover:not(:disabled) {
-  outline: 2px solid color-mix(in srgb, #f0c36a 70%, transparent);
-  outline-offset: 1px;
-}
-
-.rack-checker__slot--drop-target {
-  border-style: solid;
-  border-color: #f0c36a;
-  background: color-mix(in srgb, #f0c36a 18%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, #f0c36a 55%, transparent);
-}
-
-.rack-checker__slot .tile-face {
+.app.rack-checker .rack-checker__rack-panel .hand-row > .sortable-tile-wrap .sortable-tile-wrap__fly,
+.app.rack-checker .rack-checker__rack-panel .hand-row > .sortable-tile-wrap .tile-face {
   width: 100%;
   height: 100%;
-  position: relative;
 }
 
-/* Match main-game coach dim / lit rings on checker rack slots. */
-.app.rack-checker .rack-checker__slot.sortable-tile-wrap--suggest-dim .tile-face.tile--joker {
-  filter: brightness(var(--suggest-dim-joker-brightness, 0.72));
+.app.rack-checker .rack-checker__rack-panel .hand-row > .sortable-tile-wrap .sortable-tile-wrap__fly {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform, translate;
 }
 
-.app.rack-checker .rack-checker__slot.sortable-tile-wrap--suggest-best {
-  z-index: 3;
-  overflow: visible;
-}
-
-.app.rack-checker .rack-checker__slot.sortable-tile-wrap--suggest-best .tile-face {
-  z-index: 1;
+/* No hover ring on rack tiles (tap removes; drag reorders). */
+.app.rack-checker .rack-checker__rack-panel .hand-row > .sortable-tile-wrap:hover,
+.app.rack-checker .rack-checker__rack-panel .hand-row > .sortable-tile-wrap:focus,
+.app.rack-checker .rack-checker__rack-panel .hand-row > .sortable-tile-wrap:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 .rack-checker__actions {
-  --rack-checker-action-h: max(1.85rem, calc(var(--rack-tile-h, var(--hand-rack-tile-h, 3.2rem)) * 0.38));
+  /* Same height recipe as `.panel--hand` `--hand-button-row-h` (part-0117). */
+  --rack-action-touch-min-h: calc(var(--rack-tile-h, var(--hand-rack-tile-h, 3.2rem)) * 0.48);
+  --hand-button-row-h: max(27px, calc(var(--rack-action-touch-min-h) * 0.70));
+  --rack-checker-action-h: var(--hand-button-row-h);
   flex: 0 0 auto;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;
   flex-wrap: nowrap;
-  gap: 1vmin;
+  gap: 0.6vmin;
   width: var(--rack-checker-col-w);
   max-width: 100%;
   min-width: 0;
@@ -224,7 +242,11 @@ html[data-home-screen-app]:not([data-native-app]) .rack-checker {
   min-height: var(--rack-checker-action-h);
 }
 
-.rack-checker .btn.rack-checker__action-btn {
+/*
+ * Same chrome as blank-exchange / Sort·Call·Pass (part-0123). High specificity so global
+ * `.btn` / `.btn--primary` wash never replaces the PokerStars inset stacks.
+ */
+html body .app.rack-checker .rack-checker__actions .btn.rack-checker__action-btn {
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
@@ -234,8 +256,9 @@ html[data-home-screen-app]:not([data-native-app]) .rack-checker {
   max-width: 7.5rem;
   min-height: var(--rack-checker-action-h);
   height: var(--rack-checker-action-h);
+  max-height: var(--rack-checker-action-h);
   margin-top: 0;
-  padding: 0 var(--rack-control-pad-inline, 0.7em);
+  padding: var(--rack-control-pad-block, 0) var(--rack-control-pad-inline, 0.4em);
   border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
   border-radius: var(
     --rack-tile-btn-border-radius,
@@ -246,7 +269,7 @@ html[data-home-screen-app]:not([data-native-app]) .rack-checker {
   letter-spacing: max(0.028em, calc(0.042em + 0.026rem));
   font-size: min(
     var(--rack-hand-action-label-fs, var(--rack-control-label-fs, 0.72rem)),
-    calc(var(--rack-checker-action-h) * 0.52)
+    calc(var(--rack-checker-action-h) * 0.56)
   );
   line-height: 1.08;
   text-transform: none;
@@ -259,9 +282,10 @@ html[data-home-screen-app]:not([data-native-app]) .rack-checker {
   text-shadow: none;
   cursor: pointer;
   transition: box-shadow 0.12s ease, background 0.12s ease;
+  transform: none;
 }
 
-.rack-checker .btn.rack-checker__action-btn:hover:not(:disabled):not(:active) {
+html body .app.rack-checker .rack-checker__actions .btn.rack-checker__action-btn:hover:not(:disabled):not(:active) {
   background: var(--rack-action-face);
   border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
   box-shadow: var(--rack-action-shadow-rest);
@@ -269,8 +293,11 @@ html[data-home-screen-app]:not([data-native-app]) .rack-checker {
   transform: none;
 }
 
-.rack-checker .btn.rack-checker__action-btn:active:not(:disabled),
-.rack-checker .btn.rack-checker__action-btn.btn--pointer-down:not(:disabled) {
+/* Pointer down — same pressed-in face + inset as Sort / Call / Pass. */
+html body .app.rack-checker .rack-checker__actions
+  .btn.rack-checker__action-btn:is(:active, .btn--pointer-down):not(:disabled):not(
+    .rack-checker__tiles-toggle--on
+  ) {
   background: var(--rack-action-face-pressed-chrome);
   border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
   box-shadow: var(--rack-action-pressed);
@@ -279,19 +306,15 @@ html[data-home-screen-app]:not([data-native-app]) .rack-checker {
   transform: none;
 }
 
-.rack-checker .btn.rack-checker__action-btn:active:not(:disabled):not(.btn--pointer-down) {
+html body .app.rack-checker .rack-checker__actions
+  .btn.rack-checker__action-btn:disabled {
   background: var(--rack-action-face);
   border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
   box-shadow: var(--rack-action-shadow-rest);
-  transition: background 0.15s ease, box-shadow 0.15s ease;
-  transform: none;
-}
-
-.rack-checker .btn.rack-checker__action-btn:disabled {
-  opacity: 0.45;
+  color: var(--rack-action-label-color-disabled-text, var(--app-action-btn-label-disabled-text));
+  opacity: 1;
+  filter: none;
   cursor: default;
-  filter: grayscale(0.35);
-  box-shadow: none;
 }
 
 .rack-checker__lower {
@@ -311,7 +334,7 @@ html[data-home-screen-app]:not([data-native-app]) .rack-checker {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   min-height: 0;
   min-width: 0;
   max-height: 100%;
@@ -325,13 +348,13 @@ html[data-home-screen-app]:not([data-native-app]) .rack-checker {
   flex-direction: column;
   align-items: stretch;
   gap: 0;
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   min-height: 0;
   min-width: 0;
   max-height: 100%;
   width: 100%;
   max-width: 100%;
-  height: auto;
+  height: 100%;
   padding: 0;
   box-sizing: border-box;
   border: none;
@@ -342,19 +365,22 @@ html[data-home-screen-app]:not([data-native-app]) .rack-checker {
   overflow: hidden;
 }
 
-/* Width-sized catalog; definite width so CQ tiles can't inflate the page. */
+/*
+ * Size container: width + remaining height so catalog tiles can shrink on short
+ * landscape phones instead of clipping the bottom row.
+ */
 .rack-checker__catalog-fit {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   min-height: 0;
   min-width: 0;
   max-height: 100%;
   width: 100%;
   max-width: 100%;
-  height: auto;
+  height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  container-type: inline-size;
+  container-type: size;
   container-name: rack-checker-catalog;
 }
 
@@ -380,8 +406,8 @@ html .rack-checker .rack-checker__tracker-mirror.blank-exchange-overlay__tracker
 }
 
 /*
- * Size catalog tiles from band width. If the picker is height-capped, shrink so all
- * three rows still fit without scrolling or stretching row gaps.
+ * Catalog tiles: fit width (13.75 slots) and height (3 rows + gaps). Use the
+ * smaller so short landscape viewports don't clip the bottom row.
  */
 @container rack-checker-catalog (min-width: 0px) {
   html .rack-checker .rack-checker__catalog-fit .discard-tracker__overlay-row {
@@ -397,7 +423,12 @@ html .rack-checker .rack-checker__tracker-mirror.blank-exchange-overlay__tracker
           ) / var(--discard-tracker-slots-across)
       )
     );
-    --rack-tile-w: var(--rc-tile-w-from-width);
+    --rc-tile-h-from-height: max(
+      1px,
+      calc((100cqh - 2 * var(--rc-catalog-row-gap)) / 3)
+    );
+    --rc-tile-w-from-height: calc(var(--rc-tile-h-from-height) * 3 / 4);
+    --rack-tile-w: min(var(--rc-tile-w-from-width), var(--rc-tile-w-from-height));
     --rack-tile-h: calc(var(--rack-tile-w) * 4 / 3);
     --exposure-slot-h: var(--rack-tile-h);
     --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
@@ -526,8 +557,94 @@ html
   touch-action: none;
 }
 
+/* Rack occupancy is enforced in pick logic — don't stamp counts on picker faces. */
+.rack-checker__picker .sorted-discard-tray__count {
+  display: none;
+}
+
+/*
+ * Full classic faces: kill sorted-discard suit color fills (bam/crak/dot washes) that
+ * part-0061 paints on `--discarded` tracker slots — keep ivory under the SVG art.
+ */
+html
+  .rack-checker
+  .rack-checker__tracker-mirror
+  .sorted-discard-tray__slot
+  .tile-face.tile-face--illustrative-art,
+html
+  .rack-checker
+  .rack-checker__tracker-mirror
+  .sorted-discard-tray__slot
+  .tile-face.tile-face--illustrative-art.tile--bam,
+html
+  .rack-checker
+  .rack-checker__tracker-mirror
+  .sorted-discard-tray__slot
+  .tile-face.tile-face--illustrative-art.tile--crak,
+html
+  .rack-checker
+  .rack-checker__tracker-mirror
+  .sorted-discard-tray__slot
+  .tile-face.tile-face--illustrative-art.tile--dot,
+html
+  .rack-checker
+  .rack-checker__tracker-mirror
+  .sorted-discard-tray__slot
+  .tile-face.tile-face--illustrative-art.tile--wind,
+html
+  .rack-checker
+  .rack-checker__tracker-mirror
+  .sorted-discard-tray__slot
+  .tile-face.tile-face--illustrative-art.tile--flower,
+html
+  .rack-checker
+  .rack-checker__tracker-mirror
+  .sorted-discard-tray__slot
+  .tile-face.tile-face--illustrative-art.tile--joker,
+html
+  .rack-checker
+  .rack-checker__tracker-mirror
+  .sorted-discard-tray__slot
+  .tile-face.tile-face--illustrative-art.tile--dragon-red,
+html
+  .rack-checker
+  .rack-checker__tracker-mirror
+  .sorted-discard-tray__slot
+  .tile-face.tile-face--illustrative-art.tile--dragon-green,
+html
+  .rack-checker
+  .rack-checker__tracker-mirror
+  .sorted-discard-tray__slot
+  .tile-face.tile-face--illustrative-art.tile--dragon-soap {
+  background: var(--tile-illustrative-face, #fdfbf7) !important;
+  background-color: var(--tile-illustrative-face, #fdfbf7) !important;
+}
+
 .rack-checker__picker .sorted-discard-tray__slot--pickable:active {
   cursor: grabbing;
+}
+
+/* Press-in shrink (override blank-exchange mirror lift/scale-up). */
+html
+  .rack-checker
+  .rack-checker__tracker-mirror.blank-exchange-overlay__tracker-mirror
+  .sorted-discard-tray__slot--pickable
+  .tile-face {
+  transition: transform 0.1s ease;
+  transform-origin: center center;
+}
+
+html
+  .rack-checker
+  .rack-checker__tracker-mirror.blank-exchange-overlay__tracker-mirror
+  .sorted-discard-tray__slot--pickable:focus-visible
+  .tile-face,
+html
+  .rack-checker
+  .rack-checker__tracker-mirror.blank-exchange-overlay__tracker-mirror
+  .sorted-discard-tray__slot--pickable:active
+  .tile-face {
+  transform: scale(0.92);
 }
 
 /*
@@ -575,33 +692,25 @@ html
   height: 100%;
 }
 
-.rack-checker__results-tools {
-  position: absolute;
-  right: 0.55rem;
-  bottom: 0.55rem;
-  z-index: 2;
-  display: flex;
-  justify-content: flex-end;
-  pointer-events: none;
-}
-
-.rack-checker__results-tools > * {
-  pointer-events: auto;
-}
-
-.rack-checker .btn.rack-checker__tiles-toggle {
-  min-width: 0;
-  min-height: calc(var(--hand-button-row-h, var(--rack-action-touch-min-h, 2.4rem)) * 0.85);
-  padding-inline: 0.75em;
-  font-size: min(
-    var(--rack-hand-action-label-fs, var(--rack-control-label-fs, 0.72rem)),
-    0.78rem
-  );
-}
-
-.rack-checker__tiles-toggle--on {
-  outline: 2px solid color-mix(in srgb, #f0c36a 75%, transparent);
-  outline-offset: 1px;
+/*
+ * Tiles on — same dark flat press-in as menu History, plus 2px green border
+ * (no outer glow — matches menu selected pills).
+ */
+html body .app.rack-checker .rack-checker__actions
+  .btn.rack-checker__action-btn.rack-checker__tiles-toggle--on:not(:disabled),
+html body .app.rack-checker .rack-checker__actions
+  .btn.rack-checker__action-btn.rack-checker__tiles-toggle--on:hover:not(:disabled),
+html body .app.rack-checker .rack-checker__actions
+  .btn.rack-checker__action-btn.rack-checker__tiles-toggle--on:is(:active, .btn--pointer-down):not(
+    :disabled
+  ) {
+  background: var(--rack-action-face-pressed-chrome);
+  border: 2px solid var(--app-menu-rim-active, #22c55e);
+  box-shadow: var(--rack-action-pressed);
+  color: var(--rack-action-label-color, #e2e4e8);
+  outline: none;
+  transition: none;
+  transform: none;
 }
 
 .rack-checker__drag-ghost {

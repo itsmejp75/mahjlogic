@@ -3121,16 +3121,18 @@ html[data-home-screen-app]:not([data-native-app])
   --rack-action-label-color-disabled-text: var(--app-action-btn-label-disabled-text);
   --rack-action-face: var(--app-action-btn-face);
   --rack-action-face-pressed: var(--app-action-btn-face-pressed);
-  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed-chrome);
+  /* Flat pressed fill (no bottom-peek wash) — same as menu / rack-checker press-in. */
+  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed);
   --rack-action-shadow-rest: var(--app-action-btn-shadow-rest);
   --rack-action-border-rest: var(--app-action-btn-border-rest);
   --rack-action-border-hold: var(--app-action-btn-border-hold);
   --rack-action-well-surface: var(--app-bg-base);
   --rack-action-flat-surface: var(--app-action-btn-bottom);
   --rack-action-border-color: var(--app-action-btn-border);
-  --rack-action-press-shadow-dark: var(--app-action-btn-press-shadow-dark);
+  --rack-action-press-shadow-dark: var(--app-action-btn-press-shadow-dark-deep);
   --rack-action-press-shadow-light: var(--app-action-btn-press-shadow-light);
-  --rack-action-pressed: var(--app-action-btn-shadow-pressed);
+  /* Same deeper inset as menu pills / dialogs (part-0124). */
+  --rack-action-pressed: var(--app-action-btn-shadow-pressed-deep);
 }
 
 /*
@@ -3527,68 +3529,93 @@ html[data-home-screen-app]:not([data-native-app])
 .app[data-color-buttons='on']
   .panel--hand
   .rack-bottom-bar--tile-grid
-  .btn.btn--mahjong.rack-bottom-tile-cell--c5-6:not(:disabled):not(.btn--mahjong-rack-pressed-in),
+  .btn.btn--mahjong.rack-bottom-tile-cell--c5-6:not(:disabled):not(.btn--mahjong-rack-pressed-in):not(:active),
 .app[data-color-buttons='off']
   .panel--hand
   .rack-bottom-bar--tile-grid
-  .btn.btn--mahjong.rack-bottom-tile-cell--c5-6:not(:disabled):not(.btn--mahjong-rack-pressed-in),
-.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab--open):not(:disabled),
-.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
-.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:not(:disabled),
+  .btn.btn--mahjong.rack-bottom-tile-cell--c5-6:not(:disabled):not(.btn--mahjong-rack-pressed-in):not(:active),
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab--open):not(:disabled):not(:active),
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled):not(:active),
+.app
+  .panel--hand
+  .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.rack-bottom-tile-cell--c12-14:not(:disabled):not(:active),
 .app[data-color-buttons='on']
   .rack-bottom-bar--main.rack-bottom-bar--tile-grid
   .btn.rack-bottom-tile-cell--c12-14:disabled:is(.btn--discard, :not(.btn--discard)),
 .app[data-color-buttons='off']
   .rack-bottom-bar--main.rack-bottom-bar--tile-grid
   .btn.rack-bottom-tile-cell--c12-14:disabled:is(.btn--discard, :not(.btn--discard)),
-.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--rack-neutral.rack-bottom-tile-cell--c1:is(
-    :disabled,
-    :not(:disabled)
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--rack-neutral.rack-bottom-tile-cell--c1:is(:disabled, :not(:disabled)):not(:active):not(
+    .app-bottom-center-controls__menu-btn--open
   ),
-.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--rack-neutral.rack-bottom-tile-cell--c2-4:is(
-    :disabled,
-    :not(:disabled)
-  ),
-.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
-  .btn.btn--primary.charleston-pass-btn.rack-bottom-tile-cell--c12-14:not(:disabled),
-.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
-  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
-.btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):not(:disabled),
-.app[data-color-buttons='on'] .btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):not(:disabled),
-.app[data-color-buttons='off'] .btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):not(:disabled),
+.app
+  .panel--hand
+  .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.btn--rack-neutral.rack-bottom-tile-cell--c2-4:is(:disabled, :not(:disabled)):not(:active),
+.app
+  .panel--hand
+  .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
+  .btn.btn--primary.charleston-pass-btn.rack-bottom-tile-cell--c12-14:not(:disabled):not(:active),
+.app
+  .panel--hand
+  .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
+  .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled):not(:active),
+.btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):not(:disabled):not(:active),
+.app[data-color-buttons='on']
+  .btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):not(:disabled):not(:active),
+.app[data-color-buttons='off']
+  .btn.btn--primary.charleston-pass-btn:not(.suggested-hands-tab):not(:disabled):not(:active),
 .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell:disabled,
-.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:not(:disabled) {
+.rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:not(:disabled):not(:active) {
   background: var(--rack-action-face);
   color: var(--rack-action-label-color, #e2e4e8);
   opacity: 1;
   filter: none;
 }
 
-/* Beat part-0103 muted label color on Call / Pass / Swap / Sort. */
-.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--rack-neutral.rack-bottom-tile-cell--c1:is(
-    :disabled,
-    :not(:disabled)
-  ),
-.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--rack-neutral.rack-bottom-tile-cell--c2-4:is(
-    :disabled,
-    :not(:disabled)
+/* Beat part-0103 muted label color on Call / Pass / Swap / Sort — never while pressed-in. */
+.app
+  .panel--hand
+  .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.btn--rack-neutral.rack-bottom-tile-cell--c1:is(:disabled, :not(:disabled)):not(:active):not(
+    .app-bottom-center-controls__menu-btn--open
   ),
 .app
   .panel--hand
   .rack-bottom-bar--main.rack-bottom-bar--tile-grid
-  .btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c4-5:is(:disabled, :not(:disabled)),
+  .btn.btn--rack-neutral.rack-bottom-tile-cell--c2-4:is(:disabled, :not(:disabled)):not(:active),
+.app
+  .panel--hand
+  .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c4-5:not(
+    .suggested-hands-tab--open
+  ):is(:disabled, :not(:disabled)):not(:active),
 .app
   .panel--hand
   .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
-  .btn.btn--rack-neutral.rack-bottom-tile-cell--c1:is(:disabled, :not(:disabled)),
+  .btn.btn--rack-neutral.rack-bottom-tile-cell--c1:is(:disabled, :not(:disabled)):not(:active):not(
+    .app-bottom-center-controls__menu-btn--open
+  ),
 .app
   .panel--hand
   .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
-  .btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c4-5:is(:disabled, :not(:disabled)),
+  .btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c4-5:not(
+    .suggested-hands-tab--open
+  ):is(:disabled, :not(:disabled)):not(:active),
 .app
   .panel--hand
   .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
-  .btn.btn--primary.charleston-pass-btn.rack-bottom-tile-cell--c12-14:not(:disabled) {
+  .btn.btn--primary.charleston-pass-btn.rack-bottom-tile-cell--c12-14:not(:disabled):not(:active) {
   color: var(--rack-action-label-color, #e2e4e8);
   background: var(--rack-action-face);
   opacity: 1;
@@ -3691,12 +3718,7 @@ html body .app .panel--hand .rack-bottom-bar--tile-grid :is(
 }
 
 /*
- * Hand-rack Menu pressed (pointer-down) + toggled open: match Sort's *appearance*, not its raw
- * tokens. Sort's --rack-action-face-pressed-chrome / --rack-action-pressed carry a light bottom
- * "peek" gradient + bottom light insets that read as a thin bottom edge on Sort's wide, short
- * button — but on the small near-square hamburger that same light fills a large share of the face
- * and reads as a "bottom glow". So the hamburger uses a flat pressed face + a dark-only inset
- * (top/left/right inner-border shadow) so it visually matches Sort with no bottom glow.
+ * Hand-rack Menu pressed / open — same dark flat fill + deep inset as menu History press-in.
  */
 html body .app .panel--hand :is(
     .panel-hand-rack__action-well,
@@ -3719,7 +3741,7 @@ html body .app .panel--hand :is(
   .rack-bottom-bar--tile-grid
   .app-menu-anchor--hand-rack
   .btn.btn--rack-neutral.app-bottom-center-controls__menu-btn--open:hover:not(:disabled) {
-  background: var(--rack-action-face);
+  background: var(--rack-action-face-pressed-chrome);
   border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
   box-shadow: var(--rack-action-pressed);
   color: var(--rack-action-label-color, #e2e4e8);
@@ -3743,6 +3765,25 @@ html body .app .panel--hand :is(
   .hand-rack-menu-hamburger {
   position: relative;
   z-index: 1;
+}
+
+/*
+ * Final press-in lock — same dark flat fill + deep inset as menu History.
+ * Uses `.btn--pointer-down` (not bare `:active`) so drag-off restore still works.
+ */
+html body .app .panel--hand .rack-bottom-bar--tile-grid :is(
+  button.btn.rack-bottom-tile-cell.btn--pointer-down:not(:disabled),
+  button.btn.suggested-hands-tab--open,
+  button.btn.btn--mahjong-rack-pressed-in,
+  .app-menu-anchor--hand-rack .btn.app-bottom-center-controls__menu-btn.btn--pointer-down:not(:disabled),
+  .app-menu-anchor--hand-rack .btn.app-bottom-center-controls__menu-btn--open
+) {
+  background: var(--rack-action-face-pressed-chrome);
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
+  box-shadow: var(--rack-action-pressed);
+  color: var(--rack-action-label-color, #e2e4e8);
+  transition: none;
+  transform: none;
 }
 
 html body .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid :is(
@@ -4085,7 +4126,8 @@ html .app-dnd-frame .app-top-exposure-container .exposure-rack__meld-drop--over 
   --rack-action-label-color-disabled-text: var(--app-action-btn-label-disabled-text);
   --rack-action-face: var(--app-action-btn-face);
   --rack-action-face-pressed: var(--app-action-btn-face-pressed);
-  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed-chrome);
+  /* Flat pressed fill — same as hand action row / menu History. */
+  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed);
   --rack-action-shadow-rest: var(--app-action-btn-shadow-rest);
   --rack-action-border-rest: var(--app-action-btn-border-rest);
   --rack-action-border-hold: var(--app-action-btn-border-hold);
@@ -4548,7 +4590,7 @@ html
   cursor: pointer;
   transition: box-shadow 0.12s ease, background 0.12s ease;
 }
-.blank-exchange-overlay__panel .btn.blank-exchange-overlay__action-btn:hover:not(:disabled):not(:active) {
+.blank-exchange-overlay__panel .btn.blank-exchange-overlay__action-btn:hover:not(:disabled):not(:active):not(.btn--pointer-down) {
   background: var(--rack-action-face);
   border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
   box-shadow: var(--rack-action-shadow-rest);
@@ -4556,7 +4598,7 @@ html
   transform: none;
 }
 /* Pointer down — same pressed chrome as Sort / Call / Pass (part-0123 action row). */
-.blank-exchange-overlay__panel .btn.blank-exchange-overlay__action-btn:active:not(:disabled) {
+.blank-exchange-overlay__panel .btn.blank-exchange-overlay__action-btn:is(:active, .btn--pointer-down):not(:disabled) {
   background: var(--rack-action-face-pressed-chrome);
   border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
   box-shadow: var(--rack-action-pressed);

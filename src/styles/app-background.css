@@ -272,9 +272,8 @@
     color-mix(in srgb, var(--app-action-btn-press-shadow-light) 11%, transparent 89%) 18%,
     transparent 48%
   );
-  --app-action-btn-face-pressed-chrome:
-    var(--app-action-btn-press-bottom-peek),
-    var(--app-action-btn-face-pressed);
+  /* Flat pressed fill — no bottom-peek wash (menu History / action-row / dialogs). */
+  --app-action-btn-face-pressed-chrome: var(--app-action-btn-face-pressed);
   /* Pressed-in: dark top/left/right via inset shadow; bottom rim glow on background peek. */
   --app-action-btn-shadow-pressed:
     inset 4px 4px 8px var(--app-action-btn-press-shadow-dark),
@@ -357,9 +356,7 @@
     color-mix(in srgb, var(--app-action-btn-press-shadow-light-neutral) 11%, transparent 89%) 18%,
     transparent 48%
   );
-  --app-action-btn-face-pressed-chrome-neutral:
-    var(--app-action-btn-press-bottom-peek-neutral),
-    var(--app-action-btn-face-pressed-neutral);
+  --app-action-btn-face-pressed-chrome-neutral: var(--app-action-btn-face-pressed-neutral);
   --app-action-btn-press-shadow-dark-deep-neutral: color-mix(
     in srgb,
     #000 22%,

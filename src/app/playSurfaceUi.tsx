@@ -426,6 +426,7 @@ export function SortedDiscardTrayRow({
   selectedDef = null,
   brightSlots = false,
   onSlotPointerDown = null,
+  fullTileFaces = false,
 }: {
   tiles: readonly TileInstance[]
   slotCount: number
@@ -451,6 +452,11 @@ export function SortedDiscardTrayRow({
   brightSlots?: boolean
   /** Optional pointer-down on a pickable slot (drag-from-tracker UIs). */
   onSlotPointerDown?: ((def: TileDef, e: ReactPointerEvent<HTMLDivElement>) => void) | null
+  /**
+   * Rack Checker: paint full classic/illustrative faces instead of sorted-discard
+   * color glyphs (BAM/DOT/CRK tracker style).
+   */
+  fullTileFaces?: boolean
 }) {
   const leadingSlots = (leadingSuitLabel ? 1 : 0) + leadingEmptySlots
   const emptyCount = Math.max(0, slotCount - leadingSlots - tiles.length - trailingGlyphSlots.length)
@@ -584,10 +590,12 @@ export function SortedDiscardTrayRow({
           >
             <TileFace
               def={trackerDef}
-              {...sortedDiscardTrayTileFaceProps(
-                trackerDef,
-                hasBeenDiscarded || suggestNeed || (brightSlots && isPickable),
-              )}
+              {...(fullTileFaces
+                ? { rackSuitStacked: true as const }
+                : sortedDiscardTrayTileFaceProps(
+                    trackerDef,
+                    hasBeenDiscarded || suggestNeed || (brightSlots && isPickable),
+                  ))}
             />
             <span className="sorted-discard-tray__count" aria-hidden>
               {discardCount > 0 ? discardCount : null}

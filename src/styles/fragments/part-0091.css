@@ -200,7 +200,7 @@
   --rack-action-label-color: var(--app-action-btn-label);
   --rack-action-face: var(--app-action-btn-face);
   --rack-action-face-pressed: var(--app-action-btn-face-pressed);
-  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed-chrome);
+  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed);
   --rack-action-shadow-rest: var(--app-action-btn-shadow-rest);
   --rack-action-border-rest: var(--app-action-btn-border-rest);
   --rack-action-border-hold: var(--app-action-btn-border-hold);
@@ -281,7 +281,7 @@
   --rack-action-label-color: var(--app-action-btn-label);
   --rack-action-face: var(--app-action-btn-face);
   --rack-action-face-pressed: var(--app-action-btn-face-pressed);
-  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed-chrome);
+  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed);
   --rack-action-shadow-rest: var(--app-action-btn-shadow-rest);
   --rack-action-border-rest: var(--app-action-btn-border-rest);
   --rack-action-border-hold: var(--app-action-btn-border-hold);
@@ -397,7 +397,7 @@
   --rack-action-label-color: var(--app-action-btn-label);
   --rack-action-face: var(--app-action-btn-face);
   --rack-action-face-pressed: var(--app-action-btn-face-pressed);
-  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed-chrome);
+  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed);
   --rack-action-shadow-rest: var(--app-action-btn-shadow-rest);
   --rack-action-border-rest: var(--app-action-btn-border-rest);
   --rack-action-border-hold: var(--app-action-btn-border-hold);
@@ -452,10 +452,10 @@
 
 .charleston-error-dialog.charleston-error-dialog--new-game-warning
   .charleston-error-dialog__actions--spread
-  .charleston-error-dialog__rack-action:active:not(:disabled),
+  .charleston-error-dialog__rack-action:is(:active, .btn--pointer-down):not(:disabled),
 .charleston-error-dialog.charleston-error-dialog--new-game-warning
   .charleston-error-dialog__actions--spread
-  .charleston-error-dialog__rack-action.btn--primary:active:not(:disabled) {
+  .charleston-error-dialog__rack-action.btn--primary:is(:active, .btn--pointer-down):not(:disabled) {
   background: var(--rack-action-face-pressed-chrome, var(--app-action-btn-face-pressed-chrome));
   border: 1px solid var(--rack-action-border-rest, var(--app-action-btn-border-rest));
   transition: none;
@@ -566,7 +566,7 @@
   --rack-action-label-color: var(--app-action-btn-label);
   --rack-action-face: var(--app-action-btn-face);
   --rack-action-face-pressed: var(--app-action-btn-face-pressed);
-  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed-chrome);
+  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed);
   --rack-action-shadow-rest: var(--app-action-btn-shadow-rest);
   --rack-action-border-rest: var(--app-action-btn-border-rest);
   --rack-action-border-hold: var(--app-action-btn-border-hold);
@@ -748,7 +748,7 @@
   --rack-action-label-color: var(--app-action-btn-label);
   --rack-action-face: var(--app-action-btn-face);
   --rack-action-face-pressed: var(--app-action-btn-face-pressed);
-  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed-chrome);
+  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed);
   --rack-action-shadow-rest: var(--app-action-btn-shadow-rest);
   --rack-action-border-rest: var(--app-action-btn-border-rest);
   --rack-action-border-hold: var(--app-action-btn-border-hold);
@@ -1166,7 +1166,7 @@
   --rack-action-label-color: var(--app-action-btn-label);
   --rack-action-face: var(--app-action-btn-face);
   --rack-action-face-pressed: var(--app-action-btn-face-pressed);
-  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed-chrome);
+  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed);
   --rack-action-shadow-rest: var(--app-action-btn-shadow-rest);
   --rack-action-flat-surface: var(--app-action-btn-bottom);
   --rack-action-border-rest: var(--app-action-btn-border-rest);
@@ -1249,7 +1249,7 @@
 .wall-game-overlay
   .wall-game-dialog--wall-seats
   .wall-game-dialog__actions
-  .btn.wall-game-dialog__action-btn:hover:not(:disabled):not(:active) {
+  .btn.wall-game-dialog__action-btn:hover:not(:disabled):not(:active):not(.btn--pointer-down) {
   background: var(--rack-action-face);
   box-shadow: var(--rack-action-shadow-rest);
   transform: none;
@@ -1258,7 +1258,7 @@
 .wall-game-overlay
   .wall-game-dialog--wall-seats
   .wall-game-dialog__actions
-  .btn.wall-game-dialog__action-btn:active:not(:disabled) {
+  .btn.wall-game-dialog__action-btn:is(:active, .btn--pointer-down):not(:disabled) {
   background: var(--rack-action-face-pressed-chrome);
   box-shadow: var(--rack-action-pressed);
   transition: none;
