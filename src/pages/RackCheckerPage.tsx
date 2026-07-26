@@ -44,7 +44,7 @@ import {
   SORTED_DISCARD_ROW3_TILES,
   sortedDiscardTrackerPickableDefs,
 } from '../mahjong/sortedDiscardTrackerTiles'
-import { sortTiles, type SortMode } from '../mahjong/tileUtils'
+import { sortTiles, tileDefsEqual, type SortMode } from '../mahjong/tileUtils'
 import type { DiscardEntry, Seat, TileDef, TileInstance } from '../mahjong/types'
 import {
   readHideConcealedHandsFromStorage,
@@ -113,6 +113,25 @@ function makeTile(def: TileDef): TileInstance {
   return { id: crypto.randomUUID(), def }
 }
 
+/** Deck copy limits for rack-checker picks (NMJL: 4 of most, 8 flowers / jokers). */
+function maxCopiesForDef(
+  def: TileDef,
+  opts: { jokerCount: number; blankCount: number },
+): number {
+  if (def.cat === 'flower') return 8
+  if (def.cat === 'joker') return opts.jokerCount
+  if (def.cat === 'blank') return opts.blankCount
+  return 4
+}
+
+function countOnRack(rack: readonly TileInstance[], def: TileDef): number {
+  let n = 0
+  for (const t of rack) {
+    if (tileDefsEqual(t.def, def)) n += 1
+  }
+  return n
+}
+
 type DragGhost = {
   def: TileDef
   x: number
@@ -176,6 +195,12 @@ export function RackCheckerPage() {
   )
   const handSignature = useMemo(() => tileMultisetSignature(hand), [hand])
   const rackFull = hand.length >= RACK_SIZE
+  const jokerCount = tenJokersEnabled ? TEN_JOKERS_COUNT : STANDARD_JOKER_COUNT
+  const blankCount = blankTilesEnabled ? blankTileCount : 0
+  const deckCopyOpts = useMemo(
+    () => ({ jokerCount, blankCount }),
+    [jokerCount, blankCount],
+  )
 
   /** Same as main game: lit tiles for the focused suggested line (independent of Tiles guide). */
   const suggestedBestIds = useMemo((): ReadonlySet<string> | null => {
@@ -201,10 +226,12 @@ export function RackCheckerPage() {
     return hand.map((tile) => ({ tile, seat }))
   }, [hand])
 
-  const pickableDefs = useMemo(
-    () => (rackFull ? [] : sortedDiscardTrackerPickableDefs(blankTilesEnabled)),
-    [rackFull, blankTilesEnabled],
-  )
+  const pickableDefs = useMemo(() => {
+    if (rackFull) return []
+    return sortedDiscardTrackerPickableDefs(blankTilesEnabled).filter(
+      (def) => countOnRack(hand, def) < maxCopiesForDef(def, deckCopyOpts),
+    )
+  }, [rackFull, blankTilesEnabled, hand, deckCopyOpts])
 
   const trackerGridStyle = useMemo(
     (): CSSProperties => ({
@@ -243,18 +270,24 @@ export function RackCheckerPage() {
     handSignature,
   })
 
-  const placeDef = useCallback((def: TileDef, atIndex?: number) => {
-    setSlots((prev) => {
-      const next = [...prev]
-      const idx =
-        atIndex != null && atIndex >= 0 && atIndex < RACK_SIZE && next[atIndex] == null
-          ? atIndex
-          : next.findIndex((s) => s == null)
-      if (idx < 0) return prev
-      next[idx] = makeTile(def)
-      return next
-    })
-  }, [])
+  const placeDef = useCallback(
+    (def: TileDef, atIndex?: number) => {
+      setSlots((prev) => {
+        const filled = prev.filter((t): t is TileInstance => t != null)
+        if (filled.length >= RACK_SIZE) return prev
+        if (countOnRack(filled, def) >= maxCopiesForDef(def, deckCopyOpts)) return prev
+        const next = [...prev]
+        const idx =
+          atIndex != null && atIndex >= 0 && atIndex < RACK_SIZE && next[atIndex] == null
+            ? atIndex
+            : next.findIndex((s) => s == null)
+        if (idx < 0) return prev
+        next[idx] = makeTile(def)
+        return next
+      })
+    },
+    [deckCopyOpts],
+  )
 
   const removeAt = useCallback((index: number) => {
     setSlots((prev) => {
@@ -387,21 +420,29 @@ export function RackCheckerPage() {
     }
   }, [endDrag, slotIndexFromPoint])
 
+  const canPlaceDef = useCallback(
+    (def: TileDef) => {
+      if (rackFull || showResults) return false
+      return countOnRack(hand, def) < maxCopiesForDef(def, deckCopyOpts)
+    },
+    [rackFull, showResults, hand, deckCopyOpts],
+  )
+
   const onCatalogActivate = useCallback(
     (def: TileDef) => {
       if (suppressClickRef.current) {
         suppressClickRef.current = false
         return
       }
-      if (rackFull || showResults) return
+      if (!canPlaceDef(def)) return
       placeDef(def)
     },
-    [placeDef, rackFull, showResults],
+    [canPlaceDef, placeDef],
   )
 
   const onCatalogPointerDown = useCallback(
     (def: TileDef, e: ReactPointerEvent<HTMLDivElement>) => {
-      if (e.button !== 0 || rackFull || showResults) return
+      if (e.button !== 0 || !canPlaceDef(def)) return
       dragRef.current = {
         def,
         pointerId: e.pointerId,
@@ -410,7 +451,7 @@ export function RackCheckerPage() {
         dragging: false,
       }
     },
-    [rackFull, showResults],
+    [canPlaceDef],
   )
 
   return (
@@ -422,17 +463,9 @@ export function RackCheckerPage() {
       >
         <header className="rack-checker__header">
           <h1 className="rack-checker__title">Rack Checker</h1>
-          <button
-            type="button"
-            className="rack-checker__close"
-            aria-label="Close"
-            onClick={() => navigate('/play')}
-          >
-            ✕
-          </button>
         </header>
 
-        <div className="rack-checker__rack-panel panel panel--hand">
+        <div className="rack-checker__rack-panel">
           <div className="rack-checker__rack" role="list" aria-label="Rack">
             {slots.map((tile, index) => {
               const isBest = !!tile && !!suggestedBestIds?.has(tile.id)
@@ -493,6 +526,13 @@ export function RackCheckerPage() {
             onClick={resetAll}
           >
             Reset
+          </button>
+          <button
+            type="button"
+            className="btn btn--primary rack-bottom-tile-cell rack-checker__action-btn"
+            onClick={() => navigate('/play')}
+          >
+            Close
           </button>
         </div>
 

@@ -20,10 +20,16 @@
   --rack-action-border-hold: var(--app-action-btn-border-hold, #636870);
   --rack-action-border-color: var(--app-action-btn-border, #636870);
   --rack-action-label-color: var(--app-action-btn-label, #e2e4e8);
-  /* Same column width as the main-game East rack (tiles + tray insets). */
-  --rack-checker-col-w: min(100%, var(--rack-col-outer-w));
-  --rack-tile-w: var(--hand-rack-tile-w);
-  --rack-tile-h: var(--hand-rack-tile-h);
+  /*
+   * Column = full content box (already inset by page padding). Do NOT use
+   * `--rack-col-outer-w` / floored `--hand-rack-tile-w` — those can exceed the
+   * phone width and blow out the picker via intrinsic min-widths.
+   */
+  --rack-checker-col-w: 100%;
+  --player-rack-face-gap: 2px;
+  /* Coach dim tokens (normally from `.panel--hand`). */
+  --suggest-dim-overlay: rgba(0, 0, 0, 0.38);
+  --suggest-dim-joker-brightness: 0.64;
 
   box-sizing: border-box;
   height: 100dvh;
@@ -31,15 +37,18 @@
   max-height: 100dvh;
   max-height: 100svh;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  /* Match main play horizontal inset so `--rack-col-outer-w` / tile size fit the same. */
+  /* Match main play / PWA horizontal inset. */
   padding-inline: var(--app-h-pad, clamp(10px, 2vmin, 18px));
   padding-top: clamp(10px, 2vmin, 18px);
   padding-bottom: max(clamp(10px, 2vmin, 18px), env(safe-area-inset-bottom, 0px));
   gap: clamp(10px, 1.6vmin, 16px);
   overflow: hidden;
+  overflow-x: hidden;
   user-select: none;
   -webkit-user-select: none;
   background-color: var(--app-bg-paint-color, var(--app-bg-base, #2b2f37));
@@ -48,6 +57,39 @@
   background-repeat: var(--app-bg-paint-repeat);
   background-blend-mode: var(--app-bg-paint-blend);
   color: var(--text, #e8eaed);
+  /* Size rack tiles from this page's content width (like main-game cqw). */
+  container-type: inline-size;
+  container-name: rack-checker-page;
+}
+
+/* Installed PWA: same asymmetric side insets as the main board. */
+html[data-home-screen-app]:not([data-native-app]) .rack-checker {
+  padding-inline-start: var(--pwa-pad-inline-start, var(--app-h-pad));
+  padding-inline-end: var(--pwa-pad-inline-end, var(--app-h-pad));
+}
+
+@media (max-height: 31.25rem) and (orientation: landscape) and (pointer: coarse) and (display-mode: standalone) {
+  html[data-home-screen-app]:not([data-native-app]) .rack-checker {
+    padding-inline-start: var(--pwa-landscape-inline-start, var(--pwa-pad-inline-start));
+    padding-inline-end: var(--pwa-landscape-inline-end, var(--pwa-pad-inline-end));
+  }
+}
+
+/* 14-tile band from page content width — no rem floors that overflow phones. */
+@container rack-checker-page (min-width: 0px) {
+  .rack-checker__rack-panel,
+  .rack-checker__rack,
+  .rack-checker__header,
+  .rack-checker__actions,
+  .rack-checker__lower {
+    --hand-rack-tile-w: max(
+      1px,
+      calc((100cqi - 13 * var(--player-rack-face-gap, 2px)) / 14)
+    );
+    --hand-rack-tile-h: calc(var(--hand-rack-tile-w) * 1.3333);
+    --rack-tile-w: var(--hand-rack-tile-w);
+    --rack-tile-h: var(--hand-rack-tile-h);
+  }
 }
 
 .rack-checker__header {
@@ -58,6 +100,7 @@
   justify-content: center;
   width: var(--rack-checker-col-w);
   max-width: 100%;
+  min-width: 0;
   margin: 0 auto;
   /* Fixed band — larger title paints inside this without growing the page stack. */
   height: 1.75rem;
@@ -79,81 +122,32 @@
   justify-content: center;
 }
 
-.rack-checker__close {
-  position: absolute;
-  top: 50%;
-  right: 0;
-  transform: translateY(-50%);
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.7rem;
-  height: 1.7rem;
-  margin: 0;
-  padding: 0;
-  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
-  border-radius: 0.35rem;
-  background: var(--rack-action-face);
-  box-shadow: var(--rack-action-shadow-rest);
-  color: var(--rack-action-label-color, #e2e4e8);
-  font-family: 'Figtree', var(--sans);
-  font-size: 0.95rem;
-  font-weight: 700;
-  line-height: 1;
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-}
-
-.rack-checker__close:hover {
-  background: var(--rack-action-face);
-  border-color: var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
-  box-shadow: var(--rack-action-shadow-rest);
-  transform: translateY(-50%);
-}
-
-.rack-checker__close:active {
-  background: var(--rack-action-face-pressed-chrome);
-  box-shadow: var(--rack-action-pressed);
-  transform: translateY(-50%);
-}
-
-.rack-checker__close:focus-visible {
-  outline: 2px solid color-mix(in srgb, #f0c36a 75%, transparent);
-  outline-offset: 2px;
-}
-
 /* No tray chrome — same open band as the main-game hand / discard rows. */
-.app.rack-checker .rack-checker__rack-panel.panel.panel--hand {
+.rack-checker__rack-panel {
   flex: 0 0 auto;
   width: var(--rack-checker-col-w);
   max-width: 100%;
+  min-width: 0;
   margin: 0 auto;
-  margin-bottom: 0;
   box-sizing: border-box;
   padding: 0;
   border: none;
   border-radius: 0;
   background: transparent;
-  background-image: none;
   box-shadow: none;
 }
 
-/* Kill shared panel steel rim / top highlight (part-0057 / part-0058). */
-.app.rack-checker .rack-checker__rack-panel.panel.panel--hand::before,
-.app.rack-checker .rack-checker__rack-panel.panel.panel--hand::after {
-  content: none;
-}
-
 .rack-checker__rack {
-  --rack-tile-w: var(--hand-rack-tile-w);
-  --rack-tile-h: var(--hand-rack-tile-h);
+  /* Fallback before / without CQ — size from the rack's own width, not viewport floors. */
+  --rack-tile-w: calc((100% - 13 * var(--player-rack-face-gap, 2px)) / 14);
+  --rack-tile-h: calc(var(--rack-tile-w) * 1.3333);
   display: grid;
   grid-template-columns: repeat(14, minmax(0, 1fr));
-  grid-auto-rows: var(--rack-tile-h);
-  gap: var(--player-rack-face-gap);
+  grid-auto-rows: auto;
+  gap: var(--player-rack-face-gap, 2px);
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   align-items: start;
   align-content: start;
 }
@@ -163,11 +157,12 @@
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  height: var(--rack-tile-h);
+  aspect-ratio: 3 / 4;
+  height: auto;
   margin: 0;
   padding: 0;
   border: 1px dashed color-mix(in srgb, #9aa3ad 35%, transparent);
-  border-radius: calc(var(--rack-tile-w) * 0.132);
+  border-radius: 12.8%;
   background: color-mix(in srgb, #000 22%, transparent);
   cursor: default;
   appearance: none;
@@ -214,7 +209,7 @@
 }
 
 .rack-checker__actions {
-  --rack-checker-action-h: max(1.85rem, calc(var(--hand-rack-tile-h, 3.2rem) * 0.38));
+  --rack-checker-action-h: max(1.85rem, calc(var(--rack-tile-h, var(--hand-rack-tile-h, 3.2rem)) * 0.38));
   flex: 0 0 auto;
   display: flex;
   flex-direction: row;
@@ -224,6 +219,7 @@
   gap: 1vmin;
   width: var(--rack-checker-col-w);
   max-width: 100%;
+  min-width: 0;
   margin: 0 auto;
   min-height: var(--rack-checker-action-h);
 }
@@ -233,7 +229,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 5.6rem;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 7.5rem;
   min-height: var(--rack-checker-action-h);
   height: var(--rack-checker-action-h);
   margin-top: 0;
@@ -300,6 +298,7 @@
   flex: 1 1 auto;
   width: var(--rack-checker-col-w);
   max-width: 100%;
+  min-width: 0;
   margin: 0 auto;
   min-height: 0;
   display: flex;
@@ -314,8 +313,10 @@
   align-items: stretch;
   flex: 0 1 auto;
   min-height: 0;
+  min-width: 0;
   max-height: 100%;
   width: 100%;
+  max-width: 100%;
   overflow: hidden;
 }
 
@@ -326,8 +327,10 @@
   gap: 0;
   flex: 0 1 auto;
   min-height: 0;
+  min-width: 0;
   max-height: 100%;
   width: 100%;
+  max-width: 100%;
   height: auto;
   padding: 0;
   box-sizing: border-box;
@@ -339,12 +342,14 @@
   overflow: hidden;
 }
 
-/* Width-sized catalog; shell hugs the 3 packed rows (no stretch / no row gaps). */
+/* Width-sized catalog; definite width so CQ tiles can't inflate the page. */
 .rack-checker__catalog-fit {
   flex: 0 1 auto;
   min-height: 0;
+  min-width: 0;
   max-height: 100%;
   width: 100%;
+  max-width: 100%;
   height: auto;
   display: flex;
   flex-direction: column;
@@ -370,7 +375,7 @@ html .rack-checker .rack-checker__tracker-mirror.blank-exchange-overlay__tracker
   padding: 0;
   margin: 0;
   gap: 0;
-  overflow: visible;
+  overflow: hidden;
   background: transparent;
 }
 
@@ -425,7 +430,7 @@ html .rack-checker .rack-checker__tracker-mirror .discard-tracker__tile-groups-c
   height: auto !important;
   max-height: none !important;
   min-height: 0 !important;
-  overflow: visible !important;
+  overflow: hidden !important;
   background: transparent !important;
   background-image: none !important;
   border-radius: 0 !important;
@@ -442,10 +447,11 @@ html .rack-checker .rack-checker__tracker-mirror .discard-tracker__overlay-grid 
   gap: var(--player-rack-face-gap, 2px);
   width: 100% !important;
   max-width: 100% !important;
+  min-width: 0 !important;
   height: auto !important;
   max-height: none !important;
   min-height: 0 !important;
-  overflow: visible !important;
+  overflow: hidden !important;
   pointer-events: auto;
   container-type: normal;
   box-sizing: border-box;
@@ -461,10 +467,11 @@ html
   align-items: flex-start;
   width: 100% !important;
   max-width: 100% !important;
+  min-width: 0 !important;
   height: auto !important;
   margin: 0 !important;
   grid-template-columns: none !important;
-  overflow: visible !important;
+  overflow: hidden !important;
 }
 
 html
@@ -478,11 +485,40 @@ html
   align-items: flex-start;
   width: 100% !important;
   max-width: 100% !important;
+  min-width: 0 !important;
   height: auto !important;
   flex: 1 1 auto;
   margin: 0 !important;
   transform: none !important;
-  overflow: visible !important;
+  overflow: hidden !important;
+  gap: var(--player-rack-face-gap, 2px);
+  box-sizing: border-box;
+}
+
+/* Pin catalog slots to CQ tile size so hand-rack floors can't widen the row. */
+html
+  .rack-checker
+  .rack-checker__tracker-mirror
+  .exposure-rack--discard-tracker-sorted-row
+  .exposure-rack__slot {
+  width: var(--rack-tile-w) !important;
+  min-width: 0 !important;
+  max-width: var(--rack-tile-w) !important;
+  flex: 0 0 var(--rack-tile-w);
+  height: var(--rack-tile-h);
+  min-height: var(--rack-tile-h);
+  max-height: var(--rack-tile-h);
+  box-sizing: border-box;
+}
+
+html
+  .rack-checker
+  .rack-checker__tracker-mirror
+  .exposure-rack--discard-tracker-sorted-row
+  .exposure-rack__slot.sorted-discard-tray__slot--suit-label {
+  width: var(--sorted-discard-suit-label-w) !important;
+  max-width: var(--sorted-discard-suit-label-w) !important;
+  flex: 0 0 var(--sorted-discard-suit-label-w);
 }
 
 .rack-checker__picker .sorted-discard-tray__slot--pickable {
