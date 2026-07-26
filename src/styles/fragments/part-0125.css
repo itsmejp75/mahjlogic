@@ -67,6 +67,13 @@
   container-name: rack-checker-page;
 }
 
+/* Opened from the in-game menu — covers play without unmounting the round. */
+.rack-checker--overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 480;
+}
+
 /* Installed PWA: same asymmetric side insets as the main board. */
 html[data-home-screen-app]:not([data-native-app]) .rack-checker {
   padding-inline-start: var(--pwa-pad-inline-start, var(--app-h-pad));
@@ -306,7 +313,7 @@ html body .app.rack-checker .rack-checker__actions
   transform: none;
 }
 
-/* Check active (results showing) — stay pressed-in like menu History / Tiles open. */
+/* Check active (results showing) — pressed-in + 2px green rim (menu selected pills). */
 html body .app.rack-checker .rack-checker__actions
   .btn.rack-checker__action-btn.rack-checker__check-btn--on:not(:disabled),
 html body .app.rack-checker .rack-checker__actions
@@ -316,7 +323,7 @@ html body .app.rack-checker .rack-checker__actions
     :disabled
   ) {
   background: var(--rack-action-face-pressed-chrome);
-  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
+  border: 2px solid var(--app-menu-rim-active, #22c55e);
   box-shadow: var(--rack-action-pressed);
   color: var(--rack-action-label-color, #e2e4e8);
   outline: none;

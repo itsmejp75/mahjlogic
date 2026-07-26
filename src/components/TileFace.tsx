@@ -112,6 +112,8 @@ type Props = {
   sortedDiscardBamGreen?: boolean
   /** Sorted discard tray: paint crak red (including red dragon). */
   sortedDiscardCrakRed?: boolean
+  /** Decorative overlay (e.g. suggested-hand joker time-share); omit from the accessibility tree. */
+  ariaHidden?: boolean
 }
 
 /**
@@ -185,6 +187,7 @@ export const TileFace = memo(function TileFace({
   sortedDiscardDotBlue = false,
   sortedDiscardBamGreen = false,
   sortedDiscardCrakRed = false,
+  ariaHidden = false,
 }: Props) {
   const { tileGraphics } = useTileGraphics()
   const skinCardInk = cardInkForTileFace(def, cardInk, tileGraphics)
@@ -225,7 +228,8 @@ export const TileFace = memo(function TileFace({
       ]
         .filter(Boolean)
         .join(' ')}
-      aria-label={tileAriaLabel(def)}
+      aria-hidden={ariaHidden || undefined}
+      aria-label={ariaHidden ? undefined : tileAriaLabel(def)}
     >
       {artUrl != null ? (
         <TileArtImage src={artUrl} onFailed={() => setArtFailed(true)} />

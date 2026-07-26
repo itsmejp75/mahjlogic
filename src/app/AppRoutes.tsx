@@ -4,7 +4,6 @@ import { RequireAuth } from '../auth/RequireAuth'
 import { AuthCallbackPage } from '../pages/AuthCallbackPage'
 import { LandingPage } from '../pages/LandingPage'
 import { PrivacyPage } from '../pages/PrivacyPage'
-import { RackCheckerPage } from '../pages/RackCheckerPage'
 import { TermsPage } from '../pages/TermsPage'
 
 export function AppRoutes() {
@@ -26,7 +25,8 @@ export function AppRoutes() {
         path="/rack-checker"
         element={
           <RequireAuth>
-            <RackCheckerPage />
+            {/* Keep the live round mounted in App; open checker as an overlay. */}
+            <Navigate to="/play" replace state={{ openRackChecker: true }} />
           </RequireAuth>
         }
       />

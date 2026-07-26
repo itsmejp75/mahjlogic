@@ -471,6 +471,91 @@
   background: transparent;
 }
 
+/*
+ * Focused suggested-hand joker fill: time-share the natural the joker stands for (3s)
+ * with a joker face (1s). Both faces stack in the cell grid; opacity crossfades (~0.4s).
+ */
+@keyframes suggest-joker-timeshare-natural {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  80%,
+  95% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes suggest-joker-timeshare-joker {
+  0%,
+  70% {
+    opacity: 0;
+  }
+  80%,
+  95% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+:is(
+  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
+  .hands-sheet__tile-cell--suggest-joker
+) > .tile-face:not(.tile--joker) {
+  animation: suggest-joker-timeshare-natural 4s linear infinite;
+}
+
+:is(
+  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
+  .hands-sheet__tile-cell--suggest-joker
+) > .tile-face.tile--joker {
+  animation: suggest-joker-timeshare-joker 4s linear infinite;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(
+    .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
+    .hands-sheet__tile-cell--suggest-joker
+  ) > .tile-face:not(.tile--joker) {
+    animation: none;
+    opacity: 1;
+  }
+
+  :is(
+    .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
+    .hands-sheet__tile-cell--suggest-joker
+  ) > .tile-face.tile--joker {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+.app-layout[data-animations='off']
+  :is(
+    .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
+    .hands-sheet__tile-cell--suggest-joker
+  )
+  > .tile-face:not(.tile--joker) {
+  animation: none;
+  opacity: 1;
+}
+
+.app-layout[data-animations='off']
+  :is(
+    .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
+    .hands-sheet__tile-cell--suggest-joker
+  )
+  > .tile-face.tile--joker {
+  animation: none;
+  opacity: 0;
+}
+
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--dead-cause .tile-face:not(.tile--joker)::after,
 .hands-sheet__tile-cell--dead-cause .tile-face:not(.tile--joker)::after,
 .sortable-tile-wrap--suggest-dead-cause .tile-face:not(.tile--joker)::after,

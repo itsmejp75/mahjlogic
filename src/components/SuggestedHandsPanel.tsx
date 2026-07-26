@@ -55,6 +55,8 @@ const ROW_TOUCH_SLOP_PX = 10
 const DRAG_SCROLL_SLOP_PX = 4
 const DRAG_SCROLL_CLICK_SUPPRESS_MS = 280
 const DRAG_SCROLL_CLASS = 'hands-list-scroll--drag-scrolling'
+/** Stable face for suggested-strip joker time-share (CSS swaps with the natural). */
+const SUGGEST_JOKER_TIMESHARE_DEF: TileDef = { cat: 'joker' }
 /** Extra rows mounted above/below the viewport so fast flings do not flash empty gaps. */
 const HANDS_LIST_VIRTUAL_OVERSCAN = 8
 /** Minimum mounted window before scroll metrics are known. */
@@ -620,6 +622,7 @@ const SuggestedHandStripTileCell = memo(function SuggestedHandStripTileCell({
         def={slot.displayDef}
         cardInk={stripTileFaceCardInk(slot.displayDef, slot.cardInk)}
       />
+      {showJokerGuide ? <TileFace def={SUGGEST_JOKER_TIMESHARE_DEF} ariaHidden /> : null}
     </div>
   )
 })

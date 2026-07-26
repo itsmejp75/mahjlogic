@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { flushSync } from 'react-dom'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { RackCheckerPage } from './pages/RackCheckerPage'
 import { americanDeckTileCount, BLANK_TILE_COUNT_OPTIONS, buildAmericanDeck, dealOpeningFour, DEFAULT_BLANK_TILE_COUNT, isBlankTileCount, shuffle, STANDARD_JOKER_COUNT, TEN_JOKERS_COUNT } from './mahjong/deck'
 import type { BlankTileCount } from './mahjong/deck'
 import type { ClaimType, DiscardEntry, EastExposure, Seat, TileDef, TileInstance } from './mahjong/types'
@@ -1830,6 +1831,8 @@ function AppMenuSettingSwitch({
 export default function App() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const [rackCheckerOpen, setRackCheckerOpen] = useState(false)
   const replayOpeningDeckRef = useRef<TileInstance[] | null>(null)
   const gameResultRecordedRef = useRef(false)
   const clientRoundIdRef = useRef(
@@ -2208,6 +2211,14 @@ export default function App() {
   useEffect(() => {
     playAsEastEnabledRef.current = playAsEastEnabled
   }, [playAsEastEnabled])
+
+  /** Deep link / redirect from `/rack-checker` — open overlay without remounting the round. */
+  useEffect(() => {
+    const st = location.state as { openRackChecker?: boolean } | null
+    if (!st?.openRackChecker) return
+    setRackCheckerOpen(true)
+    navigate(location.pathname, { replace: true, state: {} })
+  }, [location.state, location.pathname, navigate])
 
   const deadHandWarningsEnabledRef = useRef(deadHandWarningsEnabled)
   useEffect(() => {
@@ -5623,6 +5634,8 @@ export default function App() {
       data-tile-graphics={tileGraphics}
       data-color-buttons={colorButtonsEnabled ? 'on' : 'off'}
       data-animations={animationsEnabled ? 'on' : 'off'}
+      aria-hidden={rackCheckerOpen || undefined}
+      {...(rackCheckerOpen ? ({ inert: '' } as Record<string, string>) : {})}
     >
       <AppMenuOpenGate>
         <div
@@ -5725,7 +5738,7 @@ export default function App() {
                     className="btn app-menu-tray__diff-btn"
                     onClick={() => {
                       appMenuOpenApiRef.current.setMenuOpen(false)
-                      navigate('/rack-checker')
+                      setRackCheckerOpen(true)
                     }}
                   >
                     Rack Checker
@@ -6884,6 +6897,15 @@ export default function App() {
         skipBotDiscard={skipBotDiscard}
       />
     </div>
+    {rackCheckerOpen ? (
+      <RackCheckerPage
+        overlay
+        onClose={() => {
+          setRackCheckerOpen(false)
+          appMenuOpenApiRef.current.setMenuOpen(true)
+        }}
+      />
+    ) : null}
     </SuggestedHandsTrayProvider>
     </TileGraphicsProvider>
     </AppMenuOpenProvider>

@@ -145,7 +145,15 @@ type DragGhost = {
   y: number
 }
 
-export function RackCheckerPage() {
+export function RackCheckerPage({
+  onClose,
+  overlay = false,
+}: {
+  /** When set (in-game overlay), Close returns here instead of remounting `/play`. */
+  onClose?: () => void
+  /** Full-viewport layer above the live game (game stays mounted underneath). */
+  overlay?: boolean
+} = {}) {
   const navigate = useNavigate()
   const [appTheme] = useState<AppTheme>(() => readTheme())
   /** Rack Checker always uses classic faces (picker + rack), independent of menu Simple. */
@@ -484,10 +492,20 @@ export function RackCheckerPage() {
     [canPlaceDef],
   )
 
+  const handleClose = useCallback(() => {
+    if (onClose) {
+      onClose()
+      return
+    }
+    navigate('/play')
+  }, [navigate, onClose])
+
   return (
     <TileGraphicsProvider tileGraphics={tileGraphics}>
       <div
-        className="app rack-checker"
+        className={['app', 'rack-checker', overlay ? 'rack-checker--overlay' : '']
+          .filter(Boolean)
+          .join(' ')}
         data-app-theme={appTheme}
         data-tile-graphics={tileGraphics}
       >
@@ -575,7 +593,7 @@ export function RackCheckerPage() {
           <button
             type="button"
             className="btn btn--primary rack-bottom-tile-cell rack-checker__action-btn"
-            onClick={() => navigate('/play')}
+            onClick={handleClose}
           >
             Close
           </button>
