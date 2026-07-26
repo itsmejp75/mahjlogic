@@ -333,7 +333,8 @@ html body .app.rack-checker .rack-checker__actions
 .rack-checker__picker {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
+  align-items: center;
+  justify-content: flex-start;
   flex: 1 1 auto;
   min-height: 0;
   min-width: 0;
@@ -346,7 +347,7 @@ html body .app.rack-checker .rack-checker__actions
 .rack-checker__tracker-shell {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
+  align-items: center;
   gap: 0;
   flex: 1 1 auto;
   min-height: 0;
@@ -366,21 +367,21 @@ html body .app.rack-checker .rack-checker__actions
 }
 
 /*
- * Size container: width + remaining height so catalog tiles can shrink on short
- * landscape phones instead of clipping the bottom row.
+ * Size container for catalog tile CQ. Width matches the rack column; height is
+ * the remaining page area (used only for short-landscape shrink below).
  */
 .rack-checker__catalog-fit {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-height: 0;
   min-width: 0;
   max-height: 100%;
   width: 100%;
   max-width: 100%;
-  height: 100%;
   display: flex;
   flex-direction: column;
+  align-items: center;
   overflow: hidden;
-  container-type: size;
+  container-type: inline-size;
   container-name: rack-checker-catalog;
 }
 
@@ -390,7 +391,9 @@ html body .app.rack-checker .rack-checker__actions
  */
 html .rack-checker .rack-checker__tracker-mirror.blank-exchange-overlay__tracker-mirror.app-play-split {
   position: static;
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   flex: 0 0 auto;
   width: 100%;
   max-width: 100%;
@@ -406,15 +409,15 @@ html .rack-checker .rack-checker__tracker-mirror.blank-exchange-overlay__tracker
 }
 
 /*
- * Catalog tiles: fit width (13.75 slots) and height (3 rows + gaps). Use the
- * smaller so short landscape viewports don't clip the bottom row.
+ * Catalog tiles: fill the same column width as the 14-slot rack (label 1.75 +
+ * 12 tiles = 13.75 slots). Do NOT height-shrink here — that left a narrow
+ * left-biased band with a big right gap. Short-landscape shrink is below.
  */
 @container rack-checker-catalog (min-width: 0px) {
   html .rack-checker .rack-checker__catalog-fit .discard-tracker__overlay-row {
     --player-rack-face-gap: 2px;
     --discard-tracker-slots-across: 13.75;
-    --rc-catalog-row-gap: var(--player-rack-face-gap);
-    --rc-tile-w-from-width: max(
+    --rack-tile-w: max(
       1px,
       calc(
         (
@@ -423,12 +426,6 @@ html .rack-checker .rack-checker__tracker-mirror.blank-exchange-overlay__tracker
           ) / var(--discard-tracker-slots-across)
       )
     );
-    --rc-tile-h-from-height: max(
-      1px,
-      calc((100cqh - 2 * var(--rc-catalog-row-gap)) / 3)
-    );
-    --rc-tile-w-from-height: calc(var(--rc-tile-h-from-height) * 3 / 4);
-    --rack-tile-w: min(var(--rc-tile-w-from-width), var(--rc-tile-w-from-height));
     --rack-tile-h: calc(var(--rack-tile-w) * 4 / 3);
     --exposure-slot-h: var(--rack-tile-h);
     --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
@@ -444,6 +441,53 @@ html .rack-checker .rack-checker__tracker-mirror.blank-exchange-overlay__tracker
     --discard-tracker-sorted-band-w: calc(
       var(--sorted-discard-suit-label-w) + 12 * var(--rack-tile-w) + 12 * var(--player-rack-face-gap)
     );
+  }
+}
+
+/*
+ * Short landscape only: shrink tiles to fit 3 rows in the remaining height,
+ * and keep the band centered under the rack.
+ */
+@media (max-height: 31.25rem) and (orientation: landscape) {
+  .rack-checker__catalog-fit {
+    flex: 1 1 auto;
+    height: 100%;
+    container-type: size;
+  }
+
+  @container rack-checker-catalog (min-width: 0px) {
+    html .rack-checker .rack-checker__catalog-fit .discard-tracker__overlay-row {
+      --rc-catalog-row-gap: var(--player-rack-face-gap, 2px);
+      --rc-tile-w-from-width: max(
+        1px,
+        calc(
+          (
+              100cqi
+              - (var(--discard-tracker-slots-across, 13.75) - 1) * var(--player-rack-face-gap, 2px)
+            ) / var(--discard-tracker-slots-across, 13.75)
+        )
+      );
+      --rc-tile-h-from-height: max(
+        1px,
+        calc((100cqh - 2 * var(--rc-catalog-row-gap)) / 3)
+      );
+      --rc-tile-w-from-height: calc(var(--rc-tile-h-from-height) * 3 / 4);
+      --rack-tile-w: min(var(--rc-tile-w-from-width), var(--rc-tile-w-from-height));
+      --rack-tile-h: calc(var(--rack-tile-w) * 4 / 3);
+      --exposure-slot-h: var(--rack-tile-h);
+      --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
+      --discard-tray-rack-tile-w: var(--rack-tile-w);
+      --discard-tray-tile-corner-r: var(--tile-face-border-radius);
+      --sorted-discard-suit-label-w: calc(var(--rack-tile-w) * var(--sorted-discard-suit-label-w-mult, 1.75));
+      --sorted-discard-suit-label-h: var(--rack-tile-h);
+      --sorted-discard-suit-label-fs: min(
+        calc(var(--sorted-discard-suit-label-h) * 0.45),
+        calc(var(--sorted-discard-suit-label-w) * 0.35)
+      );
+      --discard-tracker-sorted-band-w: calc(
+        var(--sorted-discard-suit-label-w) + 12 * var(--rack-tile-w) + 12 * var(--player-rack-face-gap, 2px)
+      );
+    }
   }
 }
 
@@ -473,7 +517,7 @@ html .rack-checker .rack-checker__tracker-mirror .discard-tracker__overlay-grid 
   inset: auto !important;
   display: flex !important;
   flex-direction: column;
-  align-items: stretch;
+  align-items: center;
   justify-content: flex-start;
   gap: var(--player-rack-face-gap, 2px);
   width: 100% !important;
@@ -496,6 +540,7 @@ html
   flex-direction: row;
   flex-wrap: nowrap;
   align-items: flex-start;
+  justify-content: center;
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
@@ -514,12 +559,12 @@ html
   display: flex !important;
   flex-wrap: nowrap;
   align-items: flex-start;
-  width: 100% !important;
+  width: var(--discard-tracker-sorted-band-w, 100%) !important;
   max-width: 100% !important;
   min-width: 0 !important;
   height: auto !important;
-  flex: 1 1 auto;
-  margin: 0 !important;
+  flex: 0 0 auto;
+  margin: 0 auto !important;
   transform: none !important;
   overflow: hidden !important;
   gap: var(--player-rack-face-gap, 2px);
