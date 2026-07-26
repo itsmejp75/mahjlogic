@@ -47,10 +47,8 @@ import { SortableHand } from '../components/SortableHand'
 import { SuggestedHandsPanel } from '../components/SuggestedHandsPanel'
 import { TileFace } from '../components/TileFace'
 import { STANDARD_JOKER_COUNT, TEN_JOKERS_COUNT } from '../mahjong/deck'
-import { tileSuitRackWord } from '../mahjong/labels'
 import {
   DISCARD_TRACKER_SORTED_BAND_COLS,
-  DISCARD_TRACKER_SORTED_ROW_SLOTS,
   SORTED_DISCARD_ROW1_TILES,
   SORTED_DISCARD_ROW2_TILES,
   SORTED_DISCARD_ROW3_TILES,
@@ -156,7 +154,6 @@ export function RackCheckerPage() {
   const [slots, setSlots] = useState<(TileInstance | null)[]>(emptySlots)
   const [showResults, setShowResults] = useState(false)
   const [focusKey, setFocusKey] = useState<string | null>(null)
-  const [tilesGuideOn, setTilesGuideOn] = useState(false)
   const [pinnedHandKeys, setPinnedHandKeys] = useState<string[]>([])
   const [dragGhost, setDragGhost] = useState<DragGhost | null>(null)
   const [catalogDropOverRack, setCatalogDropOverRack] = useState(false)
@@ -219,7 +216,7 @@ export function RackCheckerPage() {
 
   const handIds = useMemo(() => hand.map((t) => t.id), [hand])
 
-  /** Same as main game: lit tiles for the focused suggested line (independent of Tiles guide). */
+  /** Same as main game: lit tiles for the focused suggested line. */
   const suggestedTileGuide = useMemo(() => {
     if (!focusKey) return null
     const patternId = focusKeyPatternId(focusKey)
@@ -555,26 +552,17 @@ export function RackCheckerPage() {
           </button>
           <button
             type="button"
-            className="btn btn--primary rack-bottom-tile-cell rack-checker__action-btn"
-            disabled={hand.length === 0}
-            onClick={onCheck}
-          >
-            Check
-          </button>
-          <button
-            type="button"
             className={[
               'btn btn--primary rack-bottom-tile-cell rack-checker__action-btn',
-              tilesGuideOn ? 'rack-checker__tiles-toggle--on' : '',
+              showResults ? 'rack-checker__check-btn--on' : '',
             ]
               .filter(Boolean)
               .join(' ')}
-            disabled={!showResults}
-            aria-pressed={tilesGuideOn}
-            aria-label="Tiles guide"
-            onClick={() => setTilesGuideOn((v) => !v)}
+            disabled={hand.length === 0}
+            aria-pressed={showResults}
+            onClick={onCheck}
           >
-            Tiles
+            Check
           </button>
           <button
             type="button"
@@ -611,7 +599,7 @@ export function RackCheckerPage() {
                   onPinnedPatternChange={togglePinnedHandKey}
                   onPatternClick={onSuggestedPatternClick}
                   onFocusKeyMigrate={setFocusKey}
-                  tilesGuideOn={tilesGuideOn}
+                  tilesGuideOn
                   showHandProbability={handProbabilityEnabled}
                   rackTilesForSuggestedStrip={hand}
                   uncheckedSections={uncheckedSections}
@@ -637,9 +625,7 @@ export function RackCheckerPage() {
                           <div className="discard-tracker__overlay-row">
                             <SortedDiscardTrayRow
                               tiles={SORTED_DISCARD_ROW1_TILES}
-                              slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
-                              leadingSuitLabel={tileSuitRackWord('bam')}
-                              leadingSuitLabelTone="bam"
+                              slotCount={SORTED_DISCARD_ROW1_TILES.length}
                               ariaLabel="Bam tiles"
                               discardPile={rackAsDiscardPile}
                               brightSlots
@@ -652,9 +638,7 @@ export function RackCheckerPage() {
                           <div className="discard-tracker__overlay-row">
                             <SortedDiscardTrayRow
                               tiles={SORTED_DISCARD_ROW2_TILES}
-                              slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
-                              leadingSuitLabel={tileSuitRackWord('dot')}
-                              leadingSuitLabelTone="dot"
+                              slotCount={SORTED_DISCARD_ROW2_TILES.length}
                               ariaLabel="Dot tiles"
                               discardPile={rackAsDiscardPile}
                               brightSlots
@@ -667,9 +651,7 @@ export function RackCheckerPage() {
                           <div className="discard-tracker__overlay-row">
                             <SortedDiscardTrayRow
                               tiles={SORTED_DISCARD_ROW3_TILES}
-                              slotCount={DISCARD_TRACKER_SORTED_ROW_SLOTS}
-                              leadingSuitLabel={tileSuitRackWord('crak')}
-                              leadingSuitLabelTone="crak"
+                              slotCount={SORTED_DISCARD_ROW3_TILES.length}
                               ariaLabel="Crak tiles"
                               discardPile={rackAsDiscardPile}
                               blankTilesEnabled={blankTilesEnabled}

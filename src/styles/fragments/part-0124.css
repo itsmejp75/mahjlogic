@@ -2119,7 +2119,7 @@ html body .app .dead-hand-overlay
 /* Rack Checker actions — same transient press restore as blank-exchange / action row. */
 html body .app.rack-checker .rack-checker__actions
   .btn.rack-checker__action-btn:active:not(:disabled):not(.btn--pointer-down):not(
-    .rack-checker__tiles-toggle--on
+    .rack-checker__check-btn--on
   ) {
   background: var(--rack-action-face);
   border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));

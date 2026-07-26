@@ -116,7 +116,7 @@ html[data-home-screen-app]:not([data-native-app]) .rack-checker {
   max-width: 100%;
   min-width: 0;
   margin: 0 auto;
-  height: 1.15rem;
+  height: 1.4rem;
   overflow: hidden;
 }
 
@@ -125,10 +125,10 @@ html[data-home-screen-app]:not([data-native-app]) .rack-checker {
   text-align: center;
   font-family: 'Figtree', var(--sans);
   font-weight: 800;
-  font-size: clamp(0.95rem, 2.4vmin, 1.15rem);
+  font-size: clamp(1.1rem, 2.9vmin, 1.35rem);
   letter-spacing: 0.02em;
   line-height: 1;
-  height: 1.15rem;
+  height: 1.4rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -224,10 +224,9 @@ html[data-home-screen-app]:not([data-native-app]) .rack-checker {
 }
 
 .rack-checker__actions {
-  /* Same height recipe as `.panel--hand` `--hand-button-row-h` (part-0117). */
+  /* Main hand-row recipe, nudged a bit taller (~12%). */
   --rack-action-touch-min-h: calc(var(--rack-tile-h, var(--hand-rack-tile-h, 3.2rem)) * 0.48);
-  --hand-button-row-h: max(27px, calc(var(--rack-action-touch-min-h) * 0.70));
-  --rack-checker-action-h: var(--hand-button-row-h);
+  --rack-checker-action-h: max(27px, calc(var(--rack-action-touch-min-h) * 0.78));
   flex: 0 0 auto;
   display: flex;
   flex-direction: row;
@@ -238,7 +237,7 @@ html[data-home-screen-app]:not([data-native-app]) .rack-checker {
   width: var(--rack-checker-col-w);
   max-width: 100%;
   min-width: 0;
-  margin: 0 auto;
+  margin: 0.15rem auto 0.25rem;
   min-height: var(--rack-checker-action-h);
 }
 
@@ -285,7 +284,10 @@ html body .app.rack-checker .rack-checker__actions .btn.rack-checker__action-btn
   transform: none;
 }
 
-html body .app.rack-checker .rack-checker__actions .btn.rack-checker__action-btn:hover:not(:disabled):not(:active) {
+html body .app.rack-checker .rack-checker__actions
+  .btn.rack-checker__action-btn:hover:not(:disabled):not(:active):not(.btn--pointer-down):not(
+    .rack-checker__check-btn--on
+  ) {
   background: var(--rack-action-face);
   border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
   box-shadow: var(--rack-action-shadow-rest);
@@ -295,13 +297,29 @@ html body .app.rack-checker .rack-checker__actions .btn.rack-checker__action-btn
 
 /* Pointer down — same pressed-in face + inset as Sort / Call / Pass. */
 html body .app.rack-checker .rack-checker__actions
-  .btn.rack-checker__action-btn:is(:active, .btn--pointer-down):not(:disabled):not(
-    .rack-checker__tiles-toggle--on
+  .btn.rack-checker__action-btn:is(:active, .btn--pointer-down):not(:disabled) {
+  background: var(--rack-action-face-pressed-chrome);
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
+  box-shadow: var(--rack-action-pressed);
+  color: var(--rack-action-label-color, #e2e4e8);
+  transition: none;
+  transform: none;
+}
+
+/* Check active (results showing) — stay pressed-in like menu History / Tiles open. */
+html body .app.rack-checker .rack-checker__actions
+  .btn.rack-checker__action-btn.rack-checker__check-btn--on:not(:disabled),
+html body .app.rack-checker .rack-checker__actions
+  .btn.rack-checker__action-btn.rack-checker__check-btn--on:hover:not(:disabled),
+html body .app.rack-checker .rack-checker__actions
+  .btn.rack-checker__action-btn.rack-checker__check-btn--on:is(:active, .btn--pointer-down):not(
+    :disabled
   ) {
   background: var(--rack-action-face-pressed-chrome);
   border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
   box-shadow: var(--rack-action-pressed);
   color: var(--rack-action-label-color, #e2e4e8);
+  outline: none;
   transition: none;
   transform: none;
 }
@@ -409,14 +427,14 @@ html .rack-checker .rack-checker__tracker-mirror.blank-exchange-overlay__tracker
 }
 
 /*
- * Catalog tiles: fill the same column width as the 14-slot rack (label 1.75 +
- * 12 tiles = 13.75 slots). Do NOT height-shrink here — that left a narrow
- * left-biased band with a big right gap. Short-landscape shrink is below.
+ * Catalog tiles: 12 tiles per row, sized to fill the rack column width.
+ * Do NOT height-shrink here — that left a narrow left-biased band.
+ * Short-landscape shrink is below.
  */
 @container rack-checker-catalog (min-width: 0px) {
   html .rack-checker .rack-checker__catalog-fit .discard-tracker__overlay-row {
     --player-rack-face-gap: 2px;
-    --discard-tracker-slots-across: 13.75;
+    --discard-tracker-slots-across: 12;
     --rack-tile-w: max(
       1px,
       calc(
@@ -431,15 +449,8 @@ html .rack-checker .rack-checker__tracker-mirror.blank-exchange-overlay__tracker
     --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
     --discard-tray-rack-tile-w: var(--rack-tile-w);
     --discard-tray-tile-corner-r: var(--tile-face-border-radius);
-    --sorted-discard-suit-label-w-mult: 1.75;
-    --sorted-discard-suit-label-w: calc(var(--rack-tile-w) * var(--sorted-discard-suit-label-w-mult));
-    --sorted-discard-suit-label-h: var(--rack-tile-h);
-    --sorted-discard-suit-label-fs: min(
-      calc(var(--sorted-discard-suit-label-h) * 0.45),
-      calc(var(--sorted-discard-suit-label-w) * 0.35)
-    );
     --discard-tracker-sorted-band-w: calc(
-      var(--sorted-discard-suit-label-w) + 12 * var(--rack-tile-w) + 12 * var(--player-rack-face-gap)
+      12 * var(--rack-tile-w) + 11 * var(--player-rack-face-gap)
     );
   }
 }
@@ -463,8 +474,8 @@ html .rack-checker .rack-checker__tracker-mirror.blank-exchange-overlay__tracker
         calc(
           (
               100cqi
-              - (var(--discard-tracker-slots-across, 13.75) - 1) * var(--player-rack-face-gap, 2px)
-            ) / var(--discard-tracker-slots-across, 13.75)
+              - (var(--discard-tracker-slots-across, 12) - 1) * var(--player-rack-face-gap, 2px)
+            ) / var(--discard-tracker-slots-across, 12)
         )
       );
       --rc-tile-h-from-height: max(
@@ -478,14 +489,8 @@ html .rack-checker .rack-checker__tracker-mirror.blank-exchange-overlay__tracker
       --tile-face-border-radius: calc(0.116 * var(--rack-tile-w));
       --discard-tray-rack-tile-w: var(--rack-tile-w);
       --discard-tray-tile-corner-r: var(--tile-face-border-radius);
-      --sorted-discard-suit-label-w: calc(var(--rack-tile-w) * var(--sorted-discard-suit-label-w-mult, 1.75));
-      --sorted-discard-suit-label-h: var(--rack-tile-h);
-      --sorted-discard-suit-label-fs: min(
-        calc(var(--sorted-discard-suit-label-h) * 0.45),
-        calc(var(--sorted-discard-suit-label-w) * 0.35)
-      );
       --discard-tracker-sorted-band-w: calc(
-        var(--sorted-discard-suit-label-w) + 12 * var(--rack-tile-w) + 12 * var(--player-rack-face-gap, 2px)
+        12 * var(--rack-tile-w) + 11 * var(--player-rack-face-gap, 2px)
       );
     }
   }
@@ -585,16 +590,6 @@ html
   min-height: var(--rack-tile-h);
   max-height: var(--rack-tile-h);
   box-sizing: border-box;
-}
-
-html
-  .rack-checker
-  .rack-checker__tracker-mirror
-  .exposure-rack--discard-tracker-sorted-row
-  .exposure-rack__slot.sorted-discard-tray__slot--suit-label {
-  width: var(--sorted-discard-suit-label-w) !important;
-  max-width: var(--sorted-discard-suit-label-w) !important;
-  flex: 0 0 var(--sorted-discard-suit-label-w);
 }
 
 .rack-checker__picker .sorted-discard-tray__slot--pickable {
@@ -735,27 +730,6 @@ html
 .rack-checker__hands-tray .panel--hands.suggested-hands-popup__user-shift {
   max-height: none;
   height: 100%;
-}
-
-/*
- * Tiles on — same dark flat press-in as menu History, plus 2px green border
- * (no outer glow — matches menu selected pills).
- */
-html body .app.rack-checker .rack-checker__actions
-  .btn.rack-checker__action-btn.rack-checker__tiles-toggle--on:not(:disabled),
-html body .app.rack-checker .rack-checker__actions
-  .btn.rack-checker__action-btn.rack-checker__tiles-toggle--on:hover:not(:disabled),
-html body .app.rack-checker .rack-checker__actions
-  .btn.rack-checker__action-btn.rack-checker__tiles-toggle--on:is(:active, .btn--pointer-down):not(
-    :disabled
-  ) {
-  background: var(--rack-action-face-pressed-chrome);
-  border: 2px solid var(--app-menu-rim-active, #22c55e);
-  box-shadow: var(--rack-action-pressed);
-  color: var(--rack-action-label-color, #e2e4e8);
-  outline: none;
-  transition: none;
-  transform: none;
 }
 
 .rack-checker__drag-ghost {
