@@ -2303,23 +2303,77 @@ html body .app .panel--hand .rack-bottom-bar--tile-grid :is(
 }
 
 /*
- * Rack action hints: bright purple border on MAHJ (legal win) and Swap (joker swap available).
- * Soft outer glow (blurred halo) — rest / hover only; pressed-in / :active keep their own chrome.
+ * Rack action hints: gold ring + halo on MAHJ (legal win) and Swap (joker swap available).
+ * Stroke / glow track `--hand-button-row-h`. Glow stays while pressed; face uses normal
+ * resting / press-in chrome (`.btn--pointer-down` + drag-off restore).
  */
-html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-tile-cell.btn--mahjong-hint:not(:disabled):not(:active):not(
+html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-tile-cell.btn--mahjong-hint:not(:disabled):not(
     .btn--mahjong-rack-pressed-in
   ),
-html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-tile-cell.btn--mahjong-hint:not(:disabled):hover:not(:active):not(
+html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-tile-cell.btn--joker-swap-hint:not(:disabled) {
+  /* ~0.5 / 1 / 8 / 1.5 / 14 / 2 px at a ~33px action-row pill. */
+  --_hint-scale: var(--hand-button-row-h, var(--rack-tile-w, 2.65rem));
+  --_hint-border: max(0.5px, calc(var(--_hint-scale) * 0.015));
+  --_hint-ring: max(0.5px, calc(var(--_hint-scale) * 0.03));
+  --_hint-glow-blur: max(2px, calc(var(--_hint-scale) * 0.24));
+  --_hint-glow-spread: max(0.5px, calc(var(--_hint-scale) * 0.045));
+  --_hint-halo-blur: max(2px, calc(var(--_hint-scale) * 0.42));
+  --_hint-halo-spread: max(0.5px, calc(var(--_hint-scale) * 0.06));
+  /* Above later action-row siblings (Discard / undo z-index 2) so the ring isn’t clipped. */
+  position: relative;
+  z-index: 5;
+  border: var(--_hint-border) solid var(--rack-action-hint-border, #ffb800) !important;
+  overflow: visible;
+}
+
+/* Resting / hover / drag-off: raised face + gold halo. */
+html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-tile-cell.btn--mahjong-hint:not(:disabled):not(
     .btn--mahjong-rack-pressed-in
-  ),
-html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-tile-cell.btn--joker-swap-hint:not(:disabled):not(:active),
-html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-tile-cell.btn--joker-swap-hint:not(:disabled):hover:not(:active) {
-  border: 1px solid var(--rack-action-hint-border, #b56fd0) !important;
+  ):not(.btn--pointer-down):not(:active),
+html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-tile-cell.btn--mahjong-hint:not(:disabled):not(
+    .btn--mahjong-rack-pressed-in
+  ):hover:not(.btn--pointer-down):not(:active),
+html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-tile-cell.btn--joker-swap-hint:not(:disabled):not(
+    .btn--pointer-down
+  ):not(:active),
+html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-tile-cell.btn--joker-swap-hint:not(:disabled):hover:not(
+    .btn--pointer-down
+  ):not(:active),
+html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-tile-cell.btn--mahjong-hint:not(:disabled):not(
+    .btn--mahjong-rack-pressed-in
+  ):active:not(.btn--pointer-down),
+html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-tile-cell.btn--joker-swap-hint:not(:disabled):active:not(
+    .btn--pointer-down
+  ) {
+  background: var(--rack-action-face) !important;
   box-shadow:
     var(--rack-action-shadow-rest),
-    0 0 0 1px color-mix(in srgb, var(--rack-action-hint-border, #b56fd0) 85%, transparent),
-    0 0 10px 3px color-mix(in srgb, var(--rack-action-hint-border, #b56fd0) 55%, transparent) !important;
-  overflow: visible;
+    0 0 0 var(--_hint-ring) color-mix(in srgb, var(--rack-action-hint-border, #ffb800) 92%, #fff 8%),
+    0 0 var(--_hint-glow-blur) var(--_hint-glow-spread)
+      color-mix(in srgb, var(--rack-action-hint-border, #ffb800) 72%, transparent),
+    0 0 var(--_hint-halo-blur) var(--_hint-halo-spread)
+      color-mix(in srgb, var(--rack-action-hint-border, #ffb800) 38%, transparent) !important;
+  transition: none;
+  transform: none;
+}
+
+/* Press-in: pressed face + inset, gold halo kept. */
+html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-tile-cell.btn--mahjong-hint.btn--pointer-down:not(
+    :disabled
+  ):not(.btn--mahjong-rack-pressed-in),
+html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-tile-cell.btn--joker-swap-hint.btn--pointer-down:not(
+    :disabled
+  ) {
+  background: var(--rack-action-face-pressed-chrome) !important;
+  box-shadow:
+    var(--rack-action-pressed),
+    0 0 0 var(--_hint-ring) color-mix(in srgb, var(--rack-action-hint-border, #ffb800) 92%, #fff 8%),
+    0 0 var(--_hint-glow-blur) var(--_hint-glow-spread)
+      color-mix(in srgb, var(--rack-action-hint-border, #ffb800) 72%, transparent),
+    0 0 var(--_hint-halo-blur) var(--_hint-halo-spread)
+      color-mix(in srgb, var(--rack-action-hint-border, #ffb800) 38%, transparent) !important;
+  transition: none;
+  transform: none;
 }
 
 /*

@@ -2277,44 +2277,52 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   box-shadow: none;
 }
 
-/* Bot cyan identity wash (same thickness on top lip + sides). */
+/*
+ * Bot Possible Hands: same recess geometry as Suggested Hands (`::after` top lip +
+ * full-height sides, never the foot) — retinted to hint gold. Bright edge stop reads as
+ * the stroke; the feather is the glow. No border / box-shadow / mask.
+ */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
   .bot-exposure-hands-panel {
-  --_drop-frame-color: #00b4d8;
-  --_bot-tray-side-blur-color: color-mix(in srgb, var(--_drop-frame-color) 40%, transparent);
+  --_drop-frame-color: var(--rack-action-hint-border, #ffb800);
+  --_bot-tray-glow-edge: var(--_drop-frame-color);
+  --_bot-tray-glow-soft: color-mix(in srgb, var(--_drop-frame-color) 55%, transparent);
   --_bot-tray-side-blur: linear-gradient(
       to bottom in oklab,
-      var(--_bot-tray-side-blur-color) 0%,
-      color-mix(in oklab, var(--_bot-tray-side-blur-color) 62%, transparent) 22%,
-      color-mix(in oklab, var(--_bot-tray-side-blur-color) 32%, transparent) 48%,
-      color-mix(in oklab, var(--_bot-tray-side-blur-color) 12%, transparent) 72%,
-      color-mix(in oklab, var(--_bot-tray-side-blur-color) 3%, transparent) 90%,
+      var(--_bot-tray-glow-edge) 0%,
+      var(--_bot-tray-glow-soft) 10%,
+      color-mix(in oklab, var(--_bot-tray-glow-soft) 62%, transparent) 28%,
+      color-mix(in oklab, var(--_bot-tray-glow-soft) 32%, transparent) 52%,
+      color-mix(in oklab, var(--_bot-tray-glow-soft) 12%, transparent) 74%,
+      color-mix(in oklab, var(--_bot-tray-glow-soft) 3%, transparent) 90%,
       transparent 100%
     ),
     linear-gradient(
       to right in oklab,
-      var(--_bot-tray-side-blur-color) 0%,
-      color-mix(in oklab, var(--_bot-tray-side-blur-color) 62%, transparent) 22%,
-      color-mix(in oklab, var(--_bot-tray-side-blur-color) 32%, transparent) 48%,
-      color-mix(in oklab, var(--_bot-tray-side-blur-color) 12%, transparent) 72%,
-      color-mix(in oklab, var(--_bot-tray-side-blur-color) 3%, transparent) 90%,
+      var(--_bot-tray-glow-edge) 0%,
+      var(--_bot-tray-glow-soft) 10%,
+      color-mix(in oklab, var(--_bot-tray-glow-soft) 62%, transparent) 28%,
+      color-mix(in oklab, var(--_bot-tray-glow-soft) 32%, transparent) 52%,
+      color-mix(in oklab, var(--_bot-tray-glow-soft) 12%, transparent) 74%,
+      color-mix(in oklab, var(--_bot-tray-glow-soft) 3%, transparent) 90%,
       transparent 100%
     ),
     linear-gradient(
       to left in oklab,
-      var(--_bot-tray-side-blur-color) 0%,
-      color-mix(in oklab, var(--_bot-tray-side-blur-color) 62%, transparent) 22%,
-      color-mix(in oklab, var(--_bot-tray-side-blur-color) 32%, transparent) 48%,
-      color-mix(in oklab, var(--_bot-tray-side-blur-color) 12%, transparent) 72%,
-      color-mix(in oklab, var(--_bot-tray-side-blur-color) 3%, transparent) 90%,
+      var(--_bot-tray-glow-edge) 0%,
+      var(--_bot-tray-glow-soft) 10%,
+      color-mix(in oklab, var(--_bot-tray-glow-soft) 62%, transparent) 28%,
+      color-mix(in oklab, var(--_bot-tray-glow-soft) 32%, transparent) 52%,
+      color-mix(in oklab, var(--_bot-tray-glow-soft) 12%, transparent) 74%,
+      color-mix(in oklab, var(--_bot-tray-glow-soft) 3%, transparent) 90%,
       transparent 100%
     );
 }
 
 /*
  * Bot body: same paint + dim as Suggested Hands.
- * Cyan edge wash is only on ::after (same thickness on top and sides).
+ * Gold lip/side glow lives on ::after (same slot as Suggested Hands recess wash).
  */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
@@ -2354,24 +2362,14 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 }
 
 /*
- * Bot Possible Hands: cyan recess wash (header lip + sides).
+ * Same ::after geometry as Suggested Hands recess wash — only the paint is gold.
+ * Top lip + left/right sides via background-size/position; foot never gets a layer.
  */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
   .bot-exposure-hands-panel
   .hands-panel__content::after {
-  content: '';
-  position: absolute;
   z-index: 6;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: auto;
-  height: auto;
-  border-radius: var(--suggested-popup-radius);
-  pointer-events: none;
-  box-sizing: border-box;
-  background-color: transparent;
   background-image: var(--_bot-tray-side-blur);
   background-repeat: no-repeat;
   background-position: var(--hands-header-bottom-blur-position);
@@ -3660,11 +3658,15 @@ html[data-home-screen-app]:not([data-native-app])
   color: var(--rack-action-label-color, #e2e4e8);
 }
 
-/* Call when enabled (bot-turn): white — beats any leftover purple/slate from part-0064/0067. */
+/* Call/Swap when enabled (bot-turn): resting chrome only — never override press-in. */
 html body .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid
-  button.btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
+  button.btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled):not(:active):not(
+    .btn--pointer-down
+  ),
 html body .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid
-  button.btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled):hover {
+  button.btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled):hover:not(:active):not(
+    .btn--pointer-down
+  ) {
   background: var(--rack-action-face);
   border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
   box-shadow: var(--rack-action-shadow-rest);
@@ -3895,37 +3897,47 @@ html body .app .panel--discard-tracker :is(
  * Driven by `topBandDropFrame` from onDragOver (same collision path as a successful drop).
  *
  * Positioning uses simple % of the grid (15/29 ≈ start of bot band after 14 sorted + 1 seat
- * label). Soft outer glow — trial green (`#22c55e`), same weight as selected-bot blue.
+ * label). Green stroke + glow uses the same ratios as gold MAHJ/Swap / bot-exposure frames.
  */
 html .app-dnd-frame .app-top-exposure-container .discard-tracker__overlay-grid--drop-frame-lit {
   overflow: visible !important;
 }
 
 html .app-dnd-frame .app-top-exposure-container .discard-tracker__drop-frame {
-  /* Same stroke / glow weight as selected bot-exposure blue frame (part-0083). */
+  /* Same stroke / glow recipe as gold frames (part-0083 / part-0124); green kept. */
   --_drop-frame-color: #22c55e;
   --_frame-tile: var(--rack-tile-w, calc(100% / 29));
-  --_frame-outset: max(1px, calc(var(--_frame-tile) * 0.0625));
-  --_glow-blur: max(2px, calc(var(--_frame-tile) * 0.3125));
-  --_glow-spread: max(1px, calc(var(--_frame-tile) * 0.09375));
+  --_hint-scale: var(--_frame-tile);
+  --_hint-border: max(0.5px, calc(var(--_hint-scale) * 0.015));
+  --_hint-ring: max(0.5px, calc(var(--_hint-scale) * 0.03));
+  --_hint-glow-blur: max(2px, calc(var(--_hint-scale) * 0.24));
+  --_hint-glow-spread: max(0.5px, calc(var(--_hint-scale) * 0.045));
+  --_hint-halo-blur: max(2px, calc(var(--_hint-scale) * 0.42));
+  --_hint-halo-spread: max(0.5px, calc(var(--_hint-scale) * 0.06));
+  --_hint-gap: max(1px, calc(var(--_hint-scale) * 0.04));
+  --_frame-outset: calc(var(--_hint-gap) + var(--_hint-border));
   position: absolute;
   top: calc(-1 * var(--_frame-outset));
   bottom: calc(-1 * var(--_frame-outset));
   box-sizing: border-box;
-  border: 0.5px solid var(--_drop-frame-color);
+  border: var(--_hint-border) solid var(--_drop-frame-color);
   border-radius: calc(
     var(--discard-tray-tile-corner-r, var(--tile-face-border-radius)) + var(--_frame-outset)
   );
-  box-shadow: 0 0 var(--_glow-blur) var(--_glow-spread)
-    color-mix(in srgb, var(--_drop-frame-color) 55%, transparent);
+  box-shadow:
+    0 0 0 var(--_hint-ring) color-mix(in srgb, var(--_drop-frame-color) 92%, #fff 8%),
+    0 0 var(--_hint-glow-blur) var(--_hint-glow-spread)
+      color-mix(in srgb, var(--_drop-frame-color) 72%, transparent),
+    0 0 var(--_hint-halo-blur) var(--_hint-halo-spread)
+      color-mix(in srgb, var(--_drop-frame-color) 38%, transparent);
   pointer-events: none;
   z-index: 30;
 }
 
-/* Blank exchange: left sorted band (~cols 1–14 of 29). */
+/* Blank exchange: left sorted band (~cols 1–14 of 29). Outset on both sides. */
 html .app-dnd-frame .app-top-exposure-container .discard-tracker__drop-frame--blank-exchange {
   left: calc(-1 * var(--_frame-outset));
-  width: calc(100% * 14 / 29 + var(--_frame-outset));
+  width: calc(100% * 14 / 29 + 2 * var(--_frame-outset));
   right: auto;
 }
 
@@ -3936,19 +3948,63 @@ html .app-dnd-frame .app-top-exposure-container .discard-tracker__drop-frame--jo
 }
 
 /*
- * Fallback if the unified frame node is missing: restore a visible orange outer glow on the
- * seat / meld being hovered. (A prior rule set `box-shadow: none` here and killed all glow.)
+ * Fallbacks if the unified `.discard-tracker__drop-frame` node is missing — same green
+ * stroke / glow ratios as the shared drop-frame recipe above.
  */
 html .app-dnd-frame .app-top-exposure-container .app-opponents-rail__cell--swap-over {
-  /* Match selected-bot blue frame weight when the unified drop frame is not mounted. */
-  --_frame-outset: max(1px, calc(var(--rack-tile-w) * 0.0625));
-  --_glow-blur: max(2px, calc(var(--rack-tile-w) * 0.3125));
-  --_glow-spread: max(1px, calc(var(--rack-tile-w) * 0.09375));
+  --_hint-scale: var(--rack-tile-w, 2.65rem);
+  --_hint-border: max(0.5px, calc(var(--_hint-scale) * 0.015));
+  --_hint-ring: max(0.5px, calc(var(--_hint-scale) * 0.03));
+  --_hint-glow-blur: max(2px, calc(var(--_hint-scale) * 0.24));
+  --_hint-glow-spread: max(0.5px, calc(var(--_hint-scale) * 0.045));
+  --_hint-halo-blur: max(2px, calc(var(--_hint-scale) * 0.42));
+  --_hint-halo-spread: max(0.5px, calc(var(--_hint-scale) * 0.06));
   box-shadow:
-    0 0 0 0.5px #22c55e,
-    0 0 var(--_glow-blur) var(--_glow-spread)
-      color-mix(in srgb, #22c55e 55%, transparent) !important;
+    0 0 0 var(--_hint-border) #22c55e,
+    0 0 0 calc(var(--_hint-border) + var(--_hint-ring))
+      color-mix(in srgb, #22c55e 92%, #fff 8%),
+    0 0 var(--_hint-glow-blur) var(--_hint-glow-spread)
+      color-mix(in srgb, #22c55e 72%, transparent),
+    0 0 var(--_hint-halo-blur) var(--_hint-halo-spread)
+      color-mix(in srgb, #22c55e 38%, transparent) !important;
 }
+
+/* Blank exchange fallback: sorted-band frame on the overlay grid (cols 1–14). */
+html .app-dnd-frame
+  .app-top-exposure-container
+  .blank-exchange-dropzone--over
+  .discard-tracker__overlay-grid:not(:has(> .discard-tracker__drop-frame))::after {
+  --_drop-frame-color: #22c55e;
+  --_hint-scale: var(--rack-tile-w, 2.65rem);
+  --_hint-border: max(0.5px, calc(var(--_hint-scale) * 0.015));
+  --_hint-ring: max(0.5px, calc(var(--_hint-scale) * 0.03));
+  --_hint-glow-blur: max(2px, calc(var(--_hint-scale) * 0.24));
+  --_hint-glow-spread: max(0.5px, calc(var(--_hint-scale) * 0.045));
+  --_hint-halo-blur: max(2px, calc(var(--_hint-scale) * 0.42));
+  --_hint-halo-spread: max(0.5px, calc(var(--_hint-scale) * 0.06));
+  --_hint-gap: max(1px, calc(var(--_hint-scale) * 0.04));
+  --_frame-outset: calc(var(--_hint-gap) + var(--_hint-border));
+  content: '';
+  position: absolute;
+  top: calc(-1 * var(--_frame-outset));
+  bottom: calc(-1 * var(--_frame-outset));
+  left: calc(-1 * var(--_frame-outset));
+  width: calc(100% * 14 / 29 + 2 * var(--_frame-outset));
+  box-sizing: border-box;
+  border: var(--_hint-border) solid var(--_drop-frame-color);
+  border-radius: calc(
+    var(--discard-tray-tile-corner-r, var(--tile-face-border-radius)) + var(--_frame-outset)
+  );
+  box-shadow:
+    0 0 0 var(--_hint-ring) color-mix(in srgb, var(--_drop-frame-color) 92%, #fff 8%),
+    0 0 var(--_hint-glow-blur) var(--_hint-glow-spread)
+      color-mix(in srgb, var(--_drop-frame-color) 72%, transparent),
+    0 0 var(--_hint-halo-blur) var(--_hint-halo-spread)
+      color-mix(in srgb, var(--_drop-frame-color) 38%, transparent);
+  pointer-events: none;
+  z-index: 30;
+}
+
 html .app-dnd-frame
   .app-top-exposure-container:has(.discard-tracker__drop-frame)
   .app-opponents-rail__cell--swap-over {

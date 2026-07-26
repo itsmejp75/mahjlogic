@@ -687,7 +687,7 @@ export function RackCheckerPage({
             }}
             aria-hidden
           >
-            <TileFace def={dragGhost.def} rackSuitStacked />
+            <TileFace def={dragGhost.def} elevated rackSuitStacked />
           </div>
         ) : null}
       </div>

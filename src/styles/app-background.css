@@ -195,7 +195,11 @@
     var(--app-action-btn-label-disabled) 16%,
     var(--app-action-btn-bottom-pressed) 84%
   );
-  --rack-action-hint-border: #b56fd0;
+  /*
+   * MAHJ / Swap rack-action hint ring. Warm gold so it stays readable against
+   * themed pill faces (cyan / steel / orchid) — not the theme accent itself.
+   */
+  --rack-action-hint-border: #ffb800;
   --app-action-btn-face: linear-gradient(
     180deg,
     var(--app-action-btn-top) 0%,
@@ -425,7 +429,7 @@ html:not([data-app-theme]) {
   --app-action-btn-bottom-pressed: #3f4f60;
   --app-action-btn-border: color-mix(in srgb, #a8b8c8 68%, #fff 32%);
   --app-action-btn-label: #ffffff;
-  --rack-action-hint-border: #c4a46a;
+  --rack-action-hint-border: #ffb800;
 }
 
 html[data-app-theme='blue'] {
@@ -474,7 +478,7 @@ html[data-app-theme='blue'] {
   --app-action-btn-bottom-pressed: #0c6480;
   --app-action-btn-border: color-mix(in srgb, #00b4d8 55%, #fff 20%);
   --app-action-btn-label: #ffffff;
-  --rack-action-hint-border: #00b4d8;
+  --rack-action-hint-border: #ffb800;
 }
 
 html[data-app-theme='purple'] {
@@ -520,7 +524,7 @@ html[data-app-theme='purple'] {
   --app-action-btn-bottom-pressed: #582872;
   --app-action-btn-border: color-mix(in srgb, #b56fd0 55%, #fff 25%);
   --app-action-btn-label: #ffffff;
-  --rack-action-hint-border: #b56fd0;
+  --rack-action-hint-border: #ffb800;
 }
 
 /*
