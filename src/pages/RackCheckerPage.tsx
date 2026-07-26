@@ -21,9 +21,8 @@ import {
 import { arrayMove, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable'
 import { SortedDiscardTrayRow } from '../app/playSurfaceUi'
 import {
-  APP_THEME_PAGE_PAD_COLOR,
-  DEFAULT_APP_THEME,
-  isAppTheme,
+  applyAppThemeToDocument,
+  readAppThemeFromStorage,
   type AppTheme,
 } from '../app/appTheme'
 import { useRankSuggestedHandsWorker } from '../analysis/rankSuggestedHandsAsync'
@@ -68,21 +67,10 @@ const RACK_SIZE = 14
 const RACK_CHECKER_WALL_REMAINING = 72
 const DRAG_SLOP_PX = 8
 
-const LS_KEY_APP_THEME = 'mahjlogic.appTheme'
 const LS_KEY_HAND_PROBABILITY = 'mahjlogic.handProbabilityEnabled'
 const LS_KEY_TEN_JOKERS = 'mahjlogic.tenJokersEnabled'
 const LS_KEY_BLANK_TILES = 'mahjlogic.blankTilesEnabled'
 const LS_KEY_BLANK_TILE_COUNT = 'mahjlogic.blankTileCount'
-
-function readTheme(): AppTheme {
-  try {
-    const v = localStorage.getItem(LS_KEY_APP_THEME)
-    if (v != null && isAppTheme(v)) return v
-  } catch {
-    /* ignore */
-  }
-  return DEFAULT_APP_THEME
-}
 
 function readBool(key: string, fallback: boolean): boolean {
   try {
@@ -155,7 +143,7 @@ export function RackCheckerPage({
   overlay?: boolean
 } = {}) {
   const navigate = useNavigate()
-  const [appTheme] = useState<AppTheme>(() => readTheme())
+  const [appTheme] = useState<AppTheme>(() => readAppThemeFromStorage())
   /** Rack Checker always uses classic faces (picker + rack), independent of menu Simple. */
   const tileGraphics = DEFAULT_TILE_GRAPHICS
   const [cardId] = useState<PlayableCardId>(() => readPlayableCardFromStorage())
@@ -265,8 +253,7 @@ export function RackCheckerPage({
   )
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-app-theme', appTheme)
-    document.documentElement.style.backgroundColor = APP_THEME_PAGE_PAD_COLOR[appTheme]
+    applyAppThemeToDocument(appTheme)
   }, [appTheme])
 
   const rankInput = useMemo((): RankSuggestedHandsInput => {

@@ -60,9 +60,11 @@ import {
   APP_THEMES,
   APP_THEME_BTN_PREVIEW,
   APP_THEME_LABEL,
-  APP_THEME_PAGE_PAD_COLOR,
-  DEFAULT_APP_THEME,
+  applyAppThemeToDocument,
   isAppTheme,
+  LS_KEY_APP_THEME,
+  persistAppTheme,
+  readAppThemeFromStorage,
   type AppTheme,
 } from './app/appTheme'
 import { TileGraphicsProvider } from './tiles/TileGraphicsContext'
@@ -122,8 +124,6 @@ const BOT_WINS_LABEL = 'Bot wins'
 /** When false, rack / table action buttons use neutral gray (like Sort) instead of teal, purple, etc. */
 const LS_KEY_COLOR_BUTTONS = 'mahjlogic.colorButtonsEnabled'
 const LS_KEY_BOT_DIFFICULTY = 'mahjlogic.botDifficulty'
-/** Main chrome / background theme (`APP_THEMES` / `data-app-theme`). Default Abyss. */
-const LS_KEY_APP_THEME = 'mahjlogic.appTheme'
 /**
  * Tile face style (`TILE_GRAPHICS` / `data-tile-graphics`). Product default is Illustrative Classic.
  * Today: persisted in localStorage only. When accounts exist, the player’s choice should live in
@@ -279,25 +279,6 @@ function readBotDifficultyFromStorage(): BotDifficulty {
     /* ignore */
   }
   return DEFAULT_BOT_DIFFICULTY
-}
-
-function readAppThemeFromStorage(): AppTheme {
-  try {
-    const v = localStorage.getItem(LS_KEY_APP_THEME)
-    if (v === 'tan') {
-      localStorage.setItem(LS_KEY_APP_THEME, 'purple')
-      return 'purple'
-    }
-    if (v != null && isAppTheme(v)) return v
-  } catch {
-    /* ignore */
-  }
-  return DEFAULT_APP_THEME
-}
-
-function applyAppThemeToDocument(theme: AppTheme): void {
-  document.documentElement.setAttribute('data-app-theme', theme)
-  document.documentElement.style.backgroundColor = APP_THEME_PAGE_PAD_COLOR[theme]
 }
 
 function readJokerSwapHintFromStorage(): boolean {
@@ -2035,12 +2016,7 @@ export default function App() {
 
   const setAppThemeMode = useCallback((t: AppTheme) => {
     setAppTheme(t)
-    applyAppThemeToDocument(t)
-    try {
-      localStorage.setItem(LS_KEY_APP_THEME, t)
-    } catch {
-      /* ignore */
-    }
+    persistAppTheme(t)
   }, [])
 
   useLayoutEffect(() => {
@@ -4640,12 +4616,7 @@ export default function App() {
       }
       if (prefs.appTheme != null && isAppTheme(prefs.appTheme)) {
         setAppTheme(prefs.appTheme)
-        applyAppThemeToDocument(prefs.appTheme)
-        try {
-          localStorage.setItem(LS_KEY_APP_THEME, prefs.appTheme)
-        } catch {
-          /* ignore */
-        }
+        persistAppTheme(prefs.appTheme)
       }
       if (prefs.tileGraphics != null && isTileGraphics(prefs.tileGraphics)) {
         setTileGraphics(prefs.tileGraphics)

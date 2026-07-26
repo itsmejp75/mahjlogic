@@ -1,5 +1,5 @@
 import type { BotDifficulty } from '../analysis/botAI'
-import type { AppTheme } from '../app/appTheme'
+import { isAppTheme, type AppTheme } from '../app/appTheme'
 import type { PlayableCardId } from '../card/cardCatalog'
 import type { BlankTileCount } from '../mahjong/deck'
 import type { TileGraphics } from '../tiles/tileGraphics'
@@ -46,7 +46,7 @@ export function parseSyncedUserPreferences(raw: unknown): Partial<SyncedUserPref
   if (raw.botDifficulty === 'easy' || raw.botDifficulty === 'normal' || raw.botDifficulty === 'hard') {
     out.botDifficulty = raw.botDifficulty
   }
-  if (typeof raw.appTheme === 'string') out.appTheme = raw.appTheme as AppTheme
+  if (typeof raw.appTheme === 'string' && isAppTheme(raw.appTheme)) out.appTheme = raw.appTheme
   if (typeof raw.tileGraphics === 'string') out.tileGraphics = raw.tileGraphics as TileGraphics
   if (typeof raw.botWinsEnabled === 'boolean') out.botWinsEnabled = raw.botWinsEnabled
   if (typeof raw.colorButtonsEnabled === 'boolean') out.colorButtonsEnabled = raw.colorButtonsEnabled

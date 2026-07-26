@@ -15,16 +15,21 @@
   --landing-field-ink: #1f2937;
   --landing-field-placeholder: #8b93a1;
 
-  --rack-action-face: var(--app-action-btn-face);
-  --rack-action-face-pressed: var(--app-action-btn-face-pressed);
-  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed-chrome);
-  --rack-action-shadow-rest: var(--app-action-btn-shadow-rest);
-  --rack-action-pressed: var(--app-action-btn-shadow-pressed);
-  --rack-action-border-rest: var(--app-action-btn-border-rest);
-  --rack-action-border-hold: var(--app-action-btn-border-hold);
-  --rack-action-border-color: var(--app-action-btn-border);
-  --rack-action-label-color: var(--app-action-btn-label);
-  --rack-action-label-color-disabled: var(--app-action-btn-label-disabled);
+  /*
+   * Auth chrome ignores saved game theme. A stale Mystic (`purple`) localStorage
+   * value must not orchid-tint Continue with Google — keep PokerStars gray here;
+   * SIGN IN still overrides via `--primary`.
+   */
+  --rack-action-face: var(--app-action-btn-face-neutral);
+  --rack-action-face-pressed: var(--app-action-btn-face-pressed-neutral);
+  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed-chrome-neutral);
+  --rack-action-shadow-rest: var(--app-action-btn-shadow-rest-neutral);
+  --rack-action-pressed: var(--app-action-btn-shadow-pressed-deep-neutral);
+  --rack-action-border-rest: var(--app-action-btn-border-rest-neutral);
+  --rack-action-border-hold: var(--app-action-btn-border-rest-neutral);
+  --rack-action-border-color: var(--app-action-btn-border-rest-neutral);
+  --rack-action-label-color: #ffffff;
+  --rack-action-label-color-disabled: var(--app-action-btn-label-disabled-text-neutral);
 
   position: relative;
   isolation: isolate;

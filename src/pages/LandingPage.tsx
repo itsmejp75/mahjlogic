@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import watermarkSrc from '../assets/mahjlogic-watermark.svg?url'
+import { applyAppThemeToDocument, DEFAULT_APP_THEME } from '../app/appTheme'
 import { useAuth } from '../auth/AuthProvider'
 import {
   isGoogleIdentityConfigured,
@@ -55,6 +56,11 @@ export function LandingPage() {
   const [gisReady, setGisReady] = useState(false)
   const googleHostRef = useRef<HTMLDivElement>(null)
   const useGis = configured && isGoogleIdentityConfigured()
+
+  /** Login always paints Abyss; do not rewrite localStorage (cloud restores on sign-in). */
+  useLayoutEffect(() => {
+    applyAppThemeToDocument(DEFAULT_APP_THEME)
+  }, [])
 
   function clearMessages() {
     setError(null)

@@ -3,6 +3,9 @@ export const APP_THEMES = ['blue', 'dark', 'purple'] as const
 
 export type AppTheme = (typeof APP_THEMES)[number]
 
+/** localStorage cache for the active theme (cloud prefs win after sign-in). */
+export const LS_KEY_APP_THEME = 'mahjlogic.appTheme'
+
 export const APP_THEME_LABEL: Record<AppTheme, string> = {
   dark: 'Phantom',
   blue: 'Abyss',
@@ -47,4 +50,34 @@ export const APP_THEME_BTN_PREVIEW: Record<
 
 export function isAppTheme(s: string): s is AppTheme {
   return (APP_THEMES as readonly string[]).includes(s)
+}
+
+/** Read cached theme; migrates legacy `tan` → Mystic. */
+export function readAppThemeFromStorage(): AppTheme {
+  try {
+    const v = localStorage.getItem(LS_KEY_APP_THEME)
+    if (v === 'tan') {
+      localStorage.setItem(LS_KEY_APP_THEME, 'purple')
+      return 'purple'
+    }
+    if (v != null && isAppTheme(v)) return v
+  } catch {
+    /* ignore */
+  }
+  return DEFAULT_APP_THEME
+}
+
+export function applyAppThemeToDocument(theme: AppTheme): void {
+  document.documentElement.setAttribute('data-app-theme', theme)
+  document.documentElement.style.backgroundColor = APP_THEME_PAGE_PAD_COLOR[theme]
+}
+
+/** Apply theme to the document and persist the localStorage cache. */
+export function persistAppTheme(theme: AppTheme): void {
+  applyAppThemeToDocument(theme)
+  try {
+    localStorage.setItem(LS_KEY_APP_THEME, theme)
+  } catch {
+    /* ignore */
+  }
 }

@@ -14,8 +14,10 @@ import {
 } from '../tiles/tileGraphics'
 import { useTileGraphics } from '../tiles/TileGraphicsContext'
 
-/** Mobile Safari can fail a concurrent SVG load and keep the broken-image icon forever. */
-const TILE_ART_LOAD_MAX_ATTEMPTS = 3
+/** Burst retries before backing off (mobile Safari can drop concurrent SVG loads). */
+const TILE_ART_LOAD_BURST_ATTEMPTS = 3
+/** After a burst fails, wait this long then start another burst — never switch to Simple glyphs. */
+const TILE_ART_LOAD_COOLDOWN_MS = 2000
 
 function imgHasDecodedPixels(img: HTMLImageElement | null): boolean {
   return img != null && img.complete && img.naturalWidth > 0
@@ -28,14 +30,15 @@ function imgHasDecodedPixels(img: HTMLImageElement | null): boolean {
  * Important: cached SVGs can be `complete` before React attaches `onLoad`. Without a sync
  * `complete` check, those faces stay at opacity 0 (blank ivory) while DragOverlay mounts a
  * fresh `<img>` that does fire `onLoad` — exactly "face shows while dragging, blank when dropped".
+ *
+ * Never escalate to the solid-color glyph face: a permanent `artFailed` fallback mixed Classic
+ * SVG tiles with green "5B"-style Simple faces in the suggested-hands strip.
  */
-function TileArtImage({ src, onFailed }: { src: string; onFailed: () => void }) {
+function TileArtImage({ src }: { src: string }) {
   const [attempt, setAttempt] = useState(0)
   const [loaded, setLoaded] = useState(() => isClassicTileArtReady(src))
   const retryTimerRef = useRef(0)
   const imgRef = useRef<HTMLImageElement | null>(null)
-  const onFailedRef = useRef(onFailed)
-  onFailedRef.current = onFailed
 
   useEffect(() => {
     setAttempt(0)
@@ -73,14 +76,14 @@ function TileArtImage({ src, onFailed }: { src: string; onFailed: () => void }) 
       }}
       onError={() => {
         setLoaded(false)
-        if (attempt + 1 >= TILE_ART_LOAD_MAX_ATTEMPTS) {
-          onFailedRef.current()
-          return
-        }
-        const next = attempt + 1
+        const nextInBurst = (attempt % TILE_ART_LOAD_BURST_ATTEMPTS) + 1
+        const delay =
+          nextInBurst >= TILE_ART_LOAD_BURST_ATTEMPTS
+            ? TILE_ART_LOAD_COOLDOWN_MS
+            : 200 * nextInBurst
         window.clearTimeout(retryTimerRef.current)
         // Stagger retries so a rack of failed faces does not re-flood the connection pool.
-        retryTimerRef.current = window.setTimeout(() => setAttempt(next), 200 * next)
+        retryTimerRef.current = window.setTimeout(() => setAttempt((n) => n + 1), delay)
       }}
     />
   )
@@ -193,15 +196,11 @@ export const TileFace = memo(function TileFace({
   const skinCardInk = cardInkForTileFace(def, cardInk, tileGraphics)
   const illustrativeMode =
     skinCardInk == null && isIllustrativeTileGraphics(tileGraphics) && !sortedDiscardGlyph
-  const desiredArtUrl = illustrativeMode ? classicTileArtUrl(def) : null
-  const [artFailed, setArtFailed] = useState(false)
-  useEffect(() => {
-    setArtFailed(false)
-  }, [desiredArtUrl, tileGraphics])
-  const artUrl = desiredArtUrl != null && !artFailed ? desiredArtUrl : null
+  const artUrl = illustrativeMode ? classicTileArtUrl(def) : null
   // Blanks have no art image, but in illustrative mode they should still wear the illustrative
   // ivory face + rim bevel (the `::before` highlight/shadow) so they match every other rack tile
   // instead of falling back to a flat solid fill that reads as a different white.
+  // Suit/honor faces with a pending SVG keep the ivory chrome too — never drop to Simple glyphs.
   const illustrativeFace = artUrl != null || (illustrativeMode && def.cat === 'blank')
 
   const skinClass =
@@ -232,7 +231,7 @@ export const TileFace = memo(function TileFace({
       aria-label={ariaHidden ? undefined : tileAriaLabel(def)}
     >
       {artUrl != null ? (
-        <TileArtImage src={artUrl} onFailed={() => setArtFailed(true)} />
+        <TileArtImage src={artUrl} />
       ) : stackedSuit ? (
         <>
           <span className="tile-face__rank">{def.rank}</span>
