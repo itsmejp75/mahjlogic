@@ -962,7 +962,7 @@ describe('calculateWallCompletionProbability', () => {
     expect(withHint).toBeGreaterThan(withoutHint)
   })
 
-  it('ignores joker-swap hint relief when more than 4 tiles away', () => {
+  it('applies joker-swap hint relief even when more than 4 tiles away', () => {
     const slots: CompletionSlot[] = [
       { tileType: 'w:west', targetCount: 3 },
       { tileType: 'w:south', targetCount: 4 },
@@ -994,7 +994,166 @@ describe('calculateWallCompletionProbability', () => {
       ...shared,
       jokerReliefFromSwapHint: 2,
     })
-    expect(withHint).toBe(withoutHint)
+    expect(withHint).toBeGreaterThanOrEqual(withoutHint)
+  })
+
+  describe('early chase progressive calls (2468 #3 shape)', () => {
+    const slots: CompletionSlot[] = [
+      { tileType: 'f', targetCount: 3 },
+      { tileType: 's:crak:2', targetCount: 4 },
+      { tileType: 's:bam:4', targetCount: 1 },
+      { tileType: 's:bam:6', targetCount: 2 },
+      { tileType: 's:crak:8', targetCount: 4 },
+    ]
+    const openingNaturals = {
+      f: 3,
+      's:crak:2': 1,
+      's:bam:4': 1,
+      's:bam:6': 2,
+      's:crak:8': 2,
+    }
+
+    it('scores above concealed (no-call) baseline at opening Away 5', () => {
+      const ctx: HandInventoryContext = {
+        naturals: openingNaturals,
+        jokersInHand: 0,
+        blanksInHand: 0,
+        discardCounts: {},
+        jokersDisallowed: false,
+      }
+      const completion = computeHandCompletionMetrics(slots, ctx)
+      const shared = {
+        slots,
+        ctx,
+        completion,
+        visibleNaturals: {},
+        visibleJokers: 0,
+        visibleBlanks: 0,
+        wallRemaining: 99,
+        isSinglesAndPairs: false,
+        deck: DEFAULT_DECK_COMPOSITION,
+        playerRackTileCount: 14,
+        tilesNeededRough: 5,
+      }
+      const open = calculateWallCompletionProbability({ ...shared, isConcealed: false })
+      const concealed = calculateWallCompletionProbability({ ...shared, isConcealed: true })
+      expect(open).toBeGreaterThan(concealed)
+      expect(open).toBeGreaterThanOrEqual(18)
+      expect(open).toBeLessThan(50)
+    })
+
+    it('does not drop Prob when an 8 is drawn toward the kong (Away 5→4)', () => {
+      const beforeCtx: HandInventoryContext = {
+        naturals: openingNaturals,
+        jokersInHand: 0,
+        blanksInHand: 0,
+        discardCounts: {},
+        jokersDisallowed: false,
+      }
+      const afterCtx: HandInventoryContext = {
+        naturals: { ...openingNaturals, 's:crak:8': 3 },
+        jokersInHand: 0,
+        blanksInHand: 0,
+        discardCounts: {},
+        jokersDisallowed: false,
+      }
+      const shared = {
+        slots,
+        visibleNaturals: {},
+        visibleJokers: 0,
+        visibleBlanks: 0,
+        wallRemaining: 98,
+        isConcealed: false,
+        isSinglesAndPairs: false,
+        deck: DEFAULT_DECK_COMPOSITION,
+        playerRackTileCount: 14,
+      }
+      const before = calculateWallCompletionProbability({
+        ...shared,
+        ctx: beforeCtx,
+        completion: computeHandCompletionMetrics(slots, beforeCtx),
+        tilesNeededRough: 5,
+      })
+      const after = calculateWallCompletionProbability({
+        ...shared,
+        ctx: afterCtx,
+        completion: computeHandCompletionMetrics(slots, afterCtx),
+        tilesNeededRough: 4,
+      })
+      expect(after).toBeGreaterThanOrEqual(before)
+    })
+
+    it('raises Prob with joker-swap relief at Away 5', () => {
+      const ctx: HandInventoryContext = {
+        naturals: openingNaturals,
+        jokersInHand: 0,
+        blanksInHand: 0,
+        discardCounts: {},
+        jokersDisallowed: false,
+      }
+      const completion = computeHandCompletionMetrics(slots, ctx)
+      const shared = {
+        slots,
+        ctx,
+        completion,
+        visibleNaturals: {},
+        visibleJokers: 0,
+        visibleBlanks: 0,
+        wallRemaining: 99,
+        isConcealed: false,
+        isSinglesAndPairs: false,
+        deck: DEFAULT_DECK_COMPOSITION,
+        playerRackTileCount: 14,
+        tilesNeededRough: 5,
+      }
+      const without = calculateWallCompletionProbability(shared)
+      const withSwap = calculateWallCompletionProbability({
+        ...shared,
+        jokerReliefFromSwapHint: 2,
+      })
+      expect(withSwap).toBeGreaterThan(without)
+    })
+
+    it('still gives full call credit when a kong is already exposure-ready', () => {
+      const readyCtx: HandInventoryContext = {
+        naturals: { ...openingNaturals, 's:crak:8': 3 },
+        jokersInHand: 0,
+        blanksInHand: 0,
+        discardCounts: {},
+        jokersDisallowed: false,
+      }
+      expect(isSlotExposureReady(slots[4]!, readyCtx.naturals, 0)).toBe(true)
+      const completion = computeHandCompletionMetrics(slots, readyCtx)
+      const readyOpen = calculateWallCompletionProbability({
+        slots,
+        ctx: readyCtx,
+        completion,
+        visibleNaturals: {},
+        visibleJokers: 0,
+        visibleBlanks: 0,
+        wallRemaining: 99,
+        isConcealed: false,
+        isSinglesAndPairs: false,
+        deck: DEFAULT_DECK_COMPOSITION,
+        playerRackTileCount: 14,
+        tilesNeededRough: 4,
+      })
+      const readyConcealed = calculateWallCompletionProbability({
+        slots,
+        ctx: readyCtx,
+        completion,
+        visibleNaturals: {},
+        visibleJokers: 0,
+        visibleBlanks: 0,
+        wallRemaining: 99,
+        isConcealed: true,
+        isSinglesAndPairs: false,
+        deck: DEFAULT_DECK_COMPOSITION,
+        playerRackTileCount: 14,
+        tilesNeededRough: 4,
+      })
+      expect(readyOpen).toBeGreaterThan(readyConcealed)
+    })
   })
 
   it('does not apply joker-swap hint relief for singles-and-pairs lines', () => {
@@ -1325,5 +1484,106 @@ describe('liveClaimableDiscard completion probability', () => {
     expect(base.completionProbability).toBeLessThan(100)
     expect(boosted.tilesNeededRough).toBe(1)
     expect(boosted.completionProbability).toBe(100)
+  })
+
+  it('lowers Prob when a needed tile is lit but cannot be called (2468 FFF 22 44 666 8888)', () => {
+    // One natural 8, no jokers — cannot pung/kong the discarded 8. That copy leaves the
+    // hidden outs pool, so Prob should fall (not rise via a fake concealed pickup).
+    const pattern =
+      PRACTICE_PATTERNS.find((p) => p.id === '2468-7') ??
+      NMJL_2026_PATTERNS.find((p) => p.section === '2468' && p.cardHandCode === '5')!
+    const hand = [
+      { id: 'f1', def: { cat: 'flower' as const } },
+      { id: 'f2', def: { cat: 'flower' as const } },
+      { id: 'f3', def: { cat: 'flower' as const } },
+      { id: 'b2a', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 2 } },
+      { id: 'b2b', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 2 } },
+      { id: 'b3', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 3 } },
+      { id: 'b4a', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 4 } },
+      { id: 'b4b', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 4 } },
+      { id: 'gd1', def: { cat: 'dragon' as const, dragon: 'green' as const } },
+      { id: 'gd2', def: { cat: 'dragon' as const, dragon: 'green' as const } },
+      { id: 'b6', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 6 } },
+      { id: 'b8', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 8 } },
+      { id: 'n1', def: { cat: 'wind' as const, wind: 'N' as const } },
+    ]
+    const live = {
+      id: 'b8-live',
+      def: { cat: 'suit' as const, suit: 'bam' as const, rank: 8 },
+    }
+
+    const withoutLive = rankSuggestedHands({
+      hand,
+      wallRemaining: 82,
+      discards: [],
+      exposures: [],
+      patterns: [pattern],
+      deckSettings: { totalJokersInGame: 8, totalBlanksInGame: 0 },
+    })
+    const withLive = rankSuggestedHands({
+      hand,
+      wallRemaining: 82,
+      discards: [],
+      exposures: [],
+      patterns: [pattern],
+      deckSettings: { totalJokersInGame: 8, totalBlanksInGame: 0 },
+      liveClaimableDiscard: live,
+    })
+
+    const base = withoutLive.find((l) => l.id === pattern.id)!
+    const lit = withLive.find((l) => l.id === pattern.id)!
+    expect(base.tilesNeededRough).toBe(5)
+    expect(lit.tilesNeededRough).toBe(5)
+    expect(base.completionProbability).toBeGreaterThan(0)
+    expect(lit.completionProbability).toBeLessThan(base.completionProbability)
+  })
+
+  it('still boosts Prob when a lit discard can legally pung toward the line', () => {
+    const pattern =
+      PRACTICE_PATTERNS.find((p) => p.id === '2468-7') ??
+      NMJL_2026_PATTERNS.find((p) => p.section === '2468' && p.cardHandCode === '5')!
+    // Two natural 6s → can pung a discarded 6 toward 666.
+    const hand = [
+      { id: 'f1', def: { cat: 'flower' as const } },
+      { id: 'f2', def: { cat: 'flower' as const } },
+      { id: 'f3', def: { cat: 'flower' as const } },
+      { id: 'b2a', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 2 } },
+      { id: 'b2b', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 2 } },
+      { id: 'b4a', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 4 } },
+      { id: 'b4b', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 4 } },
+      { id: 'b6a', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 6 } },
+      { id: 'b6b', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 6 } },
+      { id: 'b8a', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 8 } },
+      { id: 'b8b', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 8 } },
+      { id: 'b3', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 3 } },
+      { id: 'n1', def: { cat: 'wind' as const, wind: 'N' as const } },
+    ]
+    const live = {
+      id: 'b6-live',
+      def: { cat: 'suit' as const, suit: 'bam' as const, rank: 6 },
+    }
+
+    const withoutLive = rankSuggestedHands({
+      hand,
+      wallRemaining: 82,
+      discards: [],
+      exposures: [],
+      patterns: [pattern],
+      deckSettings: { totalJokersInGame: 8, totalBlanksInGame: 0 },
+    })
+    const withLive = rankSuggestedHands({
+      hand,
+      wallRemaining: 82,
+      discards: [],
+      exposures: [],
+      patterns: [pattern],
+      deckSettings: { totalJokersInGame: 8, totalBlanksInGame: 0 },
+      liveClaimableDiscard: live,
+    })
+
+    const base = withoutLive.find((l) => l.id === pattern.id)!
+    const lit = withLive.find((l) => l.id === pattern.id)!
+    expect(lit.tilesNeededRough).toBe(base.tilesNeededRough)
+    expect(lit.completionProbability).toBeGreaterThan(base.completionProbability)
   })
 })

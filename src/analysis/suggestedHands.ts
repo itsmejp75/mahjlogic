@@ -231,6 +231,10 @@ function liveClaimableDiscardCompletesPattern(
 /**
  * Best post-claim rack if `called` can be claimed toward `p` (Away strictly improves).
  * Used so Prob already prices a live Call; committing the call should not drop the %.
+ *
+ * NMJL: a discard may enter the concealed rack or open a pair/single exposure only for
+ * Mah Jongg. Mid-hand calls are pung/kong/quint/sextet only — never treat an uncallable
+ * needed tile as already acquired just because it is lit beside the rack.
  */
 function previewLiveClaimForProbability(
   p: PracticePattern,
@@ -247,22 +251,27 @@ function previewLiveClaimForProbability(
   const consider = (
     handNext: TileInstance[],
     melds: ReadonlyArray<{ tiles: TileInstance[] }>,
+    /** When set, only accept this path if post-claim Away equals the value (Mah Jongg-only paths). */
+    requireAway?: number,
   ) => {
     if (melds.length > existingMelds.length && !claimMeldsFitPracticePattern(p, melds)) return
     const away = tilesAwayForPracticePattern(p, handNext, melds)
     if (away >= currentAway) return
+    if (requireAway !== undefined && away !== requireAway) return
     if (!best || away < best.away) best = { hand: handNext, melds, away }
   }
 
-  // Concealed 14th (no new exposure).
-  consider([...hand, called], existingMelds)
+  // Concealed 14th (no new exposure) — Mah Jongg only; cannot pocket a discard mid-hand.
+  consider([...hand, called], existingMelds, 0)
 
   if (!p.closed) {
+    // Pair / single-style 2-tile exposure — Mah Jongg only (NMJL).
     const oneFromHand = findExactMatches(hand, called.def)
     for (const t of oneFromHand) {
       const handNext = hand.filter((x) => x.id !== t.id)
-      consider(handNext, [...existingMelds, { tiles: [called, t] }])
+      consider(handNext, [...existingMelds, { tiles: [called, t] }], 0)
     }
+    // Pung / kong / quint / sextet — legal mid-hand when Away improves.
     for (const needed of [2, 3, 4, 5] as const) {
       const used = pickHandTilesForLiveClaim(hand, called.def, needed)
       if (!used) continue
@@ -277,8 +286,10 @@ function previewLiveClaimForProbability(
 
 /**
  * Wall-completion %. A live claimable discard that already wins → 100.
- * A live discard that improves Away is scored on the post-claim rack so Call does not
- * drop Prob. Away in the UI stays pre-call.
+ * A live discard that can legally be called (pung+) and improves Away is scored on the
+ * post-claim rack so Call does not drop Prob. Otherwise the lit tile is treated as already
+ * out of the hidden pool (Prob can fall when a needed copy is burned). Away in the UI
+ * stays pre-call.
  */
 function completionProbabilityForLine(
   p: PracticePattern,
@@ -338,10 +349,16 @@ function completionProbabilityForLine(
     )
   }
 
+  // Not claiming this discard for the line — it is gone from the hidden outs pool.
+  const visibleForProb =
+    liveClaimableDiscard && !visible.some((t) => t.id === liveClaimableDiscard.id)
+      ? [...visible, liveClaimableDiscard]
+      : visible
+
   return wallCompletionProbForLine(
     p,
     rackForPattern,
-    visible,
+    visibleForProb,
     wallRemaining,
     deck,
     slots,
@@ -5803,7 +5820,8 @@ export type RankSuggestedHandsInput = {
   }
   /**
    * Live unreclaimed opponent discard (bot-turn Call/Ignore). Still omitted from {@link discards}
-   * and from Away, but lines this tile completes for Mah Jongg show Prob % 100.
+   * and from Away. Prob treats it as claimable when a legal pung+ improves the line (or 100 on
+   * Mah Jongg); otherwise it counts as already out of the hidden pool.
    */
   liveClaimableDiscard?: TileInstance | null
   /**

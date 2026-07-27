@@ -537,7 +537,9 @@ function linearBlend(a: number, b: number, weightA: number): number {
 
 /**
  * Extra acquisition trials from opponent discards for one slot.
- * Credit only when the meld is already exposure-ready, or for a near-MJ pair/single declare.
+ * - Near-MJ pair/single declare
+ * - Already exposure-ready pung/kong/quint
+ * - Progressive: not yet ready — scale call credit by P(become ready via wall/Charleston naturals)
  */
 function callTrialsForSlot(
   wallDraws: number,
@@ -547,6 +549,9 @@ function callTrialsForSlot(
   isConcealed: boolean,
   isSinglesAndPairs: boolean,
   tilesNeededRough: number,
+  baseAcquisition: number,
+  outs: number,
+  unknownPool: number,
 ): number {
   if (wallDraws <= 0 || isConcealed || isSinglesAndPairs) return 0
 
@@ -560,8 +565,34 @@ function callTrialsForSlot(
     return Math.round(wallDraws * 3 * NEAR_MJ_CALL_DISCOUNT)
   }
 
-  if (!isSlotExposureReady(slot, naturals, jokersOnSlot)) return 0
-  return Math.round(wallDraws * 3 * CALL_WINDOW_DISCOUNT)
+  if (isSlotExposureReady(slot, naturals, jokersOnSlot)) {
+    return Math.round(wallDraws * 3 * CALL_WINDOW_DISCOUNT)
+  }
+
+  // Progressive kong/pung path: draw up to exposure-ready, then call the last tile.
+  if (slot.targetCount < 3) return 0
+  const held =
+    countNaturalsForSlot(slot.tileType, naturals) + Math.max(0, jokersOnSlot)
+  const readyAt = slot.targetCount - 1
+  if (held >= readyAt) return 0
+  const toReady = readyAt - held
+  if (toReady <= 0 || outs < toReady) return 0
+
+  const readyTrials = Math.min(unknownPool, baseAcquisition)
+  const readyFactor = hypergeometricAtLeast(outs, readyTrials, unknownPool, toReady)
+  if (readyFactor <= 0) return 0
+  return Math.round(readyFactor * wallDraws * 3 * CALL_WINDOW_DISCOUNT)
+}
+
+/** Cap summed per-slot call extras so multi-meld independence does not explode. */
+function capCallExtras(extras: number[], wallDraws: number): number[] {
+  if (extras.length === 0 || wallDraws <= 0) return extras
+  // Allow one full near-MJ window (or 1.5× standard call windows) before scaling.
+  const cap = Math.round(wallDraws * 3 * NEAR_MJ_CALL_DISCOUNT * 1.5)
+  const sum = extras.reduce((a, b) => a + b, 0)
+  if (sum <= cap || sum <= 0) return extras
+  const scale = cap / sum
+  return extras.map((e) => Math.round(e * scale))
 }
 
 /**
@@ -695,10 +726,8 @@ export function calculateWallCompletionProbability(
   )
 
   const jokerCapacityRemaining = jokerEligibleCapacityRemaining(slots, ctx, completion)
-  let swapRemaining =
-    tilesNeededRough > 4
-      ? 0
-      : Math.min(jokerReliefFromSwapHint, jokerCapacityRemaining)
+  // Swap relief whenever exposed jokers are swappable — not gated on Away.
+  const swapRemaining = Math.min(jokerReliefFromSwapHint, jokerCapacityRemaining)
 
   // Apply swap-hint relief with the same scarcity / call-ready preferences as hand jokers.
   const swapOnSlot = slots.map(() => 0)
@@ -717,21 +746,20 @@ export function calculateWallCompletionProbability(
   }
 
   let fluidBlankBudget = fluidBlanks
-  let anyCallCredit = false
   let totalFlexNeed = 0
   let totalNaturalOuts = 0
   let meldJokerCapacity = 0
 
-  type NaturalOnlyNeed = { outs: number; need: number; trials: number }
-  type MeldNeed = {
+  type SlotGap = {
+    slot: CompletionSlot
+    jokersOnSlot: number
+    gapAfterWild: number
     outs: number
-    remaining: number
-    trials: number
-    minJokers: number
+    callExtra: number
+    jokersAllowed: boolean
   }
 
-  const naturalOnly: NaturalOnlyNeed[] = []
-  const meldNeeds: MeldNeed[] = []
+  const gaps: SlotGap[] = []
 
   for (let i = 0; i < slots.length; i++) {
     const slot = slots[i]!
@@ -762,27 +790,63 @@ export function calculateWallCompletionProbability(
       isConcealed,
       isSinglesAndPairs,
       tilesNeededRough,
+      baseAcquisition,
+      outs,
+      unknownPool,
     )
+
+    gaps.push({
+      slot,
+      jokersOnSlot,
+      gapAfterWild,
+      outs,
+      callExtra,
+      jokersAllowed: slotAllowsJokers(slot, ctx.jokersDisallowed),
+    })
+  }
+
+  const cappedExtras = capCallExtras(
+    gaps.map((g) => g.callExtra),
+    wallDraws,
+  )
+  let anyCallCredit = false
+  type NaturalOnlyNeed = { outs: number; need: number; trials: number }
+  type MeldNeed = {
+    outs: number
+    remaining: number
+    trials: number
+    minJokers: number
+  }
+
+  const naturalOnly: NaturalOnlyNeed[] = []
+  const meldNeeds: MeldNeed[] = []
+
+  for (let i = 0; i < gaps.length; i++) {
+    const g = gaps[i]!
+    const callExtra = cappedExtras[i]!
     if (callExtra > 0) anyCallCredit = true
     const trials = Math.min(unknownPool, baseAcquisition + callExtra)
 
-    const jokersAllowed = slotAllowsJokers(slot, ctx.jokersDisallowed)
-
-    if (!jokersAllowed) {
-      if (outs < gapAfterWild) return 0
-      naturalOnly.push({ outs, need: gapAfterWild, trials })
-      totalFlexNeed += gapAfterWild
+    if (!g.jokersAllowed) {
+      if (g.outs < g.gapAfterWild) return 0
+      naturalOnly.push({ outs: g.outs, need: g.gapAfterWild, trials })
+      totalFlexNeed += g.gapAfterWild
       // Cap outs by this slot's remaining need — surplus copies of an easy tile (e.g. flowers)
       // must not count as fungible cover for unrelated scarce melds.
-      totalNaturalOuts += Math.min(outs, gapAfterWild)
+      totalNaturalOuts += Math.min(g.outs, g.gapAfterWild)
       continue
     }
 
-    const minJokers = Math.max(0, gapAfterWild - outs)
-    meldNeeds.push({ outs, remaining: gapAfterWild, trials, minJokers })
-    totalFlexNeed += gapAfterWild
-    totalNaturalOuts += Math.min(outs, gapAfterWild)
-    meldJokerCapacity += gapAfterWild
+    const minJokers = Math.max(0, g.gapAfterWild - g.outs)
+    meldNeeds.push({
+      outs: g.outs,
+      remaining: g.gapAfterWild,
+      trials,
+      minJokers,
+    })
+    totalFlexNeed += g.gapAfterWild
+    totalNaturalOuts += Math.min(g.outs, g.gapAfterWild)
+    meldJokerCapacity += g.gapAfterWild
   }
 
   // Away exceeds acquisition trials: calls / exchanges can close only a modest gap.
@@ -837,11 +901,19 @@ export function calculateWallCompletionProbability(
     unknownPool,
     totalNaturalOuts + Math.min(hiddenJokers, meldJokerCapacity),
   )
+  const progressiveCallTotal = cappedExtras.reduce((a, b) => a + b, 0)
   const prospectiveCalls =
     !isConcealed && !isSinglesAndPairs && wallRemaining >= 60
       ? Math.round(wallDraws * 3 * PROSPECTIVE_CALL_DISCOUNT)
       : 0
-  const coverTrials = Math.min(unknownPool, baseAcquisition + prospectiveCalls)
+  // Feed call unlock into cover, but at most one standard call window (half weight).
+  // Summing every ready meld's extras overstated hands with many call-ready slots.
+  const oneCallWindow = Math.round(wallDraws * 3 * CALL_WINDOW_DISCOUNT)
+  const coverCallBoost = Math.round(Math.min(progressiveCallTotal, oneCallWindow) * 0.5)
+  const coverTrials = Math.min(
+    unknownPool,
+    baseAcquisition + prospectiveCalls + coverCallBoost,
+  )
   // Cover tracks pattern Away (tilesNeededRough), capped by post-joker/swap flex so hints help.
   // Using raw flex alone overstates need vs Away and crushes opening Prob % (mean hits << flex).
   const coverNeed = Math.min(totalFlexNeed, Math.max(0, tilesNeededRough))
