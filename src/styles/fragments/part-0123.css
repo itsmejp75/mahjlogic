@@ -2307,51 +2307,8 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 }
 
 /*
- * Bot Possible Hands: same recess geometry as Suggested Hands (`::after` top lip +
- * full-height sides, never the foot) — retinted to hint gold. Bright edge stop reads as
- * the stroke; the feather is the glow. No border / box-shadow / mask.
- */
-.app
-  .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
-  .bot-exposure-hands-panel {
-  --_drop-frame-color: var(--rack-action-hint-border, #ffb800);
-  --_bot-tray-glow-edge: var(--_drop-frame-color);
-  --_bot-tray-glow-soft: color-mix(in srgb, var(--_drop-frame-color) 55%, transparent);
-  --_bot-tray-side-blur: linear-gradient(
-      to bottom in oklab,
-      var(--_bot-tray-glow-edge) 0%,
-      var(--_bot-tray-glow-soft) 10%,
-      color-mix(in oklab, var(--_bot-tray-glow-soft) 62%, transparent) 28%,
-      color-mix(in oklab, var(--_bot-tray-glow-soft) 32%, transparent) 52%,
-      color-mix(in oklab, var(--_bot-tray-glow-soft) 12%, transparent) 74%,
-      color-mix(in oklab, var(--_bot-tray-glow-soft) 3%, transparent) 90%,
-      transparent 100%
-    ),
-    linear-gradient(
-      to right in oklab,
-      var(--_bot-tray-glow-edge) 0%,
-      var(--_bot-tray-glow-soft) 10%,
-      color-mix(in oklab, var(--_bot-tray-glow-soft) 62%, transparent) 28%,
-      color-mix(in oklab, var(--_bot-tray-glow-soft) 32%, transparent) 52%,
-      color-mix(in oklab, var(--_bot-tray-glow-soft) 12%, transparent) 74%,
-      color-mix(in oklab, var(--_bot-tray-glow-soft) 3%, transparent) 90%,
-      transparent 100%
-    ),
-    linear-gradient(
-      to left in oklab,
-      var(--_bot-tray-glow-edge) 0%,
-      var(--_bot-tray-glow-soft) 10%,
-      color-mix(in oklab, var(--_bot-tray-glow-soft) 62%, transparent) 28%,
-      color-mix(in oklab, var(--_bot-tray-glow-soft) 32%, transparent) 52%,
-      color-mix(in oklab, var(--_bot-tray-glow-soft) 12%, transparent) 74%,
-      color-mix(in oklab, var(--_bot-tray-glow-soft) 3%, transparent) 90%,
-      transparent 100%
-    );
-}
-
-/*
  * Bot body: same paint + dim as Suggested Hands.
- * Gold lip/side glow lives on ::after (same slot as Suggested Hands recess wash).
+ * Recess lip/side wash uses the shared Suggested Hands `::after` (no gold glow).
  */
 .app
   .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
@@ -2388,27 +2345,6 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   position: relative;
   z-index: 2;
   background: transparent;
-}
-
-/*
- * Same ::after geometry as Suggested Hands recess wash — only the paint is gold.
- * Top lip + left/right sides via background-size/position; foot never gets a layer.
- */
-.app
-  .suggested-hands-popup.suggested-hands-popup--discard-overlay.suggested-hands-popup--open
-  .bot-exposure-hands-panel
-  .hands-panel__content::after {
-  z-index: 6;
-  background-image: var(--_bot-tray-side-blur);
-  background-repeat: no-repeat;
-  background-position: var(--hands-header-bottom-blur-position);
-  background-size: var(--hands-header-bottom-blur-size);
-  border: none;
-  box-shadow: none;
-  filter: none;
-  -webkit-mask-image: none;
-  mask-image: none;
-  clip-path: none;
 }
 
 .app

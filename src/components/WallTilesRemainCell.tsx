@@ -6,7 +6,7 @@ type Props = {
   style?: CSSProperties
 }
 
-/** Rack column 3: wall tiles remaining (heat box + count), right of Menu. */
+/** Rack column 11: wall tiles remaining (heat box + count), left of Pass/Discard. */
 export function WallTilesRemainCell({ count, className, style }: Props) {
   return (
     <div

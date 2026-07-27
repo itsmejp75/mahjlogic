@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { PRACTICE_PATTERNS } from '../card/mockCardBook'
 import { NMJL_2026_PATTERNS } from '../card/nmjl2026Patterns'
 import { patternLinePreviewSlots } from '../card/patternLinePreview'
 import { listOpenHandsFittingClaimMelds } from './eastExposurePatternFit'
@@ -166,5 +167,34 @@ describe('resolveCardLineDefsForClaimMelds', () => {
     expect(suitRanks).toHaveLength(8)
     expect(suitRanks.every((r) => r % 2 === 0), suitRanks.join(',')).toBe(true)
     expect(new Set(suitRanks).size).toBe(1)
+  })
+
+  it('maps an exposed pung of 1-bams onto the pung column for Like #s FFF 1111 111 1111', () => {
+    const melds = [
+      {
+        tiles: [
+          { id: 'a', def: { cat: 'suit', suit: 'bam', rank: 1 } },
+          { id: 'b', def: { cat: 'suit', suit: 'bam', rank: 1 } },
+          { id: 'c', def: { cat: 'suit', suit: 'bam', rank: 1 } },
+        ] as TileInstance[],
+      },
+    ]
+    const p = listOpenHandsFittingClaimMelds(melds, PRACTICE_PATTERNS).find(
+      (x) => x.id === 'like-1' && x.title === 'FFF 1111 111 1111',
+    )
+    expect(p).toBeTruthy()
+
+    const resolved = resolveCardLineDefsForClaimMelds(p!, melds)
+    expect(resolved.map(label).join(' ')).toMatch(/^F F F \S+ \S+ \S+ \S+ 1b 1b 1b \S+ \S+ \S+ \S+$/)
+
+    const placed = placeExposureMeldsOnCardLine(resolved, melds)
+    const labs = placed.defs.map((d, i) => `${label(d)}${placed.meldRunId[i] != null ? '*' : ''}`)
+    // Bam pung must box on the size-3 column — never paint 1-bams as a kong stand-in.
+    expect(labs.filter((x) => x === '1b*'), labs.join(' ')).toHaveLength(3)
+    expect(labs.filter((x) => x.startsWith('1b')), labs.join(' ')).toHaveLength(3)
+    const boxed = labs
+      .map((x, i) => (x === '1b*' ? i : -1))
+      .filter((i) => i >= 0)
+    expect(boxed).toEqual([7, 8, 9])
   })
 })

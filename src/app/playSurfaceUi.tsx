@@ -16,7 +16,6 @@ import { CSS } from '@dnd-kit/utilities'
 import type { BotExposure, BotSeat } from '../analysis/types'
 import { useAppMenuOpen } from './AppMenuOpenContext'
 import { useSuggestedHandsTray } from './SuggestedHandsTrayContext'
-import logicLogoSrc from '../assets/logic-logo.svg?url'
 import mahjBirdSrc from '../assets/mahj-bird.svg?url'
 import { ExposureRack } from '../components/ExposureRack'
 import { TileFace } from '../components/TileFace'
@@ -173,19 +172,6 @@ export function OpponentExposureDropZone({
       ) : null}
       {children}
     </Tag>
-  )
-}
-
-/** Logic rack button — no action yet; hands tray open/close is menu-only. */
-export function LogicTrayToggleButton() {
-  return (
-    <button
-      type="button"
-      className="btn btn--rack-neutral btn--logic rack-bottom-tile-cell rack-bottom-tile-cell--c7-8"
-      aria-label="Logic"
-    >
-      <img className="btn--logic__img" src={logicLogoSrc} alt="Logic" draggable={false} />
-    </button>
   )
 }
 

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  allocateJokersForProbability,
+  allocateJokersToSlots,
   applyBlankTileRedemption,
   applyCompletionComplexityAdjustments,
   calculateWallCompletionProbability,
@@ -124,7 +126,7 @@ describe('computeHandCompletionMetrics', () => {
     expect(m.P).toBe(7)
   })
 
-  it('allocates jokers to kongs but not flower pungs', () => {
+  it('counts flower pungs toward joker capacity', () => {
     const slots: CompletionSlot[] = [
       { tileType: 'f', targetCount: 3 },
       { tileType: 's:crak:3', targetCount: 4 },
@@ -141,6 +143,53 @@ describe('computeHandCompletionMetrics', () => {
     expect(m.M_nat).toBe(5)
     expect(m.M_joker).toBe(1)
     expect(m.D).toBe(8) // 14 - 6
+    // Flower gap is joker-eligible: capacity F(1)+3c(2)+7c(3)=6
+    expect(allocateJokersToSlots(slots, ctx.naturals, 1, false)[0]).toBe(1)
+  })
+})
+
+describe('allocateJokersForProbability', () => {
+  const runs5Slots: CompletionSlot[] = [
+    { tileType: 'f', targetCount: 3 },
+    { tileType: 's:crak:3', targetCount: 2 },
+    { tileType: 's:crak:4', targetCount: 3 },
+    { tileType: 's:crak:5', targetCount: 3 },
+    { tileType: 'd:red', targetCount: 3 },
+  ]
+
+  it('prefers scarce naturals over left-to-right strip parking', () => {
+    const naturals = { f: 2, 's:crak:3': 1, 's:crak:5': 1, 'd:red': 3 }
+    const visible = { 's:crak:4': 2, 's:crak:5': 0, f: 0 }
+    // L→R strip park fills flowers first.
+    expect(allocateJokersToSlots(runs5Slots, naturals, 2, false)).toEqual([1, 0, 1, 0, 0])
+    // Prob park: 4-craks are scarcer (2 visible) → prefer that meld.
+    const alloc = allocateJokersForProbability(
+      runs5Slots,
+      naturals,
+      2,
+      false,
+      visible,
+      DEFAULT_DECK_COMPOSITION,
+    )
+    expect(alloc[2]).toBeGreaterThan(0)
+    expect(alloc[2]! + alloc[3]!).toBeGreaterThanOrEqual(2)
+  })
+
+  it('keeps call-ready pungs instead of completing one when another meld still needs help', () => {
+    const naturals = { f: 2, 's:crak:3': 1, 's:crak:5': 1, 'd:red': 3 }
+    const visible = { 's:crak:4': 1, 's:crak:5': 1, f: 1 }
+    const alloc = allocateJokersForProbability(
+      runs5Slots,
+      naturals,
+      3,
+      false,
+      visible,
+      DEFAULT_DECK_COMPOSITION,
+    )
+    // Not L→R dump-all-on-first-meld; spread to preserve call windows.
+    expect(alloc).toEqual([0, 0, 2, 1, 0])
+    expect(isSlotExposureReady(runs5Slots[2]!, naturals, alloc[2]!)).toBe(true)
+    expect(isSlotExposureReady(runs5Slots[3]!, naturals, alloc[3]!)).toBe(true)
   })
 })
 
@@ -311,6 +360,100 @@ describe('calculateWallCompletionProbability', () => {
       }),
     )
     expect(withBlanksHeld).toBe(withoutBlanksHeld)
+  })
+
+  it('raises Prob when a useful joker cuts Runs #5 Away (no clamp)', () => {
+    // FFF 33 444 555 RRR — flexible run; only the 3c pair is natural-only.
+    const slots: CompletionSlot[] = [
+      { tileType: 'f', targetCount: 3 },
+      { tileType: 's:crak:3', targetCount: 2 },
+      { tileType: 's:crak:4', targetCount: 3 },
+      { tileType: 's:crak:5', targetCount: 3 },
+      { tileType: 'd:red', targetCount: 3 },
+    ]
+    const visibleNaturals = {
+      's:bam:1': 1,
+      's:bam:2': 1,
+      's:bam:4': 2,
+      's:bam:5': 1,
+      's:bam:8': 3,
+      's:dot:1': 1,
+      's:dot:4': 1,
+      'd:soap': 1,
+      'w:E': 1,
+      's:crak:1': 1,
+      's:crak:2': 1,
+      's:crak:3': 1,
+      's:crak:4': 1,
+      's:crak:5': 1,
+      's:crak:8': 1,
+      'd:green': 1,
+      f: 1,
+    }
+    const naturalsBefore = {
+      f: 2,
+      's:crak:3': 1,
+      's:crak:5': 1,
+      'd:red': 3,
+      's:crak:6': 1,
+      's:crak:9': 1,
+      'w:S': 1,
+      's:dot:8': 1,
+      's:dot:1': 1,
+    }
+    const naturalsAfter = {
+      f: 2,
+      's:crak:3': 1,
+      's:crak:5': 1,
+      'd:red': 3,
+      's:crak:6': 1,
+      's:crak:9': 1,
+      'w:S': 1,
+      's:dot:8': 1,
+    }
+    const beforeCtx: HandInventoryContext = {
+      naturals: naturalsBefore,
+      jokersInHand: 2,
+      blanksInHand: 0,
+      discardCounts: {},
+      jokersDisallowed: false,
+    }
+    const afterCtx: HandInventoryContext = {
+      naturals: naturalsAfter,
+      jokersInHand: 3,
+      blanksInHand: 0,
+      discardCounts: {},
+      jokersDisallowed: false,
+    }
+    const before = calculateWallCompletionProbability({
+      slots,
+      ctx: beforeCtx,
+      completion: computeHandCompletionMetrics(slots, beforeCtx),
+      visibleNaturals,
+      visibleJokers: 0,
+      visibleBlanks: 0,
+      wallRemaining: 86,
+      isConcealed: false,
+      isSinglesAndPairs: false,
+      deck: DEFAULT_DECK_COMPOSITION,
+      playerRackTileCount: 14,
+      tilesNeededRough: 5,
+    })
+    const after = calculateWallCompletionProbability({
+      slots,
+      ctx: afterCtx,
+      completion: computeHandCompletionMetrics(slots, afterCtx),
+      visibleNaturals,
+      visibleJokers: 0,
+      visibleBlanks: 0,
+      wallRemaining: 85,
+      isConcealed: false,
+      isSinglesAndPairs: false,
+      deck: DEFAULT_DECK_COMPOSITION,
+      playerRackTileCount: 14,
+      tilesNeededRough: 4,
+    })
+    expect(after).toBeGreaterThan(before)
   })
 
   it('raises probability when blanks are in the deck and held', () => {

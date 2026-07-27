@@ -12,6 +12,11 @@
   grid-column: 10 / 12;
 }
 
+/* Wall count: column 11, immediately left of Pass/Discard (12–14). */
+.rack-bottom-tile-cell--c11 {
+  grid-column: 11 / 12;
+}
+
 /* Last two hand slots (tiles 13–14); negative lines stay correct if slot count changes. */
 
 /* Charleston: Pass = cols 12–14 */

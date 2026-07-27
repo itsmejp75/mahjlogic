@@ -100,6 +100,14 @@ export function countNaturalsForSlot(tileType: string, naturals: TileCountMap): 
   return getCount(naturals, tileType)
 }
 
+/** True when NMJL allows jokers on this slot (identical meld of 3+; pairs/singles never). */
+export function slotAllowsJokers(
+  slot: CompletionSlot,
+  jokersDisallowed: boolean,
+): boolean {
+  return !jokersDisallowed && slot.targetCount > 2
+}
+
 /**
  * Resolve physical blank tiles by redeeming matching types from the discard pile.
  * Mutates a copy of naturals; returns remaining blanks.
@@ -168,8 +176,8 @@ export function computeHandCompletionMetrics(
     const t = slot.targetCount
     const n = countNaturalsForSlot(slot.tileType, naturals)
     M_nat += Math.min(n, t)
-    // NMJL: jokers never substitute for flowers ({@link meldDefIsJokerEligible}).
-    if (t > 2 && n < t && slot.tileType !== 'f') jokerCapacity += t - n
+    // NMJL: jokers fill any identical meld of 3+ (suits, dragons, flowers, winds) — never pairs/singles.
+    if (slotAllowsJokers(slot, false) && n < t) jokerCapacity += t - n
   }
 
   const J_hand = ctx.jokersDisallowed ? 0 : ctx.jokersInHand
@@ -365,7 +373,7 @@ const EARLY_WALL_FULL = 99
 const EARLY_WALL_FLOOR = 88
 
 /**
- * Greedy joker allocation onto joker-eligible meld slots (same order as {@link computeHandCompletionMetrics}).
+ * Left-to-right joker park onto joker-eligible melds (display / strip-style).
  * Returns per-slot joker counts (parallel to `slots`).
  */
 export function allocateJokersToSlots(
@@ -379,7 +387,7 @@ export function allocateJokersToSlots(
   for (let i = 0; i < slots.length; i++) {
     if (remaining <= 0) break
     const slot = slots[i]!
-    if (slot.targetCount <= 2 || slot.tileType === 'f') continue
+    if (!slotAllowsJokers(slot, false)) continue
     const held = countNaturalsForSlot(slot.tileType, naturals)
     const need = Math.max(0, slot.targetCount - held)
     if (need <= 0) continue
@@ -391,9 +399,85 @@ export function allocateJokersToSlots(
 }
 
 /**
+ * Prob-only joker placement: flexible wilds scored one at a time.
+ * Prefer mandatory fills, then scarce naturals, then exposure-ready over completing a meld
+ * while another joker-eligible gap remains.
+ */
+export function allocateJokersForProbability(
+  slots: readonly CompletionSlot[],
+  naturals: TileCountMap,
+  jokersInHand: number,
+  jokersDisallowed: boolean,
+  visibleNaturals: TileCountMap = {},
+  deck: DeckComposition = DEFAULT_DECK_COMPOSITION,
+): number[] {
+  const alloc = slots.map(() => 0)
+  let remaining = jokersDisallowed ? 0 : Math.max(0, jokersInHand)
+  if (remaining <= 0) return alloc
+
+  while (remaining > 0) {
+    let incompleteEligible = 0
+    for (let i = 0; i < slots.length; i++) {
+      const slot = slots[i]!
+      if (!slotAllowsJokers(slot, jokersDisallowed)) continue
+      const heldNat = countNaturalsForSlot(slot.tileType, naturals)
+      const gap = Math.max(0, slot.targetCount - heldNat - alloc[i]!)
+      if (gap > 0) incompleteEligible++
+    }
+
+    let bestIdx = -1
+    let bestMust = false
+    let bestOuts = Infinity
+    let bestWasteful = true
+    let bestGap = -1
+
+    for (let i = 0; i < slots.length; i++) {
+      const slot = slots[i]!
+      if (!slotAllowsJokers(slot, jokersDisallowed)) continue
+      const heldNat = countNaturalsForSlot(slot.tileType, naturals)
+      const held = heldNat + alloc[i]!
+      const gap = Math.max(0, slot.targetCount - held)
+      if (gap <= 0) continue
+
+      const outs = hiddenNaturalOutsForSlot(slot.tileType, naturals, visibleNaturals, deck)
+      const must = gap > outs
+      const completes = held + 1 >= slot.targetCount
+      // Completing a meld while another joker-eligible gap remains wastes a call window.
+      const wasteful = completes && incompleteEligible > 1 && !must
+
+      // After mandatory fills: avoid completing a meld while others still need help, then scarce outs.
+      const better =
+        bestIdx < 0 ||
+        (must !== bestMust
+          ? must
+          : wasteful !== bestWasteful
+            ? !wasteful
+            : outs !== bestOuts
+              ? outs < bestOuts
+              : gap !== bestGap
+                ? gap > bestGap
+                : i < bestIdx)
+
+      if (better) {
+        bestIdx = i
+        bestMust = must
+        bestOuts = outs
+        bestWasteful = wasteful
+        bestGap = gap
+      }
+    }
+
+    if (bestIdx < 0) break
+    alloc[bestIdx]!++
+    remaining--
+  }
+
+  return alloc
+}
+
+/**
  * NMJL: a pung/kong/quint can be called only when the rack already holds
  * `targetCount - 1` matching tiles (naturals + jokers on that meld).
- * Flowers never take jokers; readiness is naturals-only.
  */
 export function isSlotExposureReady(
   slot: CompletionSlot,
@@ -401,7 +485,7 @@ export function isSlotExposureReady(
   jokersOnSlot: number,
 ): boolean {
   if (slot.targetCount <= 2) return false
-  const jokers = slot.tileType === 'f' ? 0 : Math.max(0, jokersOnSlot)
+  const jokers = Math.max(0, jokersOnSlot)
   const held = countNaturalsForSlot(slot.tileType, naturals) + jokers
   return held >= slot.targetCount - 1 && held < slot.targetCount
 }
@@ -435,8 +519,8 @@ function earlyCoverWeight(wallRemaining: number, tilesNeededRough: number): numb
     1,
     Math.max(0, (wallRemaining - 40) / (EARLY_WALL_FULL - 40)),
   )
-  // High Away early: slot product is especially harsh; lean on cover.
-  const awayW = tilesNeededRough >= 5 ? 1 : tilesNeededRough >= 3 ? 0.7 : 0.35
+  // Smooth in Away — stepped thresholds used to drop Prob when Away improved (e.g. 5→4).
+  const awayW = Math.min(1, Math.max(0.35, tilesNeededRough / 5))
   return Math.min(0.88, Math.max(0.15, 0.25 + 0.55 * wallW * awayW))
 }
 
@@ -506,8 +590,8 @@ export function jokerEligibleCapacityRemaining(
 ): number {
   let capacity = 0
   for (const slot of slots) {
+    if (!slotAllowsJokers(slot, ctx.jokersDisallowed)) continue
     const t = slot.targetCount
-    if (t <= 2 || slot.tileType === 'f') continue
     const n = countNaturalsForSlot(slot.tileType, ctx.naturals)
     if (n < t) capacity += t - n
   }
@@ -593,11 +677,13 @@ export function calculateWallCompletionProbability(
   const baseAcquisition = wallDraws + exchangeTrials
 
   const { naturals: workingNaturals, fluidBlanks } = blankNaturalRelief(slots, ctx, deck)
-  const jokerAlloc = allocateJokersToSlots(
+  const jokerAlloc = allocateJokersForProbability(
     slots,
     workingNaturals,
     ctx.jokersInHand,
     ctx.jokersDisallowed,
+    visibleNaturals,
+    deck,
   )
 
   const jokerCapacityRemaining = jokerEligibleCapacityRemaining(slots, ctx, completion)
@@ -606,18 +692,20 @@ export function calculateWallCompletionProbability(
       ? 0
       : Math.min(jokerReliefFromSwapHint, jokerCapacityRemaining)
 
-  // Apply swap-hint relief onto incomplete joker-eligible slots after hand jokers.
+  // Apply swap-hint relief with the same scarcity / call-ready preferences as hand jokers.
   const swapOnSlot = slots.map(() => 0)
-  for (let i = 0; i < slots.length && swapRemaining > 0; i++) {
-    const slot = slots[i]!
-    if (slot.targetCount <= 2 || slot.tileType === 'f') continue
-    const held =
-      countNaturalsForSlot(slot.tileType, workingNaturals) + jokerAlloc[i]! + swapOnSlot[i]!
-    const need = Math.max(0, slot.targetCount - held)
-    if (need <= 0) continue
-    const give = Math.min(need, swapRemaining)
-    swapOnSlot[i] = give
-    swapRemaining -= give
+  if (swapRemaining > 0) {
+    const swapAlloc = allocateJokersForProbability(
+      slots,
+      workingNaturals,
+      ctx.jokersInHand + swapRemaining,
+      ctx.jokersDisallowed,
+      visibleNaturals,
+      deck,
+    )
+    for (let i = 0; i < slots.length; i++) {
+      swapOnSlot[i] = Math.max(0, swapAlloc[i]! - jokerAlloc[i]!)
+    }
   }
 
   let fluidBlankBudget = fluidBlanks
@@ -670,8 +758,7 @@ export function calculateWallCompletionProbability(
     if (callExtra > 0) anyCallCredit = true
     const trials = Math.min(unknownPool, baseAcquisition + callExtra)
 
-    const jokersAllowed =
-      slot.targetCount > 2 && !ctx.jokersDisallowed && slot.tileType !== 'f'
+    const jokersAllowed = slotAllowsJokers(slot, ctx.jokersDisallowed)
 
     if (!jokersAllowed) {
       if (outs < gapAfterWild) return 0

@@ -10,7 +10,7 @@
 
 /* Charleston: round title + pass hints live in the teal pass-strip box on the rack row. */
 
-/* Charleston bar: Pass cols 12–14 (cols 9–11 unused — grid spacing only) */
+/* Charleston / main bar: Call–Swap 9–10, wall 11, Pass–Discard 12–14 */
 
 .rack-bottom-tile-cell {
   width: 100%;
@@ -38,9 +38,9 @@
   grid-column: 3 / 4;
 }
 
-/* Two tile faces + one grid gap (HANDS), aligned under rack columns 4–5. */
+/* Tiles: cols 5–6, immediately left of MAHJ (7–8). */
 .rack-bottom-tile-cell--c4-5 {
-  grid-column: 4 / 6;
+  grid-column: 5 / 7;
 }
 
 /* Legacy / alternate two-column span under rack columns 3–4. */
@@ -53,9 +53,9 @@
   grid-column: 5 / 6;
 }
 
-/* Main rack: MAHJ / Logic / Call — one tile right of Sort + wall (cols 6–7 / 8–9 / 10–11). */
+/* Main rack: MAHJ (7–8) / Call–Swap (9–10) / wall count (11) / Pass–Discard (12–14). */
 .rack-bottom-tile-cell--c5-6 {
-  grid-column: 6 / 8;
+  grid-column: 7 / 9;
 }
 
 .rack-bottom-tile-cell--c7-8 {
@@ -63,7 +63,7 @@
 }
 
 .rack-bottom-tile-cell--c9-10 {
-  grid-column: 10 / 12;
+  grid-column: 9 / 11;
 }
 
 .rack-bottom-tile-cell--c6-7 {

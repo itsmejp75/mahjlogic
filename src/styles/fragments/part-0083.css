@@ -90,14 +90,14 @@
 }
 
 /*
- * Selected bot exposure (hands-identifier): gold frame matching MAHJ / Swap hint stroke + glow
- * (part-0124 ratios on `--rack-tile-w`). Elevate only the bot cell — not the whole overlay row —
- * so sorted B/C/D lit tiles stay in the shared overlay-grid stack.
+ * Selected bot exposure (hands-identifier): gold border only (no outer glow).
+ * Elevate only the bot cell — not the whole overlay row — so sorted B/C/D lit tiles
+ * stay in the shared overlay-grid stack.
  * Vs Discard> while the hands tray is open (part-0123): beat part-0103’s play-split@100 /
- * rack@0 so paint order is dark seam < glow < green discard (hands sheet stays above).
+ * rack@0 so paint order is dark seam < frame < green discard (hands sheet stays above).
  *
- * Frame stays behind cell content (z-index: 0). Raising only the bouncing slot fails because the
- * role=button / rack / meld wrappers flatten into a layer under a higher ::after.
+ * Frame paints above cell content (lifted jokers / owned-meld vignettes) so the gold stroke
+ * isn’t broken by coach lift. `pointer-events: none` keeps clicks on the tiles.
  */
 .discard-tracker__overlay-row--bot-hands-active {
   position: relative;
@@ -117,35 +117,26 @@
 }
 
 .discard-tracker__overlay-row--bot-hands-active .app-opponents-rail__cell::after {
-  /* Same gold + stroke/glow recipe as MAHJ / Swap hints (part-0124). */
+  /* Gold stroke only (no outer glow) — thicker than MAHJ / Swap tip stroke. */
   --_drop-frame-color: var(--rack-action-hint-border, #ffb800);
   --_hint-scale: var(--rack-tile-w, 2.65rem);
-  --_hint-border: max(0.5px, calc(var(--_hint-scale) * 0.015));
-  --_hint-ring: max(0.5px, calc(var(--_hint-scale) * 0.03));
-  --_hint-glow-blur: max(2px, calc(var(--_hint-scale) * 0.24));
-  --_hint-glow-spread: max(0.5px, calc(var(--_hint-scale) * 0.045));
-  --_hint-halo-blur: max(2px, calc(var(--_hint-scale) * 0.42));
-  --_hint-halo-spread: max(0.5px, calc(var(--_hint-scale) * 0.06));
-  /* Tiny air gap between tile faces and the gold stroke. */
-  --_hint-gap: max(1px, calc(var(--_hint-scale) * 0.04));
+  --_hint-border: max(2px, calc(var(--_hint-scale) * 0.045));
+  /* Air gap between tile faces and the gold stroke (match suggested-hands exposure pad). */
+  --_hint-gap: max(1px, calc(var(--_hint-scale) * 0.08));
   --_frame-outset: calc(var(--_hint-gap) + var(--_hint-border));
   content: '';
   position: absolute;
-  /* Pull the frame outside the cell so the border isn’t buried under tile faces. */
+  /* Pull the frame outside the cell so the border clears tile faces. */
   inset: calc(-1 * var(--_frame-outset));
   box-sizing: border-box;
   border: var(--_hint-border) solid var(--_drop-frame-color);
   border-radius: calc(
     var(--discard-tray-tile-corner-r, var(--tile-face-border-radius)) + var(--_frame-outset)
   );
-  box-shadow:
-    0 0 0 var(--_hint-ring) color-mix(in srgb, var(--_drop-frame-color) 92%, #fff 8%),
-    0 0 var(--_hint-glow-blur) var(--_hint-glow-spread)
-      color-mix(in srgb, var(--_drop-frame-color) 72%, transparent),
-    0 0 var(--_hint-halo-blur) var(--_hint-halo-spread)
-      color-mix(in srgb, var(--_drop-frame-color) 38%, transparent);
+  box-shadow: none;
   pointer-events: none;
-  z-index: 0;
+  /* Above `> *` (z-index 1) so lift vignettes can’t cover the stroke. */
+  z-index: 2;
 }
 
 /* Slim category | hand sheet replacing Suggested Hands while inspecting a bot. */
@@ -188,13 +179,13 @@
   text-overflow: ellipsis;
 }
 
-/* Light-gray boxed × — floats just under the title, right edge; above header glow stroke. */
+/* Light-gray boxed × — floats just under the title, right edge; above recess wash. */
 .bot-exposure-hands-panel__close {
   --_bot-hands-close: color-mix(in srgb, var(--text-h) 45%, var(--border));
   /* Same width scale as bot hands list type — size/insets track panel resize. */
   --_bot-hands-close-u: calc(100cqi * 0.0235);
   position: absolute;
-  /* Clear the toolbar band, then a panel-proportional gap below the glow. */
+  /* Clear the toolbar band, then a panel-proportional gap below the recess lip. */
   top: calc(
     1.4 * var(--hands-metric-column-header-fs, var(--app-ui-control-fs-sm, 0.75rem))
     + var(--hands-sheet-grid-line-w, 0.5px)
@@ -304,7 +295,7 @@
   );
   --bot-hands-tile-h: calc(var(--bot-hands-tile-w) * 4 / 3);
   --bot-hands-tile-radius: calc(0.116 * var(--bot-hands-tile-w));
-  --bot-hands-exposure-pad: calc(var(--bot-hands-tile-w) * 0.08);
+  --bot-hands-exposure-pad: calc(var(--bot-hands-tile-w) * 0.04);
   display: grid;
   grid-template-columns: var(--bot-hands-grid-cols);
   width: 100%;
@@ -394,10 +385,11 @@
 
 .bot-exposure-hands-list__tile-run--exposure {
   /* Outer radius = tile radius + pad so the frame follows the tile corners. */
-  --_bot-hands-exposure-frame: color-mix(in srgb, var(--text-h) 45%, var(--border));
+  /* Gold stroke — same hint gold as selected bot exposure / MAHJ–Swap frames. */
+  --_bot-hands-exposure-frame: var(--rack-action-hint-border, #ffb800);
   padding: var(--bot-hands-exposure-pad);
   border-radius: calc(var(--bot-hands-tile-radius) + var(--bot-hands-exposure-pad));
-  border: 1px solid var(--_bot-hands-exposure-frame);
+  border: 2px solid var(--_bot-hands-exposure-frame);
   box-sizing: border-box;
   background: color-mix(in srgb, var(--_bot-hands-exposure-frame) 12%, transparent);
 }

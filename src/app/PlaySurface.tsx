@@ -34,7 +34,6 @@ import {
   DiscardTrackerSlotGrid,
   EastOwnJokerSwapDropZone,
   HandRackMenuAnchor,
-  LogicTrayToggleButton,
   PlayerRackSeatLabel,
   StagingMeldDropZone,
   SuggestedHandsOpenDataAttr,
@@ -591,13 +590,6 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                               <HandRackMenuAnchor
                                 menuContainerRef={menuContainerRef}
                               />
-                              <WallTilesRemainCell
-                                count={wall.length}
-                                className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell rack-bottom-tile-cell--c3${
-                                  wall.length >= openingWallTileCount ? ' rack-bottom-wall--full' : ''
-                                }${wall.length === 0 ? ' rack-bottom-wall--empty' : ''}`}
-                                style={wallRemainHeatStyle(wall.length, openingWallTileCount)}
-                              />
                               {showSuggestedHandsPanel ? (
                                 <button
                                   type="button"
@@ -642,7 +634,6 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                   <img className="btn--mahj__img" src={mahjLogoSrc} alt="" draggable={false} />
                                 </span>
                               </button>
-                              <LogicTrayToggleButton />
                               <button
                                 type="button"
                                 className="btn btn--joker-swap-action rack-bottom-tile-cell rack-bottom-tile-cell--c9-10"
@@ -651,6 +642,13 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                               >
                                 Swap
                               </button>
+                              <WallTilesRemainCell
+                                count={wall.length}
+                                className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell rack-bottom-tile-cell--c11${
+                                  wall.length >= openingWallTileCount ? ' rack-bottom-wall--full' : ''
+                                }${wall.length === 0 ? ' rack-bottom-wall--empty' : ''}`}
+                                style={wallRemainHeatStyle(wall.length, openingWallTileCount)}
+                              />
                               <button
                                 type="button"
                                 className="btn btn--primary charleston-pass-btn rack-bottom-tile-cell rack-bottom-tile-cell--c12-14"
@@ -796,13 +794,6 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                 <HandRackMenuAnchor
                                   menuContainerRef={menuContainerRef}
                                 />
-                                <WallTilesRemainCell
-                                  count={wall.length}
-                                  className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell rack-bottom-tile-cell--c3${
-                                    wall.length >= openingWallTileCount ? ' rack-bottom-wall--full' : ''
-                                  }${wall.length === 0 ? ' rack-bottom-wall--empty' : ''}`}
-                                  style={wallRemainHeatStyle(wall.length, openingWallTileCount)}
-                                />
                                 {showSuggestedHandsPanel ? (
                                   <button
                                     type="button"
@@ -850,7 +841,6 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                     <img className="btn--mahj__img" src={mahjLogoSrc} alt="" draggable={false} />
                                   </span>
                                 </button>
-                                <LogicTrayToggleButton />
                                 {mainBarSharedSlotIsSwap ? (
                                   <button
                                     type="button"
@@ -890,6 +880,13 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                     ) : 'Call'}
                                   </button>
                                 )}
+                                <WallTilesRemainCell
+                                  count={wall.length}
+                                  className={`rack-hand-tools__wall rack-bottom-wall rack-bottom-tile-cell rack-bottom-tile-cell--c11${
+                                    wall.length >= openingWallTileCount ? ' rack-bottom-wall--full' : ''
+                                  }${wall.length === 0 ? ' rack-bottom-wall--empty' : ''}`}
+                                  style={wallRemainHeatStyle(wall.length, openingWallTileCount)}
+                                />
                                 <button
                                   type="button"
                                   className={[

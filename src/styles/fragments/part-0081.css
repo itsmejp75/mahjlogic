@@ -3217,11 +3217,14 @@
 
 .hands-sheet__tile-run--exposure,
 .hands-list__pattern-tile-run--exposure {
-  --_suggested-exposure-frame: color-mix(in srgb, var(--text-h) 45%, var(--border));
+  /* Gold stroke — same hint gold as bot possible-hands / MAHJ–Swap frames. */
+  --_suggested-exposure-frame: var(--rack-action-hint-border, #ffb800);
+  /* Air gap between stroke and tile faces. */
   --_suggested-exposure-pad: calc(var(--hands-sheet-tile-w, var(--hands-preview-tile-w, 0.9rem)) * 0.08);
   --_suggested-exposure-tile-radius: calc(
     0.116 * var(--hands-sheet-tile-w, var(--hands-preview-tile-w, 0.9rem))
   );
+  position: relative;
   display: inline-flex;
   flex-direction: row;
   flex-wrap: nowrap;
@@ -3229,13 +3232,36 @@
   gap: var(--hands-sheet-tile-gap, var(--hands-row-pattern-gap, var(--rack-tile-gap)));
   flex: 0 0 auto;
   flex-shrink: 0;
-  z-index: 1;
-  /* Real pad (not overlay) so neighbors clear the frame — same as bot possible-hands. */
+  /*
+   * Above neighbouring suggest-best/joker cells (`z-index: 3`) so their coach lift vignettes
+   * cannot paint over this frame. Frame stroke itself is on ::after above in-run tiles.
+   */
+  z-index: 5;
+  isolation: isolate;
   padding: var(--_suggested-exposure-pad);
   border-radius: calc(var(--_suggested-exposure-tile-radius) + var(--_suggested-exposure-pad));
-  border: 1px solid var(--_suggested-exposure-frame);
+  /* Frame is painted by ::after so it stays above in-run tile lift shadows. */
+  border: none;
   box-sizing: border-box;
   background: color-mix(in srgb, var(--_suggested-exposure-frame) 12%, transparent);
+  /* Clip in-run lift glow to the padded box so it can’t cover the gold stroke. */
+  overflow: hidden;
+}
+
+/*
+ * Parent borders paint under children; coach lift on in-run lit tiles would muddy the gold.
+ * Stroke on a top-layer pseudo; run z-index keeps neighbour vignettes underneath too.
+ */
+.hands-sheet__tile-run--exposure::after,
+.hands-list__pattern-tile-run--exposure::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 2px solid var(--_suggested-exposure-frame);
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 6;
 }
 
 /* Tray sheet: when a meld is boxed, flex runs with fixed tile size (pad stays additive). */

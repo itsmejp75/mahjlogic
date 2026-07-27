@@ -38,12 +38,11 @@ export type DeadHintNeedMap = Map<string, DeadHintNeedEntry>
 
 /**
  * NMJL joker rule: a joker may substitute for any tile in a pung/kong/quint/sextet (a meld of 3+
- * identical tiles) — EXCEPT flowers, singles, and pairs. So a meld is joker-eligible when it needs
- * 3+ copies of a single non-flower tile. (Runs/sequences are handled separately and never reach
- * here.) This is intrinsic to the tile + meld size, not a per-pattern opt-in flag.
+ * identical tiles), including flower pungs/kongs — never singles or pairs. Runs/sequences built from
+ * single tiles never reach here. Intrinsic to meld size, not a per-pattern opt-in flag.
  */
-export function meldDefIsJokerEligible(def: TileDef, need: number): boolean {
-  return need >= 3 && def.cat !== 'flower'
+export function meldDefIsJokerEligible(_def: TileDef, need: number): boolean {
+  return need >= 3
 }
 
 export function addDeadHintNeed(

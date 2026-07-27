@@ -745,8 +745,8 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
         }
         const m = take(pred, g.need)
         total += m
-        // NMJL: jokers never substitute for flowers ({@link meldDefIsJokerEligible}).
-        noteJokerSlots(g.need, m, g.test({ cat: 'flower', flower: 1 }))
+        // Flower pungs/kongs take jokers (FFF/FFFF); pairs/singles still skipped via need < 3.
+        noteJokerSlots(g.need, m)
         break
       }
 
@@ -4316,6 +4316,71 @@ function firstSuitPermutePlanFittingClaimMelds(
 }
 
 /**
+ * First (perm, rank) for a shared-rank-suits group where every *suit* claim meld lands on an
+ * exact-size slot. Ignores flower/dragon/wind exposures (other groups) so they don't block the
+ * suit↔size assignment. Avoids greedy partial fills that paint a pung onto a kong of the same
+ * like-number (e.g. Like #s `FFF 1111 111 1111` with an exposed pung of 1-bams).
+ */
+function firstSharedRankSuitsPlanFittingClaimMelds(
+  g: Extract<PatternGroup, { kind: 'shared-rank-suits' }>,
+  claimMelds: ReadonlyArray<{ tiles: TileInstance[] }>,
+): { perm: Suit[]; rank: number } | null {
+  const n = g.needs.length
+  if (n < 2 || n > 3) return null
+  const suitMelds = claimMelds.filter((m) => {
+    const naturals = m.tiles.filter((t) => t.def.cat !== 'joker')
+    if (naturals.length === 0) return false
+    return naturals.every((t) => t.def.cat === 'suit' && g.test(t.def))
+  })
+  if (suitMelds.length === 0) return null
+  for (let rank = 1; rank <= 9; rank++) {
+    for (const perm of suitPermutations(n)) {
+      let ok = true
+      const slots: { key: string; need: number }[] = []
+      for (let i = 0; i < n; i++) {
+        const s = perm[i]!
+        const def: TileDef = { cat: 'suit', suit: s, rank }
+        if (!g.test(def)) {
+          ok = false
+          break
+        }
+        slots.push({ key: `s:${s}:${rank}`, need: g.needs[i]! })
+      }
+      if (!ok) continue
+      if (claimMeldsExactMatchSlots(suitMelds, slots)) {
+        return { perm: [...perm], rank }
+      }
+    }
+  }
+  return null
+}
+
+/** Write a concrete (perm, rank) into the shared-rank-suits group span only. */
+function applySharedRankSuitsPlanToPreviewSpan(
+  preview: readonly TileDef[],
+  p: PracticePattern,
+  srsGi: number,
+  g: Extract<PatternGroup, { kind: 'shared-rank-suits' }>,
+  plan: { perm: Suit[]; rank: number },
+): TileDef[] | null {
+  const spans = groupPreviewIndexSpans(p)
+  const span = spans?.[srsGi]
+  if (!span || preview.length < span[1]) return null
+  const out = [...preview]
+  const [a, b] = span
+  let idx = a
+  for (let col = 0; col < g.needs.length && idx < b; col++) {
+    const s = plan.perm[col]!
+    const need = g.needs[col]!
+    for (let k = 0; k < need && idx < b; k++) {
+      out[idx++] = { cat: 'suit', suit: s, rank: plan.rank }
+    }
+  }
+  if (idx !== b) return null
+  return out
+}
+
+/**
  * Write a concrete (perm, base) into the suit-permute group span only — leaves neighboring
  * groups (e.g. `dragon-meld-permute` DDD DDD DDDD) as printed preview stand-ins.
  */
@@ -4363,8 +4428,9 @@ function applySuitPermutePlanToPreviewSpan(
  * that actually fit the exposures (e.g. `77 88 999` for a pung of 9s), then falls back to the
  * printed preview when nothing can be resolved.
  *
- * Suit-permute plans require **exact** meld sizes (pung≠kong) so a pung of 7s cannot paint a
- * kong of 7s just because greedy fill scored a partial match.
+ * Suit-permute and shared-rank-suits plans require **exact** meld sizes (pung≠kong) so a pung
+ * of 7s / 1-bams cannot paint a kong of the same rank just because greedy fill scored a partial
+ * match.
  *
  * Patterns with `dragon-meld-permute` (W&D #2) keep the printed distinct dragon melds — never
  * rebuild the whole title through suit-permute ink (that collapses every DDD to one type).
@@ -4391,6 +4457,16 @@ export function resolveCardLineDefsForClaimMelds(
         if (title && title.length === preview.length) return title
       }
       const patched = applySuitPermutePlanToPreviewSpan(preview, p, spGi, g, plan)
+      if (patched) return patched
+    }
+  }
+
+  const srsGi = p.groups?.findIndex((g) => g.kind === 'shared-rank-suits') ?? -1
+  if (srsGi >= 0) {
+    const g = p.groups![srsGi]! as Extract<PatternGroup, { kind: 'shared-rank-suits' }>
+    const plan = firstSharedRankSuitsPlanFittingClaimMelds(g, claimMelds)
+    if (plan) {
+      const patched = applySharedRankSuitsPlanToPreviewSpan(preview, p, srsGi, g, plan)
       if (patched) return patched
     }
   }
