@@ -2745,7 +2745,10 @@ export default function App() {
     () => {
       const exposuresForMatch = callStagingSuggestedPreview?.eastMelds ?? eastExposures
       const exposureIds = new Set(exposuresForMatch.flatMap((e) => e.tiles).map((t) => t.id))
-      const handForMatch = callStagingSuggestedPreview?.handNext ?? deferredHand
+      // Wall-draw: match live `hand` so lit/dim seams land with the new tile (deferredHand lags
+      // a frame and side-glow clips snap). Charleston keeps deferredHand + deferredPassSlots paired.
+      const handForMatch =
+        callStagingSuggestedPreview?.handNext ?? (drawnTileId != null ? hand : deferredHand)
       const rack = tileInstancesWithClaimMeldJokersResolved(
         [
           ...handForMatch,
@@ -2761,7 +2764,9 @@ export default function App() {
       deferredHand,
       deferredPendingEastDiscardTile,
       deferredPassSlots,
+      drawnTileId,
       eastExposures,
+      hand,
     ],
   )
 

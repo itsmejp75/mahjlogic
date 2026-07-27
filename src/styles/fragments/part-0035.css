@@ -56,8 +56,8 @@
   .panel--hand
   .panel-hand-rack__hand-tray
   .hand-row {
-  /* part-0008 isolates + clips the row; open both so tile z-index:10 clears Charleston. */
-  isolation: auto;
+  /* part-0008 already keeps overflow visible. Do not toggle isolation — tray z-index lift
+   * clears green Discard> / Charleston, and flipping isolate↔auto jogs lit neighbours on PWA. */
   overflow: visible;
 }
 

@@ -2946,6 +2946,8 @@ html
     0 0 calc(var(--coach-lift-tile-w, var(--rack-tile-w)) * 0.42)
       calc(var(--coach-lift-tile-w, var(--rack-tile-w)) * 0.072) rgba(0, 0, 0, 0.3);
   --coach-centered-lift-clip-outset: calc(var(--coach-lift-tile-w, var(--rack-tile-w)) * -0.92);
+  /* Top inset for hand-row lift glow; fly-in zeros this so the halo cannot cover green Discard>. */
+  --coach-centered-lift-clip-top: var(--coach-centered-lift-clip-outset);
   /* Lit→lit seams: extend glow/rim to gap center (negative inset expands clip outward). */
   --coach-lit-seam-inset-x: calc(var(--player-rack-face-gap, 1px) / -2);
   /* Match top-exposure overlay `gap: max(bot-row, face)` so seam clips track the real row gap. */

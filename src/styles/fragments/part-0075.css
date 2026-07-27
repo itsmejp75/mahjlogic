@@ -829,17 +829,19 @@
 
 /* ── Drawn tile drop-in animation ── */
 /* --draw-anim-dx / --draw-anim-dy are set at runtime to the offset from the tile's
-   final rest position back to the animation origin (rack-local wall draw, joker-swap capture, etc.). */
+   final rest position back to the animation origin (rack-local wall draw, joker-swap capture, etc.).
+   Animate the independent `translate` property — not `transform` — so hand `__fly`'s permanent
+   `translateZ(0)` jog guard (part-0008) stays put for the whole flight (PWA/WKWebView). */
 @keyframes tile-drop-in {
   0% {
-    transform: translate(var(--draw-anim-dx, 0px), var(--draw-anim-dy, -3rem));
+    translate: var(--draw-anim-dx, 0px) var(--draw-anim-dy, -3rem);
     opacity: 0;
   }
   20% {
     opacity: 1;
   }
   100% {
-    transform: translate(0, 0);
+    translate: 0 0;
     opacity: 1;
   }
 }

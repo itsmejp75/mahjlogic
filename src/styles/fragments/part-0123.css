@@ -1230,6 +1230,30 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   z-index: 3;
 }
 
+/*
+ * Fly-in lifts the hand tray above green Discard> / incoming bot discard (`N >`, etc.).
+ * Resting stack hides upward halos under rack-top; while raised, top+side glow paints over
+ * those rack-top tiles (nudged down into the hand band) and makes them look coplanar.
+ * Keep only the underside halo for the flight window — overrides lit→lit seam clip variants.
+ */
+.app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row {
+  --coach-centered-lift-clip-top: 0px;
+}
+
+.app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
+  .app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap--suggest-best
+  .sortable-tile-wrap__fly::after {
+  /* Beat lit→lit :has(+…) seam variants for the short fly-in window only. */
+  clip-path: inset(0 0 var(--coach-centered-lift-clip-outset) 0) !important;
+}
+
 .panel--hand .rack-stage__rack-top .exposure-rack:not(.exposure-rack--charleston-pass),
 .panel--hand .rack-stage__rack-top .exposure-rack.exposure-rack--charleston-pass {
   background: transparent;
@@ -1354,8 +1378,9 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   border-radius: var(--tile-face-border-radius);
   box-shadow: var(--coach-centered-lift-shadow);
   clip-path: inset(
-    var(--coach-centered-lift-clip-outset) var(--coach-centered-lift-clip-outset)
+    var(--coach-centered-lift-clip-top, var(--coach-centered-lift-clip-outset))
       var(--coach-centered-lift-clip-outset) var(--coach-centered-lift-clip-outset)
+      var(--coach-centered-lift-clip-outset)
   );
   z-index: -1;
   pointer-events: none;
@@ -1371,7 +1396,8 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   > .sortable-tile-wrap--suggest-best:has(+ .sortable-tile-wrap--suggest-best:not(.sortable-tile-wrap--dragging))
   .sortable-tile-wrap__fly::after {
   clip-path: inset(
-    var(--coach-centered-lift-clip-outset) var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2))
+    var(--coach-centered-lift-clip-top, var(--coach-centered-lift-clip-outset))
+      var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2))
       var(--coach-centered-lift-clip-outset) var(--coach-centered-lift-clip-outset)
   );
 }
@@ -1385,8 +1411,9 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   + .sortable-tile-wrap--suggest-best
   .sortable-tile-wrap__fly::after {
   clip-path: inset(
-    var(--coach-centered-lift-clip-outset) var(--coach-centered-lift-clip-outset)
-      var(--coach-centered-lift-clip-outset) var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2))
+    var(--coach-centered-lift-clip-top, var(--coach-centered-lift-clip-outset))
+      var(--coach-centered-lift-clip-outset) var(--coach-centered-lift-clip-outset)
+      var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2))
   );
 }
 
@@ -1399,8 +1426,10 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   + .sortable-tile-wrap--suggest-best:has(+ .sortable-tile-wrap--suggest-best:not(.sortable-tile-wrap--dragging))
   .sortable-tile-wrap__fly::after {
   clip-path: inset(
-    var(--coach-centered-lift-clip-outset) var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2))
-      var(--coach-centered-lift-clip-outset) var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2))
+    var(--coach-centered-lift-clip-top, var(--coach-centered-lift-clip-outset))
+      var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2))
+      var(--coach-centered-lift-clip-outset)
+      var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2))
   );
 }
 
@@ -2927,9 +2956,13 @@ html[data-home-screen-app]:not([data-native-app])
 /*
  * Bot-turn call drag: tile is full height but the strip is only the bottom third — without this,
  * the lower face sits over the hand row (same z-index) and only the top strip is grabbable.
+ *
+ * Hand-tray is position:relative without its own z-index, so lit hand tiles (z-index 3–4) compete
+ * in `.rack-col` with rack-top. Beat lit→dim boundary (4) so tile 13’s lift shadow cannot paint
+ * over the incoming discard and flatten both onto one plane.
  */
 .panel--hand .rack-stage__rack-top:has(.exposure-rack__incoming-discard-drag) {
-  z-index: 3;
+  z-index: 5;
 }
 
 .panel--hand .rack-stage__rack-top .exposure-rack .exposure-rack__slot--incoming-discard:has(.exposure-rack__incoming-discard-drag) {
