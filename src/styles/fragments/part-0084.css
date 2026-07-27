@@ -415,18 +415,22 @@
   font-size: var(--player-seat-label-fs);
 }
 
-/* Player seat name chip — green fill/border only on the compass name (matches discard-tracker S/W/N). */
+/* Player seat initial chip — tight circle around E/S/W/N; stays in the seat band. */
 .panel--hand .panel-hand-rack__seat-label__chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  /* Match main-rack tile face width (hand-tray sets --rack-tile-w → --hand-rack-tile-w). */
-  width: var(--rack-tile-w, var(--hand-rack-tile-w));
-  min-width: var(--rack-tile-w, var(--hand-rack-tile-w));
-  padding: 0.22em 0;
-  /* Full capsule ends (semicircle left/right), not tile-face corners. */
-  border-radius: 9999px;
+  /* Diameter tracks the seat-label type scale — not tile width — so it never covers
+   * discard-tracker / main-rack faces. */
+  --player-seat-chip-d: calc(var(--player-seat-label-fs) * 1.7);
+  width: var(--player-seat-chip-d);
+  height: var(--player-seat-chip-d);
+  min-width: var(--player-seat-chip-d);
+  min-height: var(--player-seat-chip-d);
+  padding: 0;
+  aspect-ratio: 1;
+  border-radius: 50%;
   /* Same ink as the inactive `Seat:` prefix (not `--window-fg`). */
   color: #c2c2c8;
   opacity: 0.92;
@@ -444,49 +448,53 @@
 .panel--hand .panel-hand-rack__seat-label__chip-text {
   position: relative;
   z-index: 3;
+  /* Fill most of the circle without clipping ascenders/optical overflow. */
+  font-size: calc(var(--player-seat-chip-d) * 0.78);
+  line-height: 1;
 }
 
 /*
- * Lit seat chip: same main-rack rim bevel + inset highlight as B/C/D suit-label chips
- * (part-0061 discard-tracker suit-label / seat-turn block).
+ * Lit seat chip: circular body + rim bevel (not the rectangular B/C/D suit-label lip).
+ * Radial fill + soft inset rings follow border-radius: 50%.
  */
 .panel--hand .panel-hand-rack__seat-label__chip--turn {
-  padding: 0.12em 0;
   background-color: var(--card-ink-green, #52b147);
-  background-image: linear-gradient(
-    to bottom,
-    var(--card-ink-green, #52b147) 0%,
-    var(--card-ink-green, #52b147) 42%,
-    color-mix(in srgb, #1c1916 22%, var(--card-ink-green, #52b147)) 100%
+  background-image: radial-gradient(
+    circle at 34% 30%,
+    color-mix(in srgb, #ffffff 26%, var(--card-ink-green, #52b147)) 0%,
+    var(--card-ink-green, #52b147) 48%,
+    color-mix(in srgb, #1c1916 24%, var(--card-ink-green, #52b147)) 100%
   );
   color: #ffffff;
   opacity: 1;
+  /* Default circular lip — theme variants override when needed. */
+  box-shadow:
+    inset 0 calc(var(--player-seat-chip-d) * 0.08) calc(var(--player-seat-chip-d) * 0.16)
+      color-mix(in srgb, #ffffff 34%, transparent),
+    inset 0 calc(var(--player-seat-chip-d) * -0.1) calc(var(--player-seat-chip-d) * 0.18)
+      color-mix(in srgb, #1c1916 36%, transparent),
+    inset 0 0 calc(var(--player-seat-chip-d) * 0.12) calc(var(--player-seat-chip-d) * 0.02)
+      color-mix(in srgb, #1c1916 14%, transparent);
 }
 
 .app[data-tile-graphics='bakelite'] .panel--hand .panel-hand-rack__seat-label__chip--turn {
-  box-shadow: inset 0 1px 0 color-mix(in srgb, #d4a060 11%, transparent);
+  box-shadow:
+    inset 0 calc(var(--player-seat-chip-d) * 0.07) calc(var(--player-seat-chip-d) * 0.14)
+      color-mix(in srgb, #d4a060 18%, transparent),
+    inset 0 calc(var(--player-seat-chip-d) * -0.08) calc(var(--player-seat-chip-d) * 0.14)
+      color-mix(in srgb, #1c1916 28%, transparent),
+    inset 0 0 calc(var(--player-seat-chip-d) * 0.1) calc(var(--player-seat-chip-d) * 0.015)
+      color-mix(in srgb, #1c1916 12%, transparent);
 }
 
 .app[data-tile-graphics='designer'] .panel--hand .panel-hand-rack__seat-label__chip--turn {
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #f0f2fa 10%, transparent),
-    inset 0 -1px 0 color-mix(in srgb, var(--color-black) 26%, transparent);
-}
-
-/*
- * Rounded lip (no hard chamfer ring): soft inset shadows follow the capsule.
- * Keep blur high enough that the edge feathers — no visible inner cut line.
- */
-.app[data-tile-graphics='classic'] .panel--hand .panel-hand-rack__seat-label__chip--turn,
-.app[data-tile-graphics='solid-color'] .panel--hand .panel-hand-rack__seat-label__chip--turn,
-.app[data-tile-graphics='light'] .panel--hand .panel-hand-rack__seat-label__chip--turn,
-.app[data-tile-graphics='dark'] .panel--hand .panel-hand-rack__seat-label__chip--turn,
-.app[data-tile-graphics='illustrative-classic'] .panel--hand .panel-hand-rack__seat-label__chip--turn {
-  box-shadow:
-    inset 0 1.5px 3px color-mix(in srgb, #ffffff 36%, transparent),
-    inset 0 -2px 3.5px color-mix(in srgb, #1c1916 34%, transparent),
-    inset 1.5px 0 3px color-mix(in srgb, #1c1916 12%, transparent),
-    inset -1.5px 0 3px color-mix(in srgb, #1c1916 12%, transparent);
+    inset 0 calc(var(--player-seat-chip-d) * 0.07) calc(var(--player-seat-chip-d) * 0.14)
+      color-mix(in srgb, #f0f2fa 16%, transparent),
+    inset 0 calc(var(--player-seat-chip-d) * -0.09) calc(var(--player-seat-chip-d) * 0.16)
+      color-mix(in srgb, var(--color-black) 30%, transparent),
+    inset 0 0 calc(var(--player-seat-chip-d) * 0.1) calc(var(--player-seat-chip-d) * 0.015)
+      color-mix(in srgb, var(--color-black) 14%, transparent);
 }
 
 /* No ::before rim on the seat chip — hard masked rings read as a chamfer line. */
@@ -499,6 +507,6 @@
 }
 
 .panel--hand .panel-hand-rack__seat-label__chip--called {
-  box-shadow: inset 0 0 0 max(1px, calc(var(--rack-tile-w, var(--hand-top-rack-tile-w)) * 0.035))
+  box-shadow: inset 0 0 0 max(1px, calc(var(--player-seat-chip-d, var(--player-seat-label-fs)) * 0.08))
     var(--card-ink-green, #52b147);
 }

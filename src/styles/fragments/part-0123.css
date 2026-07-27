@@ -1200,18 +1200,10 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
  * Drawn-tile / Charleston fly-in: hand tray must clear the green Discard> / pass wells on
  * sibling `.rack-stage__rack-top` (including when call melds are pinned). Late-cascade twin of
  * part-0035 so later rack stacking rules cannot bury the flight again.
- *
- * Skip the tray/rack-bottom lift when owned melds are present — rest stacking already keeps
- * Seat > melds > hand lit tiles (see part-0035).
  */
 .app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
   .panel--hand
-  .rack-stage__rack-col:not(
-    :has(
-      .exposure-rack__slot--owned-meld,
-      .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld
-    )
-  )
+  .rack-stage__rack-col
   > .panel-hand-rack__hand-tray {
   position: relative;
   z-index: 6;
@@ -1219,12 +1211,6 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 .app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
   .panel--hand
-  .rack-stage__rack-col:not(
-    :has(
-      .exposure-rack__slot--owned-meld,
-      .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld
-    )
-  )
   .panel-hand-rack__hand-tray
   .rack-stage__rack-bottom {
   z-index: 3;

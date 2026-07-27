@@ -244,16 +244,31 @@ export function copiesForTileType(tileType: string, deck: DeckComposition = DEFA
 
 function binomial(a: number, b: number): number {
   if (b < 0 || b > a) return 0
-  let k = Math.min(b, a - b)
+  const bi = Math.trunc(b)
+  const ai = Math.trunc(a)
+  if (bi !== b || ai !== a) return 0
+  let k = Math.min(bi, ai - bi)
   let result = 1
   for (let i = 0; i < k; i++) {
-    result *= (a - i) / (i + 1)
+    result *= (ai - i) / (i + 1)
   }
   return result
 }
 
-/** P(X ≥ k) for X ~ Hypergeometric(K successes in N, sample n). */
-export function hypergeometricAtLeast(K: number, n: number, N: number, k: number): number {
+/** Blend neighboring integer sample sizes so fractional trials don't cliff Prob. */
+function blendTrialSize(
+  n: number,
+  evalInt: (nInt: number) => number,
+): number {
+  if (n <= 0) return 0
+  const n0 = Math.floor(n)
+  const n1 = Math.ceil(n)
+  if (n0 === n1) return evalInt(n0)
+  const w = n - n0
+  return (1 - w) * evalInt(n0) + w * evalInt(n1)
+}
+
+function hypergeometricAtLeastInt(K: number, n: number, N: number, k: number): number {
   if (k <= 0) return 1
   if (K < k || n < k || N <= 0 || n <= 0) return 0
   if (n >= N) return K >= k ? 1 : 0
@@ -269,11 +284,15 @@ export function hypergeometricAtLeast(K: number, n: number, N: number, k: number
   return Math.min(1, Math.max(0, sum))
 }
 
-/**
- * P(X1 + X2 ≥ need) for multivariate hypergeometric draws:
- * X1 from K1 typed naturals, X2 from K2 jokers, sample n from pool N.
- */
-export function probNatPlusJokerAtLeast(
+/** P(X ≥ k) for X ~ Hypergeometric(K successes in N, sample n). `n` may be fractional. */
+export function hypergeometricAtLeast(K: number, n: number, N: number, k: number): number {
+  if (k <= 0) return 1
+  if (K < k || N <= 0 || n <= 0) return 0
+  if (n >= N) return K >= k ? 1 : 0
+  return blendTrialSize(n, (nInt) => hypergeometricAtLeastInt(K, nInt, N, k))
+}
+
+function probNatPlusJokerAtLeastInt(
   outs: number,
   jokers: number,
   trials: number,
@@ -303,6 +322,27 @@ export function probNatPlusJokerAtLeast(
     }
   }
   return Math.min(1, Math.max(0, sum))
+}
+
+/**
+ * P(X1 + X2 ≥ need) for multivariate hypergeometric draws:
+ * X1 from K1 typed naturals, X2 from K2 jokers, sample n from pool N.
+ * `trials` may be fractional.
+ */
+export function probNatPlusJokerAtLeast(
+  outs: number,
+  jokers: number,
+  trials: number,
+  pool: number,
+  need: number,
+): number {
+  if (need <= 0) return 1
+  if (trials <= 0 || pool <= 0) return 0
+  if (outs + jokers < need) return 0
+  if (trials >= pool) return outs + jokers >= need ? 1 : 0
+  return blendTrialSize(trials, (t) =>
+    probNatPlusJokerAtLeastInt(outs, jokers, t, pool, need),
+  )
 }
 
 /** Integer 0–100; sub-percent positive odds display as 1 (not a hard zero). */
@@ -493,12 +533,14 @@ export function isSlotExposureReady(
   return held >= slot.targetCount - 1 && held < slot.targetCount
 }
 
-/** East's share of remaining wall draws — rack 13 vs 14 must not change this. */
+/**
+ * East's share of remaining wall draws — rack 13 vs 14 must not change this.
+ * Continuous (wall/4), not floor: flooring cliffed Prob by a full trial whenever the
+ * wall crossed a multiple of 4 (e.g. 96→95 after one junk draw).
+ */
 function wallDrawTrials(wallRemaining: number): number {
-  const base = Math.floor(wallRemaining / 4)
-  // Late wall: still allow one trial while tiles remain.
-  if (base <= 0 && wallRemaining > 0) return 1
-  return Math.max(0, base)
+  if (wallRemaining <= 0) return 0
+  return wallRemaining / 4
 }
 
 /**

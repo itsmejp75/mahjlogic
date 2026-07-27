@@ -311,7 +311,7 @@ export function PlayerRackSeatLabel({
           .filter(Boolean)
           .join(' ')}
       >
-        <span className="panel-hand-rack__seat-label__chip-text">{seatLabel(seat)}</span>
+        <span className="panel-hand-rack__seat-label__chip-text">{seatLabel(seat).charAt(0)}</span>
       </span>
     </span>
   )

@@ -379,6 +379,106 @@
 }
 
 /*
+ * Signed-in gate / resume bootstrap — same paint as the play felt (`data-app-theme` on html).
+ * Do not use `.landing` here: that forces Abyss navy and flashes before the saved theme.
+ */
+.app-theme-loading {
+  box-sizing: border-box;
+  position: relative;
+  isolation: isolate;
+  flex: 1 1 auto;
+  align-self: stretch;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: max(0.75rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+    max(0.75rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  color: color-mix(in srgb, #d7dde6 72%, #fff 28%);
+  font-family: var(--sans, system-ui, sans-serif);
+  background-color: var(--app-bg-paint-color, var(--app-bg-base, #0d1522));
+  background-image: var(--app-bg-paint-image, none);
+  background-size: var(--app-bg-paint-size, auto);
+  background-repeat: var(--app-bg-paint-repeat, no-repeat);
+  background-position: center;
+  background-blend-mode: var(--app-bg-paint-blend, normal);
+  background-attachment: var(--app-bg-paint-attachment, scroll);
+}
+
+.app-theme-loading--cover {
+  position: fixed;
+  inset: 0;
+  /* Above game dialogs (e.g. charleston-error-overlay at 400) until boot finishes. */
+  z-index: 500;
+}
+
+.app-theme-loading__brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.35rem;
+  width: min(100%, 28rem);
+  padding-inline: 1rem;
+}
+
+.app-theme-loading__logo {
+  display: block;
+  width: min(100%, 22rem);
+  max-height: min(28vh, 9.5rem);
+  height: auto;
+  margin: 0;
+  object-fit: contain;
+  object-position: center;
+  user-select: none;
+  filter: drop-shadow(0 10px 28px rgba(0, 0, 0, 0.4));
+}
+
+.app-theme-loading__bar {
+  position: relative;
+  width: min(100%, 14rem);
+  height: 0.35rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: color-mix(in srgb, #fff 14%, transparent);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.app-theme-loading__bar-fill {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 0%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #00b4d8 0%, #00b4d8 45%, #ffb800 100%);
+}
+
+.app-theme-loading__bar-fill--animate {
+  animation: app-theme-loading-fill 1.5s linear forwards;
+}
+
+@keyframes app-theme-loading-fill {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-theme-loading__bar-fill--animate {
+    animation: none;
+    width: 100%;
+  }
+}
+
+/*
  * App background themes — `data-app-theme` on `html` (and mirrored on `.app`).
  * Each theme uses the login-style layered atmosphere (soft accent glows + mid
  * radials + angled base gradient), retinted to Phantom / Abyss / Mystic.

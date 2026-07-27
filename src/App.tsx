@@ -18,7 +18,15 @@ import { AppMenuAccountFooter } from './components/AppMenuAccountFooter'
 import { GameHistoryStatsOverlay } from './components/GameHistoryStatsOverlays'
 import { TileFace } from './components/TileFace'
 import { useAuth } from './auth/AuthProvider'
+import { useSessionBoot } from './auth/sessionBoot'
 import { recordGameResult, type GameOutcome, type GameWinMethod } from './lib/gameResults'
+import {
+  buildInProgressSnapshot,
+  clearInProgressGame,
+  createDebouncedInProgressGameSaver,
+  loadInProgressGame,
+  type InProgressGameSnapshot,
+} from './lib/inProgressGame'
 import {
   createDebouncedPrefsSaver,
   loadUserPreferences,
@@ -1842,6 +1850,12 @@ export default function App() {
   const wallGameEndedByRef = useRef<'natural' | 'manual_end'>('natural')
   const cloudPrefsHydratedRef = useRef(false)
   const prefsSaverRef = useRef(createDebouncedPrefsSaver(400))
+  const inProgressSaverRef = useRef(createDebouncedInProgressGameSaver(800))
+  /** False until cloud resume check finishes (or user picks Resume / New Game). */
+  const sessionReadyRef = useRef(false)
+  const [sessionReady, setSessionReady] = useState(false)
+  const [resumePrompt, setResumePrompt] = useState<InProgressGameSnapshot | null>(null)
+  const sessionBoot = useSessionBoot()
   const [gameMetaPanel, setGameMetaPanel] = useState<'stats' | 'history' | null>(null)
   const replayOpeningMetaRef = useRef<Pick<OpeningDealMeta, 'playerSeat' | 'botSlotSeats'>>({
     playerSeat: 'east',
@@ -1857,7 +1871,9 @@ export default function App() {
     )
     replayOpeningDeckRef.current = roundOpeningDeckOrder(r)
     replayOpeningMetaRef.current = { playerSeat: r.playerSeat, botSlotSeats: r.botSlotSeats }
-    return r
+    // Hold opening fly-in until resume check finishes — avoids a new rack animating in
+    // before a saved hand is restored underneath the Continue prompt.
+    return { ...r, handTileFlyIn: null }
   })
   const [suggestedFocusHandKey, setSuggestedFocusHandKey] = useState<string | null>(null)
   const suggestedFocusHandKeyRef = useRef<string | null>(null)
@@ -4248,6 +4264,11 @@ export default function App() {
         ? crypto.randomUUID()
         : `round-${Date.now()}`
     wallGameEndedByRef.current = 'natural'
+    // Abandon any cloud autosave when dealing a fresh/replay hand.
+    if (sessionReadyRef.current) {
+      inProgressSaverRef.current.cancel()
+      void clearInProgressGame()
+    }
     // Most menu prefs persist across hands; suggested-hand category filters + Concealed (C) reset below.
     const w = readBotWinsEnabledFromStorage()
     setBotWinsEnabled((prev) => (prev === w ? prev : w))
@@ -4487,6 +4508,8 @@ export default function App() {
     }
     recordedGameResultRoundIds.add(roundKey)
     gameResultRecordedRef.current = true
+    inProgressSaverRef.current.cancel()
+    void clearInProgressGame()
 
     let outcome: GameOutcome
     if (mainPhase === 'mahjong-declared') outcome = 'player_win'
@@ -4588,248 +4611,380 @@ export default function App() {
     round.deadHandReason,
   ])
 
-  /** Load cloud prefs on login (cloud wins); upload local prefs when none exist yet. */
+  const markSessionReady = useCallback(() => {
+    sessionReadyRef.current = true
+    setSessionReady(true)
+  }, [])
+
+  /** Apply deck/card settings from an autosave before restoring the round. */
+  const applyResumeSettings = useCallback((snap: InProgressGameSnapshot) => {
+    const s = snap.settings
+    writePlayableCardToStorage(s.cardId)
+    setMenuCardId(s.cardId)
+    menuCardIdRef.current = s.cardId
+    setCommittedCardId(s.cardId)
+    committedCardIdRef.current = s.cardId
+    setActiveCardPatterns(patternsForCard(s.cardId))
+
+    setBotDifficulty(s.botDifficulty)
+    botDifficultyRef.current = s.botDifficulty
+    setBotWinsEnabled(s.botWinsEnabled)
+    botWinsEnabledRef.current = s.botWinsEnabled
+    setTenJokersEnabled(s.tenJokersEnabled)
+    tenJokersEnabledRef.current = s.tenJokersEnabled
+    setBlankTilesEnabled(s.blankTilesEnabled)
+    blankTilesEnabledRef.current = s.blankTilesEnabled
+    setBlankTileCount(s.blankTileCount)
+    blankTileCountRef.current = s.blankTileCount
+    setPlayAsEastEnabled(s.playAsEastEnabled)
+    playAsEastEnabledRef.current = s.playAsEastEnabled
+    try {
+      localStorage.setItem(LS_KEY_BOT_DIFFICULTY, s.botDifficulty)
+      localStorage.setItem(LS_KEY_BOT_WINS, s.botWinsEnabled ? 'true' : 'false')
+      localStorage.setItem(LS_KEY_TEN_JOKERS, s.tenJokersEnabled ? 'true' : 'false')
+      localStorage.setItem(LS_KEY_BLANK_TILES, s.blankTilesEnabled ? 'true' : 'false')
+      localStorage.setItem(LS_KEY_BLANK_TILE_COUNT, String(s.blankTileCount))
+      localStorage.setItem(LS_KEY_PLAY_AS_EAST, s.playAsEastEnabled ? 'true' : 'false')
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  /** Put the autosaved hand on the table (no fly-in) before showing Continue / New Game. */
+  const loadSavedGameOntoTable = useCallback(
+    (snap: InProgressGameSnapshot) => {
+      applyResumeSettings(snap)
+      clientRoundIdRef.current = snap.clientRoundId
+      gameResultRecordedRef.current = false
+      historyRef.current = []
+      sortModeRef.current = null
+      setCanUndo(false)
+      setPendingJokerSwapTileId(null)
+      setCharlestonPassError(null)
+      setCallRuleError(null)
+      setPassStripFlyOut(null)
+      setSuggestedFocusHandKey(null)
+      setSuggestedPinnedHandKeys([])
+      setSuggestedSuppressedHandKey(null)
+      setSuggestedDeadTileGuidesByKey({})
+      setSuggestedDeadTableGuidesByKey({})
+      if (snap.openingDeck?.length) {
+        replayOpeningDeckRef.current = snap.openingDeck
+      }
+      if (snap.openingMeta) {
+        replayOpeningMetaRef.current = snap.openingMeta
+      }
+      setRound(snap.round)
+      setResumePrompt(snap)
+      // Resume dialog opens only after the boot loader dismisses (see effect below).
+    },
+    [applyResumeSettings],
+  )
+
+  /** Continue: table already shows the saved hand — just dismiss the prompt. */
+  const confirmContinueSavedGame = useCallback(() => {
+    setBlockingDialog(null)
+    setResumePrompt(null)
+    markSessionReady()
+  }, [markSessionReady])
+
+  const declineResumeStartNewGame = useCallback(() => {
+    setBlockingDialog(null)
+    setResumePrompt(null)
+    inProgressSaverRef.current.cancel()
+    void clearInProgressGame()
+    // sessionReady must be true before performNewHandDeal so it clears the cloud row.
+    markSessionReady()
+    performNewHandDeal()
+  }, [markSessionReady, performNewHandDeal])
+
+  /** No cloud save: allow play and run the deferred opening-deal fly-in. */
+  const beginFreshSessionWithOpeningFlyIn = useCallback(() => {
+    markSessionReady()
+    setRound((r) => {
+      if (r.handTileFlyIn || r.hand.length === 0) return r
+      return {
+        ...r,
+        handTileFlyIn: {
+          ids: r.hand.map((t) => t.id),
+          from: 'across',
+          staggerWaveDelayMs: 44,
+        },
+      }
+    })
+  }, [markSessionReady])
+
+  /** Load cloud prefs + in-progress game on login; prompt to resume when a hand was autosaved. */
   useEffect(() => {
     if (!user) {
       cloudPrefsHydratedRef.current = false
       prefsSaverRef.current.cancel()
+      inProgressSaverRef.current.cancel()
+      sessionReadyRef.current = true
+      setSessionReady(true)
+      setResumePrompt(null)
       return
     }
 
     let cancelled = false
     cloudPrefsHydratedRef.current = false
+    sessionReadyRef.current = false
+    setSessionReady(false)
+    setResumePrompt(null)
 
     void (async () => {
-      const { prefs, error } = await loadUserPreferences()
+      const [{ prefs, error }, { snapshot: savedGame }] = await Promise.all([
+        loadUserPreferences(),
+        loadInProgressGame(),
+      ])
       if (cancelled) return
+
       if (error) {
         cloudPrefsHydratedRef.current = true
+        if (savedGame) {
+          loadSavedGameOntoTable(savedGame)
+        } else {
+          beginFreshSessionWithOpeningFlyIn()
+        }
         return
       }
 
       if (!prefs) {
         await saveUserPreferences(collectSyncedPrefs())
-        if (!cancelled) cloudPrefsHydratedRef.current = true
-        return
+        if (cancelled) return
       }
 
       let redeal = false
-      const prevCard = committedCardIdRef.current
-      const prevBlank = blankTilesEnabledRef.current
-      const prevBlankCount = blankTileCountRef.current
-      const prevTen = tenJokersEnabledRef.current
-      const prevEast = playAsEastEnabledRef.current
+      if (prefs) {
+        const prevCard = committedCardIdRef.current
+        const prevBlank = blankTilesEnabledRef.current
+        const prevBlankCount = blankTileCountRef.current
+        const prevTen = tenJokersEnabledRef.current
+        const prevEast = playAsEastEnabledRef.current
 
-      if (prefs.playableCardId != null && prefs.playableCardId !== prevCard) {
-        writePlayableCardToStorage(prefs.playableCardId)
-        setMenuCardId(prefs.playableCardId)
-        menuCardIdRef.current = prefs.playableCardId
-        setCommittedCardId(prefs.playableCardId)
-        committedCardIdRef.current = prefs.playableCardId
-        setActiveCardPatterns(patternsForCard(prefs.playableCardId))
-        redeal = true
-      }
-      if (prefs.botDifficulty != null) {
-        setBotDifficulty(prefs.botDifficulty)
-        botDifficultyRef.current = prefs.botDifficulty
-        try {
-          localStorage.setItem(LS_KEY_BOT_DIFFICULTY, prefs.botDifficulty)
-        } catch {
-          /* ignore */
+        if (prefs.playableCardId != null && prefs.playableCardId !== prevCard) {
+          writePlayableCardToStorage(prefs.playableCardId)
+          setMenuCardId(prefs.playableCardId)
+          menuCardIdRef.current = prefs.playableCardId
+          setCommittedCardId(prefs.playableCardId)
+          committedCardIdRef.current = prefs.playableCardId
+          setActiveCardPatterns(patternsForCard(prefs.playableCardId))
+          redeal = true
         }
-      }
-      if (prefs.appTheme != null && isAppTheme(prefs.appTheme)) {
-        setAppTheme(prefs.appTheme)
-        persistAppTheme(prefs.appTheme)
-      }
-      if (prefs.tileGraphics != null && isTileGraphics(prefs.tileGraphics)) {
-        setTileGraphics(prefs.tileGraphics)
-        persistTileGraphicsChoice(prefs.tileGraphics)
-      }
-      if (typeof prefs.botWinsEnabled === 'boolean') {
-        setBotWinsEnabled(prefs.botWinsEnabled)
-        botWinsEnabledRef.current = prefs.botWinsEnabled
-        try {
-          localStorage.setItem(LS_KEY_BOT_WINS, prefs.botWinsEnabled ? 'true' : 'false')
-        } catch {
-          /* ignore */
-        }
-      }
-      if (typeof prefs.colorButtonsEnabled === 'boolean') {
-        setColorButtonsEnabled(prefs.colorButtonsEnabled)
-        try {
-          localStorage.setItem(LS_KEY_COLOR_BUTTONS, prefs.colorButtonsEnabled ? 'true' : 'false')
-        } catch {
-          /* ignore */
-        }
-      }
-      if (typeof prefs.undoEnabled === 'boolean') {
-        setUndoEnabled(prefs.undoEnabled)
-        try {
-          localStorage.setItem(LS_KEY_UNDO, prefs.undoEnabled ? 'true' : 'false')
-        } catch {
-          /* ignore */
-        }
-      }
-      if (typeof prefs.animationsEnabled === 'boolean') {
-        setAnimationsEnabled(prefs.animationsEnabled)
-        try {
-          localStorage.setItem(LS_KEY_ANIMATIONS, prefs.animationsEnabled ? 'true' : 'false')
-        } catch {
-          /* ignore */
-        }
-      }
-      if (typeof prefs.deadHandWarningsEnabled === 'boolean') {
-        setDeadHandWarningsEnabled(prefs.deadHandWarningsEnabled)
-        deadHandWarningsEnabledRef.current = prefs.deadHandWarningsEnabled
-        try {
-          localStorage.setItem(
-            LS_KEY_DEAD_HAND_WARNINGS,
-            prefs.deadHandWarningsEnabled ? 'true' : 'false',
-          )
-        } catch {
-          /* ignore */
-        }
-      }
-      if (typeof prefs.jokerSwapHintEnabled === 'boolean') {
-        setJokerSwapHintEnabled(prefs.jokerSwapHintEnabled)
-        try {
-          localStorage.setItem(LS_KEY_JOKER_SWAP_HINT, prefs.jokerSwapHintEnabled ? 'true' : 'false')
-        } catch {
-          /* ignore */
-        }
-      }
-      if (typeof prefs.mahjongHintEnabled === 'boolean') {
-        setMahjongHintEnabled(prefs.mahjongHintEnabled)
-        try {
-          localStorage.setItem(LS_KEY_MAHJONG_HINT, prefs.mahjongHintEnabled ? 'true' : 'false')
-        } catch {
-          /* ignore */
-        }
-      }
-      if (typeof prefs.mahjongHintDelaySeconds === 'number') {
-        const delay = normalizeHintDelaySeconds(prefs.mahjongHintDelaySeconds)
-        if (delay != null) {
-          setMahjongHintDelaySeconds(delay)
+        if (prefs.botDifficulty != null) {
+          setBotDifficulty(prefs.botDifficulty)
+          botDifficultyRef.current = prefs.botDifficulty
           try {
-            localStorage.setItem(LS_KEY_MAHJONG_HINT_DELAY_SECONDS, String(delay))
+            localStorage.setItem(LS_KEY_BOT_DIFFICULTY, prefs.botDifficulty)
+          } catch {
+            /* ignore */
+          }
+        }
+        if (prefs.appTheme != null && isAppTheme(prefs.appTheme)) {
+          setAppTheme(prefs.appTheme)
+          persistAppTheme(prefs.appTheme)
+        }
+        if (prefs.tileGraphics != null && isTileGraphics(prefs.tileGraphics)) {
+          setTileGraphics(prefs.tileGraphics)
+          persistTileGraphicsChoice(prefs.tileGraphics)
+        }
+        if (typeof prefs.botWinsEnabled === 'boolean') {
+          setBotWinsEnabled(prefs.botWinsEnabled)
+          botWinsEnabledRef.current = prefs.botWinsEnabled
+          try {
+            localStorage.setItem(LS_KEY_BOT_WINS, prefs.botWinsEnabled ? 'true' : 'false')
+          } catch {
+            /* ignore */
+          }
+        }
+        if (typeof prefs.colorButtonsEnabled === 'boolean') {
+          setColorButtonsEnabled(prefs.colorButtonsEnabled)
+          try {
+            localStorage.setItem(LS_KEY_COLOR_BUTTONS, prefs.colorButtonsEnabled ? 'true' : 'false')
+          } catch {
+            /* ignore */
+          }
+        }
+        if (typeof prefs.undoEnabled === 'boolean') {
+          setUndoEnabled(prefs.undoEnabled)
+          try {
+            localStorage.setItem(LS_KEY_UNDO, prefs.undoEnabled ? 'true' : 'false')
+          } catch {
+            /* ignore */
+          }
+        }
+        if (typeof prefs.animationsEnabled === 'boolean') {
+          setAnimationsEnabled(prefs.animationsEnabled)
+          try {
+            localStorage.setItem(LS_KEY_ANIMATIONS, prefs.animationsEnabled ? 'true' : 'false')
+          } catch {
+            /* ignore */
+          }
+        }
+        if (typeof prefs.deadHandWarningsEnabled === 'boolean') {
+          setDeadHandWarningsEnabled(prefs.deadHandWarningsEnabled)
+          deadHandWarningsEnabledRef.current = prefs.deadHandWarningsEnabled
+          try {
+            localStorage.setItem(
+              LS_KEY_DEAD_HAND_WARNINGS,
+              prefs.deadHandWarningsEnabled ? 'true' : 'false',
+            )
+          } catch {
+            /* ignore */
+          }
+        }
+        if (typeof prefs.jokerSwapHintEnabled === 'boolean') {
+          setJokerSwapHintEnabled(prefs.jokerSwapHintEnabled)
+          try {
+            localStorage.setItem(LS_KEY_JOKER_SWAP_HINT, prefs.jokerSwapHintEnabled ? 'true' : 'false')
+          } catch {
+            /* ignore */
+          }
+        }
+        if (typeof prefs.mahjongHintEnabled === 'boolean') {
+          setMahjongHintEnabled(prefs.mahjongHintEnabled)
+          try {
+            localStorage.setItem(LS_KEY_MAHJONG_HINT, prefs.mahjongHintEnabled ? 'true' : 'false')
+          } catch {
+            /* ignore */
+          }
+        }
+        if (typeof prefs.mahjongHintDelaySeconds === 'number') {
+          const delay = normalizeHintDelaySeconds(prefs.mahjongHintDelaySeconds)
+          if (delay != null) {
+            setMahjongHintDelaySeconds(delay)
+            try {
+              localStorage.setItem(LS_KEY_MAHJONG_HINT_DELAY_SECONDS, String(delay))
+            } catch {
+              /* ignore */
+            }
+          }
+        }
+        if (typeof prefs.jokerSwapHintDelaySeconds === 'number') {
+          const delay = normalizeHintDelaySeconds(prefs.jokerSwapHintDelaySeconds)
+          if (delay != null) {
+            setJokerSwapHintDelaySeconds(delay)
+            try {
+              localStorage.setItem(LS_KEY_JOKER_SWAP_HINT_DELAY_SECONDS, String(delay))
+            } catch {
+              /* ignore */
+            }
+          }
+        }
+        if (typeof prefs.deadTileHintEnabled === 'boolean') {
+          setDeadTileHintEnabled(prefs.deadTileHintEnabled)
+          try {
+            localStorage.setItem(LS_KEY_DEAD_TILE_HINT, prefs.deadTileHintEnabled ? 'true' : 'false')
+          } catch {
+            /* ignore */
+          }
+        }
+        if (typeof prefs.botHandsIdentifierEnabled === 'boolean') {
+          setBotHandsIdentifierEnabled(prefs.botHandsIdentifierEnabled)
+          try {
+            localStorage.setItem(
+              LS_KEY_BOT_HANDS_IDENTIFIER,
+              prefs.botHandsIdentifierEnabled ? 'true' : 'false',
+            )
+          } catch {
+            /* ignore */
+          }
+        }
+        if (typeof prefs.concealedHandReminderEnabled === 'boolean') {
+          setConcealedHandReminderEnabled(prefs.concealedHandReminderEnabled)
+          concealedHandReminderEnabledRef.current = prefs.concealedHandReminderEnabled
+          try {
+            localStorage.setItem(
+              LS_KEY_CONCEALED_HAND_REMINDER,
+              prefs.concealedHandReminderEnabled ? 'true' : 'false',
+            )
+          } catch {
+            /* ignore */
+          }
+        }
+        if (typeof prefs.blankTilesEnabled === 'boolean' && prefs.blankTilesEnabled !== prevBlank) {
+          setBlankTilesEnabled(prefs.blankTilesEnabled)
+          blankTilesEnabledRef.current = prefs.blankTilesEnabled
+          try {
+            localStorage.setItem(LS_KEY_BLANK_TILES, prefs.blankTilesEnabled ? 'true' : 'false')
+          } catch {
+            /* ignore */
+          }
+          redeal = true
+        }
+        if (
+          typeof prefs.blankTileCount === 'number' &&
+          isBlankTileCount(prefs.blankTileCount) &&
+          prefs.blankTileCount !== prevBlankCount
+        ) {
+          setBlankTileCount(prefs.blankTileCount)
+          blankTileCountRef.current = prefs.blankTileCount
+          try {
+            localStorage.setItem(LS_KEY_BLANK_TILE_COUNT, String(prefs.blankTileCount))
+          } catch {
+            /* ignore */
+          }
+          redeal = true
+        }
+        if (typeof prefs.tenJokersEnabled === 'boolean' && prefs.tenJokersEnabled !== prevTen) {
+          setTenJokersEnabled(prefs.tenJokersEnabled)
+          tenJokersEnabledRef.current = prefs.tenJokersEnabled
+          try {
+            localStorage.setItem(LS_KEY_TEN_JOKERS, prefs.tenJokersEnabled ? 'true' : 'false')
+          } catch {
+            /* ignore */
+          }
+          redeal = true
+        }
+        if (typeof prefs.playAsEastEnabled === 'boolean' && prefs.playAsEastEnabled !== prevEast) {
+          setPlayAsEastEnabled(prefs.playAsEastEnabled)
+          playAsEastEnabledRef.current = prefs.playAsEastEnabled
+          try {
+            localStorage.setItem(LS_KEY_PLAY_AS_EAST, prefs.playAsEastEnabled ? 'true' : 'false')
+          } catch {
+            /* ignore */
+          }
+          redeal = true
+        }
+        if (typeof prefs.suggestedHandsTrayDefaultOpen === 'boolean') {
+          setSuggestedHandsTrayDefaultOpen(prefs.suggestedHandsTrayDefaultOpen)
+          suggestedHandsTrayApiRef.current.setTrayOpen(prefs.suggestedHandsTrayDefaultOpen)
+          try {
+            localStorage.setItem(
+              LS_KEY_SUGGESTED_HANDS_TRAY,
+              prefs.suggestedHandsTrayDefaultOpen ? 'true' : 'false',
+            )
+          } catch {
+            /* ignore */
+          }
+        }
+        if (typeof prefs.handProbabilityEnabled === 'boolean') {
+          setHandProbabilityEnabled(prefs.handProbabilityEnabled)
+          try {
+            localStorage.setItem(
+              LS_KEY_HAND_PROBABILITY,
+              prefs.handProbabilityEnabled ? 'true' : 'false',
+            )
           } catch {
             /* ignore */
           }
         }
       }
-      if (typeof prefs.jokerSwapHintDelaySeconds === 'number') {
-        const delay = normalizeHintDelaySeconds(prefs.jokerSwapHintDelaySeconds)
-        if (delay != null) {
-          setJokerSwapHintDelaySeconds(delay)
-          try {
-            localStorage.setItem(LS_KEY_JOKER_SWAP_HINT_DELAY_SECONDS, String(delay))
-          } catch {
-            /* ignore */
-          }
-        }
-      }
-      if (typeof prefs.deadTileHintEnabled === 'boolean') {
-        setDeadTileHintEnabled(prefs.deadTileHintEnabled)
-        try {
-          localStorage.setItem(LS_KEY_DEAD_TILE_HINT, prefs.deadTileHintEnabled ? 'true' : 'false')
-        } catch {
-          /* ignore */
-        }
-      }
-      if (typeof prefs.botHandsIdentifierEnabled === 'boolean') {
-        setBotHandsIdentifierEnabled(prefs.botHandsIdentifierEnabled)
-        try {
-          localStorage.setItem(
-            LS_KEY_BOT_HANDS_IDENTIFIER,
-            prefs.botHandsIdentifierEnabled ? 'true' : 'false',
-          )
-        } catch {
-          /* ignore */
-        }
-      }
-      if (typeof prefs.concealedHandReminderEnabled === 'boolean') {
-        setConcealedHandReminderEnabled(prefs.concealedHandReminderEnabled)
-        concealedHandReminderEnabledRef.current = prefs.concealedHandReminderEnabled
-        try {
-          localStorage.setItem(
-            LS_KEY_CONCEALED_HAND_REMINDER,
-            prefs.concealedHandReminderEnabled ? 'true' : 'false',
-          )
-        } catch {
-          /* ignore */
-        }
-      }
-      if (typeof prefs.blankTilesEnabled === 'boolean' && prefs.blankTilesEnabled !== prevBlank) {
-        setBlankTilesEnabled(prefs.blankTilesEnabled)
-        blankTilesEnabledRef.current = prefs.blankTilesEnabled
-        try {
-          localStorage.setItem(LS_KEY_BLANK_TILES, prefs.blankTilesEnabled ? 'true' : 'false')
-        } catch {
-          /* ignore */
-        }
-        redeal = true
-      }
-      if (
-        typeof prefs.blankTileCount === 'number' &&
-        isBlankTileCount(prefs.blankTileCount) &&
-        prefs.blankTileCount !== prevBlankCount
-      ) {
-        setBlankTileCount(prefs.blankTileCount)
-        blankTileCountRef.current = prefs.blankTileCount
-        try {
-          localStorage.setItem(LS_KEY_BLANK_TILE_COUNT, String(prefs.blankTileCount))
-        } catch {
-          /* ignore */
-        }
-        redeal = true
-      }
-      if (typeof prefs.tenJokersEnabled === 'boolean' && prefs.tenJokersEnabled !== prevTen) {
-        setTenJokersEnabled(prefs.tenJokersEnabled)
-        tenJokersEnabledRef.current = prefs.tenJokersEnabled
-        try {
-          localStorage.setItem(LS_KEY_TEN_JOKERS, prefs.tenJokersEnabled ? 'true' : 'false')
-        } catch {
-          /* ignore */
-        }
-        redeal = true
-      }
-      if (typeof prefs.playAsEastEnabled === 'boolean' && prefs.playAsEastEnabled !== prevEast) {
-        setPlayAsEastEnabled(prefs.playAsEastEnabled)
-        playAsEastEnabledRef.current = prefs.playAsEastEnabled
-        try {
-          localStorage.setItem(LS_KEY_PLAY_AS_EAST, prefs.playAsEastEnabled ? 'true' : 'false')
-        } catch {
-          /* ignore */
-        }
-        redeal = true
-      }
-      if (typeof prefs.suggestedHandsTrayDefaultOpen === 'boolean') {
-        setSuggestedHandsTrayDefaultOpen(prefs.suggestedHandsTrayDefaultOpen)
-        suggestedHandsTrayApiRef.current.setTrayOpen(prefs.suggestedHandsTrayDefaultOpen)
-        try {
-          localStorage.setItem(
-            LS_KEY_SUGGESTED_HANDS_TRAY,
-            prefs.suggestedHandsTrayDefaultOpen ? 'true' : 'false',
-          )
-        } catch {
-          /* ignore */
-        }
-      }
-      if (typeof prefs.handProbabilityEnabled === 'boolean') {
-        setHandProbabilityEnabled(prefs.handProbabilityEnabled)
-        try {
-          localStorage.setItem(
-            LS_KEY_HAND_PROBABILITY,
-            prefs.handProbabilityEnabled ? 'true' : 'false',
-          )
-        } catch {
-          /* ignore */
-        }
-      }
 
-      if (redeal) performNewHandDeal()
       if (!cancelled) cloudPrefsHydratedRef.current = true
+
+      // Restore the saved table first, then prompt — never flash a new opening deal.
+      if (savedGame) {
+        loadSavedGameOntoTable(savedGame)
+        return
+      }
+
+      if (redeal) {
+        markSessionReady()
+        performNewHandDeal()
+      } else {
+        beginFreshSessionWithOpeningFlyIn()
+      }
     })()
 
     return () => {
@@ -4848,6 +5003,70 @@ export default function App() {
   useEffect(() => {
     const saver = prefsSaverRef.current
     return () => saver.cancel()
+  }, [])
+
+  /** Tell the single boot loader (in RequireAuth) that cloud hydrate is finished. */
+  useEffect(() => {
+    if (!user) return
+    if (!(sessionReady || resumePrompt != null)) return
+    sessionBoot?.notifySessionBootReady()
+  }, [user, sessionReady, resumePrompt, sessionBoot])
+
+  /** Show Continue / New Game only after the load screen (and bar) are gone. */
+  useEffect(() => {
+    if (!resumePrompt) return
+    if (!sessionBoot?.bootLoaderDismissed) return
+    setBlockingDialog((prev) =>
+      prev?.variant === 'resume-game' ? prev : { variant: 'resume-game' },
+    )
+  }, [resumePrompt, sessionBoot?.bootLoaderDismissed])
+
+  /** After bootstrap reveals the table, refresh hand-panel CQW (pass-slot / rack geometry). */
+  useLayoutEffect(() => {
+    if (!sessionReady && !resumePrompt) return
+    refreshHandPanelCqwRef.current()
+  }, [sessionReady, resumePrompt])
+
+  /** Autosave in-progress hand for signed-in players (resume after reload). */
+  useEffect(() => {
+    if (!user || !sessionReady || resumePrompt) return
+    const snap = buildInProgressSnapshot({
+      clientRoundId: clientRoundIdRef.current,
+      round,
+      settings: {
+        cardId: committedCardIdRef.current,
+        botDifficulty: botDifficultyRef.current,
+        botWinsEnabled: botWinsEnabledRef.current,
+        tenJokersEnabled: tenJokersEnabledRef.current,
+        blankTilesEnabled: blankTilesEnabledRef.current,
+        blankTileCount: blankTileCountRef.current,
+        playAsEastEnabled: playAsEastEnabledRef.current,
+      },
+      openingDeck: replayOpeningDeckRef.current,
+      openingMeta: replayOpeningMetaRef.current,
+    })
+    if (!snap) {
+      // Fresh unplayed deal — do not upsert, and do not delete a cloud save we might
+      // have failed to load (only New Game / hand-end / decline-resume clear).
+      inProgressSaverRef.current.cancel()
+      return
+    }
+    inProgressSaverRef.current.schedule(snap)
+  }, [user, sessionReady, resumePrompt, round])
+
+  useEffect(() => {
+    const saver = inProgressSaverRef.current
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') saver.flush()
+    }
+    const onPageHide = () => saver.flush()
+    document.addEventListener('visibilitychange', onHide)
+    window.addEventListener('pagehide', onPageHide)
+    return () => {
+      document.removeEventListener('visibilitychange', onHide)
+      window.removeEventListener('pagehide', onPageHide)
+      saver.cancel()
+    }
   }, [])
 
   /** Same shuffled deck + opening deal as before Charleston on the last fresh deal (reshuffle only via New Game). */
@@ -6215,6 +6434,7 @@ export default function App() {
             if (blockingDialog?.variant === 'invalid-call-meld-warning') return
             if (blockingDialog?.variant === 'discard-dead-warning') return
             if (blockingDialog?.variant === 'concealed-call-warning') return
+            if (blockingDialog?.variant === 'resume-game') return
             setCharlestonPassError(null)
             setCallRuleError(null)
             setBlockingDialog(null)
@@ -6252,6 +6472,9 @@ export default function App() {
               blockingDialog?.variant === 'mahjong-blocked'
                 ? 'charleston-error-dialog--table charleston-error-dialog--mahjong-blocked'
                 : '',
+              blockingDialog?.variant === 'resume-game'
+                ? 'charleston-error-dialog--menu-shell charleston-error-dialog--new-game-warning'
+                : '',
               callRuleError ? 'charleston-error-dialog--call-warning' : '',
             ]
               .filter(Boolean)
@@ -6266,7 +6489,8 @@ export default function App() {
               blockingDialog?.variant === 'call-meld-size-warning' ||
               blockingDialog?.variant === 'invalid-call-meld-warning' ||
               blockingDialog?.variant === 'discard-dead-warning' ||
-              blockingDialog?.variant === 'concealed-call-warning'
+              blockingDialog?.variant === 'concealed-call-warning' ||
+              blockingDialog?.variant === 'resume-game'
                 ? 'game-blocking-error-title'
                 : blockingDialog?.variant === 'mahjong-blocked'
                   ? 'mj-blocked-title'
@@ -6280,13 +6504,45 @@ export default function App() {
               blockingDialog?.variant === 'call-meld-size-warning' ||
               blockingDialog?.variant === 'invalid-call-meld-warning' ||
               blockingDialog?.variant === 'discard-dead-warning' ||
-              blockingDialog?.variant === 'concealed-call-warning'
+              blockingDialog?.variant === 'concealed-call-warning' ||
+              blockingDialog?.variant === 'resume-game'
                 ? 'game-blocking-error-body'
                 : undefined
             }
             onClick={(e) => e.stopPropagation()}
           >
-            {blockingDialog?.variant === 'concealed-call-warning' ? (
+            {blockingDialog?.variant === 'resume-game' ? (
+              <>
+                <h2 id="game-blocking-error-title" className="charleston-error-dialog__title">
+                  Continue game?
+                </h2>
+                <p id="game-blocking-error-body" className="charleston-error-dialog__body">
+                  You have a game in progress. Continue where you left off, or start a new game?
+                </p>
+                <div className="charleston-error-dialog__actions charleston-error-dialog__actions--spread">
+                  <button
+                    type="button"
+                    className="btn charleston-error-dialog__rack-action"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      declineResumeStartNewGame()
+                    }}
+                  >
+                    New Game
+                  </button>
+                  <button
+                    type="button"
+                    className="btn charleston-error-dialog__rack-action"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      confirmContinueSavedGame()
+                    }}
+                  >
+                    Continue
+                  </button>
+                </div>
+              </>
+            ) : blockingDialog?.variant === 'concealed-call-warning' ? (
               <>
                 <h2 id="game-blocking-error-title" className="charleston-error-dialog__title">
                   Concealed Hand Reminder
