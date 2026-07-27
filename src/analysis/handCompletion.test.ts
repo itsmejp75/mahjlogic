@@ -10,9 +10,11 @@ import {
   finalizeCompletionMetrics,
   hypergeometricAtLeast,
   isHandDeadByVisibleTiles,
+  isSlotExposureReady,
   jokerBanRatio,
   jokerSwapHintReliefForLine,
   maxCompletionMetricsOverSlotSets,
+  probNatPlusJokerAtLeast,
   type CompletionSlot,
   type HandInventoryContext,
   type WallCompletionProbabilityInput,
@@ -588,7 +590,7 @@ describe('calculateWallCompletionProbability', () => {
   })
 
   it('keeps Away-3 open melds low but non-zero at wall 11 with a 14-tile rack', () => {
-    // Quints-style: 11111 44444 DDDD — call paths for 1D/4D/G still exist.
+    // Quints-style: 11111 44444 DDDD — call paths only when exposure-ready.
     const slots: CompletionSlot[] = [
       { tileType: 's:dot:1', targetCount: 5 },
       { tileType: 's:dot:4', targetCount: 5 },
@@ -615,12 +617,81 @@ describe('calculateWallCompletionProbability', () => {
     }
     const at11 = calculateWallCompletionProbability({ ...shared, wallRemaining: 11 })
     const at12 = calculateWallCompletionProbability({ ...shared, wallRemaining: 12 })
-    // Previously wall 11 + rack 14 hard-zeroed after stripping call credit.
     expect(at11).toBeGreaterThan(0)
     expect(at11).toBeLessThan(25)
-    // Away 3 late-wall should stay dampened (not the old ~38% full call-window band).
     expect(at12).toBeGreaterThan(0)
     expect(at12).toBeLessThan(25)
+  })
+
+  it('gives higher Prob % when a quint is exposure-ready vs the same wall when it is not', () => {
+    const slots: CompletionSlot[] = [
+      { tileType: 's:dot:1', targetCount: 5 },
+      { tileType: 'd:green', targetCount: 5 },
+      { tileType: 's:bam:2', targetCount: 4 },
+    ]
+    const wallRemaining = 48
+    // Not ready to expose either quint (need 4 matching before calling the 5th).
+    const notReady = calculateWallCompletionProbability(
+      baseInput({
+        slots,
+        ctx: {
+          naturals: { 's:dot:1': 2, 'd:green': 2, 's:bam:2': 3 },
+          jokersInHand: 1,
+          blanksInHand: 0,
+          discardCounts: {},
+          jokersDisallowed: false,
+        },
+        completion: { M_nat: 7, M_joker: 1, D: 6, P_base: 57, P: 57 },
+        wallRemaining,
+        tilesNeededRough: 6,
+      }),
+    )
+    // Ready to call the last 1-dot for the quint (4 naturals held).
+    const ready = calculateWallCompletionProbability(
+      baseInput({
+        slots,
+        ctx: {
+          naturals: { 's:dot:1': 4, 'd:green': 4, 's:bam:2': 4 },
+          jokersInHand: 1,
+          blanksInHand: 0,
+          discardCounts: {},
+          jokersDisallowed: false,
+        },
+        completion: { M_nat: 12, M_joker: 1, D: 1, P_base: 93, P: 93 },
+        wallRemaining,
+        tilesNeededRough: 1,
+      }),
+    )
+    expect(notReady).toBeGreaterThan(0)
+    expect(ready).toBeGreaterThan(notReady)
+    expect(ready).toBeGreaterThan(20)
+  })
+
+  it('does not treat expected wall jokers as a guaranteed 100% for a 1-joker quint gap', () => {
+    const slots: CompletionSlot[] = [
+      { tileType: 's:bam:3', targetCount: 5 },
+      { tileType: 's:dot:5', targetCount: 5 },
+      { tileType: 'd:green', targetCount: 4 },
+    ]
+    const prob = calculateWallCompletionProbability(
+      baseInput({
+        slots,
+        ctx: {
+          naturals: { 's:bam:3': 4, 's:dot:5': 4, 'd:green': 4 },
+          jokersInHand: 1,
+          blanksInHand: 0,
+          discardCounts: {},
+          jokersDisallowed: false,
+        },
+        completion: { M_nat: 12, M_joker: 1, D: 1, P_base: 93, P: 93 },
+        wallRemaining: 40,
+        tilesNeededRough: 1,
+        visibleJokers: 0,
+      }),
+    )
+    // Need one more joker from the wall/calls — real odds, not EV wipeout to 100.
+    expect(prob).toBeGreaterThan(0)
+    expect(prob).toBeLessThan(100)
   })
 
   it('raises completion prob when joker-swap hint relief is available', () => {
@@ -746,6 +817,25 @@ describe('calculateWallCompletionProbability', () => {
     })
     expect(wall.length).toBeGreaterThan(50)
     expect(ranked.some((line) => line.completionProbability > 0)).toBe(true)
+  })
+})
+
+describe('isSlotExposureReady', () => {
+  it('requires targetCount-1 matching tiles', () => {
+    const quint: CompletionSlot = { tileType: 's:dot:1', targetCount: 5 }
+    expect(isSlotExposureReady(quint, { 's:dot:1': 3 }, 0)).toBe(false)
+    expect(isSlotExposureReady(quint, { 's:dot:1': 3 }, 1)).toBe(true)
+    expect(isSlotExposureReady(quint, { 's:dot:1': 4 }, 0)).toBe(true)
+    expect(isSlotExposureReady(quint, { 's:dot:1': 5 }, 0)).toBe(false)
+  })
+})
+
+describe('probNatPlusJokerAtLeast', () => {
+  it('allows jokers to fill natural shortfall', () => {
+    const withJokers = probNatPlusJokerAtLeast(2, 8, 20, 120, 3)
+    const naturalsOnly = hypergeometricAtLeast(2, 20, 120, 3)
+    expect(naturalsOnly).toBe(0)
+    expect(withJokers).toBeGreaterThan(0.2)
   })
 })
 
@@ -949,7 +1039,8 @@ describe('computePatternCompletionMetrics', () => {
     })
     const line = ranked.find((l) => l.id === pattern.id)
     expect(line?.tilesNeededRough).toBe(6)
-    expect(line?.completionProbability).toBeGreaterThan(10)
+    // Concealed + joker-gated: precise odds stay low (old viability heuristic was >10%).
+    expect(line?.completionProbability).toBeGreaterThan(0)
     expect(line?.completionProbability).toBeLessThan(99)
     expect(isHandDeadByVisibleTiles(
       [{ tileType: 's:crak:2', targetCount: 1 }],

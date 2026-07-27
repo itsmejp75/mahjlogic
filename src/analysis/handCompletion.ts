@@ -258,6 +258,50 @@ export function hypergeometricAtLeast(K: number, n: number, N: number, k: number
   return Math.min(1, Math.max(0, sum))
 }
 
+/**
+ * P(X1 + X2 ≥ need) for multivariate hypergeometric draws:
+ * X1 from K1 typed naturals, X2 from K2 jokers, sample n from pool N.
+ */
+export function probNatPlusJokerAtLeast(
+  outs: number,
+  jokers: number,
+  trials: number,
+  pool: number,
+  need: number,
+): number {
+  if (need <= 0) return 1
+  if (trials <= 0 || pool <= 0) return 0
+  if (outs + jokers < need || trials < need) return 0
+  if (trials >= pool) return outs + jokers >= need ? 1 : 0
+
+  const denom = binomial(pool, trials)
+  if (denom === 0) return 0
+
+  const other = pool - outs - jokers
+  if (other < 0) return 0
+
+  let sum = 0
+  const nMax = Math.min(outs, trials)
+  for (let n = 0; n <= nMax; n++) {
+    const jMin = Math.max(0, need - n)
+    const jMax = Math.min(jokers, trials - n)
+    for (let j = jMin; j <= jMax; j++) {
+      const rest = trials - n - j
+      if (rest < 0 || rest > other) continue
+      sum += (binomial(outs, n) * binomial(jokers, j) * binomial(other, rest)) / denom
+    }
+  }
+  return Math.min(1, Math.max(0, sum))
+}
+
+/** Integer 0–100; sub-percent positive odds display as 1 (not a hard zero). */
+function pctFromProb(p: number): number {
+  if (p <= 0) return 0
+  if (p >= 1) return 100
+  const rounded = Math.round(p * 100)
+  return Math.max(1, Math.min(100, rounded))
+}
+
 function hiddenNaturalOutsForSlot(
   tileType: string,
   naturals: TileCountMap,
@@ -280,15 +324,6 @@ function hiddenNaturalOutsForSlot(
     0,
     copiesForTileType(tileType, deck) - getCount(visibleNaturals, tileType) - getCount(naturals, tileType),
   )
-}
-
-function pairOrSingleStillMissing(slots: readonly CompletionSlot[], naturals: TileCountMap): boolean {
-  for (const slot of slots) {
-    if (slot.targetCount > 2) continue
-    const held = countNaturalsForSlot(slot.tileType, naturals)
-    if (held < slot.targetCount) return true
-  }
-  return false
 }
 
 /** 0% when a single/pair slot cannot be satisfied from remaining physical copies. */
@@ -315,129 +350,107 @@ function sumVisibleNaturals(visibleNaturals: TileCountMap): number {
   return total
 }
 
-/** Natural tiles still needed in single/pair slots (callable for Mah Jongg on a discard). */
-function pairSingleNaturalGap(slots: readonly CompletionSlot[], naturals: TileCountMap): number {
-  let gap = 0
-  for (const slot of slots) {
-    if (slot.targetCount > 2) continue
-    const held = countNaturalsForSlot(slot.tileType, naturals)
-    gap += Math.max(0, slot.targetCount - held)
-  }
-  return gap
-}
+/** Discount on opponent discard windows for skip / competition risk. */
+const CALL_WINDOW_DISCOUNT = 0.35
+/** Near-MJ declare calls are more reliable (you take any winning discard). */
+const NEAR_MJ_CALL_DISCOUNT = 0.85
 
-function estimatePlayerTrials(
-  wallRemaining: number,
-  isConcealed: boolean,
-  isSinglesAndPairs: boolean,
+/**
+ * Greedy joker allocation onto joker-eligible meld slots (same order as {@link computeHandCompletionMetrics}).
+ * Returns per-slot joker counts (parallel to `slots`).
+ */
+export function allocateJokersToSlots(
   slots: readonly CompletionSlot[],
   naturals: TileCountMap,
-  tilesNeededRough: number,
-): number {
-  const baseDraws = Math.floor(wallRemaining / 4)
-  if (baseDraws <= 0) return wallRemaining > 0 ? 1 : 0
-
-  const callRestricted =
-    isConcealed || isSinglesAndPairs || pairOrSingleStillMissing(slots, naturals)
-
-  if (callRestricted) {
-    const pairGap = pairSingleNaturalGap(slots, naturals)
-    // Open hand near Mah Jongg: the winning tile may be called off an opponent discard,
-    // including the natural that completes a pair or single (NMJL declare).
-    if (!isConcealed && tilesNeededRough > 0 && tilesNeededRough <= 2 && pairGap > 0) {
-      const opponentDiscards = baseDraws * 3
-      const expanded = Math.round((baseDraws + opponentDiscards) * 0.85)
-      return Math.min(wallRemaining, Math.max(baseDraws, expanded))
-    }
-    return baseDraws
+  jokersInHand: number,
+  jokersDisallowed: boolean,
+): number[] {
+  const alloc = slots.map(() => 0)
+  let remaining = jokersDisallowed ? 0 : Math.max(0, jokersInHand)
+  for (let i = 0; i < slots.length; i++) {
+    if (remaining <= 0) break
+    const slot = slots[i]!
+    if (slot.targetCount <= 2 || slot.tileType === 'f') continue
+    const held = countNaturalsForSlot(slot.tileType, naturals)
+    const need = Math.max(0, slot.targetCount - held)
+    if (need <= 0) continue
+    const give = Math.min(need, remaining)
+    alloc[i] = give
+    remaining -= give
   }
-
-  // Open meld-only: wall draws plus opponent discard windows, discounted for skip risk.
-  const expanded = Math.round((baseDraws + baseDraws * 3) * 0.85)
-  return Math.min(wallRemaining, Math.max(baseDraws, expanded))
+  return alloc
 }
 
-function blankCushionForHand(
+/**
+ * NMJL: a pung/kong/quint can be called only when the rack already holds
+ * `targetCount - 1` matching tiles (naturals + jokers on that meld).
+ * Flowers never take jokers; readiness is naturals-only.
+ */
+export function isSlotExposureReady(
+  slot: CompletionSlot,
+  naturals: TileCountMap,
+  jokersOnSlot: number,
+): boolean {
+  if (slot.targetCount <= 2) return false
+  const jokers = slot.tileType === 'f' ? 0 : Math.max(0, jokersOnSlot)
+  const held = countNaturalsForSlot(slot.tileType, naturals) + jokers
+  return held >= slot.targetCount - 1 && held < slot.targetCount
+}
+
+function wallDrawTrials(wallRemaining: number, pendingDrawBonus: number): number {
+  const base = Math.floor(wallRemaining / 4)
+  if (base <= 0 && wallRemaining > 0) return Math.max(1, pendingDrawBonus)
+  return Math.max(0, base + pendingDrawBonus)
+}
+
+/**
+ * Extra acquisition trials from opponent discards for one slot.
+ * Credit only when the meld is already exposure-ready, or for a near-MJ pair/single declare.
+ */
+function callTrialsForSlot(
+  wallDraws: number,
+  slot: CompletionSlot,
+  naturals: TileCountMap,
+  jokersOnSlot: number,
+  isConcealed: boolean,
+  isSinglesAndPairs: boolean,
+  tilesNeededRough: number,
+): number {
+  if (wallDraws <= 0 || isConcealed || isSinglesAndPairs) return 0
+
+  const nearMj =
+    tilesNeededRough > 0 &&
+    tilesNeededRough <= 2 &&
+    slot.targetCount <= 2 &&
+    countNaturalsForSlot(slot.tileType, naturals) < slot.targetCount
+
+  if (nearMj) {
+    return Math.round(wallDraws * 3 * NEAR_MJ_CALL_DISCOUNT)
+  }
+
+  if (!isSlotExposureReady(slot, naturals, jokersOnSlot)) return 0
+  return Math.round(wallDraws * 3 * CALL_WINDOW_DISCOUNT)
+}
+
+/**
+ * Held blanks that already redeem (or remain fluid) — reduces natural need only.
+ * Hidden-wall blanks are handled separately via a small multiplicative boost (not EV wipeout).
+ */
+function blankNaturalRelief(
   slots: readonly CompletionSlot[],
   ctx: HandInventoryContext,
   deck: DeckComposition,
-  hiddenBlanks: number,
-  trials: number,
-  unknownPool: number,
-): number {
-  if (deck.totalBlanksInGame <= 0) return 0
-
-  const { blanksRemaining } = applyBlankTileRedemption(
+): { naturals: TileCountMap; fluidBlanks: number } {
+  if (deck.totalBlanksInGame <= 0) {
+    return { naturals: ctx.naturals, fluidBlanks: 0 }
+  }
+  const { naturals, blanksRemaining } = applyBlankTileRedemption(
     slots,
     ctx.naturals,
     ctx.discardCounts,
     ctx.blanksInHand,
   )
-  const reactive = ctx.blanksInHand - blanksRemaining
-
-  // Held blanks not yet exchanged — flexible end-game optionality.
-  const fluidHeld = blanksRemaining
-
-  // Hidden blanks still in wall / opponent racks.
-  const expectedFromWall =
-    unknownPool > 0 && trials > 0
-      ? Math.min(hiddenBlanks, Math.round((trials * hiddenBlanks) / unknownPool))
-      : 0
-
-  // Reactive conversions already cover specific deficits; fluid + expected are generic cushion.
-  return reactive + fluidHeld + expectedFromWall
-}
-
-function slotGapBreakdown(
-  slot: CompletionSlot,
-  naturals: TileCountMap,
-  visibleNaturals: TileCountMap,
-  deck: DeckComposition,
-  jokersDisallowed: boolean,
-): { naturalGap: number; jokerGap: number; jokerGapFromDeadNaturals: number; naturalOuts: number } {
-  const held = countNaturalsForSlot(slot.tileType, naturals)
-  const gap = Math.max(0, slot.targetCount - held)
-  if (gap <= 0) return { naturalGap: 0, jokerGap: 0, jokerGapFromDeadNaturals: 0, naturalOuts: 0 }
-
-  const outs = hiddenNaturalOutsForSlot(slot.tileType, naturals, visibleNaturals, deck)
-
-  // Singles, pairs, and flowers must be filled with naturals (flowers have 8 copies).
-  if (slot.targetCount <= 2 || jokersDisallowed || slot.tileType === 'f') {
-    return { naturalGap: gap, jokerGap: 0, jokerGapFromDeadNaturals: 0, naturalOuts: outs }
-  }
-
-  // Pung / kong / quint: only `copiesForTileType` naturals exist (4 per suit, 8 flowers above).
-  // Any gap beyond acquirable naturals can be filled with jokers.
-  const maxCopies = copiesForTileType(slot.tileType, deck)
-  const theoreticalNaturalRoom = Math.min(
-    gap,
-    Math.max(0, Math.min(slot.targetCount, maxCopies) - held),
-  )
-  const naturalGap = Math.min(theoreticalNaturalRoom, outs)
-  const jokerGap = gap - naturalGap
-  const jokerGapFromDeadNaturals = Math.min(gap, Math.max(0, theoreticalNaturalRoom - outs))
-  return { naturalGap, jokerGap, jokerGapFromDeadNaturals, naturalOuts: outs }
-}
-
-function aggregateSlotGaps(
-  slots: readonly CompletionSlot[],
-  naturals: TileCountMap,
-  visibleNaturals: TileCountMap,
-  deck: DeckComposition,
-  jokersDisallowed: boolean,
-): { naturalGap: number; jokerGap: number; jokerGapFromDeadNaturals: number; naturalOuts: number } {
-  let naturalGap = 0
-  let jokerGap = 0
-  let jokerGapFromDeadNaturals = 0
-  let naturalOuts = 0
-  for (const slot of slots) {
-    const b = slotGapBreakdown(slot, naturals, visibleNaturals, deck, jokersDisallowed)
-    naturalGap += b.naturalGap
-    jokerGap += b.jokerGap
-    jokerGapFromDeadNaturals += b.jokerGapFromDeadNaturals
-    naturalOuts += Math.min(b.naturalGap, b.naturalOuts)
-  }
-  return { naturalGap, jokerGap, jokerGapFromDeadNaturals, naturalOuts }
+  return { naturals, fluidBlanks: blanksRemaining }
 }
 
 /**
@@ -481,84 +494,19 @@ export function jokerSwapHintReliefForLine(
   )
 }
 
-function capCompletionTrials(
-  estimatedTrials: number,
-  wallRemaining: number,
-  pendingDrawBonus: number,
-  tilesNeededRough: number,
-  isConcealed: boolean,
-  isSinglesAndPairs: boolean,
-): number {
-  const wallDraws = Math.floor(wallRemaining / 4)
-  const physicalPickCap = wallDraws + pendingDrawBonus
-  const rawTrials = estimatedTrials + pendingDrawBonus
-
-  // Near Mah Jongg on open hands: opponent discard windows can complete a pair/single declare.
-  if (
-    !isConcealed &&
-    !isSinglesAndPairs &&
-    tilesNeededRough > 0 &&
-    tilesNeededRough <= 2
-  ) {
-    return Math.max(
-      physicalPickCap,
-      Math.min(rawTrials, wallRemaining),
-    )
-  }
-
-  // Away 3 open melds: still call-completable (expose with jokers), but don't treat every
-  // opponent discard as a pickup — keep a dampened slice so late-wall Prob stays low, not 0%.
-  if (
-    !isConcealed &&
-    !isSinglesAndPairs &&
-    tilesNeededRough === 3
-  ) {
-    const callSlack = Math.max(0, rawTrials - physicalPickCap)
-    const dampened = Math.round(physicalPickCap + callSlack * 0.35)
-    return Math.max(
-      tilesNeededRough + 1,
-      Math.min(dampened, wallRemaining),
-    )
-  }
-
-  // Endgame: need exceeds realistic wall draws — don't treat every opponent discard as a pickup.
-  if (tilesNeededRough > physicalPickCap) {
-    return physicalPickCap
-  }
-
-  return rawTrials
-}
-
-/** Combine rack proximity, draw slack, live outs, and wildcard relief into a 0–99 score. */
-function viabilityCompletionScore(
-  deficit: number,
-  trials: number,
-  supplyPool: number,
-  jokerGapFromDeadNaturals: number,
-  completion: HandCompletionMetrics,
-  blankRelief: number,
-  deck: DeckComposition,
-): number {
-  const proximity = Math.min(100, Math.max(0, completion.P)) / 100
-  const slack = trials - deficit
-  if (slack < 0) return 0
-
-  const wallFactor = slack / (slack + deficit * 0.6)
-  const deadNaturalPenalty =
-    deficit > 0 ? Math.min(0.45, (jokerGapFromDeadNaturals / deficit) * 0.45) : 0
-  const poolFactor = Math.min(1, supplyPool / Math.max(1, deficit)) * (1 - deadNaturalPenalty)
-  const blankFactor =
-    deck.totalBlanksInGame > 0
-      ? 1 + Math.min(0.35, (blankRelief / Math.max(1, deficit)) * 0.35)
-      : 1
-
-  const raw = proximity * wallFactor * poolFactor * blankFactor
-  return Math.min(99, Math.max(0, Math.round(raw * 100)))
+/** Light dampener when multiple natural needs compete for the same draw budget. */
+function naturalCompetitionDampener(totalNaturalNeed: number): number {
+  if (totalNaturalNeed <= 1) return 1
+  return 1 / (1 + 0.15 * (totalNaturalNeed - 1))
 }
 
 /**
  * Solo completion probability (0–100) before the wall runs out.
- * Uses hidden pool math with configurable joker count (8/10) and optional blanks (0/2/4/6).
+ *
+ * Analytical model:
+ * - Wall draws from the hidden pool (hypergeometric)
+ * - Call windows only for melds that are already exposure-ready (or near-MJ pair/single declare)
+ * - Joker need as P(draw ≥ k jokers), never EV wipeout to 100%
  */
 export function calculateWallCompletionProbability(
   input: WallCompletionProbabilityInput,
@@ -582,33 +530,12 @@ export function calculateWallCompletionProbability(
   if (tilesNeededRough <= 0 || completion.D <= 0) return 100
   if (wallRemaining <= 0) return 0
   if (isHandDeadByVisibleTiles(slots, ctx.naturals, visibleNaturals, deck)) return 0
+  if (tilesNeededRough > wallRemaining) return 0
 
-  const trials = estimatePlayerTrials(
-    wallRemaining,
-    isConcealed,
-    isSinglesAndPairs,
-    slots,
-    ctx.naturals,
-    tilesNeededRough,
-  )
   // Pre-draw discard phase: East at 13 commits a discard then draws before needing pattern tiles.
   const pendingDrawBonus = playerRackTileCount < 14 ? 1 : 0
-  const effectiveTrials = capCompletionTrials(
-    trials,
-    wallRemaining,
-    pendingDrawBonus,
-    tilesNeededRough,
-    isConcealed,
-    isSinglesAndPairs,
-  )
-
-  if (
-    effectiveTrials <= 0 ||
-    tilesNeededRough > wallRemaining ||
-    tilesNeededRough > effectiveTrials
-  ) {
-    return 0
-  }
+  const wallDraws = wallDrawTrials(wallRemaining, pendingDrawBonus)
+  if (wallDraws <= 0) return 0
 
   const totalDeck =
     NATURAL_TILES_IN_DECK + deck.totalJokersInGame + deck.totalBlanksInGame
@@ -617,75 +544,147 @@ export function calculateWallCompletionProbability(
   const unknownPool = Math.max(0, totalDeck - playerRackTileCount - visibleTotal)
   if (unknownPool <= 0) return 0
 
-  const gaps = aggregateSlotGaps(
+  const { naturals: workingNaturals, fluidBlanks } = blankNaturalRelief(slots, ctx, deck)
+  const jokerAlloc = allocateJokersToSlots(
     slots,
-    ctx.naturals,
-    visibleNaturals,
-    deck,
+    workingNaturals,
+    ctx.jokersInHand,
     ctx.jokersDisallowed,
   )
+
+  const jokerCapacityRemaining = jokerEligibleCapacityRemaining(slots, ctx, completion)
+  let swapRemaining =
+    tilesNeededRough > 4
+      ? 0
+      : Math.min(jokerReliefFromSwapHint, jokerCapacityRemaining)
+
+  // Apply swap-hint relief onto incomplete joker-eligible slots after hand jokers.
+  const swapOnSlot = slots.map(() => 0)
+  for (let i = 0; i < slots.length && swapRemaining > 0; i++) {
+    const slot = slots[i]!
+    if (slot.targetCount <= 2 || slot.tileType === 'f') continue
+    const held =
+      countNaturalsForSlot(slot.tileType, workingNaturals) + jokerAlloc[i]! + swapOnSlot[i]!
+    const need = Math.max(0, slot.targetCount - held)
+    if (need <= 0) continue
+    const give = Math.min(need, swapRemaining)
+    swapOnSlot[i] = give
+    swapRemaining -= give
+  }
+
+  let fluidBlankBudget = fluidBlanks
+  let anyCallCredit = false
+  let totalFlexNeed = 0
+
+  type NaturalOnlyNeed = { outs: number; need: number; trials: number }
+  type MeldNeed = {
+    outs: number
+    remaining: number
+    trials: number
+    minJokers: number
+  }
+
+  const naturalOnly: NaturalOnlyNeed[] = []
+  const meldNeeds: MeldNeed[] = []
+
+  for (let i = 0; i < slots.length; i++) {
+    const slot = slots[i]!
+    const jokersOnSlot = jokerAlloc[i]! + swapOnSlot[i]!
+    const heldNat = countNaturalsForSlot(slot.tileType, workingNaturals)
+    let gapAfterWild = Math.max(0, slot.targetCount - heldNat - jokersOnSlot)
+    if (gapAfterWild <= 0) continue
+
+    if (fluidBlankBudget > 0) {
+      const use = Math.min(fluidBlankBudget, gapAfterWild)
+      gapAfterWild -= use
+      fluidBlankBudget -= use
+    }
+    if (gapAfterWild <= 0) continue
+
+    const outs = hiddenNaturalOutsForSlot(
+      slot.tileType,
+      workingNaturals,
+      visibleNaturals,
+      deck,
+    )
+
+    const callExtra = callTrialsForSlot(
+      wallDraws,
+      slot,
+      workingNaturals,
+      jokersOnSlot,
+      isConcealed,
+      isSinglesAndPairs,
+      tilesNeededRough,
+    )
+    if (callExtra > 0) anyCallCredit = true
+    const trials = Math.min(unknownPool, wallDraws + callExtra)
+
+    const jokersAllowed =
+      slot.targetCount > 2 && !ctx.jokersDisallowed && slot.tileType !== 'f'
+
+    if (!jokersAllowed) {
+      if (outs < gapAfterWild) return 0
+      naturalOnly.push({ outs, need: gapAfterWild, trials })
+      totalFlexNeed += gapAfterWild
+      continue
+    }
+
+    const minJokers = Math.max(0, gapAfterWild - outs)
+    meldNeeds.push({ outs, remaining: gapAfterWild, trials, minJokers })
+    totalFlexNeed += gapAfterWild
+  }
+
+  // Away exceeds wall draws: calls can close only a modest gap, and only when legal.
+  if (tilesNeededRough > wallDraws) {
+    if (isConcealed || isSinglesAndPairs || !anyCallCredit) return 0
+    const pairSingleStillOpen = slots.some(
+      (slot) =>
+        slot.targetCount <= 2 &&
+        countNaturalsForSlot(slot.tileType, workingNaturals) < slot.targetCount,
+    )
+    // Pairs/singles still need wall draws (except near-MJ declare).
+    if (pairSingleStillOpen && tilesNeededRough > 2) return 0
+    const callSurplus = Math.max(1, Math.round(wallDraws * 3 * CALL_WINDOW_DISCOUNT))
+    if (tilesNeededRough > wallDraws + callSurplus) return 0
+  }
+
   const hiddenJokers = Math.max(
     0,
     deck.totalJokersInGame - visibleJokers - ctx.jokersInHand,
   )
-  const jokerReliefFromWall =
-    unknownPool > 0 && effectiveTrials > 0
-      ? Math.min(
-          gaps.jokerGap,
-          hiddenJokers,
-          Math.round((effectiveTrials * hiddenJokers) / unknownPool),
-        )
-      : 0
-  const jokerReliefFromHand = Math.min(gaps.jokerGap, completion.M_joker)
-  const jokerCapacityRemaining = jokerEligibleCapacityRemaining(slots, ctx, completion)
-  const swapHintRelief =
-    tilesNeededRough > 4
-      ? 0
-      : Math.min(jokerReliefFromSwapHint, jokerCapacityRemaining)
+  const totalMinJokers = meldNeeds.reduce((s, m) => s + m.minJokers, 0)
+  if (totalMinJokers > hiddenJokers) return 0
+
+  if (naturalOnly.length === 0 && meldNeeds.length === 0) return 100
+
+  let p = 1
+
+  for (const n of naturalOnly) {
+    p *= hypergeometricAtLeast(n.outs, n.trials, unknownPool, n.need)
+  }
+
+  // Hardest meld first (most mandatory jokers); consume reserved jokers so they aren't double-counted.
+  meldNeeds.sort((a, b) => b.minJokers - a.minJokers || b.remaining - a.remaining)
+  let jokersLeft = hiddenJokers
+  for (const m of meldNeeds) {
+    p *= probNatPlusJokerAtLeast(m.outs, jokersLeft, m.trials, unknownPool, m.remaining)
+    jokersLeft = Math.max(0, jokersLeft - m.minJokers)
+  }
+
+  p *= naturalCompetitionDampener(totalFlexNeed)
 
   const hiddenBlanks = Math.max(
     0,
     deck.totalBlanksInGame - visibleBlanks - ctx.blanksInHand,
   )
-  const blankRelief = blankCushionForHand(slots, ctx, deck, hiddenBlanks, effectiveTrials, unknownPool)
+  // Small boost only — blanks do not wipe natural deficit via expected value.
+  const blankBoost =
+    deck.totalBlanksInGame > 0 && hiddenBlanks > 0 && totalFlexNeed > 0
+      ? 1 + Math.min(0.25, hypergeometricAtLeast(hiddenBlanks, wallDraws, unknownPool, 1) * 0.25)
+      : 1
 
-  let swapReliefRemaining = swapHintRelief
-  const naturalShiftFromSwap = Math.min(
-    Math.max(0, gaps.naturalGap - blankRelief),
-    swapReliefRemaining,
-  )
-  swapReliefRemaining -= naturalShiftFromSwap
-  const jokerShiftFromSwap = Math.min(
-    Math.max(0, gaps.jokerGap - jokerReliefFromHand - jokerReliefFromWall),
-    swapReliefRemaining,
-  )
-  const jokerRemaining = Math.max(
-    0,
-    gaps.jokerGap - jokerReliefFromHand - jokerReliefFromWall - jokerShiftFromSwap,
-  )
-
-  const naturalRemaining = Math.max(0, gaps.naturalGap - blankRelief - naturalShiftFromSwap)
-  const deficit = naturalRemaining + jokerRemaining
-  if (deficit <= 0) return 100
-  if (tilesNeededRough > wallRemaining || deficit > effectiveTrials) return 0
-
-  const uncommittedHandJokers = Math.max(0, ctx.jokersInHand - completion.M_joker)
-  const jokerSupply = hiddenJokers + uncommittedHandJokers + jokerReliefFromWall + swapHintRelief
-  if (gaps.naturalOuts < naturalRemaining) return 0
-  if (jokerRemaining > jokerSupply) return 0
-
-  const supplyPool =
-    gaps.naturalOuts + Math.min(hiddenJokers, gaps.jokerGap) + jokerReliefFromWall + swapHintRelief
-
-  return viabilityCompletionScore(
-    deficit,
-    effectiveTrials,
-    supplyPool,
-    gaps.jokerGapFromDeadNaturals,
-    completion,
-    blankRelief,
-    deck,
-  )
+  return pctFromProb(Math.min(1, Math.max(0, p * blankBoost)))
 }
 
 /**
