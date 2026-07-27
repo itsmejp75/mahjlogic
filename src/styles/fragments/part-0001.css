@@ -73,7 +73,9 @@
  * Single-tile hand controls (Sort, Menu): cap label to one face width so both shrink together
  * on resize (same formula as bot-toolbar one-tile actions above).
  */
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c3,
 .panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c1,
+.panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c6,
 .panel--hand .rack-bottom-bar--tile-grid .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn {
   font-size: min(
     var(--rack-hand-action-label-fs),

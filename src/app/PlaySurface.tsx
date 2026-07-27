@@ -37,6 +37,7 @@ import {
   PlayerRackSeatLabel,
   StagingMeldDropZone,
   SuggestedHandsOpenDataAttr,
+  SuggestedHandsTrayToggleButton,
   type MainPhase,
 } from './playSurfaceUi'
 import type { BotExposure, BotSeat } from '../analysis/types'
@@ -145,6 +146,7 @@ export type PlaySurfaceProps = {
 
   onHandTileActivate: (id: string) => void
   sortHand: () => void
+  newHand: () => void
   declareMahjong: () => void
   onSuggestedTilesButtonClick: () => void
   onSuggestedTilesButtonPointerDown: () => void
@@ -215,6 +217,7 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
     applyEastNaturalForExposedJoker,
     onHandTileActivate,
     sortHand,
+    newHand,
     declareMahjong,
     onSuggestedTilesButtonClick,
     onSuggestedTilesButtonPointerDown,
@@ -590,32 +593,43 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                               <HandRackMenuAnchor
                                 menuContainerRef={menuContainerRef}
                               />
+                              <button
+                                type="button"
+                                className="btn btn--rack-neutral rack-bottom-tile-cell rack-bottom-tile-cell--c3"
+                                onClick={newHand}
+                                aria-label="New game"
+                              >
+                                New
+                              </button>
                               {showSuggestedHandsPanel ? (
-                                <button
-                                  type="button"
-                                  className={[
-                                    'btn',
-                                    'btn--primary',
-                                    'charleston-pass-btn',
-                                    'suggested-hands-tab',
-                                    'rack-bottom-tile-cell',
-                                    'rack-bottom-tile-cell--c4-5',
-                                    suggestedPanelTilesOn && mainPhase !== 'mahjong-declared'
-                                      ? 'suggested-hands-tab--open'
-                                      : '',
-                                  ]
-                                    .filter(Boolean)
-                                    .join(' ')}
-                                  aria-label="Suggested tiles"
-                                  aria-pressed={mainPhase !== 'mahjong-declared' && suggestedPanelTilesOn}
-                                  onClick={onSuggestedTilesButtonClick}
-                                  onPointerDown={onSuggestedTilesButtonPointerDown}
-                                  onPointerUp={onSuggestedTilesButtonPointerUpOrLeave}
-                                  onPointerLeave={onSuggestedTilesButtonPointerUpOrLeave}
-                                  onPointerCancel={onSuggestedTilesButtonPointerUpOrLeave}
-                                >
-                                  Tiles
-                                </button>
+                                <>
+                                  <SuggestedHandsTrayToggleButton />
+                                  <button
+                                    type="button"
+                                    className={[
+                                      'btn',
+                                      'btn--primary',
+                                      'charleston-pass-btn',
+                                      'suggested-hands-tab',
+                                      'rack-bottom-tile-cell',
+                                      'rack-bottom-tile-cell--c6',
+                                      suggestedPanelTilesOn && mainPhase !== 'mahjong-declared'
+                                        ? 'suggested-hands-tab--open'
+                                        : '',
+                                    ]
+                                      .filter(Boolean)
+                                      .join(' ')}
+                                    aria-label="Suggested tiles"
+                                    aria-pressed={mainPhase !== 'mahjong-declared' && suggestedPanelTilesOn}
+                                    onClick={onSuggestedTilesButtonClick}
+                                    onPointerDown={onSuggestedTilesButtonPointerDown}
+                                    onPointerUp={onSuggestedTilesButtonPointerUpOrLeave}
+                                    onPointerLeave={onSuggestedTilesButtonPointerUpOrLeave}
+                                    onPointerCancel={onSuggestedTilesButtonPointerUpOrLeave}
+                                  >
+                                    Tiles
+                                  </button>
+                                </>
                               ) : null}
                               <button
                                 type="button"
@@ -794,32 +808,43 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                 <HandRackMenuAnchor
                                   menuContainerRef={menuContainerRef}
                                 />
+                                <button
+                                  type="button"
+                                  className="btn btn--rack-neutral rack-bottom-tile-cell rack-bottom-tile-cell--c3"
+                                  onClick={newHand}
+                                  aria-label="New game"
+                                >
+                                  New
+                                </button>
                                 {showSuggestedHandsPanel ? (
-                                  <button
-                                    type="button"
-                                    className={[
-                                      'btn',
-                                      'btn--primary',
-                                      'charleston-pass-btn',
-                                      'suggested-hands-tab',
-                                      'rack-bottom-tile-cell',
-                                      'rack-bottom-tile-cell--c4-5',
-                                      suggestedPanelTilesOn && mainPhase !== 'mahjong-declared'
-                                        ? 'suggested-hands-tab--open'
-                                        : '',
-                                    ]
-                                      .filter(Boolean)
-                                      .join(' ')}
-                                    aria-label="Suggested tiles"
-                                    aria-pressed={mainPhase !== 'mahjong-declared' && suggestedPanelTilesOn}
-                                    onClick={onSuggestedTilesButtonClick}
-                                    onPointerDown={onSuggestedTilesButtonPointerDown}
-                                    onPointerUp={onSuggestedTilesButtonPointerUpOrLeave}
-                                    onPointerLeave={onSuggestedTilesButtonPointerUpOrLeave}
-                                    onPointerCancel={onSuggestedTilesButtonPointerUpOrLeave}
-                                  >
-                                    Tiles
-                                  </button>
+                                  <>
+                                    <SuggestedHandsTrayToggleButton />
+                                    <button
+                                      type="button"
+                                      className={[
+                                        'btn',
+                                        'btn--primary',
+                                        'charleston-pass-btn',
+                                        'suggested-hands-tab',
+                                        'rack-bottom-tile-cell',
+                                        'rack-bottom-tile-cell--c6',
+                                        suggestedPanelTilesOn && mainPhase !== 'mahjong-declared'
+                                          ? 'suggested-hands-tab--open'
+                                          : '',
+                                      ]
+                                        .filter(Boolean)
+                                        .join(' ')}
+                                      aria-label="Suggested tiles"
+                                      aria-pressed={mainPhase !== 'mahjong-declared' && suggestedPanelTilesOn}
+                                      onClick={onSuggestedTilesButtonClick}
+                                      onPointerDown={onSuggestedTilesButtonPointerDown}
+                                      onPointerUp={onSuggestedTilesButtonPointerUpOrLeave}
+                                      onPointerLeave={onSuggestedTilesButtonPointerUpOrLeave}
+                                      onPointerCancel={onSuggestedTilesButtonPointerUpOrLeave}
+                                    >
+                                      Tiles
+                                    </button>
+                                  </>
                                 ) : null}
                                 <button
                                   type="button"

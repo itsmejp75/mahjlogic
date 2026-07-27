@@ -285,6 +285,33 @@ export function HandRackMenuAnchor({
   )
 }
 
+/** Suggested-hands tray toggle — cols 4–5, immediately left of Tiles. */
+export function SuggestedHandsTrayToggleButton() {
+  const { trayOpen, toggleTray } = useSuggestedHandsTray()
+  return (
+    <button
+      type="button"
+      className={[
+        'btn',
+        'btn--primary',
+        'charleston-pass-btn',
+        'suggested-hands-tab',
+        'rack-bottom-tile-cell',
+        'rack-bottom-tile-cell--c4-5',
+        trayOpen ? 'suggested-hands-tab--open' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      aria-label="Suggested hands"
+      aria-pressed={trayOpen}
+      aria-controls="suggested-hands-popup"
+      onClick={toggleTray}
+    >
+      Hands
+    </button>
+  )
+}
+
 /** Player compass seat — centered in the well from discard-tracker bottom to main-rack top. */
 export function PlayerRackSeatLabel({
   seat,

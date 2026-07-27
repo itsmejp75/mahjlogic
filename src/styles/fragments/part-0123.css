@@ -3508,6 +3508,12 @@ html[data-home-screen-app]:not([data-native-app])
 .app
   .panel--hand
   .rack-bottom-bar--tile-grid
+  .btn.btn--rack-neutral.rack-bottom-tile-cell--c3:is(:disabled, :not(:disabled)):not(:active):not(
+    .app-bottom-center-controls__menu-btn--open
+  ),
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
   .btn.btn--rack-neutral.rack-bottom-tile-cell--c1:is(:disabled, :not(:disabled)):not(:active):not(
     .app-bottom-center-controls__menu-btn--open
   ),
@@ -3540,6 +3546,12 @@ html[data-home-screen-app]:not([data-native-app])
 .app
   .panel--hand
   .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.btn--rack-neutral.rack-bottom-tile-cell--c3:is(:disabled, :not(:disabled)):not(:active):not(
+    .app-bottom-center-controls__menu-btn--open
+  ),
+.app
+  .panel--hand
+  .rack-bottom-bar--main.rack-bottom-bar--tile-grid
   .btn.btn--rack-neutral.rack-bottom-tile-cell--c1:is(:disabled, :not(:disabled)):not(:active):not(
     .app-bottom-center-controls__menu-btn--open
   ),
@@ -3555,6 +3567,18 @@ html[data-home-screen-app]:not([data-native-app])
   ):is(:disabled, :not(:disabled)):not(:active),
 .app
   .panel--hand
+  .rack-bottom-bar--main.rack-bottom-bar--tile-grid
+  .btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c6:not(
+    .suggested-hands-tab--open
+  ):is(:disabled, :not(:disabled)):not(:active),
+.app
+  .panel--hand
+  .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
+  .btn.btn--rack-neutral.rack-bottom-tile-cell--c3:is(:disabled, :not(:disabled)):not(:active):not(
+    .app-bottom-center-controls__menu-btn--open
+  ),
+.app
+  .panel--hand
   .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
   .btn.btn--rack-neutral.rack-bottom-tile-cell--c1:is(:disabled, :not(:disabled)):not(:active):not(
     .app-bottom-center-controls__menu-btn--open
@@ -3563,6 +3587,12 @@ html[data-home-screen-app]:not([data-native-app])
   .panel--hand
   .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
   .btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c4-5:not(
+    .suggested-hands-tab--open
+  ):is(:disabled, :not(:disabled)):not(:active),
+.app
+  .panel--hand
+  .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid
+  .btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c6:not(
     .suggested-hands-tab--open
   ):is(:disabled, :not(:disabled)):not(:active),
 .app
@@ -3635,8 +3665,12 @@ html body .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid
  * neumorphic inset (part-0067 / part-0069) that only hit btn--rack-neutral + suggested-hands-tab.
  */
 html body .app .panel--hand .rack-bottom-bar--tile-grid :is(
+  button.btn.btn--rack-neutral.rack-bottom-tile-cell--c3:not(:disabled),
   button.btn.btn--rack-neutral.rack-bottom-tile-cell--c1:not(:disabled),
   button.btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c4-5:not(:disabled):not(
+      .suggested-hands-tab--open
+    ),
+  button.btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c6:not(:disabled):not(
       .suggested-hands-tab--open
     ),
   button.btn.btn--mahjong.rack-bottom-tile-cell--c5-6:not(:disabled):not(.btn--mahjong-rack-pressed-in),
@@ -3744,8 +3778,12 @@ html body .app .panel--hand .rack-bottom-bar--tile-grid :is(
 }
 
 html body .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid :is(
+  button.btn.btn--rack-neutral.rack-bottom-tile-cell--c3:not(:disabled),
   button.btn.btn--rack-neutral.rack-bottom-tile-cell--c1:not(:disabled),
   button.btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c4-5:not(:disabled):not(
+      .suggested-hands-tab--open
+    ),
+  button.btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c6:not(:disabled):not(
       .suggested-hands-tab--open
     ),
   button.btn.btn--mahjong.rack-bottom-tile-cell--c5-6:not(:disabled):not(.btn--mahjong-rack-pressed-in),

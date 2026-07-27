@@ -34,13 +34,9 @@
   grid-column: 2 / 3;
 }
 
+/* New game: one face, immediately left of Hands (4–5). */
 .rack-bottom-tile-cell--c3 {
   grid-column: 3 / 4;
-}
-
-/* Tiles: cols 5–6, immediately left of MAHJ (7–8). */
-.rack-bottom-tile-cell--c4-5 {
-  grid-column: 5 / 7;
 }
 
 /* Legacy / alternate two-column span under rack columns 3–4. */
@@ -48,9 +44,19 @@
   grid-column: 3 / 5;
 }
 
-/* Single column under rack column 5 (e.g. wall count when HANDS uses 4–5). */
+/* Hands: cols 4–5, immediately left of Tiles (6). */
+.rack-bottom-tile-cell--c4-5 {
+  grid-column: 4 / 6;
+}
+
+/* Single column under rack column 5. */
 .rack-bottom-tile-cell--c5 {
   grid-column: 5 / 6;
+}
+
+/* Tiles: one face, immediately left of MAHJ (7–8). */
+.rack-bottom-tile-cell--c6 {
+  grid-column: 6 / 7;
 }
 
 /* Main rack: MAHJ (7–8) / Call–Swap (9–10) / wall count (11) / Pass–Discard (12–14). */

@@ -2201,6 +2201,7 @@ html body .app.rack-checker .rack-checker__actions
 
 /* Sort + Menu (single-tile): identical label scale + padding — loaded last so resize stays matched. */
 .app .panel--hand .rack-bottom-bar--tile-grid :is(
+    .btn.rack-bottom-tile-cell--c3,
     .btn.rack-bottom-tile-cell--c1,
     .app-menu-anchor--hand-rack .app-bottom-center-controls__menu-btn
   ) {

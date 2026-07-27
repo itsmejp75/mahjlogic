@@ -13,7 +13,8 @@
   box-sizing: border-box;
 }
 
-/* 14 hand slots: Sort=1, Menu=2, wall=3, HANDS=4–5 (optional), MAHJ=6–7, LOGIC=8–9, Call *or* Swap=10–11, Discard=12–14
+/* 14 hand slots: Sort=1, Menu=2, New=3, Hands=4–5 (optional), Tiles=6 (optional), MAHJ=7–8,
+   Call *or* Swap=9–10, wall=11, Discard=12–14
    (Call and joker Swap share 9–10; Discard matches Charleston pass width: three slots). */
 .rack-bottom-bar--tile-grid {
   --rack-hand-slot-count: 14;

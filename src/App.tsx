@@ -1856,6 +1856,8 @@ export default function App() {
   const [sessionReady, setSessionReady] = useState(false)
   const [resumePrompt, setResumePrompt] = useState<InProgressGameSnapshot | null>(null)
   const sessionBoot = useSessionBoot()
+  /** Cold-start opening deal: arm fly-in only after the boot load screen dismisses. */
+  const pendingOpeningDealFlyInRef = useRef(false)
   const [gameMetaPanel, setGameMetaPanel] = useState<'stats' | 'history' | null>(null)
   const replayOpeningMetaRef = useRef<Pick<OpeningDealMeta, 'playerSeat' | 'botSlotSeats'>>({
     playerSeat: 'east',
@@ -4231,7 +4233,11 @@ export default function App() {
 
   const charlestonRackRoundTitleText = charlestonRackRoundTitle(charlestonPhase)
 
-  const performNewHandDeal = useCallback((opts?: { replayLastOpening?: boolean }) => {
+  const performNewHandDeal = useCallback((opts?: {
+    replayLastOpening?: boolean
+    /** Deal tiles now but hold the rack fly-in (e.g. until boot loader dismisses). */
+    deferOpeningFlyIn?: boolean
+  }) => {
     const m = menuCardIdRef.current
     const c = committedCardIdRef.current
 
@@ -4311,7 +4317,7 @@ export default function App() {
           replayOpeningMetaRef.current = { playerSeat: r.playerSeat, botSlotSeats: r.botSlotSeats }
           return r
         })()
-    setRound(nextRound)
+    setRound(opts?.deferOpeningFlyIn ? { ...nextRound, handTileFlyIn: null } : nextRound)
   }, [])
 
   /** Seat / deck prefs: redeal a fresh rack behind the open menu (do not close it). */
@@ -4698,20 +4704,10 @@ export default function App() {
     performNewHandDeal()
   }, [markSessionReady, performNewHandDeal])
 
-  /** No cloud save: allow play and run the deferred opening-deal fly-in. */
+  /** No cloud save: allow play; opening fly-in waits for boot loader dismiss. */
   const beginFreshSessionWithOpeningFlyIn = useCallback(() => {
     markSessionReady()
-    setRound((r) => {
-      if (r.handTileFlyIn || r.hand.length === 0) return r
-      return {
-        ...r,
-        handTileFlyIn: {
-          ids: r.hand.map((t) => t.id),
-          from: 'across',
-          staggerWaveDelayMs: 44,
-        },
-      }
-    })
+    pendingOpeningDealFlyInRef.current = true
   }, [markSessionReady])
 
   /** Load cloud prefs + in-progress game on login; prompt to resume when a hand was autosaved. */
@@ -4981,7 +4977,8 @@ export default function App() {
 
       if (redeal) {
         markSessionReady()
-        performNewHandDeal()
+        pendingOpeningDealFlyInRef.current = true
+        performNewHandDeal({ deferOpeningFlyIn: true })
       } else {
         beginFreshSessionWithOpeningFlyIn()
       }
@@ -5020,6 +5017,26 @@ export default function App() {
       prev?.variant === 'resume-game' ? prev : { variant: 'resume-game' },
     )
   }, [resumePrompt, sessionBoot?.bootLoaderDismissed])
+
+  /** Start the cold-start opening-deal fly-in only after the load screen lifts. */
+  useLayoutEffect(() => {
+    if (!pendingOpeningDealFlyInRef.current) return
+    if (!sessionReady || resumePrompt) return
+    // Outside SessionBootProvider (e.g. tests), treat the loader as already gone.
+    if (sessionBoot != null && !sessionBoot.bootLoaderDismissed) return
+    pendingOpeningDealFlyInRef.current = false
+    setRound((r) => {
+      if (r.handTileFlyIn || r.hand.length === 0) return r
+      return {
+        ...r,
+        handTileFlyIn: {
+          ids: r.hand.map((t) => t.id),
+          from: 'across',
+          staggerWaveDelayMs: 44,
+        },
+      }
+    })
+  }, [sessionBoot, sessionBoot?.bootLoaderDismissed, sessionReady, resumePrompt])
 
   /** After bootstrap reveals the table, refresh hand-panel CQW (pass-slot / rack geometry). */
   useLayoutEffect(() => {
@@ -7129,6 +7146,7 @@ export default function App() {
         applyEastNaturalForExposedJoker={applyEastNaturalForExposedJoker}
         onHandTileActivate={onHandTileActivate}
         sortHand={sortHand}
+        newHand={newHand}
         declareMahjong={declareMahjong}
         onSuggestedTilesButtonClick={onSuggestedTilesButtonClick}
         onSuggestedTilesButtonPointerDown={onSuggestedTilesButtonPointerDown}

@@ -39,14 +39,20 @@
 }
 
 /* Main rack (table actions): label color — wins over part-0064 / 0067 / 0071 / rules above. */
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--rack-neutral.rack-bottom-tile-cell--c3:not(:disabled),
 .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--rack-neutral.rack-bottom-tile-cell--c1:not(:disabled),
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--rack-neutral.rack-bottom-tile-cell--c3:disabled,
 .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--rack-neutral.rack-bottom-tile-cell--c1:disabled,
 .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--rack-neutral.rack-bottom-tile-cell--c2-4:not(:disabled),
 .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--rack-neutral.rack-bottom-tile-cell--c2-4:disabled,
 .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c4-5:not(:disabled),
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c6:not(:disabled),
 .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c4-5:disabled,
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c6:disabled,
 .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open.rack-bottom-tile-cell--c4-5:not(:disabled),
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open.rack-bottom-tile-cell--c6:not(:disabled),
 .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open.rack-bottom-tile-cell--c4-5:disabled,
+.app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open.rack-bottom-tile-cell--c6:disabled,
 .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
 .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:not(:disabled),
 .app .panel--hand .rack-bottom-bar--main.rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c12-14:disabled {
@@ -54,12 +60,18 @@
 }
 
 /* Charleston rack row: same label color as main (Sort / Hands / Swap / Pass). */
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--rack-neutral.rack-bottom-tile-cell--c3:not(:disabled),
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--rack-neutral.rack-bottom-tile-cell--c1:not(:disabled),
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--rack-neutral.rack-bottom-tile-cell--c3:disabled,
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--rack-neutral.rack-bottom-tile-cell--c1:disabled,
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c4-5:not(:disabled),
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c6:not(:disabled),
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c4-5:disabled,
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab.rack-bottom-tile-cell--c6:disabled,
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open.rack-bottom-tile-cell--c4-5:not(:disabled),
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open.rack-bottom-tile-cell--c6:not(:disabled),
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open.rack-bottom-tile-cell--c4-5:disabled,
+.app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.suggested-hands-tab--open.rack-bottom-tile-cell--c6:disabled,
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--joker-swap-action.rack-bottom-tile-cell--c9-10:not(:disabled),
 .app .panel--hand .rack-bottom-bar--charleston.rack-bottom-bar--tile-grid .btn.btn--primary.charleston-pass-btn.rack-bottom-tile-cell--c12-14:not(:disabled) {
   color: var(--rack-action-label-color, var(--app-action-btn-label));

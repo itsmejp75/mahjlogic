@@ -37,6 +37,7 @@
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c2,
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c3,
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c5,
+.rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c6,
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c11,
 .rack-bottom-bar--tile-grid .rack-bottom-tile-cell--c12 {
   width: var(--rack-tile-btn-inner-1);
