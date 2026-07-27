@@ -150,19 +150,27 @@ const DEAD_HAND_WARNINGS_LABEL = 'Dead hand warnings'
 /** Highlight the Mah Jongg rack button when a declaration would succeed (self-draw or on a live discard). */
 const LS_KEY_MAHJONG_HINT = 'mahjlogic.mahjongHintEnabled'
 const MAHJONG_HINT_LABEL = 'Mah Jongg hint'
-/** Seconds to wait before showing each hint (0 / 3 / 5; blank-tiles-style chips in the menu). */
+/** Seconds to wait before showing each hint (0 / 2 / 4; blank-tiles-style chips in the menu). */
 const LS_KEY_MAHJONG_HINT_DELAY_SECONDS = 'mahjlogic.mahjongHintDelaySeconds'
 const LS_KEY_JOKER_SWAP_HINT_DELAY_SECONDS = 'mahjlogic.jokerSwapHintDelaySeconds'
 /** Former boolean delay toggles; read once to seed the seconds keys if missing. */
 const LS_KEY_MAHJONG_HINT_DELAY_3S_LEGACY = 'mahjlogic.mahjongHintDelay3SecondsEnabled'
 const LS_KEY_JOKER_SWAP_HINT_DELAY_3S_LEGACY = 'mahjlogic.jokerSwapHintDelay3SecondsEnabled'
 const LS_KEY_HINT_DELAY_3S_LEGACY = 'mahjlogic.hintDelay3SecondsEnabled'
-const HINT_DELAY_SECONDS_OPTIONS = [0, 3, 5] as const
+const HINT_DELAY_SECONDS_OPTIONS = [0, 2, 4] as const
 type HintDelaySeconds = (typeof HINT_DELAY_SECONDS_OPTIONS)[number]
 const DEFAULT_HINT_DELAY_SECONDS: HintDelaySeconds = 0
 
 function isHintDelaySeconds(n: number): n is HintDelaySeconds {
   return (HINT_DELAY_SECONDS_OPTIONS as readonly number[]).includes(n)
+}
+
+/** Map retired 3s/5s choices onto the current 2s/4s options. */
+function normalizeHintDelaySeconds(n: number): HintDelaySeconds | null {
+  if (isHintDelaySeconds(n)) return n
+  if (n === 3) return 2
+  if (n === 5) return 4
+  return null
 }
 const LS_KEY_DEAD_TILE_HINT = 'mahjlogic.deadTileHintEnabled'
 const DEAD_TILE_HINT_LABEL = 'Dead tile(s) hint'
@@ -329,9 +337,9 @@ function readLegacyHintDelayEnabled(key: string): boolean | null {
 
 function migrateLegacyHintDelaySeconds(perHintKey: string): HintDelaySeconds | null {
   const perHint = readLegacyHintDelayEnabled(perHintKey)
-  if (perHint != null) return perHint ? 3 : 0
+  if (perHint != null) return perHint ? 2 : 0
   const shared = readLegacyHintDelayEnabled(LS_KEY_HINT_DELAY_3S_LEGACY)
-  if (shared != null) return shared ? 3 : 0
+  if (shared != null) return shared ? 2 : 0
   return null
 }
 
@@ -339,8 +347,13 @@ function readMahjongHintDelaySecondsFromStorage(): HintDelaySeconds {
   try {
     const v = localStorage.getItem(LS_KEY_MAHJONG_HINT_DELAY_SECONDS)
     if (v != null) {
-      const n = Number(v)
-      if (isHintDelaySeconds(n)) return n
+      const normalized = normalizeHintDelaySeconds(Number(v))
+      if (normalized != null) {
+        if (String(normalized) !== v) {
+          localStorage.setItem(LS_KEY_MAHJONG_HINT_DELAY_SECONDS, String(normalized))
+        }
+        return normalized
+      }
     }
     const migrated = migrateLegacyHintDelaySeconds(LS_KEY_MAHJONG_HINT_DELAY_3S_LEGACY)
     if (migrated != null) {
@@ -357,8 +370,13 @@ function readJokerSwapHintDelaySecondsFromStorage(): HintDelaySeconds {
   try {
     const v = localStorage.getItem(LS_KEY_JOKER_SWAP_HINT_DELAY_SECONDS)
     if (v != null) {
-      const n = Number(v)
-      if (isHintDelaySeconds(n)) return n
+      const normalized = normalizeHintDelaySeconds(Number(v))
+      if (normalized != null) {
+        if (String(normalized) !== v) {
+          localStorage.setItem(LS_KEY_JOKER_SWAP_HINT_DELAY_SECONDS, String(normalized))
+        }
+        return normalized
+      }
     }
     const migrated = migrateLegacyHintDelaySeconds(LS_KEY_JOKER_SWAP_HINT_DELAY_3S_LEGACY)
     if (migrated != null) {
@@ -2319,12 +2337,12 @@ export default function App() {
         setMahjongHintEnabled(e.newValue === 'true' || e.newValue === '1')
       } else if (e.key === LS_KEY_MAHJONG_HINT_DELAY_SECONDS) {
         if (e.newValue == null) return
-        const n = Number(e.newValue)
-        if (isHintDelaySeconds(n)) setMahjongHintDelaySeconds(n)
+        const n = normalizeHintDelaySeconds(Number(e.newValue))
+        if (n != null) setMahjongHintDelaySeconds(n)
       } else if (e.key === LS_KEY_JOKER_SWAP_HINT_DELAY_SECONDS) {
         if (e.newValue == null) return
-        const n = Number(e.newValue)
-        if (isHintDelaySeconds(n)) setJokerSwapHintDelaySeconds(n)
+        const n = normalizeHintDelaySeconds(Number(e.newValue))
+        if (n != null) setJokerSwapHintDelaySeconds(n)
       } else if (e.key === LS_KEY_DEAD_TILE_HINT) {
         if (e.newValue == null) return
         setDeadTileHintEnabled(e.newValue === 'true' || e.newValue === '1')
@@ -4688,32 +4706,26 @@ export default function App() {
           /* ignore */
         }
       }
-      if (
-        typeof prefs.mahjongHintDelaySeconds === 'number' &&
-        isHintDelaySeconds(prefs.mahjongHintDelaySeconds)
-      ) {
-        setMahjongHintDelaySeconds(prefs.mahjongHintDelaySeconds)
-        try {
-          localStorage.setItem(
-            LS_KEY_MAHJONG_HINT_DELAY_SECONDS,
-            String(prefs.mahjongHintDelaySeconds),
-          )
-        } catch {
-          /* ignore */
+      if (typeof prefs.mahjongHintDelaySeconds === 'number') {
+        const delay = normalizeHintDelaySeconds(prefs.mahjongHintDelaySeconds)
+        if (delay != null) {
+          setMahjongHintDelaySeconds(delay)
+          try {
+            localStorage.setItem(LS_KEY_MAHJONG_HINT_DELAY_SECONDS, String(delay))
+          } catch {
+            /* ignore */
+          }
         }
       }
-      if (
-        typeof prefs.jokerSwapHintDelaySeconds === 'number' &&
-        isHintDelaySeconds(prefs.jokerSwapHintDelaySeconds)
-      ) {
-        setJokerSwapHintDelaySeconds(prefs.jokerSwapHintDelaySeconds)
-        try {
-          localStorage.setItem(
-            LS_KEY_JOKER_SWAP_HINT_DELAY_SECONDS,
-            String(prefs.jokerSwapHintDelaySeconds),
-          )
-        } catch {
-          /* ignore */
+      if (typeof prefs.jokerSwapHintDelaySeconds === 'number') {
+        const delay = normalizeHintDelaySeconds(prefs.jokerSwapHintDelaySeconds)
+        if (delay != null) {
+          setJokerSwapHintDelaySeconds(delay)
+          try {
+            localStorage.setItem(LS_KEY_JOKER_SWAP_HINT_DELAY_SECONDS, String(delay))
+          } catch {
+            /* ignore */
+          }
         }
       }
       if (typeof prefs.deadTileHintEnabled === 'boolean') {
