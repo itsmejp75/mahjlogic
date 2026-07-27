@@ -354,6 +354,15 @@ function sumVisibleNaturals(visibleNaturals: TileCountMap): number {
 const CALL_WINDOW_DISCOUNT = 0.35
 /** Near-MJ declare calls are more reliable (you take any winning discard). */
 const NEAR_MJ_CALL_DISCOUNT = 0.85
+/**
+ * Prospective mid-hand call credit for open melds not yet exposure-ready.
+ * Low on purpose: most matching discards still go by until the rack can expose.
+ */
+const PROSPECTIVE_CALL_DISCOUNT = 0.12
+/** Wall height where Charleston / early-deal exchange value is still material (~full wall 99). */
+const EARLY_WALL_FULL = 99
+/** Below this wall, treat Charleston as over and stop adding exchange trials. */
+const EARLY_WALL_FLOOR = 88
 
 /**
  * Greedy joker allocation onto joker-eligible meld slots (same order as {@link computeHandCompletionMetrics}).
@@ -401,6 +410,40 @@ function wallDrawTrials(wallRemaining: number, pendingDrawBonus: number): number
   const base = Math.floor(wallRemaining / 4)
   if (base <= 0 && wallRemaining > 0) return Math.max(1, pendingDrawBonus)
   return Math.max(0, base + pendingDrawBonus)
+}
+
+/**
+ * Equivalent random acquisition trials from remaining Charleston / courtesy receives.
+ * Inferred from a near-full wall (wall does not shrink during Charleston) and how little
+ * is already settled on the table.
+ */
+export function earlyExchangeTrials(wallRemaining: number, visibleTotal: number): number {
+  if (wallRemaining < EARLY_WALL_FLOOR) return 0
+  const early = Math.min(
+    1,
+    Math.max(0, (wallRemaining - EARLY_WALL_FLOOR) / (EARLY_WALL_FULL - EARLY_WALL_FLOOR)),
+  )
+  // Up to ~15 receives across a full Charleston; many are unhelpful → keep ~55%.
+  const receives = 3 + Math.round(12 * early)
+  const visibilityFactor = Math.max(0.4, 1 - visibleTotal / 28)
+  return Math.round(receives * 0.55 * visibilityFactor)
+}
+
+/** Weight on pooled cover odds vs slot-precise product (1 = full early-game cover). */
+function earlyCoverWeight(wallRemaining: number, tilesNeededRough: number): number {
+  const wallW = Math.min(
+    1,
+    Math.max(0, (wallRemaining - 40) / (EARLY_WALL_FULL - 40)),
+  )
+  // High Away early: slot product is especially harsh; lean on cover.
+  const awayW = tilesNeededRough >= 5 ? 1 : tilesNeededRough >= 3 ? 0.7 : 0.35
+  return Math.min(0.88, Math.max(0.15, 0.25 + 0.55 * wallW * awayW))
+}
+
+/** Linear blend — geometric mean lets a ~0 slot-product crush early cover odds. */
+function linearBlend(a: number, b: number, weightA: number): number {
+  const w = Math.min(1, Math.max(0, weightA))
+  return Math.min(1, Math.max(0, a * w + b * (1 - w)))
 }
 
 /**
@@ -504,9 +547,11 @@ function naturalCompetitionDampener(totalNaturalNeed: number): number {
  * Solo completion probability (0–100) before the wall runs out.
  *
  * Analytical model:
- * - Wall draws from the hidden pool (hypergeometric)
- * - Call windows only for melds that are already exposure-ready (or near-MJ pair/single declare)
- * - Joker need as P(draw ≥ k jokers), never EV wipeout to 100%
+ * - Wall draws + early Charleston exchange trials from the hidden pool (hypergeometric)
+ * - Call windows for exposure-ready melds (or near-MJ pair/single declare)
+ * - Slot-precise product blended with pooled “useful tile” cover while the wall is high
+ *   (independence alone crushes opening Away-6..8 hands to ~1%)
+ * - Jokers via nat+joker multivariate fill — never EV wipeout to 100%
  */
 export function calculateWallCompletionProbability(
   input: WallCompletionProbabilityInput,
@@ -544,6 +589,9 @@ export function calculateWallCompletionProbability(
   const unknownPool = Math.max(0, totalDeck - playerRackTileCount - visibleTotal)
   if (unknownPool <= 0) return 0
 
+  const exchangeTrials = earlyExchangeTrials(wallRemaining, visibleTotal)
+  const baseAcquisition = wallDraws + exchangeTrials
+
   const { naturals: workingNaturals, fluidBlanks } = blankNaturalRelief(slots, ctx, deck)
   const jokerAlloc = allocateJokersToSlots(
     slots,
@@ -575,6 +623,8 @@ export function calculateWallCompletionProbability(
   let fluidBlankBudget = fluidBlanks
   let anyCallCredit = false
   let totalFlexNeed = 0
+  let totalNaturalOuts = 0
+  let meldJokerCapacity = 0
 
   type NaturalOnlyNeed = { outs: number; need: number; trials: number }
   type MeldNeed = {
@@ -618,7 +668,7 @@ export function calculateWallCompletionProbability(
       tilesNeededRough,
     )
     if (callExtra > 0) anyCallCredit = true
-    const trials = Math.min(unknownPool, wallDraws + callExtra)
+    const trials = Math.min(unknownPool, baseAcquisition + callExtra)
 
     const jokersAllowed =
       slot.targetCount > 2 && !ctx.jokersDisallowed && slot.tileType !== 'f'
@@ -627,26 +677,37 @@ export function calculateWallCompletionProbability(
       if (outs < gapAfterWild) return 0
       naturalOnly.push({ outs, need: gapAfterWild, trials })
       totalFlexNeed += gapAfterWild
+      totalNaturalOuts += outs
       continue
     }
 
     const minJokers = Math.max(0, gapAfterWild - outs)
     meldNeeds.push({ outs, remaining: gapAfterWild, trials, minJokers })
     totalFlexNeed += gapAfterWild
+    totalNaturalOuts += outs
+    meldJokerCapacity += gapAfterWild
   }
 
-  // Away exceeds wall draws: calls can close only a modest gap, and only when legal.
-  if (tilesNeededRough > wallDraws) {
-    if (isConcealed || isSinglesAndPairs || !anyCallCredit) return 0
-    const pairSingleStillOpen = slots.some(
-      (slot) =>
-        slot.targetCount <= 2 &&
-        countNaturalsForSlot(slot.tileType, workingNaturals) < slot.targetCount,
-    )
-    // Pairs/singles still need wall draws (except near-MJ declare).
-    if (pairSingleStillOpen && tilesNeededRough > 2) return 0
-    const callSurplus = Math.max(1, Math.round(wallDraws * 3 * CALL_WINDOW_DISCOUNT))
-    if (tilesNeededRough > wallDraws + callSurplus) return 0
+  // Away exceeds acquisition trials: calls / exchanges can close only a modest gap.
+  const acquisitionCap = baseAcquisition
+  if (tilesNeededRough > acquisitionCap) {
+    if (isConcealed || isSinglesAndPairs) {
+      // Concealed / S&P: exchanges + wall only (no mid-hand calls).
+      if (tilesNeededRough > acquisitionCap) return 0
+    } else if (!anyCallCredit && exchangeTrials <= 0) {
+      return 0
+    } else {
+      const pairSingleStillOpen = slots.some(
+        (slot) =>
+          slot.targetCount <= 2 &&
+          countNaturalsForSlot(slot.tileType, workingNaturals) < slot.targetCount,
+      )
+      if (pairSingleStillOpen && tilesNeededRough > 2 && exchangeTrials <= 0) return 0
+      const callSurplus = anyCallCredit
+        ? Math.max(1, Math.round(wallDraws * 3 * CALL_WINDOW_DISCOUNT))
+        : 0
+      if (tilesNeededRough > acquisitionCap + callSurplus) return 0
+    }
   }
 
   const hiddenJokers = Math.max(
@@ -658,21 +719,42 @@ export function calculateWallCompletionProbability(
 
   if (naturalOnly.length === 0 && meldNeeds.length === 0) return 100
 
-  let p = 1
+  let pPrecise = 1
 
   for (const n of naturalOnly) {
-    p *= hypergeometricAtLeast(n.outs, n.trials, unknownPool, n.need)
+    pPrecise *= hypergeometricAtLeast(n.outs, n.trials, unknownPool, n.need)
   }
 
   // Hardest meld first (most mandatory jokers); consume reserved jokers so they aren't double-counted.
   meldNeeds.sort((a, b) => b.minJokers - a.minJokers || b.remaining - a.remaining)
   let jokersLeft = hiddenJokers
   for (const m of meldNeeds) {
-    p *= probNatPlusJokerAtLeast(m.outs, jokersLeft, m.trials, unknownPool, m.remaining)
+    pPrecise *= probNatPlusJokerAtLeast(m.outs, jokersLeft, m.trials, unknownPool, m.remaining)
     jokersLeft = Math.max(0, jokersLeft - m.minJokers)
   }
 
-  p *= naturalCompetitionDampener(totalFlexNeed)
+  pPrecise *= naturalCompetitionDampener(totalFlexNeed)
+
+  // Pooled cover: P(acquire enough useful tiles) — optimistic on type mix, good early-game signal.
+  const usefulPool = Math.min(
+    unknownPool,
+    totalNaturalOuts + Math.min(hiddenJokers, meldJokerCapacity),
+  )
+  const prospectiveCalls =
+    !isConcealed && !isSinglesAndPairs && wallRemaining >= 60
+      ? Math.round(wallDraws * 3 * PROSPECTIVE_CALL_DISCOUNT)
+      : 0
+  const coverTrials = Math.min(unknownPool, baseAcquisition + prospectiveCalls)
+  // Cover tracks pattern Away (tilesNeededRough), capped by post-joker/swap flex so hints help.
+  // Using raw flex alone overstates need vs Away and crushes opening Prob % (mean hits << flex).
+  const coverNeed = Math.min(totalFlexNeed, Math.max(0, tilesNeededRough))
+  const pCover =
+    coverNeed <= 0
+      ? 1
+      : hypergeometricAtLeast(usefulPool, coverTrials, unknownPool, coverNeed)
+
+  const coverW = earlyCoverWeight(wallRemaining, tilesNeededRough)
+  let p = linearBlend(pCover, pPrecise, coverW)
 
   const hiddenBlanks = Math.max(
     0,

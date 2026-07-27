@@ -8,6 +8,7 @@ import {
   DEFAULT_DECK_COMPOSITION,
   estimateWallCompletionProbability,
   finalizeCompletionMetrics,
+  earlyExchangeTrials,
   hypergeometricAtLeast,
   isHandDeadByVisibleTiles,
   isSlotExposureReady,
@@ -373,57 +374,41 @@ describe('calculateWallCompletionProbability', () => {
     expect(copiesForTileType('j', { totalJokersInGame: 10, totalBlanksInGame: 0 })).toBe(10)
   })
 
-  it('shifts shortfall to jokers when naturals are dead but kong is still possible', () => {
+  it('lowers Prob % when kong naturals die and more jokers are required', () => {
     const slots: CompletionSlot[] = [
-      { tileType: 's:dot:1', targetCount: 1 },
-      { tileType: 'w:N', targetCount: 1 },
-      { tileType: 'w:E', targetCount: 2 },
       { tileType: 'w:W', targetCount: 3 },
       { tileType: 'w:S', targetCount: 4 },
+      { tileType: 'd:green', targetCount: 3 },
+      { tileType: 'd:red', targetCount: 4 },
     ]
-    const beforeDiscard = calculateWallCompletionProbability(
-      baseInput({
-        slots,
-        ctx: {
-          naturals: {
-            's:dot:1': 1,
-            'w:N': 1,
-            'w:W': 3,
-            'w:S': 1,
-            f: 1,
-            's:dot:3': 1,
-          },
-          jokersInHand: 0,
-          blanksInHand: 0,
-          discardCounts: {},
-          jokersDisallowed: false,
-        },
-        completion: { M_nat: 8, M_joker: 0, D: 6, P_base: 57, P: 57 },
-        wallRemaining: 97,
-      }),
-    )
-    const afterDiscard = calculateWallCompletionProbability(
-      baseInput({
-        slots,
-        ctx: {
-          naturals: {
-            's:dot:1': 1,
-            'w:N': 1,
-            'w:W': 3,
-            'w:S': 1,
-            f: 1,
-            's:dot:3': 1,
-          },
-          jokersInHand: 0,
-          blanksInHand: 0,
-          discardCounts: {},
-          jokersDisallowed: false,
-        },
-        completion: { M_nat: 8, M_joker: 0, D: 6, P_base: 57, P: 57 },
-        visibleNaturals: { 'w:S': 1 },
-        wallRemaining: 97,
-      }),
-    )
+    const shared = {
+      slots,
+      ctx: {
+        naturals: { 'w:W': 3, 'w:S': 2, 'd:green': 2, 'd:red': 2 },
+        jokersInHand: 1,
+        blanksInHand: 0,
+        discardCounts: {},
+        jokersDisallowed: false,
+      } satisfies HandInventoryContext,
+      completion: { M_nat: 9, M_joker: 1, D: 4, P_base: 71, P: 71 },
+      wallRemaining: 56,
+      isConcealed: false,
+      isSinglesAndPairs: false,
+      deck: DEFAULT_DECK_COMPOSITION,
+      playerRackTileCount: 14,
+      tilesNeededRough: 4,
+      visibleJokers: 0,
+      visibleBlanks: 0,
+    }
+    const beforeDiscard = calculateWallCompletionProbability({
+      ...shared,
+      visibleNaturals: {},
+    })
+    const afterDiscard = calculateWallCompletionProbability({
+      ...shared,
+      // Two Souths dead on the table → kong must lean harder on jokers.
+      visibleNaturals: { 'w:S': 2 },
+    })
     expect(beforeDiscard).toBeGreaterThan(0)
     expect(afterDiscard).toBeGreaterThan(0)
     expect(afterDiscard).toBeLessThan(beforeDiscard)
@@ -667,6 +652,45 @@ describe('calculateWallCompletionProbability', () => {
     expect(ready).toBeGreaterThan(20)
   })
 
+  it('gives meaningful opening Charleston Prob % for Away-6 concealed runs (not ~1%)', () => {
+    const slots: CompletionSlot[] = [
+      { tileType: 'f', targetCount: 2 },
+      { tileType: 's:bam:2', targetCount: 1 },
+      { tileType: 's:bam:3', targetCount: 2 },
+      { tileType: 's:bam:4', targetCount: 3 },
+      { tileType: 's:crak:2', targetCount: 1 },
+      { tileType: 's:crak:3', targetCount: 2 },
+      { tileType: 's:crak:4', targetCount: 3 },
+    ]
+    expect(earlyExchangeTrials(99, 5)).toBeGreaterThan(0)
+    expect(earlyExchangeTrials(80, 5)).toBe(0)
+    const prob = calculateWallCompletionProbability(
+      baseInput({
+        slots,
+        ctx: {
+          naturals: {
+            's:bam:2': 1,
+            's:bam:3': 1,
+            's:crak:2': 1,
+            's:crak:3': 2,
+          },
+          jokersInHand: 0,
+          blanksInHand: 0,
+          discardCounts: {},
+          jokersDisallowed: false,
+        },
+        completion: { M_nat: 5, M_joker: 0, D: 9, P_base: 36, P: 29 },
+        visibleNaturals: { 's:dot:3': 1, 's:crak:3': 1, f: 1, 'w:N': 1, 'w:W': 1 },
+        wallRemaining: 99,
+        isConcealed: true,
+        tilesNeededRough: 6,
+      }),
+    )
+    // Full wall + Charleston receives: pursuit odds, not the crushed slot-product ~1%.
+    expect(prob).toBeGreaterThanOrEqual(12)
+    expect(prob).toBeLessThan(80)
+  })
+
   it('does not treat expected wall jokers as a guaranteed 100% for a 1-joker quint gap', () => {
     const slots: CompletionSlot[] = [
       { tileType: 's:bam:3', targetCount: 5 },
@@ -714,7 +738,7 @@ describe('calculateWallCompletionProbability', () => {
       visibleNaturals: {},
       visibleJokers: 2,
       visibleBlanks: 0,
-      wallRemaining: 80,
+      wallRemaining: 48,
       isConcealed: false,
       isSinglesAndPairs: false,
       deck: DEFAULT_DECK_COMPOSITION,
