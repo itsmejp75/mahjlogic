@@ -4,6 +4,7 @@
  */
 
 import type { PatternGroup, PracticePattern } from '../card/practicePatterns'
+import { pairKongsTripleBlockRanks } from '../card/patternLinePreview'
 import { suitPermutations } from '../card/nmjlSuitSlots'
 import type { Suit, TileInstance } from '../mahjong/types'
 import { deadHintDefKey } from '../mahjong/deadHintVariants'
@@ -234,13 +235,23 @@ function expandGroup(
     }
 
     case 'odd-pair-kongs-triple': {
+      // Six-pack / 369 block: per-rank singles & the odd pair (jokers never — targetCount ≤ 2),
+      // plus two kongs of the pair rank in the other suits (jokers OK).
       const out: CompletionSlot[][] = []
       for (const pairRank of g.odds) {
         for (const perm of suitPermutations(3)) {
           const [mixed, k1, k2] = perm
+          const needByRank = new Map<number, number>()
+          for (const r of pairKongsTripleBlockRanks(g.odds, pairRank)) {
+            needByRank.set(r, (needByRank.get(r) ?? 0) + 1)
+          }
+          const mixedSlots: CompletionSlot[] = [...needByRank.entries()].map(([rank, targetCount]) => ({
+            tileType: suitRankKey(mixed!, rank),
+            targetCount,
+          }))
           out.push(
             appendPartial(partial, [
-              { tileType: suitRankKey(mixed!, pairRank), targetCount: 6 },
+              ...mixedSlots,
               { tileType: suitRankKey(k1!, pairRank), targetCount: 4 },
               { tileType: suitRankKey(k2!, pairRank), targetCount: 4 },
             ]),

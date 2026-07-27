@@ -27,6 +27,11 @@ describe('findFocusedPatternDeadCause', () => {
   it('finds CONSECUTIVE RUN 4b pattern', () => {
     expect(consec4b).toBeDefined()
     expect(consec4b!.title).toBe('111 222 3333 4444')
+    // Any 2 suits: green pung pair + red kong pair (not a single all-green run).
+    expect(consec4b!.titleSegments?.map((s) => s.ink)).toEqual(['green', 'red'])
+    const sp = consec4b!.groups?.find((g) => g.kind === 'suit-permute')
+    expect(sp?.kind).toBe('suit-permute')
+    if (sp?.kind === 'suit-permute') expect(sp.colorGroups).toHaveLength(2)
   })
 
   it('369-4: 6 dot in the pung suit is not a pair dead-tile warning when other 6 dots are gone', () => {

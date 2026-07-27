@@ -35,7 +35,7 @@ CONSECUTIVE RUN,2a,FFF 1111 234 5555,Blue:FFF 1111 234 5555,"(Any 1 Suit, Any 5 
 CONSECUTIVE RUN,2b,FFF 1111 234 5555,"Blue:FFF, green:1111, red:234, green:5555","(Any 2 Suits, Any 5 Consec. Nos.)",X25
 CONSECUTIVE RUN,3,11 22 111 222 3333 ,"Green:11 22, red:111 222, blue:3333","(Any 3 Suits, Any 3 Consec. Nos.)",X25
 CONSECUTIVE RUN,4a,111 222 3333 4444,Blue:111 222 3333 4444,"(Any 1 Suit, Any 4 Consec. Nos.)",X25
-CONSECUTIVE RUN,4b,111 222 3333 4444,Green:111 222 3333 4444,"(Any 2 Suits, Any 4 Consec. Nos.)",X25
+CONSECUTIVE RUN,4b,111 222 3333 4444,"Green:111 222, red:3333 4444","(Any 2 Suits, Any 4 Consec. Nos.)",X25
 CONSECUTIVE RUN,5a,FFF 11 22 333 DDDD,Blue:FFF 11 22 333 DDDD,"(Any 1 Suit, Any 3 Consec. Nos. W Matching Dragons)",X25
 CONSECUTIVE RUN,5b,FFF 11 22 333 DDDD,"Blue:FFF, green:11, red:22, green:333, red:DDDD","(Any 2 Suits, Any 3 Consec. Nos., Dragons Match Middle No.)",X25
 CONSECUTIVE RUN,6,1111 FFFFFF 2222,Blue:1111 FFFFF 2222,"(Any 1 Suit, Any 2 Consec. Nos.)",X30

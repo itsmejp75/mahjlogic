@@ -1200,8 +1200,14 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
  * Drawn-tile / Charleston fly-in: hand tray must clear the green Discard> / pass wells on
  * sibling `.rack-stage__rack-top` (including when call melds are pinned). Late-cascade twin of
  * part-0035 so later rack stacking rules cannot bury the flight again.
+ *
+ * `just-drawn` must be hand-tray-scoped — discard-tracker drop-ins reuse the same class and must
+ * not lift the hand over the green-slot incoming discard (lit tile-13 vignette flash).
  */
-.app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
+.app-layout[data-animations='on']:is(
+  [data-hand-fly-in],
+  :has(.panel-hand-rack__hand-tray .sortable-tile-wrap--just-drawn)
+)
   .panel--hand
   .rack-stage__rack-col
   > .panel-hand-rack__hand-tray {
@@ -1209,7 +1215,10 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   z-index: 6;
 }
 
-.app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
+.app-layout[data-animations='on']:is(
+  [data-hand-fly-in],
+  :has(.panel-hand-rack__hand-tray .sortable-tile-wrap--just-drawn)
+)
   .panel--hand
   .panel-hand-rack__hand-tray
   .rack-stage__rack-bottom {
@@ -1222,14 +1231,20 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
  * those rack-top tiles (nudged down into the hand band) and makes them look coplanar.
  * Keep only the underside halo for the flight window — overrides lit→lit seam clip variants.
  */
-.app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
+.app-layout[data-animations='on']:is(
+  [data-hand-fly-in],
+  :has(.panel-hand-rack__hand-tray .sortable-tile-wrap--just-drawn)
+)
   .panel--hand
   .panel-hand-rack__hand-tray
   .hand-row {
   --coach-centered-lift-clip-top: 0px;
 }
 
-.app-layout[data-animations='on']:is([data-hand-fly-in], :has(.sortable-tile-wrap--just-drawn))
+.app-layout[data-animations='on']:is(
+  [data-hand-fly-in],
+  :has(.panel-hand-rack__hand-tray .sortable-tile-wrap--just-drawn)
+)
   .app
   .panel--hand
   .panel-hand-rack__hand-tray

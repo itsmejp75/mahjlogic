@@ -1587,3 +1587,163 @@ describe('liveClaimableDiscard completion probability', () => {
     expect(lit.completionProbability).toBeGreaterThan(base.completionProbability)
   })
 })
+
+describe('odd-pair-kongs-triple completion slots', () => {
+  it('models 13579 #4 six-pack as per-rank singles/pair (not 6-of-a-kind)', () => {
+    const pattern = NMJL_2026_PATTERNS.find(
+      (p) => p.section === '13579' && p.cardHandCode === '4',
+    )!
+    const hand = [
+      { id: 'c1', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 1 } },
+      { id: 'c3', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 3 } },
+      { id: 'c5', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 5 } },
+      { id: 'c7a', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 7 } },
+      { id: 'c7b', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 7 } },
+      { id: 'c9', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 9 } },
+      { id: 'b7a', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 7 } },
+      { id: 'b7b', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 7 } },
+      { id: 'd7a', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 7 } },
+      { id: 'd7b', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 7 } },
+      { id: 'j1', def: { cat: 'joker' as const } },
+      { id: 'junk1', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 1 } },
+      { id: 'junk2', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 5 } },
+      { id: 'junk3', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 8 } },
+    ]
+    const ranked = rankSuggestedHands({
+      hand,
+      wallRemaining: 66,
+      discards: [],
+      exposures: [],
+      patterns: [pattern],
+      deckSettings: { totalJokersInGame: 8, totalBlanksInGame: 0 },
+    })
+    const line = ranked.find((l) => l.id === pattern.id)!
+    // Greedy Away and Prob deficit must agree: six-pack is complete; only kong gaps remain.
+    expect(line.tilesNeededRough).toBe(3)
+    expect(line.completionProbability).toBeGreaterThan(10)
+  })
+})
+
+describe('joker-swap Prob relief vs required naturals', () => {
+  it('does not raise Prob when the only swap natural is needed as a six-pack single (13579 #4)', () => {
+    // Hand aims at 113579 (crak, pair 7) + kong 7 bam + kong 7 dot. West exposes 5-crak + joker;
+    // swapping the sole 5-crak for that joker would ruin the six-pack single (jokers cannot fill it).
+    const pattern = NMJL_2026_PATTERNS.find(
+      (p) => p.section === '13579' && p.cardHandCode === '4',
+    )!
+    const hand = [
+      { id: 'c1', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 1 } },
+      { id: 'c3', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 3 } },
+      { id: 'c5', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 5 } },
+      { id: 'c7a', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 7 } },
+      { id: 'c7b', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 7 } },
+      { id: 'c9', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 9 } },
+      { id: 'b7a', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 7 } },
+      { id: 'b7b', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 7 } },
+      { id: 'd7a', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 7 } },
+      { id: 'd7b', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 7 } },
+      { id: 'j1', def: { cat: 'joker' as const } },
+      { id: 'junk1', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 1 } },
+      { id: 'junk2', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 5 } },
+    ]
+    const westExposure = {
+      seat: 'West' as const,
+      claimType: 'pung' as const,
+      tiles: [
+        { id: 'w5a', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 5 } },
+        { id: 'wj', def: { cat: 'joker' as const } },
+        { id: 'w5b', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 5 } },
+      ],
+    }
+
+    const withoutSwap = rankSuggestedHands({
+      hand,
+      wallRemaining: 60,
+      discards: [],
+      exposures: [westExposure],
+      patterns: [pattern],
+      deckSettings: { totalJokersInGame: 8, totalBlanksInGame: 0 },
+    })
+    const withSwap = rankSuggestedHands({
+      hand,
+      wallRemaining: 60,
+      discards: [],
+      exposures: [westExposure],
+      patterns: [pattern],
+      deckSettings: { totalJokersInGame: 8, totalBlanksInGame: 0 },
+      jokerSwapHintForProb: {
+        enabled: true,
+        hand,
+        pendingDiscard: null,
+        botExposures: [westExposure],
+        eastExposures: [],
+      },
+    })
+
+    const base = withoutSwap.find((l) => l.id === pattern.id)!
+    const lit = withSwap.find((l) => l.id === pattern.id)!
+    expect(base.tilesNeededRough).toBeGreaterThan(0)
+    expect(lit.tilesNeededRough).toBe(base.tilesNeededRough)
+    expect(lit.completionProbability).toBe(base.completionProbability)
+  })
+
+  it('still raises Prob when a surplus natural can redeem an exposed joker', () => {
+    // Same 13579 #4 shape, but an extra 6-crak can swap for West's 6-crak joker without
+    // touching the six-pack — that joker helps the kong gaps.
+    const pattern = NMJL_2026_PATTERNS.find(
+      (p) => p.section === '13579' && p.cardHandCode === '4',
+    )!
+    const hand = [
+      { id: 'c1', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 1 } },
+      { id: 'c3', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 3 } },
+      { id: 'c5', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 5 } },
+      { id: 'c7a', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 7 } },
+      { id: 'c7b', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 7 } },
+      { id: 'c9', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 9 } },
+      { id: 'b7a', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 7 } },
+      { id: 'b7b', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 7 } },
+      { id: 'd7a', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 7 } },
+      { id: 'd7b', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 7 } },
+      { id: 'j1', def: { cat: 'joker' as const } },
+      { id: 'spare6', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 6 } },
+      { id: 'junk2', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 5 } },
+    ]
+    const westExposure = {
+      seat: 'West' as const,
+      claimType: 'pung' as const,
+      tiles: [
+        { id: 'w6a', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 6 } },
+        { id: 'wj', def: { cat: 'joker' as const } },
+        { id: 'w6b', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 6 } },
+      ],
+    }
+
+    const withoutSwap = rankSuggestedHands({
+      hand,
+      wallRemaining: 60,
+      discards: [],
+      exposures: [westExposure],
+      patterns: [pattern],
+      deckSettings: { totalJokersInGame: 8, totalBlanksInGame: 0 },
+    })
+    const withSwap = rankSuggestedHands({
+      hand,
+      wallRemaining: 60,
+      discards: [],
+      exposures: [westExposure],
+      patterns: [pattern],
+      deckSettings: { totalJokersInGame: 8, totalBlanksInGame: 0 },
+      jokerSwapHintForProb: {
+        enabled: true,
+        hand,
+        pendingDiscard: null,
+        botExposures: [westExposure],
+        eastExposures: [],
+      },
+    })
+
+    const base = withoutSwap.find((l) => l.id === pattern.id)!
+    const lit = withSwap.find((l) => l.id === pattern.id)!
+    expect(lit.completionProbability).toBeGreaterThan(base.completionProbability)
+  })
+})

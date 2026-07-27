@@ -29,7 +29,7 @@ export function representativeDefInExposedMeld(tiles: TileInstance[]): TileDef |
  * On your turn, any exposed joker in the meld may be redeemed with a natural matching what that
  * joker represents (the meld’s like naturals).
  */
-function jokersSwappableWithNaturalInMeld(
+export function jokersSwappableWithNaturalInMeld(
   tiles: TileInstance[],
   naturalDef: TileDef,
 ): TileInstance[] {
