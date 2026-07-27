@@ -57,4 +57,39 @@ describe('suggested hands ranking rack', () => {
       suggestedHandShownInPanelList(line(concealedOnly), null),
     )
   })
+
+  it('does not raise Prob when a junk tile is moved to the discard tray', () => {
+    const hand13 = screenshotHand13()
+    const junk = tile({ cat: 'suit', suit: 'dot', rank: 9 }, 'd9p')
+    const exposure = {
+      tiles: [
+        tile({ cat: 'suit', suit: 'bam', rank: 2 }, 'exp-b2a'),
+        tile({ cat: 'suit', suit: 'bam', rank: 2 }, 'exp-b2b'),
+        tile({ cat: 'joker' }, 'exp-j'),
+      ],
+    }
+
+    const at14 = rankSuggestedHands({
+      hand: [...hand13, junk],
+      wallRemaining: 94,
+      discards: [],
+      exposures: [],
+      playerClaimMelds: [exposure],
+      patterns: NMJL_2026_PATTERNS,
+    })
+    const staged = rankSuggestedHands({
+      hand: hand13,
+      wallRemaining: 94,
+      discards: [],
+      exposures: [],
+      playerClaimMelds: [exposure],
+      pendingDiscardTile: junk,
+      patterns: NMJL_2026_PATTERNS,
+    })
+
+    const pick = (rows: ReturnType<typeof rankSuggestedHands>) =>
+      rows.find((l) => l.tilesNeededRough === rows[0]?.tilesNeededRough) ?? rows[0]!
+
+    expect(pick(staged).completionProbability).toBe(pick(at14).completionProbability)
+  })
 })

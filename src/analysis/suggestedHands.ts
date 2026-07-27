@@ -54,16 +54,22 @@ import {
   resolveBestPatternCompletion,
 } from './handCompletionSlots'
 
-/** Discards + all bot melds + East’s face-up claim melds (table visibility for dead-tile math). */
+/**
+ * Table tiles known dead/out for wall-outs math.
+ * Excludes `excludeTileIds` (this seat’s claim-meld tiles) — those are already in rack
+ * inventory; counting them again as “visible” double-subtracts and falsely kills outs.
+ */
 function tableVisibleTiles(
   discards: TileInstance[],
   botExposures: BotExposure[],
   eastTableClaimMelds: ReadonlyArray<{ tiles: TileInstance[] }>,
+  excludeTileIds?: ReadonlySet<string>,
 ): TileInstance[] {
+  const keep = (t: TileInstance) => !excludeTileIds?.has(t.id)
   return [
-    ...discards,
-    ...botExposures.flatMap((e) => e.tiles),
-    ...eastTableClaimMelds.flatMap((e) => e.tiles),
+    ...discards.filter(keep),
+    ...botExposures.flatMap((e) => e.tiles).filter(keep),
+    ...eastTableClaimMelds.flatMap((e) => e.tiles).filter(keep),
   ]
 }
 
@@ -109,6 +115,8 @@ function wallCompletionProbForLine(
   completion: HandCompletionMetrics,
   tilesNeededRough: number,
   swappableExposedJokers = 0,
+  /** Physical rack size for Prob (hand+claims, plus staged discard still on your tray). */
+  playerRackTileCount = rackForPattern.length,
 ): number {
   if (slots.length === 0) {
     return estimateWallCompletionProbability(tilesNeededRough, wallRemaining, completion.P)
@@ -135,7 +143,7 @@ function wallCompletionProbForLine(
     isConcealed: p.closed,
     isSinglesAndPairs: p.section === 'SINGLES AND PAIRS',
     deck,
-    playerRackTileCount: rackForPattern.length,
+    playerRackTileCount,
     tilesNeededRough,
     jokerReliefFromSwapHint,
   })
@@ -221,9 +229,56 @@ function liveClaimableDiscardCompletesPattern(
 }
 
 /**
- * Wall-completion % unless a live claimable discard already wins this line — then 100.
- * Rows farther than 1 away keep the wall estimate even when another assignment of the
- * same pattern would win (consecRanks tier rows).
+ * Best post-claim rack if `called` can be claimed toward `p` (Away strictly improves).
+ * Used so Prob already prices a live Call; committing the call should not drop the %.
+ */
+function previewLiveClaimForProbability(
+  p: PracticePattern,
+  hand: TileInstance[],
+  existingMelds: ReadonlyArray<{ tiles: TileInstance[] }>,
+  called: TileInstance,
+  currentAway: number,
+): { hand: TileInstance[]; melds: ReadonlyArray<{ tiles: TileInstance[] }>; away: number } | null {
+  if (called.def.cat === 'joker' || currentAway <= 0) return null
+
+  let best: { hand: TileInstance[]; melds: ReadonlyArray<{ tiles: TileInstance[] }>; away: number } | null =
+    null
+
+  const consider = (
+    handNext: TileInstance[],
+    melds: ReadonlyArray<{ tiles: TileInstance[] }>,
+  ) => {
+    if (melds.length > existingMelds.length && !claimMeldsFitPracticePattern(p, melds)) return
+    const away = tilesAwayForPracticePattern(p, handNext, melds)
+    if (away >= currentAway) return
+    if (!best || away < best.away) best = { hand: handNext, melds, away }
+  }
+
+  // Concealed 14th (no new exposure).
+  consider([...hand, called], existingMelds)
+
+  if (!p.closed) {
+    const oneFromHand = findExactMatches(hand, called.def)
+    for (const t of oneFromHand) {
+      const handNext = hand.filter((x) => x.id !== t.id)
+      consider(handNext, [...existingMelds, { tiles: [called, t] }])
+    }
+    for (const needed of [2, 3, 4, 5] as const) {
+      const used = pickHandTilesForLiveClaim(hand, called.def, needed)
+      if (!used) continue
+      const usedIds = new Set(used.map((t) => t.id))
+      const handNext = hand.filter((t) => !usedIds.has(t.id))
+      consider(handNext, [...existingMelds, { tiles: [called, ...used] }])
+    }
+  }
+
+  return best
+}
+
+/**
+ * Wall-completion %. A live claimable discard that already wins → 100.
+ * A live discard that improves Away is scored on the post-claim rack so Call does not
+ * drop Prob. Away in the UI stays pre-call.
  */
 function completionProbabilityForLine(
   p: PracticePattern,
@@ -239,8 +294,51 @@ function completionProbabilityForLine(
   hand: TileInstance[],
   playerClaimMelds: ReadonlyArray<{ tiles: TileInstance[] }>,
   liveClaimableDiscard: TileInstance | null | undefined,
+  playerRackTileCount: number,
+  discards: TileInstance[],
 ): number {
-  const wallProb = wallCompletionProbForLine(
+  if (
+    liveClaimableDiscard &&
+    tilesNeededRough > 0 &&
+    tilesNeededRough <= 1 &&
+    liveClaimableDiscardCompletesPattern(p, hand, playerClaimMelds, liveClaimableDiscard)
+  ) {
+    return 100
+  }
+
+  const livePreview =
+    liveClaimableDiscard && tilesNeededRough > 1
+      ? previewLiveClaimForProbability(
+          p,
+          hand,
+          playerClaimMelds,
+          liveClaimableDiscard,
+          tilesNeededRough,
+        )
+      : null
+
+  if (livePreview) {
+    const previewRack = rackForPatternWithClaimMelds(livePreview.hand, livePreview.melds)
+    const resolved = resolveBestPatternCompletion(p, previewRack, discards)
+    // Own claim tiles (including the new exposure) stay out of visible outs.
+    const ownIds = new Set(livePreview.melds.flatMap((m) => m.tiles).map((t) => t.id))
+    const previewVisible = visible.filter((t) => !ownIds.has(t.id))
+    return wallCompletionProbForLine(
+      p,
+      previewRack,
+      previewVisible,
+      wallRemaining,
+      deck,
+      resolved.slots,
+      resolved.ctx,
+      resolved.metrics,
+      livePreview.away,
+      swappableExposedJokers,
+      previewRack.length,
+    )
+  }
+
+  return wallCompletionProbForLine(
     p,
     rackForPattern,
     visible,
@@ -251,16 +349,8 @@ function completionProbabilityForLine(
     completion,
     tilesNeededRough,
     swappableExposedJokers,
+    playerRackTileCount,
   )
-  if (
-    liveClaimableDiscard &&
-    tilesNeededRough > 0 &&
-    tilesNeededRough <= 1 &&
-    liveClaimableDiscardCompletesPattern(p, hand, playerClaimMelds, liveClaimableDiscard)
-  ) {
-    return 100
-  }
-  return wallProb
 }
 
 /** Hand + claim melds for tiles-away: flower-meld jokers stay off the rack; other melds resolve jokers. */
@@ -5716,6 +5806,11 @@ export type RankSuggestedHandsInput = {
    * and from Away, but lines this tile completes for Mah Jongg show Prob % 100.
    */
   liveClaimableDiscard?: TileInstance | null
+  /**
+   * Tile staged on the discard tray (still yours until Discard commits). Counted in Prob rack
+   * size only — not toward Away — so staging junk does not change ownership bookkeeping.
+   */
+  pendingDiscardTile?: TileInstance | null
 }
 
 function cardBookForRankInput(input: RankSuggestedHandsInput): PracticePattern[] {
@@ -5778,9 +5873,12 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
   const playerClaimMelds = input.playerClaimMelds ?? []
   const eastTableClaimMelds = input.eastTableClaimMelds ?? input.playerClaimMelds ?? []
   const liveClaimableDiscard = input.liveClaimableDiscard ?? null
+  const pendingDiscardTile = input.pendingDiscardTile ?? null
   const hasPlayerClaimMelds = playerClaimMelds.length > 0
   /** Concealed hand + this seat’s exposed claim melds — all count toward the 14. */
   const rackForPattern = rackForPatternWithClaimMelds(hand, playerClaimMelds)
+  /** Prob acquisition uses physical ownership (include staged discard still on the tray). */
+  const playerRackTileCount = rackForPattern.length + (pendingDiscardTile ? 1 : 0)
   const exposureTileIds: ReadonlySet<string> | undefined =
     hasPlayerClaimMelds ? new Set(playerClaimMelds.flatMap((e) => e.tiles).map((t) => t.id)) : undefined
   const groupMatchOpts: GroupMatchOpts = {
@@ -5791,7 +5889,12 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
   }
   const greedyExposureOpts: GreedyPatternMatchOpts | undefined =
     exposureTileIds && exposureTileIds.size > 0 ? { exposureTileIds } : undefined
-  const visible = tableVisibleTiles(discards, exposures, eastTableClaimMelds)
+  const visible = tableVisibleTiles(
+    discards,
+    exposures,
+    eastTableClaimMelds,
+    exposureTileIds,
+  )
   const deck = deckCompositionFromInput(input)
   const swappableExposedJokers =
     input.jokerSwapHintForProb?.enabled === true
@@ -5871,6 +5974,8 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
         hand,
         playerClaimMelds,
         liveClaimableDiscard,
+        playerRackTileCount,
+        discards,
       ),
       wallRemaining,
       visibleDeadMatches,
@@ -6035,6 +6140,8 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
             hand,
             playerClaimMelds,
             liveClaimableDiscard,
+            playerRackTileCount,
+            discards,
           ),
           wallRemaining,
           visibleDeadMatches,

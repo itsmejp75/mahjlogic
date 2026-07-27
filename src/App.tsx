@@ -3132,8 +3132,8 @@ export default function App() {
     }
 
     const handForRank = deferredHand
-    // Pending discard is leaving the rack — do not count it toward suggested-hand distance or
-    // completion % (it wrongly sets playerRackTileCount to 14 and drops the pre-draw bonus).
+    // Staged discard stays out of Away matching (not in `hand`) but still counts as owned in
+    // Prob rack size so tray bookkeeping matches the 14-tile discard state.
     return {
       hand: handForRank,
       wallRemaining: wall.length,
@@ -3144,6 +3144,7 @@ export default function App() {
       patterns: cardPatterns,
       deckSettings,
       jokerSwapHintForProb,
+      pendingDiscardTile: pendingEastDiscardTile,
       // Boost Prob % when this unreclaimed discard already wins a line (Away stays pre-call).
       liveClaimableDiscard:
         mainPhase === 'bot-turn' && activeBotDiscard ? activeBotDiscard : null,

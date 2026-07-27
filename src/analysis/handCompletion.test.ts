@@ -618,8 +618,8 @@ describe('calculateWallCompletionProbability', () => {
         wallRemaining: 8,
       }),
     )
-    // 8 wall → ~2 draws + ~6 opponent discards; should not read as hopeless.
-    expect(prob).toBeGreaterThan(15)
+    // 8 wall → 2 draws + near-MJ call windows on the open pair; should not read as hopeless.
+    expect(prob).toBeGreaterThan(10)
   })
 
   it('returns non-zero for quint melds that require jokers beyond four naturals', () => {
@@ -645,7 +645,63 @@ describe('calculateWallCompletionProbability', () => {
     expect(prob).toBeGreaterThan(0)
   })
 
-  it('gives 13-tile discard racks the pre-draw trial bonus that a staged 14th tile removes', () => {
+  it('raises Prob when an exposure-ready flower pung is filled (cover outs not fungible)', () => {
+    const slots: CompletionSlot[] = [
+      { tileType: 'f', targetCount: 3 },
+      { tileType: 's:crak:4', targetCount: 4 },
+      { tileType: 's:dot:6', targetCount: 4 },
+      { tileType: 's:bam:2', targetCount: 3 },
+    ]
+    const visibleNaturals = {
+      's:bam:8': 1,
+      'd:soap': 1,
+      's:dot:3': 1,
+      's:dot:4': 1,
+      's:crak:4': 1,
+      'd:red': 1,
+      f: 1,
+    }
+    const beforeCtx: HandInventoryContext = {
+      naturals: { f: 2, 's:crak:4': 2, 's:dot:6': 3, 's:bam:2': 2 },
+      jokersInHand: 1,
+      blanksInHand: 0,
+      discardCounts: {},
+      jokersDisallowed: false,
+    }
+    const afterCtx: HandInventoryContext = {
+      naturals: { f: 3, 's:crak:4': 2, 's:dot:6': 3, 's:bam:2': 2 },
+      jokersInHand: 1,
+      blanksInHand: 0,
+      discardCounts: {},
+      jokersDisallowed: false,
+    }
+    const shared = {
+      slots,
+      visibleNaturals,
+      visibleJokers: 0,
+      visibleBlanks: 0,
+      wallRemaining: 94,
+      isConcealed: false,
+      isSinglesAndPairs: false,
+      deck: DEFAULT_DECK_COMPOSITION,
+      playerRackTileCount: 14,
+    }
+    const before = calculateWallCompletionProbability({
+      ...shared,
+      ctx: beforeCtx,
+      completion: computeHandCompletionMetrics(slots, beforeCtx),
+      tilesNeededRough: 6,
+    })
+    const after = calculateWallCompletionProbability({
+      ...shared,
+      ctx: afterCtx,
+      completion: computeHandCompletionMetrics(slots, afterCtx),
+      tilesNeededRough: 5,
+    })
+    expect(after).toBeGreaterThan(before)
+  })
+
+  it('does not change Prob when rack count is 13 vs 14 (junk on tray)', () => {
     const slots: CompletionSlot[] = [
       { tileType: 's:bam:2', targetCount: 2 },
       { tileType: 'd:soap', targetCount: 2 },
@@ -671,16 +727,15 @@ describe('calculateWallCompletionProbability', () => {
       visibleNaturals: {},
       visibleJokers: 0,
       visibleBlanks: 0,
-      wallRemaining: 38,
+      wallRemaining: 60,
       isConcealed: false,
       isSinglesAndPairs: false,
       deck: DEFAULT_DECK_COMPOSITION,
-      tilesNeededRough: 10,
+      tilesNeededRough: 6,
     }
     const at13 = calculateWallCompletionProbability({ ...shared, playerRackTileCount: 13 })
     const at14 = calculateWallCompletionProbability({ ...shared, playerRackTileCount: 14 })
-    expect(at13).toBeGreaterThan(0)
-    expect(at14).toBe(0)
+    expect(at13).toBe(at14)
   })
 
   it('returns 0% when 7 away with only 8 wall tiles (W&D #5 endgame)', () => {
@@ -830,7 +885,8 @@ describe('calculateWallCompletionProbability', () => {
       }),
     )
     // Full wall + Charleston receives: pursuit odds, not the crushed slot-product ~1%.
-    expect(prob).toBeGreaterThanOrEqual(12)
+    // Cover outs are capped per-slot (not fungible across types), so high-single-digits is honest.
+    expect(prob).toBeGreaterThanOrEqual(8)
     expect(prob).toBeLessThan(80)
   })
 

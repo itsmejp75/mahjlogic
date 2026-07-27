@@ -59,7 +59,10 @@ export type WallCompletionProbabilityInput = {
   isConcealed: boolean
   isSinglesAndPairs: boolean
   deck: DeckComposition
-  /** Tiles on this seat's rack (hand + claim melds), including jokers/blanks. */
+  /**
+   * Tiles owned on this seat (hand + claim melds + staged discard), including jokers/blanks.
+   * Used only to size the hidden pool; 13 vs 14 must not change wall-draw trials.
+   */
   playerRackTileCount: number
   /** Greedy tiles-away — pattern distance, not 14-tile inventory gap. */
   tilesNeededRough: number
@@ -490,10 +493,12 @@ export function isSlotExposureReady(
   return held >= slot.targetCount - 1 && held < slot.targetCount
 }
 
-function wallDrawTrials(wallRemaining: number, pendingDrawBonus: number): number {
+/** East's share of remaining wall draws — rack 13 vs 14 must not change this. */
+function wallDrawTrials(wallRemaining: number): number {
   const base = Math.floor(wallRemaining / 4)
-  if (base <= 0 && wallRemaining > 0) return Math.max(1, pendingDrawBonus)
-  return Math.max(0, base + pendingDrawBonus)
+  // Late wall: still allow one trial while tiles remain.
+  if (base <= 0 && wallRemaining > 0) return 1
+  return Math.max(0, base)
 }
 
 /**
@@ -661,16 +666,19 @@ export function calculateWallCompletionProbability(
   if (isHandDeadByVisibleTiles(slots, ctx.naturals, visibleNaturals, deck)) return 0
   if (tilesNeededRough > wallRemaining) return 0
 
-  // Pre-draw discard phase: East at 13 commits a discard then draws before needing pattern tiles.
-  const pendingDrawBonus = playerRackTileCount < 14 ? 1 : 0
-  const wallDraws = wallDrawTrials(wallRemaining, pendingDrawBonus)
+  // Draw budget from the wall only — do not award an extra trial for a 13-tile rack.
+  // Junk on the tray (or staged for discard) must not swing Prob via 13 vs 14 bookkeeping.
+  const wallDraws = wallDrawTrials(wallRemaining)
   if (wallDraws <= 0) return 0
 
   const totalDeck =
     NATURAL_TILES_IN_DECK + deck.totalJokersInGame + deck.totalBlanksInGame
   const visibleTotal =
     sumVisibleNaturals(visibleNaturals) + visibleJokers + visibleBlanks
-  const unknownPool = Math.max(0, totalDeck - playerRackTileCount - visibleTotal)
+  // Stabilize pool vs momentary 13/14 junk: held tiles that are not pattern-relevant still
+  // occupy a seat on the rack, but ±1 junk must not dominate acquisition math.
+  const rackForPool = Math.min(14, Math.max(13, playerRackTileCount))
+  const unknownPool = Math.max(0, totalDeck - rackForPool - visibleTotal)
   if (unknownPool <= 0) return 0
 
   const exchangeTrials = earlyExchangeTrials(wallRemaining, visibleTotal)
@@ -764,14 +772,16 @@ export function calculateWallCompletionProbability(
       if (outs < gapAfterWild) return 0
       naturalOnly.push({ outs, need: gapAfterWild, trials })
       totalFlexNeed += gapAfterWild
-      totalNaturalOuts += outs
+      // Cap outs by this slot's remaining need — surplus copies of an easy tile (e.g. flowers)
+      // must not count as fungible cover for unrelated scarce melds.
+      totalNaturalOuts += Math.min(outs, gapAfterWild)
       continue
     }
 
     const minJokers = Math.max(0, gapAfterWild - outs)
     meldNeeds.push({ outs, remaining: gapAfterWild, trials, minJokers })
     totalFlexNeed += gapAfterWild
-    totalNaturalOuts += outs
+    totalNaturalOuts += Math.min(outs, gapAfterWild)
     meldJokerCapacity += gapAfterWild
   }
 
