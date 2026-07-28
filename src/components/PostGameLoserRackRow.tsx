@@ -3,18 +3,42 @@ import {
   postGameRackAndHighlights,
   segmentRackIntoExposureRuns,
   suggestedHandCardRefDisplay,
-  suggestedHandCategoryDashCardRef,
   type RankSuggestedHandsInput,
 } from '../analysis/suggestedHands'
 import { CardHandNotation } from '../card/CardHandNotation'
+import { suggestedHandSectionMenuLabel } from '../suggestedHands/filterSettings'
 import type { SuggestedHandLine } from '../training/types'
 import { TileFace } from './TileFace'
 import { CardColoredText } from './CardColoredText'
 
+/** Same category + #hand markup as the suggested-hands tray (gap + smaller hash). */
+function SuggestedHandCategoryRefLabel({
+  line,
+  className,
+}: {
+  line: SuggestedHandLine
+  className?: string
+}) {
+  const cardRef = suggestedHandCardRefDisplay(line)
+  return (
+    <span className={className}>
+      <span className="hands-sheet__category">
+        {suggestedHandSectionMenuLabel(line.section)}
+        <span className="hands-sheet__section-num">
+          <span className="hands-sheet__section-hash" aria-hidden="true">
+            #
+          </span>
+          {cardRef}
+        </span>
+      </span>
+    </span>
+  )
+}
+
 function TiedLineHandLabel({ line }: { line: SuggestedHandLine }) {
   return (
     <>
-      <span className="post-game-tied__ref">{suggestedHandCategoryDashCardRef(line)}</span>
+      <SuggestedHandCategoryRefLabel line={line} className="post-game-tied__ref" />
       <CardHandNotation
         fallback={null}
       >
@@ -170,10 +194,16 @@ export function PostGameLoserRackRow({
     <div className="mahjong-win__bots-review-header">
       <span className="mahjong-win__bots-review-seat">{label}</span>
       <span className="mahjong-win__bots-review-away">
-        {bestTilesAway === 0 ? '0 away' : `${bestTilesAway} away`}
+        <span className="mahjong-win__bots-review-away__n">
+          {bestTilesAway === 0 ? 0 : bestTilesAway}
+        </span>
+        <span className="mahjong-win__bots-review-away__label">away</span>
       </span>
       {line.section ? (
-        <span className="mahjong-win__bots-review-ref">{suggestedHandCategoryDashCardRef(line)}</span>
+        <SuggestedHandCategoryRefLabel
+          line={line}
+          className="mahjong-win__bots-review-ref"
+        />
       ) : null}
       <div
         className="post-game-tied__pattern-line mahjong-win__bots-review-pattern"

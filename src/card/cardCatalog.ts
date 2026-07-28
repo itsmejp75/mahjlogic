@@ -75,3 +75,8 @@ export function playableCardShortLabel(id: PlayableCardId): string {
 export function playableCardHeadingLabel(id: PlayableCardId): string {
   return id === 'mock' ? 'Practice Card' : `${id} NMJL Card`
 }
+
+/** Compact label for the suggested-hands sheet header (card-hand column). */
+export function playableCardColumnLabel(id: PlayableCardId): string {
+  return id === 'mock' ? 'Practice' : `NMJL ${id}`
+}

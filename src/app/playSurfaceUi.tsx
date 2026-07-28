@@ -329,6 +329,7 @@ export function PlayerRackSeatLabel({
       className="panel-hand-rack__seat-label"
       aria-hidden
     >
+      <span className="panel-hand-rack__seat-label__prefix">Playing position:</span>
       <span
         className={[
           'panel-hand-rack__seat-label__chip',
@@ -970,12 +971,14 @@ export function BlankExchangeOverlay({
   )
 }
 
-/** Per-bot full-hand dump on the table during post-game Review (exposed lit / concealed dim). */
+/** Per-bot full-hand dump on the table when the round ends (exposed lit / concealed dim). */
 export type PostGameBotReviewRackRow = {
   seat: BotSeat
   melds: ReadonlyArray<{ tiles: TileInstance[] }>
   /** `null` = winner (all lit). Otherwise lit tile ids; tiles not listed are dim. */
   litTileIds: ReadonlySet<string> | null
+  /** Closest line tiles-away; shown in slot 14 for non-winners. */
+  bestTilesAway: number
 }
 
 /** 3 rows: 13-column sorted discard grid (inset) + prefix + 14-column bot exposures. */
@@ -1138,6 +1141,9 @@ export function DiscardTrackerSlotGrid({
             : null
           : botExposureSuggestedTileGuide
         const rowSuggestedDeadIds = reviewRow ? null : botExposureDeadIds
+        // Non-winners end with 13 tiles — put "N away" in the empty 14th slot.
+        const tilesAway =
+          reviewRow != null && reviewRow.litTileIds != null ? reviewRow.bestTilesAway : null
         return (
           <div
             key={seat}
@@ -1240,6 +1246,21 @@ export function DiscardTrackerSlotGrid({
                   jokerSwapHintBounceTileIds={reviewRow ? null : jokerSwapHintBounceTileIds}
                   jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
                   possibleOpenHandsCount={botRowPossibleOpenHandsCounts[rowIdx] ?? null}
+                  reserveTrailingSlots={tilesAway != null ? 1 : 0}
+                  trailingSuffix={
+                    tilesAway != null ? (
+                      <div
+                        className="exposure-rack__slot exposure-rack__slot--empty exposure-rack__slot--tiles-away"
+                        role="status"
+                        aria-label={`${tilesAway} away`}
+                      >
+                        <span className="exposure-rack__tiles-away" aria-hidden="true">
+                          <span className="exposure-rack__tiles-away__n">{tilesAway}</span>
+                          <span className="exposure-rack__tiles-away__label">away</span>
+                        </span>
+                      </div>
+                    ) : null
+                  }
                 />
               </div>
             </OpponentExposureDropZone>

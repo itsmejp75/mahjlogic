@@ -610,6 +610,7 @@ export function RackCheckerPage({
                   uncheckedSections={uncheckedSections}
                   hideConcealedHands={hideConcealedHands}
                   cardPatterns={cardPatterns}
+                  cardId={cardId}
                   cardSectionOrder={cardSectionOrder}
                 />
               </div>

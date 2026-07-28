@@ -19,7 +19,12 @@ import { GameHistoryStatsOverlay } from './components/GameHistoryStatsOverlays'
 import { TileFace } from './components/TileFace'
 import { useAuth } from './auth/AuthProvider'
 import { useSessionBoot } from './auth/sessionBoot'
-import { recordGameResult, type GameOutcome, type GameWinMethod } from './lib/gameResults'
+import {
+  recordGameResult,
+  type GameAssistKey,
+  type GameOutcome,
+  type GameWinMethod,
+} from './lib/gameResults'
 import {
   buildInProgressSnapshot,
   clearInProgressGame,
@@ -1842,6 +1847,8 @@ export default function App() {
   const [rackCheckerOpen, setRackCheckerOpen] = useState(false)
   const replayOpeningDeckRef = useRef<TileInstance[] | null>(null)
   const gameResultRecordedRef = useRef(false)
+  /** Helper tools actually used during the current hand (reset on each new deal). */
+  const handAssistsRef = useRef<Set<GameAssistKey>>(new Set())
   const clientRoundIdRef = useRef(
     typeof crypto !== 'undefined' && 'randomUUID' in crypto
       ? crypto.randomUUID()
@@ -1918,6 +1925,14 @@ export default function App() {
   const [handProbabilityEnabled, setHandProbabilityEnabled] = useState(() =>
     readHandProbabilityEnabledFromStorage(),
   )
+  const handProbabilityEnabledRef = useRef(handProbabilityEnabled)
+  handProbabilityEnabledRef.current = handProbabilityEnabled
+  const markSuggestedHandsAssist = useCallback(() => {
+    handAssistsRef.current.add('suggested_hands')
+    if (handProbabilityEnabledRef.current) {
+      handAssistsRef.current.add('hand_probability')
+    }
+  }, [])
   const suggestedHandsPopupRef = useRef<HTMLDivElement>(null)
   const eastExposureRackTopRef = useRef<HTMLDivElement>(null)
   const playerHandRackBottomRef = useRef<HTMLDivElement>(null)
@@ -1928,11 +1943,15 @@ export default function App() {
   const refreshHandPanelCqwRef = useRef<() => void>(() => {})
   const playSurfaceDnDApiRef = useRef<PlaySurfaceDnDApi | null>(null)
   const [suggestedPinnedHandKeys, setSuggestedPinnedHandKeys] = useState<string[]>([])
-  const toggleSuggestedPinnedHandKey = useCallback((key: string) => {
-    setSuggestedPinnedHandKeys((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
-    )
-  }, [])
+  const toggleSuggestedPinnedHandKey = useCallback(
+    (key: string) => {
+      markSuggestedHandsAssist()
+      setSuggestedPinnedHandKeys((prev) =>
+        prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+      )
+    },
+    [markSuggestedHandsAssist],
+  )
   const [suggestedSuppressedHandKey, setSuggestedSuppressedHandKey] = useState<string | null>(null)
   const menuContainerRef = useRef<HTMLDivElement>(null)
   const [blankTilesEnabled, setBlankTilesEnabled] = useState(() => readBlankTilesEnabledFromStorage())
@@ -1949,8 +1968,9 @@ export default function App() {
     wallGameReviewing || mahjongWinReviewing || botMahjongWinReviewing
   const [suggestedPanelTilesOn, setSuggestedPanelTilesOn] = useState(false)
   const toggleSuggestedPanelTilesOn = useCallback(() => {
+    markSuggestedHandsAssist()
     setSuggestedPanelTilesOn((v) => !v)
-  }, [])
+  }, [markSuggestedHandsAssist])
   const toggleSuggestedHandsTrayDefaultOpen = useCallback(() => {
     setSuggestedHandsTrayDefaultOpen((prev) => {
       const next = !prev
@@ -1970,6 +1990,9 @@ export default function App() {
         localStorage.setItem(LS_KEY_HAND_PROBABILITY, next ? 'true' : 'false')
       } catch {
         /* ignore */
+      }
+      if (next && handAssistsRef.current.has('suggested_hands')) {
+        handAssistsRef.current.add('hand_probability')
       }
       return next
     })
@@ -2160,7 +2183,10 @@ export default function App() {
   const onBotExposureRowClick = useCallback((seat: BotSeat) => {
     setBotHandsIdentifierFocusSeat((prev) => {
       const next = prev === seat ? null : seat
-      if (next != null) suggestedHandsTrayApiRef.current.setTrayOpen(true)
+      if (next != null) {
+        handAssistsRef.current.add('bot_hands')
+        suggestedHandsTrayApiRef.current.setTrayOpen(true)
+      }
       return next
     })
   }, [])
@@ -2550,6 +2576,7 @@ export default function App() {
     setPassStripFlyOut(null)
     const stack = historyRef.current
     if (stack.length === 0) return
+    handAssistsRef.current.add('undo')
     const entry = stack[stack.length - 1]
     historyRef.current = stack.slice(0, -1)
     sortModeRef.current = entry.sortMode
@@ -3978,12 +4005,16 @@ export default function App() {
     toggleSuggestedPanelTilesOn()
   }, [suggestedHandsCoachActive, toggleSuggestedPanelTilesOn])
 
-  const onSuggestedPatternClick = useCallback((handKey: string) => {
-    const isDeselect = suggestedFocusHandKeyRef.current === handKey
-    setSuggestedFocusHandKey(isDeselect ? null : handKey)
-    setSuggestedSuppressedHandKey(null)
-    if (isDeselect) clearSuggestedDeadGuidesForHandKey(handKey)
-  }, [clearSuggestedDeadGuidesForHandKey])
+  const onSuggestedPatternClick = useCallback(
+    (handKey: string) => {
+      markSuggestedHandsAssist()
+      const isDeselect = suggestedFocusHandKeyRef.current === handKey
+      setSuggestedFocusHandKey(isDeselect ? null : handKey)
+      setSuggestedSuppressedHandKey(null)
+      if (isDeselect) clearSuggestedDeadGuidesForHandKey(handKey)
+    },
+    [clearSuggestedDeadGuidesForHandKey, markSuggestedHandsAssist],
+  )
 
   const mainPhaseRef = useRef(mainPhase)
   mainPhaseRef.current = mainPhase
@@ -4168,12 +4199,12 @@ export default function App() {
   }, [mainPhase, botWin, bots, hand, wall.length, discardTiles, botExposures, eastExposures, cardPatterns, botSlotSeats, playerYouLabelText])
 
   /**
-   * Table Review: dump each bot’s full hand into the exposure rail.
-   * Keep claim melds contiguous (table order) so exposed groups stay together; concealed
-   * tiles follow, suit-sorted. Lit = exposed; dim = concealed. Winner keeps every tile lit.
+   * End-game table rails: dump each bot’s full hand into the exposure rail as soon as the
+   * round ends (while the overlay is still up). Keep claim melds contiguous (table order)
+   * so exposed groups stay together; concealed tiles follow, suit-sorted. Lit = exposed;
+   * dim = concealed. Winner keeps every tile lit. Review/Menu only dismisses the overlay.
    */
   const postGameBotTableReviewRacks = useMemo(() => {
-    if (!postGameTableReviewing) return null
     if (
       mainPhase !== 'wall-game' &&
       mainPhase !== 'mahjong-declared' &&
@@ -4197,7 +4228,7 @@ export default function App() {
         eastTableClaimMelds: eastExposures,
         patterns: cardPatterns,
       }
-      const { linesAtMin } = suggestedHandsTiedAtBest(rankInput)
+      const { bestTilesAway, linesAtMin } = suggestedHandsTiedAtBest(rankInput)
       const line = linesAtMin[0]
       // Claim melds first (each intact), then suit-sorted concealed — never card-strip order,
       // which can split an exposure (e.g. soap kong) across the rail.
@@ -4213,6 +4244,7 @@ export default function App() {
         seat: label,
         melds,
         litTileIds: isWinner ? null : exposedIds,
+        bestTilesAway,
         claimMelds: claims.map((c) => ({ tiles: c.tiles })),
         closestLines: linesAtMin,
         isWinner,
@@ -4220,7 +4252,6 @@ export default function App() {
       }
     })
   }, [
-    postGameTableReviewing,
     mainPhase,
     botWin,
     botSlotSeats,
@@ -4310,7 +4341,38 @@ export default function App() {
     replayLastOpening?: boolean
     /** Deal tiles now but hold the rack fly-in (e.g. until boot loader dismisses). */
     deferOpeningFlyIn?: boolean
+    /** Skip new_rack when replacing the ephemeral boot deal after prefs hydrate. */
+    skipNewRackRecord?: boolean
   }) => {
+    const phase = mainPhaseRef.current
+    const terminal =
+      phase === 'mahjong-declared' ||
+      phase === 'bot-mahjong' ||
+      phase === 'dead-hand' ||
+      phase === 'wall-game'
+    if (
+      !opts?.skipNewRackRecord &&
+      sessionReadyRef.current &&
+      !gameResultRecordedRef.current &&
+      !terminal
+    ) {
+      const roundKey = clientRoundIdRef.current
+      if (!recordedGameResultRoundIds.has(roundKey)) {
+        recordedGameResultRoundIds.add(roundKey)
+        gameResultRecordedRef.current = true
+        inProgressSaverRef.current.cancel()
+        void clearInProgressGame()
+        void recordGameResult({
+          outcome: 'new_rack',
+          cardId: committedCardIdRef.current,
+          botDifficulty: botDifficultyRef.current,
+          assists: [],
+        })
+      } else {
+        gameResultRecordedRef.current = true
+      }
+    }
+
     const m = menuCardIdRef.current
     const c = committedCardIdRef.current
 
@@ -4338,6 +4400,7 @@ export default function App() {
     sortModeRef.current = null
     setCanUndo(false)
     gameResultRecordedRef.current = false
+    handAssistsRef.current = new Set()
     clientRoundIdRef.current =
       typeof crypto !== 'undefined' && 'randomUUID' in crypto
         ? crypto.randomUUID()
@@ -4671,6 +4734,7 @@ export default function App() {
       deadHandReason: outcome === 'dead_hand' ? round.deadHandReason : null,
       botDifficulty,
       endedBy: outcome === 'wall_game' ? wallGameEndedByRef.current : null,
+      assists: [...handAssistsRef.current],
     })
   }, [
     mainPhase,
@@ -4735,6 +4799,7 @@ export default function App() {
       applyResumeSettings(snap)
       clientRoundIdRef.current = snap.clientRoundId
       gameResultRecordedRef.current = false
+      handAssistsRef.current = new Set()
       historyRef.current = []
       sortModeRef.current = null
       setCanUndo(false)
@@ -5051,7 +5116,7 @@ export default function App() {
       if (redeal) {
         markSessionReady()
         pendingOpeningDealFlyInRef.current = true
-        performNewHandDeal({ deferOpeningFlyIn: true })
+        performNewHandDeal({ deferOpeningFlyIn: true, skipNewRackRecord: true })
       } else {
         beginFreshSessionWithOpeningFlyIn()
       }
@@ -5592,6 +5657,14 @@ export default function App() {
   ])
   const showMahjongRackHint = useDelayedReady(showMahjongRackHintRaw, mahjongHintDelayMs)
 
+  useEffect(() => {
+    if (showMahjongRackHint) handAssistsRef.current.add('mahjong_hint')
+  }, [showMahjongRackHint])
+
+  useEffect(() => {
+    if (jokerSwapHintTargetIdsForRackHint) handAssistsRef.current.add('joker_swap_hint')
+  }, [jokerSwapHintTargetIdsForRackHint])
+
   /** Discard tracker + suggested hands row below rack (always on so layout is visible during Charleston). */
   const showPlaySplitRow = true
 
@@ -5948,6 +6021,7 @@ export default function App() {
                 playerMahjongWinReviewHands ? false : suggestedHandsHideConcealed
               }
               cardPatterns={cardPatterns}
+              cardId={committedCardId}
               cardSectionOrder={cardSectionOrder}
               deadCauseByFocusKey={suggestedDeadCauseByFocusKey}
               focusedHandDeadCause={suggestedFocusedHandDeadCause}
@@ -5980,6 +6054,7 @@ export default function App() {
     suggestedHandsUncheckedSections,
     suggestedHandsHideConcealed,
     cardPatterns,
+    committedCardId,
     cardSectionOrder,
     suggestedDeadCauseByFocusKey,
     suggestedFocusedHandDeadCause,
@@ -6283,11 +6358,12 @@ export default function App() {
                               <AppMenuSettingSwitch
                                 labelId={labelId}
                                 pressed={shown}
-                                onToggle={() =>
+                                onToggle={() => {
+                                  markSuggestedHandsAssist()
                                   setSuggestedHandsUncheckedSections((prev) =>
                                     toggledSuggestedHandSectionFilter(section, prev, !shown),
                                   )
-                                }
+                                }}
                               />
                               <span
                                 className={[
@@ -6308,7 +6384,10 @@ export default function App() {
                             <AppMenuSettingSwitch
                               labelId="app-menu-label-sh-filter-concealed"
                               pressed={!suggestedHandsHideConcealed}
-                              onToggle={() => setSuggestedHandsHideConcealed((v) => !v)}
+                              onToggle={() => {
+                                markSuggestedHandsAssist()
+                                setSuggestedHandsHideConcealed((v) => !v)
+                              }}
                             />
                             <span
                               className={[
@@ -6586,7 +6665,13 @@ export default function App() {
         </div>
       </AppMenuOpenGate>
       {gameMetaPanel ? (
-        <GameHistoryStatsOverlay kind={gameMetaPanel} onClose={() => setGameMetaPanel(null)} />
+        <GameHistoryStatsOverlay
+          kind={gameMetaPanel}
+          onClose={() => {
+            setGameMetaPanel(null)
+            appMenuOpenApiRef.current.setMenuOpen(true)
+          }}
+        />
       ) : null}
       {charlestonPassError || callRuleError || blockingDialog ? (
         <div

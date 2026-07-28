@@ -1123,9 +1123,18 @@
   white-space: nowrap;
 }
 
-/* Concealed C on Call — tray badge scaled to match the button label. */
+/* Concealed C on Call — square badge like `.hands-sheet__card-c`; thicker border. */
 .btn--call-concealed .hands-list__card-c {
-  font-size: 1em;
+  font-size: 1.12em;
+  width: 1em;
+  height: 1em;
+  margin-inline-end: 0.04em;
+  padding: 0;
+  border: 2px solid var(--card-ink-red);
+  border-radius: 0.15em;
+  background: var(--hands-row-active-fill, #334155);
+  color: var(--card-ink-red);
+  line-height: 1;
 }
 
 .hands-list__tiles-away {
@@ -2103,6 +2112,7 @@
   border-inline-end-color: var(--hands-header-grid-line-color, transparent);
 }
 
+
 /*
  * Hands-only header row: horizontal border only. Vertical rules are drawn once by the sheet-level
  * overlay below so the header band and row grid cannot paint slightly different x positions.
@@ -2218,6 +2228,7 @@
   --hands-metric-title-fit-fs: var(--hands-metric-column-header-fs);
 }
 
+.suggested-hands-popup .panel--hands .hands-sheet__cell--header.hands-sheet__cell--hand,
 .suggested-hands-popup .panel--hands .hands-sheet__cell--header.hands-sheet__cell--odds,
 .suggested-hands-popup .panel--hands .hands-sheet__cell--header.hands-sheet__cell--away,
 .suggested-hands-popup .panel--hands .hands-sheet__cell--header.hands-sheet__cell--values,
@@ -2235,6 +2246,15 @@
   color: #c2c2c8;
 }
 
+/* Keep league acronym casing (`NMJL 2026`) — header row defaults to capitalize. */
+.suggested-hands-popup .panel--hands .hands-sheet__cell--header.hands-sheet__cell--hand {
+  text-transform: none;
+}
+
+.app[data-color-buttons='off']
+  .suggested-hands-popup
+  .panel--hands
+  .hands-sheet__cell--header.hands-sheet__cell--hand,
 .app[data-color-buttons='off']
   .suggested-hands-popup
   .panel--hands

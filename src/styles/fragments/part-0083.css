@@ -59,6 +59,46 @@
   text-align: center;
 }
 
+/* End-game non-winner: "N away" in the empty 14th bot-exposure slot. */
+.exposure-rack__slot--tiles-away {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: none;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.exposure-rack__tiles-away {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.02em;
+  font-family: 'Figtree', var(--sans);
+  font-weight: 500;
+  line-height: 1;
+  color: #fbbf24;
+  user-select: none;
+  text-align: center;
+}
+
+.exposure-rack__tiles-away__n {
+  font-family: var(--mono);
+  font-size: calc(var(--rack-tile-w) * 0.62);
+  font-variant-numeric: tabular-nums;
+}
+
+.exposure-rack__tiles-away__label {
+  font-size: calc(var(--rack-tile-w) * 0.28);
+  letter-spacing: 0.01em;
+}
+
 /* Clickable bot exposure row → open possible-hands list in the tray. */
 .discard-tracker__overlay-row--bot-hands-clickable .app-opponents-rail__cell {
   cursor: pointer;

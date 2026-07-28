@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { PLAYABLE_CARD_LABEL, type PlayableCardId, isPlayableCardId } from '../card/cardCatalog'
 import {
+  assistLabels,
   clearGameResults,
   emptyGameStatsSummary,
   fetchGameResults,
@@ -180,20 +181,28 @@ function StatsBody({
   onCancelReset: () => void
   onConfirmReset: () => void
 }) {
-  const canReset = summary.gamesPlayed > 0
+  const hasAnyStarts = summary.finished + summary.newRacks > 0
+  const canReset = hasAnyStarts
 
   return (
     <>
-      {summary.gamesPlayed === 0 ? (
+      {!hasAnyStarts ? (
         <p className="game-meta-dialog__status">
-          No finished games yet. Complete a hand and your results will show up here.
+          No games yet. Finish a hand (or start a new rack) and your results will show up here.
         </p>
       ) : (
         <>
           <ul className="game-meta-stats">
             <li>
-              <span className="game-meta-stats__label">Games</span>
-              <span className="game-meta-stats__value">{summary.gamesPlayed}</span>
+              <span className="game-meta-stats__label">Finished</span>
+              <span className="game-meta-stats__value">
+                {summary.finished}{' '}
+                <span className="game-meta-stats__pct">({summary.finishedPercent}%)</span>
+              </span>
+            </li>
+            <li>
+              <span className="game-meta-stats__label">Finish streak</span>
+              <span className="game-meta-stats__value">{summary.finishStreak}</span>
             </li>
             <li>
               <span className="game-meta-stats__label">Wins</span>
@@ -217,6 +226,14 @@ function StatsBody({
               </span>
             </li>
             <li>
+              <span className="game-meta-stats__label">Unassisted wins</span>
+              <span className="game-meta-stats__value">{summary.unassistedWins}</span>
+            </li>
+            <li>
+              <span className="game-meta-stats__label">Assisted wins</span>
+              <span className="game-meta-stats__value">{summary.assistedWins}</span>
+            </li>
+            <li>
               <span className="game-meta-stats__label">Points won</span>
               <span className="game-meta-stats__value">{summary.pointsWon}</span>
             </li>
@@ -226,10 +243,12 @@ function StatsBody({
             </li>
           </ul>
           <p className="game-meta-dialog__footnote">
-            Percentages are of all finished games (including wall games). Points use NMJL payouts:
-            discard win collects 4× the card value; self-pick collects 6×. On a bot win you pay 2×
-            if you discarded (or on a self-pick), otherwise 1×. Dead hands end the round here, so
-            they do not add points won or lost.
+            Finished % is hands played to a result (win, loss, or wall) out of all starts, including
+            optional new-rack early exits — those are not losses. Win / loss / wall % are among
+            finished hands only. Assisted means helper tools were used (see History for * details).
+            Points use NMJL payouts: discard win collects 4× the card value; self-pick collects 6×.
+            On a bot win you pay 2× if you discarded (or on a self-pick), otherwise 1×. Dead hands
+            end the round here, so they do not add points won or lost.
           </p>
 
           <h3 className="game-meta-dialog__section-title">Hands you’ve won</h3>
@@ -306,42 +325,51 @@ function HistoryBody({ rows }: { rows: GameResultRow[] }) {
 
   return (
     <ul className="game-meta-history">
-      {rows.map((row) => (
-        <li key={row.id} className="game-meta-history__row">
-          <div className="game-meta-history__top">
-            <span
-              className={[
-                'game-meta-history__outcome',
-                row.outcome === 'player_win' ? 'game-meta-history__outcome--win' : '',
-                row.outcome === 'wall_game' ? 'game-meta-history__outcome--wall' : '',
-                row.outcome === 'bot_win' || row.outcome === 'dead_hand'
-                  ? 'game-meta-history__outcome--loss'
-                  : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-            >
-              {gameOutcomeLabel(row.outcome)}
-              {typeof row.points === 'number' &&
-              (row.outcome === 'player_win' ||
-                row.outcome === 'bot_win' ||
-                row.outcome === 'dead_hand')
-                ? ` · ${row.points} pts`
-                : ''}
-            </span>
-            <span className="game-meta-history__when">{formatWhen(row.created_at)}</span>
-          </div>
-          <div className="game-meta-history__detail">
-            <span>{cardLabel(row.card_id)}</span>
-            {row.outcome === 'player_win' && row.hand_title ? (
-              <span className="game-meta-history__hand">
-                {row.hand_title}
-                {handRef(row) ? ` (${handRef(row)})` : ''}
+      {rows.map((row) => {
+        const tools = row.outcome === 'new_rack' ? [] : assistLabels(row.assists)
+        const assisted = tools.length > 0
+        return (
+          <li key={row.id} className="game-meta-history__row">
+            <div className="game-meta-history__top">
+              <span
+                className={[
+                  'game-meta-history__outcome',
+                  row.outcome === 'player_win' ? 'game-meta-history__outcome--win' : '',
+                  row.outcome === 'wall_game' ? 'game-meta-history__outcome--wall' : '',
+                  row.outcome === 'new_rack' ? 'game-meta-history__outcome--new-rack' : '',
+                  row.outcome === 'bot_win' || row.outcome === 'dead_hand'
+                    ? 'game-meta-history__outcome--loss'
+                    : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                {gameOutcomeLabel(row.outcome)}
+                {assisted ? '*' : ''}
+                {typeof row.points === 'number' &&
+                (row.outcome === 'player_win' ||
+                  row.outcome === 'bot_win' ||
+                  row.outcome === 'dead_hand')
+                  ? ` · ${row.points} pts`
+                  : ''}
               </span>
+              <span className="game-meta-history__when">{formatWhen(row.created_at)}</span>
+            </div>
+            <div className="game-meta-history__detail">
+              <span>{cardLabel(row.card_id)}</span>
+              {row.outcome === 'player_win' && row.hand_title ? (
+                <span className="game-meta-history__hand">
+                  {row.hand_title}
+                  {handRef(row) ? ` (${handRef(row)})` : ''}
+                </span>
+              ) : null}
+            </div>
+            {assisted ? (
+              <div className="game-meta-history__assists">{tools.join(' · ')}</div>
             ) : null}
-          </div>
-        </li>
-      ))}
+          </li>
+        )
+      })}
     </ul>
   )
 }

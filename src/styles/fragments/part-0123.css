@@ -886,7 +886,11 @@ html
 html
   .app-top-exposure-container
   .exposure-rack--discard-tracker-bot-row
-  .exposure-rack__slot--possible-hands {
+  .exposure-rack__slot--possible-hands,
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--tiles-away {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -908,6 +912,38 @@ html
   line-height: 1;
   color: color-mix(in srgb, var(--text-h) 78%, transparent);
   text-align: center;
+}
+
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__tiles-away {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.02em;
+  font-weight: 500;
+  line-height: 1;
+  color: #fbbf24;
+  text-align: center;
+}
+
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__tiles-away__n {
+  font-size: calc(var(--rack-tile-w) * 0.62);
+}
+
+html
+  .app-top-exposure-container
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__tiles-away__label {
+  font-size: calc(var(--rack-tile-w) * 0.28);
 }
 
 /*
@@ -2649,7 +2685,9 @@ html .app-top-exposure-container .discard-tracker__bot-band-bird {
 
 .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
-  .exposure-rack__slot--empty:not(.exposure-rack__slot--possible-hands) {
+  .exposure-rack__slot--empty:not(.exposure-rack__slot--possible-hands):not(
+    .exposure-rack__slot--tiles-away
+  ) {
   position: relative;
   z-index: 0;
 }
@@ -2660,7 +2698,8 @@ html .app-top-exposure-container .discard-tracker__bot-band-bird {
     .exposure-rack__meld-drop,
     .exposure-rack__meld-grid-span,
     .exposure-rack__slot:has(.tile-face),
-    .exposure-rack__slot--possible-hands
+    .exposure-rack__slot--possible-hands,
+    .exposure-rack__slot--tiles-away
   ) {
   position: relative;
   z-index: 2;
@@ -2668,7 +2707,10 @@ html .app-top-exposure-container .discard-tracker__bot-band-bird {
 
 .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
-  .exposure-rack__slot--possible-hands {
+  .exposure-rack__slot--possible-hands,
+.discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--tiles-away {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2689,6 +2731,35 @@ html .app-top-exposure-container .discard-tracker__bot-band-bird {
   line-height: 1;
   color: color-mix(in srgb, var(--text-h) 78%, transparent);
   text-align: center;
+}
+
+.discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__tiles-away {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.02em;
+  font-weight: 500;
+  line-height: 1;
+  color: #fbbf24;
+  text-align: center;
+}
+
+.discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__tiles-away__n {
+  font-size: calc(var(--rack-tile-w) * 0.62);
+}
+
+.discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__tiles-away__label {
+  font-size: calc(var(--rack-tile-w) * 0.28);
 }
 
 /*

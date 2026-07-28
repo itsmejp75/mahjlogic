@@ -160,9 +160,17 @@
 }
 
 .mahjong-win__bots-review-away {
-  font-family: var(--mono);
+  display: inline-flex;
+  align-items: baseline;
+  /* Tighter than a mono space (which reads as a double gap next to Figtree seat text). */
+  gap: 0.28em;
+  font-family: 'Figtree', var(--sans);
   font-weight: 600;
   color: #b45309;
+}
+
+.mahjong-win__bots-review-away__n {
+  font-family: var(--mono);
 }
 
 .mahjong-win__bots-review-card--dead .mahjong-win__bots-review-tile {
@@ -170,9 +178,24 @@
 }
 
 .mahjong-win__bots-review-ref {
+  font-family: 'Figtree', var(--sans);
   font-size: 1.06rem;
   font-weight: 600;
-  opacity: 0.6;
+  color: var(--text-h);
+  opacity: 1;
+}
+
+/* Reuse tray category markup (gap + smaller #) without its 0.78em sheet scale / muted num. */
+.mahjong-win__bots-review-ref .hands-sheet__category,
+.post-game-tied__ref .hands-sheet__category {
+  font-size: 1em;
+  font-weight: inherit;
+  letter-spacing: inherit;
+}
+
+.mahjong-win__bots-review-ref .hands-sheet__section-num,
+.mahjong-win__bots-review-ref .hands-sheet__section-hash {
+  opacity: 1;
 }
 
 .mahjong-win__bots-review-pattern {
@@ -314,16 +337,36 @@
 }
 
 .mahjong-win__bots-review-tile-run--exposure {
-  /* Match bot possible-hands: pad + radius scale with tile width; soft frame wash. */
+  /* Gold stroke — same hint gold as suggested-hands / bot possible-hands exposure frames. */
   --_review-exposure-tile-w: var(--hand-rack-tile-w);
   --_review-exposure-pad: calc(var(--_review-exposure-tile-w) * 0.08);
   --_review-exposure-tile-radius: calc(0.116 * var(--_review-exposure-tile-w));
-  --_review-exposure-frame: color-mix(in srgb, var(--text-h) 45%, var(--border));
+  --_review-exposure-border-w: max(0.5px, calc(var(--_review-exposure-tile-w) * 0.045));
+  --_review-exposure-frame: var(--rack-action-hint-border, #ffb800);
+  position: relative;
+  z-index: 5;
+  isolation: isolate;
   padding: var(--_review-exposure-pad);
   border-radius: calc(var(--_review-exposure-tile-radius) + var(--_review-exposure-pad));
-  border: 1px solid var(--_review-exposure-frame);
+  border: none;
   box-sizing: border-box;
   background: color-mix(in srgb, var(--_review-exposure-frame) 12%, transparent);
+  /* Clip in-run tile shadows so they can’t cover the gold stroke. */
+  overflow: hidden;
+}
+
+/*
+ * Parent borders paint under children; stroke on ::after keeps gold above tile faces.
+ */
+.mahjong-win__bots-review-tile-run--exposure::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: var(--_review-exposure-border-w) solid var(--_review-exposure-frame);
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 6;
 }
 
 .mahjong-win__bots-review-tile {

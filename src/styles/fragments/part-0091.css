@@ -842,7 +842,7 @@
   align-items: center;
   justify-content: flex-start;
   padding: var(--wall-game-overlay-pad-top) 1rem var(--wall-game-overlay-pad-bottom);
-  /* No dim scrim — keep the main app atmosphere visible behind the dialog (like menu). */
+  /* No dim scrim — play table stays visible around the dialog. */
   background: transparent;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
@@ -1043,7 +1043,7 @@
 }
 
 .wall-game-dialog:not(.wall-game-dialog--wall-seats) .wall-game-dialog__review .mahjong-win__bots-review-list {
-  background: color-mix(in srgb, var(--color-black) 18%, var(--window-surface));
+  background: transparent;
 }
 
 @media (min-width: 24rem) {

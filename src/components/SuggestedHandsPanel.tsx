@@ -28,7 +28,11 @@ import {
 } from '../analysis/suggestedHands'
 import type { CardInk } from '../card/cardText'
 import { patternByIdLookup } from '../card/activeCardPatternsScope'
-import { isCardContentAvailable } from '../card/cardCatalog'
+import {
+  isCardContentAvailable,
+  playableCardColumnLabel,
+  type PlayableCardId,
+} from '../card/cardCatalog'
 import { CardHandNotation, showCardHandNotation } from '../card/CardHandNotation'
 import type { PracticePattern } from '../card/practicePatterns'
 import type { TileDef, TileInstance } from '../mahjong/types'
@@ -1378,6 +1382,8 @@ type Props = {
   hideConcealedHands: boolean
   /** Active card book — pattern lookup and section order for this deal. */
   cardPatterns: PracticePattern[]
+  /** Active playable card — shown in the card-hand column header. */
+  cardId: PlayableCardId
   /** Section order on the active card (same semantics as built-in practice card order). */
   cardSectionOrder: readonly string[]
   /**
@@ -1412,6 +1418,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   uncheckedSections,
   hideConcealedHands,
   cardPatterns,
+  cardId,
   cardSectionOrder,
   discardTraySurface,
   trayOpen = false,
@@ -1424,6 +1431,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   /** Tall tile rows + strip render only once deferred strip data is ready (avoids empty expanded rows). */
   const tilesDetailActive = tilesGuideOn && tilesStripSlotsOn
   const cardPatternsById = useMemo(() => patternByIdLookup(cardPatterns), [cardPatterns])
+  const cardColumnLabel = playableCardColumnLabel(cardId)
   const pinnedKeySet = useMemo(() => new Set(pinnedHandKeys), [pinnedHandKeys])
   const handsListScrollRef = useRef<HTMLDivElement>(null)
   const listColumnRef = useRef<HTMLDivElement>(null)
@@ -2531,8 +2539,9 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                   <div
                     className="hands-sheet__cell hands-sheet__cell--header hands-sheet__cell--hand"
                     role="columnheader"
-                    aria-hidden
-                  />
+                  >
+                    {cardColumnLabel}
+                  </div>
                   <div
                     className={[
                       'hands-sheet__cell',

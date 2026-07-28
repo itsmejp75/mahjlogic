@@ -4,7 +4,7 @@ import type { PracticePattern } from '../card/practicePatterns'
 import {
   getRackTilesNotHelpingPattern,
   rankSuggestedHands,
-  suggestedHandCategoryDashCardRef,
+  suggestedHandCategoryHashCardRef,
   type RankSuggestedHandsInput,
 } from '../analysis/suggestedHands'
 import { CardHandNotation, showCardHandNotation } from '../card/CardHandNotation'
@@ -151,7 +151,7 @@ export function IllegalMahjongDialog({ rankInput, onDismiss }: Props) {
                 >
                   {handsInActiveSection.map((l) => (
                     <option key={l.id} value={l.id}>
-                      {suggestedHandCategoryDashCardRef(l)}
+                      {suggestedHandCategoryHashCardRef(l)}
                       {showCardHandNotation() ? ` — ${l.title}` : ''}
                       {l.closed ? ' (C)' : ''}
                     </option>
@@ -163,7 +163,7 @@ export function IllegalMahjongDialog({ rankInput, onDismiss }: Props) {
             {selected ? (
               <div className="mahjong-blocked-modal__white-panel">
                 <p className="mahjong-blocked-modal__line-summary">
-                  {suggestedHandCategoryDashCardRef(selected)} — {selected.tilesNeededRough} tiles away (
+                  {suggestedHandCategoryHashCardRef(selected)} — {selected.tilesNeededRough} tiles away (
                   {selected.closed ? 'Concealed' : 'Exposed'}, {selected.points}
                   pt)
                 </p>
@@ -172,7 +172,7 @@ export function IllegalMahjongDialog({ rankInput, onDismiss }: Props) {
                   aria-label={
                     showCardHandNotation()
                       ? selected.title
-                      : suggestedHandCategoryDashCardRef(selected)
+                      : suggestedHandCategoryHashCardRef(selected)
                   }
                   data-nosnippet
                 >

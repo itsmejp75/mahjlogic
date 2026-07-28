@@ -413,6 +413,11 @@
 .panel--hand .panel-hand-rack__seat-label {
   color: #c2c2c8;
   font-size: var(--player-seat-label-fs);
+  white-space: nowrap;
+}
+
+.panel--hand .panel-hand-rack__seat-label__prefix {
+  line-height: 1;
 }
 
 /* Player seat initial chip — tight circle around E/S/W/N; stays in the seat band. */

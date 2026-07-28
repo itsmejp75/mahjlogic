@@ -5963,11 +5963,11 @@ export function suggestedHandCardRefDisplay(line: SuggestedHandLine): string {
 }
 
 /**
- * Category + hand # in the same form as the suggested-hands card column (e.g. `2468 - 6`), not
- * `2468 #6` — keeps Mah Jongg / wall-game overlays aligned with the rack card display.
+ * Plain-text category + hand # (e.g. `2468 #6`). Prefer tray markup with
+ * `.hands-sheet__section-hash` when rendering in UI.
  */
-export function suggestedHandCategoryDashCardRef(line: SuggestedHandLine): string {
-  return `${suggestedHandSectionMenuLabel(line.section)} - ${suggestedHandCardRefDisplay(line)}`
+export function suggestedHandCategoryHashCardRef(line: SuggestedHandLine): string {
+  return `${suggestedHandSectionMenuLabel(line.section)} #${suggestedHandCardRefDisplay(line)}`
 }
 
 /**
