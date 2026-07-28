@@ -36,8 +36,8 @@ const svgPath = path.resolve(positionalPath ?? (faviconOnly ? faviconSvgSrc : ap
 /** SVG file read for Puppeteer raster (may differ from svgPath when copying padded favicon.svg). */
 const rasterSvgPath = positionalPath ? svgPath : faviconOnly ? faviconSvgSrc : svgPath
 const masterPng = path.join(root, '.tmp-app-icon-master.png')
-/** Solid Abyss mid-blue from app paint — a bit brighter/happier than the gray pad. */
-const ICON_CANVAS_BG = '#1e3a5f'
+/** Solid Abyss pad — dark enough for cyan to pop; blur still reads against it. */
+const ICON_CANVAS_BG = '#0d1522'
 
 /** Same logo artwork, fills forced near-black for the blurred under-layer. */
 function darkLogoSvg(svg) {
@@ -93,7 +93,7 @@ async function rasterMaster() {
   const markStack = faviconOnly
     ? `<img src="${dataUrl}" alt="" style="width:100%;height:100%;object-fit:contain;object-position:center center"/>`
     : `<div style="position:relative;width:100%;height:100%;">
-<img src="${darkDataUrl}" alt="" aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center center;filter:blur(28px);opacity:0.85;"/>
+<img src="${darkDataUrl}" alt="" aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center center;transform:scale(1.04);filter:blur(36px);opacity:1;"/>
 <img src="${dataUrl}" alt="" style="position:relative;width:100%;height:100%;object-fit:contain;object-position:center center"/>
 </div>`
   await page.setContent(
