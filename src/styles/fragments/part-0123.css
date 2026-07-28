@@ -3087,7 +3087,6 @@ html[data-home-screen-app]:not([data-native-app])
   );
   --rack-inline-slot-top-rule-h: var(--rack-inline-slot-top-rule-radius);
   --rack-inline-slot-plus-color: var(--app-container-surface, #5c6066);
-  --rack-inline-slot-plus-border-color: var(--rack-action-border-color, #484c52);
   --rack-inline-slot-plus-size: min(
     calc(var(--rack-tile-w) * 0.44),
     calc(var(--rack-inline-slot-strip-h) * 0.86)
@@ -3293,8 +3292,7 @@ html[data-home-screen-app]:not([data-native-app])
   line-height: 1;
   letter-spacing: 0;
   color: var(--rack-inline-slot-plus-color);
-  -webkit-text-stroke: 0.035em var(--rack-inline-slot-plus-border-color);
-  paint-order: stroke fill;
+  -webkit-text-stroke: 0;
 }
 
 /* Beat part-0084 hiding the call-target empty-well plus. */
