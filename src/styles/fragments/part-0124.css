@@ -88,7 +88,7 @@
 /* Ivory + illustrative classic: green coaching ring (not the default white rack ring). */
 /* TEMP: green suggest-best ring removed to preview highlighted rack tiles with no border. */
 .app[data-tile-graphics='classic'],
-.app[data-tile-graphics='illustrative-classic'] {
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large']) {
   --illustrative-suggest-best-border: 0 0 0 0 transparent;
 }
 
@@ -97,13 +97,13 @@
  * discard pile only. Do NOT set this on `.panel--discard-tracker` itself: the suggested-hands
  * popup lives inside `.discard-tracker__content` and must keep the green coaching border.
  */
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   .panel--discard-tracker
   :is(.discard-tracker__overlay-grid, .discard-pile) {
   --illustrative-suggest-best-border: inset 0 0 0 1px rgba(255, 255, 255, 0.68);
 }
 
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   :is(
     .sortable-tile-wrap--suggest-best,
     .sortable-tile-wrap--blank-exchange-hint,
@@ -122,7 +122,7 @@
 }
 
 /* Border on topmost `::after` (z-index 5) — above rim bevel `::before` (z-index 2) and art (z-index 1). */
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   :is(
     .sortable-tile-wrap--suggest-best,
     .sortable-tile-wrap--suggest-dim.sortable-tile-wrap--suggest-best,
@@ -160,7 +160,7 @@
   opacity: 1;
 }
 
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   :is(
     .sortable-tile-wrap--suggest-best,
     .sortable-tile-wrap--suggest-dim.sortable-tile-wrap--suggest-best,
@@ -176,7 +176,7 @@
   box-shadow: var(--illustrative-suggest-best-border);
 }
 
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   :is(
     .sortable-tile-wrap--blank-exchange-hint,
     .sortable-tile-wrap--suggest-dim.sortable-tile-wrap--blank-exchange-hint,
@@ -190,7 +190,7 @@
 }
 
 /* Joker: beat circular-ring + SVG suppress rules — same full-tile inner border as naturals. */
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   :is(
     .sortable-tile-wrap--suggest-best,
     .sortable-tile-wrap--suggest-dim.sortable-tile-wrap--suggest-best,
@@ -230,29 +230,29 @@
 .app[data-tile-graphics='classic'] .hands-list__row-hit--with-tiles
   .hands-list__pattern-tile-cell--suggest-best
   .tile-face.tile-face--illustrative-art,
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   .hands-list__row-hit--with-tiles
   .hands-list__pattern-tile-cell--suggest-best
   .tile-face.tile-face--illustrative-art,
 .app[data-tile-graphics='classic'] .hands-sheet__tile-cell--suggest-best .tile-face.tile-face--illustrative-art,
-.app[data-tile-graphics='illustrative-classic'] .hands-sheet__tile-cell--suggest-best .tile-face.tile-face--illustrative-art,
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large']) .hands-sheet__tile-cell--suggest-best .tile-face.tile-face--illustrative-art,
 .app[data-tile-graphics='classic'] .hands-sheet__tile-cell--suggest-joker .tile-face.tile-face--illustrative-art,
-.app[data-tile-graphics='illustrative-classic'] .hands-sheet__tile-cell--suggest-joker .tile-face.tile-face--illustrative-art,
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large']) .hands-sheet__tile-cell--suggest-joker .tile-face.tile-face--illustrative-art,
 .app[data-tile-graphics='classic']
   .hands-list__row-hit--with-tiles
   .hands-list__pattern-tile-cell--suggest-joker
   .tile-face.tile-face--illustrative-art,
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   .hands-list__row-hit--with-tiles
   .hands-list__pattern-tile-cell--suggest-joker
   .tile-face.tile-face--illustrative-art,
 .app[data-tile-graphics='classic'] .hands-sheet__tile-cell--dead-cause .tile-face.tile-face--illustrative-art,
-.app[data-tile-graphics='illustrative-classic'] .hands-sheet__tile-cell--dead-cause .tile-face.tile-face--illustrative-art,
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large']) .hands-sheet__tile-cell--dead-cause .tile-face.tile-face--illustrative-art,
 .app[data-tile-graphics='classic']
   .hands-list__row-hit--with-tiles
   .hands-list__pattern-tile-cell--dead-cause
   .tile-face.tile-face--illustrative-art,
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   .hands-list__row-hit--with-tiles
   .hands-list__pattern-tile-cell--dead-cause
   .tile-face.tile-face--illustrative-art {
@@ -264,19 +264,19 @@
 }
 
 /* Player hand exposures: meld group border only — no per-tile rings on SVG faces. */
-.app[data-tile-graphics='illustrative-classic'] .panel--hand .exposure-rack__slot--suggest-best .tile-face.tile-face--illustrative-art,
-.app[data-tile-graphics='illustrative-classic'] .panel--hand .exposure-rack__slot--called .tile-face.tile-face--illustrative-art,
-.app[data-tile-graphics='illustrative-classic'] .panel--hand .exposure-rack__slot--call-amendable:hover .tile-face.tile-face--illustrative-art {
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large']) .panel--hand .exposure-rack__slot--suggest-best .tile-face.tile-face--illustrative-art,
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large']) .panel--hand .exposure-rack__slot--called .tile-face.tile-face--illustrative-art,
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large']) .panel--hand .exposure-rack__slot--call-amendable:hover .tile-face.tile-face--illustrative-art {
   --tile-face-highlight-inset: 0 0 0 0 transparent;
   --tile-face-highlight-shadow: 0 0 0 0 transparent;
 }
 
 /* Bot-turn incoming discard: green “need this for your line” ring (same as hand / pass staging). */
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   .panel--hand
   .exposure-rack__slot--incoming-discard.exposure-rack__slot--suggest-best
   .tile-face.tile-face--illustrative-art::after,
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   .panel--hand
   .exposure-rack__slot--incoming-discard
   .east-discard-staging__tile--suggest-best
@@ -304,11 +304,11 @@
 }
 
 /* Bot exposures panel: lift-only lit tiles — no illustrative coaching ring on the face. */
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   .panel--bot-exposures
   .exposure-rack__slot--suggest-best
   .tile-face.tile-face--illustrative-art::after,
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   .panel--bot-exposures
   .exposure-rack__slot--suggest-best
   .tile-face.tile--joker.tile-face--illustrative-art::after {
@@ -317,7 +317,7 @@
   box-shadow: none;
 }
 
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   .panel--bot-exposures
   .exposure-rack__slot--suggest-best
   .tile-face.tile-face--illustrative-art {
@@ -326,19 +326,19 @@
 }
 
 /* Discard-tracker bot row: lift-only lit tiles — no illustrative coaching ring on the face. */
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   .panel--discard-tracker
   .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot--suggest-best
   .tile-face.tile-face--illustrative-art::after,
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   .panel--discard-tracker
   .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot--suggest-best
   .tile-face.tile--joker.tile-face--illustrative-art::after,
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   .panel--discard-tracker
   .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
@@ -349,19 +349,19 @@
   box-shadow: none;
 }
 
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   .panel--discard-tracker
   .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot--suggest-best
   .tile-face.tile-face--illustrative-art,
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   .panel--discard-tracker
   .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot--suggest-best
   .tile-face.tile--joker.tile-face--illustrative-art,
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   .panel--discard-tracker
   .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
@@ -1869,12 +1869,12 @@ html
 }
 
 /* Lift-only: no illustrative border ring on tracker coach highlights. */
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   .panel--discard-tracker
   .discard-tracker__overlay-grid
   .sorted-discard-tray__slot--suggest-need
   .tile-face::after,
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   .panel--discard-tracker
   .discard-tracker__content
   .discard-entry--suggest-need

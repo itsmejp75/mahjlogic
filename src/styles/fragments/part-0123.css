@@ -2009,12 +2009,12 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   --coach-lift-clip-left: var(--coach-lit-seam-inset-x, calc(var(--player-rack-face-gap, 1px) / -2));
 }
 
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   .panel--hand
   .rack-stage__rack-top
   .exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim)
   .tile-face.tile-face--illustrative-art::before,
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   .panel--hand
   .rack-stage__rack-top
   .exposure-rack__call-meld-strip__tile.exposure-rack__slot--owned-meld:not(.exposure-rack__slot--suggest-dim)
@@ -4514,7 +4514,7 @@ html
   .discard-tracker__overlay-grid
   .sorted-discard-tray__slot--suit-label
   .tile-face.tile-face--sorted-discard-glyph::before,
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   .blank-exchange-overlay__tracker-mirror
   .discard-tracker__overlay-grid
   .sorted-discard-tray__slot--suit-label

@@ -183,7 +183,7 @@
 
 /* Light tile faces (ivory minimalist + classic illustrative): Bam green coaching / meld rings. */
 .app[data-tile-graphics='classic'],
-.app[data-tile-graphics='illustrative-classic'] {
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large']) {
   --tile-highlight-border: var(--card-ink-green, #52B147);
 }
 

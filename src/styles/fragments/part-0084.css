@@ -456,6 +456,10 @@
   /* Fill most of the circle without clipping ascenders/optical overflow. */
   font-size: calc(var(--player-seat-chip-d) * 0.78);
   line-height: 1;
+  /* Outer outline a step darker than the letter so E/S/W/N stays legible on the chip.
+   * paint-order keeps fill on top so the stroke reads outside the glyph, not into it. */
+  -webkit-text-stroke: 1px color-mix(in srgb, currentColor 32%, #000000);
+  paint-order: stroke fill;
 }
 
 /*
@@ -507,7 +511,7 @@
 .app[data-tile-graphics='solid-color'] .panel--hand .panel-hand-rack__seat-label__chip--turn::before,
 .app[data-tile-graphics='light'] .panel--hand .panel-hand-rack__seat-label__chip--turn::before,
 .app[data-tile-graphics='dark'] .panel--hand .panel-hand-rack__seat-label__chip--turn::before,
-.app[data-tile-graphics='illustrative-classic'] .panel--hand .panel-hand-rack__seat-label__chip--turn::before {
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large']) .panel--hand .panel-hand-rack__seat-label__chip--turn::before {
   content: none;
 }
 

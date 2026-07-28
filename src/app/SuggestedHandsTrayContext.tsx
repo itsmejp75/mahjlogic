@@ -23,9 +23,10 @@ const SuggestedHandsTrayContext = createContext<SuggestedHandsTrayApi | null>(nu
  * (which would re-render the play tree on every tray open/close).
  */
 export const suggestedHandsTrayApiRef: {
-  current: Pick<SuggestedHandsTrayApi, 'setTrayOpen' | 'toggleTray'>
+  current: Pick<SuggestedHandsTrayApi, 'trayOpen' | 'setTrayOpen' | 'toggleTray'>
 } = {
   current: {
+    trayOpen: false,
     setTrayOpen: () => {},
     toggleTray: () => {},
   },
@@ -46,8 +47,8 @@ export function SuggestedHandsTrayProvider({
   )
 
   useEffect(() => {
-    suggestedHandsTrayApiRef.current = { setTrayOpen, toggleTray }
-  }, [setTrayOpen, toggleTray])
+    suggestedHandsTrayApiRef.current = { trayOpen, setTrayOpen, toggleTray }
+  }, [trayOpen, setTrayOpen, toggleTray])
 
   return (
     <SuggestedHandsTrayContext.Provider value={value}>

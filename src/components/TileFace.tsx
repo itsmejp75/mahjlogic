@@ -4,7 +4,7 @@ import type { CardInk } from '../card/cardText'
 import { CARD_INK_TO_TILE_SKIN_CLASS } from '../card/cardInkTileSkin'
 import { tileAriaLabel, tileShortLabel, tileSuitRackWord } from '../mahjong/labels'
 import {
-  classicTileArtUrl,
+  illustrativeTileArtUrl,
   isClassicTileArtReady,
   markClassicTileArtReady,
 } from '../tiles/classicTileArt'
@@ -197,14 +197,16 @@ export const TileFace = memo(function TileFace({
 }: Props) {
   const { tileGraphics } = useTileGraphics()
   const skinCardInk = cardInkForTileFace(def, cardInk, tileGraphics)
-  const illustrativeMode =
-    skinCardInk == null && isIllustrativeTileGraphics(tileGraphics) && !sortedDiscardGlyph
-  const artUrl = illustrativeMode ? classicTileArtUrl(def) : null
+  const illustrativePack =
+    skinCardInk == null && !sortedDiscardGlyph && isIllustrativeTileGraphics(tileGraphics)
+      ? tileGraphics
+      : null
+  const artUrl = illustrativePack != null ? illustrativeTileArtUrl(illustrativePack, def) : null
   // Blanks have no art image, but in illustrative mode they should still wear the illustrative
   // ivory face + rim bevel (the `::before` highlight/shadow) so they match every other rack tile
   // instead of falling back to a flat solid fill that reads as a different white.
   // Suit/honor faces with a pending SVG keep the ivory chrome too — never drop to Simple glyphs.
-  const illustrativeFace = artUrl != null || (illustrativeMode && def.cat === 'blank')
+  const illustrativeFace = artUrl != null || (illustrativePack != null && def.cat === 'blank')
 
   const skinClass =
     skinCardInk != null

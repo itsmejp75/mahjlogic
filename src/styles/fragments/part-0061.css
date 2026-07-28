@@ -1012,7 +1012,7 @@
     .sorted-discard-tray__slot--suit-label .tile-face.tile-face--sorted-discard-glyph,
     .sorted-discard-tray__slot--seat-label.sorted-discard-tray__slot--seat-turn
   )::before,
-.app[data-tile-graphics='illustrative-classic']
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
   .panel--discard-tracker
   .discard-tracker__overlay-grid
   :is(

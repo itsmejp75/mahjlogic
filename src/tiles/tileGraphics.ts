@@ -2,29 +2,23 @@
 export const MINIMALIST_TILE_GRAPHICS = ['solid-color'] as const
 
 /** Illustrative (SVG art) tile face themes. */
-export const ILLUSTRATIVE_TILE_GRAPHICS = ['illustrative-classic'] as const
+export const ILLUSTRATIVE_TILE_GRAPHICS = ['illustrative-classic', 'illustrative-large'] as const
 
 export const TILE_GRAPHICS = [...MINIMALIST_TILE_GRAPHICS, ...ILLUSTRATIVE_TILE_GRAPHICS] as const
 
-/** Menu row order: Classic (illustrative) then Simple (minimalist). */
+/** Menu row order: Classic → Large → Simple. */
 export const MENU_TILE_GRAPHICS: readonly TileGraphics[] = [
   'illustrative-classic',
+  'illustrative-large',
   'solid-color',
 ]
 
-/**
- * Menu buttons in display order. `Large` is a placeholder until its tile art ships —
- * pressable in the UI but not wired to a `TileGraphics` mode yet.
- */
-export type TileGraphicsMenuItem =
-  | { kind: 'mode'; graphics: TileGraphics }
-  | { kind: 'placeholder'; id: 'large'; label: 'Large' }
+/** Menu buttons in display order (all wired to a `TileGraphics` mode). */
+export type TileGraphicsMenuItem = { kind: 'mode'; graphics: TileGraphics }
 
-export const MENU_TILE_GRAPHICS_ITEMS: readonly TileGraphicsMenuItem[] = [
-  { kind: 'mode', graphics: 'illustrative-classic' },
-  { kind: 'placeholder', id: 'large', label: 'Large' },
-  { kind: 'mode', graphics: 'solid-color' },
-]
+export const MENU_TILE_GRAPHICS_ITEMS: readonly TileGraphicsMenuItem[] = MENU_TILE_GRAPHICS.map(
+  (graphics) => ({ kind: 'mode' as const, graphics }),
+)
 
 export type MinimalistTileGraphics = (typeof MINIMALIST_TILE_GRAPHICS)[number]
 export type IllustrativeTileGraphics = (typeof ILLUSTRATIVE_TILE_GRAPHICS)[number]
@@ -33,6 +27,7 @@ export type TileGraphics = (typeof TILE_GRAPHICS)[number]
 export const TILE_GRAPHICS_LABEL: Record<TileGraphics, string> = {
   'solid-color': 'Simple',
   'illustrative-classic': 'Classic',
+  'illustrative-large': 'Large',
 }
 
 /** Product default: Illustrative Classic SVG tile set. */

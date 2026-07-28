@@ -66,7 +66,15 @@ import {
 import { incomingBotDiscardDragId } from './mahjong/jokerSwapIds'
 import { discardedDefsForBlankExchange } from './mahjong/blankExchange'
 import { eastExposureSwapDropId, findNextJokerSwapTarget, collectHandTileIdsSwappableForJokers, collectSwappableJokerTileIds } from './mahjong/jokerSwapTarget'
-import { DEFAULT_TILE_GRAPHICS, isTileGraphics, MENU_TILE_GRAPHICS_ITEMS, TILE_GRAPHICS_LABEL, type TileGraphics } from './tiles/tileGraphics'
+import { preloadClassicTileArt } from './tiles/classicTileArt'
+import {
+  DEFAULT_TILE_GRAPHICS,
+  isIllustrativeTileGraphics,
+  isTileGraphics,
+  MENU_TILE_GRAPHICS_ITEMS,
+  TILE_GRAPHICS_LABEL,
+  type TileGraphics,
+} from './tiles/tileGraphics'
 import {
   APP_THEMES,
   APP_THEME_BTN_PREVIEW,
@@ -2058,6 +2066,8 @@ export default function App() {
   )
   /** When set, the hands tray shows that seat’s possible open card hands instead of East’s list. */
   const [botHandsIdentifierFocusSeat, setBotHandsIdentifierFocusSeat] = useState<BotSeat | null>(null)
+  /** Tray open state before bot possible-hands was shown; restored when that view closes. */
+  const trayOpenBeforeBotHandsRef = useRef<boolean | null>(null)
   const [concealedHandReminderEnabled, setConcealedHandReminderEnabled] = useState<boolean>(() =>
     readConcealedHandReminderFromStorage(),
   )
@@ -2065,6 +2075,9 @@ export default function App() {
   const setTileGraphicsMode = useCallback((g: TileGraphics) => {
     setTileGraphics(g)
     persistTileGraphicsChoice(g)
+    if (isIllustrativeTileGraphics(g)) {
+      preloadClassicTileArt({ graphics: g, immediate: true })
+    }
   }, [])
 
   const setBotDifficultyLevel = useCallback((d: BotDifficulty) => {
@@ -2167,10 +2180,22 @@ export default function App() {
     })
   }, [])
 
+  const restoreTrayAfterBotHands = useCallback(() => {
+    const prior = trayOpenBeforeBotHandsRef.current
+    if (prior === null) return
+    trayOpenBeforeBotHandsRef.current = null
+    suggestedHandsTrayApiRef.current.setTrayOpen(prior)
+  }, [])
+
+  const clearBotHandsIdentifierFocus = useCallback(() => {
+    setBotHandsIdentifierFocusSeat(null)
+    restoreTrayAfterBotHands()
+  }, [restoreTrayAfterBotHands])
+
   const toggleBotHandsIdentifier = useCallback(() => {
     setBotHandsIdentifierEnabled((v) => {
       const next = !v
-      if (!next) setBotHandsIdentifierFocusSeat(null)
+      if (!next) clearBotHandsIdentifierFocus()
       try {
         localStorage.setItem(LS_KEY_BOT_HANDS_IDENTIFIER, next ? 'true' : 'false')
       } catch {
@@ -2178,22 +2203,23 @@ export default function App() {
       }
       return next
     })
-  }, [])
+  }, [clearBotHandsIdentifierFocus])
 
   const onBotExposureRowClick = useCallback((seat: BotSeat) => {
     setBotHandsIdentifierFocusSeat((prev) => {
       const next = prev === seat ? null : seat
       if (next != null) {
         handAssistsRef.current.add('bot_hands')
+        if (prev == null) {
+          trayOpenBeforeBotHandsRef.current = suggestedHandsTrayApiRef.current.trayOpen
+        }
         suggestedHandsTrayApiRef.current.setTrayOpen(true)
+      } else {
+        restoreTrayAfterBotHands()
       }
       return next
     })
-  }, [])
-
-  const clearBotHandsIdentifierFocus = useCallback(() => {
-    setBotHandsIdentifierFocusSeat(null)
-  }, [])
+  }, [restoreTrayAfterBotHands])
 
   const toggleConcealedHandReminder = useCallback(() => {
     setConcealedHandReminderEnabled((v) => {
@@ -3968,6 +3994,7 @@ export default function App() {
       setSuggestedSuppressedHandKey(null)
       setSuggestedDeadTileGuidesByKey({})
       setSuggestedDeadTableGuidesByKey({})
+      trayOpenBeforeBotHandsRef.current = null
       setBotHandsIdentifierFocusSeat(null)
       suggestedHandsTrayApiRef.current.setTrayOpen(false)
     }
@@ -4429,6 +4456,7 @@ export default function App() {
     setBlankTileCount((prev) => (prev === blankCount ? prev : blankCount))
     blankTileCountRef.current = blankCount
     suggestedHandsTrayApiRef.current.setTrayOpen(readSuggestedHandsTrayDefaultOpenFromStorage())
+    trayOpenBeforeBotHandsRef.current = null
     setBotHandsIdentifierFocusSeat(null)
     if (m !== c) {
       try {
@@ -5945,24 +5973,25 @@ export default function App() {
   useEffect(() => {
     if (!botHandsIdentifierFocusSeat) return
     if (!botHandsIdentifierEnabled) {
-      setBotHandsIdentifierFocusSeat(null)
+      clearBotHandsIdentifierFocus()
       return
     }
     if (postGameBotTableReviewRacks) {
       const hasRow = postGameBotTableReviewRacks.some(
         (r) => r.seat === botHandsIdentifierFocusSeat && r.melds.some((m) => m.tiles.length > 0),
       )
-      if (!hasRow) setBotHandsIdentifierFocusSeat(null)
+      if (!hasRow) clearBotHandsIdentifierFocus()
       return
     }
     if (botHandsIdentifierFocusMelds.length === 0) {
-      setBotHandsIdentifierFocusSeat(null)
+      clearBotHandsIdentifierFocus()
     }
   }, [
     botHandsIdentifierFocusSeat,
     botHandsIdentifierEnabled,
     botHandsIdentifierFocusMelds.length,
     postGameBotTableReviewRacks,
+    clearBotHandsIdentifierFocus,
   ])
 
   const suggestedHandsPopup = useMemo(() => {
@@ -6275,36 +6304,24 @@ export default function App() {
                   role="radiogroup"
                   aria-labelledby="tile-graphics-menu-label"
                 >
-                  {MENU_TILE_GRAPHICS_ITEMS.map((item) =>
-                    item.kind === 'mode' ? (
-                      <button
-                        key={item.graphics}
-                        type="button"
-                        className={[
-                          'btn',
-                          'app-menu-tray__diff-btn',
-                          tileGraphics === item.graphics ? 'app-menu-tray__diff-btn--on' : '',
-                        ]
-                          .filter(Boolean)
-                          .join(' ')}
-                        role="radio"
-                        aria-checked={tileGraphics === item.graphics}
-                        onClick={() => setTileGraphicsMode(item.graphics)}
-                      >
-                        {TILE_GRAPHICS_LABEL[item.graphics]}
-                      </button>
-                    ) : (
-                      <button
-                        key={item.id}
-                        type="button"
-                        className="btn app-menu-tray__diff-btn"
-                        aria-label={`${item.label} tile graphics (coming soon)`}
-                        onClick={() => {}}
-                      >
-                        {item.label}
-                      </button>
-                    ),
-                  )}
+                  {MENU_TILE_GRAPHICS_ITEMS.map((item) => (
+                    <button
+                      key={item.graphics}
+                      type="button"
+                      className={[
+                        'btn',
+                        'app-menu-tray__diff-btn',
+                        tileGraphics === item.graphics ? 'app-menu-tray__diff-btn--on' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      role="radio"
+                      aria-checked={tileGraphics === item.graphics}
+                      onClick={() => setTileGraphicsMode(item.graphics)}
+                    >
+                      {TILE_GRAPHICS_LABEL[item.graphics]}
+                    </button>
+                  ))}
                 </div>
                 <div
                   key={tileGraphics}
