@@ -3402,11 +3402,14 @@ html body .app .app-menu-modal-layer .app-menu-modal
   position: fixed;
   inset: 0;
   z-index: 420;
+  box-sizing: border-box;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 1rem;
-  background: color-mix(in srgb, var(--color-black, #000) 45%, transparent);
+  padding: max(1.25rem, env(safe-area-inset-top, 0px)) 1.5rem max(1.25rem, env(safe-area-inset-bottom, 0px));
+  background: color-mix(in srgb, #0a0a0a 82%, transparent);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
 }
 
 .game-meta-dialog {
@@ -3422,21 +3425,32 @@ html body .app .app-menu-modal-layer .app-menu-modal
   --rack-action-border-color: var(--app-action-btn-border);
   --rack-action-press-shadow-dark: var(--app-action-btn-press-shadow-dark-deep);
 
-  width: min(28rem, 100%);
-  max-height: min(80vh, 40rem);
+  /* Match `.app-menu-modal` shell size / chrome. */
+  width: 100%;
+  max-width: min(38rem, 100%);
+  max-height: min(
+    calc(
+      100dvh - max(1.25rem, env(safe-area-inset-top, 0px)) - max(1.25rem, env(safe-area-inset-bottom, 0px))
+    ),
+    48rem
+  );
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  padding: 1rem 1.1rem 1.1rem;
-  border-radius: 0.75rem;
+  padding: 1.35rem 1.25rem 1.45rem;
+  border-radius: 0.9rem;
   background-color: var(--app-bg-paint-color, var(--app-bg-base, #2a2e35));
   background-image: var(--app-bg-paint-image);
   background-size: var(--app-bg-paint-size);
   background-repeat: var(--app-bg-paint-repeat);
   background-blend-mode: var(--app-bg-paint-blend);
-  border: 1px solid color-mix(in srgb, #fff 18%, transparent);
+  background-attachment: var(--app-bg-paint-attachment);
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
   color: #e8eaed;
-  box-shadow: 0 12px 40px color-mix(in srgb, #000 55%, transparent);
+  box-shadow:
+    var(--shadow, 0 8px 32px rgba(0, 0, 0, 0.28)),
+    0 0 0 1px color-mix(in srgb, var(--border) 50%, transparent);
 }
 
 .game-meta-dialog__header {
@@ -3529,6 +3543,18 @@ html body .app .app-menu-modal-layer .app-menu-modal
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+.game-meta-dialog__body--stats {
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.game-meta-dialog__body--stats::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .game-meta-dialog__status {

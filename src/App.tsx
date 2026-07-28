@@ -6089,14 +6089,20 @@ export default function App() {
                   <button
                     type="button"
                     className="btn app-menu-tray__diff-btn"
-                    onClick={() => setGameMetaPanel('history')}
+                    onClick={() => {
+                      appMenuOpenApiRef.current.setMenuOpen(false)
+                      setGameMetaPanel('history')
+                    }}
                   >
                     History
                   </button>
                   <button
                     type="button"
                     className="btn app-menu-tray__diff-btn"
-                    onClick={() => setGameMetaPanel('stats')}
+                    onClick={() => {
+                      appMenuOpenApiRef.current.setMenuOpen(false)
+                      setGameMetaPanel('stats')
+                    }}
                   >
                     Stats
                   </button>

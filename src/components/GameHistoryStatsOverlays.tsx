@@ -131,7 +131,14 @@ export function GameHistoryStatsOverlay({ kind, onClose }: Props) {
           </button>
         </div>
 
-        <div className="game-meta-dialog__body">
+        <div
+          className={[
+            'game-meta-dialog__body',
+            kind === 'stats' ? 'game-meta-dialog__body--stats' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
           {loading ? (
             <p className="game-meta-dialog__status">Loading…</p>
           ) : error ? (
