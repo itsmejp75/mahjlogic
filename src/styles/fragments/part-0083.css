@@ -295,7 +295,13 @@
   );
   --bot-hands-tile-h: calc(var(--bot-hands-tile-w) * 4 / 3);
   --bot-hands-tile-radius: calc(0.116 * var(--bot-hands-tile-w));
-  --bot-hands-exposure-pad: calc(var(--bot-hands-tile-w) * 0.04);
+  /* Same air gap as suggested-hands exposure runs (`0.08 × tile-w`). */
+  --bot-hands-exposure-pad: calc(var(--bot-hands-tile-w) * 0.08);
+  /*
+   * Stroke scales with mini-tile width (same 0.045 ratio as selected bot-exposure gold
+   * frame). No 2px floor — that looked fat on these small strip tiles.
+   */
+  --bot-hands-exposure-border-w: max(0.5px, calc(var(--bot-hands-tile-w) * 0.045));
   display: grid;
   grid-template-columns: var(--bot-hands-grid-cols);
   width: 100%;
@@ -387,11 +393,31 @@
   /* Outer radius = tile radius + pad so the frame follows the tile corners. */
   /* Gold stroke — same hint gold as selected bot exposure / MAHJ–Swap frames. */
   --_bot-hands-exposure-frame: var(--rack-action-hint-border, #ffb800);
+  position: relative;
+  /*
+   * Above neighbouring runs / tile face shadows so the gold frame isn’t buried.
+   * Stroke itself paints on ::after (parent `border` would sit under children).
+   */
+  z-index: 5;
+  isolation: isolate;
   padding: var(--bot-hands-exposure-pad);
   border-radius: calc(var(--bot-hands-tile-radius) + var(--bot-hands-exposure-pad));
-  border: 2px solid var(--_bot-hands-exposure-frame);
+  border: none;
   box-sizing: border-box;
   background: color-mix(in srgb, var(--_bot-hands-exposure-frame) 12%, transparent);
+  /* Clip in-run tile shadows so they can’t cover the gold stroke. */
+  overflow: hidden;
+}
+
+.bot-exposure-hands-list__tile-run--exposure::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: var(--bot-hands-exposure-border-w) solid var(--_bot-hands-exposure-frame);
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 6;
 }
 
 .bot-exposure-hands-list__tile-cell {

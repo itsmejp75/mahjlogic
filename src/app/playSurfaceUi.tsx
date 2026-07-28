@@ -1035,14 +1035,22 @@ export function DiscardTrackerSlotGrid({
   const botBandSlots =
     DISCARD_TRACKER_BOT_PREFIX_SLOTS + DISCARD_TRACKER_BOT_ROW_SLOTS
   const overlayGridRef = useRef<HTMLDivElement>(null)
+  // Review dumps lit exposed melds into S/W/N — seam clip must run or each tile keeps its
+  // own lift/vignette and adjacent exposed groups look stacked on different planes.
+  const reviewCoachLitActive =
+    !!postGameBotReviewRacks?.some(
+      (row) => row.litTileIds == null || row.litTileIds.size > 0,
+    )
   const coachGuideActive =
     !!botExposureSuggestedTileGuide?.bestIds?.size ||
-    !!suggestedDiscardTrackerNeedDefs?.length
+    !!suggestedDiscardTrackerNeedDefs?.length ||
+    reviewCoachLitActive
   useCoachLitNeighborClip(overlayGridRef, coachGuideActive, [
     botExposures,
     botExposureSuggestedTileGuide,
     botExposureDeadIds,
     suggestedDiscardTrackerNeedDefs,
+    postGameBotReviewRacks,
     mainPhase,
     jokerSwapUiActive,
     animationsEnabled,

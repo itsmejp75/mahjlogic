@@ -474,18 +474,26 @@
 /*
  * Focused suggested-hand joker fill: time-share the natural the joker stands for (3s)
  * with a joker face (1s). Both faces stack in the cell grid; opacity crossfades (~0.4s).
+ *
+ * iOS WKWebView / PWA: keep `.tile-face--suggest-joker-timeshare` mounted (opacity 0) before
+ * focus — creating the overlay in the same frame as `animation` often freezes the first
+ * keyframe forever. Also promote a compositing layer; opacity-only infinite anims inside the
+ * hands scroller otherwise fail to paint.
  */
 @keyframes suggest-joker-timeshare-natural {
   0%,
   70% {
     opacity: 1;
+    transform: translateZ(0);
   }
   80%,
   95% {
     opacity: 0;
+    transform: translateZ(0);
   }
   100% {
     opacity: 1;
+    transform: translateZ(0);
   }
 }
 
@@ -493,36 +501,51 @@
   0%,
   70% {
     opacity: 0;
+    transform: translateZ(0);
   }
   80%,
   95% {
     opacity: 1;
+    transform: translateZ(0);
   }
   100% {
     opacity: 0;
+    transform: translateZ(0);
   }
 }
 
-:is(
-  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
-  .hands-sheet__tile-cell--suggest-joker
-) > .tile-face:not(.tile--joker) {
-  animation: suggest-joker-timeshare-natural 4s linear infinite;
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell > .tile-face--suggest-joker-timeshare,
+.hands-sheet__tile-cell > .tile-face--suggest-joker-timeshare {
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 :is(
   .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
   .hands-sheet__tile-cell--suggest-joker
-) > .tile-face.tile--joker {
+) > .tile-face:not(.tile-face--suggest-joker-timeshare) {
+  animation: suggest-joker-timeshare-natural 4s linear infinite;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+:is(
+  .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
+  .hands-sheet__tile-cell--suggest-joker
+) > .tile-face--suggest-joker-timeshare {
   animation: suggest-joker-timeshare-joker 4s linear infinite;
-  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
   :is(
     .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
     .hands-sheet__tile-cell--suggest-joker
-  ) > .tile-face:not(.tile--joker) {
+  ) > .tile-face:not(.tile-face--suggest-joker-timeshare) {
     animation: none;
     opacity: 1;
   }
@@ -530,7 +553,7 @@
   :is(
     .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
     .hands-sheet__tile-cell--suggest-joker
-  ) > .tile-face.tile--joker {
+  ) > .tile-face--suggest-joker-timeshare {
     animation: none;
     opacity: 0;
   }
@@ -541,7 +564,7 @@
     .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
     .hands-sheet__tile-cell--suggest-joker
   )
-  > .tile-face:not(.tile--joker) {
+  > .tile-face:not(.tile-face--suggest-joker-timeshare) {
   animation: none;
   opacity: 1;
 }
@@ -551,7 +574,7 @@
     .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
     .hands-sheet__tile-cell--suggest-joker
   )
-  > .tile-face.tile--joker {
+  > .tile-face--suggest-joker-timeshare {
   animation: none;
   opacity: 0;
 }

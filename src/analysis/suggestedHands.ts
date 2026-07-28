@@ -2045,6 +2045,27 @@ function rackOrderIndex(rack: TileInstance[], id: string): number {
  * Map `usedMeta` onto the pattern strip when preview tile counts match `p.groups` (title strip).
  * Consecutive kongs: naturals in main-rack order first in each rank arm, then jokers in remaining cells.
  */
+/**
+ * Stand-in tile for an exposure joker on the display rack (still `cat: 'joker'`): the natural face
+ * of another tile from the same claim meld in `nat`. Used so Pass 2 does not park the joker on the
+ * first empty slot of a wide suit-permute span (e.g. 5B-kong joker lighting a third 3C).
+ */
+function exposureJokerStandInDef(
+  jokerId: string,
+  nat: readonly GroupUsedMeta[],
+  byId: Map<string, TileInstance>,
+  exposureTileIds?: ReadonlySet<string>,
+): TileDef | null {
+  if (!exposureTileIds?.has(jokerId)) return null
+  for (const m of nat) {
+    if (m.id === jokerId) continue
+    if (!exposureTileIds.has(m.id)) continue
+    const t = byId.get(m.id)
+    if (t && t.def.cat !== 'joker') return t.def
+  }
+  return null
+}
+
 function buildPreviewSlotKindsFromGroups(
   p: PracticePattern,
   rack: TileInstance[],
@@ -2053,6 +2074,7 @@ function buildPreviewSlotKindsFromGroups(
   usedMeta: readonly GroupUsedMeta[],
   bestIds: ReadonlySet<string>,
   jokerEligible: readonly boolean[],
+  exposureTileIds?: ReadonlySet<string>,
 ): PreviewStripAssignment {
   const kinds: PreviewSlotSuggestKind[] = defs.map(() => null)
   const slotTileIdByStripIndex = defs.map<string | null>(() => null)
@@ -2192,10 +2214,18 @@ function buildPreviewSlotKindsFromGroups(
           placeNaturalAt(si, m, t)
           break
         }
-        // Exposure jokers are resolved to naturals for greedy match but stay jokers on the display rack.
+        // Exposure jokers are resolved to naturals for greedy match but stay jokers on the display
+        // rack. Place them only on slots matching their claim-meld stand-in — never the first empty
+        // slot of a wide suit-permute group (that parked a 5B-kong joker on a third 3C cell).
         if (t.def.cat === 'joker' && bestIds.has(m.id)) {
-          placeNaturalAt(si, m, t)
-          break
+          const standIn = exposureJokerStandInDef(m.id, nat, byId, exposureTileIds)
+          if (
+            standIn &&
+            (tileDefsEqual(target, standIn) || stripSlotAcceptsNatural(p, target, standIn))
+          ) {
+            placeNaturalAt(si, m, t)
+            break
+          }
         }
       }
     }
@@ -2382,7 +2412,16 @@ export function computePreviewStripAssignment(
   const spans = groupPreviewIndexSpans(p)
 
   if (p.groups && spans && usedMeta.length > 0) {
-    const r = buildPreviewSlotKindsFromGroups(p, rackForPattern, defs, spans, usedMeta, bestIds, jokerEligible)
+    const r = buildPreviewSlotKindsFromGroups(
+      p,
+      rackForPattern,
+      defs,
+      spans,
+      usedMeta,
+      bestIds,
+      jokerEligible,
+      greedyOpts?.exposureTileIds,
+    )
     const jokerMarks = concealedRackJokers(rackForPattern, bestIds, greedyOpts?.exposureTileIds)
     if (jokerMarks.suggestionMarks > 0) {
       redistributeJokerPreviewMarksToFirstMeld(
@@ -4879,6 +4918,34 @@ export type SuggestedStripRowsResult = {
   ocAllSuffix: string
 }
 
+/**
+ * Strip assignment must see exposure jokers as their meld stand-ins. Callers sometimes pass the
+ * display rack (jokers still `cat: 'joker'`); suit-permute variant rows re-run greedy on that rack
+ * and would treat a committed expose joker as a flexible fill on the wrong pung.
+ */
+function rackWithClaimMeldJokersResolvedForStrip(
+  rack: TileInstance[],
+  exposureMelds?: readonly ExposureMeld[],
+): TileInstance[] {
+  if (!exposureMelds?.length) return rack
+  let needsResolve = false
+  for (const m of exposureMelds) {
+    for (const t of m.tiles) {
+      if (t.def.cat !== 'joker') continue
+      const onRack = rack.find((r) => r.id === t.id)
+      if (onRack?.def.cat === 'joker') {
+        needsResolve = true
+        break
+      }
+    }
+    if (needsResolve) break
+  }
+  if (!needsResolve) return rack
+  const exposureIds = new Set(exposureMelds.flatMap((m) => m.tiles.map((t) => t.id)))
+  const concealed = rack.filter((t) => !exposureIds.has(t.id))
+  return tileInstancesWithClaimMeldJokersResolved(concealed, exposureMelds)
+}
+
 export function buildSuggestedStripSlotRowsWithVariants(
   p: PracticePattern,
   rack: TileInstance[],
@@ -4888,6 +4955,7 @@ export function buildSuggestedStripSlotRowsWithVariants(
   exposureTileIds?: ReadonlySet<string>,
   exposureMelds?: readonly ExposureMeld[],
 ): SuggestedStripRowsResult {
+  const matchRack = rackWithClaimMeldJokersResolvedForStrip(rack, exposureMelds)
   const um = usedMeta ?? []
   const finalizeRows = (rows: SuggestedStripSlot[][]): SuggestedStripSlot[][] => {
     let out = rows
@@ -4900,7 +4968,7 @@ export function buildSuggestedStripSlotRowsWithVariants(
           row,
           p,
           exposureMelds,
-          rack,
+          matchRack,
           usedOrder,
           bestIdsForAssignment,
           usedMeta,
@@ -4910,10 +4978,10 @@ export function buildSuggestedStripSlotRowsWithVariants(
     }
     return out
   }
-  const stripResolved = resolveStripTargetDefsForGreedyMatch(p, rack, um, exposureTileIds)
+  const stripResolved = resolveStripTargetDefsForGreedyMatch(p, matchRack, um, exposureTileIds)
   const altConsec = buildConsecOpposingSuitStripVariantRows(
     p,
-    rack,
+    matchRack,
     usedMeta,
     stripResolved,
   )
@@ -4936,7 +5004,7 @@ export function buildSuggestedStripSlotRowsWithVariants(
   }
   const altPerm = buildSuitPermuteStripVariantRows(
     p,
-    rack,
+    matchRack,
     usedOrder,
     bestIdsForAssignment,
     usedMeta,
@@ -4961,7 +5029,7 @@ export function buildSuggestedStripSlotRowsWithVariants(
     rows: finalizeRows([
       buildSuggestedStripSlotsFromStripDefs(
         p,
-        rack,
+        matchRack,
         usedOrder,
         bestIdsForAssignment,
         um,

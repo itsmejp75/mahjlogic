@@ -2530,6 +2530,26 @@
 }
 
 /*
+ * Exposed-meld frame needs vertical chrome around the strip. Grow the row instead of
+ * shrinking tiles to fit the gold box inside the old fixed budget.
+ */
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2).hands-sheet--detail-tiles
+  .hands-sheet__row:has(.hands-sheet__tile-run--exposure) {
+  --_hands-exposure-chrome: calc(2 * var(--hands-sheet-tile-w) * 0.08);
+  --_hands-row-h: round(
+    up,
+    calc(
+      var(--hands-sheet-row-outer-pad-y) + 1em + var(--hands-sheet-tile-h) +
+        var(--_hands-exposure-chrome) + var(--hands-pattern-lift-pad-block, 0.14rem) +
+        var(--hands-sheet-row-pad-y) + 2px
+    ),
+    1px
+  );
+}
+
+/*
  * Tiles off: pin every row to a whole-pixel height. The card line + parenthesis line come to a
  * fractional height, so each row started on a different sub-pixel. When the list re-ranks the
  * selected row is held in place while the surrounding rows nudge by that leftover fraction, which
@@ -2944,7 +2964,14 @@
   padding-block: 0.1em calc(var(--hands-sheet-row-pad-y) + var(--hands-pattern-lift-pad-block, 0.14rem) / 2);
 }
 
-/* Boxed exposure runs are taller (real pad like bot hands) — don't clip the frame. */
+/* Boxed exposure runs: frame paints outside tile faces — don't clip the chrome. */
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2).hands-sheet--detail-tiles
+  .hands-sheet__cell--hand.hands-sheet__cell--detail-pad:has(.hands-sheet__tile-run--exposure) {
+  overflow: visible;
+}
+
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2).hands-sheet--detail-tiles
@@ -3208,7 +3235,8 @@
 
 /*
  * Suggested-hands strip runs: non-exposure runs use `display: contents` so the 14-col grid
- * stays intact. Exposed melds use the same padded frame + inter-run gap as bot possible-hands.
+ * stays intact. Exposed melds use subgrid (span N) + an out-of-flow gold frame so tile size
+ * matches the unboxed 1fr strip; the row grows slightly for the frame chrome.
  */
 .hands-sheet__tile-run,
 .hands-list__pattern-tile-run {
@@ -3219,33 +3247,52 @@
 .hands-list__pattern-tile-run--exposure {
   /* Gold stroke — same hint gold as bot possible-hands / MAHJ–Swap frames. */
   --_suggested-exposure-frame: var(--rack-action-hint-border, #ffb800);
+  --_suggested-exposure-tile-w: var(--hands-sheet-tile-w, var(--hands-preview-tile-w, 0.9rem));
   /* Air gap between stroke and tile faces. */
-  --_suggested-exposure-pad: calc(var(--hands-sheet-tile-w, var(--hands-preview-tile-w, 0.9rem)) * 0.08);
-  --_suggested-exposure-tile-radius: calc(
-    0.116 * var(--hands-sheet-tile-w, var(--hands-preview-tile-w, 0.9rem))
-  );
+  --_suggested-exposure-pad: calc(var(--_suggested-exposure-tile-w) * 0.08);
+  --_suggested-exposure-tile-radius: calc(0.116 * var(--_suggested-exposure-tile-w));
+  /* Same 0.045×tile stroke as bot possible-hands / selected bot-exposure gold frame. */
+  --_suggested-exposure-border-w: max(0.5px, calc(var(--_suggested-exposure-tile-w) * 0.045));
+  /*
+   * Stay on the parent 14-col tracks via subgrid (`grid-column: span N` from
+   * SuggestedHandsPanel). Do NOT switch the strip to flex + fixed `--hands-sheet-tile-w` —
+   * that was shrinking faces vs the normal 1fr fill as soon as a meld was boxed.
+   */
   position: relative;
-  display: inline-flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
+  display: grid;
+  grid-template-columns: subgrid;
   align-items: center;
-  gap: var(--hands-sheet-tile-gap, var(--hands-row-pattern-gap, var(--rack-tile-gap)));
-  flex: 0 0 auto;
-  flex-shrink: 0;
   /*
    * Above neighbouring suggest-best/joker cells (`z-index: 3`) so their coach lift vignettes
    * cannot paint over this frame. Frame stroke itself is on ::after above in-run tiles.
    */
   z-index: 5;
   isolation: isolate;
-  padding: var(--_suggested-exposure-pad);
-  border-radius: calc(var(--_suggested-exposure-tile-radius) + var(--_suggested-exposure-pad));
-  /* Frame is painted by ::after so it stays above in-run tile lift shadows. */
+  /*
+   * Frame chrome is painted outside the tile box (`::before` / `::after` negative inset).
+   * No layout padding — boxing a meld must not change tile size.
+   */
+  padding: 0;
+  border-radius: var(--_suggested-exposure-tile-radius);
   border: none;
   box-sizing: border-box;
+  background: transparent;
+  overflow: visible;
+}
+
+/*
+ * Soft fill behind the meld (outside the faces). Sibling of the gold stroke pseudo.
+ */
+.hands-sheet__tile-run--exposure::before,
+.hands-list__pattern-tile-run--exposure::before {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * var(--_suggested-exposure-pad));
+  border-radius: calc(var(--_suggested-exposure-tile-radius) + var(--_suggested-exposure-pad));
   background: color-mix(in srgb, var(--_suggested-exposure-frame) 12%, transparent);
-  /* Clip in-run lift glow to the padded box so it can’t cover the gold stroke. */
-  overflow: hidden;
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 0;
 }
 
 /*
@@ -3256,63 +3303,48 @@
 .hands-list__pattern-tile-run--exposure::after {
   content: '';
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  border: 2px solid var(--_suggested-exposure-frame);
+  inset: calc(-1 * var(--_suggested-exposure-pad));
+  border-radius: calc(var(--_suggested-exposure-tile-radius) + var(--_suggested-exposure-pad));
+  border: var(--_suggested-exposure-border-w) solid var(--_suggested-exposure-frame);
   box-sizing: border-box;
   pointer-events: none;
   z-index: 6;
 }
 
-/* Tray sheet: when a meld is boxed, flex runs with fixed tile size (pad stays additive). */
-.hands-panel__list-column .hands-sheet__tiles-grid:has(.hands-sheet__tile-run--exposure) {
-  display: flex;
-  width: max-content;
-  max-width: 100%;
-  min-width: 0;
+.hands-sheet__tile-run--exposure > .hands-sheet__tile-cell,
+.hands-list__pattern-tile-run--exposure > .hands-list__pattern-tile-cell {
+  /* Above the soft fill; below the gold stroke. */
+  position: relative;
+  z-index: 1;
 }
 
+/*
+ * Grow the strip’s block padding so the out-of-flow gold frame has room — row height
+ * increases; tile faces stay on the same 14×1fr tracks.
+ */
+.hands-panel__list-column .hands-sheet__tiles-grid:has(.hands-sheet__tile-run--exposure),
 .hands-panel__list-column
-  .hands-sheet__tiles-grid:has(.hands-sheet__tile-run--exposure)
-  .hands-sheet__tile-run {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: var(--hands-sheet-tile-gap);
-  flex: 0 0 auto;
-  min-width: 0;
-}
-
-.hands-panel__list-column
-  .hands-sheet__tiles-grid:has(.hands-sheet__tile-run--exposure)
-  .hands-sheet__tile-cell {
-  flex: 0 0 auto;
-  width: var(--hands-sheet-tile-w);
-  height: var(--hands-sheet-tile-h);
-}
-
-/* Compact list strip — same flex + padded exposure runs as bot hands. */
-.hands-list__pattern-tiles-grid:has(.hands-list__pattern-tile-run--exposure),
-.hands-list__row-hit--with-tiles
+  .hands-list__pattern-tiles
   .hands-list__pattern-tiles-grid:has(.hands-list__pattern-tile-run--exposure) {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: var(--hands-row-pattern-gap, var(--rack-tile-gap));
-  width: max-content;
-  grid-template-columns: none;
+  overflow: visible;
+  padding-block: calc(var(--hands-sheet-tile-w, var(--hands-preview-tile-w, 0.9rem)) * 0.08);
 }
 
-.hands-list__pattern-tiles-grid:has(.hands-list__pattern-tile-run--exposure)
-  .hands-list__pattern-tile-run {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: var(--hands-row-pattern-gap, var(--rack-tile-gap));
-  flex: 0 0 auto;
-  flex-shrink: 0;
+.hands-panel__content
+  .hands-list-scroll
+  > .hands-sheet:not(.hands-sheet--tiles2).hands-sheet--detail-tiles
+  .hands-sheet__cell--hand.hands-sheet__cell--detail-pad
+  .hands-sheet__tiles-grid:has(.hands-sheet__tile-run--exposure) {
+  overflow: visible;
+  /* Keep the usual lift air under the strip; ensure ≥ exposure chrome on both ends. */
+  padding-block-start: max(
+    0.1em,
+    calc(var(--hands-sheet-tile-w, var(--hands-preview-tile-w, 0.9rem)) * 0.08)
+  );
+  padding-block-end: max(
+    calc(var(--hands-sheet-row-pad-y) + var(--hands-pattern-lift-pad-block, 0.14rem) / 2),
+    calc(var(--hands-sheet-tile-w, var(--hands-preview-tile-w, 0.9rem)) * 0.08)
+  );
 }
 
 .hands-sheet__tile-cell {

@@ -622,7 +622,18 @@ const SuggestedHandStripTileCell = memo(function SuggestedHandStripTileCell({
         def={slot.displayDef}
         cardInk={stripTileFaceCardInk(slot.displayDef, slot.cardInk)}
       />
-      {showJokerGuide ? <TileFace def={SUGGEST_JOKER_TIMESHARE_DEF} ariaHidden /> : null}
+      {/*
+       * Keep the joker overlay mounted whenever this slot is a joker fill — not only while the
+       * row is focused. iOS WKWebView often never starts an opacity animation on a face that is
+       * created in the same frame as `animation` (same reason strip lift `::after` stays mounted).
+       */}
+      {slot.jokerSuggested ? (
+        <TileFace
+          def={SUGGEST_JOKER_TIMESHARE_DEF}
+          ariaHidden
+          className="tile-face--suggest-joker-timeshare"
+        />
+      ) : null}
     </div>
   )
 })
@@ -725,7 +736,14 @@ function renderSuggestedStripRuns({
           ]
             .filter(Boolean)
             .join(' ')}
-          style={{ ['--_run-tiles' as string]: run.slots.length }}
+          style={
+            run.exposureMeldId !== null
+              ? {
+                  // Keep boxed melds on the parent 14-col tracks (CSS subgrid).
+                  gridColumn: `span ${run.slots.length}`,
+                }
+              : undefined
+          }
         >
           {run.slots.map((slot, j) => {
             const i = run.startIndex + j
@@ -1914,7 +1932,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                 row,
                 p,
                 boxMelds,
-                rackDisplay,
+                rackMatch,
                 detail.usedOrder,
                 bestIdsForAssign,
                 detail.usedMeta,
@@ -1935,9 +1953,12 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
           if (p.matches(t.def)) bestIdsForAssign.add(t.id)
         }
       }
+      // Match rack (exposure jokers resolved to stand-ins) for strip assignment — suit-permute
+      // variant rows re-run greedy, and the display rack would treat a committed expose joker as a
+      // flexible fill (e.g. 5B-kong joker lighting a third 3C on Runs #4b).
       const result = buildSuggestedStripSlotRowsWithVariants(
         p,
-        rackDisplay,
+        rackMatch,
         detail.usedOrder,
         bestIdsForAssign,
         detail.usedMeta,

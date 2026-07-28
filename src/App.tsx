@@ -192,6 +192,8 @@ const LS_KEY_TEN_JOKERS = 'mahjlogic.tenJokersEnabled'
 const LS_KEY_PLAY_AS_EAST = 'mahjlogic.playAsEastEnabled'
 const LS_KEY_SUGGESTED_HANDS_TRAY = 'mahjlogic.suggestedHandsTrayDefaultOpen'
 const LS_KEY_HAND_PROBABILITY = 'mahjlogic.handProbabilityEnabled'
+/** Stable empty section filter for player Mah Jongg Hands review (avoids per-render `new Set()`). */
+const EMPTY_SUGGESTED_HAND_SECTIONS = new Set<string>()
 const BLANK_TILES_LABEL = 'Blank tiles'
 const SUGGESTED_HANDS_TRAY_LABEL = 'Suggested hands'
 const HAND_PROBABILITY_LABEL = 'Hand Probability %'
@@ -4092,6 +4094,18 @@ export default function App() {
   }, [mainPhase, hand, eastExposures, wall.length, discardTiles, botExposures, cardPatterns])
 
   /**
+   * After a player Mah Jongg + Review, Hands should list only the completed winning line
+   * (same identity as win-rack sort / overlay closest line) — not the full ranked card.
+   */
+  const playerMahjongWinReviewHands = useMemo(() => {
+    if (!mahjongWinReviewing) return null
+    const row = postGameBotReview?.[0]
+    if (!row || row.bestTilesAway !== 0 || row.linesAtMin.length === 0) return null
+    // Prefer the primary winning line (same as summarizeRackTowardWin.closestLine).
+    return [row.linesAtMin[0]!]
+  }, [mahjongWinReviewing, postGameBotReview])
+
+  /**
    * Bot-mahjong end screen: same per-seat layout as Wall Game (East + three bots).
    */
   const postGameBotMahjongReview = useMemo(() => {
@@ -5915,7 +5929,7 @@ export default function App() {
               discardTraySurface
               trayOpen={trayOpen}
               onPinnedPatternChange={toggleSuggestedPinnedHandKey}
-              hands={eastSuggestedHands}
+              hands={playerMahjongWinReviewHands ?? eastSuggestedHands}
               activePatternId={suggestedFocusHandKey}
               pinnedHandKeys={suggestedPinnedHandKeys}
               onPatternClick={onSuggestedPatternClick}
@@ -5927,8 +5941,14 @@ export default function App() {
               rackTilesForPatternMatch={deferredRackForSuggestedPatternMatch}
               exposureTileIdsForSuggestedStrip={suggestedHandsExposureTileIds}
               exposureMeldsForSuggestedStrip={suggestedHandsExposureMelds}
-              uncheckedSections={suggestedHandsUncheckedSections}
-              hideConcealedHands={suggestedHandsHideConcealed}
+              uncheckedSections={
+                playerMahjongWinReviewHands
+                  ? EMPTY_SUGGESTED_HAND_SECTIONS
+                  : suggestedHandsUncheckedSections
+              }
+              hideConcealedHands={
+                playerMahjongWinReviewHands ? false : suggestedHandsHideConcealed
+              }
               cardPatterns={cardPatterns}
               cardSectionOrder={cardSectionOrder}
               deadCauseByFocusKey={suggestedDeadCauseByFocusKey}
@@ -5946,6 +5966,7 @@ export default function App() {
     clearBotHandsIdentifierFocus,
     postGameBotTableReviewRacks,
     toggleSuggestedPinnedHandKey,
+    playerMahjongWinReviewHands,
     eastSuggestedHands,
     suggestedFocusHandKey,
     suggestedPinnedHandKeys,

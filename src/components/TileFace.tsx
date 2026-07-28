@@ -117,6 +117,8 @@ type Props = {
   sortedDiscardCrakRed?: boolean
   /** Decorative overlay (e.g. suggested-hand joker time-share); omit from the accessibility tree. */
   ariaHidden?: boolean
+  /** Extra face classes (e.g. suggested-hand joker time-share overlay). */
+  className?: string
 }
 
 /**
@@ -191,6 +193,7 @@ export const TileFace = memo(function TileFace({
   sortedDiscardBamGreen = false,
   sortedDiscardCrakRed = false,
   ariaHidden = false,
+  className,
 }: Props) {
   const { tileGraphics } = useTileGraphics()
   const skinCardInk = cardInkForTileFace(def, cardInk, tileGraphics)
@@ -224,6 +227,7 @@ export const TileFace = memo(function TileFace({
         sortedDiscardDotBlue ? 'tile-face--sorted-discard-dot' : '',
         sortedDiscardBamGreen ? 'tile-face--sorted-discard-bam' : '',
         sortedDiscardCrakRed ? 'tile-face--sorted-discard-crak' : '',
+        className,
       ]
         .filter(Boolean)
         .join(' ')}

@@ -1018,18 +1018,20 @@
 }
 
 /*
- * Coach lit→lit seams (all directions): clip slot lift `::after` only.
- * Keep face rim `::before` (inner tile bevel) on every lit tile — same as the main hand
- * rack. Clipping the rim at seams made stacked lit exposures (e.g. joker under joker) look
- * flat on the shared edge. Dim tiles still seam-clip their softer rim via data attrs below.
+ * Coach lit→lit seams:
+ * - Vertical: clip slot lift `::after` only. Keep face rim `::before` (inner tile bevel) so
+ *   stacked lit exposures (e.g. joker under joker) don’t go flat on the shared edge.
+ * - Horizontal (bot S/W/N): also clip face rim left/right so a lit exposure run reads as one
+ *   plane — review dumps whole claim melds lit, and per-tile side vignettes otherwise stack.
+ * Dim tiles still seam-clip their softer rim via data attrs below.
  * Edge classes from `coachLitNeighborClip.ts`, plus sibling `:has(+)` / `+` fallbacks so
- * same-meld neighbors clip lift even if the JS pass is late or misses.
+ * same-meld neighbors clip even if the JS pass is late or misses.
  */
 .app {
   --coach-vignette-seam-inset: calc(var(--tile-shadow-fade, 6.5%) * 0.92);
 }
 
-/* Lit↔lit: clip lift only. Dim data attrs: rim only (never chop lit lift over a dim row). */
+/* Lit↔lit vertical: clip lift only. Dim data attrs: rim only (never chop lit lift over a dim row). */
 .discard-tracker__overlay-grid
   :is(.exposure-rack__slot--suggest-best, .sorted-discard-tray__slot--suggest-need).coach-lit-clip-top,
 .panel--bot-exposures .exposure-rack__slot--suggest-best.coach-lit-clip-top {
@@ -1098,8 +1100,87 @@
 }
 
 /*
+ * Bot S/W/N horizontal lit→lit: also clip face rim at the shared edge so a lit claim run
+ * (review + coaching) sits on one plane. Sorted suggest-need stays lift-only (no rim).
+ */
+.discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-best.coach-lit-clip-left,
+.panel--bot-exposures .exposure-rack__slot--suggest-best.coach-lit-clip-left,
+:is(
+  .panel--bot-exposures .exposure-rack,
+  .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row
+)
+  .exposure-rack__slot--suggest-best
+  + .exposure-rack__slot--suggest-best {
+  --coach-vignette-clip-left: var(--coach-vignette-seam-inset);
+}
+
+.discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-best.coach-lit-clip-right,
+.panel--bot-exposures .exposure-rack__slot--suggest-best.coach-lit-clip-right,
+:is(
+  .panel--bot-exposures .exposure-rack,
+  .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row
+)
+  .exposure-rack__slot--suggest-best:has(+ .exposure-rack__slot--suggest-best) {
+  --coach-vignette-clip-right: var(--coach-vignette-seam-inset);
+}
+
+/*
+ * Cross-meld horizontal lit→lit (review: claim A next to claim B). Slots aren’t siblings across
+ * `.exposure-rack__meld-grid-span` / `.exposure-rack__meld-drop` wrappers — JS clip classes cover
+ * this; these `:has(+)` fallbacks keep the plane joined if the pass is late.
+ * Only when the facing edge tiles are both lit (lit→dim keeps a full lift halo).
+ */
+:is(
+  .panel--bot-exposures .exposure-rack,
+  .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row
+)
+  > .exposure-rack__meld-grid-span:has(
+    + .exposure-rack__meld-grid-span
+      > .exposure-rack__meld-drop
+      > .exposure-rack__slot--suggest-best:first-child
+  )
+  > .exposure-rack__meld-drop
+  > .exposure-rack__slot--suggest-best:last-child,
+:is(
+  .panel--bot-exposures .exposure-rack,
+  .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row
+)
+  > .exposure-rack__meld-drop:has(
+    + .exposure-rack__meld-drop > .exposure-rack__slot--suggest-best:first-child
+  )
+  > .exposure-rack__slot--suggest-best:last-child {
+  --coach-lift-clip-right: var(--coach-lit-seam-inset-x);
+  --coach-vignette-clip-right: var(--coach-vignette-seam-inset);
+}
+
+:is(
+  .panel--bot-exposures .exposure-rack,
+  .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row
+)
+  > .exposure-rack__meld-grid-span:has(
+    > .exposure-rack__meld-drop > .exposure-rack__slot--suggest-best:last-child
+  )
+  + .exposure-rack__meld-grid-span
+  > .exposure-rack__meld-drop
+  > .exposure-rack__slot--suggest-best:first-child,
+:is(
+  .panel--bot-exposures .exposure-rack,
+  .discard-tracker__overlay-grid .exposure-rack--discard-tracker-bot-row
+)
+  > .exposure-rack__meld-drop:has(> .exposure-rack__slot--suggest-best:last-child)
+  + .exposure-rack__meld-drop
+  > .exposure-rack__slot--suggest-best:first-child {
+  --coach-lift-clip-left: var(--coach-lit-seam-inset-x);
+  --coach-vignette-clip-left: var(--coach-vignette-seam-inset);
+}
+
+/*
  * Bot exposure grid rows — CSS fallback (adjacent `+` only):
- * - Lit↔lit: clip lift only (keep face rim bevel on every lit tile).
+ * - Lit↔lit vertical: clip lift only (horizontal rim clip is above).
  * - Lit↔dim: clip dim rim only; lit lift stays full so it paints over the dim row.
  * - Dim↔dim: clip facing dim rims.
  */
@@ -2914,7 +2995,7 @@ html
   );
 }
 
-/* Lit bot-row illustrative faces keep full rim ::before (lift seams clip; face bevel does not). */
+/* Lit bot-row illustrative faces: rim ::before stays; horizontal lit→lit seams clip side bevel. */
 html
   .app-top-exposure-container
   .discard-tracker__overlay-grid
@@ -2926,12 +3007,23 @@ html
 
 html
   .app-top-exposure-container
+  .panel--discard-tracker
   .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
   .exposure-rack__slot--suggest-best:not(:has(+ .exposure-rack__slot--suggest-best)):not(
     .exposure-rack__slot--suggest-dying
-  ) {
-  /* Stay with lit elevation (12) — was 4 and undercut top/bottom lift over dim seats. */
+  ),
+html
+  .app-top-exposure-container
+  .panel--discard-tracker
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-best:not(.exposure-rack__slot--suggest-dying) {
+  /*
+   * Keep every lit tile at elevation 12 (same plane). The older `:not(:has(+ lit))` → z-index 4
+   * rule undercuts the last tile in a lit claim run so its lift/vignette stacks differently
+   * from its neighbours — obvious on review when whole exposures stay lit.
+   */
   z-index: 12;
 }
 
