@@ -2964,12 +2964,18 @@
   padding-block: 0.1em calc(var(--hands-sheet-row-pad-y) + var(--hands-pattern-lift-pad-block, 0.14rem) / 2);
 }
 
-/* Boxed exposure runs: frame paints outside tile faces — don't clip the chrome. */
+/* Boxed exposure runs use in-flow pad (bot possible-hands) — don't clip the chrome. */
 .hands-panel__content
   .hands-list-scroll
   > .hands-sheet:not(.hands-sheet--tiles2).hands-sheet--detail-tiles
   .hands-sheet__cell--hand.hands-sheet__cell--detail-pad:has(.hands-sheet__tile-run--exposure) {
   overflow: visible;
+  /*
+   * Strip faces size from this cell’s inline size (`100cqi`) so they match the unboxed
+   * 14×1fr track. The tiles-grid must not be its own container (can’t query itself).
+   */
+  container-type: inline-size;
+  container-name: suggested-exposure-strip;
 }
 
 .hands-panel__content
@@ -3235,8 +3241,8 @@
 
 /*
  * Suggested-hands strip runs: non-exposure runs use `display: contents` so the 14-col grid
- * stays intact. Exposed melds use subgrid (span N) + an out-of-flow gold frame so tile size
- * matches the unboxed 1fr strip; the row grows slightly for the frame chrome.
+ * stays intact. When a meld is boxed, the strip switches to flex runs (same structure as bot
+ * possible-hands): in-flow pad + gold stroke, with a real gap between adjacent boxes.
  */
 .hands-sheet__tile-run,
 .hands-list__pattern-tile-run {
@@ -3248,51 +3254,33 @@
   /* Gold stroke — same hint gold as bot possible-hands / MAHJ–Swap frames. */
   --_suggested-exposure-frame: var(--rack-action-hint-border, #ffb800);
   --_suggested-exposure-tile-w: var(--hands-sheet-tile-w, var(--hands-preview-tile-w, 0.9rem));
-  /* Air gap between stroke and tile faces. */
+  /* Air gap between stroke and tile faces (matches `--bot-hands-exposure-pad`). */
   --_suggested-exposure-pad: calc(var(--_suggested-exposure-tile-w) * 0.08);
   --_suggested-exposure-tile-radius: calc(0.116 * var(--_suggested-exposure-tile-w));
   /* Same 0.045×tile stroke as bot possible-hands / selected bot-exposure gold frame. */
   --_suggested-exposure-border-w: max(0.5px, calc(var(--_suggested-exposure-tile-w) * 0.045));
-  /*
-   * Stay on the parent 14-col tracks via subgrid (`grid-column: span N` from
-   * SuggestedHandsPanel). Do NOT switch the strip to flex + fixed `--hands-sheet-tile-w` —
-   * that was shrinking faces vs the normal 1fr fill as soon as a meld was boxed.
-   */
   position: relative;
-  display: grid;
-  grid-template-columns: subgrid;
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
+  gap: var(--hands-sheet-tile-gap, var(--hands-row-pattern-gap, var(--rack-tile-gap)));
+  flex: 0 0 auto;
+  flex-shrink: 0;
   /*
    * Above neighbouring suggest-best/joker cells (`z-index: 3`) so their coach lift vignettes
    * cannot paint over this frame. Frame stroke itself is on ::after above in-run tiles.
    */
   z-index: 5;
   isolation: isolate;
-  /*
-   * Frame chrome is painted outside the tile box (`::before` / `::after` negative inset).
-   * No layout padding — boxing a meld must not change tile size.
-   */
-  padding: 0;
-  border-radius: var(--_suggested-exposure-tile-radius);
+  /* In-flow pad — same plane as bot possible-hands; neighbouring boxes no longer overlap. */
+  padding: var(--_suggested-exposure-pad);
+  border-radius: calc(var(--_suggested-exposure-tile-radius) + var(--_suggested-exposure-pad));
   border: none;
   box-sizing: border-box;
-  background: transparent;
-  overflow: visible;
-}
-
-/*
- * Soft fill behind the meld (outside the faces). Sibling of the gold stroke pseudo.
- */
-.hands-sheet__tile-run--exposure::before,
-.hands-list__pattern-tile-run--exposure::before {
-  content: '';
-  position: absolute;
-  inset: calc(-1 * var(--_suggested-exposure-pad));
-  border-radius: calc(var(--_suggested-exposure-tile-radius) + var(--_suggested-exposure-pad));
   background: color-mix(in srgb, var(--_suggested-exposure-frame) 12%, transparent);
-  box-sizing: border-box;
-  pointer-events: none;
-  z-index: 0;
+  /* Clip in-run lift glow to the padded box so it can’t cover the gold stroke. */
+  overflow: hidden;
 }
 
 /*
@@ -3303,31 +3291,79 @@
 .hands-list__pattern-tile-run--exposure::after {
   content: '';
   position: absolute;
-  inset: calc(-1 * var(--_suggested-exposure-pad));
-  border-radius: calc(var(--_suggested-exposure-tile-radius) + var(--_suggested-exposure-pad));
+  inset: 0;
+  border-radius: inherit;
   border: var(--_suggested-exposure-border-w) solid var(--_suggested-exposure-frame);
   box-sizing: border-box;
   pointer-events: none;
   z-index: 6;
 }
 
-.hands-sheet__tile-run--exposure > .hands-sheet__tile-cell,
-.hands-list__pattern-tile-run--exposure > .hands-list__pattern-tile-cell {
-  /* Above the soft fill; below the gold stroke. */
-  position: relative;
-  z-index: 1;
+/* cqi source for boxed-strip face width (must be an ancestor of the tiles-grid). */
+.hands-panel__list-column
+  .hands-sheet__cell--hand.hands-sheet__cell--detail-pad:has(.hands-sheet__tile-run--exposure) {
+  container-type: inline-size;
+  container-name: suggested-exposure-strip;
 }
 
 /*
- * Grow the strip’s block padding so the out-of-flow gold frame has room — row height
- * increases; tile faces stay on the same 14×1fr tracks.
+ * Boxed-meld strips: flex runs like bot possible-hands. Face width = unboxed 14×1fr size
+ * from the parent cell container (`suggested-exposure-strip`). Frame pad is additive (may
+ * paint slightly past the track); the row grows taller for vertical chrome.
  */
 .hands-panel__list-column .hands-sheet__tiles-grid:has(.hands-sheet__tile-run--exposure),
 .hands-panel__list-column
   .hands-list__pattern-tiles
   .hands-list__pattern-tiles-grid:has(.hands-list__pattern-tile-run--exposure) {
+  --_suggested-strip-gap: var(
+    --hands-sheet-tile-gap,
+    var(--hands-row-pattern-gap, var(--rack-tile-gap))
+  );
+  /* Query parent cell — not this grid (an element can’t use its own cqi). */
+  --_suggested-strip-tile-w: calc((100cqi - 13 * var(--_suggested-strip-gap)) / 14);
+  --hands-sheet-tile-w: var(--_suggested-strip-tile-w);
+  --hands-sheet-tile-h: calc(var(--_suggested-strip-tile-w) * 4 / 3);
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--_suggested-strip-gap);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   overflow: visible;
-  padding-block: calc(var(--hands-sheet-tile-w, var(--hands-preview-tile-w, 0.9rem)) * 0.08);
+  grid-template-columns: none;
+}
+
+.hands-panel__list-column
+  .hands-sheet__tiles-grid:has(.hands-sheet__tile-run--exposure)
+  .hands-sheet__tile-run,
+.hands-panel__list-column
+  .hands-list__pattern-tiles
+  .hands-list__pattern-tiles-grid:has(.hands-list__pattern-tile-run--exposure)
+  .hands-list__pattern-tile-run {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--_suggested-strip-gap, var(--hands-sheet-tile-gap));
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.hands-panel__list-column
+  .hands-sheet__tiles-grid:has(.hands-sheet__tile-run--exposure)
+  .hands-sheet__tile-cell,
+.hands-panel__list-column
+  .hands-list__pattern-tiles
+  .hands-list__pattern-tiles-grid:has(.hands-list__pattern-tile-run--exposure)
+  .hands-list__pattern-tile-cell {
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  width: var(--_suggested-strip-tile-w, var(--hands-sheet-tile-w));
+  height: auto;
+  aspect-ratio: 3 / 4;
 }
 
 .hands-panel__content
@@ -3336,15 +3372,11 @@
   .hands-sheet__cell--hand.hands-sheet__cell--detail-pad
   .hands-sheet__tiles-grid:has(.hands-sheet__tile-run--exposure) {
   overflow: visible;
-  /* Keep the usual lift air under the strip; ensure ≥ exposure chrome on both ends. */
-  padding-block-start: max(
-    0.1em,
-    calc(var(--hands-sheet-tile-w, var(--hands-preview-tile-w, 0.9rem)) * 0.08)
-  );
-  padding-block-end: max(
-    calc(var(--hands-sheet-row-pad-y) + var(--hands-pattern-lift-pad-block, 0.14rem) / 2),
-    calc(var(--hands-sheet-tile-w, var(--hands-preview-tile-w, 0.9rem)) * 0.08)
-  );
+  /*
+   * In-flow gold pad already adds block size; keep the usual air under the strip and let
+   * the row min-height (`--_hands-exposure-chrome`) grow for full-size faces + frames.
+   */
+  padding-block: 0.1em calc(var(--hands-sheet-row-pad-y) + var(--hands-pattern-lift-pad-block, 0.14rem) / 2);
 }
 
 .hands-sheet__tile-cell {
@@ -4129,6 +4161,13 @@
   align-self: center;
 }
 
+/* Compact list: same cqi sizing source as the sheet detail-pad cell. */
+.hands-panel__list-column
+  .hands-list__pattern-tiles:has(.hands-list__pattern-tile-run--exposure) {
+  container-type: inline-size;
+  container-name: suggested-exposure-strip;
+}
+
 /* Sheet strip: same 1fr columns so mini tiles fill the tile column without changing grid tracks. */
 .hands-panel__list-column .hands-sheet__tiles-grid {
   display: grid;
@@ -4145,6 +4184,18 @@
   height: auto;
   aspect-ratio: 3 / 4;
   align-self: center;
+}
+
+/*
+ * After the 14×1fr defaults above — boxed strips stay flex + full 1fr-equivalent faces
+ * (`100cqi` from `suggested-exposure-strip`). Higher specificity than the grid rules.
+ */
+.hands-panel__list-column .hands-sheet__tiles-grid:has(.hands-sheet__tile-run--exposure),
+.hands-panel__list-column
+  .hands-list__pattern-tiles
+  .hands-list__pattern-tiles-grid:has(.hands-list__pattern-tile-run--exposure) {
+  display: flex;
+  grid-template-columns: none;
 }
 
 .hands-panel__list-column .hands-list__pattern-tiles-stack {
@@ -4328,13 +4379,9 @@
   --tile-face-highlight-shadow: var(--suggest-best-ring);
 }
 
-/* Staged call tiles that can be clicked/dragged back to the hand */
+/* Staged call tiles that can be clicked/dragged back to the hand — no hover chrome (keeps meld corner radii stable). */
 .exposure-rack__slot--staged-returnable {
   cursor: grab;
-}
-.exposure-rack__slot--staged-returnable:hover .tile-face {
-  --tile-face-highlight-shadow: inset 0 0 0 2px rgba(245, 158, 11, 0.7);
-  border-radius: 0.35rem;
 }
 /* Committed claim before next discard: tap any tile in the meld to re-open staging */
 .exposure-rack__slot--call-amendable {

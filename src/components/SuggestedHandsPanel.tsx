@@ -57,6 +57,24 @@ const DRAG_SCROLL_CLICK_SUPPRESS_MS = 280
 const DRAG_SCROLL_CLASS = 'hands-list-scroll--drag-scrolling'
 /** Stable face for suggested-strip joker time-share (CSS swaps with the natural). */
 const SUGGEST_JOKER_TIMESHARE_DEF: TileDef = { cat: 'joker' }
+/** Must match `suggest-joker-timeshare-*` animation duration in part-0075.css. */
+const SUGGEST_JOKER_TIMESHARE_MS = 4000
+
+/** Identity of joker-fill slots on the focused strip — changes when a joker joins/leaves. */
+function jokerTimeshareSyncKey(
+  slots: readonly SuggestedStripSlot[],
+  isActiveRow: boolean,
+): string {
+  if (!isActiveRow) return ''
+  let key = ''
+  for (let i = 0; i < slots.length; i++) {
+    const s = slots[i]!
+    if (!s.jokerSuggested) continue
+    if (key) key += '|'
+    key += `${i}:${s.tileId ?? ''}`
+  }
+  return key
+}
 /** Extra rows mounted above/below the viewport so fast flings do not flash empty gaps. */
 const HANDS_LIST_VIRTUAL_OVERSCAN = 8
 /** Minimum mounted window before scroll metrics are known. */
@@ -247,6 +265,11 @@ function findScrollRowAnchor(
       viewportTop: rowViewportTopInScrollContainer(preferredByPattern, scrollEl, scrollRect),
     }
   }
+
+  // Preferred focus row requested but not mounted (virtualized away / briefly absent during
+  // call-staging). Do not substitute a random visible row — that steals the pin and the
+  // highlighted hand jumps out of view on the next re-rank. Caller estimates from list index.
+  if (preferredKey || preferredPatternId) return null
 
   const visibleRow = firstVisibleRowByHitTest(scrollEl, scrollRect)
   if (visibleRow && visibleRow.dataset.handsRowKey) {
@@ -581,6 +604,8 @@ const SuggestedHandStripTileCell = memo(function SuggestedHandStripTileCell({
   dim,
   deadCauseSlot,
   classPrefix,
+  timeshareDelayCss,
+  timeshareSyncKey,
 }: {
   slot: SuggestedStripSlot
   showJokerGuide: boolean
@@ -588,6 +613,10 @@ const SuggestedHandStripTileCell = memo(function SuggestedHandStripTileCell({
   dim: boolean
   deadCauseSlot: boolean
   classPrefix: 'hands-sheet__tile-cell' | 'hands-list__pattern-tile-cell'
+  /** Shared strip delay — same string on every joker cell for this sync generation. */
+  timeshareDelayCss: string | null
+  /** Changes when the focused strip's joker-fill set changes; remounts faces to restart in phase. */
+  timeshareSyncKey: string
 }) {
   const jokerClass =
     classPrefix === 'hands-sheet__tile-cell'
@@ -606,6 +635,15 @@ const SuggestedHandStripTileCell = memo(function SuggestedHandStripTileCell({
       ? 'hands-sheet__tile-cell--dead-cause'
       : 'hands-list__pattern-tile-cell--dead-cause'
 
+  const timeshareStyle =
+    showJokerGuide && timeshareDelayCss
+      ? ({
+          ['--suggest-joker-timeshare-delay' as string]: timeshareDelayCss,
+        } as CSSProperties)
+      : undefined
+  // Remount animated faces whenever the strip joker set changes so late joiners don't drift.
+  const faceSyncKey = showJokerGuide ? timeshareSyncKey : 'idle'
+
   return (
     <div
       className={[
@@ -617,8 +655,10 @@ const SuggestedHandStripTileCell = memo(function SuggestedHandStripTileCell({
       ]
         .filter(Boolean)
         .join(' ')}
+      style={timeshareStyle}
     >
       <TileFace
+        key={`nat-${faceSyncKey}`}
         def={slot.displayDef}
         cardInk={stripTileFaceCardInk(slot.displayDef, slot.cardInk)}
       />
@@ -629,6 +669,7 @@ const SuggestedHandStripTileCell = memo(function SuggestedHandStripTileCell({
        */}
       {slot.jokerSuggested ? (
         <TileFace
+          key={`jok-${faceSyncKey}`}
           def={SUGGEST_JOKER_TIMESHARE_DEF}
           ariaHidden
           className="tile-face--suggest-joker-timeshare"
@@ -707,7 +748,7 @@ type PatternRowInteractionProps = {
   onClick: (e: MouseEvent<HTMLButtonElement>) => void
 }
 
-function renderSuggestedStripRuns({
+const SuggestedHandStripRuns = memo(function SuggestedHandStripRuns({
   slots,
   isActiveRow,
   keyPrefix,
@@ -724,7 +765,20 @@ function renderSuggestedStripRuns({
   runClassPrefix: 'hands-sheet__tile-run' | 'hands-list__pattern-tile-run'
   cellClassPrefix: 'hands-sheet__tile-cell' | 'hands-list__pattern-tile-cell'
 }) {
-  const runs = segmentSuggestedStripIntoRuns(slots)
+  const runs = useMemo(() => segmentSuggestedStripIntoRuns(slots), [slots])
+  const timeshareSyncKey = useMemo(
+    () => jokerTimeshareSyncKey(slots, isActiveRow),
+    [slots, isActiveRow],
+  )
+  /*
+   * One delay for the whole strip. When a joker joins/leaves, sync key changes → new delay and
+   * every timeshare face remounts together (wall-clock join alone drifts after CSS anim pauses).
+   */
+  const timeshareDelayCss = useMemo(() => {
+    if (!timeshareSyncKey) return null
+    return `${-(performance.now() % SUGGEST_JOKER_TIMESHARE_MS)}ms`
+  }, [timeshareSyncKey])
+
   return (
     <div className={gridClassName} role="presentation">
       {runs.map((run, runIdx) => (
@@ -736,14 +790,6 @@ function renderSuggestedStripRuns({
           ]
             .filter(Boolean)
             .join(' ')}
-          style={
-            run.exposureMeldId !== null
-              ? {
-                  // Keep boxed melds on the parent 14-col tracks (CSS subgrid).
-                  gridColumn: `span ${run.slots.length}`,
-                }
-              : undefined
-          }
         >
           {run.slots.map((slot, j) => {
             const i = run.startIndex + j
@@ -760,6 +806,8 @@ function renderSuggestedStripRuns({
                 dim={dim}
                 deadCauseSlot={deadCauseSlot}
                 classPrefix={cellClassPrefix}
+                timeshareDelayCss={timeshareDelayCss}
+                timeshareSyncKey={timeshareSyncKey}
               />
             )
           })}
@@ -767,7 +815,7 @@ function renderSuggestedStripRuns({
       ))}
     </div>
   )
-}
+})
 
 const SuggestedHandSheetTileGrid = memo(function SuggestedHandSheetTileGrid({
   slots,
@@ -780,15 +828,17 @@ const SuggestedHandSheetTileGrid = memo(function SuggestedHandSheetTileGrid({
   keyPrefix: string
   deadCause: DeadCauseHint | null
 }) {
-  return renderSuggestedStripRuns({
-    slots,
-    isActiveRow,
-    keyPrefix,
-    deadCause,
-    gridClassName: 'hands-sheet__tiles-grid',
-    runClassPrefix: 'hands-sheet__tile-run',
-    cellClassPrefix: 'hands-sheet__tile-cell',
-  })
+  return (
+    <SuggestedHandStripRuns
+      slots={slots}
+      isActiveRow={isActiveRow}
+      keyPrefix={keyPrefix}
+      deadCause={deadCause}
+      gridClassName="hands-sheet__tiles-grid"
+      runClassPrefix="hands-sheet__tile-run"
+      cellClassPrefix="hands-sheet__tile-cell"
+    />
+  )
 })
 
 const SuggestedHandListTileGrid = memo(function SuggestedHandListTileGrid({
@@ -802,15 +852,17 @@ const SuggestedHandListTileGrid = memo(function SuggestedHandListTileGrid({
   keyPrefix: string
   deadCause: DeadCauseHint | null
 }) {
-  return renderSuggestedStripRuns({
-    slots,
-    isActiveRow,
-    keyPrefix,
-    deadCause,
-    gridClassName: 'hands-list__pattern-tiles-grid',
-    runClassPrefix: 'hands-list__pattern-tile-run',
-    cellClassPrefix: 'hands-list__pattern-tile-cell',
-  })
+  return (
+    <SuggestedHandStripRuns
+      slots={slots}
+      isActiveRow={isActiveRow}
+      keyPrefix={keyPrefix}
+      deadCause={deadCause}
+      gridClassName="hands-list__pattern-tiles-grid"
+      runClassPrefix="hands-list__pattern-tile-run"
+      cellClassPrefix="hands-list__pattern-tile-cell"
+    />
+  )
 })
 
 const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
@@ -1301,8 +1353,10 @@ type Props = {
   onFocusKeyMigrate?: (nextKey: string | null) => void
   /**
    * When true, keep `activePatternId` even if that pattern is temporarily absent from the ranked
-   * list. Used during call-staging: an incomplete staged meld (e.g. kong not Done yet) can drop
-   * the focused line until the claim is finished — rack highlights should stay until commit.
+   * list, and preserve the scroll-pin anchor across that gap. Used during call-staging: an
+   * incomplete staged meld (e.g. kong not Done yet) can drop or reshuffle the focused line until
+   * the claim is finished — row highlight + viewport position should hold while the growable
+   * exposure still fits that hand.
    */
   retainFocusWhenPatternMissing?: boolean
   tilesGuideOn: boolean
@@ -2022,9 +2076,38 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     (rowKeys?: string[]) => {
       const scrollEl = getTrayScrollTarget()
       if (!scrollEl) return
+      const snap = handsListScrollSnapshotRef.current
       const anchorPatternLineId = effectiveFocusRowKey
         ? focusKeyPatternId(effectiveFocusRowKey)
         : null
+      const focusStillInList =
+        effectiveFocusRowKey != null &&
+        (expandedHandsMeta.some((r) => r.focusKey === effectiveFocusRowKey) ||
+          (anchorPatternLineId != null &&
+            expandedHandsMeta.some((r) => r.line.id === anchorPatternLineId)))
+
+      // Call-staging can briefly drop the focused line (or empty the tray) while the exposure is
+      // still growable. Keep the prior pin so the row returns highlighted in the same viewport spot.
+      if (
+        retainFocusWhenPatternMissing &&
+        effectiveFocusRowKey != null &&
+        !focusStillInList
+      ) {
+        handsListScrollSnapshotRef.current = {
+          ...snap,
+          rowKeys:
+            rowKeys && rowKeys.length > 0
+              ? rowKeys
+              : snap.rowKeys.length > 0
+                ? snap.rowKeys
+                : rowKeys ?? snap.rowKeys,
+          anchorKey: snap.anchorKey ?? effectiveFocusRowKey,
+          anchorPatternId: snap.anchorPatternId ?? anchorPatternLineId,
+          scrollTop: scrollEl.scrollTop,
+        }
+        return
+      }
+
       const anchor = findScrollRowAnchor(
         scrollEl,
         effectiveFocusRowKey,
@@ -2035,14 +2118,16 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
       let anchorKey = anchor?.key ?? null
       let anchorPatternId = anchor?.patternId ?? null
       if (!anchor && effectiveFocusRowKey) {
-        const idx = expandedHandsMeta.findIndex((r) => r.focusKey === effectiveFocusRowKey)
+        let idx = expandedHandsMeta.findIndex((r) => r.focusKey === effectiveFocusRowKey)
+        if (idx < 0 && anchorPatternLineId != null) {
+          idx = expandedHandsMeta.findIndex((r) => r.line.id === anchorPatternLineId)
+        }
         if (idx >= 0) {
           viewportTop = idx * rowHeightForVirtual - scrollEl.scrollTop
-          anchorKey = effectiveFocusRowKey
+          anchorKey = expandedHandsMeta[idx]!.focusKey
           anchorPatternId = anchorPatternLineId
         }
       }
-      const snap = handsListScrollSnapshotRef.current
       handsListScrollSnapshotRef.current = {
         rowKeys: rowKeys ?? snap.rowKeys,
         anchorKey,
@@ -2051,7 +2136,13 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
         scrollTop: scrollEl.scrollTop,
       }
     },
-    [effectiveFocusRowKey, getTrayScrollTarget, expandedHandsMeta, rowHeightForVirtual],
+    [
+      effectiveFocusRowKey,
+      getTrayScrollTarget,
+      expandedHandsMeta,
+      rowHeightForVirtual,
+      retainFocusWhenPatternMissing,
+    ],
   )
 
   // Trend arrow reflects the direction of the most recent tiles-away change while a row stays
@@ -2169,12 +2260,22 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
         anchorPatternId != null &&
         prev.anchorPatternId != null &&
         anchorPatternId === prev.anchorPatternId
+      const prevAnchoredFocus =
+        effectiveFocusRowKey != null &&
+        (prev.anchorKey === effectiveFocusRowKey ||
+          prev.anchorKey === anchorKey ||
+          (prev.anchorPatternId != null &&
+            anchorPatternId != null &&
+            prev.anchorPatternId === anchorPatternId))
       // Highlighted row: pin to the viewport position it held before the re-rank (Tiles on/off).
+      // During call-staging retain-focus, pin whenever we still have a prior anchor sample —
+      // growable exposures re-rank often and must not kick the row out of view.
       const pinHighlightedRow =
         effectiveFocusRowKey != null &&
         (samePatternAsPrev ||
-          prev.anchorKey === effectiveFocusRowKey ||
-          prev.anchorKey === anchorKey)
+          prevAnchoredFocus ||
+          (retainFocusWhenPatternMissing &&
+            (prev.anchorKey != null || prev.anchorPatternId != null)))
       if (pinHighlightedRow && anchorRow) {
         const currentViewportTop = rowViewportTopInScrollContainer(anchorRow, scrollEl, scrollRect)
         delta = currentViewportTop - prev.anchorViewportTop
@@ -2223,6 +2324,26 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
       if (Math.abs(delta) >= 0.5) {
         scrollEl.scrollTop = Math.round(scrollEl.scrollTop + delta)
       }
+
+      // Safety: if pin math still left the focused row off-screen (e.g. recovering after a brief
+      // empty tray during growable staging), nudge just enough to bring it back into view.
+      if (retainFocusWhenPatternMissing && effectiveFocusRowKey != null) {
+        let focusIdx = rowKeys.indexOf(effectiveFocusRowKey)
+        if (focusIdx === -1 && anchorPatternId != null) {
+          focusIdx = rowKeys.findIndex((k) => focusKeyPatternId(k) === anchorPatternId)
+        }
+        if (focusIdx >= 0) {
+          const rowTop = focusIdx * fallbackH
+          const rowBottom = rowTop + fallbackH
+          const viewTop = scrollEl.scrollTop
+          const viewBottom = viewTop + scrollEl.clientHeight
+          if (rowTop < viewTop) {
+            scrollEl.scrollTop = Math.round(rowTop)
+          } else if (rowBottom > viewBottom) {
+            scrollEl.scrollTop = Math.round(Math.max(0, rowBottom - scrollEl.clientHeight))
+          }
+        }
+      }
     } else if (focusChanged && effectiveFocusRowKey != null && !keysChanged) {
       refreshScrollSnapshot(rowKeys)
       refreshHandsAboveViewHint()
@@ -2241,6 +2362,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     rowHeightForVirtual,
     syncVirtualRange,
     tilesDetailActive,
+    retainFocusWhenPatternMissing,
   ])
 
   // Measure a real mounted row so spacers match live height (font scales with panel cqi).

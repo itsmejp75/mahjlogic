@@ -266,8 +266,7 @@
 /* Player hand exposures: meld group border only — no per-tile rings on SVG faces. */
 .app[data-tile-graphics='illustrative-classic'] .panel--hand .exposure-rack__slot--suggest-best .tile-face.tile-face--illustrative-art,
 .app[data-tile-graphics='illustrative-classic'] .panel--hand .exposure-rack__slot--called .tile-face.tile-face--illustrative-art,
-.app[data-tile-graphics='illustrative-classic'] .panel--hand .exposure-rack__slot--call-amendable:hover .tile-face.tile-face--illustrative-art,
-.app[data-tile-graphics='illustrative-classic'] .panel--hand .exposure-rack__slot--staged-returnable:hover .tile-face.tile-face--illustrative-art {
+.app[data-tile-graphics='illustrative-classic'] .panel--hand .exposure-rack__slot--call-amendable:hover .tile-face.tile-face--illustrative-art {
   --tile-face-highlight-inset: 0 0 0 0 transparent;
   --tile-face-highlight-shadow: 0 0 0 0 transparent;
 }
@@ -1378,7 +1377,12 @@
   background-size: var(--app-bg-paint-size);
   background-repeat: var(--app-bg-paint-repeat);
   background-blend-mode: var(--app-bg-paint-blend);
-  background-attachment: var(--app-bg-paint-attachment);
+  /*
+   * Themes use `--app-bg-paint-attachment: fixed` for the full play surface. On this
+   * modal that splits background into a separate compositor layer, so the shell can
+   * paint a frame before title/body text. Keep scroll so chrome + copy appear together.
+   */
+  background-attachment: scroll;
   border: 1px solid var(--post-game-tray-border);
   color: var(--post-game-tray-fg);
   box-shadow: 0 12px 40px color-mix(in srgb, var(--color-black) 55%, transparent);

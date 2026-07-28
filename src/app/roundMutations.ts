@@ -405,7 +405,16 @@ export function rankInputDuringCallStaging(
   const preview = buildCallStagingPreview(r, r as RoundState)
   if (!preview) return null
   const pileNext = r.discardPile.filter((e) => e.tile.id !== r.activeBotDiscard!.id)
-  return buildRankInputAfterStagedCall(r as RoundState, preview.handNext, pileNext, preview.eastMelds)
+  const calledId = r.activeBotDiscard.id
+  // Staging meld may still grow (e.g. pung-sized partial toward a kong) — keep card lines
+  // that need the larger slot so the hands tray does not blank mid-call.
+  const allowUndersizeClaimMeldIndexes = preview.eastMelds
+    .map((m, i) => (m.calledTileId === calledId ? i : -1))
+    .filter((i): i is number => i >= 0)
+  return {
+    ...buildRankInputAfterStagedCall(r as RoundState, preview.handNext, pileNext, preview.eastMelds),
+    allowUndersizeClaimMeldIndexes,
+  }
 }
 
 /**

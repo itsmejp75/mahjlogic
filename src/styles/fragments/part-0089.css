@@ -28,7 +28,6 @@
 
 .panel--bot-exposures .exposure-rack__slot--suggest-best .tile-face,
 .panel--bot-exposures .exposure-rack__slot--called .tile-face,
-.panel--bot-exposures .exposure-rack__slot--staged-returnable:hover .tile-face,
 .panel--bot-exposures .exposure-rack__slot--call-amendable:hover .tile-face {
   border-radius: var(--tile-face-border-radius);
 }

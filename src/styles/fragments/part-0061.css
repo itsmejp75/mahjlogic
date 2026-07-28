@@ -628,7 +628,6 @@
 /* Highlight / hover rings: use tray-scaled radius, not the main-rack 0.35rem default. */
 .discard-tracker__content .exposure-rack__slot--suggest-best .tile-face,
 .discard-tracker__content .exposure-rack__slot--called .tile-face,
-.discard-tracker__content .exposure-rack__slot--staged-returnable:hover .tile-face,
 .discard-tracker__content .exposure-rack__slot--call-amendable:hover .tile-face,
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--suggest-need .tile-face {
   border-radius: var(--tile-face-border-radius);

@@ -167,6 +167,7 @@ export function useRankSuggestedHandsWorker({
     input.exposures,
     input.playerClaimMelds,
     input.eastTableClaimMelds,
+    input.allowUndersizeClaimMeldIndexes,
     input.patterns,
     input.deckSettings?.totalJokersInGame,
     input.deckSettings?.totalBlanksInGame,

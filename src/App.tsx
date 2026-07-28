@@ -42,15 +42,13 @@ import { useRankSuggestedHandsWorker } from './analysis/rankSuggestedHandsAsync'
 import { CharlestonPassStripInstructionMain } from './components/CharlestonPassStripInstructionLabel'
 import { BotExposureHandsPanel } from './components/BotExposureHandsPanel'
 import { SuggestedHandsPanel } from './components/SuggestedHandsPanel'
+import { PostGameLoserRackRow } from './components/PostGameLoserRackRow'
+import { HIDE_CONCEALED_HANDS_STORAGE_KEY, readHideConcealedHandsFromStorage, writeHideConcealedHandsToStorage, readUncheckedSectionsFromStorage, writeUncheckedSectionsToStorage, suggestedHandsFilterMenuColumns, SUGGESTED_HANDS_UNCHECKED_SECTIONS_KEY, suggestedHandSectionMenuLabel, suggestedHandSectionsAvailableWithClaimMelds, isSuggestedHandSectionFilterEnabled, toggledSuggestedHandSectionFilter } from './suggestedHands/filterSettings'
 
 /** Rare overlays — keep analysis-heavy dialogs out of the initial play bundle. */
 const IllegalMahjongDialog = lazy(() =>
   import('./components/IllegalMahjongDialog').then((m) => ({ default: m.IllegalMahjongDialog })),
 )
-const PostGameLoserRackRow = lazy(() =>
-  import('./components/PostGameLoserRackRow').then((m) => ({ default: m.PostGameLoserRackRow })),
-)
-import { HIDE_CONCEALED_HANDS_STORAGE_KEY, readHideConcealedHandsFromStorage, writeHideConcealedHandsToStorage, readUncheckedSectionsFromStorage, writeUncheckedSectionsToStorage, suggestedHandsFilterMenuColumns, SUGGESTED_HANDS_UNCHECKED_SECTIONS_KEY, suggestedHandSectionMenuLabel, suggestedHandSectionsAvailableWithClaimMelds, isSuggestedHandSectionFilterEnabled, toggledSuggestedHandSectionFilter } from './suggestedHands/filterSettings'
 import type { BotExposure, BotSeat } from './analysis/types'
 import { BOT_DIFFICULTIES, type BotDifficulty, chooseBotDiscard, botCallStrategicProbability, botBestTilesAway, tryBotBlankExchange, DEFAULT_BOT_DIFFICULTY, isBotDifficulty, type BotRankContext } from './analysis/botAI'
 import { hasLegalMahjongOnBotDiscard, isMahjongWinOnLiveBotDiscard, isSelfDrawMahjongWin, type CallValidationRoundSlice } from './mahjong/callValidation'
@@ -7032,39 +7030,37 @@ export default function App() {
             </p>
             {postGameWallGameReview ? (
               <div className="wall-game-dialog__review mahjong-win__bots-review" aria-labelledby="wall-game-title">
-                <Suspense fallback={null}>
-                  <ul className="mahjong-win__bots-review-list">
-                    {postGameWallGameReview.rows[0] ? (
-                      <li key={postGameWallGameReview.rows[0].label} className="mahjong-win__bots-review-card">
-                        <PostGameLoserRackRow
-                          rowId={`wall-${postGameWallGameReview.rows[0].label}`}
-                          label={postGameWallGameReview.rows[0].label}
-                          bestTilesAway={postGameWallGameReview.rows[0].bestTilesAway}
-                          linesAtMin={postGameWallGameReview.rows[0].linesAtMin}
-                          rankInput={postGameWallGameReview.rows[0].rankInput}
-                          showTiedLinePicker={postGameWallGameReview.rows[0].linesAtMin.length > 1}
-                          cardVariant="wrapped"
-                          trailingLabel="none"
-                          playerSeatFocus
-                        />
-                      </li>
-                    ) : null}
-                    {postGameWallGameReview.rows.slice(1).map((row) => (
-                      <li key={row.label} className="mahjong-win__bots-review-card">
-                        <PostGameLoserRackRow
-                          rowId={`wall-${row.label}`}
-                          label={row.label}
-                          bestTilesAway={row.bestTilesAway}
-                          linesAtMin={row.linesAtMin}
-                          rankInput={row.rankInput}
-                          showTiedLinePicker={row.linesAtMin.length > 1}
-                          cardVariant="wrapped"
-                          trailingLabel="none"
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                </Suspense>
+                <ul className="mahjong-win__bots-review-list">
+                  {postGameWallGameReview.rows[0] ? (
+                    <li key={postGameWallGameReview.rows[0].label} className="mahjong-win__bots-review-card">
+                      <PostGameLoserRackRow
+                        rowId={`wall-${postGameWallGameReview.rows[0].label}`}
+                        label={postGameWallGameReview.rows[0].label}
+                        bestTilesAway={postGameWallGameReview.rows[0].bestTilesAway}
+                        linesAtMin={postGameWallGameReview.rows[0].linesAtMin}
+                        rankInput={postGameWallGameReview.rows[0].rankInput}
+                        showTiedLinePicker={postGameWallGameReview.rows[0].linesAtMin.length > 1}
+                        cardVariant="wrapped"
+                        trailingLabel="none"
+                        playerSeatFocus
+                      />
+                    </li>
+                  ) : null}
+                  {postGameWallGameReview.rows.slice(1).map((row) => (
+                    <li key={row.label} className="mahjong-win__bots-review-card">
+                      <PostGameLoserRackRow
+                        rowId={`wall-${row.label}`}
+                        label={row.label}
+                        bestTilesAway={row.bestTilesAway}
+                        linesAtMin={row.linesAtMin}
+                        rankInput={row.rankInput}
+                        showTiedLinePicker={row.linesAtMin.length > 1}
+                        cardVariant="wrapped"
+                        trailingLabel="none"
+                      />
+                    </li>
+                  ))}
+                </ul>
               </div>
             ) : null}
             <div className="wall-game-dialog__actions">
@@ -7106,39 +7102,37 @@ export default function App() {
             </p>
             {postGameBotReview ? (
               <div className="wall-game-dialog__review mahjong-win__bots-review" aria-labelledby="mj-win-title">
-                <Suspense fallback={null}>
-                  <ul className="mahjong-win__bots-review-list">
-                    {postGameBotReview[0] ? (
-                      <li key={postGameBotReview[0].label} className="mahjong-win__bots-review-card">
-                        <PostGameLoserRackRow
-                          rowId={`mj-win-${postGameBotReview[0].label}`}
-                          label={postGameBotReview[0].label}
-                          bestTilesAway={postGameBotReview[0].bestTilesAway}
-                          linesAtMin={postGameBotReview[0].linesAtMin}
-                          rankInput={postGameBotReview[0].rankInput}
-                          showTiedLinePicker={postGameBotReview[0].linesAtMin.length > 1}
-                          cardVariant="wrapped"
-                          trailingLabel="none"
-                          playerSeatFocus
-                        />
-                      </li>
-                    ) : null}
-                    {postGameBotReview.slice(1).map((row) => (
-                      <li key={row.label} className="mahjong-win__bots-review-card">
-                        <PostGameLoserRackRow
-                          rowId={`mj-win-${row.label}`}
-                          label={row.label}
-                          bestTilesAway={row.bestTilesAway}
-                          linesAtMin={row.linesAtMin}
-                          rankInput={row.rankInput}
-                          showTiedLinePicker={row.linesAtMin.length > 1}
-                          cardVariant="wrapped"
-                          trailingLabel="none"
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                </Suspense>
+                <ul className="mahjong-win__bots-review-list">
+                  {postGameBotReview[0] ? (
+                    <li key={postGameBotReview[0].label} className="mahjong-win__bots-review-card">
+                      <PostGameLoserRackRow
+                        rowId={`mj-win-${postGameBotReview[0].label}`}
+                        label={postGameBotReview[0].label}
+                        bestTilesAway={postGameBotReview[0].bestTilesAway}
+                        linesAtMin={postGameBotReview[0].linesAtMin}
+                        rankInput={postGameBotReview[0].rankInput}
+                        showTiedLinePicker={postGameBotReview[0].linesAtMin.length > 1}
+                        cardVariant="wrapped"
+                        trailingLabel="none"
+                        playerSeatFocus
+                      />
+                    </li>
+                  ) : null}
+                  {postGameBotReview.slice(1).map((row) => (
+                    <li key={row.label} className="mahjong-win__bots-review-card">
+                      <PostGameLoserRackRow
+                        rowId={`mj-win-${row.label}`}
+                        label={row.label}
+                        bestTilesAway={row.bestTilesAway}
+                        linesAtMin={row.linesAtMin}
+                        rankInput={row.rankInput}
+                        showTiedLinePicker={row.linesAtMin.length > 1}
+                        cardVariant="wrapped"
+                        trailingLabel="none"
+                      />
+                    </li>
+                  ))}
+                </ul>
               </div>
             ) : null}
             <div className="wall-game-dialog__actions">
@@ -7179,37 +7173,35 @@ export default function App() {
               {postGameBotMahjongReview.winDescription}
             </p>
             <div className="wall-game-dialog__review mahjong-win__bots-review" aria-labelledby="bot-mj-win-title">
-              <Suspense fallback={null}>
-                <ul className="mahjong-win__bots-review-list">
-                  <li key={postGameBotMahjongReview.winnerRow.label} className="mahjong-win__bots-review-card">
+              <ul className="mahjong-win__bots-review-list">
+                <li key={postGameBotMahjongReview.winnerRow.label} className="mahjong-win__bots-review-card">
+                  <PostGameLoserRackRow
+                    rowId={`bot-mj-${postGameBotMahjongReview.winnerRow.label}`}
+                    label={postGameBotMahjongReview.winnerRow.label}
+                    bestTilesAway={postGameBotMahjongReview.winnerRow.bestTilesAway}
+                    linesAtMin={postGameBotMahjongReview.winnerRow.linesAtMin}
+                    rankInput={postGameBotMahjongReview.winnerRow.rankInput}
+                    showTiedLinePicker={postGameBotMahjongReview.winnerRow.linesAtMin.length > 1}
+                    cardVariant="wrapped"
+                    trailingLabel="none"
+                    playerSeatFocus
+                  />
+                </li>
+                {postGameBotMahjongReview.loserRows.map((row) => (
+                  <li key={row.label} className="mahjong-win__bots-review-card">
                     <PostGameLoserRackRow
-                      rowId={`bot-mj-${postGameBotMahjongReview.winnerRow.label}`}
-                      label={postGameBotMahjongReview.winnerRow.label}
-                      bestTilesAway={postGameBotMahjongReview.winnerRow.bestTilesAway}
-                      linesAtMin={postGameBotMahjongReview.winnerRow.linesAtMin}
-                      rankInput={postGameBotMahjongReview.winnerRow.rankInput}
-                      showTiedLinePicker={postGameBotMahjongReview.winnerRow.linesAtMin.length > 1}
+                      rowId={`bot-mj-${row.label}`}
+                      label={row.label}
+                      bestTilesAway={row.bestTilesAway}
+                      linesAtMin={row.linesAtMin}
+                      rankInput={row.rankInput}
+                      showTiedLinePicker={row.linesAtMin.length > 1}
                       cardVariant="wrapped"
                       trailingLabel="none"
-                      playerSeatFocus
                     />
                   </li>
-                  {postGameBotMahjongReview.loserRows.map((row) => (
-                    <li key={row.label} className="mahjong-win__bots-review-card">
-                      <PostGameLoserRackRow
-                        rowId={`bot-mj-${row.label}`}
-                        label={row.label}
-                        bestTilesAway={row.bestTilesAway}
-                        linesAtMin={row.linesAtMin}
-                        rankInput={row.rankInput}
-                        showTiedLinePicker={row.linesAtMin.length > 1}
-                        cardVariant="wrapped"
-                        trailingLabel="none"
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </Suspense>
+                ))}
+              </ul>
             </div>
             <div className="wall-game-dialog__actions">
               <button

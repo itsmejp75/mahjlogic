@@ -842,8 +842,10 @@
   align-items: center;
   justify-content: flex-start;
   padding: var(--wall-game-overlay-pad-top) 1rem var(--wall-game-overlay-pad-bottom);
-  background: color-mix(in srgb, #0a0a0a 72%, transparent);
-  backdrop-filter: blur(3px);
+  /* No dim scrim — keep the main app atmosphere visible behind the dialog (like menu). */
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   overflow: hidden;
   overscroll-behavior: none;
 }
@@ -898,7 +900,8 @@
   background-size: var(--app-bg-paint-size);
   background-repeat: var(--app-bg-paint-repeat);
   background-blend-mode: var(--app-bg-paint-blend);
-  background-attachment: var(--app-bg-paint-attachment);
+  /* See part-0124: fixed attachment on this modal paints shell before text. */
+  background-attachment: scroll;
   border: 2px solid var(--border, #334);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
   text-align: center;

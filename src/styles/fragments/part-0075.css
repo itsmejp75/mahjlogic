@@ -528,7 +528,9 @@
   .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
   .hands-sheet__tile-cell--suggest-joker
 ) > .tile-face:not(.tile-face--suggest-joker-timeshare) {
+  /* Shared strip `--suggest-joker-timeshare-delay`; faces remount when the joker set changes. */
   animation: suggest-joker-timeshare-natural 4s linear infinite;
+  animation-delay: var(--suggest-joker-timeshare-delay, 0ms);
   transform: translateZ(0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
@@ -539,6 +541,7 @@
   .hands-sheet__tile-cell--suggest-joker
 ) > .tile-face--suggest-joker-timeshare {
   animation: suggest-joker-timeshare-joker 4s linear infinite;
+  animation-delay: var(--suggest-joker-timeshare-delay, 0ms);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -6082,6 +6082,11 @@ export type RankSuggestedHandsInput = {
    * size only — not toward Away — so staging junk does not change ownership bookkeeping.
    */
   pendingDiscardTile?: TileInstance | null
+  /**
+   * Indexes into {@link playerClaimMelds} that are still growable (call-staging). Those melds
+   * may match pattern slots with `count <= need` so an incomplete kong does not wipe the tray.
+   */
+  allowUndersizeClaimMeldIndexes?: readonly number[]
 }
 
 function cardBookForRankInput(input: RankSuggestedHandsInput): PracticePattern[] {
@@ -6188,9 +6193,16 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
     cardLineNumbers.set(p.id, sectionLineCount[p.section])
   }
 
+  const undersizeIdx = input.allowUndersizeClaimMeldIndexes
+  const claimFitOpts =
+    undersizeIdx && undersizeIdx.length > 0
+      ? { allowUndersizeAtIndexes: new Set(undersizeIdx) }
+      : undefined
   const patternsToRank = book.filter((p) => {
     if (hasPlayerClaimMelds && p.closed) return false
-    if (hasPlayerClaimMelds && !claimMeldsFitPracticePattern(p, playerClaimMelds)) return false
+    if (hasPlayerClaimMelds && !claimMeldsFitPracticePattern(p, playerClaimMelds, claimFitOpts)) {
+      return false
+    }
     return true
   })
 

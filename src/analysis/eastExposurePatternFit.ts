@@ -565,22 +565,39 @@ function meldKeyCount(
 
 type Slot = { key: string; need: number }
 
+export type ClaimMeldFitOptions = {
+  /**
+   * Melds at these indexes may fill a same-key slot with `count <= need`
+   * (in-progress call-staging toward a larger exposure, e.g. 3 tiles of a kong).
+   * Committed exposures stay exact-size.
+   */
+  allowUndersizeAtIndexes?: ReadonlySet<number>
+}
+
 /**
  * True if we can assign each meld to a **distinct** slot (key + need) with
  * `meld.key === slot.key` and `meld.count === slot.need` — all melds use one
  * hand embedding. Slots come from the **per-group** branch maps, not a merged
  * `Map` (so two 7D pungs from two groups are two 3s, not one 6-bucket).
+ * When `allowUndersizeAtIndexes` includes a meld index, that meld may match with
+ * `count <= need` instead of exact size.
  */
-function canMatchMeldsToSlots(sigs: { key: string; count: number }[], slots: Slot[]): boolean {
+function canMatchMeldsToSlots(
+  sigs: { key: string; count: number }[],
+  slots: Slot[],
+  allowUndersizeAtIndexes?: ReadonlySet<number>,
+): boolean {
   if (sigs.length > slots.length) return false
   const used = new Array(slots.length).fill(false)
   const dfs = (i: number): boolean => {
     if (i >= sigs.length) return true
     const s = sigs[i]!
+    const allowUnder = allowUndersizeAtIndexes?.has(i) === true
     for (let j = 0; j < slots.length; j++) {
       if (used[j]) continue
       const sl = slots[j]!
-      if (s.key === sl.key && s.count === sl.need) {
+      const sizeOk = allowUnder ? s.count <= sl.need : s.count === sl.need
+      if (s.key === sl.key && sizeOk) {
         used[j] = true
         if (dfs(i + 1)) return true
         used[j] = false
@@ -610,6 +627,7 @@ function eachMeldMatchesThisEmbedding(
   merged: Map<string, number>,
   deltaList: ReadonlyArray<Map<string, number>>,
   exp: Map<string, number>,
+  allowUndersizeAtIndexes?: ReadonlySet<number>,
 ): boolean {
   if (!exposureFitsCap(exp, merged)) return false
   const sigs: { key: string; count: number }[] = []
@@ -618,17 +636,20 @@ function eachMeldMatchesThisEmbedding(
     if (sig == null) return false
     sigs.push(sig)
   }
-  return canMatchMeldsToSlots(sigs, slotsFromDeltaList(deltaList))
+  return canMatchMeldsToSlots(sigs, slotsFromDeltaList(deltaList), allowUndersizeAtIndexes)
 }
 
 /**
  * True when every tile in these discard-claim melds can sit on some NMJL-valid embedding
  * of this practice pattern (East or any other seat), AND each individual meld's locked
  * size exactly matches a group in the pattern (a pung of 3 cannot satisfy a kong of 4).
+ * Pass {@link ClaimMeldFitOptions.allowUndersizeAtIndexes} during call-staging so an
+ * incomplete growable exposure (e.g. 3 of 4 toward a kong) still fits kong slots.
  */
 export function claimMeldsFitPracticePattern(
   pat: PracticePattern,
   exposures: ReadonlyArray<{ tiles: TileInstance[] }>,
+  options?: ClaimMeldFitOptions,
 ): boolean {
   if (!exposures.length) return true
   const defs = normalizeExposureTiles(exposures)
@@ -643,12 +664,15 @@ export function claimMeldsFitPracticePattern(
   // Comparing to a merged `Map` alone is wrong when two groups need the same key
   // (e.g. two 7D pungs); the old per-meld/branch check let mixed embeddings through.
   const exp = aggregateExposureKeys(defs)
+  const allowUndersizeAtIndexes = options?.allowUndersizeAtIndexes
   for (const deltaList of enumerateGroupDeltaLists(pat.groups)) {
     let merged = new Map<string, number>()
     for (const d of deltaList) {
       merged = mergeCap(merged, d)
     }
-    if (eachMeldMatchesThisEmbedding(exposures, merged, deltaList, exp)) return true
+    if (eachMeldMatchesThisEmbedding(exposures, merged, deltaList, exp, allowUndersizeAtIndexes)) {
+      return true
+    }
   }
   return false
 }
