@@ -71,6 +71,28 @@ export type WallCompletionProbabilityInput = {
    * Counts toward supply / deficit relief but not rack proximity or tiles-away until the swap commits.
    */
   jokerReliefFromSwapHint?: number
+  /**
+   * Exposed swap-eligible jokers not already credited by {@link jokerReliefFromSwapHint}.
+   * Each channel is a stand-in tile type: drawing that natural (beyond natural-only reserve)
+   * unlocks up to `jokerCount` flexible jokers via swap. Mixture uses exact multivariate
+   * hypergeometric P(S=s) — no heuristic discount.
+   */
+  prospectiveSwapChannels?: readonly ProspectiveSwapChannel[]
+}
+
+/** One stand-in tile type with exposed jokers still available for a future swap. */
+export type ProspectiveSwapChannel = {
+  /** Inventory key (`s:dot:1`, `d:soap`, `f`, …) matching {@link hiddenNaturalOutsForSlot}. */
+  tileType: string
+  /** How many exposed jokers of this stand-in remain (after immediate swap relief). */
+  jokerCount: number
+  /** Hidden naturals of this type in the unknown pool. */
+  outs: number
+  /**
+   * Draws of this type that must satisfy natural-only slots (pairs/singles) before a draw
+   * is surplus and can be spent on a joker swap.
+   */
+  reservedForNaturalOnly: number
 }
 
 export type HandCompletionMetrics = {
@@ -353,7 +375,7 @@ function pctFromProb(p: number): number {
   return Math.max(1, Math.min(100, rounded))
 }
 
-function hiddenNaturalOutsForSlot(
+export function hiddenNaturalOutsForSlot(
   tileType: string,
   naturals: TileCountMap,
   visibleNaturals: TileCountMap,
@@ -706,6 +728,131 @@ function naturalCompetitionDampener(totalNaturalNeed: number): number {
 }
 
 /**
+ * Remaining natural-only (pair/single) need per tile type after rack holdings.
+ * Prospective swaps may only spend draws beyond this reserve.
+ */
+export function naturalOnlyReserveByTileType(
+  slots: readonly CompletionSlot[],
+  naturals: TileCountMap,
+  jokersDisallowed: boolean,
+): Record<string, number> {
+  const need: Record<string, number> = {}
+  for (const slot of slots) {
+    if (slotAllowsJokers(slot, jokersDisallowed)) continue
+    const held = countNaturalsForSlot(slot.tileType, naturals)
+    const gap = Math.max(0, slot.targetCount - held)
+    if (gap <= 0) continue
+    need[slot.tileType] = (need[slot.tileType] ?? 0) + gap
+  }
+  return need
+}
+
+/**
+ * Exact P(S = s) for prospective joker swaps under a shared draw budget.
+ *
+ * For each channel i, X_i ~ multivariate hypergeometric (typed naturals in the unknown pool).
+ * Surplus draws Yi = max(0, X_i − reserved_i) may each redeem one exposed joker of that type,
+ * up to jokerCount_i. S = Σ min(C_i, Y_i).
+ *
+ * `trials` may be fractional (blended neighboring integers), matching wall-draw trials.
+ */
+export function prospectiveSwapJokerDistribution(
+  channels: readonly ProspectiveSwapChannel[],
+  trials: number,
+  pool: number,
+): number[] {
+  const maxS = channels.reduce((a, c) => a + Math.max(0, c.jokerCount), 0)
+  const dist = new Array(maxS + 1).fill(0) as number[]
+  if (maxS === 0) {
+    dist[0] = 1
+    return dist
+  }
+  mixProspectiveSwapOutcomes(channels, trials, pool, (weight, totalSwaps) => {
+    dist[totalSwaps] = (dist[totalSwaps] ?? 0) + weight
+  })
+  const sum = dist.reduce((a, b) => a + b, 0)
+  if (sum > 0 && Math.abs(sum - 1) > 1e-9) {
+    for (let i = 0; i < dist.length; i++) dist[i]! /= sum
+  }
+  if (sum <= 0) dist[0] = 1
+  return dist
+}
+
+/**
+ * Enumerate multivariate-hypergeometric draw outcomes for prospective swap channels.
+ * For each outcome, `onOutcome(weight, totalSwaps, swapsByType)` is invoked with the exact
+ * probability weight. Naturals spent on swaps are reported per tile type so callers can remove
+ * them from hidden outs (no double-count as both slot naturals and swap jokers).
+ */
+export function mixProspectiveSwapOutcomes(
+  channels: readonly ProspectiveSwapChannel[],
+  trials: number,
+  pool: number,
+  onOutcome: (
+    weight: number,
+    totalSwaps: number,
+    swapsByType: Readonly<Record<string, number>>,
+  ) => void,
+): void {
+  if (channels.length === 0 || trials <= 0 || pool <= 0) {
+    onOutcome(1, 0, {})
+    return
+  }
+
+  const runInt = (n: number, scale: number) => {
+    if (n <= 0 || scale <= 0) {
+      onOutcome(scale, 0, {})
+      return
+    }
+    const totalTyped = channels.reduce((a, c) => a + Math.max(0, c.outs), 0)
+    const other = pool - totalTyped
+    if (other < 0) {
+      onOutcome(scale, 0, {})
+      return
+    }
+    const denom = binomial(pool, n)
+    if (denom <= 0) {
+      onOutcome(scale, 0, {})
+      return
+    }
+
+    const swapsByType: Record<string, number> = {}
+    const walk = (i: number, nLeft: number, ways: number, totalSwaps: number) => {
+      if (i === channels.length) {
+        if (nLeft > other || nLeft < 0) return
+        onOutcome(scale * ((ways * binomial(other, nLeft)) / denom), totalSwaps, {
+          ...swapsByType,
+        })
+        return
+      }
+      const c = channels[i]!
+      const outs = Math.max(0, c.outs)
+      const reserved = Math.max(0, c.reservedForNaturalOnly)
+      const cap = Math.max(0, c.jokerCount)
+      const maxX = Math.min(outs, nLeft)
+      for (let x = 0; x <= maxX; x++) {
+        const surplus = Math.max(0, x - reserved)
+        const s = Math.min(cap, surplus)
+        if (s > 0) swapsByType[c.tileType] = s
+        walk(i + 1, nLeft - x, ways * binomial(outs, x), totalSwaps + s)
+        delete swapsByType[c.tileType]
+      }
+    }
+    walk(0, n, 1, 0)
+  }
+
+  const n0 = Math.floor(trials)
+  const n1 = Math.ceil(trials)
+  if (n0 === n1) {
+    runInt(n0, 1)
+    return
+  }
+  const w = trials - n0
+  runInt(n0, 1 - w)
+  runInt(n1, w)
+}
+
+/**
  * Solo completion probability (0–100) before the wall runs out.
  *
  * Analytical model:
@@ -714,6 +861,7 @@ function naturalCompetitionDampener(totalNaturalNeed: number): number {
  * - Slot-precise product blended with pooled “useful tile” cover while the wall is high
  *   (independence alone crushes opening Away-6..8 hands to ~1%)
  * - Jokers via nat+joker multivariate fill — never EV wipeout to 100%
+ * - Prospective joker swaps: mixture over exact P(S=s) × completion | S swap jokers unlocked
  */
 export function calculateWallCompletionProbability(
   input: WallCompletionProbabilityInput,
@@ -732,6 +880,7 @@ export function calculateWallCompletionProbability(
     playerRackTileCount,
     tilesNeededRough,
     jokerReliefFromSwapHint = 0,
+    prospectiveSwapChannels = [],
   } = input
 
   if (tilesNeededRough <= 0 || completion.D <= 0) return 100
@@ -756,6 +905,83 @@ export function calculateWallCompletionProbability(
 
   const exchangeTrials = earlyExchangeTrials(wallRemaining, visibleTotal)
   const baseAcquisition = wallDraws + exchangeTrials
+
+  const channels =
+    isSinglesAndPairs || ctx.jokersDisallowed
+      ? []
+      : prospectiveSwapChannels.filter((c) => c.jokerCount > 0 && c.outs > 0)
+
+  let pMix = 0
+  let weightSum = 0
+  mixProspectiveSwapOutcomes(channels, baseAcquisition, unknownPool, (weight, totalSwaps, swapsByType) => {
+    if (weight <= 0) return
+    weightSum += weight
+    let visibleForOutcome = visibleNaturals
+    const spentTypes = Object.keys(swapsByType)
+    if (spentTypes.length > 0) {
+      const adj: Record<string, number> = { ...visibleNaturals }
+      for (const key of spentTypes) {
+        adj[key] = (adj[key] ?? 0) + (swapsByType[key] ?? 0)
+      }
+      visibleForOutcome = adj
+    }
+    pMix +=
+      weight *
+      wallCompletionProbabilityGivenSwapRelief(
+        {
+          slots,
+          ctx,
+          completion,
+          visibleNaturals: visibleForOutcome,
+          visibleJokers,
+          visibleBlanks,
+          wallRemaining,
+          isConcealed,
+          isSinglesAndPairs,
+          deck,
+          playerRackTileCount,
+          tilesNeededRough,
+        },
+        wallDraws,
+        unknownPool,
+        exchangeTrials,
+        baseAcquisition,
+        jokerReliefFromSwapHint + totalSwaps,
+      )
+  })
+
+  if (weightSum > 0 && Math.abs(weightSum - 1) > 1e-9) {
+    pMix /= weightSum
+  }
+
+  return pctFromProb(Math.min(1, Math.max(0, pMix)))
+}
+
+/**
+ * Completion probability in [0, 1] for a fixed joker-swap relief count (immediate + conditioned
+ * prospective successes). Shared wall/pool terms are passed in to avoid recomputing.
+ */
+function wallCompletionProbabilityGivenSwapRelief(
+  input: Omit<WallCompletionProbabilityInput, 'jokerReliefFromSwapHint' | 'prospectiveSwapChannels'>,
+  wallDraws: number,
+  unknownPool: number,
+  exchangeTrials: number,
+  baseAcquisition: number,
+  jokerReliefFromSwapHint: number,
+): number {
+  const {
+    slots,
+    ctx,
+    completion,
+    visibleNaturals,
+    visibleJokers,
+    visibleBlanks,
+    wallRemaining,
+    isConcealed,
+    isSinglesAndPairs,
+    deck,
+    tilesNeededRough,
+  } = input
 
   const { naturals: workingNaturals, fluidBlanks } = blankNaturalRelief(slots, ctx, deck)
   const jokerAlloc = allocateJokersForProbability(
@@ -920,7 +1146,7 @@ export function calculateWallCompletionProbability(
   const totalMinJokers = meldNeeds.reduce((s, m) => s + m.minJokers, 0)
   if (totalMinJokers > hiddenJokers) return 0
 
-  if (naturalOnly.length === 0 && meldNeeds.length === 0) return 100
+  if (naturalOnly.length === 0 && meldNeeds.length === 0) return 1
 
   let pPrecise = 1
 
@@ -965,7 +1191,7 @@ export function calculateWallCompletionProbability(
       : hypergeometricAtLeast(usefulPool, coverTrials, unknownPool, coverNeed)
 
   const coverW = earlyCoverWeight(wallRemaining, tilesNeededRough)
-  let p = linearBlend(pCover, pPrecise, coverW)
+  const p = linearBlend(pCover, pPrecise, coverW)
 
   const hiddenBlanks = Math.max(
     0,
@@ -977,7 +1203,7 @@ export function calculateWallCompletionProbability(
       ? 1 + Math.min(0.25, hypergeometricAtLeast(hiddenBlanks, wallDraws, unknownPool, 1) * 0.25)
       : 1
 
-  return pctFromProb(Math.min(1, Math.max(0, p * blankBoost)))
+  return Math.min(1, Math.max(0, p * blankBoost))
 }
 
 /**

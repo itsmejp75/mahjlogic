@@ -21,7 +21,7 @@ Sourced from design discussion; not committed work. Revisit and break into ticke
 ## Jokers (offense)
 
 - [ ] Model **path to completion** where jokers fill pung/kong/kong-like needs but **not** pairs (NMJL-specific).
-- [ ] Treat **joker swap** as a compound event: probability of drawing the swap tile × probability the swap target exposure still matters (game still in play, exposure still valid for swap).
+- [x] Treat **joker swap** as a compound event: probability of drawing the swap tile × probability the swap target exposure still matters (game still in play, exposure still valid for swap).
 
 ## Jokers (defense)
 

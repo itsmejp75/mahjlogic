@@ -8,7 +8,7 @@ import type { ClaimType, DiscardEntry, EastExposure, Seat, TileDef, TileInstance
 import { formatMahjongWinDescription } from './mahjong/labels'
 import { findFocusedPatternDeadCause, focusedLineJokerIneligibleNeedForDef, type DeadCauseHint } from './mahjong/deadCauseHint'
 import { addDeadHintNeed, copyDeadHintNeeds, deadHintDefKey, deadHintGroupNeedVariants, patternNeedVariantIsSatisfiable, type DeadHintNeedMap } from './mahjong/deadHintVariants'
-import { findExactMatches, tileDefsEqual, type SortMode } from './mahjong/tileUtils'
+import { findExactMatches, sortTiles, tileDefsEqual, type SortMode } from './mahjong/tileUtils'
 import { charlestonAllowsBlind, charlestonPassStripInstructionAria, charlestonRackRoundTitle, type CharlestonPhase } from './mahjong/charleston'
 import type { HandTileFlyInFrom } from './mahjong/handTileFlyIn'
 import { handTileFlyInFromBotSeat } from './mahjong/handTileFlyIn'
@@ -36,7 +36,7 @@ import {
 import { PLAYABLE_CARD_IDS, PLAYABLE_CARD_LABEL, type PlayableCardId, cardSectionOrderFromPatterns, patternsForCard, playableCardShortLabel, readPlayableCardFromStorage, writePlayableCardToStorage } from './card/cardCatalog'
 import type { PracticePattern } from './card/practicePatterns'
 import { patternByIdLookup, setActiveCardPatterns } from './card/activeCardPatternsScope'
-import { buildPinnedPatternsFromFocusKey, computeRackPatternHighlightIds, computeBlankExchangeFills, greedyPatternMatchDetail, jokerSwapHandHintUsesSingleBounceIteration, focusKeyForSuggestedHandLine, focusKeyPatternId, segmentRackIntoExposureRuns, sortFullRackTilesForPattern, suggestedHandsTiedAtBest, summarizeRackTowardWin, computeSuggestedDiscardNeedHighlightIds, computeSuggestedDiscardTrackerNeedDefs, computeBotExposureSuggestedBestIds, findInfeasibleBestIds, buildUnavailableTileDefCounts, tileMultisetSignature, type RankSuggestedHandsInput } from './analysis/suggestedHands'
+import { buildPinnedPatternsFromFocusKey, computeRackPatternHighlightIds, computeBlankExchangeFills, greedyPatternMatchDetail, jokerSwapHandHintUsesSingleBounceIteration, focusKeyForSuggestedHandLine, focusKeyPatternId, sortFullRackTilesForPattern, suggestedHandsTiedAtBest, summarizeRackTowardWin, computeSuggestedDiscardNeedHighlightIds, computeSuggestedDiscardTrackerNeedDefs, computeBotExposureSuggestedBestIds, findInfeasibleBestIds, buildUnavailableTileDefCounts, tileMultisetSignature, type RankSuggestedHandsInput } from './analysis/suggestedHands'
 import { tileInstancesWithClaimMeldJokersResolved, listOpenHandsFittingClaimMelds, openClaimMeldsFitSomePracticeLine } from './analysis/eastExposurePatternFit'
 import { useRankSuggestedHandsWorker } from './analysis/rankSuggestedHandsAsync'
 import { CharlestonPassStripInstructionMain } from './components/CharlestonPassStripInstructionLabel'
@@ -4156,8 +4156,9 @@ export default function App() {
   }, [mainPhase, botWin, bots, hand, wall.length, discardTiles, botExposures, eastExposures, cardPatterns, botSlotSeats, playerYouLabelText])
 
   /**
-   * Table Review: dump each bot’s full hand into the exposure rail (card order).
-   * Lit = tiles that were exposed during play; dim = concealed. Winner keeps every tile lit.
+   * Table Review: dump each bot’s full hand into the exposure rail.
+   * Keep claim melds contiguous (table order) so exposed groups stay together; concealed
+   * tiles follow, suit-sorted. Lit = exposed; dim = concealed. Winner keeps every tile lit.
    */
   const postGameBotTableReviewRacks = useMemo(() => {
     if (!postGameTableReviewing) return null
@@ -4186,16 +4187,12 @@ export default function App() {
       }
       const { linesAtMin } = suggestedHandsTiedAtBest(rankInput)
       const line = linesAtMin[0]
-      const fullRack = line
-        ? sortFullRackTilesForPattern(
-            line.id,
-            rankInput,
-            focusKeyForSuggestedHandLine(line),
-          )
-        : [...botHand, ...claims.flatMap((c) => c.tiles)]
-      const melds = segmentRackIntoExposureRuns(fullRack, claims).map((run) => ({
-        tiles: run.tiles,
-      }))
+      // Claim melds first (each intact), then suit-sorted concealed — never card-strip order,
+      // which can split an exposure (e.g. soap kong) across the rail.
+      const melds = [
+        ...claims.map((c) => ({ tiles: c.tiles })),
+        ...(botHand.length > 0 ? [{ tiles: sortTiles(botHand, 'suit') }] : []),
+      ]
       const isWinner = winnerBotIndex === idx
       const exposedIds = new Set(claims.flatMap((c) => c.tiles.map((t) => t.id)))
       const winningPattern =
@@ -5111,8 +5108,9 @@ export default function App() {
   /** Autosave in-progress hand for signed-in players (resume after reload). */
   useEffect(() => {
     if (!user || !sessionReady || resumePrompt) return
+    const roundKey = clientRoundIdRef.current
     const snap = buildInProgressSnapshot({
-      clientRoundId: clientRoundIdRef.current,
+      clientRoundId: roundKey,
       round,
       settings: {
         cardId: committedCardIdRef.current,
@@ -5126,6 +5124,16 @@ export default function App() {
       openingDeck: replayOpeningDeckRef.current,
       openingMeta: replayOpeningMetaRef.current,
     })
+    // Hand already finished (result recorded). Undo can restore a mid-hand phase — never
+    // re-persist that as "in progress", or reload will offer Continue on an ended game.
+    if (
+      gameResultRecordedRef.current ||
+      recordedGameResultRoundIds.has(roundKey)
+    ) {
+      inProgressSaverRef.current.cancel()
+      if (snap) void clearInProgressGame()
+      return
+    }
     if (!snap) {
       // Fresh unplayed deal — do not upsert, and do not delete a cloud save we might
       // have failed to load (only New Game / hand-end / decline-resume clear).

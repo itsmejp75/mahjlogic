@@ -3,6 +3,7 @@ import { findExactMatches, tileDefsEqual } from '../mahjong/tileUtils'
 import {
   collectSwappableJokerTileIds,
   jokersSwappableWithNaturalInMeld,
+  representativeDefInExposedMeld,
 } from '../mahjong/jokerSwapTarget'
 import type { CardInk } from '../card/cardText'
 import {
@@ -44,11 +45,15 @@ import {
   calculateWallCompletionProbability,
   DEFAULT_DECK_COMPOSITION,
   estimateWallCompletionProbability,
+  hiddenNaturalOutsForSlot,
   jokerSwapHintReliefForLine,
+  naturalOnlyReserveByTileType,
   type DeckComposition,
   type HandCompletionMetrics,
   type HandInventoryContext,
   type CompletionSlot,
+  type ProspectiveSwapChannel,
+  type TileCountMap,
 } from './handCompletion'
 import {
   buildDeterministicCompletionSlots,
@@ -108,19 +113,22 @@ function deckCompositionFromInput(input: RankSuggestedHandsInput): DeckCompositi
 }
 
 /**
- * Exposed jokers that may boost this line's Prob % via a legal joker swap.
+ * Exposed jokers that may boost this line's Prob % via a legal joker swap right now.
  * Simulates spend-natural/gain-joker per candidate: a swap counts only when it does not reduce
  * natural-only fill (singles/pairs/six-pack cells jokers cannot cover) and does not reduce
  * overall greedy match. Ruinous swaps (e.g. giving away the 5 in 13579 #4's six-pack) are ignored.
+ * Returns how many jokers were credited and which exposed joker ids were used (so prospective
+ * channels do not double-count them).
  */
 function swappableExposedJokersBeneficialForLine(
   p: PracticePattern,
   rack: TileInstance[],
   swapHint: RankSuggestedHandsInput['jokerSwapHintForProb'] | undefined,
   exposureTileIds: ReadonlySet<string> | undefined,
-): number {
-  if (swapHint?.enabled !== true) return 0
-  if (p.section === 'SINGLES AND PAIRS') return 0
+): { beneficial: number; usedJokerIds: ReadonlySet<string> } {
+  const empty = { beneficial: 0, usedJokerIds: new Set<string>() }
+  if (swapHint?.enabled !== true) return empty
+  if (p.section === 'SINGLES AND PAIRS') return empty
 
   const pending = swapHint.pendingDiscard ?? null
   const redeemable = collectSwappableJokerTileIds(
@@ -129,10 +137,12 @@ function swappableExposedJokersBeneficialForLine(
     swapHint.botExposures,
     swapHint.eastExposures,
   )
-  if (redeemable.size === 0) return 0
+  if (redeemable.size === 0) return empty
 
   // No group structure to judge natural-only slots — keep prior global count.
-  if (!p.groups?.length) return redeemable.size
+  if (!p.groups?.length) {
+    return { beneficial: redeemable.size, usedJokerIds: redeemable }
+  }
 
   const candidates: TileInstance[] = []
   for (const t of swapHint.hand) {
@@ -193,7 +203,58 @@ function swappableExposedJokersBeneficialForLine(
     }
   }
 
-  return beneficial
+  return { beneficial, usedJokerIds }
+}
+
+/**
+ * Exposed swap-eligible jokers not already credited by an immediate beneficial swap, grouped by
+ * stand-in type. Used for prospective P(draw matching natural → unlock joker) mixture.
+ */
+function prospectiveSwapChannelsForLine(
+  botExposures: readonly BotExposure[],
+  eastExposures: ReadonlyArray<{ tiles: TileInstance[] }>,
+  usedJokerIds: ReadonlySet<string>,
+  slots: readonly CompletionSlot[],
+  ctx: HandInventoryContext,
+  visibleNaturals: TileCountMap,
+  deck: DeckComposition,
+  isSinglesAndPairs: boolean,
+): ProspectiveSwapChannel[] {
+  if (isSinglesAndPairs || ctx.jokersDisallowed) return []
+
+  const byType: Record<string, number> = {}
+  const addMeld = (tiles: TileInstance[]) => {
+    const rep = representativeDefInExposedMeld(tiles)
+    if (!rep || rep.cat === 'joker' || rep.cat === 'blank') return
+    const key = deadHintDefKey(rep)
+    for (const t of tiles) {
+      if (t.def.cat !== 'joker') continue
+      if (usedJokerIds.has(t.id)) continue
+      byType[key] = (byType[key] ?? 0) + 1
+    }
+  }
+  for (const exp of botExposures) addMeld(exp.tiles)
+  for (const exp of eastExposures) addMeld(exp.tiles)
+
+  const naturalOnlyNeed = naturalOnlyReserveByTileType(
+    slots,
+    ctx.naturals,
+    ctx.jokersDisallowed,
+  )
+
+  const channels: ProspectiveSwapChannel[] = []
+  for (const [tileType, jokerCount] of Object.entries(byType)) {
+    if (jokerCount <= 0) continue
+    const outs = hiddenNaturalOutsForSlot(tileType, ctx.naturals, visibleNaturals, deck)
+    if (outs <= 0) continue
+    channels.push({
+      tileType,
+      jokerCount,
+      outs,
+      reservedForNaturalOnly: naturalOnlyNeed[tileType] ?? 0,
+    })
+  }
+  return channels
 }
 
 function wallCompletionProbForLine(
@@ -209,6 +270,7 @@ function wallCompletionProbForLine(
   swappableExposedJokers = 0,
   /** Physical rack size for Prob (hand+claims, plus staged discard still on your tray). */
   playerRackTileCount = rackForPattern.length,
+  prospectiveSwapChannels: readonly ProspectiveSwapChannel[] = [],
 ): number {
   if (slots.length === 0) {
     return estimateWallCompletionProbability(tilesNeededRough, wallRemaining, completion.P)
@@ -238,6 +300,7 @@ function wallCompletionProbForLine(
     playerRackTileCount,
     tilesNeededRough,
     jokerReliefFromSwapHint,
+    prospectiveSwapChannels,
   })
 }
 
@@ -399,6 +462,7 @@ function completionProbabilityForLine(
   liveClaimableDiscard: TileInstance | null | undefined,
   playerRackTileCount: number,
   discards: TileInstance[],
+  prospectiveSwapChannels: readonly ProspectiveSwapChannel[] = [],
 ): number {
   if (
     liveClaimableDiscard &&
@@ -438,6 +502,7 @@ function completionProbabilityForLine(
       livePreview.away,
       swappableExposedJokers,
       previewRack.length,
+      prospectiveSwapChannels,
     )
   }
 
@@ -459,6 +524,7 @@ function completionProbabilityForLine(
     tilesNeededRough,
     swappableExposedJokers,
     playerRackTileCount,
+    prospectiveSwapChannels,
   )
 }
 
@@ -5927,6 +5993,8 @@ export type RankSuggestedHandsInput = {
    * jokers may boost completion prob for lines with joker-eligible gaps — but only when the
    * swap helps that line (ruinous single/pair spends are ignored). Not gated on whose turn it
    * is, and not tied to the hint setting — hints are visual only.
+   * Prospective swaps (draw the matching natural later) are always derived from `exposures` /
+   * East claims via exact hypergeometric mixture — this hint only covers immediate relief.
    */
   jokerSwapHintForProb?: {
     enabled: boolean
@@ -6081,11 +6149,22 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
         ? 'No discards or exposures yet — table info will tighten these estimates next.'
         : `${visibleDeadMatches} tile(s) that help this shape are already visible on discards or bot racks — fewer copies are hidden in other hands or the wall.`
 
-    const lineSwapJokers = swappableExposedJokersBeneficialForLine(
+    const lineSwap = swappableExposedJokersBeneficialForLine(
       p,
       rackForPattern,
       swapHintForProb,
       exposureTileIds,
+    )
+    const visForSwap = countTableVisibility(visible)
+    const lineProspectiveSwaps = prospectiveSwapChannelsForLine(
+      exposures,
+      eastTableClaimMelds,
+      lineSwap.usedJokerIds,
+      resolved.slots,
+      resolved.ctx,
+      visForSwap.naturals,
+      deck,
+      p.section === 'SINGLES AND PAIRS',
     )
     const primary: SuggestedHandLine = {
       id: p.id,
@@ -6103,12 +6182,13 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
         resolved.ctx,
         completion,
         tilesNeededRough,
-        lineSwapJokers,
+        lineSwap.beneficial,
         hand,
         playerClaimMelds,
         liveClaimableDiscard,
         playerRackTileCount,
         discards,
+        lineProspectiveSwaps,
       ),
       wallRemaining,
       visibleDeadMatches,
@@ -6253,6 +6333,16 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
         const tierCompletion = computeTierCompletionMetrics(p, rackForPattern, discards, c.perm, c.base)
         const tierMatched = c.total
         const tierAway = Math.max(0, p.roughTarget - tierMatched)
+        const tierProspectiveSwaps = prospectiveSwapChannelsForLine(
+          exposures,
+          eastTableClaimMelds,
+          lineSwap.usedJokerIds,
+          tierSlots,
+          tierCtx,
+          visForSwap.naturals,
+          deck,
+          p.section === 'SINGLES AND PAIRS',
+        )
         tierEntries.push({
           id: p.id,
           title: p.title,
@@ -6269,12 +6359,13 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
             tierCtx,
             tierCompletion,
             tierAway,
-            lineSwapJokers,
+            lineSwap.beneficial,
             hand,
             playerClaimMelds,
             liveClaimableDiscard,
             playerRackTileCount,
             discards,
+            tierProspectiveSwaps,
           ),
           wallRemaining,
           visibleDeadMatches,

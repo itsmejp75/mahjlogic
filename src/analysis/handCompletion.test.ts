@@ -18,6 +18,7 @@ import {
   jokerSwapHintReliefForLine,
   maxCompletionMetricsOverSlotSets,
   probNatPlusJokerAtLeast,
+  prospectiveSwapJokerDistribution,
   type CompletionSlot,
   type HandInventoryContext,
   type WallCompletionProbabilityInput,
@@ -1745,5 +1746,139 @@ describe('joker-swap Prob relief vs required naturals', () => {
     const base = withoutSwap.find((l) => l.id === pattern.id)!
     const lit = withSwap.find((l) => l.id === pattern.id)!
     expect(lit.completionProbability).toBeGreaterThan(base.completionProbability)
+  })
+
+  it('raises Prob via prospective swap odds when an exposed joker has no matching natural yet', () => {
+    // No soap in hand — cannot redeem immediately — but wall soaps can unlock West's joker.
+    const pattern = NMJL_2026_PATTERNS.find(
+      (p) => p.section === '13579' && p.cardHandCode === '4',
+    )!
+    const hand = [
+      { id: 'c1', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 1 } },
+      { id: 'c3', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 3 } },
+      { id: 'c5', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 5 } },
+      { id: 'c7a', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 7 } },
+      { id: 'c7b', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 7 } },
+      { id: 'c9', def: { cat: 'suit' as const, suit: 'crak' as const, rank: 9 } },
+      { id: 'b7a', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 7 } },
+      { id: 'b7b', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 7 } },
+      { id: 'd7a', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 7 } },
+      { id: 'd7b', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 7 } },
+      { id: 'j1', def: { cat: 'joker' as const } },
+      { id: 'junk1', def: { cat: 'suit' as const, suit: 'bam' as const, rank: 2 } },
+      { id: 'junk2', def: { cat: 'suit' as const, suit: 'dot' as const, rank: 5 } },
+    ]
+    const westSoapJoker = {
+      seat: 'West' as const,
+      claimType: 'pung' as const,
+      tiles: [
+        { id: 'ws1', def: { cat: 'dragon' as const, dragon: 'soap' as const } },
+        { id: 'wj', def: { cat: 'joker' as const } },
+        { id: 'ws2', def: { cat: 'dragon' as const, dragon: 'soap' as const } },
+      ],
+    }
+    const withExposure = rankSuggestedHands({
+      hand,
+      wallRemaining: 72,
+      discards: [],
+      exposures: [westSoapJoker],
+      patterns: [pattern],
+      deckSettings: { totalJokersInGame: 8, totalBlanksInGame: 0 },
+    })
+    const noExposure = rankSuggestedHands({
+      hand,
+      wallRemaining: 72,
+      discards: [],
+      exposures: [],
+      patterns: [pattern],
+      deckSettings: { totalJokersInGame: 8, totalBlanksInGame: 0 },
+    })
+    const lit = withExposure.find((l) => l.id === pattern.id)!
+    const base = noExposure.find((l) => l.id === pattern.id)!
+    // Exposed joker leaves the hidden joker pool, but prospective soap→swap odds must more than
+    // claw that back for this joker-hungry kong shape (otherwise Prob would fall on exposure).
+    expect(lit.completionProbability).toBeGreaterThanOrEqual(base.completionProbability)
+  })
+})
+
+describe('prospectiveSwapJokerDistribution', () => {
+  it('matches hypergeometric P(S≥1) for a single unrestricted channel', () => {
+    const channels = [
+      { tileType: 'd:soap', jokerCount: 1, outs: 3, reservedForNaturalOnly: 0 },
+    ]
+    const trials = 20
+    const pool = 100
+    const dist = prospectiveSwapJokerDistribution(channels, trials, pool)
+    const pAtLeast1 = dist.slice(1).reduce((a, b) => a + b, 0)
+    const expected = hypergeometricAtLeast(3, trials, pool, 1)
+    expect(dist.reduce((a, b) => a + b, 0)).toBeCloseTo(1, 9)
+    expect(pAtLeast1).toBeCloseTo(expected, 9)
+  })
+
+  it('requires reserved natural-only draws before counting a swap success', () => {
+    // Need 1 natural-only first: S≥1 only when X≥2.
+    const channels = [
+      { tileType: 's:crak:5', jokerCount: 1, outs: 3, reservedForNaturalOnly: 1 },
+    ]
+    const trials = 18
+    const pool = 90
+    const dist = prospectiveSwapJokerDistribution(channels, trials, pool)
+    const pSwap = dist.slice(1).reduce((a, b) => a + b, 0)
+    expect(pSwap).toBeCloseTo(hypergeometricAtLeast(3, trials, pool, 2), 9)
+    expect(pSwap).toBeLessThan(hypergeometricAtLeast(3, trials, pool, 1))
+  })
+})
+
+describe('prospective joker-swap Prob mixture', () => {
+  it('raises wall-completion Prob by exact swap-channel odds (not a flat boost)', () => {
+    const slots: CompletionSlot[] = [
+      { tileType: 'w:W', targetCount: 3 },
+      { tileType: 'w:S', targetCount: 4 },
+      { tileType: 'w:N', targetCount: 4 },
+      { tileType: 'f', targetCount: 3 },
+    ]
+    const ctx: HandInventoryContext = {
+      naturals: { 'w:W': 2, 'w:S': 1, 'w:N': 1, f: 2 },
+      jokersInHand: 0,
+      blanksInHand: 0,
+      discardCounts: {},
+      jokersDisallowed: false,
+    }
+    const completion = computeHandCompletionMetrics(slots, ctx)
+    const shared = {
+      slots,
+      ctx,
+      completion,
+      visibleNaturals: { 'd:soap': 2 },
+      visibleJokers: 1,
+      visibleBlanks: 0,
+      wallRemaining: 80,
+      isConcealed: false,
+      isSinglesAndPairs: false,
+      deck: DEFAULT_DECK_COMPOSITION,
+      playerRackTileCount: 14,
+      tilesNeededRough: 8,
+    }
+    const without = calculateWallCompletionProbability(shared)
+    const withChannel = calculateWallCompletionProbability({
+      ...shared,
+      prospectiveSwapChannels: [
+        { tileType: 'd:soap', jokerCount: 1, outs: 2, reservedForNaturalOnly: 0 },
+      ],
+    })
+    expect(withChannel).toBeGreaterThan(without)
+
+    // Certainty of the swap (outs cover every trial path) must match immediate +1 joker relief.
+    const certainSwap = calculateWallCompletionProbability({
+      ...shared,
+      prospectiveSwapChannels: [
+        { tileType: 'd:soap', jokerCount: 1, outs: 80, reservedForNaturalOnly: 0 },
+      ],
+    })
+    const immediate = calculateWallCompletionProbability({
+      ...shared,
+      jokerReliefFromSwapHint: 1,
+    })
+    expect(certainSwap).toBe(immediate)
   })
 })
