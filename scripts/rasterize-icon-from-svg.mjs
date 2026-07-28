@@ -2,14 +2,12 @@
 /**
  * Rasterize SVG → PNGs via Puppeteer + macOS `sips`.
  *
- * App icons (default): PWA + Capacitor — uses src/assets/mahjlogic-app-icon-button.svg (same bird+M as
- * the in-app menu chip). Tab favicon copies mahjlogic-favicon.svg (same mark + #121419 + pad).
+ * App icons (default): PWA + Capacitor — uses src/assets/mahjlogic-app-icon-button.svg.
+ * Solid Abyss canvas + a darker blurred duplicate of the logo behind the mark.
  *
- * Tab favicon only: copies src/assets/mahjlogic-favicon.svg → public/favicon.svg (square
- * canvas with built-in dark inset). Raster PNG fallbacks use the same favicon SVG with
- * no extra Puppeteer padding by default (padding lives in the SVG viewBox).
+ * Tab favicon only: copies src/assets/mahjlogic-favicon.svg → public/favicon.svg.
  *
- * Inset: FAVICON_SAFE_INSET_PERCENT (default 0). App icons: APP_ICON_SAFE_INSET_PERCENT (default 7).
+ * Inset: FAVICON_SAFE_INSET_PERCENT (default 0). App icons: APP_ICON_SAFE_INSET_PERCENT (default 13).
  *
  * Desktop Chrome often keeps using old bitmaps for the omnibox “Open in app” chip even after you
  * regenerate PNGs. Bump the `?v=` query on manifest `icons[].src` (and `apple-touch-icon` in
@@ -38,8 +36,17 @@ const svgPath = path.resolve(positionalPath ?? (faviconOnly ? faviconSvgSrc : ap
 /** SVG file read for Puppeteer raster (may differ from svgPath when copying padded favicon.svg). */
 const rasterSvgPath = positionalPath ? svgPath : faviconOnly ? faviconSvgSrc : svgPath
 const masterPng = path.join(root, '.tmp-app-icon-master.png')
-/** Install / launcher PNG background (matches menu app-icon chip). */
-const ICON_CANVAS_BG = '#121419'
+/** Solid Abyss mid-blue from app paint — a bit brighter/happier than the gray pad. */
+const ICON_CANVAS_BG = '#1e3a5f'
+
+/** Same logo artwork, fills forced near-black for the blurred under-layer. */
+function darkLogoSvg(svg) {
+  return svg
+    .replace(/#00b4d8/gi, '#000000')
+    .replace(/#ffb800/gi, '#000000')
+    .replace(/fill:\s*#00b4d8/gi, 'fill:#000000')
+    .replace(/fill:\s*#ffb800/gi, 'fill:#000000')
+}
 
 /** Edge padding (% of 1024 master). Favicon SVG already includes dark inset (default 0). */
 function safeInsetPercent() {
@@ -49,7 +56,7 @@ function safeInsetPercent() {
     )
   }
   return Number(
-    process.env.APP_ICON_SAFE_INSET_PERCENT ?? process.env.ICON_SAFE_INSET_PERCENT ?? 7,
+    process.env.APP_ICON_SAFE_INSET_PERCENT ?? process.env.ICON_SAFE_INSET_PERCENT ?? 13,
   )
 }
 function sipsZ(w, h, input, output) {
@@ -59,6 +66,9 @@ function sipsZ(w, h, input, output) {
 async function rasterMaster() {
   const svg = fs.readFileSync(rasterSvgPath, 'utf8')
   const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)
+  const darkDataUrl = faviconOnly
+    ? null
+    : 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(darkLogoSvg(svg))
   const chromeCandidates = [
     process.env.CHROME_PATH,
     '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -80,9 +90,15 @@ async function rasterMaster() {
   await page.setViewport({ width: 1024, height: 1024, deviceScaleFactor: 1 })
   const inset = safeInsetPercent()
   const pad = `${inset}%`
+  const markStack = faviconOnly
+    ? `<img src="${dataUrl}" alt="" style="width:100%;height:100%;object-fit:contain;object-position:center center"/>`
+    : `<div style="position:relative;width:100%;height:100%;">
+<img src="${darkDataUrl}" alt="" aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center center;filter:blur(28px);opacity:0.85;"/>
+<img src="${dataUrl}" alt="" style="position:relative;width:100%;height:100%;object-fit:contain;object-position:center center"/>
+</div>`
   await page.setContent(
-    `<!DOCTYPE html><html><body style="margin:0;background:${ICON_CANVAS_BG};box-sizing:border-box;width:1024px;height:1024px;padding:${pad};display:flex;align-items:center;justify-content:center;">
-<img src="${dataUrl}" alt="" style="width:100%;height:100%;object-fit:contain;object-position:center center"/></body></html>`,
+    `<!DOCTYPE html><html><body style="margin:0;background:${ICON_CANVAS_BG};box-sizing:border-box;width:1024px;height:1024px;padding:${pad};display:flex;align-items:center;justify-content:center;overflow:hidden;">
+${markStack}</body></html>`,
     { waitUntil: 'networkidle0' },
   )
   await new Promise((r) => setTimeout(r, 150))

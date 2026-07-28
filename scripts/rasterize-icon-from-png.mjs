@@ -18,7 +18,7 @@ const masterPng = path.join(root, '.tmp-app-icon-master.png')
 /** Padding on each edge (percent of canvas). Env `ICON_SAFE_INSET_PERCENT` overrides. */
 const SAFE_INSET_PERCENT = Number(process.env.ICON_SAFE_INSET_PERCENT ?? 8)
 const OUT_SIZE = 1024
-const BG = [18, 20, 25] /* #121419 — matches SVG app-icon raster canvas */
+const BG = [13, 21, 34] /* #0d1522 Abyss — matches SVG app-icon raster canvas */
 
 function sipsZ(w, h, input, output) {
   execFileSync('sips', ['-z', String(h), String(w), input, '--out', output], { stdio: 'inherit' })
