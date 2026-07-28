@@ -1203,6 +1203,9 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
  *
  * `just-drawn` must be hand-tray-scoped — discard-tracker drop-ins reuse the same class and must
  * not lift the hand over the green-slot incoming discard (lit tile-13 vignette flash).
+ *
+ * Call-meld promotion + seat-in-front stacking (tray auto, rack-bottom 6, anchor 7, seat 10)
+ * is also twinned here so late rack rules cannot re-bury the chip under meld vignettes.
  */
 .app-layout[data-animations='on']:is(
   [data-hand-fly-in],
@@ -1220,16 +1223,76 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   :has(.panel-hand-rack__hand-tray .sortable-tile-wrap--just-drawn)
 )
   .panel--hand
+  .rack-stage__rack-col:has(.exposure-rack--has-call-melds)
+  > .panel-hand-rack__hand-tray {
+  z-index: auto;
+}
+
+.app-layout[data-animations='on']:is(
+  [data-hand-fly-in],
+  :has(.panel-hand-rack__hand-tray .sortable-tile-wrap--just-drawn)
+)
+  .panel--hand
+  .rack-stage__rack-top:has(.exposure-rack--has-call-melds) {
+  z-index: auto;
+}
+
+.app-layout[data-animations='on']:is(
+  [data-hand-fly-in],
+  :has(.panel-hand-rack__hand-tray .sortable-tile-wrap--just-drawn)
+)
+  .panel--hand
+  .rack-stage__rack-top:has(.exposure-rack--has-call-melds)
+  .exposure-rack {
+  z-index: auto;
+}
+
+.app-layout[data-animations='on']:is(
+  [data-hand-fly-in],
+  :has(.panel-hand-rack__hand-tray .sortable-tile-wrap--just-drawn)
+)
+  .panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__call-meld-anchor {
+  z-index: 7;
+}
+
+.app-layout[data-animations='on']:is(
+  [data-hand-fly-in],
+  :has(.panel-hand-rack__hand-tray .sortable-tile-wrap--just-drawn)
+)
+  .panel--hand
   .panel-hand-rack__hand-tray
   .rack-stage__rack-bottom {
   z-index: 3;
 }
 
+.app-layout[data-animations='on']:is(
+  [data-hand-fly-in],
+  :has(.panel-hand-rack__hand-tray .sortable-tile-wrap--just-drawn)
+)
+  .panel--hand
+  .rack-stage__rack-col:has(.exposure-rack--has-call-melds)
+  .panel-hand-rack__hand-tray
+  .rack-stage__rack-bottom {
+  z-index: 6;
+}
+
+.app-layout[data-animations='on']:is(
+  [data-hand-fly-in],
+  :has(.panel-hand-rack__hand-tray .sortable-tile-wrap--just-drawn)
+)
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  > .panel-hand-rack__seat-label {
+  z-index: 10;
+}
+
 /*
  * Fly-in lifts the hand tray above green Discard> / incoming bot discard (`N >`, etc.).
- * Resting stack hides upward halos under rack-top; while raised, top+side glow paints over
- * those rack-top tiles (nudged down into the hand band) and makes them look coplanar.
- * Keep only the underside halo for the flight window — overrides lit→lit seam clip variants.
+ * Resting stack hides upward halos under rack-top; while raised, top+side glow can still paint
+ * over non-call rack-top chrome. Keep only the underside halo for the flight window —
+ * overrides lit→lit seam clip variants. With call melds: seat 10 > anchor 7 > rack-bottom 6.
  */
 .app-layout[data-animations='on']:is(
   [data-hand-fly-in],

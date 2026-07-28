@@ -304,6 +304,8 @@ export function applyToggleStagedCallTile(r: RoundState, tileId: string): RoundS
   const tile = r.hand.find((t) => t.id === tileId)
   if (!tile) return r
   if (r.stagedCallTileIds.length >= 5) return r
+  // Only matching naturals (or jokers) can join the staged claim meld.
+  if (tile.def.cat !== 'joker' && !tileDefsEqual(tile.def, r.activeBotDiscard.def)) return r
   return { ...r, stagedCallTileIds: [...r.stagedCallTileIds, tileId] }
 }
 

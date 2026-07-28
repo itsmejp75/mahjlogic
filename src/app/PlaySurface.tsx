@@ -39,6 +39,7 @@ import {
   SuggestedHandsOpenDataAttr,
   SuggestedHandsTrayToggleButton,
   type MainPhase,
+  type PostGameBotReviewRackRow,
 } from './playSurfaceUi'
 import type { BotExposure, BotSeat } from '../analysis/types'
 import type { DiscardEntry, EastExposure, Seat, TileInstance } from '../mahjong/types'
@@ -93,6 +94,8 @@ export type PlaySurfaceProps = {
 
   displayedDiscardPile: readonly DiscardEntry[]
   botExposures: BotExposure[]
+  /** Table Review: full-hand lit/dim dump into opponent exposure rails. */
+  postGameBotReviewRacks?: readonly PostGameBotReviewRackRow[] | null
   activeBotIndex: number | null
   botTurnBannerDiscarderBotIndex: number | null
   jokerSwapUiActive: boolean
@@ -175,6 +178,7 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
     showPlaySplitRow,
     displayedDiscardPile,
     botExposures,
+    postGameBotReviewRacks = null,
     activeBotIndex,
     botTurnBannerDiscarderBotIndex,
     jokerSwapUiActive,
@@ -509,6 +513,7 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                           onBotExposureRowClick={onBotExposureRowClick}
                           suggestedDiscardTrackerNeedDefs={suggestedDiscardTrackerNeedDefs}
                           botSlotSeats={botSlotSeats}
+                          postGameBotReviewRacks={postGameBotReviewRacks}
                         />
                         </div>
                         </BlankExchangeDropZone>
@@ -613,14 +618,18 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                       'suggested-hands-tab',
                                       'rack-bottom-tile-cell',
                                       'rack-bottom-tile-cell--c6',
-                                      suggestedPanelTilesOn && mainPhase !== 'mahjong-declared'
+                                      suggestedPanelTilesOn &&
+                                      (mainPhase !== 'mahjong-declared' || mahjongWinReviewing)
                                         ? 'suggested-hands-tab--open'
                                         : '',
                                     ]
                                       .filter(Boolean)
                                       .join(' ')}
                                     aria-label="Suggested tiles"
-                                    aria-pressed={mainPhase !== 'mahjong-declared' && suggestedPanelTilesOn}
+                                    aria-pressed={
+                                      (mainPhase !== 'mahjong-declared' || mahjongWinReviewing) &&
+                                      suggestedPanelTilesOn
+                                    }
                                     onClick={onSuggestedTilesButtonClick}
                                     onPointerDown={onSuggestedTilesButtonPointerDown}
                                     onPointerUp={onSuggestedTilesButtonPointerUpOrLeave}
@@ -828,14 +837,18 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                         'suggested-hands-tab',
                                         'rack-bottom-tile-cell',
                                         'rack-bottom-tile-cell--c6',
-                                        suggestedPanelTilesOn && mainPhase !== 'mahjong-declared'
+                                        suggestedPanelTilesOn &&
+                                      (mainPhase !== 'mahjong-declared' || mahjongWinReviewing)
                                           ? 'suggested-hands-tab--open'
                                           : '',
                                       ]
                                         .filter(Boolean)
                                         .join(' ')}
                                       aria-label="Suggested tiles"
-                                      aria-pressed={mainPhase !== 'mahjong-declared' && suggestedPanelTilesOn}
+                                      aria-pressed={
+                                        (mainPhase !== 'mahjong-declared' || mahjongWinReviewing) &&
+                                        suggestedPanelTilesOn
+                                      }
                                       onClick={onSuggestedTilesButtonClick}
                                       onPointerDown={onSuggestedTilesButtonPointerDown}
                                       onPointerUp={onSuggestedTilesButtonPointerUpOrLeave}

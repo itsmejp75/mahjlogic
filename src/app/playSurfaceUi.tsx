@@ -970,6 +970,14 @@ export function BlankExchangeOverlay({
   )
 }
 
+/** Per-bot full-hand dump on the table during post-game Review (exposed lit / concealed dim). */
+export type PostGameBotReviewRackRow = {
+  seat: BotSeat
+  melds: ReadonlyArray<{ tiles: TileInstance[] }>
+  /** `null` = winner (all lit). Otherwise lit tile ids; tiles not listed are dim. */
+  litTileIds: ReadonlySet<string> | null
+}
+
 /** 3 rows: 13-column sorted discard grid (inset) + prefix + 14-column bot exposures. */
 export function DiscardTrackerSlotGrid({
   discardPile,
@@ -992,6 +1000,7 @@ export function DiscardTrackerSlotGrid({
   onBotExposureRowClick,
   suggestedDiscardTrackerNeedDefs,
   botSlotSeats,
+  postGameBotReviewRacks = null,
 }: {
   discardPile: readonly DiscardEntry[]
   botExposures: BotExposure[]
@@ -1016,6 +1025,8 @@ export function DiscardTrackerSlotGrid({
   onBotExposureRowClick?: (seat: BotSeat) => void
   suggestedDiscardTrackerNeedDefs: readonly TileDef[] | null
   botSlotSeats: BotSlotSeats
+  /** When set (table Review), replace live exposures with full-hand lit/dim racks. */
+  postGameBotReviewRacks?: readonly PostGameBotReviewRackRow[] | null
 }) {
   const botExposureSeats = useMemo(
     () => botSlotSeats.map((s) => seatLabel(s) as BotSeat),
@@ -1041,10 +1052,21 @@ export function DiscardTrackerSlotGrid({
     jokerSwapHintBounceEpoch,
   ])
 
+  const reviewRackBySeat = useMemo(() => {
+    if (!postGameBotReviewRacks?.length) return null
+    const m = new Map<BotSeat, PostGameBotReviewRackRow>()
+    for (const row of postGameBotReviewRacks) m.set(row.seat, row)
+    return m
+  }, [postGameBotReviewRacks])
+
   const botRowMelds = useMemo(
     () =>
-      botExposureSeats.map((seat) =>
-        botExposures
+      botExposureSeats.map((seat) => {
+        const review = reviewRackBySeat?.get(seat)
+        if (review) {
+          return review.melds.map((meld) => ({ tiles: [...meld.tiles] }))
+        }
+        return botExposures
           .map((exp, globalIdx) => ({ exp, globalIdx }))
           .filter(({ exp }) => exp.seat === seat)
           .filter(
@@ -1058,19 +1080,22 @@ export function DiscardTrackerSlotGrid({
               jokerSwapUiActive && exp.tiles.some((t) => t.def.cat === 'joker')
                 ? botExposureSwapDropId(globalIdx)
                 : undefined,
-          })),
-      ),
-    [botExposureSeats, botExposures, mainPhase, jokerSwapUiActive],
+          }))
+      }),
+    [botExposureSeats, botExposures, mainPhase, jokerSwapUiActive, reviewRackBySeat],
   )
 
   const botRowPossibleOpenHandsCounts = useMemo(
     () =>
-      botHandsIdentifierEnabled
-        ? botRowMelds.map((melds) =>
-            melds.length > 0 ? countOpenHandsFittingClaimMelds(melds) : null,
-          )
-        : botRowMelds.map(() => null),
-    [botRowMelds, botHandsIdentifierEnabled],
+      // Review dumps the full hand into the rail — hide the possible-hands count chip.
+      reviewRackBySeat
+        ? botRowMelds.map(() => null)
+        : botHandsIdentifierEnabled
+          ? botRowMelds.map((melds) =>
+              melds.length > 0 ? countOpenHandsFittingClaimMelds(melds) : null,
+            )
+          : botRowMelds.map(() => null),
+    [botRowMelds, botHandsIdentifierEnabled, reviewRackBySeat],
   )
 
   return (
@@ -1095,9 +1120,16 @@ export function DiscardTrackerSlotGrid({
       </div>
       {botExposureSeats.map((seat, rowIdx) => {
         const melds = botRowMelds[rowIdx] ?? []
+        const reviewRow = reviewRackBySeat?.get(seat)
         const rowClickable =
           botHandsIdentifierEnabled && melds.length > 0 && onBotExposureRowClick != null
         const rowActive = botHandsIdentifierFocusSeat === seat
+        const rowSuggestedTileGuide = reviewRow
+          ? reviewRow.litTileIds != null
+            ? { bestIds: reviewRow.litTileIds }
+            : null
+          : botExposureSuggestedTileGuide
+        const rowSuggestedDeadIds = reviewRow ? null : botExposureDeadIds
         return (
           <div
             key={seat}
@@ -1190,12 +1222,14 @@ export function DiscardTrackerSlotGrid({
                   gridMeldColumnSpans
                   ariaLabel={`${seat} exposures`}
                   stackSuitTiles
-                  flyInTileIds={animationsEnabled ? botExposureFlyInTileIds : null}
-                  flyInFromBelowTileIds={animationsEnabled ? exposureJokerSwapFlyInTileIds : null}
-                  suggestedTileGuide={botExposureSuggestedTileGuide}
-                  suggestedDeadTileIds={botExposureDeadIds}
+                  flyInTileIds={animationsEnabled && !reviewRow ? botExposureFlyInTileIds : null}
+                  flyInFromBelowTileIds={
+                    animationsEnabled && !reviewRow ? exposureJokerSwapFlyInTileIds : null
+                  }
+                  suggestedTileGuide={rowSuggestedTileGuide}
+                  suggestedDeadTileIds={rowSuggestedDeadIds}
                   botJokerBorderMenuOn={false}
-                  jokerSwapHintBounceTileIds={jokerSwapHintBounceTileIds}
+                  jokerSwapHintBounceTileIds={reviewRow ? null : jokerSwapHintBounceTileIds}
                   jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
                   possibleOpenHandsCount={botRowPossibleOpenHandsCounts[rowIdx] ?? null}
                 />

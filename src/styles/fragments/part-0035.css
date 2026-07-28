@@ -17,10 +17,17 @@
  * (`position: relative` for Seat:, transforms on call-meld inset, etc.). Bot-hands glow stacking
  * (rack above the top band so green covers the halo) made that more likely to show.
  *
- * Always lift the hand-tray above rack-top (z-index 6 beats staged rack-top 5) — including when
- * owned melds are pinned — so drawn tiles clear the green Discard> well. Lift rack-bottom so
- * tile z-index:10 clears within the tray; Seat drops under the flying tile. Upward coach halos
- * are clipped for this window (part-0123) so lit hand vignettes do not paint over melds.
+ * Always lift the hand-tray above rack-top (z-index 6 beats staged rack-top 5) so drawn
+ * tiles clear the green Discard> well. Lift rack-bottom so tile z-index:10 clears within
+ * the tray. Seat chip stays at z-index 10 (part-0084) — always in front of fly-ins and melds.
+ *
+ * That tray lift also buries call melds (nudged down into the hand band) under hand
+ * faces/vignettes. For the flight window with call melds: release rack-top / exposure-rack
+ * stacking, pin `.exposure-rack__call-meld-anchor` at 7 (above hand tiles), but do NOT lift
+ * the hand-tray (that would trap the seat chip under the meld vignette). Lift rack-bottom to
+ * 6 instead so the drawn tile still clears Discard>. Stack: seat 10 > call-meld 7 >
+ * rack-bottom 6 > Discard>. Upward coach halos stay clipped (part-0123) for non-call-meld
+ * fly-ins.
  *
  * Scope `just-drawn` to the hand tray only. Discard-tracker drop-ins also use
  * `sortable-tile-wrap--just-drawn` (DiscardPileFlyInTile); a layout-wide `:has()` would lift the
@@ -38,6 +45,51 @@
   z-index: 6;
 }
 
+/*
+ * Call melds: keep hand-tray from forming a stacking context so the seat chip (z-index 10)
+ * can stay above the promoted call-meld vignette (7). Rack-bottom alone clears Discard>.
+ */
+.app-layout[data-animations='on']:is(
+  [data-hand-fly-in],
+  :has(.panel-hand-rack__hand-tray .sortable-tile-wrap--just-drawn)
+)
+  .panel--hand
+  .rack-stage__rack-col:has(.exposure-rack--has-call-melds)
+  > .panel-hand-rack__hand-tray {
+  z-index: auto;
+}
+
+.app-layout[data-animations='on']:is(
+  [data-hand-fly-in],
+  :has(.panel-hand-rack__hand-tray .sortable-tile-wrap--just-drawn)
+)
+  .panel--hand
+  .rack-stage__rack-top:has(.exposure-rack--has-call-melds) {
+  /* Release SC so call-meld-anchor / seat can interleave with rack-bottom. */
+  z-index: auto;
+}
+
+.app-layout[data-animations='on']:is(
+  [data-hand-fly-in],
+  :has(.panel-hand-rack__hand-tray .sortable-tile-wrap--just-drawn)
+)
+  .panel--hand
+  .rack-stage__rack-top:has(.exposure-rack--has-call-melds)
+  .exposure-rack {
+  z-index: auto;
+}
+
+.app-layout[data-animations='on']:is(
+  [data-hand-fly-in],
+  :has(.panel-hand-rack__hand-tray .sortable-tile-wrap--just-drawn)
+)
+  .panel--hand
+  .rack-stage__rack-top
+  .exposure-rack__call-meld-anchor {
+  /* Above rack-bottom (6); under seat chip (10). Discard> stays at default child z-index. */
+  z-index: 7;
+}
+
 .app-layout[data-animations='on']:is(
   [data-hand-fly-in],
   :has(.panel-hand-rack__hand-tray .sortable-tile-wrap--just-drawn)
@@ -46,6 +98,18 @@
   .panel-hand-rack__hand-tray
   .rack-stage__rack-bottom {
   z-index: 3;
+}
+
+.app-layout[data-animations='on']:is(
+  [data-hand-fly-in],
+  :has(.panel-hand-rack__hand-tray .sortable-tile-wrap--just-drawn)
+)
+  .panel--hand
+  .rack-stage__rack-col:has(.exposure-rack--has-call-melds)
+  .panel-hand-rack__hand-tray
+  .rack-stage__rack-bottom {
+  /* Tray is not lifted — rack-bottom must clear Discard> on its own. */
+  z-index: 6;
 }
 
 .app-layout[data-animations='on']:is(
@@ -77,8 +141,8 @@
   .panel--hand
   .panel-hand-rack__hand-tray
   > .panel-hand-rack__seat-label {
-  /* Seat chip is z-index 10 in part-0084 — keep it under flying tiles (10) within the lifted tray. */
-  z-index: 1;
+  /* Always in front of fly-in tiles and call-meld lift vignettes (part-0084 resting value). */
+  z-index: 10;
 }
 
 /*

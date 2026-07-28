@@ -1,38 +1,15 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import {
   postGameRackAndHighlights,
+  segmentRackIntoExposureRuns,
   suggestedHandCardRefDisplay,
   suggestedHandCategoryDashCardRef,
   type RankSuggestedHandsInput,
 } from '../analysis/suggestedHands'
-import type { TileInstance } from '../mahjong/types'
 import { CardHandNotation } from '../card/CardHandNotation'
 import type { SuggestedHandLine } from '../training/types'
 import { TileFace } from './TileFace'
 import { CardColoredText } from './CardColoredText'
-
-/** Split card-ordered rack into runs; consecutive exposure tiles share one meld frame. */
-function segmentRackIntoExposureRuns(
-  fullRack: readonly TileInstance[],
-  claimMelds: ReadonlyArray<{ tiles: TileInstance[] }> | undefined,
-): { meldIdx: number | null; tiles: TileInstance[] }[] {
-  const idToMeld = new Map<string, number>()
-  claimMelds?.forEach((meld, mi) => {
-    for (const t of meld.tiles) idToMeld.set(t.id, mi)
-  })
-  const runs: { meldIdx: number | null; tiles: TileInstance[] }[] = []
-  for (const tile of fullRack) {
-    const mi = idToMeld.get(tile.id)
-    const meldIdx = mi === undefined ? null : mi
-    const last = runs[runs.length - 1]
-    if (!last || last.meldIdx !== meldIdx) {
-      runs.push({ meldIdx, tiles: [tile] })
-    } else {
-      last.tiles.push(tile)
-    }
-  }
-  return runs
-}
 
 function TiedLineHandLabel({ line }: { line: SuggestedHandLine }) {
   return (

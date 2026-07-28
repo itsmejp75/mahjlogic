@@ -67,8 +67,8 @@ export type WallCompletionProbabilityInput = {
   /** Greedy tiles-away — pattern distance, not 14-tile inventory gap. */
   tilesNeededRough: number
   /**
-   * Exposed jokers redeemable via joker swap this turn. Counts toward supply / deficit relief
-   * but not rack proximity or tiles-away until the swap commits.
+   * Exposed jokers redeemable via joker swap (when the rack holds a matching natural).
+   * Counts toward supply / deficit relief but not rack proximity or tiles-away until the swap commits.
    */
   jokerReliefFromSwapHint?: number
 }
@@ -677,7 +677,7 @@ export function jokerEligibleCapacityRemaining(
 }
 
 /**
- * How many exposed jokers may count toward completion prob when a joker swap is legal:
+ * How many exposed jokers may count toward completion prob when a joker swap is available:
  * capped by swappable meld jokers and this line's unfilled joker-eligible capacity.
  */
 export function jokerSwapHintReliefForLine(

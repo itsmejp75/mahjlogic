@@ -5690,6 +5690,29 @@ export function sortHandForSuggestedPattern(
   return [...orderedBest, ...remainingBest, ...blanksAfterPattern, ...dimRest]
 }
 
+/** Split card-ordered rack into runs; consecutive exposure tiles share one meld frame. */
+export function segmentRackIntoExposureRuns(
+  fullRack: readonly TileInstance[],
+  claimMelds: ReadonlyArray<{ tiles: TileInstance[] }> | undefined,
+): { meldIdx: number | null; tiles: TileInstance[] }[] {
+  const idToMeld = new Map<string, number>()
+  claimMelds?.forEach((meld, mi) => {
+    for (const t of meld.tiles) idToMeld.set(t.id, mi)
+  })
+  const runs: { meldIdx: number | null; tiles: TileInstance[] }[] = []
+  for (const tile of fullRack) {
+    const mi = idToMeld.get(tile.id)
+    const meldIdx = mi === undefined ? null : mi
+    const last = runs[runs.length - 1]
+    if (!last || last.meldIdx !== meldIdx) {
+      runs.push({ meldIdx, tiles: [tile] })
+    } else {
+      last.tiles.push(tile)
+    }
+  }
+  return runs
+}
+
 /**
  * **Concealed + claim-meld** tiles in one list, left-to-right as on the card strip (same
  * `computePreviewStripAssignment` order as the suggested-hands line). Use for end-game review
@@ -5900,9 +5923,10 @@ export type RankSuggestedHandsInput = {
     totalBlanksInGame?: number
   }
   /**
-   * When a joker swap is legal this turn, exposed redeemable jokers may boost completion prob for
-   * lines with joker-eligible gaps — but only when the redeeming natural is not needed on a
-   * non-joker strip slot for that line. Not tied to the hint setting — hints are visual only.
+   * When exposed jokers are redeemable with a natural on the rack (or staged discard), those
+   * jokers may boost completion prob for lines with joker-eligible gaps — but only when the
+   * swap helps that line (ruinous single/pair spends are ignored). Not gated on whose turn it
+   * is, and not tied to the hint setting — hints are visual only.
    */
   jokerSwapHintForProb?: {
     enabled: boolean

@@ -22,6 +22,8 @@ type Props = {
   exposureMelds?: readonly ExposureMeld[]
   discardTraySurface?: boolean
   onClose?: () => void
+  /** Post-game winner review: title says “winning hand” instead of “possible hands”. */
+  winningHandReview?: boolean
 }
 
 function patternCardRef(p: PracticePattern): string {
@@ -131,6 +133,7 @@ export const BotExposureHandsPanel = memo(function BotExposureHandsPanel({
   exposureMelds = [],
   discardTraySurface = false,
   onClose,
+  winningHandReview = false,
 }: Props) {
   const listColumnRef = useRef<HTMLDivElement>(null)
 
@@ -170,7 +173,9 @@ export const BotExposureHandsPanel = memo(function BotExposureHandsPanel({
     .filter(Boolean)
     .join(' ')
 
-  const title = `${seat}'s ${patterns.length} possible hand${patterns.length === 1 ? '' : 's'}`
+  const title = winningHandReview
+    ? `${seat}'s winning hand`
+    : `${seat}'s ${patterns.length} possible hand${patterns.length === 1 ? '' : 's'}`
 
   return (
     <section className={rootClassName} aria-label={title} data-nosnippet>
