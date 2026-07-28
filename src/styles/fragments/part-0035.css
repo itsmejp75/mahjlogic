@@ -19,14 +19,16 @@
  *
  * Always lift the hand-tray above rack-top (z-index 6 beats staged rack-top 5) so drawn
  * tiles clear the green Discard> well. Lift rack-bottom so tile z-index:10 clears within
- * the tray. Seat chip stays at z-index 10 (part-0084) — always in front of fly-ins and melds.
+ * the tray. Drop the seat chip under rack-bottom for the flight window so opening-deal /
+ * Charleston / wall-draw tiles paint over "Playing position:" (same idea as joker-swap
+ * bounce). Resting seat stays at z-index 10 (part-0084) above melds after the flight.
  *
  * That tray lift also buries call melds (nudged down into the hand band) under hand
  * faces/vignettes. For the flight window with call melds: release rack-top / exposure-rack
  * stacking, pin `.exposure-rack__call-meld-anchor` at 7 (above hand tiles), but do NOT lift
  * the hand-tray (that would trap the seat chip under the meld vignette). Lift rack-bottom to
- * 6 instead so the drawn tile still clears Discard>. Stack: seat 10 > call-meld 7 >
- * rack-bottom 6 > Discard>. Upward coach halos stay clipped (part-0123) for non-call-meld
+ * 6 instead so the drawn tile still clears Discard>. Stack: call-meld 7 > rack-bottom 6 >
+ * seat 1 > Discard>. Upward coach halos stay clipped (part-0123) for non-call-meld
  * fly-ins.
  *
  * Scope `just-drawn` to the hand tray only. Discard-tracker drop-ins also use
@@ -46,8 +48,9 @@
 }
 
 /*
- * Call melds: keep hand-tray from forming a stacking context so the seat chip (z-index 10)
- * can stay above the promoted call-meld vignette (7). Rack-bottom alone clears Discard>.
+ * Call melds: keep hand-tray from forming a stacking context so call-meld-anchor (7) and
+ * rack-bottom (6) can interleave with the seat (dropped to 1 for the flight). Rack-bottom
+ * alone clears Discard>.
  */
 .app-layout[data-animations='on']:is(
   [data-hand-fly-in],
@@ -86,7 +89,7 @@
   .panel--hand
   .rack-stage__rack-top
   .exposure-rack__call-meld-anchor {
-  /* Above rack-bottom (6); under seat chip (10). Discard> stays at default child z-index. */
+  /* Above rack-bottom (6) / seat (1). Discard> stays at default child z-index. */
   z-index: 7;
 }
 
@@ -141,8 +144,8 @@
   .panel--hand
   .panel-hand-rack__hand-tray
   > .panel-hand-rack__seat-label {
-  /* Always in front of fly-in tiles and call-meld lift vignettes (part-0084 resting value). */
-  z-index: 10;
+  /* Under rack-bottom (3 / 6) so fly-in tiles clear "Playing position:" + seat chip. */
+  z-index: 1;
 }
 
 /*

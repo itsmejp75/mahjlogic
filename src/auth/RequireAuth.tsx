@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
 import { isAppTheme, persistAppTheme } from '../app/appTheme'
 import { loadUserPreferences } from '../lib/userPreferences'
@@ -12,9 +12,8 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   const [themeReady, setThemeReady] = useState(false)
   const [sessionBootReady, setSessionBootReady] = useState(false)
   const [barFillComplete, setBarFillComplete] = useState(false)
-  /** Bumps only on account switch so the CSS bar is not remounted when session arrives. */
+  /** Bumps when an authenticated boot starts so the status bar remounts/restarts. */
   const [bootEpoch, setBootEpoch] = useState(0)
-  const prevUserIdRef = useRef<string | undefined>(undefined)
 
   const notifySessionBootReady = useCallback(() => {
     setSessionBootReady(true)
@@ -27,20 +26,18 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   /**
    * Apply cloud theme before mounting the game shell so a stale localStorage
    * value (e.g. legacy Grape/Mystic default) cannot flash the wrong theme.
+   * The boot loader itself stays Abyss (see AuthThemeLoading) regardless.
    */
   useEffect(() => {
-    const nextId = user?.id
-    const prevId = prevUserIdRef.current
-    if (prevId !== undefined && prevId !== nextId) {
-      setBootEpoch((n) => n + 1)
-      setBarFillComplete(false)
-    }
-    prevUserIdRef.current = nextId
-
+    setBarFillComplete(false)
     setThemeReady(false)
     setSessionBootReady(false)
 
     if (!user) return
+
+    // Remount AuthThemeLoading so the status bar always restarts for this boot
+    // (avoids a bar that finished during auth `loading` staying stuck at 100%).
+    setBootEpoch((n) => n + 1)
 
     let cancelled = false
 

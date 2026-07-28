@@ -28,19 +28,22 @@ if (Capacitor.isNativePlatform()) {
 }
 
 /**
- * Installed-PWA splash cover defined in `index.html`. Fade it out after React has painted so
- * the visible launch is `apple-touch-startup-image` (or this watermark cover when iOS skips
- * it) → app, with no white flash or icon swap between them. Browser tabs never show the splash.
+ * Installed-PWA splash cover in `index.html` mirrors AuthThemeLoading (logo + empty bar).
+ * Remove it instantly after React paints so the handoff is seamless, then the boot loader
+ * starts the status-bar fill. Browser tabs never show the splash.
  */
 function hidePwaSplashAfterFirstPaint() {
   if (typeof document === 'undefined') return
   const splash = document.getElementById('pwa-splash')
   if (!splash) return
   const hide = () => {
+    if (!splash.isConnected || splash.classList.contains('is-hidden')) return
     splash.classList.add('is-hidden')
-    window.setTimeout(() => splash.remove(), 320)
+    // Boot loader starts its status bar once this cover is no longer blocking.
+    window.dispatchEvent(new Event('mahjlogic:pwa-splash-hidden'))
+    splash.remove()
   }
-  // Two RAFs guarantee at least one full app frame has rendered before we fade.
+  // Two RAFs guarantee AuthThemeLoading has painted under the identical splash frame.
   window.requestAnimationFrame(() => window.requestAnimationFrame(hide))
   // Safety: never let the cover linger if something errors during mount.
   window.setTimeout(hide, 4000)

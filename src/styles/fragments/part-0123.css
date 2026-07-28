@@ -1240,8 +1240,8 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
  * `just-drawn` must be hand-tray-scoped — discard-tracker drop-ins reuse the same class and must
  * not lift the hand over the green-slot incoming discard (lit tile-13 vignette flash).
  *
- * Call-meld promotion + seat-in-front stacking (tray auto, rack-bottom 6, anchor 7, seat 10)
- * is also twinned here so late rack rules cannot re-bury the chip under meld vignettes.
+ * Call-meld promotion stacking (tray auto, rack-bottom 6, anchor 7, seat 1 under tiles)
+ * is also twinned here so late rack rules cannot re-bury the flight.
  */
 .app-layout[data-animations='on']:is(
   [data-hand-fly-in],
@@ -1321,14 +1321,15 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .panel--hand
   .panel-hand-rack__hand-tray
   > .panel-hand-rack__seat-label {
-  z-index: 10;
+  /* Under rack-bottom so fly-in tiles clear "Playing position:" + seat chip. */
+  z-index: 1;
 }
 
 /*
  * Fly-in lifts the hand tray above green Discard> / incoming bot discard (`N >`, etc.).
  * Resting stack hides upward halos under rack-top; while raised, top+side glow can still paint
  * over non-call rack-top chrome. Keep only the underside halo for the flight window —
- * overrides lit→lit seam clip variants. With call melds: seat 10 > anchor 7 > rack-bottom 6.
+ * overrides lit→lit seam clip variants. With call melds: anchor 7 > rack-bottom 6 > seat 1.
  */
 .app-layout[data-animations='on']:is(
   [data-hand-fly-in],

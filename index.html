@@ -39,34 +39,64 @@
         background-color: #2a2438;
       }
       /*
-       * iOS PWA: `apple-touch-startup-image` only fires when a media query matches the device
-       * exactly; portrait launches (or unmatched sizes) fall back to a white screen. This
-       * inline cover paints `#121419` + watermark splash (same master as
-       * `apple-touch-startup-image`) immediately after HTML loads so there is no white flash
-       * or app-icon flash before React mounts. Hidden in the browser tab.
+       * Installed-PWA / native pre-React cover. Mirrors `AuthThemeLoading` (logo + empty
+       * status bar) so the handoff to the React load screen is seamless. Hidden in browser
+       * tabs. iOS `apple-touch-startup-image` still covers the gap before this HTML paints.
        */
       #pwa-splash {
+        box-sizing: border-box;
         position: fixed;
         inset: 0;
         z-index: 9999;
         display: none;
         align-items: center;
         justify-content: center;
-        background-color: #121419;
+        margin: 0;
+        padding: max(0.75rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+          max(0.75rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+        /* Always Abyss — same as `.app-theme-loading` (ignore saved Phantom/Mystic). */
+        background-color: #0d1522;
         pointer-events: none;
-        opacity: 1;
-        transition: opacity 240ms ease-out;
       }
-      #pwa-splash > img {
-        width: auto;
+      #pwa-splash__brand {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1.35rem;
+        width: min(100%, 28rem);
+        padding-inline: 1rem;
+      }
+      #pwa-splash__logo {
+        display: block;
+        width: min(100%, 22rem);
+        max-height: min(28vh, 9.5rem);
         height: auto;
-        max-width: min(100vw, 100vh);
-        max-height: min(100vw, 100vh);
+        margin: 0;
         object-fit: contain;
+        object-position: center;
+        user-select: none;
+        -webkit-user-select: none;
+        filter: drop-shadow(0 10px 28px rgba(0, 0, 0, 0.4));
       }
-      #pwa-splash.is-hidden {
-        opacity: 0;
-        visibility: hidden;
+      #pwa-splash__bar {
+        position: relative;
+        width: min(100%, 14rem);
+        height: 0.35rem;
+        border-radius: 999px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.14);
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+      }
+      #pwa-splash__bar-fill {
+        position: absolute;
+        inset-block: 0;
+        left: 0;
+        width: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #00b4d8 0%, #00b4d8 45%, #ffb800 100%);
+        transform: scaleX(0);
+        transform-origin: left center;
       }
       html[data-native-app] #pwa-splash,
       html[data-home-screen-app] #pwa-splash {
@@ -196,9 +226,17 @@
     </script>
   </head>
   <body>
-    <!-- Installed-PWA splash cover (watermark master); hidden by `main.tsx` once React mounts. -->
+    <!--
+      Installed-PWA splash = first frame of the React load screen (logo + empty bar).
+      Hidden by `main.tsx` once AuthThemeLoading has painted underneath.
+    -->
     <div id="pwa-splash" aria-hidden="true">
-      <img src="/Splash%20page%20-%20MahjLogic.png?v=14" alt="" />
+      <div id="pwa-splash__brand">
+        <img id="pwa-splash__logo" src="/mahjlogic-watermark.svg" alt="" draggable="false" />
+        <div id="pwa-splash__bar">
+          <span id="pwa-splash__bar-fill"></span>
+        </div>
+      </div>
     </div>
     <!-- data-nosnippet: do not use app UI (incl. card hands) in search result snippets -->
     <div id="root" data-nosnippet></div>
