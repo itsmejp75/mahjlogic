@@ -3,11 +3,11 @@
  * Rasterize SVG → PNGs via Puppeteer + macOS `sips`.
  *
  * App icons (default): PWA + Capacitor — uses src/assets/mahjlogic-app-icon-button.svg.
- * Solid gold canvas + one cyan bird path with a thin dark stroke (nothing else).
+ * Solid Abyss canvas + one cyan bird path with a thin dark stroke (nothing else).
  *
  * Tab favicon only: copies src/assets/mahjlogic-favicon.svg → public/favicon.svg.
  *
- * Inset: FAVICON_SAFE_INSET_PERCENT (default 0). App icons: APP_ICON_SAFE_INSET_PERCENT (default 13).
+ * Inset: FAVICON_SAFE_INSET_PERCENT (default 0). App icons: APP_ICON_SAFE_INSET_PERCENT (default 7).
  *
  * Desktop Chrome often keeps using old bitmaps for the omnibox “Open in app” chip even after you
  * regenerate PNGs. Bump the `?v=` query on manifest `icons[].src` (and `apple-touch-icon` in
@@ -98,7 +98,7 @@ function safeInsetPercent() {
     )
   }
   return Number(
-    process.env.APP_ICON_SAFE_INSET_PERCENT ?? process.env.ICON_SAFE_INSET_PERCENT ?? 13,
+    process.env.APP_ICON_SAFE_INSET_PERCENT ?? process.env.ICON_SAFE_INSET_PERCENT ?? 7,
   )
 }
 function sipsZ(w, h, input, output) {
