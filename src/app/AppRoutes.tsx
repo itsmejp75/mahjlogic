@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import App from '../App.tsx'
 import { RequireAuth } from '../auth/RequireAuth'
 import { AuthCallbackPage } from '../pages/AuthCallbackPage'
+import { HomePage } from '../pages/HomePage'
 import { LandingPage } from '../pages/LandingPage'
 import { PrivacyPage } from '../pages/PrivacyPage'
 import { TermsPage } from '../pages/TermsPage'
@@ -14,6 +15,14 @@ export function AppRoutes() {
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
       <Route
+        path="/home"
+        element={
+          <RequireAuth>
+            <HomePage />
+          </RequireAuth>
+        }
+      />
+      <Route
         path="/play"
         element={
           <RequireAuth>
@@ -25,8 +34,8 @@ export function AppRoutes() {
         path="/rack-checker"
         element={
           <RequireAuth>
-            {/* Keep the live round mounted in App; open checker as an overlay. */}
-            <Navigate to="/play" replace state={{ openRackChecker: true }} />
+            {/* Open checker from Home without mounting a live deal. */}
+            <Navigate to="/home" replace state={{ openRackChecker: true }} />
           </RequireAuth>
         }
       />

@@ -137,7 +137,7 @@ export function RackCheckerPage({
   onClose,
   overlay = false,
 }: {
-  /** When set (in-game overlay), Close returns here instead of remounting `/play`. */
+  /** When set (overlay from Home or in-game Menu), Close returns here instead of navigating. */
   onClose?: () => void
   /** Full-viewport layer above the live game (game stays mounted underneath). */
   overlay?: boolean
@@ -484,7 +484,7 @@ export function RackCheckerPage({
       onClose()
       return
     }
-    navigate('/play')
+    navigate('/home')
   }, [navigate, onClose])
 
   return (

@@ -38,6 +38,8 @@ import {
   saveUserPreferences,
   type SyncedUserPreferences,
 } from './lib/userPreferences'
+import { LS_KEY_HELP_PRESET, readHelpPresetFromStorage } from './lib/helpPreset'
+import { readPlayLocationState } from './app/playLocationState'
 import { PLAYABLE_CARD_IDS, PLAYABLE_CARD_LABEL, type PlayableCardId, cardSectionOrderFromPatterns, patternsForCard, playableCardShortLabel, readPlayableCardFromStorage, writePlayableCardToStorage } from './card/cardCatalog'
 import type { PracticePattern } from './card/practicePatterns'
 import { patternByIdLookup, setActiveCardPatterns } from './card/activeCardPatternsScope'
@@ -1852,6 +1854,8 @@ export default function App() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  /** Captured once from Home → Play navigation (cleared from location.state after mount). */
+  const homePlayIntentRef = useRef(readPlayLocationState(location.state).playIntent)
   const [rackCheckerOpen, setRackCheckerOpen] = useState(false)
   const replayOpeningDeckRef = useRef<TileInstance[] | null>(null)
   const gameResultRecordedRef = useRef(false)
@@ -2279,11 +2283,12 @@ export default function App() {
     playAsEastEnabledRef.current = playAsEastEnabled
   }, [playAsEastEnabled])
 
-  /** Deep link / redirect from `/rack-checker` — open overlay without remounting the round. */
+  /** Deep link / Home handoff — open overlays and clear one-shot navigation state. */
   useEffect(() => {
-    const st = location.state as { openRackChecker?: boolean } | null
-    if (!st?.openRackChecker) return
-    setRackCheckerOpen(true)
+    const st = readPlayLocationState(location.state)
+    if (!st.openRackChecker && !st.openStats && !st.playIntent) return
+    if (st.openRackChecker) setRackCheckerOpen(true)
+    if (st.openStats) setGameMetaPanel('stats')
     navigate(location.pathname, { replace: true, state: {} })
   }, [location.state, location.pathname, navigate])
 
@@ -4639,6 +4644,7 @@ export default function App() {
       playAsEastEnabled,
       suggestedHandsTrayDefaultOpen,
       handProbabilityEnabled,
+      helpPreset: readHelpPresetFromStorage(),
     }
   }, [
     appTheme,
@@ -4821,9 +4827,9 @@ export default function App() {
     }
   }, [])
 
-  /** Put the autosaved hand on the table (no fly-in) before showing Continue / New Game. */
+  /** Put the autosaved hand on the table (no fly-in). Optionally skip Continue dialog (Home → Resume). */
   const loadSavedGameOntoTable = useCallback(
-    (snap: InProgressGameSnapshot) => {
+    (snap: InProgressGameSnapshot, opts?: { autoContinue?: boolean }) => {
       applyResumeSettings(snap)
       clientRoundIdRef.current = snap.clientRoundId
       gameResultRecordedRef.current = false
@@ -4847,10 +4853,15 @@ export default function App() {
         replayOpeningMetaRef.current = snap.openingMeta
       }
       setRound(snap.round)
+      if (opts?.autoContinue) {
+        setResumePrompt(null)
+        markSessionReady()
+        return
+      }
       setResumePrompt(snap)
       // Resume dialog opens only after the boot loader dismisses (see effect below).
     },
-    [applyResumeSettings],
+    [applyResumeSettings, markSessionReady],
   )
 
   /** Continue: table already shows the saved hand — just dismiss the prompt. */
@@ -4903,8 +4914,14 @@ export default function App() {
 
       if (error) {
         cloudPrefsHydratedRef.current = true
-        if (savedGame) {
-          loadSavedGameOntoTable(savedGame)
+        const playIntent = homePlayIntentRef.current
+        homePlayIntentRef.current = undefined
+        if (playIntent === 'new') {
+          inProgressSaverRef.current.cancel()
+          void clearInProgressGame()
+          beginFreshSessionWithOpeningFlyIn()
+        } else if (savedGame) {
+          loadSavedGameOntoTable(savedGame, { autoContinue: playIntent === 'resume' })
         } else {
           beginFreshSessionWithOpeningFlyIn()
         }
@@ -5133,11 +5150,36 @@ export default function App() {
         }
       }
 
+      if (prefs?.helpPreset) {
+        try {
+          localStorage.setItem(LS_KEY_HELP_PRESET, prefs.helpPreset)
+        } catch {
+          /* ignore */
+        }
+      }
+
       if (!cancelled) cloudPrefsHydratedRef.current = true
 
-      // Restore the saved table first, then prompt — never flash a new opening deal.
+      const playIntent = homePlayIntentRef.current
+      homePlayIntentRef.current = undefined
+
+      // Home → New Game: discard autosave and deal fresh with current options.
+      if (playIntent === 'new') {
+        inProgressSaverRef.current.cancel()
+        void clearInProgressGame()
+        if (redeal) {
+          markSessionReady()
+          pendingOpeningDealFlyInRef.current = true
+          performNewHandDeal({ deferOpeningFlyIn: true, skipNewRackRecord: true })
+        } else {
+          beginFreshSessionWithOpeningFlyIn()
+        }
+        return
+      }
+
+      // Restore the saved table first — never flash a new opening deal under a resume.
       if (savedGame) {
-        loadSavedGameOntoTable(savedGame)
+        loadSavedGameOntoTable(savedGame, { autoContinue: playIntent === 'resume' })
         return
       }
 
@@ -5259,6 +5301,8 @@ export default function App() {
     return () => {
       document.removeEventListener('visibilitychange', onHide)
       window.removeEventListener('pagehide', onPageHide)
+      // Leaving /play (e.g. Exit to Home) — flush pending autosave before unmount.
+      saver.flush()
       saver.cancel()
     }
   }, [])
@@ -6221,6 +6265,17 @@ export default function App() {
                     }}
                   >
                     Rack Checker
+                  </button>
+                  <button
+                    type="button"
+                    className="btn app-menu-tray__diff-btn"
+                    onClick={() => {
+                      appMenuOpenApiRef.current.setMenuOpen(false)
+                      inProgressSaverRef.current.flush()
+                      navigate('/home')
+                    }}
+                  >
+                    Exit to Home
                   </button>
                 </div>
               </div>

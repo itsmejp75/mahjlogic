@@ -91,7 +91,7 @@ export function LandingPage() {
                   setError(googleError)
                   return
                 }
-                navigate('/play', { replace: true })
+                navigate('/home', { replace: true })
               } finally {
                 setGoogleBusy(false)
               }
@@ -119,7 +119,7 @@ export function LandingPage() {
   }, [useGis, mode, user, navigate, signInWithGoogleIdToken])
 
   if (!loading && user) {
-    return <Navigate to="/play" replace />
+    return <Navigate to="/home" replace />
   }
 
   async function onSubmit(e: FormEvent) {
@@ -153,7 +153,7 @@ export function LandingPage() {
           setError(signInError)
           return
         }
-        navigate('/play', { replace: true })
+        navigate('/home', { replace: true })
         return
       }
 
@@ -167,7 +167,7 @@ export function LandingPage() {
         setMode('sign-in')
         return
       }
-      navigate('/play', { replace: true })
+      navigate('/home', { replace: true })
     } finally {
       setBusy(false)
     }
@@ -194,7 +194,7 @@ export function LandingPage() {
     }
     if (redirected) return
     setGoogleBusy(false)
-    if (signedIn) navigate('/play', { replace: true })
+    if (signedIn) navigate('/home', { replace: true })
   }
 
   const submitLabel =

@@ -3,6 +3,7 @@ import { isAppTheme, type AppTheme } from '../app/appTheme'
 import type { PlayableCardId } from '../card/cardCatalog'
 import type { BlankTileCount } from '../mahjong/deck'
 import type { TileGraphics } from '../tiles/tileGraphics'
+import { isHelpPreset, type HelpPreset } from './helpPreset'
 import { getSupabase } from './supabase'
 
 /** Menu settings synced to Supabase for the signed-in user (localStorage remains the cache). */
@@ -29,6 +30,7 @@ export type SyncedUserPreferences = {
   playAsEastEnabled: boolean
   suggestedHandsTrayDefaultOpen: boolean
   handProbabilityEnabled: boolean
+  helpPreset: HelpPreset
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -80,6 +82,7 @@ export function parseSyncedUserPreferences(raw: unknown): Partial<SyncedUserPref
   if (typeof raw.handProbabilityEnabled === 'boolean') {
     out.handProbabilityEnabled = raw.handProbabilityEnabled
   }
+  if (isHelpPreset(raw.helpPreset)) out.helpPreset = raw.helpPreset
 
   return out
 }

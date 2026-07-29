@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase'
 
 /**
- * Completes OAuth / email-confirm PKCE exchange, then sends the user into the game.
+ * Completes OAuth / email-confirm PKCE exchange, then sends the user to Home.
  */
 export function AuthCallbackPage() {
   const [ready, setReady] = useState(!isSupabaseConfigured)
@@ -50,5 +50,5 @@ export function AuthCallbackPage() {
     )
   }
 
-  return <Navigate to="/play" replace />
+  return <Navigate to="/home" replace />
 }
