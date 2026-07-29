@@ -3,7 +3,7 @@
  * Rasterize SVG → PNGs via Puppeteer + macOS `sips`.
  *
  * App icons (default): PWA + Capacitor — uses src/assets/mahjlogic-app-icon-button.svg.
- * Solid Abyss canvas + a darker blurred duplicate of the logo behind the mark.
+ * Solid gold canvas + one cyan bird path with a thin dark stroke (nothing else).
  *
  * Tab favicon only: copies src/assets/mahjlogic-favicon.svg → public/favicon.svg.
  *
@@ -36,16 +36,56 @@ const svgPath = path.resolve(positionalPath ?? (faviconOnly ? faviconSvgSrc : ap
 /** SVG file read for Puppeteer raster (may differ from svgPath when copying padded favicon.svg). */
 const rasterSvgPath = positionalPath ? svgPath : faviconOnly ? faviconSvgSrc : svgPath
 const masterPng = path.join(root, '.tmp-app-icon-master.png')
-/** Solid Abyss pad — dark enough for cyan to pop; blur still reads against it. */
-const ICON_CANVAS_BG = '#0d1522'
+/** Solid canvas behind the mark (LOGIC gold). Override with ICON_CANVAS_BG. */
+const ICON_CANVAS_BG = process.env.ICON_CANVAS_BG || '#ffb800'
+/** Thin darker-blue outer rim on the cyan bird. */
+const BIRD_EDGE_STROKE = '#0d1522'
+/** ViewBox units (~910 wide); keep thin — thick/round joins read as a second bird. */
+const BIRD_EDGE_STROKE_WIDTH = 6
+/** Soft bird-shaped shadow for lift off the gold (CSS filter on the mark only). */
+/** Warm soft shadow — cool Abyss navy next to cyan-on-gold reads as visual buzz. */
+const BIRD_DROP_SHADOW = 'drop-shadow(0 6px 12px rgba(90, 55, 0, 0.38))'
 
-/** Same logo artwork, fills forced near-black for the blurred under-layer. */
-function darkLogoSvg(svg) {
-  return svg
-    .replace(/#00b4d8/gi, '#000000')
-    .replace(/#ffb800/gi, '#000000')
-    .replace(/fill:\s*#00b4d8/gi, 'fill:#000000')
-    .replace(/fill:\s*#ffb800/gi, 'fill:#000000')
+/**
+ * Rebuild as a minimal SVG: one cyan bird path + stroke. Drops Inkscape clipPaths,
+ * gold LOGIC letters, text, blurs, and every other layer from the source file.
+ *
+ * The source bird fills its viewBox edge-to-edge — pad the viewBox so the stroke
+ * isn't clipped into a square that cuts the M tips / belly.
+ */
+function prepareAppIconSvg(svg) {
+  const parts = (svg.match(/viewBox="([^"]+)"/)?.[1] ?? '0 0 910.03613 755.43872')
+    .trim()
+    .split(/[\s,]+/)
+    .map(Number)
+  const [vbX, vbY, vbW, vbH] = parts
+  const birdTag =
+    svg.match(/<path\b[^>]*\bid="path13"[^>]*\/?>/i)?.[0] ||
+    svg.match(/<path\b[^>]*#00b4d8[^>]*\/?>/i)?.[0]
+  const d = birdTag?.match(/\bd="([^"]+)"/)?.[1]
+  if (!d) {
+    throw new Error('rasterize-icon-from-svg: cyan bird path (path13) not found')
+  }
+  // Stroke is centered on the path; miter joins at sharp M tips stick out farther.
+  const pad = BIRD_EDGE_STROKE_WIDTH * 3
+  const viewBox = `${vbX - pad} ${vbY - pad} ${vbW + pad * 2} ${vbH + pad * 2}`
+  // Source bird lives under translate(1011.7469,-559.78164) in the app-icon SVG.
+  const transform = 'translate(1011.7469,-559.78164)'
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" overflow="visible">
+  <g transform="${transform}">
+    <path
+      d="${d}"
+      fill="#00b4d8"
+      stroke="${BIRD_EDGE_STROKE}"
+      stroke-width="${BIRD_EDGE_STROKE_WIDTH}"
+      stroke-linejoin="miter"
+      stroke-miterlimit="3"
+      stroke-linecap="butt"
+      paint-order="stroke fill"
+    />
+  </g>
+</svg>`
 }
 
 /** Edge padding (% of 1024 master). Favicon SVG already includes dark inset (default 0). */
@@ -64,11 +104,9 @@ function sipsZ(w, h, input, output) {
 }
 
 async function rasterMaster() {
-  const svg = fs.readFileSync(rasterSvgPath, 'utf8')
+  const raw = fs.readFileSync(rasterSvgPath, 'utf8')
+  const svg = faviconOnly ? raw : prepareAppIconSvg(raw)
   const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)
-  const darkDataUrl = faviconOnly
-    ? null
-    : 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(darkLogoSvg(svg))
   const chromeCandidates = [
     process.env.CHROME_PATH,
     '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -90,15 +128,19 @@ async function rasterMaster() {
   await page.setViewport({ width: 1024, height: 1024, deviceScaleFactor: 1 })
   const inset = safeInsetPercent()
   const pad = `${inset}%`
-  const markStack = faviconOnly
-    ? `<img src="${dataUrl}" alt="" style="width:100%;height:100%;object-fit:contain;object-position:center center"/>`
-    : `<div style="position:relative;width:100%;height:100%;">
-<img src="${darkDataUrl}" alt="" aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center center;transform:scale(1.04);filter:blur(36px);opacity:1;"/>
-<img src="${dataUrl}" alt="" style="position:relative;width:100%;height:100%;object-fit:contain;object-position:center center"/>
-</div>`
+  const imgStyle = [
+    'width:100%',
+    'height:100%',
+    'object-fit:contain',
+    'object-position:center center',
+    !faviconOnly ? `filter:${BIRD_DROP_SHADOW}` : '',
+  ]
+    .filter(Boolean)
+    .join(';')
   await page.setContent(
     `<!DOCTYPE html><html><body style="margin:0;background:${ICON_CANVAS_BG};box-sizing:border-box;width:1024px;height:1024px;padding:${pad};display:flex;align-items:center;justify-content:center;overflow:hidden;">
-${markStack}</body></html>`,
+<img src="${dataUrl}" alt="" style="${imgStyle}"/>
+</body></html>`,
     { waitUntil: 'networkidle0' },
   )
   await new Promise((r) => setTimeout(r, 150))
