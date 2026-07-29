@@ -50,5 +50,5 @@ export function AuthCallbackPage() {
     )
   }
 
-  return <Navigate to="/home" replace />
+  return <Navigate to="/play" replace />
 }

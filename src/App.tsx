@@ -30,6 +30,7 @@ import {
   clearInProgressGame,
   createDebouncedInProgressGameSaver,
   loadInProgressGame,
+  saveInProgressGame,
   type InProgressGameSnapshot,
 } from './lib/inProgressGame'
 import {
@@ -39,7 +40,7 @@ import {
   type SyncedUserPreferences,
 } from './lib/userPreferences'
 import { LS_KEY_HELP_PRESET, readHelpPresetFromStorage } from './lib/helpPreset'
-import { readPlayLocationState } from './app/playLocationState'
+import { clearPlayEnterFastPath, readPlayLocationState } from './app/playLocationState'
 import { PLAYABLE_CARD_IDS, PLAYABLE_CARD_LABEL, type PlayableCardId, cardSectionOrderFromPatterns, patternsForCard, playableCardShortLabel, readPlayableCardFromStorage, writePlayableCardToStorage } from './card/cardCatalog'
 import type { PracticePattern } from './card/practicePatterns'
 import { patternByIdLookup, setActiveCardPatterns } from './card/activeCardPatternsScope'
@@ -735,6 +736,44 @@ function createNewRound(
     ),
     randomSeatEnabled,
   )
+}
+
+/** Empty table until hydrate finishes — avoids flashing a mount deal before the opening fly-in. */
+function createPendingOpeningRound(): RoundState {
+  return {
+    hand: [],
+    bots: [[], [], []],
+    playerSeat: 'east',
+    botSlotSeats: DEFAULT_BOT_SLOT_SEATS,
+    wall: [],
+    openingWallTileCount: 0,
+    passSlots: [null, null, null],
+    passSlotOrigins: [null, null, null],
+    selectedHandTileId: null,
+    charlestonPhase: 'right1',
+    charlestonSkippedSecondRound: false,
+    awaitingSecondCharlestonChoice: false,
+    mainPhase: 'east-discard',
+    discardPile: [],
+    drawnTileId: null,
+    activeBotIndex: null,
+    activeBotDiscard: null,
+    botTurnBanner: null,
+    eastExposures: [],
+    botExposures: [],
+    pendingEastDiscardTile: null,
+    pendingEastDiscardIdx: null,
+    charlestonNewTileIds: [],
+    handTileFlyIn: null,
+    handJokerSwapFlyInFromBelowId: null,
+    exposureJokerSwapFlyInTileId: null,
+    stagedCallTileIds: [],
+    callAmendableAfterClaimTileId: null,
+    callAmendFromBotIndex: null,
+    botWin: null,
+    playerWinMethod: null,
+    deadHandReason: null,
+  }
 }
 
 
@@ -1856,6 +1895,8 @@ export default function App() {
   const location = useLocation()
   /** Captured once from Home → Play navigation (cleared from location.state after mount). */
   const homePlayIntentRef = useRef(readPlayLocationState(location.state).playIntent)
+  /** Home → Play (new): deal in useLayoutEffect before first paint — do not wait on cloud hydrate. */
+  const eagerNewDealDoneRef = useRef(false)
   const [rackCheckerOpen, setRackCheckerOpen] = useState(false)
   const replayOpeningDeckRef = useRef<TileInstance[] | null>(null)
   const gameResultRecordedRef = useRef(false)
@@ -1882,20 +1923,7 @@ export default function App() {
     playerSeat: 'east',
     botSlotSeats: DEFAULT_BOT_SLOT_SEATS,
   })
-  const [round, setRound] = useState<RoundState>(() => {
-    const randomSeatOn = !readPlayAsEastEnabledFromStorage()
-    const r = createNewRound(
-      readTenJokersEnabledFromStorage(),
-      readBlankTilesEnabledFromStorage(),
-      readBlankTileCountFromStorage(),
-      randomSeatOn,
-    )
-    replayOpeningDeckRef.current = roundOpeningDeckOrder(r)
-    replayOpeningMetaRef.current = { playerSeat: r.playerSeat, botSlotSeats: r.botSlotSeats }
-    // Hold opening fly-in until resume check finishes — avoids a new rack animating in
-    // before a saved hand is restored underneath the Continue prompt.
-    return { ...r, handTileFlyIn: null }
-  })
+  const [round, setRound] = useState<RoundState>(() => createPendingOpeningRound())
   const [suggestedFocusHandKey, setSuggestedFocusHandKey] = useState<string | null>(null)
   const suggestedFocusHandKeyRef = useRef<string | null>(null)
   suggestedFocusHandKeyRef.current = suggestedFocusHandKey
@@ -4460,7 +4488,12 @@ export default function App() {
     const blankCount = readBlankTileCountFromStorage()
     setBlankTileCount((prev) => (prev === blankCount ? prev : blankCount))
     blankTileCountRef.current = blankCount
-    suggestedHandsTrayApiRef.current.setTrayOpen(readSuggestedHandsTrayDefaultOpenFromStorage())
+    // Keep Hands closed for deferred opening deals — open when the fly-in arms (avoids empty tray flash).
+    if (!opts?.deferOpeningFlyIn) {
+      suggestedHandsTrayApiRef.current.setTrayOpen(readSuggestedHandsTrayDefaultOpenFromStorage())
+    } else {
+      suggestedHandsTrayApiRef.current.setTrayOpen(false)
+    }
     trayOpenBeforeBotHandsRef.current = null
     setBotHandsIdentifierFocusSeat(null)
     if (m !== c) {
@@ -4853,6 +4886,8 @@ export default function App() {
         replayOpeningMetaRef.current = snap.openingMeta
       }
       setRound(snap.round)
+      // Restore live tray state from the save — do not re-open from the menu default.
+      suggestedHandsTrayApiRef.current.setTrayOpen(snap.settings.suggestedHandsTrayOpen === true)
       if (opts?.autoContinue) {
         setResumePrompt(null)
         markSessionReady()
@@ -4881,11 +4916,31 @@ export default function App() {
     performNewHandDeal()
   }, [markSessionReady, performNewHandDeal])
 
-  /** No cloud save: allow play; opening fly-in waits for boot loader dismiss. */
+  /**
+   * Fresh session: deal once (committed before revealing), fly-in armed when the boot loader lifts.
+   * flushSync so the loader never dismisses onto an empty rack / wall 0.
+   */
   const beginFreshSessionWithOpeningFlyIn = useCallback(() => {
-    markSessionReady()
     pendingOpeningDealFlyInRef.current = true
-  }, [markSessionReady])
+    flushSync(() => {
+      performNewHandDeal({ deferOpeningFlyIn: true, skipNewRackRecord: true })
+    })
+    markSessionReady()
+  }, [markSessionReady, performNewHandDeal])
+
+  /**
+   * Home → Play: deal from local prefs immediately (Home already saved them).
+   * Waiting on cloud hydrate was the empty-rack / wall-0 hesitation.
+   */
+  useLayoutEffect(() => {
+    if (eagerNewDealDoneRef.current) return
+    if (homePlayIntentRef.current !== 'new') return
+    eagerNewDealDoneRef.current = true
+    inProgressSaverRef.current.cancel()
+    void clearInProgressGame()
+    beginFreshSessionWithOpeningFlyIn()
+    clearPlayEnterFastPath()
+  }, [beginFreshSessionWithOpeningFlyIn])
 
   /** Load cloud prefs + in-progress game on login; prompt to resume when a hand was autosaved. */
   useEffect(() => {
@@ -4901,8 +4956,11 @@ export default function App() {
 
     let cancelled = false
     cloudPrefsHydratedRef.current = false
-    sessionReadyRef.current = false
-    setSessionReady(false)
+    // Keep sessionReady if Home → Play already dealt; otherwise wait for hydrate.
+    if (!eagerNewDealDoneRef.current) {
+      sessionReadyRef.current = false
+      setSessionReady(false)
+    }
     setResumePrompt(null)
 
     void (async () => {
@@ -4916,10 +4974,10 @@ export default function App() {
         cloudPrefsHydratedRef.current = true
         const playIntent = homePlayIntentRef.current
         homePlayIntentRef.current = undefined
-        if (playIntent === 'new') {
+        if (eagerNewDealDoneRef.current || playIntent === 'new') {
           inProgressSaverRef.current.cancel()
           void clearInProgressGame()
-          beginFreshSessionWithOpeningFlyIn()
+          if (!sessionReadyRef.current) beginFreshSessionWithOpeningFlyIn()
         } else if (savedGame) {
           loadSavedGameOntoTable(savedGame, { autoContinue: playIntent === 'resume' })
         } else {
@@ -4933,7 +4991,6 @@ export default function App() {
         if (cancelled) return
       }
 
-      let redeal = false
       if (prefs) {
         const prevCard = committedCardIdRef.current
         const prevBlank = blankTilesEnabledRef.current
@@ -4948,7 +5005,6 @@ export default function App() {
           setCommittedCardId(prefs.playableCardId)
           committedCardIdRef.current = prefs.playableCardId
           setActiveCardPatterns(patternsForCard(prefs.playableCardId))
-          redeal = true
         }
         if (prefs.botDifficulty != null) {
           setBotDifficulty(prefs.botDifficulty)
@@ -5089,7 +5145,6 @@ export default function App() {
           } catch {
             /* ignore */
           }
-          redeal = true
         }
         if (
           typeof prefs.blankTileCount === 'number' &&
@@ -5103,7 +5158,6 @@ export default function App() {
           } catch {
             /* ignore */
           }
-          redeal = true
         }
         if (typeof prefs.tenJokersEnabled === 'boolean' && prefs.tenJokersEnabled !== prevTen) {
           setTenJokersEnabled(prefs.tenJokersEnabled)
@@ -5113,7 +5167,6 @@ export default function App() {
           } catch {
             /* ignore */
           }
-          redeal = true
         }
         if (typeof prefs.playAsEastEnabled === 'boolean' && prefs.playAsEastEnabled !== prevEast) {
           setPlayAsEastEnabled(prefs.playAsEastEnabled)
@@ -5123,11 +5176,10 @@ export default function App() {
           } catch {
             /* ignore */
           }
-          redeal = true
         }
         if (typeof prefs.suggestedHandsTrayDefaultOpen === 'boolean') {
           setSuggestedHandsTrayDefaultOpen(prefs.suggestedHandsTrayDefaultOpen)
-          suggestedHandsTrayApiRef.current.setTrayOpen(prefs.suggestedHandsTrayDefaultOpen)
+          // Do not force the live tray open here — resume restores tray from the in-progress save.
           try {
             localStorage.setItem(
               LS_KEY_SUGGESTED_HANDS_TRAY,
@@ -5163,17 +5215,11 @@ export default function App() {
       const playIntent = homePlayIntentRef.current
       homePlayIntentRef.current = undefined
 
-      // Home → New Game: discard autosave and deal fresh with current options.
-      if (playIntent === 'new') {
+      // Home → Play already dealt in useLayoutEffect — apply cloud prefs above, do not redeal.
+      if (eagerNewDealDoneRef.current || playIntent === 'new') {
         inProgressSaverRef.current.cancel()
         void clearInProgressGame()
-        if (redeal) {
-          markSessionReady()
-          pendingOpeningDealFlyInRef.current = true
-          performNewHandDeal({ deferOpeningFlyIn: true, skipNewRackRecord: true })
-        } else {
-          beginFreshSessionWithOpeningFlyIn()
-        }
+        if (!sessionReadyRef.current) beginFreshSessionWithOpeningFlyIn()
         return
       }
 
@@ -5183,13 +5229,7 @@ export default function App() {
         return
       }
 
-      if (redeal) {
-        markSessionReady()
-        pendingOpeningDealFlyInRef.current = true
-        performNewHandDeal({ deferOpeningFlyIn: true, skipNewRackRecord: true })
-      } else {
-        beginFreshSessionWithOpeningFlyIn()
-      }
+      beginFreshSessionWithOpeningFlyIn()
     })()
 
     return () => {
@@ -5215,6 +5255,7 @@ export default function App() {
     if (!user) return
     if (!(sessionReady || resumePrompt != null)) return
     sessionBoot?.notifySessionBootReady()
+    clearPlayEnterFastPath()
   }, [user, sessionReady, resumePrompt, sessionBoot])
 
   /** Show Continue / New Game only after the load screen (and bar) are gone. */
@@ -5233,15 +5274,20 @@ export default function App() {
     // Outside SessionBootProvider (e.g. tests), treat the loader as already gone.
     if (sessionBoot != null && !sessionBoot.bootLoaderDismissed) return
     pendingOpeningDealFlyInRef.current = false
-    setRound((r) => {
-      if (r.handTileFlyIn || r.hand.length === 0) return r
-      return {
-        ...r,
-        handTileFlyIn: {
-          ids: r.hand.map((t) => t.id),
-          from: 'across',
-          staggerWaveDelayMs: 44,
-        },
+    flushSync(() => {
+      setRound((r) => {
+        if (r.handTileFlyIn || r.hand.length === 0) return r
+        return {
+          ...r,
+          handTileFlyIn: {
+            ids: r.hand.map((t) => t.id),
+            from: 'across',
+            staggerWaveDelayMs: 44,
+          },
+        }
+      })
+      if (readSuggestedHandsTrayDefaultOpenFromStorage()) {
+        suggestedHandsTrayApiRef.current.setTrayOpen(true)
       }
     })
   }, [sessionBoot, sessionBoot?.bootLoaderDismissed, sessionReady, resumePrompt])
@@ -5267,6 +5313,7 @@ export default function App() {
         blankTilesEnabled: blankTilesEnabledRef.current,
         blankTileCount: blankTileCountRef.current,
         playAsEastEnabled: playAsEastEnabledRef.current,
+        suggestedHandsTrayOpen: suggestedHandsTrayApiRef.current.trayOpen,
       },
       openingDeck: replayOpeningDeckRef.current,
       openingMeta: replayOpeningMetaRef.current,
@@ -5292,18 +5339,37 @@ export default function App() {
 
   useEffect(() => {
     const saver = inProgressSaverRef.current
-    const onHide = () => {
-      if (document.visibilityState === 'hidden') saver.flush()
+    const persistWithLiveTray = () => {
+      const snap = buildInProgressSnapshot({
+        clientRoundId: clientRoundIdRef.current,
+        round: roundRef.current,
+        settings: {
+          cardId: committedCardIdRef.current,
+          botDifficulty: botDifficultyRef.current,
+          botWinsEnabled: botWinsEnabledRef.current,
+          tenJokersEnabled: tenJokersEnabledRef.current,
+          blankTilesEnabled: blankTilesEnabledRef.current,
+          blankTileCount: blankTileCountRef.current,
+          playAsEastEnabled: playAsEastEnabledRef.current,
+          suggestedHandsTrayOpen: suggestedHandsTrayApiRef.current.trayOpen,
+        },
+        openingDeck: replayOpeningDeckRef.current,
+        openingMeta: replayOpeningMetaRef.current,
+      })
+      saver.cancel()
+      if (snap) void saveInProgressGame(snap)
     }
-    const onPageHide = () => saver.flush()
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') persistWithLiveTray()
+    }
+    const onPageHide = () => persistWithLiveTray()
     document.addEventListener('visibilitychange', onHide)
     window.addEventListener('pagehide', onPageHide)
     return () => {
       document.removeEventListener('visibilitychange', onHide)
       window.removeEventListener('pagehide', onPageHide)
-      // Leaving /play (e.g. Exit to Home) — flush pending autosave before unmount.
-      saver.flush()
-      saver.cancel()
+      // Leaving /play — persist with current Hands tray state before unmount.
+      persistWithLiveTray()
     }
   }, [])
 
@@ -6136,7 +6202,7 @@ export default function App() {
   return (
     <AppMenuOpenProvider>
     <TileGraphicsProvider tileGraphics={tileGraphics}>
-    <SuggestedHandsTrayProvider initialOpen={suggestedHandsTrayDefaultOpen}>
+    <SuggestedHandsTrayProvider initialOpen={false}>
     <MenuCardDraftOnClose onClosed={resetMenuCardDraftOnClose} />
     <SuggestedHandsPinOnTrayClose
       focusKeyRef={suggestedFocusHandKeyRef}
@@ -6151,6 +6217,9 @@ export default function App() {
       data-tile-graphics={tileGraphics}
       data-color-buttons={colorButtonsEnabled ? 'on' : 'off'}
       data-animations={animationsEnabled ? 'on' : 'off'}
+      data-opening-pending={
+        round.hand.length === 0 && resumePrompt == null ? 'true' : undefined
+      }
       aria-hidden={rackCheckerOpen || undefined}
       {...(rackCheckerOpen ? ({ inert: '' } as Record<string, string>) : {})}
     >
@@ -6265,17 +6334,6 @@ export default function App() {
                     }}
                   >
                     Rack Checker
-                  </button>
-                  <button
-                    type="button"
-                    className="btn app-menu-tray__diff-btn"
-                    onClick={() => {
-                      appMenuOpenApiRef.current.setMenuOpen(false)
-                      inProgressSaverRef.current.flush()
-                      navigate('/home')
-                    }}
-                  >
-                    Exit to Home
                   </button>
                 </div>
               </div>

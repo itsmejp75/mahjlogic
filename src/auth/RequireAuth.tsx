@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
-import { isAppTheme, persistAppTheme } from '../app/appTheme'
+import { peekPlayEnterFastPath } from '../app/playLocationState'
+import { isAppTheme, persistAppTheme, readAppThemeFromStorage } from '../app/appTheme'
 import { loadUserPreferences } from '../lib/userPreferences'
 import { AuthThemeLoading } from './AuthThemeLoading'
 import { useAuth } from './AuthProvider'
@@ -9,9 +10,11 @@ import { SessionBootProvider } from './sessionBoot'
 /** Sends signed-out users to the landing page. */
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { loading, user } = useAuth()
-  const [themeReady, setThemeReady] = useState(false)
+  /** Home → Play: theme already applied; skip cloud theme wait + boot-bar fill. */
+  const fastPlayEnterRef = useRef(peekPlayEnterFastPath())
+  const [themeReady, setThemeReady] = useState(() => fastPlayEnterRef.current)
   const [sessionBootReady, setSessionBootReady] = useState(false)
-  const [barFillComplete, setBarFillComplete] = useState(false)
+  const [barFillComplete, setBarFillComplete] = useState(() => fastPlayEnterRef.current)
   /** Bumps when an authenticated boot starts so the status bar remounts/restarts. */
   const [bootEpoch, setBootEpoch] = useState(0)
 
@@ -27,13 +30,22 @@ export function RequireAuth({ children }: { children: ReactNode }) {
    * Apply cloud theme before mounting the game shell so a stale localStorage
    * value (e.g. legacy Grape/Mystic default) cannot flash the wrong theme.
    * The boot loader itself stays Abyss (see AuthThemeLoading) regardless.
+   * Fast Play enter keeps the Home theme and mounts the shell immediately.
    */
   useEffect(() => {
+    if (!user) return
+
+    if (fastPlayEnterRef.current) {
+      // Ensure document theme matches local cache (Home already persisted).
+      persistAppTheme(readAppThemeFromStorage())
+      setThemeReady(true)
+      setBarFillComplete(true)
+      return
+    }
+
     setBarFillComplete(false)
     setThemeReady(false)
     setSessionBootReady(false)
-
-    if (!user) return
 
     // Remount AuthThemeLoading so the status bar always restarts for this boot
     // (avoids a bar that finished during auth `loading` staying stuck at 100%).

@@ -9,7 +9,7 @@ import {
   readAppThemeFromStorage,
   type AppTheme,
 } from '../app/appTheme'
-import { readPlayLocationState } from '../app/playLocationState'
+import { markPlayEnterFastPath, readPlayLocationState } from '../app/playLocationState'
 import { useSessionBoot } from '../auth/sessionBoot'
 import { useAuth } from '../auth/AuthProvider'
 import {
@@ -53,7 +53,6 @@ import {
   saveUserPreferences,
   type SyncedUserPreferences,
 } from '../lib/userPreferences'
-import { RackCheckerPage } from './RackCheckerPage'
 import '../styles/home.css'
 
 const BOT_DIFFICULTY_LABEL: Record<BotDifficulty, string> = {
@@ -189,7 +188,6 @@ export function HomePage() {
   const [resumeLoading, setResumeLoading] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [signOutBusy, setSignOutBusy] = useState(false)
-  const [rackCheckerOpen, setRackCheckerOpen] = useState(false)
   const [statsOpen, setStatsOpen] = useState(false)
 
   const schedulePrefs = useCallback((next: SyncedUserPreferences) => {
@@ -216,9 +214,12 @@ export function HomePage() {
 
   useEffect(() => {
     const st = readPlayLocationState(location.state)
-    if (st.openRackChecker) setRackCheckerOpen(true)
-    if (st.openStats) setStatsOpen(true)
-    if (st.openRackChecker || st.openStats) {
+    if (st.openRackChecker) {
+      navigate('/rack-checker', { replace: true })
+      return
+    }
+    if (st.openStats) {
+      setStatsOpen(true)
       navigate(location.pathname, { replace: true, state: {} })
     }
   }, [location.state, location.pathname, navigate])
@@ -362,6 +363,7 @@ export function HomePage() {
   const goPlay = (intent: 'new' | 'resume') => {
     prefsSaverRef.current.cancel()
     void saveUserPreferences(prefsRef.current)
+    markPlayEnterFastPath()
     navigate('/play', { state: { playIntent: intent } })
   }
 
@@ -380,286 +382,291 @@ export function HomePage() {
   const hasResume = resumeSnap != null
 
   return (
-    <main className="home-hub">
-      <div className="home-hub__atmosphere" aria-hidden="true" />
-
-      <header className="home-hub__header">
-        <div className="home-hub__brand">
-          <img className="home-hub__logo" src={watermarkSrc} alt="" />
-          <div className="home-hub__brand-text">
-            <h1 className="home-hub__title">Mahj Logic</h1>
+    <main className="app home-hub" data-app-theme={appTheme}>
+      <div className="home-hub__shell">
+        <header className="home-hub__header">
+          <div className="home-hub__brand">
+            <img
+              className="home-hub__logo"
+              src={watermarkSrc}
+              alt="Mahj Logic"
+              decoding="async"
+              draggable={false}
+            />
             <p className="home-hub__tagline">American Mah Jongg Intelligence</p>
           </div>
-        </div>
-        <button
-          type="button"
-          className="btn home-hub__gear"
-          aria-label="Settings"
-          aria-expanded={settingsOpen}
-          onClick={() => setSettingsOpen((v) => !v)}
-        >
-          ⚙
-        </button>
-      </header>
-
-      {settingsOpen ? (
-        <div className="home-hub__settings" role="dialog" aria-label="Settings">
-          <div className="home-hub__option-block">
-            <div className="home-hub__subhead" id="home-theme-label">
-              Theme
-            </div>
-            <div
-              className="home-hub__chip-row"
-              role="radiogroup"
-              aria-labelledby="home-theme-label"
-            >
-              {APP_THEMES.map((t) => {
-                const preview = APP_THEME_BTN_PREVIEW[t]
-                return (
-                  <button
-                    key={t}
-                    type="button"
-                    className={[
-                      'btn',
-                      'home-hub__chip',
-                      'home-hub__theme-chip',
-                      appTheme === t ? 'home-hub__chip--on' : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')}
-                    style={
-                      {
-                        '--theme-btn-face': preview.face,
-                        '--theme-btn-face-pressed': preview.facePressed,
-                        '--theme-btn-border': preview.border,
-                      } as CSSProperties
-                    }
-                    role="radio"
-                    aria-checked={appTheme === t}
-                    onClick={() => onTheme(t)}
-                  >
-                    {APP_THEME_LABEL[t]}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-          {user ? (
-            <p className="home-hub__account">
-              Signed in as <span>{user.email ?? 'account'}</span>
-            </p>
-          ) : null}
           <button
             type="button"
-            className="btn home-hub__action-btn"
-            disabled={signOutBusy}
-            onClick={() => void onSignOut()}
+            className="btn home-hub__gear"
+            aria-label="Settings"
+            aria-expanded={settingsOpen}
+            onClick={() => setSettingsOpen((v) => !v)}
           >
-            {signOutBusy ? 'Signing out…' : 'Sign out'}
+            ⚙
           </button>
-          <footer className="home-hub__legal">
-            <a href="mailto:support@mahjlogic.com">support@mahjlogic.com</a>
-            <span aria-hidden="true">·</span>
-            <Link to="/privacy">Privacy</Link>
-            <span aria-hidden="true">·</span>
-            <Link to="/terms">Terms</Link>
-          </footer>
-        </div>
-      ) : null}
+        </header>
 
-      <section className="home-hub__primary" aria-label="Play">
-        {resumeLoading ? (
-          <p className="home-hub__status">Checking for a saved game…</p>
-        ) : hasResume ? (
-          <div className="home-hub__cta-row">
-            <button
-              type="button"
-              className="btn home-hub__action-btn home-hub__action-btn--primary"
-              onClick={() => goPlay('resume')}
-            >
-              Resume
-            </button>
+        {settingsOpen ? (
+          <div className="home-hub__settings" role="region" aria-label="Settings">
+            <div className="home-hub__option-row">
+              <div className="home-hub__subhead" id="home-theme-label">
+                Theme
+              </div>
+              <div
+                className="home-hub__chip-row"
+                role="radiogroup"
+                aria-labelledby="home-theme-label"
+              >
+                {APP_THEMES.map((t) => {
+                  const preview = APP_THEME_BTN_PREVIEW[t]
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      className={[
+                        'btn',
+                        'home-hub__chip',
+                        'home-hub__theme-chip',
+                        appTheme === t ? 'home-hub__chip--on' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      style={
+                        {
+                          '--theme-btn-face': preview.face,
+                          '--theme-btn-face-pressed': preview.facePressed,
+                          '--theme-btn-border': preview.border,
+                        } as CSSProperties
+                      }
+                      role="radio"
+                      aria-checked={appTheme === t}
+                      onClick={() => onTheme(t)}
+                    >
+                      {APP_THEME_LABEL[t]}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+            {user ? (
+              <p className="home-hub__account">
+                Signed in as <span>{user.email ?? 'account'}</span>
+              </p>
+            ) : null}
             <button
               type="button"
               className="btn home-hub__action-btn"
-              onClick={() => goPlay('new')}
+              disabled={signOutBusy}
+              onClick={() => void onSignOut()}
             >
-              New Game
+              {signOutBusy ? 'Signing out…' : 'Sign out'}
             </button>
+            <footer className="home-hub__legal">
+              <a href="mailto:support@mahjlogic.com">support@mahjlogic.com</a>
+              <span aria-hidden="true">·</span>
+              <Link to="/privacy">Privacy</Link>
+              <span aria-hidden="true">·</span>
+              <Link to="/terms">Terms</Link>
+            </footer>
           </div>
-        ) : (
-          <button
-            type="button"
-            className="btn home-hub__action-btn home-hub__action-btn--primary home-hub__action-btn--solo"
-            onClick={() => goPlay('new')}
-          >
-            Play
-          </button>
-        )}
-      </section>
+        ) : null}
 
-      <section className="home-hub__options" aria-label="Game options">
-        <div className="home-hub__option-block">
-          <div className="home-hub__subhead" id="home-card-label">
-            Card
-          </div>
-          <div className="home-hub__chip-row" role="radiogroup" aria-labelledby="home-card-label">
-            {PLAYABLE_CARD_IDS.map((id) => (
+        <section className="home-hub__primary" aria-label="Play">
+          {resumeLoading ? (
+            <p className="home-hub__status">Checking for a saved game…</p>
+          ) : hasResume ? (
+            <div className="home-hub__cta-row">
               <button
-                key={id}
                 type="button"
-                className={['btn', 'home-hub__chip', cardId === id ? 'home-hub__chip--on' : '']
-                  .filter(Boolean)
-                  .join(' ')}
-                role="radio"
-                aria-checked={cardId === id}
-                onClick={() => onCard(id)}
+                className="btn home-hub__action-btn home-hub__action-btn--primary"
+                onClick={() => goPlay('resume')}
               >
-                {PLAYABLE_CARD_LABEL[id]}
+                Resume
               </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="home-hub__option-block">
-          <div className="home-hub__subhead" id="home-bot-label">
-            Bot skill
-          </div>
-          <div className="home-hub__chip-row" role="radiogroup" aria-labelledby="home-bot-label">
-            {BOT_DIFFICULTIES.map((d) => (
               <button
-                key={d}
                 type="button"
-                className={[
-                  'btn',
-                  'home-hub__chip',
-                  botDifficulty === d ? 'home-hub__chip--on' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                role="radio"
-                aria-checked={botDifficulty === d}
-                onClick={() => onDifficulty(d)}
+                className="btn home-hub__action-btn"
+                onClick={() => goPlay('new')}
               >
-                {BOT_DIFFICULTY_LABEL[d]}
+                New Game
               </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="home-hub__option-block home-hub__option-block--row">
-          <div className="home-hub__toggle-group">
+            </div>
+          ) : (
             <button
               type="button"
-              className={[
-                'btn',
-                'home-hub__chip',
-                blankTilesEnabled ? 'home-hub__chip--on' : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-              aria-pressed={blankTilesEnabled}
-              onClick={() => onBlankTiles(!blankTilesEnabled)}
+              className="btn home-hub__action-btn home-hub__action-btn--primary home-hub__action-btn--solo"
+              onClick={() => goPlay('new')}
             >
-              Blank tiles
+              Play
             </button>
-            <div
-              className="home-hub__chip-row home-hub__chip-row--counts"
-              role="radiogroup"
-              aria-label="Blank tile count"
-            >
-              {BLANK_TILE_COUNT_OPTIONS.map((n) => (
+          )}
+        </section>
+
+        <section className="home-hub__options" aria-label="Game options">
+          <div className="home-hub__option-row">
+            <div className="home-hub__subhead" id="home-card-label">
+              Card
+            </div>
+            <div className="home-hub__chip-row" role="radiogroup" aria-labelledby="home-card-label">
+              {PLAYABLE_CARD_IDS.map((id) => (
                 <button
-                  key={n}
+                  key={id}
                   type="button"
-                  className={[
-                    'btn',
-                    'home-hub__chip',
-                    'home-hub__chip--count',
-                    blankTilesEnabled && blankTileCount === n ? 'home-hub__chip--on' : '',
-                  ]
+                  className={['btn', 'home-hub__chip', cardId === id ? 'home-hub__chip--on' : '']
                     .filter(Boolean)
                     .join(' ')}
                   role="radio"
-                  aria-checked={blankTilesEnabled && blankTileCount === n}
-                  disabled={!blankTilesEnabled}
-                  onClick={() => onBlankCount(n)}
+                  aria-checked={cardId === id}
+                  onClick={() => onCard(id)}
                 >
-                  {n}
+                  {PLAYABLE_CARD_LABEL[id]}
                 </button>
               ))}
             </div>
           </div>
-          <button
-            type="button"
-            className={[
-              'btn',
-              'home-hub__chip',
-              tenJokersEnabled ? 'home-hub__chip--on' : '',
-            ]
-              .filter(Boolean)
-              .join(' ')}
-            aria-pressed={tenJokersEnabled}
-            onClick={() => onTenJokers(!tenJokersEnabled)}
-          >
-            10 Jokers
-          </button>
-        </div>
 
-        <div className="home-hub__option-block">
-          <div className="home-hub__subhead" id="home-help-label">
-            Help level
+          <div className="home-hub__option-row">
+            <div className="home-hub__subhead" id="home-bot-label">
+              Bot skill
+            </div>
+            <div className="home-hub__chip-row" role="radiogroup" aria-labelledby="home-bot-label">
+              {BOT_DIFFICULTIES.map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  className={[
+                    'btn',
+                    'home-hub__chip',
+                    botDifficulty === d ? 'home-hub__chip--on' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  role="radio"
+                  aria-checked={botDifficulty === d}
+                  onClick={() => onDifficulty(d)}
+                >
+                  {BOT_DIFFICULTY_LABEL[d]}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="home-hub__chip-row" role="radiogroup" aria-labelledby="home-help-label">
-            {HELP_PRESETS.map((p) => (
+
+          <div className="home-hub__option-row">
+            <div className="home-hub__subhead" id="home-house-label">
+              House rules
+            </div>
+            <div className="home-hub__option-trail">
               <button
-                key={p}
                 type="button"
-                className={['btn', 'home-hub__chip', helpPreset === p ? 'home-hub__chip--on' : '']
+                className={[
+                  'btn',
+                  'home-hub__chip',
+                  blankTilesEnabled ? 'home-hub__chip--on' : '',
+                ]
                   .filter(Boolean)
                   .join(' ')}
-                role="radio"
-                aria-checked={helpPreset === p}
-                onClick={() => onHelpPreset(p)}
+                aria-pressed={blankTilesEnabled}
+                onClick={() => onBlankTiles(!blankTilesEnabled)}
               >
-                {HELP_PRESET_LABEL[p]}
+                Blank tiles
               </button>
-            ))}
+              <div
+                className="home-hub__chip-row home-hub__chip-row--counts"
+                role="radiogroup"
+                aria-label="Blank tile count"
+              >
+                {BLANK_TILE_COUNT_OPTIONS.map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    className={[
+                      'btn',
+                      'home-hub__chip',
+                      'home-hub__chip--count',
+                      blankTilesEnabled && blankTileCount === n ? 'home-hub__chip--on' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                    role="radio"
+                    aria-checked={blankTilesEnabled && blankTileCount === n}
+                    disabled={!blankTilesEnabled}
+                    onClick={() => onBlankCount(n)}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                className={[
+                  'btn',
+                  'home-hub__chip',
+                  tenJokersEnabled ? 'home-hub__chip--on' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                aria-pressed={tenJokersEnabled}
+                onClick={() => onTenJokers(!tenJokersEnabled)}
+              >
+                10 Jokers
+              </button>
+            </div>
           </div>
-        </div>
-      </section>
 
-      <section className="home-hub__modes" aria-label="More">
-        <button
-          type="button"
-          className="btn home-hub__action-btn home-hub__mode-btn"
-          disabled
-          title="Coming soon"
-        >
-          Rack of the Day
-          <span className="home-hub__soon">Soon</span>
-        </button>
-        <button
-          type="button"
-          className="btn home-hub__action-btn home-hub__mode-btn"
-          onClick={() => setRackCheckerOpen(true)}
-        >
-          Rack Checker
-        </button>
-        <button
-          type="button"
-          className="btn home-hub__action-btn home-hub__mode-btn"
-          onClick={() => setStatsOpen(true)}
-        >
-          Stats
-        </button>
-      </section>
+          <div className="home-hub__option-row">
+            <div className="home-hub__subhead" id="home-help-label">
+              Help level
+            </div>
+            <div className="home-hub__chip-row" role="radiogroup" aria-labelledby="home-help-label">
+              {HELP_PRESETS.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  className={['btn', 'home-hub__chip', helpPreset === p ? 'home-hub__chip--on' : '']
+                    .filter(Boolean)
+                    .join(' ')}
+                  role="radio"
+                  aria-checked={helpPreset === p}
+                  onClick={() => onHelpPreset(p)}
+                >
+                  {HELP_PRESET_LABEL[p]}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <hr className="home-hub__divider" />
+
+        <section className="home-hub__modes" aria-label="More">
+          <button
+            type="button"
+            className="btn home-hub__action-btn home-hub__mode-btn"
+            disabled
+            title="Coming soon"
+          >
+            Rack of the Day
+            <span className="home-hub__soon">Soon</span>
+          </button>
+          <button
+            type="button"
+            className="btn home-hub__action-btn home-hub__mode-btn"
+            onClick={() => navigate('/rack-checker')}
+          >
+            Rack Checker
+          </button>
+          <button
+            type="button"
+            className="btn home-hub__action-btn home-hub__mode-btn"
+            onClick={() => setStatsOpen(true)}
+          >
+            Stats
+          </button>
+        </section>
+      </div>
 
       {statsOpen ? (
         <GameHistoryStatsOverlay kind="stats" onClose={() => setStatsOpen(false)} />
-      ) : null}
-      {rackCheckerOpen ? (
-        <RackCheckerPage overlay onClose={() => setRackCheckerOpen(false)} />
       ) : null}
     </main>
   )

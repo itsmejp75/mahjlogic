@@ -65,6 +65,7 @@ describe('inProgressGame', () => {
         blankTilesEnabled: false,
         blankTileCount: 2,
         playAsEastEnabled: true,
+        suggestedHandsTrayOpen: false,
       },
       openingDeck: null,
       openingMeta: null,
@@ -74,6 +75,7 @@ describe('inProgressGame', () => {
     expect(isResumableSnapshot(parsed)).toBe(true)
     expect(parsed?.clientRoundId).toBe('round-1')
     expect(parsed?.round.handTileFlyIn).toBeNull()
+    expect(parsed?.settings.suggestedHandsTrayOpen).toBe(false)
   })
 
   it('rejects terminal hands', () => {

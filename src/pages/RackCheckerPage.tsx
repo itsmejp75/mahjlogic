@@ -18,6 +18,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
+import { useSessionBoot } from '../auth/sessionBoot'
 import { arrayMove, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable'
 import { SortedDiscardTrayRow } from '../app/playSurfaceUi'
 import {
@@ -143,10 +144,17 @@ export function RackCheckerPage({
   overlay?: boolean
 } = {}) {
   const navigate = useNavigate()
+  const sessionBoot = useSessionBoot()
   const [appTheme] = useState<AppTheme>(() => readAppThemeFromStorage())
   /** Rack Checker always uses classic faces (picker + rack), independent of menu Simple. */
   const tileGraphics = DEFAULT_TILE_GRAPHICS
   const [cardId] = useState<PlayableCardId>(() => readPlayableCardFromStorage())
+
+  // Standalone `/rack-checker` is wrapped in RequireAuth — dismiss the boot loader.
+  useEffect(() => {
+    if (overlay) return
+    sessionBoot?.notifySessionBootReady()
+  }, [overlay, sessionBoot])
   const [slots, setSlots] = useState<(TileInstance | null)[]>(emptySlots)
   const [showResults, setShowResults] = useState(false)
   const [focusKey, setFocusKey] = useState<string | null>(null)
@@ -484,7 +492,7 @@ export function RackCheckerPage({
       onClose()
       return
     }
-    navigate('/home')
+    navigate('/play')
   }, [navigate, onClose])
 
   return (

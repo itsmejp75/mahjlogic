@@ -1123,6 +1123,11 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   background-blend-mode: normal;
 }
 
+/* Hide empty chrome (wall 0 / vacant rack) until the opening deal is in state. */
+.app[data-opening-pending='true'] {
+  visibility: hidden;
+}
+
 :is(
   .app-dnd-frame,
   .app-play-split,

@@ -25,6 +25,8 @@ export type InProgressGameSettings = {
   blankTilesEnabled: boolean
   blankTileCount: BlankTileCount
   playAsEastEnabled: boolean
+  /** Live Hands tray open/closed when the hand was saved (not the menu default). */
+  suggestedHandsTrayOpen?: boolean
 }
 
 export type InProgressGameSnapshot = {
@@ -141,6 +143,9 @@ export function parseInProgressSnapshot(raw: unknown): InProgressGameSnapshot | 
       blankTilesEnabled: s.blankTilesEnabled,
       blankTileCount: s.blankTileCount as BlankTileCount,
       playAsEastEnabled: s.playAsEastEnabled,
+      ...(typeof s.suggestedHandsTrayOpen === 'boolean'
+        ? { suggestedHandsTrayOpen: s.suggestedHandsTrayOpen }
+        : {}),
     },
     openingDeck: Array.isArray(raw.openingDeck) ? (raw.openingDeck as TileInstance[]) : null,
     openingMeta: isRecord(raw.openingMeta)
