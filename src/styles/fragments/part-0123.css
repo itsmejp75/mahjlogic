@@ -2994,16 +2994,19 @@ html[data-home-screen-app]:not([data-native-app])
  * Empty wells are transparent — a tall row reads as dead gray band between the top tracker
  * and hand (see part-0118 / part-0119). Compact strips stay ~⅓ tile at the row bottom.
  *
- * Inline: match `.hand-row` (part-0008 `padding-inline: 0` + full-width `--rack-tile-w`).
- * Older rules still apply `--hand-rack-tray-inset-inline` (4px) here while tile math assumes a
- * flush 14-wide strip — that parks slot 14 (bot discard / East discard) a few px further right
- * than hand column 14, so the gap after the 13th rack tile looks wider than a normal face gap.
+ * Direct children only: match `.hand-row` (part-0008) — 14 equal tracks of
+ * `(100% − 13·gap) / 14`, not frozen `--rack-tile-w` px. Fixed flex widths round per slot
+ * and the leftover piles onto slot 14 (East discard / bot incoming), so the gap after the
+ * 13th hand tile looks wider and the staged tile sticks past Ignore / bot exposure / tray.
+ * Do not put that `%` calc on nested meld/pass-tail slots — `100%` would resolve against the
+ * wrong containing block and collapse those faces.
  */
 .panel--hand .rack-stage__rack-top .exposure-rack {
   height: auto;
   min-height: 0;
   align-items: flex-end;
   justify-content: flex-start;
+  gap: var(--player-rack-face-gap);
   padding-block: 0;
   padding-inline: 0;
 }
@@ -3013,6 +3016,25 @@ html[data-home-screen-app]:not([data-native-app])
   min-height: 0;
   align-self: flex-end;
   justify-content: flex-end;
+}
+
+/* Empty wells + discard/incoming: one hand-row column each (direct flex children only). */
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack
+  > :is(
+    .exposure-rack__slot--empty,
+    .exposure-rack__slot--east-discard-slot,
+    .exposure-rack__slot--incoming-discard,
+    .exposure-rack__slot--possible-hands,
+    .exposure-rack__call-initiate-target--near,
+    .exposure-rack__call-meld-add-slot
+  ) {
+  width: calc((100% - 13 * var(--player-rack-face-gap)) / 14);
+  flex: 0 0 calc((100% - 13 * var(--player-rack-face-gap)) / 14);
+  min-width: 0;
+  max-width: none;
+  box-sizing: border-box;
 }
 
 .panel--hand
@@ -3374,17 +3396,27 @@ html[data-home-screen-app]:not([data-native-app])
 /* Absolute plus pseudo no longer sizes the cell — pin single-tile strip width explicitly. */
 .app
   .panel--hand
+  .exposure-rack--charleston-pass
+  .pass-strip-tail
+  .exposure-rack__slot--pass-tail {
+  width: var(--rack-tile-w);
+  flex: 0 0 var(--rack-tile-w);
+  min-width: var(--rack-tile-w);
+}
+
+.app
+  .panel--hand
   :is(
-    .exposure-rack--charleston-pass .pass-strip-tail .exposure-rack__slot--pass-tail,
     .rack-stage__rack-top .exposure-rack__slot--east-discard-slot,
     .rack-stage__rack-top .exposure-rack__slot--incoming-discard,
     .rack-stage__rack-top
       .exposure-rack:not(.exposure-rack--charleston-pass)
       > .exposure-rack__slot--empty:last-child
   ) {
-  width: var(--rack-tile-w);
-  flex: 0 0 var(--rack-tile-w);
-  min-width: var(--rack-tile-w);
+  width: calc((100% - 13 * var(--player-rack-face-gap)) / 14);
+  flex: 0 0 calc((100% - 13 * var(--player-rack-face-gap)) / 14);
+  min-width: 0;
+  max-width: none;
 }
 
 .app
@@ -3498,6 +3530,53 @@ html[data-home-screen-app]:not([data-native-app])
   align-self: flex-start;
   overflow: visible;
   z-index: 2;
+}
+
+/*
+ * Discard / incoming tile must fill the percentage column (not frozen `--rack-tile-w`), or the
+ * face stays a hair wider than the slot and still reads past the Ignore / tray right edge.
+ */
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack
+  :is(.exposure-rack__slot--east-discard-slot, .exposure-rack__slot--incoming-discard)
+  .east-discard-staging.east-discard-staging--inline,
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack
+  :is(.exposure-rack__slot--east-discard-slot, .exposure-rack__slot--incoming-discard)
+  .east-discard-staging--inline
+  .east-discard-staging__tile,
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack
+  :is(.exposure-rack__slot--east-discard-slot, .exposure-rack__slot--incoming-discard)
+  .east-discard-staging--inline
+  .east-discard-staging__tile
+  > div,
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack
+  :is(.exposure-rack__slot--east-discard-slot, .exposure-rack__slot--incoming-discard)
+  .east-discard-staging--inline
+  .east-discard-staging__tile
+  .tile-face,
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack
+  .exposure-rack__slot--incoming-discard
+  .exposure-rack__incoming-discard-drag,
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack
+  .exposure-rack__slot--incoming-discard
+  .exposure-rack__incoming-discard-drag
+  .tile-face {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  margin-inline: 0;
+  box-sizing: border-box;
 }
 
 /* Retire legacy flat teal boxes on discard staging + call target (chrome lives on slot pseudos). */

@@ -4079,8 +4079,12 @@ export default function App() {
       suggestedTilesButtonLongPressFired.current = false
       return
     }
+    const turningTilesOn = !suggestedPanelTilesOn
     toggleSuggestedPanelTilesOn()
-  }, [suggestedHandsCoachActive, toggleSuggestedPanelTilesOn])
+    if (turningTilesOn && !suggestedHandsTrayApiRef.current.trayOpen) {
+      suggestedHandsTrayApiRef.current.setTrayOpen(true)
+    }
+  }, [suggestedHandsCoachActive, suggestedPanelTilesOn, toggleSuggestedPanelTilesOn])
 
   const onSuggestedPatternClick = useCallback(
     (handKey: string) => {
