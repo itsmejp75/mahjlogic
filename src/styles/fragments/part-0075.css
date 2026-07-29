@@ -475,45 +475,11 @@
  * Focused suggested-hand joker fill: time-share the natural the joker stands for (3s)
  * with a joker face (1s). Both faces stack in the cell grid; opacity crossfades (~0.4s).
  *
- * iOS WKWebView / PWA: keep `.tile-face--suggest-joker-timeshare` mounted (opacity 0) before
- * focus — creating the overlay in the same frame as `animation` often freezes the first
- * keyframe forever. Also promote a compositing layer; opacity-only infinite anims inside the
- * hands scroller otherwise fail to paint.
+ * iOS WKWebView / PWA: do NOT use CSS @keyframes here — opacity infinite animations on strip
+ * faces often freeze at the first keyframe (worse when remounting with `animation`). The strip
+ * root sets `--suggest-joker-natural-opacity` / `--suggest-joker-joker-opacity` from rAF
+ * (see SuggestedHandsPanel). Keep the joker overlay mounted at rest (opacity 0).
  */
-@keyframes suggest-joker-timeshare-natural {
-  0%,
-  70% {
-    opacity: 1;
-    transform: translateZ(0);
-  }
-  80%,
-  95% {
-    opacity: 0;
-    transform: translateZ(0);
-  }
-  100% {
-    opacity: 1;
-    transform: translateZ(0);
-  }
-}
-
-@keyframes suggest-joker-timeshare-joker {
-  0%,
-  70% {
-    opacity: 0;
-    transform: translateZ(0);
-  }
-  80%,
-  95% {
-    opacity: 1;
-    transform: translateZ(0);
-  }
-  100% {
-    opacity: 0;
-    transform: translateZ(0);
-  }
-}
-
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell > .tile-face--suggest-joker-timeshare,
 .hands-sheet__tile-cell > .tile-face--suggest-joker-timeshare {
   opacity: 0;
@@ -528,20 +494,19 @@
   .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
   .hands-sheet__tile-cell--suggest-joker
 ) > .tile-face:not(.tile-face--suggest-joker-timeshare) {
-  /* Shared strip `--suggest-joker-timeshare-delay`; faces remount when the joker set changes. */
-  animation: suggest-joker-timeshare-natural 4s linear infinite;
-  animation-delay: var(--suggest-joker-timeshare-delay, 0ms);
+  opacity: var(--suggest-joker-natural-opacity, 1);
   transform: translateZ(0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  will-change: opacity;
 }
 
 :is(
   .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
   .hands-sheet__tile-cell--suggest-joker
 ) > .tile-face--suggest-joker-timeshare {
-  animation: suggest-joker-timeshare-joker 4s linear infinite;
-  animation-delay: var(--suggest-joker-timeshare-delay, 0ms);
+  opacity: var(--suggest-joker-joker-opacity, 0);
+  will-change: opacity;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -549,16 +514,16 @@
     .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
     .hands-sheet__tile-cell--suggest-joker
   ) > .tile-face:not(.tile-face--suggest-joker-timeshare) {
-    animation: none;
     opacity: 1;
+    will-change: auto;
   }
 
   :is(
     .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--suggest-joker,
     .hands-sheet__tile-cell--suggest-joker
   ) > .tile-face--suggest-joker-timeshare {
-    animation: none;
     opacity: 0;
+    will-change: auto;
   }
 }
 
@@ -568,8 +533,8 @@
     .hands-sheet__tile-cell--suggest-joker
   )
   > .tile-face:not(.tile-face--suggest-joker-timeshare) {
-  animation: none;
   opacity: 1;
+  will-change: auto;
 }
 
 .app-layout[data-animations='off']
@@ -578,8 +543,8 @@
     .hands-sheet__tile-cell--suggest-joker
   )
   > .tile-face--suggest-joker-timeshare {
-  animation: none;
   opacity: 0;
+  will-change: auto;
 }
 
 .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--dead-cause .tile-face:not(.tile--joker)::after,

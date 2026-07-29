@@ -59,25 +59,40 @@ const ROW_TOUCH_SLOP_PX = 10
 const DRAG_SCROLL_SLOP_PX = 4
 const DRAG_SCROLL_CLICK_SUPPRESS_MS = 280
 const DRAG_SCROLL_CLASS = 'hands-list-scroll--drag-scrolling'
-/** Stable face for suggested-strip joker time-share (CSS swaps with the natural). */
+/** Stable face for suggested-strip joker time-share (CSS vars swap with the natural). */
 const SUGGEST_JOKER_TIMESHARE_DEF: TileDef = { cat: 'joker' }
-/** Must match `suggest-joker-timeshare-*` animation duration in part-0075.css. */
+/** 3s natural + 1s joker (incl. ~0.4s crossfades); drives `--suggest-joker-*-opacity`. */
 const SUGGEST_JOKER_TIMESHARE_MS = 4000
 
-/** Identity of joker-fill slots on the focused strip — changes when a joker joins/leaves. */
-function jokerTimeshareSyncKey(
-  slots: readonly SuggestedStripSlot[],
-  isActiveRow: boolean,
-): string {
-  if (!isActiveRow) return ''
-  let key = ''
-  for (let i = 0; i < slots.length; i++) {
-    const s = slots[i]!
-    if (!s.jokerSuggested) continue
-    if (key) key += '|'
-    key += `${i}:${s.tileId ?? ''}`
+/**
+ * iOS WKWebView / installed PWA often freezes CSS opacity keyframes on strip faces (especially
+ * when a face remounts in the same frame as `animation`). Drive the crossfade from rAF into CSS
+ * variables on the strip root instead — every joker cell stays in phase automatically.
+ */
+function applySuggestJokerTimeshareOpacities(root: HTMLElement, nowMs: number): void {
+  const t = (nowMs % SUGGEST_JOKER_TIMESHARE_MS) / SUGGEST_JOKER_TIMESHARE_MS
+  let natural: number
+  if (t <= 0.7) natural = 1
+  else if (t < 0.8) natural = 1 - (t - 0.7) / 0.1
+  else if (t <= 0.95) natural = 0
+  else natural = (t - 0.95) / 0.05
+  root.style.setProperty('--suggest-joker-natural-opacity', String(natural))
+  root.style.setProperty('--suggest-joker-joker-opacity', String(1 - natural))
+}
+
+function clearSuggestJokerTimeshareOpacities(root: HTMLElement): void {
+  root.style.removeProperty('--suggest-joker-natural-opacity')
+  root.style.removeProperty('--suggest-joker-joker-opacity')
+}
+
+function suggestJokerTimeshareMotionBlocked(root: HTMLElement): boolean {
+  if (
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ) {
+    return true
   }
-  return key
+  return root.closest('[data-animations]')?.getAttribute('data-animations') === 'off'
 }
 /** Extra rows mounted above/below the viewport so fast flings do not flash empty gaps. */
 const HANDS_LIST_VIRTUAL_OVERSCAN = 8
@@ -608,8 +623,6 @@ const SuggestedHandStripTileCell = memo(function SuggestedHandStripTileCell({
   dim,
   deadCauseSlot,
   classPrefix,
-  timeshareDelayCss,
-  timeshareSyncKey,
 }: {
   slot: SuggestedStripSlot
   showJokerGuide: boolean
@@ -617,10 +630,6 @@ const SuggestedHandStripTileCell = memo(function SuggestedHandStripTileCell({
   dim: boolean
   deadCauseSlot: boolean
   classPrefix: 'hands-sheet__tile-cell' | 'hands-list__pattern-tile-cell'
-  /** Shared strip delay — same string on every joker cell for this sync generation. */
-  timeshareDelayCss: string | null
-  /** Changes when the focused strip's joker-fill set changes; remounts faces to restart in phase. */
-  timeshareSyncKey: string
 }) {
   const jokerClass =
     classPrefix === 'hands-sheet__tile-cell'
@@ -639,15 +648,6 @@ const SuggestedHandStripTileCell = memo(function SuggestedHandStripTileCell({
       ? 'hands-sheet__tile-cell--dead-cause'
       : 'hands-list__pattern-tile-cell--dead-cause'
 
-  const timeshareStyle =
-    showJokerGuide && timeshareDelayCss
-      ? ({
-          ['--suggest-joker-timeshare-delay' as string]: timeshareDelayCss,
-        } as CSSProperties)
-      : undefined
-  // Remount animated faces whenever the strip joker set changes so late joiners don't drift.
-  const faceSyncKey = showJokerGuide ? timeshareSyncKey : 'idle'
-
   return (
     <div
       className={[
@@ -659,21 +659,17 @@ const SuggestedHandStripTileCell = memo(function SuggestedHandStripTileCell({
       ]
         .filter(Boolean)
         .join(' ')}
-      style={timeshareStyle}
     >
       <TileFace
-        key={`nat-${faceSyncKey}`}
         def={slot.displayDef}
         cardInk={stripTileFaceCardInk(slot.displayDef, slot.cardInk)}
       />
       {/*
        * Keep the joker overlay mounted whenever this slot is a joker fill — not only while the
-       * row is focused. iOS WKWebView often never starts an opacity animation on a face that is
-       * created in the same frame as `animation` (same reason strip lift `::after` stays mounted).
+       * row is focused. Opacity is driven by strip CSS vars (rAF), not by mounting with animation.
        */}
       {slot.jokerSuggested ? (
         <TileFace
-          key={`jok-${faceSyncKey}`}
           def={SUGGEST_JOKER_TIMESHARE_DEF}
           ariaHidden
           className="tile-face--suggest-joker-timeshare"
@@ -769,22 +765,36 @@ const SuggestedHandStripRuns = memo(function SuggestedHandStripRuns({
   runClassPrefix: 'hands-sheet__tile-run' | 'hands-list__pattern-tile-run'
   cellClassPrefix: 'hands-sheet__tile-cell' | 'hands-list__pattern-tile-cell'
 }) {
-  const runs = useMemo(() => segmentSuggestedStripIntoRuns(slots), [slots])
-  const timeshareSyncKey = useMemo(
-    () => jokerTimeshareSyncKey(slots, isActiveRow),
-    [slots, isActiveRow],
-  )
-  /*
-   * One delay for the whole strip. When a joker joins/leaves, sync key changes → new delay and
-   * every timeshare face remounts together (wall-clock join alone drifts after CSS anim pauses).
-   */
-  const timeshareDelayCss = useMemo(() => {
-    if (!timeshareSyncKey) return null
-    return `${-(performance.now() % SUGGEST_JOKER_TIMESHARE_MS)}ms`
-  }, [timeshareSyncKey])
+const runs = useMemo(() => segmentSuggestedStripIntoRuns(slots), [slots])
+  const stripRef = useRef<HTMLDivElement>(null)
+  const hasJokerFill = useMemo(() => slots.some((s) => s.jokerSuggested), [slots])
+
+  useEffect(() => {
+    const root = stripRef.current
+    if (!root) return
+    if (!isActiveRow || !hasJokerFill) {
+      clearSuggestJokerTimeshareOpacities(root)
+      return
+    }
+    if (suggestJokerTimeshareMotionBlocked(root)) {
+      root.style.setProperty('--suggest-joker-natural-opacity', '1')
+      root.style.setProperty('--suggest-joker-joker-opacity', '0')
+      return
+    }
+    let raf = 0
+    const tick = (now: number) => {
+      applySuggestJokerTimeshareOpacities(root, now)
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => {
+      cancelAnimationFrame(raf)
+      clearSuggestJokerTimeshareOpacities(root)
+    }
+  }, [isActiveRow, hasJokerFill])
 
   return (
-    <div className={gridClassName} role="presentation">
+    <div ref={stripRef} className={gridClassName} role="presentation">
       {runs.map((run, runIdx) => (
         <div
           key={`${keyPrefix}-run-${runIdx}`}
@@ -810,8 +820,6 @@ const SuggestedHandStripRuns = memo(function SuggestedHandStripRuns({
                 dim={dim}
                 deadCauseSlot={deadCauseSlot}
                 classPrefix={cellClassPrefix}
-                timeshareDelayCss={timeshareDelayCss}
-                timeshareSyncKey={timeshareSyncKey}
               />
             )
           })}

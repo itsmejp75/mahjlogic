@@ -2355,7 +2355,9 @@ html body .app.rack-checker .rack-checker__actions
   background-color: var(--rack-action-label-color-disabled, var(--app-action-btn-label-disabled));
 }
 
-.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong.rack-bottom-tile-cell--c5-6
+.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong.rack-bottom-tile-cell--c5-6:not(
+    .btn--mahjong-win-lit
+  )
   .btn--mahj__img {
   opacity: 0;
   filter: none;
@@ -3709,4 +3711,359 @@ html body .app .app-menu-modal-layer .app-menu-modal
 
 .app-menu-modal__game-meta-row {
   margin-top: 0.45rem;
+}
+
+/* Tiny preview chrome for `?previewWinConfetti=1` — stay out of the way of the burst. */
+.mahjong-win-confetti-preview-bar {
+  --rack-action-face: var(--app-action-btn-face);
+  --rack-action-face-pressed: var(--app-action-btn-face-pressed);
+  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed);
+  --rack-action-shadow-rest: var(--app-action-btn-shadow-rest);
+  --rack-action-pressed: var(--app-action-btn-shadow-pressed-deep);
+  --rack-action-border-rest: var(--app-action-btn-border-rest);
+  --rack-action-border-hold: var(--app-action-btn-border-hold);
+  --rack-action-border-color: var(--app-action-btn-border);
+  --rack-action-label-color: var(--app-action-btn-label);
+  position: fixed;
+  top: max(0.4rem, env(safe-area-inset-top, 0px));
+  right: max(0.4rem, env(safe-area-inset-right, 0px));
+  z-index: 520;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-bg-paint-color, #1a1f24) 82%, transparent);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+}
+
+.mahjong-win-confetti-preview-bar__btn {
+  min-width: 0;
+  min-height: 0;
+  height: 1.55rem;
+  padding: 0 0.55rem;
+  font-size: 0.68rem;
+  line-height: 1;
+  border-radius: 999px;
+}
+
+/* Mah Jongg win confetti: behind rack (spawn), then front fallout over the overlay. */
+.mahjong-win-confetti {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  border: 0;
+  display: block;
+}
+
+/* Under the play surface so the opaque rack tray occludes the launch. */
+.mahjong-win-confetti--behind {
+  z-index: 0;
+}
+
+/* Over wall-game-overlay (500) — fallout covers dialog + table down to the bottom. */
+.mahjong-win-confetti--front {
+  z-index: 510;
+}
+
+/* Lift the whole play tree above the behind canvas (transparent regions still show it). */
+.app:has(.mahjong-win-confetti--behind) .app-layout {
+  position: relative;
+  z-index: 1;
+}
+
+/* Drop from above with the falling confetti (delay timed in App). */
+@keyframes mahjong-win-dialog-in {
+  0% {
+    opacity: 0;
+    transform: translateY(calc(-100% - 1.25rem));
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes mahjong-win-title-punch {
+  0% {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes mahjong-win-rack-glow {
+  0% {
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.wall-game-dialog--mahjong-win-enter {
+  /* Ease-in drop so it rides down with the confetti. */
+  animation: mahjong-win-dialog-in 1.35s cubic-bezier(0.33, 0.08, 0.22, 1) both;
+  will-change: transform, opacity;
+}
+
+.wall-game-dialog__title--mahjong-win-punch {
+  /* Punch after the panel has mostly landed. */
+  animation: mahjong-win-title-punch 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.7s both;
+}
+
+/*
+ * MahJ button: one smooth rise+grow, hold aloft, then a delayed smooth return.
+ * Only three poses so the motion doesn’t stutter through mid keyframes.
+ */
+@keyframes mahjong-win-btn-pop {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  22% {
+    transform: translateY(-2.35rem) scale(1.9);
+  }
+  /* Hold aloft longer before the return. */
+  72% {
+    transform: translateY(-2.35rem) scale(1.9);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+.app-layout[data-mahjong-win-celebrate='on'][data-animations='on']
+  .panel--hand
+  .panel-hand-rack__action-well,
+.app-layout[data-mahjong-win-celebrate='on'][data-animations='on']
+  .panel--hand
+  .rack-bottom-bar--tile-grid {
+  overflow: visible;
+}
+
+.app-layout[data-mahjong-win-celebrate='on'][data-animations='on']
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.btn--mahjong-win-pop {
+  overflow: visible;
+  z-index: 40;
+  transform-origin: center bottom;
+  /* Ease both legs; hold at apex until ~58% before returning. */
+  animation: mahjong-win-btn-pop 1.45s cubic-bezier(0.45, 0.05, 0.25, 1) both;
+}
+
+.app-layout[data-animations='off']
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.btn--mahjong-win-pop {
+  animation: none;
+}
+
+/*
+ * Win glyph (stays lit through Review):
+ *  back  = cyan logo img + soft border glow
+ *  front = logo img + seat-chip-style alpha outline (feMorphology stroke)
+ */
+@keyframes mahjong-win-glyph-glow {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Beat color-on disabled opacity: 0.5 so the white glyph + glow stay bright. */
+.app[data-color-buttons='on']
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.btn--mahjong-win-lit.rack-bottom-tile-cell--c5-6:disabled,
+.app[data-color-buttons='off']
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.btn--mahjong-win-lit.rack-bottom-tile-cell--c5-6:disabled,
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.btn--mahjong-win-lit {
+  opacity: 1;
+  filter: none;
+  overflow: visible;
+}
+
+.app-layout:has(.btn.btn--mahjong-win-lit)
+  .panel--hand
+  .panel-hand-rack__action-well,
+.app-layout:has(.btn.btn--mahjong-win-lit)
+  .panel--hand
+  .rack-bottom-bar--tile-grid {
+  overflow: visible;
+}
+
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.btn--mahjong-win-lit
+  .btn--mahj__logo-stack {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: visible;
+  isolation: isolate;
+  z-index: 1;
+}
+
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.btn--mahjong-win-lit
+  .btn--mahj__logo-stack__well {
+  display: none;
+}
+
+/* Hide masked ::after + decorative logo img; SVG face is the front mark. */
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.btn--mahjong-win-lit.rack-bottom-tile-cell--c5-6
+  .btn--mahj__logo-stack::after,
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.btn--mahjong-win-lit.rack-bottom-tile-cell--c5-6:disabled
+  .btn--mahj__logo-stack::after {
+  opacity: 0;
+  filter: none;
+}
+
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.btn--mahjong-win-lit.rack-bottom-tile-cell--c5-6
+  .btn--mahj__img:not(.btn--mahj__img--win-glow) {
+  grid-area: 1 / 1;
+  opacity: 0;
+  filter: none;
+}
+
+/* Back: cyan logo + soft border glow. */
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.btn--mahjong-win-lit.rack-bottom-tile-cell--c5-6
+  .btn--mahj__img.btn--mahj__img--win-glow {
+  grid-area: 1 / 1;
+  z-index: 0;
+  position: relative;
+  height: 1.35em;
+  width: auto;
+  max-width: none;
+  max-height: none;
+  opacity: 1;
+  filter:
+    drop-shadow(0 0 0.75px #00b4d8)
+    drop-shadow(0 0 2px rgba(0, 180, 216, 0.95))
+    drop-shadow(0 0 4px rgba(0, 180, 216, 0.75))
+    drop-shadow(0 0 7px rgba(0, 180, 216, 0.45));
+  pointer-events: none;
+}
+
+/* Front: white fill + uniform outer stroke (same approach as seat-chip text-stroke). */
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.btn--mahjong-win-lit
+  .btn--mahj__win-face {
+  grid-area: 1 / 1;
+  z-index: 2;
+  position: relative;
+  display: block;
+  height: 1.35em;
+  width: auto;
+  max-width: none;
+  max-height: none;
+  opacity: 1;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.app-layout[data-animations='on']
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.btn--mahjong-win-lit.btn--mahjong-win-pop
+  .btn--mahj__img.btn--mahj__img--win-glow {
+  animation: mahjong-win-glyph-glow 0.45s ease-out both;
+}
+
+.app-layout[data-animations='off']
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--mahjong.btn--mahjong-win-lit
+  .btn--mahj__img.btn--mahj__img--win-glow {
+  animation: none;
+  opacity: 1;
+}
+
+/* Soft amber wash behind the winning 14 while celebrating. */
+.app-layout[data-mahjong-win-celebrate='on'] .panel--hand .rack-stage__rack-bottom {
+  position: relative;
+  isolation: isolate;
+}
+
+.app-layout[data-mahjong-win-celebrate='on'] .panel--hand .rack-stage__rack-bottom::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  left: -2%;
+  right: -2%;
+  top: -12%;
+  bottom: -8%;
+  border-radius: 0.55rem;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 78% 85% at 50% 55%,
+    color-mix(in srgb, #fbbf24 42%, transparent) 0%,
+    color-mix(in srgb, #f59e0b 18%, transparent) 42%,
+    transparent 72%
+  );
+  animation: mahjong-win-rack-glow 1.55s ease-out both;
+}
+
+.app-layout[data-mahjong-win-celebrate='on'] .panel--hand .rack-stage__rack-bottom > * {
+  position: relative;
+  z-index: 1;
+}
+
+.app[data-animations='off'] .wall-game-dialog--mahjong-win-enter,
+.app[data-animations='off'] .wall-game-dialog__title--mahjong-win-punch,
+.app[data-animations='off'] .app-layout .panel--hand .rack-stage__rack-bottom::before,
+.app[data-animations='off'] .app-layout .panel--hand .btn.btn--mahjong-win-pop {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mahjong-win-confetti {
+    display: none;
+  }
+
+  .wall-game-dialog--mahjong-win-enter,
+  .wall-game-dialog__title--mahjong-win-punch,
+  .app-layout[data-mahjong-win-celebrate='on'] .panel--hand .rack-stage__rack-bottom::before,
+  .app-layout[data-mahjong-win-celebrate='on'] .panel--hand .btn.btn--mahjong-win-pop {
+    animation: none;
+  }
 }

@@ -52,6 +52,7 @@ import {
   type CharlestonPhase,
 } from '../mahjong/charleston'
 import mahjLogoSrc from '../assets/mahj-logo.svg?url'
+import { MahjWinFaceGlyph } from '../components/MahjWinFaceGlyph'
 import type { RoundState } from './roundState'
 import {
   usePlaySurfaceDnD,
@@ -86,6 +87,13 @@ export type PlaySurfaceProps = {
   botHandsIdentifierEnabled: boolean
   botHandsIdentifierFocusSeat: BotSeat | null
   onBotExposureRowClick: (seat: BotSeat) => void
+  /** Soft rack glow while player Mah Jongg confetti / win dialog celebrate. */
+  mahjongWinCelebrate?: boolean
+  /** Keep MahJ logo lit in brand cyan after the pop (through Review). */
+  mahjongWinGlyphLit?: boolean
+  /** Bump to re-run the MahJ button pop (preview Replay / fresh win). */
+  mahjongWinBtnPopKey?: number
+  mahjongBtnRef?: RefObject<HTMLButtonElement | null>
 
   charlestonDone: boolean
   mainPhase: MainPhase
@@ -172,6 +180,10 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
     botHandsIdentifierEnabled,
     botHandsIdentifierFocusSeat,
     onBotExposureRowClick,
+    mahjongWinCelebrate = false,
+    mahjongWinGlyphLit = false,
+    mahjongWinBtnPopKey = 0,
+    mahjongBtnRef,
     charlestonDone,
     mainPhase,
     charlestonPhase,
@@ -436,6 +448,7 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
       <div
         className="app-layout"
         data-animations={animationsEnabled ? 'on' : 'off'}
+        data-mahjong-win-celebrate={mahjongWinCelebrate ? 'on' : undefined}
         data-hand-fly-in={
           animationsEnabled && handTileFlyIn ? handTileFlyIn.from : undefined
         }
@@ -641,10 +654,14 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                 </>
                               ) : null}
                               <button
+                                key={`mahj-btn-pop-${mahjongWinBtnPopKey}`}
+                                ref={mahjongBtnRef}
                                 type="button"
                                 className={[
                                   'btn btn--mahjong rack-bottom-tile-cell rack-bottom-tile-cell--c5-6',
                                   showMahjongRackHint ? 'btn--mahjong-hint' : '',
+                                  mahjongWinCelebrate ? 'btn--mahjong-win-pop' : '',
+                                  mahjongWinGlyphLit ? 'btn--mahjong-win-lit' : '',
                                 ]
                                   .filter(Boolean)
                                   .join(' ')}
@@ -654,6 +671,18 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                               >
                                 <span className="btn--mahj__logo-stack">
                                   <span className="btn--mahj__logo-stack__well" aria-hidden />
+                                  {mahjongWinGlyphLit ? (
+                                    <>
+                                      <img
+                                        className="btn--mahj__img btn--mahj__img--win-glow"
+                                        src={mahjLogoSrc}
+                                        alt=""
+                                        draggable={false}
+                                        aria-hidden
+                                      />
+                                      <MahjWinFaceGlyph className="btn--mahj__win-face" strokeWidth={0.7} />
+                                    </>
+                                  ) : null}
                                   <img className="btn--mahj__img" src={mahjLogoSrc} alt="" draggable={false} />
                                 </span>
                               </button>
@@ -860,13 +889,14 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                   </>
                                 ) : null}
                                 <button
+                                  key={`mahj-btn-pop-${mahjongWinBtnPopKey}`}
+                                  ref={mahjongBtnRef}
                                   type="button"
                                   className={[
                                     'btn btn--mahjong rack-bottom-tile-cell rack-bottom-tile-cell--c5-6',
                                     showMahjongRackHint ? 'btn--mahjong-hint' : '',
-                                    mainPhase === 'mahjong-declared' && mahjongWinReviewing
-                                      ? 'btn--mahjong-rack-pressed-in'
-                                      : '',
+                                    mahjongWinCelebrate ? 'btn--mahjong-win-pop' : '',
+                                    mahjongWinGlyphLit ? 'btn--mahjong-win-lit' : '',
                                   ]
                                     .filter(Boolean)
                                     .join(' ')}
@@ -876,6 +906,18 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                 >
                                   <span className="btn--mahj__logo-stack">
                                     <span className="btn--mahj__logo-stack__well" aria-hidden />
+                                    {mahjongWinGlyphLit ? (
+                                      <>
+                                        <img
+                                          className="btn--mahj__img btn--mahj__img--win-glow"
+                                          src={mahjLogoSrc}
+                                          alt=""
+                                          draggable={false}
+                                          aria-hidden
+                                        />
+                                        <MahjWinFaceGlyph className="btn--mahj__win-face" strokeWidth={0.7} />
+                                      </>
+                                    ) : null}
                                     <img className="btn--mahj__img" src={mahjLogoSrc} alt="" draggable={false} />
                                   </span>
                                 </button>
