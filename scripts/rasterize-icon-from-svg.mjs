@@ -42,9 +42,11 @@ const ICON_CANVAS_BG = process.env.ICON_CANVAS_BG || '#0d1522'
 const BIRD_EDGE_STROKE = '#05080c'
 /** ViewBox units (~910 wide); keep thin — thick/round joins read as a second bird. */
 const BIRD_EDGE_STROKE_WIDTH = 6
-/** Soft bird-shaped shadow for lift (subtle on Abyss, still present). */
-const BIRD_DROP_SHADOW =
-  'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.45)) drop-shadow(0 10px 18px rgba(0, 0, 0, 0.55))'
+/**
+ * Drop shadow off on Abyss: on-device it mostly reads as a dimmer belly, not lift.
+ * Re-enable via ICON_BIRD_DROP_SHADOW if testing on a lighter pad.
+ */
+const BIRD_DROP_SHADOW = process.env.ICON_BIRD_DROP_SHADOW || ''
 
 /**
  * Rebuild as a minimal SVG: one cyan bird path + stroke. Drops Inkscape clipPaths,
@@ -133,7 +135,7 @@ async function rasterMaster() {
     'height:100%',
     'object-fit:contain',
     'object-position:center center',
-    !faviconOnly ? `filter:${BIRD_DROP_SHADOW}` : '',
+    !faviconOnly && BIRD_DROP_SHADOW ? `filter:${BIRD_DROP_SHADOW}` : '',
   ]
     .filter(Boolean)
     .join(';')
