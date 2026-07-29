@@ -36,15 +36,15 @@ const svgPath = path.resolve(positionalPath ?? (faviconOnly ? faviconSvgSrc : ap
 /** SVG file read for Puppeteer raster (may differ from svgPath when copying padded favicon.svg). */
 const rasterSvgPath = positionalPath ? svgPath : faviconOnly ? faviconSvgSrc : svgPath
 const masterPng = path.join(root, '.tmp-app-icon-master.png')
-/** Solid canvas behind the mark (LOGIC gold). Override with ICON_CANVAS_BG. */
-const ICON_CANVAS_BG = process.env.ICON_CANVAS_BG || '#ffb800'
-/** Thin darker-blue outer rim on the cyan bird. */
+/** Solid canvas behind the mark (Mystic purple pad). Override with ICON_CANVAS_BG. */
+const ICON_CANVAS_BG = process.env.ICON_CANVAS_BG || '#2a2438'
+/** Thin darker outer rim on the cyan bird. */
 const BIRD_EDGE_STROKE = '#0d1522'
 /** ViewBox units (~910 wide); keep thin — thick/round joins read as a second bird. */
 const BIRD_EDGE_STROKE_WIDTH = 6
-/** Soft bird-shaped shadow for lift off the gold (CSS filter on the mark only). */
-/** Warm soft shadow — cool Abyss navy next to cyan-on-gold reads as visual buzz. */
-const BIRD_DROP_SHADOW = 'drop-shadow(0 6px 12px rgba(90, 55, 0, 0.38))'
+/** Soft bird-shaped shadow for lift off the Mystic pad. */
+const BIRD_DROP_SHADOW =
+  'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4)) drop-shadow(0 10px 18px rgba(8, 4, 16, 0.55))'
 
 /**
  * Rebuild as a minimal SVG: one cyan bird path + stroke. Drops Inkscape clipPaths,
