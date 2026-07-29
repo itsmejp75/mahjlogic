@@ -320,6 +320,7 @@ function tilesAwayForPracticePattern(
     leftToRight: true,
     requireCompleteRunSingles: true,
     ...(exposureTileIds && exposureTileIds.size > 0 ? { exposureTileIds } : {}),
+    ...(claimMelds.length > 0 ? { claimMelds } : {}),
   }
   const matched = p.groups?.length
     ? computeGroupMatch(rack, p.groups, opts)
@@ -625,6 +626,12 @@ type GroupMatchOpts = {
    * `shared-rank-suits` group (e.g. ANY LIKE NUMBERS) fixes the like-number rank to that exposure.
    */
   exposureTileIds?: ReadonlySet<string>
+  /**
+   * This seat’s exposed claim melds (pung/kong/…). When set, suit-permute / shared-rank-suits
+   * prefer embeddings where every claim lands on an **exact-size** slot (a pung never parks on a
+   * kong). Among exact fits, existing fill scoring still picks the best consec window.
+   */
+  claimMelds?: ReadonlyArray<{ tiles: TileInstance[] }>
   /**
    * When true, a suit-permute color group made only of non-joker run singles (e.g. 234) is credited
    * only if every rank in that group is available on the rack — partial runs do not reduce tiles-away.
@@ -1165,7 +1172,10 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
         const forcedRank = forcedSharedRankSuitsRankFromExposures(remaining, opts?.exposureTileIds, g)
         const ranksToTry =
           forcedRank != null ? [forcedRank] : ([1, 2, 3, 4, 5, 6, 7, 8, 9] as const)
+        const suitClaimMelds = suitClaimMeldsForSharedRankSuits(g, opts?.claimMelds)
+        const preferExactClaimFit = suitClaimMelds.length > 0
         let bestFill = 0
+        let bestExactClaimFit = false
         let bestRank = -1
         let bestPerm: Suit[] = []
         for (const rank of ranksToTry) {
@@ -1180,8 +1190,16 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
             for (let i = 0; i < n; i++) {
               fill += Math.min(counts[perm[i]!], g.needs[i]!)
             }
-            if (fill > bestFill) {
+            const exactClaimFit =
+              preferExactClaimFit &&
+              claimMeldsExactMatchSlots(suitClaimMelds, sharedRankSuitsPlanSlots(g, perm, rank))
+            const better =
+              preferExactClaimFit && exactClaimFit !== bestExactClaimFit
+                ? exactClaimFit
+                : fill > bestFill
+            if (better) {
               bestFill = fill
+              bestExactClaimFit = exactClaimFit
               bestRank = rank
               bestPerm = [...perm]
             }
@@ -1487,16 +1505,30 @@ function computeGroupMatch(hand: TileInstance[], groups: PatternGroup[], opts?: 
         const searchBases = g.consecRanks
           ? Array.from({ length: 9 - maxRankOff }, (_, i) => i + 1)
           : [1]
+        const claimMelds = opts?.claimMelds
+        const preferExactClaimFit = !!claimMelds && claimMelds.length > 0
 
         let bestScore = { fill: -1, exposureFill: -1, maxSlotFill: -1, slotSquareFill: -1 }
+        let bestExactClaimFit = false
         let bestPerm: Suit[] = []
         let bestBase = 1
 
         for (const base of searchBases) {
           for (const perm of suitPermutations(n)) {
             const score = scoreSuitPermuteCombo(remaining, g, perm, base, opts?.exposureTileIds)
-            if (suitPermuteComboScoreBetter(score, bestScore, !!opts?.exposureTileIds)) {
+            const exactClaimFit =
+              preferExactClaimFit &&
+              claimMeldsExactMatchSlots(claimMelds!, suitPermutePlanSlots(g, perm, base))
+            if (
+              suitPermuteComboPreferred(
+                { score, exactClaimFit },
+                { score: bestScore, exactClaimFit: bestExactClaimFit },
+                !!opts?.exposureTileIds,
+                preferExactClaimFit,
+              )
+            ) {
               bestScore = score
+              bestExactClaimFit = exactClaimFit
               bestPerm = [...perm]
               bestBase = base
             }
@@ -1605,6 +1637,21 @@ export function getRackTilesNotHelpingPattern(
 
 export type GreedyPatternMatchOpts = {
   exposureTileIds?: ReadonlySet<string>
+  /** Exact-size claim parking for suit-permute / shared-rank-suits (see {@link GroupMatchOpts}). */
+  claimMelds?: ReadonlyArray<{ tiles: TileInstance[] }>
+}
+
+function greedyMatchOptsFromUi(
+  exposureTileIds?: ReadonlySet<string>,
+  claimMelds?: ReadonlyArray<{ tiles: TileInstance[] }>,
+): GreedyPatternMatchOpts | undefined {
+  const hasIds = !!exposureTileIds && exposureTileIds.size > 0
+  const hasMelds = !!claimMelds && claimMelds.length > 0
+  if (!hasIds && !hasMelds) return undefined
+  return {
+    ...(hasIds ? { exposureTileIds } : {}),
+    ...(hasMelds ? { claimMelds } : {}),
+  }
 }
 
 /** Greedy match with ids + per-group metadata (for suggested-hand strip vs rack alignment). */
@@ -1627,6 +1674,7 @@ export function greedyPatternMatchDetail(
     usedOut,
     usedMeta,
     exposureTileIds: opts?.exposureTileIds,
+    claimMelds: opts?.claimMelds,
   })
   return { usedOrder: usedOut, usedMeta }
 }
@@ -1646,7 +1694,7 @@ export function computeBlankExchangeFills(
   rack: TileInstance[],
   p: PracticePattern,
   eligibleDiscardDefs: readonly TileDef[],
-  opts?: { exposureTileIds?: ReadonlySet<string> },
+  opts?: GreedyPatternMatchOpts,
 ): BlankExchangeFill[] {
   const blanks = rack.filter((t) => t.def.cat === 'blank')
   if (blanks.length === 0 || eligibleDiscardDefs.length === 0) return []
@@ -1663,6 +1711,7 @@ export function computeBlankExchangeFills(
     noJokers: p.section === 'SINGLES AND PAIRS',
     leftToRight: true,
     exposureTileIds: opts?.exposureTileIds,
+    claimMelds: opts?.claimMelds,
   }
   const score = (tiles: TileInstance[]): number =>
     p.groups?.length
@@ -2808,6 +2857,7 @@ function resolveStripTargetDefsForGreedyMatch(
   rack: TileInstance[],
   usedMeta: readonly GroupUsedMeta[],
   exposureTileIds?: ReadonlySet<string>,
+  claimMelds?: ReadonlyArray<{ tiles: TileInstance[] }>,
 ): TileDef[] {
   const base = patternLinePreviewGroupOrderDefs(p)
   if (!p.groups?.length || base.length === 0) return base
@@ -3109,8 +3159,10 @@ function resolveStripTargetDefsForGreedyMatch(
           ? Array.from({ length: 9 - maxRankOff }, (_, i) => i + 1)
           : [1]
         let bestScore = { fill: -1, exposureFill: -1, maxSlotFill: -1, slotSquareFill: -1 }
+        let bestExactClaimFit = false
         let bestPerm: Suit[] = []
         let bestBase = 1
+        const preferExactClaimFit = !!claimMelds && claimMelds.length > 0
         const metaPlan = inferConsecSuitPermutePlanFromMeta(rack, usedMeta, gi, g)
         if (metaPlan) {
           bestPerm = metaPlan.perm
@@ -3121,8 +3173,19 @@ function resolveStripTargetDefsForGreedyMatch(
               // Skip permutations that reuse a suit already committed by a suit-locked group.
               if (lockedSuits.size > 0 && perm.some((s) => lockedSuits.has(s))) continue
               const score = scoreSuitPermuteCombo(rem, g, perm, base, exposureTileIds)
-              if (suitPermuteComboScoreBetter(score, bestScore, !!exposureTileIds)) {
+              const exactClaimFit =
+                preferExactClaimFit &&
+                claimMeldsExactMatchSlots(claimMelds!, suitPermutePlanSlots(g, perm, base))
+              if (
+                suitPermuteComboPreferred(
+                  { score, exactClaimFit },
+                  { score: bestScore, exactClaimFit: bestExactClaimFit },
+                  !!exposureTileIds,
+                  preferExactClaimFit,
+                )
+              ) {
                 bestScore = score
+                bestExactClaimFit = exactClaimFit
                 bestPerm = [...perm]
                 bestBase = base
               }
@@ -4053,6 +4116,25 @@ function suitPermuteComboScoreBetter(
   return candidate.slotSquareFill > current.slotSquareFill
 }
 
+/** Prefer exact claim-meld parking, then the usual fill / exposure score. */
+function suitPermuteComboPreferred(
+  candidate: {
+    score: { fill: number; exposureFill: number; maxSlotFill: number; slotSquareFill: number }
+    exactClaimFit: boolean
+  },
+  current: {
+    score: { fill: number; exposureFill: number; maxSlotFill: number; slotSquareFill: number }
+    exactClaimFit: boolean
+  },
+  useExposureBias: boolean,
+  preferExactClaimFit: boolean,
+): boolean {
+  if (preferExactClaimFit && candidate.exactClaimFit !== current.exactClaimFit) {
+    return candidate.exactClaimFit
+  }
+  return suitPermuteComboScoreBetter(candidate.score, current.score, useExposureBias)
+}
+
 /** NMJL cards: soap zero is neutral — adjoining 2s/6s may also be dots when matching. */
 function isNmjl2026NeutralZeroPattern(p: PracticePattern): boolean {
   // Applies anywhere an NMJL card prints a zero (Year, Winds-Dragons, S&P). Not mock.
@@ -4372,6 +4454,7 @@ function buildSuitPermuteStripVariantRows(
   /** Must match {@link resolveStripTargetDefsForGreedyMatch}: same exposure-first tie-break so
    * strip rows / discard-need defs stay aligned with greedy `usedOrder` after claims. */
   exposureTileIds?: ReadonlySet<string>,
+  claimMelds?: ReadonlyArray<{ tiles: TileInstance[] }>,
 ): { rows: SuggestedStripSlot[][]; maxFill: number; combos: Array<{ perm: Suit[]; base: number }> } | null {
   const groups = p.groups
   if (!groups?.length) return null
@@ -4427,11 +4510,14 @@ function buildSuitPermuteStripVariantRows(
     exposureFill: number
     maxSlotFill: number
     slotSquareFill: number
+    exactClaimFit: boolean
   }
   const combos: Combo[] = []
   let bestScore = { fill: -1, exposureFill: -1, maxSlotFill: -1, slotSquareFill: -1 }
+  let bestExactClaimFit = false
   let bestComboIdx = -1
   const useExposureBias = exposureTileIds && exposureTileIds.size > 0
+  const preferExactClaimFit = !!claimMelds && claimMelds.length > 0
 
   for (const base of searchBases) {
     for (const perm of perms) {
@@ -4439,9 +4525,21 @@ function buildSuitPermuteStripVariantRows(
         continue
       }
       const score = scoreSuitPermuteCombo(rem, g, perm, base, exposureTileIds)
-      combos.push({ perm: [...perm], base, ...score })
-      if (bestComboIdx < 0 || suitPermuteComboScoreBetter(score, bestScore, !!useExposureBias)) {
+      const exactClaimFit =
+        preferExactClaimFit &&
+        claimMeldsExactMatchSlots(claimMelds!, suitPermutePlanSlots(g, perm, base))
+      combos.push({ perm: [...perm], base, ...score, exactClaimFit })
+      if (
+        bestComboIdx < 0 ||
+        suitPermuteComboPreferred(
+          { score, exactClaimFit },
+          { score: bestScore, exactClaimFit: bestExactClaimFit },
+          !!useExposureBias,
+          preferExactClaimFit,
+        )
+      ) {
         bestScore = score
+        bestExactClaimFit = exactClaimFit
         bestComboIdx = combos.length - 1
       }
     }
@@ -4455,9 +4553,14 @@ function buildSuitPermuteStripVariantRows(
     maxFill > 0
       ? combos
           .filter((c) =>
-            useExposureBias
-              ? c.exposureFill === primary.exposureFill && c.fill === primary.fill
-              : c.fill === primary.fill,
+            preferExactClaimFit
+              ? c.exactClaimFit === primary.exactClaimFit &&
+                (useExposureBias
+                  ? c.exposureFill === primary.exposureFill && c.fill === primary.fill
+                  : c.fill === primary.fill)
+              : useExposureBias
+                ? c.exposureFill === primary.exposureFill && c.fill === primary.fill
+                : c.fill === primary.fill,
           )
           .sort((a, b) => {
             const ap = a.base === primary.base && a.perm.join('-') === primary.perm.join('-') ? 0 : 1
@@ -4579,6 +4682,52 @@ function claimMeldsExactMatchSlots(
   return dfs(0)
 }
 
+/** Slot signatures for one suit-permute (perm, base) — same keys as claim-meld exact match. */
+function suitPermutePlanSlots(
+  g: Extract<PatternGroup, { kind: 'suit-permute' }>,
+  perm: readonly Suit[],
+  base: number,
+): { key: string; need: number }[] {
+  const slots: { key: string; need: number }[] = []
+  const n = g.colorGroups.length
+  for (let ci = 0; ci < n; ci++) {
+    const s = perm[ci]!
+    for (const sg of g.colorGroups[ci]!) {
+      const rank = g.consecRanks ? sg.rank - 1 + base : sg.rank
+      slots.push({ key: `s:${s}:${rank}`, need: sg.need })
+    }
+    const dc = g.colorGroupDragonCounts?.[ci] ?? 0
+    if (dc > 0) slots.push({ key: `d:${DRAGON_FOR_SUIT[s]}`, need: dc })
+  }
+  const tdc = g.trailingDragonCount ?? 0
+  if (tdc > 0) {
+    const trailSuit = SUITS.find((s) => !perm.includes(s))
+    if (trailSuit) slots.push({ key: `d:${DRAGON_FOR_SUIT[trailSuit]}`, need: tdc })
+  }
+  return slots
+}
+
+function sharedRankSuitsPlanSlots(
+  g: Extract<PatternGroup, { kind: 'shared-rank-suits' }>,
+  perm: readonly Suit[],
+  rank: number,
+): { key: string; need: number }[] {
+  return perm.map((s, i) => ({ key: `s:${s}:${rank}`, need: g.needs[i]! }))
+}
+
+/** Suit claim melds that can park on a shared-rank-suits group (ignore flower/dragon/wind). */
+function suitClaimMeldsForSharedRankSuits(
+  g: Extract<PatternGroup, { kind: 'shared-rank-suits' }>,
+  claimMelds: ReadonlyArray<{ tiles: TileInstance[] }> | undefined,
+): ReadonlyArray<{ tiles: TileInstance[] }> {
+  if (!claimMelds?.length) return []
+  return claimMelds.filter((m) => {
+    const naturals = m.tiles.filter((t) => t.def.cat !== 'joker')
+    if (naturals.length === 0) return false
+    return naturals.every((t) => t.def.cat === 'suit' && g.test(t.def))
+  })
+}
+
 /**
  * First (perm, base) for a suit-permute group where every claim meld lands on an exact-size slot.
  * Avoids greedy partial fills that paint a pung onto a kong of the same rank.
@@ -4596,22 +4745,7 @@ function firstSuitPermutePlanFittingClaimMelds(
     : [1]
   for (const base of searchBases) {
     for (const perm of suitPermutations(n)) {
-      const slots: { key: string; need: number }[] = []
-      for (let ci = 0; ci < n; ci++) {
-        const s = perm[ci]!
-        for (const sg of g.colorGroups[ci]!) {
-          const rank = g.consecRanks ? sg.rank - 1 + base : sg.rank
-          slots.push({ key: `s:${s}:${rank}`, need: sg.need })
-        }
-        const dc = g.colorGroupDragonCounts?.[ci] ?? 0
-        if (dc > 0) slots.push({ key: `d:${DRAGON_FOR_SUIT[s]}`, need: dc })
-      }
-      const tdc = g.trailingDragonCount ?? 0
-      if (tdc > 0) {
-        const trailSuit = SUITS.find((s) => !perm.includes(s))
-        if (trailSuit) slots.push({ key: `d:${DRAGON_FOR_SUIT[trailSuit]}`, need: tdc })
-      }
-      if (claimMeldsExactMatchSlots(claimMelds, slots)) {
+      if (claimMeldsExactMatchSlots(claimMelds, suitPermutePlanSlots(g, perm, base))) {
         return { perm: [...perm], base }
       }
     }
@@ -4631,27 +4765,20 @@ function firstSharedRankSuitsPlanFittingClaimMelds(
 ): { perm: Suit[]; rank: number } | null {
   const n = g.needs.length
   if (n < 2 || n > 3) return null
-  const suitMelds = claimMelds.filter((m) => {
-    const naturals = m.tiles.filter((t) => t.def.cat !== 'joker')
-    if (naturals.length === 0) return false
-    return naturals.every((t) => t.def.cat === 'suit' && g.test(t.def))
-  })
+  const suitMelds = suitClaimMeldsForSharedRankSuits(g, claimMelds)
   if (suitMelds.length === 0) return null
   for (let rank = 1; rank <= 9; rank++) {
     for (const perm of suitPermutations(n)) {
       let ok = true
-      const slots: { key: string; need: number }[] = []
       for (let i = 0; i < n; i++) {
-        const s = perm[i]!
-        const def: TileDef = { cat: 'suit', suit: s, rank }
+        const def: TileDef = { cat: 'suit', suit: perm[i]!, rank }
         if (!g.test(def)) {
           ok = false
           break
         }
-        slots.push({ key: `s:${s}:${rank}`, need: g.needs[i]! })
       }
       if (!ok) continue
-      if (claimMeldsExactMatchSlots(suitMelds, slots)) {
+      if (claimMeldsExactMatchSlots(suitMelds, sharedRankSuitsPlanSlots(g, perm, rank))) {
         return { perm: [...perm], rank }
       }
     }
@@ -4978,7 +5105,13 @@ export function buildSuggestedStripSlotRowsWithVariants(
     }
     return out
   }
-  const stripResolved = resolveStripTargetDefsForGreedyMatch(p, matchRack, um, exposureTileIds)
+  const stripResolved = resolveStripTargetDefsForGreedyMatch(
+    p,
+    matchRack,
+    um,
+    exposureTileIds,
+    exposureMelds,
+  )
   const altConsec = buildConsecOpposingSuitStripVariantRows(
     p,
     matchRack,
@@ -5010,6 +5143,7 @@ export function buildSuggestedStripSlotRowsWithVariants(
     usedMeta,
     stripResolved,
     exposureTileIds,
+    exposureMelds,
   )
   if (altPerm) {
     if (altPerm.rows.length > 1) {
@@ -5296,6 +5430,7 @@ export function computeBotExposureSuggestedBestIds(
   eastExposures: EastExposure[],
   exposureTileIds?: ReadonlySet<string>,
   patternBook: PracticePattern[] = getActiveCardPatterns(),
+  exposureMelds?: readonly ExposureMeld[],
 ): Set<string> {
   if (!focusKey) return new Set()
   const variantSep = ['::tier::', '::oc::', '::ocall::']
@@ -5305,8 +5440,7 @@ export function computeBotExposureSuggestedBestIds(
   const patternId = variantSep >= 0 ? focusKey.slice(0, variantSep) : focusKey
   const p = patternByIdLookup(patternBook).get(patternId)
   if (!p) return new Set()
-  const greedyUiOpts: GreedyPatternMatchOpts | undefined =
-    exposureTileIds && exposureTileIds.size > 0 ? { exposureTileIds } : undefined
+  const greedyUiOpts = greedyMatchOptsFromUi(exposureTileIds, exposureMelds)
 
   const addFromStripWork = (pinnedP: PracticePattern, isMulti: boolean, fk: string) => {
     const detail = greedyPatternMatchDetail(rack, pinnedP, greedyUiOpts)
@@ -5326,6 +5460,7 @@ export function computeBotExposureSuggestedBestIds(
       bestIds,
       detail.usedMeta,
       exposureTileIds,
+      exposureMelds,
     )
     const rows = pickStripRowsForFocusKey(p.id, fk, isMulti, result)
     const needDefs = collectNeededNaturalDefsFromStripRows(rows)
@@ -5369,6 +5504,7 @@ export function computeSuggestedDiscardTrackerNeedDefs(
   rack: TileInstance[],
   exposureTileIds?: ReadonlySet<string>,
   patternBook: PracticePattern[] = getActiveCardPatterns(),
+  exposureMelds?: readonly ExposureMeld[],
 ): TileDef[] {
   if (!focusKey) return []
   const variantSep = ['::tier::', '::oc::', '::ocall::']
@@ -5378,10 +5514,7 @@ export function computeSuggestedDiscardTrackerNeedDefs(
   const patternId = variantSep >= 0 ? focusKey.slice(0, variantSep) : focusKey
   const p = patternByIdLookup(patternBook).get(patternId)
   if (!p) return []
-  const greedyUiOpts: GreedyPatternMatchOpts | undefined =
-    exposureTileIds && exposureTileIds.size > 0
-      ? { exposureTileIds }
-      : undefined
+  const greedyUiOpts = greedyMatchOptsFromUi(exposureTileIds, exposureMelds)
 
   const addFromStripWork = (pinnedP: PracticePattern, isMulti: boolean, fk: string): TileDef[] => {
     const detail = greedyPatternMatchDetail(rack, pinnedP, greedyUiOpts)
@@ -5401,6 +5534,7 @@ export function computeSuggestedDiscardTrackerNeedDefs(
       bestIds,
       detail.usedMeta,
       exposureTileIds,
+      exposureMelds,
     )
     const rows = pickStripRowsForFocusKey(p.id, fk, isMulti, result)
     const needDefsRaw = collectNeededNaturalDefsFromStripRows(rows)
@@ -5439,12 +5573,14 @@ export function computeSuggestedDiscardNeedHighlightIds(
   discards: readonly TileInstance[],
   exposureTileIds?: ReadonlySet<string>,
   patternBook: PracticePattern[] = getActiveCardPatterns(),
+  exposureMelds?: readonly ExposureMeld[],
 ): Set<string> {
   const needDefs = computeSuggestedDiscardTrackerNeedDefs(
     focusKey,
     rack,
     exposureTileIds,
     patternBook,
+    exposureMelds,
   )
   return discardIdsMatchingNeededDefs(discards, needDefs)
 }
@@ -5705,7 +5841,7 @@ function stripOrderedHandIdsForPattern(
   exposureTileIds?: ReadonlySet<string>,
   exposureMelds?: readonly ExposureMeld[],
 ): { orderedIds: string[]; usedIds: Set<string> } {
-  const greedyOpts = exposureTileIds?.size ? { exposureTileIds } : undefined
+  const greedyOpts = greedyMatchOptsFromUi(exposureTileIds, exposureMelds)
   const detail = greedyPatternMatchDetail(rackForPattern, pinnedP, greedyOpts)
   const rackIdSet = new Set(rackForPattern.map((t) => t.id))
   const bestIds = new Set(detail.usedOrder.filter((id) => rackIdSet.has(id)))
@@ -5809,8 +5945,10 @@ export function sortHandForSuggestedPattern(
    * then keep true dim tiles in their current rack order so switching focused hands only
    * slides the best group left without scrambling the rest.
    */
-  const greedyOpts: GreedyPatternMatchOpts | undefined =
-    exposureTileIds?.size ? { exposureTileIds } : undefined
+  const greedyOpts = greedyMatchOptsFromUi(
+    exposureTileIds,
+    playerClaimMelds.length > 0 ? playerClaimMelds : undefined,
+  )
   const tailDetail = greedyPatternMatchDetail(rackForPattern, sortPattern, greedyOpts)
   const usedRank = new Map(tailDetail.usedOrder.map((id, i) => [id, i] as const))
   const remainingBest: TileInstance[] = []
@@ -5897,8 +6035,10 @@ export function sortFullRackTilesForPattern(
   }
 
   const pForMatch: PracticePattern = sortPattern
-  const greedyOpts: GreedyPatternMatchOpts | undefined =
-    exposureTileIds?.size ? { exposureTileIds } : undefined
+  const greedyOpts = greedyMatchOptsFromUi(
+    exposureTileIds,
+    playerClaimMelds.length > 0 ? playerClaimMelds : undefined,
+  )
   const blanksAfterPattern = blanksAfterPatternSortInHandOrder(input.hand, seen)
   const tailDetail = greedyPatternMatchDetail(rackForPattern, pForMatch, greedyOpts)
   const usedRank = new Map(tailDetail.usedOrder.map((id, i) => [id, i] as const))
@@ -5935,10 +6075,14 @@ export function postGameRackAndHighlights(
   if (!base) return { fullRack, bestIds: new Set() }
   const playerClaimMelds = rankInput.playerClaimMelds ?? []
   const rack = rackForPatternWithClaimMelds(rankInput.hand, playerClaimMelds)
-  const opt: GreedyPatternMatchOpts | undefined =
+  const exposureTileIds =
     playerClaimMelds.length > 0
-      ? { exposureTileIds: new Set(playerClaimMelds.flatMap((e) => e.tiles).map((t) => t.id)) }
+      ? new Set(playerClaimMelds.flatMap((e) => e.tiles).map((t) => t.id))
       : undefined
+  const opt = greedyMatchOptsFromUi(
+    exposureTileIds,
+    playerClaimMelds.length > 0 ? playerClaimMelds : undefined,
+  )
   let pForMatch: PracticePattern = base
   if (fk) {
     const pinned = buildPinnedPatternsFromFocusKey(base, fk)
@@ -6162,9 +6306,12 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
     leftToRight: true,
     requireCompleteRunSingles: true,
     ...(exposureTileIds && exposureTileIds.size > 0 ? { exposureTileIds } : {}),
+    ...(hasPlayerClaimMelds ? { claimMelds: playerClaimMelds } : {}),
   }
-  const greedyExposureOpts: GreedyPatternMatchOpts | undefined =
-    exposureTileIds && exposureTileIds.size > 0 ? { exposureTileIds } : undefined
+  const greedyExposureOpts: GreedyPatternMatchOpts | undefined = greedyMatchOptsFromUi(
+    exposureTileIds,
+    hasPlayerClaimMelds ? playerClaimMelds : undefined,
+  )
   const visible = tableVisibleTiles(
     discards,
     exposures,

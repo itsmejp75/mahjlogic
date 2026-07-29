@@ -2003,7 +2003,7 @@ export default function App() {
   const [wallGameReviewing, setWallGameReviewing] = useState(false)
   const [mahjongWinReviewing, setMahjongWinReviewing] = useState(false)
   const [botMahjongWinReviewing, setBotMahjongWinReviewing] = useState(false)
-  /** Overlay dismissed — table review after wall game / mahjong; hands tray + focus highlights stay available (tray stays closed until Hands). */
+  /** Overlay dismissed — table review after wall game / mahjong; hands tray + focus highlights stay available. */
   const postGameTableReviewing =
     wallGameReviewing || mahjongWinReviewing || botMahjongWinReviewing
   const [suggestedPanelTilesOn, setSuggestedPanelTilesOn] = useState(false)
@@ -3367,8 +3367,16 @@ export default function App() {
     if (!deferredSuggestedFocusHandKey || !suggestedHandsCoachActive) return null
     if (suggestedSuppressedHandKey === deferredSuggestedFocusHandKey) return null
     const greedyUiOpts =
-      suggestedHandsExposureTileIds && suggestedHandsExposureTileIds.size > 0
-        ? { exposureTileIds: suggestedHandsExposureTileIds }
+      (suggestedHandsExposureTileIds && suggestedHandsExposureTileIds.size > 0) ||
+      (suggestedHandsExposureMelds && suggestedHandsExposureMelds.length > 0)
+        ? {
+            ...(suggestedHandsExposureTileIds && suggestedHandsExposureTileIds.size > 0
+              ? { exposureTileIds: suggestedHandsExposureTileIds }
+              : {}),
+            ...(suggestedHandsExposureMelds && suggestedHandsExposureMelds.length > 0
+              ? { claimMelds: suggestedHandsExposureMelds }
+              : {}),
+          }
         : undefined
     // Focus key format:
     //   `<patternId>`                                  — base focus
@@ -3461,7 +3469,7 @@ export default function App() {
       bestIds: computeAvailableRackHighlightIds(p),
       blankExchangeIds: computeBlankExchangeIds(p),
     }
-  }, [deferredSuggestedFocusHandKey, suggestedSuppressedHandKey, suggestedHandsCoachActive, rackForSuggestedPatternMatch, suggestedHandsExposureTileIds, cardPatternsById, deadTileHintEnabled, discardTiles, botExposures, blankExchangeEligibleDiscardDefs])
+  }, [deferredSuggestedFocusHandKey, suggestedSuppressedHandKey, suggestedHandsCoachActive, rackForSuggestedPatternMatch, suggestedHandsExposureTileIds, suggestedHandsExposureMelds, cardPatternsById, deadTileHintEnabled, discardTiles, botExposures, blankExchangeEligibleDiscardDefs])
 
   /**
    * Bot exposure rings for the focused line: naturals that match strip “need” slots (dead tiles you
@@ -3480,6 +3488,7 @@ export default function App() {
       eastExposures,
       suggestedHandsExposureTileIds,
       cardPatterns,
+      suggestedHandsExposureMelds,
     )
     // Belt-and-suspenders: swappable jokers always get suggest-best (swap path + strip-wanted path).
     for (const id of collectSwappableJokerTileIds(
@@ -3501,6 +3510,7 @@ export default function App() {
     deferredPendingEastDiscardTile,
     eastExposures,
     suggestedHandsExposureTileIds,
+    suggestedHandsExposureMelds,
     cardPatterns,
   ])
 
@@ -3520,6 +3530,7 @@ export default function App() {
       discardPile.map((e) => e.tile),
       suggestedHandsExposureTileIds,
       cardPatterns,
+      suggestedHandsExposureMelds,
     )
   }, [
     suggestedDiscardGuideActive,
@@ -3527,6 +3538,7 @@ export default function App() {
     rackForSuggestedPatternMatch,
     discardPile,
     suggestedHandsExposureTileIds,
+    suggestedHandsExposureMelds,
     cardPatterns,
   ])
 
@@ -3540,12 +3552,14 @@ export default function App() {
       rackForSuggestedPatternMatch,
       suggestedHandsExposureTileIds,
       cardPatterns,
+      suggestedHandsExposureMelds,
     )
   }, [
     suggestedDiscardGuideActive,
     deferredSuggestedFocusHandKey,
     rackForSuggestedPatternMatch,
     suggestedHandsExposureTileIds,
+    suggestedHandsExposureMelds,
     cardPatterns,
   ])
 
@@ -4029,7 +4043,10 @@ export default function App() {
       setSuggestedDeadTableGuidesByKey({})
       trayOpenBeforeBotHandsRef.current = null
       setBotHandsIdentifierFocusSeat(null)
-      suggestedHandsTrayApiRef.current.setTrayOpen(false)
+      // Player Mah Jongg: keep the Hands tray open if it already was (show only the winning line).
+      if (mainPhase !== 'mahjong-declared') {
+        suggestedHandsTrayApiRef.current.setTrayOpen(false)
+      }
     }
   }, [mainPhase])
 
@@ -4183,16 +4200,15 @@ export default function App() {
   }, [mainPhase, hand, eastExposures, wall.length, discardTiles, botExposures, cardPatterns])
 
   /**
-   * After a player Mah Jongg + Review, Hands should list only the completed winning line
+   * On player Mah Jongg (win popup or Review), Hands lists only the completed winning line
    * (same identity as win-rack sort / overlay closest line) — not the full ranked card.
    */
   const playerMahjongWinReviewHands = useMemo(() => {
-    if (!mahjongWinReviewing) return null
     const row = postGameBotReview?.[0]
     if (!row || row.bestTilesAway !== 0 || row.linesAtMin.length === 0) return null
     // Prefer the primary winning line (same as summarizeRackTowardWin.closestLine).
     return [row.linesAtMin[0]!]
-  }, [mahjongWinReviewing, postGameBotReview])
+  }, [postGameBotReview])
 
   /**
    * Bot-mahjong end screen: same per-seat layout as Wall Game (East + three bots).

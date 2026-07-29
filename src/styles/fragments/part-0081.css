@@ -2662,7 +2662,7 @@
 
 .hands-sheet__selected-check__mark {
   display: block;
-  width: 0.95em;
+  width: 0.8em;
   aspect-ratio: 96 / 79;
   flex: none;
   background-color: var(--tg-bam, var(--card-ink-green));

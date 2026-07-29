@@ -1494,12 +1494,18 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 
 /* Highlighted tile with a highlighted tile to its RIGHT: clip the shadow to the center of the gap
    (not the tile edge) so its shadow meets the left neighbour's and the bottom shadow stays joined.
-   Skip the seam when the neighbour is lifted — let glow + rim extend into the empty slot. */
+   Also treat lit → [drag hole] → lit as a seam: neighbours slide shut, so the hole is not a gap. */
 .app
   .panel--hand
   .panel-hand-rack__hand-tray
   .hand-row
   > .sortable-tile-wrap--suggest-best:has(+ .sortable-tile-wrap--suggest-best:not(.sortable-tile-wrap--dragging))
+  .sortable-tile-wrap__fly::after,
+.app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap--suggest-best:has(+ .sortable-tile-wrap--dragging + .sortable-tile-wrap--suggest-best)
   .sortable-tile-wrap__fly::after {
   clip-path: inset(
     var(--coach-centered-lift-clip-top, var(--coach-centered-lift-clip-outset))
@@ -1515,6 +1521,12 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .hand-row
   > .sortable-tile-wrap--suggest-best:not(.sortable-tile-wrap--dragging)
   + .sortable-tile-wrap--suggest-best
+  .sortable-tile-wrap__fly::after,
+.app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap--suggest-best + .sortable-tile-wrap--dragging + .sortable-tile-wrap--suggest-best
   .sortable-tile-wrap__fly::after {
   clip-path: inset(
     var(--coach-centered-lift-clip-top, var(--coach-centered-lift-clip-outset))
@@ -1530,6 +1542,29 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .hand-row
   > .sortable-tile-wrap--suggest-best:not(.sortable-tile-wrap--dragging)
   + .sortable-tile-wrap--suggest-best:has(+ .sortable-tile-wrap--suggest-best:not(.sortable-tile-wrap--dragging))
+  .sortable-tile-wrap__fly::after,
+.app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap--suggest-best:not(.sortable-tile-wrap--dragging)
+  + .sortable-tile-wrap--suggest-best:has(+ .sortable-tile-wrap--dragging + .sortable-tile-wrap--suggest-best)
+  .sortable-tile-wrap__fly::after,
+.app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap--suggest-best
+  + .sortable-tile-wrap--dragging
+  + .sortable-tile-wrap--suggest-best:has(+ .sortable-tile-wrap--suggest-best:not(.sortable-tile-wrap--dragging))
+  .sortable-tile-wrap__fly::after,
+.app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap--suggest-best
+  + .sortable-tile-wrap--dragging
+  + .sortable-tile-wrap--suggest-best:has(+ .sortable-tile-wrap--dragging + .sortable-tile-wrap--suggest-best)
   .sortable-tile-wrap__fly::after {
   clip-path: inset(
     var(--coach-centered-lift-clip-top, var(--coach-centered-lift-clip-outset))
@@ -1556,12 +1591,15 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 /*
  * Neighbour of a lifted tile: extend rim vignette on the facing edge into the empty slot
  * (`--coach-rack-edge-vignette-x` reaches roughly half a tile into the gap).
+ * Skip when the far side of the hole is also lit — neighbours slide shut (lit→lit seam).
  */
 .app
   .panel--hand
   .panel-hand-rack__hand-tray
   .hand-row
-  > .sortable-tile-wrap--suggest-best:has(+ .sortable-tile-wrap--dragging)
+  > .sortable-tile-wrap--suggest-best:has(+ .sortable-tile-wrap--dragging):not(
+    :has(+ .sortable-tile-wrap--dragging + .sortable-tile-wrap--suggest-best)
+  )
   .tile-face:not(.tile-face--illustrative-art)::before {
   right: var(--coach-rack-edge-vignette-x);
 }
@@ -1570,7 +1608,13 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .panel--hand
   .panel-hand-rack__hand-tray
   .hand-row
-  > .sortable-tile-wrap--dragging + .sortable-tile-wrap--suggest-best
+  > :not(.sortable-tile-wrap--suggest-best) + .sortable-tile-wrap--dragging + .sortable-tile-wrap--suggest-best
+  .tile-face:not(.tile-face--illustrative-art)::before,
+.app
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .sortable-tile-wrap--dragging:first-child + .sortable-tile-wrap--suggest-best
   .tile-face:not(.tile-face--illustrative-art)::before {
   left: var(--coach-rack-edge-vignette-x);
 }
@@ -1601,6 +1645,10 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
 /*
  * Lit→dim boundary: last highlighted tile in a run stacks above the next cell so rim vignette +
  * cast shadow paint on dim neighbours (same as suggested-hands tray, part-0081).
+ *
+ * Do not boost when the "boundary" is only a drag hole before another lit tile — neighbours slide
+ * shut during reorder/drag-out, and a z-index:4 end-cap + full lift glow reads as one tile sitting
+ * on a higher plane until drop (e.g. pull a dim flower from between two lit 9s).
  */
 .app
   .panel--hand
@@ -1616,12 +1664,12 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .hand-row
   > .sortable-tile-wrap--suggest-best:not(
     :has(+ .sortable-tile-wrap--suggest-best:not(.sortable-tile-wrap--dragging))
-  ),
+  ):not(:has(+ .sortable-tile-wrap--dragging + .sortable-tile-wrap--suggest-best)),
 .app
   .panel--hand
   .panel-hand-rack__hand-tray
   .hand-row
-  > .sortable-tile-wrap--suggest-dim
+  > .sortable-tile-wrap--suggest-dim:not(.sortable-tile-wrap--dragging)
   + .sortable-tile-wrap--suggest-best {
   z-index: 4;
 }
@@ -2945,12 +2993,19 @@ html[data-home-screen-app]:not([data-native-app])
  * Exposure row (Charleston + main play): drop legacy `--hand-rack-outer-h` full-tile tray.
  * Empty wells are transparent — a tall row reads as dead gray band between the top tracker
  * and hand (see part-0118 / part-0119). Compact strips stay ~⅓ tile at the row bottom.
+ *
+ * Inline: match `.hand-row` (part-0008 `padding-inline: 0` + full-width `--rack-tile-w`).
+ * Older rules still apply `--hand-rack-tray-inset-inline` (4px) here while tile math assumes a
+ * flush 14-wide strip — that parks slot 14 (bot discard / East discard) a few px further right
+ * than hand column 14, so the gap after the 13th rack tile looks wider than a normal face gap.
  */
 .panel--hand .rack-stage__rack-top .exposure-rack {
   height: auto;
   min-height: 0;
   align-items: flex-end;
+  justify-content: flex-start;
   padding-block: 0;
+  padding-inline: 0;
 }
 
 .panel--hand .rack-stage__rack-top .exposure-rack .exposure-rack__slot {
