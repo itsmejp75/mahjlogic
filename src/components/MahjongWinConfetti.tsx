@@ -36,6 +36,14 @@ function prefersReducedMotion(): boolean {
   )
 }
 
+function viewportSize(): { width: number; height: number } {
+  const vv = window.visualViewport
+  // Prefer visualViewport on iOS Safari / PWA (inner* can lag chrome show/hide).
+  const width = Math.max(1, Math.round(vv?.width ?? window.innerWidth))
+  const height = Math.max(1, Math.round(vv?.height ?? window.innerHeight))
+  return { width, height }
+}
+
 /** `power` 1 = full height; lower values keep pieces nearer the rack (trail filler). */
 function createBurst(
   originX: number,
@@ -108,18 +116,23 @@ export function MahjongWinConfetti({
     let raf = 0
     let cancelled = false
     let lastTs = 0
+    const bctx = behind.getContext('2d', { alpha: true })
+    const fctx = front.getContext('2d', { alpha: true })
+    if (!bctx || !fctx) return
 
     const syncSize = () => {
-      width = window.innerWidth
-      height = window.innerHeight
+      const size = viewportSize()
+      width = size.width
+      height = size.height
       for (const canvas of [behind, front]) {
         canvas.width = Math.max(1, Math.floor(width * dpr))
         canvas.height = Math.max(1, Math.floor(height * dpr))
         canvas.style.width = `${width}px`
         canvas.style.height = `${height}px`
-        const ctx = canvas.getContext('2d')
-        if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       }
+      // Reset transform after resize (setting width/height clears the context state).
+      bctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      fctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     }
 
     const measureOrigin = () => {
@@ -128,6 +141,9 @@ export function MahjongWinConfetti({
         return { x: width / 2, y: height * 0.78, top: height * 0.7 }
       }
       const r = el.getBoundingClientRect()
+      if (r.width < 1 || r.height < 1) {
+        return { x: width / 2, y: height * 0.78, top: height * 0.7 }
+      }
       // Spawn mid-control (e.g. MahJ button); emerge once pieces clear its top edge.
       return {
         x: r.left + r.width / 2,
@@ -138,7 +154,8 @@ export function MahjongWinConfetti({
 
     syncSize()
     // Stream for ~¼s — same total volume, emitted continuously instead of one bang.
-    const totalCount = Math.round(Math.min(240, Math.max(155, width * 0.2)))
+    // Slightly fewer pieces on narrow/mobile viewports for steadier rAF under WKWebView.
+    const totalCount = Math.round(Math.min(220, Math.max(120, width * 0.18)))
     const emitMs = 250
     let startTs = 0
     let spawned = 0
@@ -164,9 +181,6 @@ export function MahjongWinConfetti({
         }
       }
 
-      const bctx = behind.getContext('2d')
-      const fctx = front.getContext('2d')
-      if (!bctx || !fctx) return
       bctx.clearRect(0, 0, width, height)
       fctx.clearRect(0, 0, width, height)
 
@@ -206,22 +220,28 @@ export function MahjongWinConfetti({
       rackTop = o.top
     }
     window.addEventListener('resize', onResize)
-    // Wait a frame so the MahJ button remount/ref is laid out before the first spawn.
-    raf = requestAnimationFrame(() => {
-      if (cancelled) return
-      const o = measureOrigin()
-      rackTop = o.top
-      raf = requestAnimationFrame(tick)
+    window.visualViewport?.addEventListener('resize', onResize)
+
+    // Wait a couple frames so the MahJ button remount/ref is laid out before the first spawn.
+    let startRaf2 = 0
+    const startRaf1 = requestAnimationFrame(() => {
+      startRaf2 = requestAnimationFrame(() => {
+        if (cancelled) return
+        const o = measureOrigin()
+        rackTop = o.top
+        raf = requestAnimationFrame(tick)
+      })
     })
 
     return () => {
       cancelled = true
+      window.cancelAnimationFrame(startRaf1)
+      window.cancelAnimationFrame(startRaf2)
       window.cancelAnimationFrame(raf)
       window.removeEventListener('resize', onResize)
-      const bctx = behind.getContext('2d')
-      const fctx = front.getContext('2d')
-      bctx?.clearRect(0, 0, behind.width, behind.height)
-      fctx?.clearRect(0, 0, front.width, front.height)
+      window.visualViewport?.removeEventListener('resize', onResize)
+      bctx.clearRect(0, 0, width, height)
+      fctx.clearRect(0, 0, width, height)
     }
   }, [active, animationsEnabled, originRef])
 

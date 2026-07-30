@@ -7468,10 +7468,7 @@ export default function App() {
             className="wall-game-dialog--wall-seats"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2
-              id="mj-win-title"
-              className="wall-game-dialog__title wall-game-dialog__title--mahjong-win wall-game-dialog__title--mahjong-win-punch"
-            >
+            <h2 id="mj-win-title" className="wall-game-dialog__title wall-game-dialog__title--mahjong-win">
               Mah Jongg!
             </h2>
             <p className="wall-game-dialog__intro">

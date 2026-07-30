@@ -59,6 +59,7 @@ import {
   type PlaySurfaceDnDApi,
 } from './usePlaySurfaceDnD'
 import { usePlayerSeatLabelLayout } from './usePlayerSeatLabelLayout'
+import { useMahjongWinBtnPop } from './useMahjongWinBtnPop'
 import type {
   PlaySurfaceActionBarProps,
   PlaySurfaceCoachProps,
@@ -332,6 +333,12 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
     handLength: hand.length,
     incomingBotDiscardCallDragActive,
   })
+
+  useMahjongWinBtnPop(
+    mahjongBtnRef,
+    Boolean(mahjongWinCelebrate && animationsEnabled),
+    mahjongWinBtnPopKey,
+  )
 
   const charlestonPassPhantomTile = useMemo(() => {
     if (!charlestonPassIntoHandPreview) return null

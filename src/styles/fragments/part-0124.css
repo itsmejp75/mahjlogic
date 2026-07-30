@@ -3762,6 +3762,9 @@ html body .app .app-menu-modal-layer .app-menu-modal
   pointer-events: none;
   border: 0;
   display: block;
+  /* Promote a compositor layer — WKWebView often skips unlayered canvas paints. */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 /* Under the play surface so the opaque rack tray occludes the launch. */
@@ -3774,16 +3777,31 @@ html body .app .app-menu-modal-layer .app-menu-modal
   z-index: 510;
 }
 
-/* Lift the whole play tree above the behind canvas (transparent regions still show it). */
+/*
+ * Lift the play tree above the behind canvas (transparent regions still show it).
+ * Also unlock overflow on ancestors / overlay so iOS WKWebView can’t clip fixed
+ * canvases or the drop-in panel while it’s parked above the viewport.
+ */
+body:has(.mahjong-win-confetti--behind),
+#root:has(.mahjong-win-confetti--behind),
+.app:has(.mahjong-win-confetti--behind) {
+  overflow: visible;
+}
+
 .app:has(.mahjong-win-confetti--behind) .app-layout {
   position: relative;
   z-index: 1;
+}
+
+.wall-game-overlay--mahjong-win-enter {
+  overflow: visible;
 }
 
 /*
  * End / win dialog drop-in: Web Animations API in WallGameDialogPanel (opacity + transform).
  * Park invisible above the viewport until WAAPI starts. After settle, keep translateZ(0) so
  * atmosphere paint doesn’t re-slice (that was the dark/brown snap when the layer tore down).
+ * Inline styles from WallGameDialogPanel also park/settle — these classes are the CSS backup.
  */
 .wall-game-dialog--mahjong-win-enter:not(.wall-game-dialog--enter-settled):not(
     .wall-game-dialog--enter-running
@@ -3800,21 +3818,6 @@ html body .app .app-menu-modal-layer .app-menu-modal
   transform: translateZ(0);
 }
 
-@keyframes mahjong-win-title-punch {
-  0% {
-    opacity: 0;
-    transform: scale(0.88);
-  }
-  60% {
-    opacity: 1;
-    transform: scale(1.06);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
 @keyframes mahjong-win-rack-glow {
   0% {
     opacity: 0;
@@ -3827,31 +3830,10 @@ html body .app .app-menu-modal-layer .app-menu-modal
   }
 }
 
-.wall-game-dialog__title--mahjong-win-punch {
-  /* Punch after the panel has mostly landed. */
-  animation: mahjong-win-title-punch 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.7s both;
-}
-
 /*
- * MahJ button: one smooth rise+grow, hold aloft, then a delayed smooth return.
- * Only three poses so the motion doesn’t stutter through mid keyframes.
+ * MahJ button pop: Web Animations API in useMahjongWinBtnPop (rise + grow, hold, return).
+ * CSS only keeps overflow/z-index so the enlarged control isn’t clipped by the action well.
  */
-@keyframes mahjong-win-btn-pop {
-  0% {
-    transform: translateY(0) scale(1);
-  }
-  22% {
-    transform: translateY(-2.35rem) scale(1.9);
-  }
-  /* Hold aloft longer before the return. */
-  72% {
-    transform: translateY(-2.35rem) scale(1.9);
-  }
-  100% {
-    transform: translateY(0) scale(1);
-  }
-}
-
 .app-layout[data-mahjong-win-celebrate='on'][data-animations='on']
   .panel--hand
   .panel-hand-rack__action-well,
@@ -3868,15 +3850,6 @@ html body .app .app-menu-modal-layer .app-menu-modal
   overflow: visible;
   z-index: 40;
   transform-origin: center bottom;
-  /* Ease both legs; hold at apex until ~58% before returning. */
-  animation: mahjong-win-btn-pop 1.45s cubic-bezier(0.45, 0.05, 0.25, 1) both;
-}
-
-.app-layout[data-animations='off']
-  .panel--hand
-  .rack-bottom-bar--tile-grid
-  .btn.btn--mahjong.btn--mahjong-win-pop {
-  animation: none;
 }
 
 /*
@@ -4055,14 +4028,18 @@ html body .app .app-menu-modal-layer .app-menu-modal
 }
 
 .app[data-animations='off'] .wall-game-dialog--mahjong-win-enter,
-.app[data-animations='off'] .wall-game-dialog--end-enter {
+.app[data-animations='off'] .wall-game-dialog--end-enter,
+.app[data-animations='off'] .wall-game-dialog--mahjong-win-enter:not(.wall-game-dialog--enter-settled):not(
+    .wall-game-dialog--enter-running
+  ),
+.app[data-animations='off'] .wall-game-dialog--end-enter:not(.wall-game-dialog--enter-settled):not(
+    .wall-game-dialog--enter-running
+  ) {
   opacity: 1;
-  transform: none;
+  transform: translateZ(0);
 }
 
-.app[data-animations='off'] .wall-game-dialog__title--mahjong-win-punch,
-.app[data-animations='off'] .app-layout .panel--hand .rack-stage__rack-bottom::before,
-.app[data-animations='off'] .app-layout .panel--hand .btn.btn--mahjong-win-pop {
+.app[data-animations='off'] .app-layout .panel--hand .rack-stage__rack-bottom::before {
   animation: none;
 }
 
@@ -4071,15 +4048,20 @@ html body .app .app-menu-modal-layer .app-menu-modal
     display: none;
   }
 
+  /* Match park-rule specificity so reduce-motion never loses to opacity:0 / -120vh. */
   .wall-game-dialog--mahjong-win-enter,
-  .wall-game-dialog--end-enter {
+  .wall-game-dialog--end-enter,
+  .wall-game-dialog--mahjong-win-enter:not(.wall-game-dialog--enter-settled):not(
+      .wall-game-dialog--enter-running
+    ),
+  .wall-game-dialog--end-enter:not(.wall-game-dialog--enter-settled):not(
+      .wall-game-dialog--enter-running
+    ) {
     opacity: 1;
-    transform: none;
+    transform: translateZ(0);
   }
 
-  .wall-game-dialog__title--mahjong-win-punch,
-  .app-layout[data-mahjong-win-celebrate='on'] .panel--hand .rack-stage__rack-bottom::before,
-  .app-layout[data-mahjong-win-celebrate='on'] .panel--hand .btn.btn--mahjong-win-pop {
+  .app-layout[data-mahjong-win-celebrate='on'] .panel--hand .rack-stage__rack-bottom::before {
     animation: none;
   }
 }
