@@ -3780,16 +3780,24 @@ html body .app .app-menu-modal-layer .app-menu-modal
   z-index: 1;
 }
 
-/* Drop from above with the falling confetti (delay timed in App). */
-@keyframes mahjong-win-dialog-in {
-  0% {
-    opacity: 0;
-    transform: translateY(calc(-100% - 1.25rem));
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/*
+ * End / win dialog drop-in: Web Animations API in WallGameDialogPanel (opacity + transform).
+ * Park invisible above the viewport until WAAPI starts. After settle, keep translateZ(0) so
+ * atmosphere paint doesn’t re-slice (that was the dark/brown snap when the layer tore down).
+ */
+.wall-game-dialog--mahjong-win-enter:not(.wall-game-dialog--enter-settled):not(
+    .wall-game-dialog--enter-running
+  ),
+.wall-game-dialog--end-enter:not(.wall-game-dialog--enter-settled):not(
+    .wall-game-dialog--enter-running
+  ) {
+  opacity: 0;
+  transform: translate3d(0, -120vh, 0);
+}
+
+.wall-game-dialog--enter-settled {
+  opacity: 1;
+  transform: translateZ(0);
 }
 
 @keyframes mahjong-win-title-punch {
@@ -3817,18 +3825,6 @@ html body .app .app-menu-modal-layer .app-menu-modal
   100% {
     opacity: 0;
   }
-}
-
-.wall-game-dialog--mahjong-win-enter {
-  /* Ease-in drop so it rides down with the confetti. */
-  animation: mahjong-win-dialog-in 1.35s cubic-bezier(0.33, 0.08, 0.22, 1) both;
-  will-change: transform, opacity;
-}
-
-/* Wall game + bot Mah Jongg: same top drop, immediate + snappier (no confetti wait). */
-.wall-game-dialog--end-enter {
-  animation: mahjong-win-dialog-in 0.48s cubic-bezier(0.28, 0.1, 0.2, 1) both;
-  will-change: transform, opacity;
 }
 
 .wall-game-dialog__title--mahjong-win-punch {
@@ -4059,7 +4055,11 @@ html body .app .app-menu-modal-layer .app-menu-modal
 }
 
 .app[data-animations='off'] .wall-game-dialog--mahjong-win-enter,
-.app[data-animations='off'] .wall-game-dialog--end-enter,
+.app[data-animations='off'] .wall-game-dialog--end-enter {
+  opacity: 1;
+  transform: none;
+}
+
 .app[data-animations='off'] .wall-game-dialog__title--mahjong-win-punch,
 .app[data-animations='off'] .app-layout .panel--hand .rack-stage__rack-bottom::before,
 .app[data-animations='off'] .app-layout .panel--hand .btn.btn--mahjong-win-pop {
@@ -4072,7 +4072,11 @@ html body .app .app-menu-modal-layer .app-menu-modal
   }
 
   .wall-game-dialog--mahjong-win-enter,
-  .wall-game-dialog--end-enter,
+  .wall-game-dialog--end-enter {
+    opacity: 1;
+    transform: none;
+  }
+
   .wall-game-dialog__title--mahjong-win-punch,
   .app-layout[data-mahjong-win-celebrate='on'] .panel--hand .rack-stage__rack-bottom::before,
   .app-layout[data-mahjong-win-celebrate='on'] .panel--hand .btn.btn--mahjong-win-pop {

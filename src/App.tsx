@@ -98,6 +98,7 @@ import type { RoundState } from './app/roundState'
 import { eastExposureMeldSortId } from './app/playSurfaceDnDHelpers'
 import { PlaySurface, type PlaySurfaceDnDApi } from './app/PlaySurface'
 import { MahjongWinConfetti } from './components/MahjongWinConfetti'
+import { WallGameDialogPanel } from './components/WallGameDialogPanel'
 import {
   buildPlaySurfaceActionBarProps,
   buildPlayerSeatLabelProps,
@@ -7318,8 +7319,9 @@ export default function App() {
             aria-modal="true"
             aria-labelledby="end-dialog-preview-title"
           >
-            <div
-              className="wall-game-dialog wall-game-dialog--wall-seats wall-game-dialog--end-enter"
+            <WallGameDialogPanel
+              enter="end"
+              className="wall-game-dialog--wall-seats"
               onClick={(e) => e.stopPropagation()}
             >
               <h2 id="end-dialog-preview-title" className="wall-game-dialog__title">
@@ -7330,7 +7332,7 @@ export default function App() {
                   ? 'The wall ran out — no one drew a winning tile.'
                   : 'Bot 1 (West) wins — preview only, not a real loss.'}
               </p>
-            </div>
+            </WallGameDialogPanel>
           </div>
           <div
             className="mahjong-win-confetti-preview-bar"
@@ -7383,8 +7385,9 @@ export default function App() {
       ) : null}
       {mainPhase === 'wall-game' && !wallGameReviewing ? (
         <div className="wall-game-overlay" role="dialog" aria-modal="true" aria-labelledby="wall-game-title">
-          <div
-            className="wall-game-dialog wall-game-dialog--wall-seats wall-game-dialog--end-enter"
+          <WallGameDialogPanel
+            enter="end"
+            className="wall-game-dialog--wall-seats"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id="wall-game-title" className="wall-game-dialog__title">Wall Game</h2>
@@ -7448,7 +7451,7 @@ export default function App() {
                 Replay
               </button>
             </div>
-          </div>
+          </WallGameDialogPanel>
         </div>
       ) : null}
       {charlestonDone && mainPhase === 'mahjong-declared' && !mahjongWinReviewing && (
@@ -7460,8 +7463,9 @@ export default function App() {
         />
         {mahjongWinDialogShown ? (
         <div className="wall-game-overlay wall-game-overlay--mahjong-win-enter" role="dialog" aria-modal="true" aria-labelledby="mj-win-title">
-          <div
-            className="wall-game-dialog wall-game-dialog--wall-seats wall-game-dialog--mahjong-win-enter"
+          <WallGameDialogPanel
+            enter="win"
+            className="wall-game-dialog--wall-seats"
             onClick={(e) => e.stopPropagation()}
           >
             <h2
@@ -7530,15 +7534,16 @@ export default function App() {
                 Replay
               </button>
             </div>
-          </div>
+          </WallGameDialogPanel>
         </div>
         ) : null}
         </>
       )}
       {charlestonDone && mainPhase === 'bot-mahjong' && postGameBotMahjongReview && !botMahjongWinReviewing && (
         <div className="wall-game-overlay" role="dialog" aria-modal="true" aria-labelledby="bot-mj-win-title">
-          <div
-            className="wall-game-dialog wall-game-dialog--wall-seats wall-game-dialog--end-enter"
+          <WallGameDialogPanel
+            enter="end"
+            className="wall-game-dialog--wall-seats"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id="bot-mj-win-title" className="wall-game-dialog__title">
@@ -7600,7 +7605,7 @@ export default function App() {
                 Replay
               </button>
             </div>
-          </div>
+          </WallGameDialogPanel>
         </div>
       )}
       <PlaySurface
