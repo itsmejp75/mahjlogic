@@ -1,90 +1,100 @@
 import { useLayoutEffect, type RefObject } from 'react'
+import { rafAnimate, sampleKeyframes, type RafAnimHandle } from '../lib/rafAnimate'
 
 const POP_MS = 1450
-const POP_EASING = 'cubic-bezier(0.45, 0.05, 0.25, 1)'
+
+/** Rise (rem) and scale stops matching the former CSS keyframes. */
+const Y_STOPS: Array<[number, number]> = [
+  [0, 0],
+  [0.22, -2.35],
+  [0.72, -2.35],
+  [1, 0],
+]
+const S_STOPS: Array<[number, number]> = [
+  [0, 1],
+  [0.22, 1.9],
+  [0.72, 1.9],
+  [1, 1],
+]
 
 /**
- * MahJ win pop (rise + grow, hold, return). WAAPI — not CSS `@keyframes` — so iOS
- * WKWebView / installed PWA actually runs it; CSS `animation-fill-mode: both` on mount
- * often freezes at the first keyframe.
+ * MahJ win pop (rise + grow, hold, return) via rAF + inline transform.
+ * CSS @keyframes / WAAPI freeze on iOS WKWebView / installed PWA; this path paints.
+ * In-app Animations only — do not gate on prefers-reduced-motion.
  */
 export function useMahjongWinBtnPop(
   btnRef: RefObject<HTMLElement | null> | undefined,
   active: boolean,
-  /** Remount/replay key from App when a fresh win starts. */
   popKey: number,
 ) {
   useLayoutEffect(() => {
-    const el = btnRef?.current
-    if (!el || !active) return
-
-    const reduceMotion =
-      typeof window.matchMedia === 'function' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const animOff =
-      el.closest('[data-animations]')?.getAttribute('data-animations') === 'off'
-
-    el.style.removeProperty('transform')
-
-    if (reduceMotion || animOff || typeof el.animate !== 'function') {
-      return
-    }
+    if (!active) return
 
     let cancelled = false
-    let anim: Animation | null = null
-    let raf2 = 0
+    let handle: RafAnimHandle | null = null
     let fallbackTimer = 0
+    let retryRaf = 0
+    let startRaf1 = 0
+    let startRaf2 = 0
 
-    const settle = () => {
-      if (cancelled || !btnRef?.current) return
-      const node = btnRef.current
-      node.style.transform = 'translateY(0) scale(1)'
-      try {
-        anim?.cancel()
-      } catch {
-        /* ignore */
-      }
-      anim = null
-      window.clearTimeout(fallbackTimer)
-      fallbackTimer = 0
+    const settle = (el: HTMLElement) => {
+      el.style.transform = 'translateY(0px) scale(1)'
     }
 
-    void el.offsetWidth
+    const startOn = (el: HTMLElement) => {
+      el.style.transform = 'translateY(0px) scale(1)'
+      void el.offsetWidth
 
-    const raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => {
-        if (cancelled || !btnRef?.current) return
-        const node = btnRef.current
-        try {
-          anim = node.animate(
-            [
-              { transform: 'translateY(0) scale(1)' },
-              { transform: 'translateY(-2.35rem) scale(1.9)', offset: 0.22 },
-              { transform: 'translateY(-2.35rem) scale(1.9)', offset: 0.72 },
-              { transform: 'translateY(0) scale(1)' },
-            ],
-            { duration: POP_MS, easing: POP_EASING, fill: 'forwards' },
-          )
-          anim.addEventListener('finish', settle)
-        } catch {
-          settle()
-          return
-        }
-        fallbackTimer = window.setTimeout(settle, POP_MS + 160)
+      startRaf1 = requestAnimationFrame(() => {
+        startRaf2 = requestAnimationFrame(() => {
+          if (cancelled || !btnRef?.current) return
+          handle = rafAnimate({
+            durationMs: POP_MS,
+            // Linear raw t — keyframe stops already encode the hold.
+            easing: (t) => t,
+            onUpdate: (_e, rawT) => {
+              if (!btnRef?.current) return
+              const y = sampleKeyframes(Y_STOPS, rawT)
+              const s = sampleKeyframes(S_STOPS, rawT)
+              btnRef.current.style.transform = `translateY(${y}rem) scale(${s})`
+            },
+            onDone: () => {
+              if (cancelled || !btnRef?.current) return
+              settle(btnRef.current)
+            },
+          })
+        })
       })
-    })
+    }
+
+    const tryStart = () => {
+      if (cancelled) return
+      const el = btnRef?.current
+      if (!el) {
+        retryRaf = requestAnimationFrame(tryStart)
+        return
+      }
+      if (el.closest('[data-animations]')?.getAttribute('data-animations') === 'off') {
+        return
+      }
+      startOn(el)
+      fallbackTimer = window.setTimeout(() => {
+        if (cancelled || !btnRef?.current) return
+        settle(btnRef.current)
+      }, POP_MS + 200)
+    }
+
+    tryStart()
 
     return () => {
       cancelled = true
-      cancelAnimationFrame(raf1)
-      cancelAnimationFrame(raf2)
+      cancelAnimationFrame(retryRaf)
+      cancelAnimationFrame(startRaf1)
+      cancelAnimationFrame(startRaf2)
+      handle?.cancel()
       window.clearTimeout(fallbackTimer)
-      try {
-        anim?.cancel()
-      } catch {
-        /* ignore */
-      }
-      el.style.removeProperty('transform')
+      const el = btnRef?.current
+      if (el) el.style.removeProperty('transform')
     }
   }, [btnRef, active, popKey])
 }

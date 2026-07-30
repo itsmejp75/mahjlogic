@@ -4081,11 +4081,9 @@ export default function App() {
       return
     }
     setMahjongWinBtnPopKey((k) => k + 1)
-    const reduceMotion =
-      typeof window !== 'undefined' &&
-      typeof window.matchMedia === 'function' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (reduceMotion || !animationsEnabled) {
+    // In-app Animations only — do not skip the celebrate beat for OS Reduce Motion
+    // (that setting would skip confetti/btn pop and still show a frozen dialog).
+    if (!animationsEnabled) {
       setMahjongWinDialogShown(true)
       return
     }
@@ -4553,12 +4551,8 @@ export default function App() {
     const blankCount = readBlankTileCountFromStorage()
     setBlankTileCount((prev) => (prev === blankCount ? prev : blankCount))
     blankTileCountRef.current = blankCount
-    // Keep Hands closed for deferred opening deals — open when the fly-in arms (avoids empty tray flash).
-    if (!opts?.deferOpeningFlyIn) {
-      suggestedHandsTrayApiRef.current.setTrayOpen(readSuggestedHandsTrayDefaultOpenFromStorage())
-    } else {
-      suggestedHandsTrayApiRef.current.setTrayOpen(false)
-    }
+    // New games always start with the Hands tray closed (menu default no longer auto-opens).
+    suggestedHandsTrayApiRef.current.setTrayOpen(false)
     trayOpenBeforeBotHandsRef.current = null
     setBotHandsIdentifierFocusSeat(null)
     if (m !== c) {
@@ -5357,9 +5351,6 @@ export default function App() {
           },
         }
       })
-      if (readSuggestedHandsTrayDefaultOpenFromStorage()) {
-        suggestedHandsTrayApiRef.current.setTrayOpen(true)
-      }
     })
   }, [sessionBoot, sessionBoot?.bootLoaderDismissed, sessionReady, resumePrompt])
 

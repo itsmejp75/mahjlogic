@@ -3753,7 +3753,7 @@ html body .app .app-menu-modal-layer .app-menu-modal
   outline: 1px solid color-mix(in srgb, var(--rack-action-label-color, #e8eaed) 55%, transparent);
 }
 
-/* Mah Jongg win confetti: behind rack (spawn), then front fallout over the overlay. */
+/* Mah Jongg win confetti (portaled to body): behind rack, then front over overlay. */
 .mahjong-win-confetti {
   position: fixed;
   inset: 0;
@@ -3778,17 +3778,17 @@ html body .app .app-menu-modal-layer .app-menu-modal
 }
 
 /*
- * Lift the play tree above the behind canvas (transparent regions still show it).
- * Also unlock overflow on ancestors / overlay so iOS WKWebView can’t clip fixed
- * canvases or the drop-in panel while it’s parked above the viewport.
+ * Confetti canvases portal to body. Lift `#root` / play tree above the behind canvas
+ * (transparent regions still show it). Attribute is set by MahjongWinConfetti.
  */
-body:has(.mahjong-win-confetti--behind),
 #root:has(.mahjong-win-confetti--behind),
-.app:has(.mahjong-win-confetti--behind) {
-  overflow: visible;
+.app[data-mahjong-win-confetti='on'] {
+  position: relative;
+  z-index: 1;
 }
 
-.app:has(.mahjong-win-confetti--behind) .app-layout {
+.app[data-mahjong-win-confetti='on'] .app-layout,
+.app-layout[data-mahjong-win-celebrate='on'] {
   position: relative;
   z-index: 1;
 }
@@ -3798,21 +3798,11 @@ body:has(.mahjong-win-confetti--behind),
 }
 
 /*
- * End / win dialog drop-in: Web Animations API in WallGameDialogPanel (opacity + transform).
- * Park invisible above the viewport until WAAPI starts. After settle, keep translateZ(0) so
- * atmosphere paint doesn’t re-slice (that was the dark/brown snap when the layer tore down).
- * Inline styles from WallGameDialogPanel also park/settle — these classes are the CSS backup.
+ * End / win dialog drop-in: rAF + inline styles in WallGameDialogPanel.
+ * Do NOT park at opacity 0 in CSS — if JS is late, a CSS park leaves the panel
+ * permanently invisible on iOS when motion APIs are skipped. Settled keeps
+ * translateZ(0) so atmosphere paint doesn’t re-slice when the tween ends.
  */
-.wall-game-dialog--mahjong-win-enter:not(.wall-game-dialog--enter-settled):not(
-    .wall-game-dialog--enter-running
-  ),
-.wall-game-dialog--end-enter:not(.wall-game-dialog--enter-settled):not(
-    .wall-game-dialog--enter-running
-  ) {
-  opacity: 0;
-  transform: translate3d(0, -120vh, 0);
-}
-
 .wall-game-dialog--enter-settled {
   opacity: 1;
   transform: translateZ(0);
@@ -4028,13 +4018,7 @@ body:has(.mahjong-win-confetti--behind),
 }
 
 .app[data-animations='off'] .wall-game-dialog--mahjong-win-enter,
-.app[data-animations='off'] .wall-game-dialog--end-enter,
-.app[data-animations='off'] .wall-game-dialog--mahjong-win-enter:not(.wall-game-dialog--enter-settled):not(
-    .wall-game-dialog--enter-running
-  ),
-.app[data-animations='off'] .wall-game-dialog--end-enter:not(.wall-game-dialog--enter-settled):not(
-    .wall-game-dialog--enter-running
-  ) {
+.app[data-animations='off'] .wall-game-dialog--end-enter {
   opacity: 1;
   transform: translateZ(0);
 }
@@ -4043,24 +4027,8 @@ body:has(.mahjong-win-confetti--behind),
   animation: none;
 }
 
+/* Rack glow can stay CSS; if iOS skips it the wash simply never appears (non-blocking). */
 @media (prefers-reduced-motion: reduce) {
-  .mahjong-win-confetti {
-    display: none;
-  }
-
-  /* Match park-rule specificity so reduce-motion never loses to opacity:0 / -120vh. */
-  .wall-game-dialog--mahjong-win-enter,
-  .wall-game-dialog--end-enter,
-  .wall-game-dialog--mahjong-win-enter:not(.wall-game-dialog--enter-settled):not(
-      .wall-game-dialog--enter-running
-    ),
-  .wall-game-dialog--end-enter:not(.wall-game-dialog--enter-settled):not(
-      .wall-game-dialog--enter-running
-    ) {
-    opacity: 1;
-    transform: translateZ(0);
-  }
-
   .app-layout[data-mahjong-win-celebrate='on'] .panel--hand .rack-stage__rack-bottom::before {
     animation: none;
   }

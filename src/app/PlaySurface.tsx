@@ -661,7 +661,6 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                 </>
                               ) : null}
                               <button
-                                key={`mahj-btn-pop-${mahjongWinBtnPopKey}`}
                                 ref={mahjongBtnRef}
                                 type="button"
                                 className={[
@@ -896,7 +895,6 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                   </>
                                 ) : null}
                                 <button
-                                  key={`mahj-btn-pop-${mahjongWinBtnPopKey}`}
                                   ref={mahjongBtnRef}
                                   type="button"
                                   className={[

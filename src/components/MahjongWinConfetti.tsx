@@ -1,4 +1,5 @@
 import { useEffect, useRef, type RefObject } from 'react'
+import { createPortal } from 'react-dom'
 
 type Particle = {
   x: number
@@ -17,34 +18,24 @@ type Particle = {
 }
 
 const COLORS = [
-  '#e11d48', // rose
-  '#dc2626', // red
-  '#16a34a', // green
-  '#15803d', // deep green
-  '#eab308', // gold
-  '#f59e0b', // amber
-  '#f8fafc', // ivory
-  '#38bdf8', // sky
-  '#2dd4bf', // teal
+  '#e11d48',
+  '#dc2626',
+  '#16a34a',
+  '#15803d',
+  '#eab308',
+  '#f59e0b',
+  '#f8fafc',
+  '#38bdf8',
+  '#2dd4bf',
 ]
-
-function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== 'undefined' &&
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  )
-}
 
 function viewportSize(): { width: number; height: number } {
   const vv = window.visualViewport
-  // Prefer visualViewport on iOS Safari / PWA (inner* can lag chrome show/hide).
   const width = Math.max(1, Math.round(vv?.width ?? window.innerWidth))
   const height = Math.max(1, Math.round(vv?.height ?? window.innerHeight))
   return { width, height }
 }
 
-/** `power` 1 = full height; lower values keep pieces nearer the rack (trail filler). */
 function createBurst(
   originX: number,
   originY: number,
@@ -54,7 +45,6 @@ function createBurst(
   const out: Particle[] = []
   const pwr = Math.max(0.28, Math.min(1, power))
   for (let i = 0; i < count; i++) {
-    // Wide upward fountain (~±58°); late stream uses a bit less lateral throw.
     const angle = -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI * (0.52 + 0.14 * pwr))
     const speed = (12 + Math.random() * 15) * pwr
     out.push({
@@ -86,8 +76,12 @@ function drawParticle(ctx: CanvasRenderingContext2D, p: Particle) {
 }
 
 /**
- * Celebration burst on player Mah Jongg: particles launch from behind the rack,
- * clear its top edge, then fall in front of the win overlay and the rest of the UI.
+ * Celebration burst on player Mah Jongg.
+ *
+ * Portaled to `document.body` so `#root` / `.app` overflow cannot clip the fixed
+ * canvases in iOS WKWebView. Behind layer sits under a lifted `.app-layout`; front
+ * layer is above the win overlay. Does not gate on prefers-reduced-motion — only
+ * the in-app Animations toggle (iOS Reduce Motion would otherwise kill the burst).
  */
 export function MahjongWinConfetti({
   active,
@@ -102,11 +96,15 @@ export function MahjongWinConfetti({
   const frontRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
-    if (!active || !animationsEnabled || prefersReducedMotion()) return
+    if (!active || !animationsEnabled) return
 
     const behind = behindRef.current
     const front = frontRef.current
     if (!behind || !front) return
+
+    // Mark celebrate on the app shell so CSS can lift `.app-layout` above the behind canvas.
+    const app = document.querySelector('.app')
+    app?.setAttribute('data-mahjong-win-confetti', 'on')
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
     let width = 0
@@ -118,7 +116,10 @@ export function MahjongWinConfetti({
     let lastTs = 0
     const bctx = behind.getContext('2d', { alpha: true })
     const fctx = front.getContext('2d', { alpha: true })
-    if (!bctx || !fctx) return
+    if (!bctx || !fctx) {
+      app?.removeAttribute('data-mahjong-win-confetti')
+      return
+    }
 
     const syncSize = () => {
       const size = viewportSize()
@@ -130,7 +131,6 @@ export function MahjongWinConfetti({
         canvas.style.width = `${width}px`
         canvas.style.height = `${height}px`
       }
-      // Reset transform after resize (setting width/height clears the context state).
       bctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       fctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     }
@@ -144,7 +144,6 @@ export function MahjongWinConfetti({
       if (r.width < 1 || r.height < 1) {
         return { x: width / 2, y: height * 0.78, top: height * 0.7 }
       }
-      // Spawn mid-control (e.g. MahJ button); emerge once pieces clear its top edge.
       return {
         x: r.left + r.width / 2,
         y: r.top + r.height * 0.55,
@@ -153,8 +152,6 @@ export function MahjongWinConfetti({
     }
 
     syncSize()
-    // Stream for ~¼s — same total volume, emitted continuously instead of one bang.
-    // Slightly fewer pieces on narrow/mobile viewports for steadier rAF under WKWebView.
     const totalCount = Math.round(Math.min(220, Math.max(120, width * 0.18)))
     const emitMs = 250
     let startTs = 0
@@ -174,7 +171,6 @@ export function MahjongWinConfetti({
         if (n > 0) {
           const o = measureOrigin()
           rackTop = o.top
-          // Ease down launch height through the stream so the tail fills just above the origin.
           const power = 1 - 0.58 * progress * progress
           particles.push(...createBurst(o.x, o.y, n, power))
           spawned = target
@@ -203,6 +199,7 @@ export function MahjongWinConfetti({
 
         if (p.life <= 0 || p.y > height + 40) continue
         alive += 1
+        // If behind layer is occluded by an opaque shell, still show on front once emerged.
         drawParticle(p.emerged ? fctx : bctx, p)
       }
 
@@ -222,7 +219,6 @@ export function MahjongWinConfetti({
     window.addEventListener('resize', onResize)
     window.visualViewport?.addEventListener('resize', onResize)
 
-    // Wait a couple frames so the MahJ button remount/ref is laid out before the first spawn.
     let startRaf2 = 0
     const startRaf1 = requestAnimationFrame(() => {
       startRaf2 = requestAnimationFrame(() => {
@@ -242,12 +238,13 @@ export function MahjongWinConfetti({
       window.visualViewport?.removeEventListener('resize', onResize)
       bctx.clearRect(0, 0, width, height)
       fctx.clearRect(0, 0, width, height)
+      app?.removeAttribute('data-mahjong-win-confetti')
     }
   }, [active, animationsEnabled, originRef])
 
-  if (!active || !animationsEnabled) return null
+  if (!active || !animationsEnabled || typeof document === 'undefined') return null
 
-  return (
+  return createPortal(
     <>
       <canvas
         ref={behindRef}
@@ -259,6 +256,7 @@ export function MahjongWinConfetti({
         className="mahjong-win-confetti mahjong-win-confetti--front"
         aria-hidden="true"
       />
-    </>
+    </>,
+    document.body,
   )
 }

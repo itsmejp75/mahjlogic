@@ -41,7 +41,8 @@ export function helpFlagsForPreset(preset: HelpPreset): HelpPresetFlags {
   }
   if (preset === 'full') {
     return {
-      suggestedHandsTrayDefaultOpen: true,
+      // Tray starts closed on new games; player opens Hands when they want it.
+      suggestedHandsTrayDefaultOpen: false,
       mahjongHintEnabled: true,
       jokerSwapHintEnabled: true,
       deadTileHintEnabled: true,

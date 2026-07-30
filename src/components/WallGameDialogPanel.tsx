@@ -4,33 +4,26 @@ import {
   type HTMLAttributes,
   type ReactNode,
 } from 'react'
+import { easeOutCubic, rafAnimate, type RafAnimHandle } from '../lib/rafAnimate'
 
 type EnterVariant = 'win' | 'end'
 
 const ENTER: Record<
   EnterVariant,
-  { duration: number; easing: string; className: string }
+  { duration: number; className: string }
 > = {
   win: {
     duration: 1350,
-    easing: 'cubic-bezier(0.33, 0.08, 0.22, 1)',
     className: 'wall-game-dialog--mahjong-win-enter',
   },
   end: {
     duration: 480,
-    easing: 'cubic-bezier(0.28, 0.1, 0.2, 1)',
     className: 'wall-game-dialog--end-enter',
   },
 }
 
-function motionBlocked(el: HTMLElement): boolean {
-  if (el.closest('[data-animations]')?.getAttribute('data-animations') === 'off') {
-    return true
-  }
-  return (
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  )
+function animationsOff(el: HTMLElement): boolean {
+  return el.closest('[data-animations]')?.getAttribute('data-animations') === 'off'
 }
 
 function settleEnter(node: HTMLElement) {
@@ -41,12 +34,14 @@ function settleEnter(node: HTMLElement) {
 }
 
 /**
- * Wall / Mah Jongg / bot-win panel. Drop-in is driven by the Web Animations API (not CSS
- * `@keyframes`) so iOS WKWebView / installed PWA actually runs the enter — CSS animations
- * applied on mount often freeze at the first keyframe (opacity 0).
+ * Wall / Mah Jongg / bot-win panel drop-in.
  *
- * Always settles with a timeout fallback: if WAAPI stalls at opacity 0 (common on mobile
- * Safari / standalone PWA), the dialog must still become visible.
+ * Driven by rAF + inline styles (not CSS @keyframes / WAAPI). On iOS WKWebView /
+ * installed PWA those APIs often freeze at opacity 0 on mount; writing style each
+ * frame matches the joker-timeshare fix that already works in this app.
+ *
+ * Respects in-app Animations only — do not gate on prefers-reduced-motion (iOS
+ * Reduce Motion would leave the panel parked invisible / skip the celebration).
  */
 export function WallGameDialogPanel({
   enter,
@@ -66,82 +61,67 @@ export function WallGameDialogPanel({
     if (!el) return
 
     el.classList.remove('wall-game-dialog--enter-settled', 'wall-game-dialog--enter-running')
-    el.style.removeProperty('opacity')
-    el.style.removeProperty('transform')
 
-    if (motionBlocked(el) || typeof el.animate !== 'function') {
+    if (animationsOff(el)) {
       settleEnter(el)
       return
     }
 
     let cancelled = false
     let settled = false
-    let anim: Animation | null = null
-    let raf2 = 0
+    let handle: RafAnimHandle | null = null
     let fallbackTimer = 0
+    let startRaf2 = 0
 
     const finish = () => {
       if (cancelled || settled || !ref.current) return
       settled = true
-      const node = ref.current
-      settleEnter(node)
-      try {
-        anim?.cancel()
-      } catch {
-        /* ignore */
-      }
-      anim = null
+      handle?.cancel()
+      handle = null
       window.clearTimeout(fallbackTimer)
       fallbackTimer = 0
+      settleEnter(ref.current)
     }
 
-    // Park above the viewport in inline styles (not only CSS) so a stalled WAAPI cannot
-    // leave the panel permanently invisible under the higher-specificity park rule.
-    const parkY = Math.max(el.getBoundingClientRect().height + 20, 96)
+    const fromY = Math.max(el.getBoundingClientRect().height + 20, 96)
     el.style.opacity = '0'
-    el.style.transform = `translate3d(0, ${-parkY}px, 0)`
+    el.style.transform = `translate3d(0, ${-fromY}px, 0)`
+    el.classList.add('wall-game-dialog--enter-running')
     void el.offsetWidth
 
-    // Double rAF: park one frame, then drop+fade (iOS needs the gap).
-    const raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => {
+    const startRaf1 = requestAnimationFrame(() => {
+      startRaf2 = requestAnimationFrame(() => {
         if (cancelled || !ref.current) return
         const node = ref.current
-        const fromY = Math.max(node.getBoundingClientRect().height + 20, parkY)
-        node.classList.add('wall-game-dialog--enter-running')
-        try {
-          anim = node.animate(
-            [
-              { opacity: 0, transform: `translate3d(0, ${-fromY}px, 0)` },
-              { opacity: 1, transform: 'translate3d(0, 0, 0)' },
-            ],
-            { duration: spec.duration, easing: spec.easing, fill: 'forwards' },
-          )
-          anim.addEventListener('finish', finish)
-        } catch {
-          finish()
-          return
-        }
-        // Never leave the win/end panel frozen at opacity 0 on WKWebView / PWA.
-        fallbackTimer = window.setTimeout(finish, spec.duration + 160)
+        const dist = Math.max(node.getBoundingClientRect().height + 20, fromY)
+
+        handle = rafAnimate({
+          durationMs: spec.duration,
+          easing: easeOutCubic,
+          onUpdate: (e) => {
+            if (!ref.current) return
+            ref.current.style.opacity = String(e)
+            ref.current.style.transform = `translate3d(0, ${-dist * (1 - e)}px, 0)`
+          },
+          onDone: finish,
+        })
       })
     })
 
+    // Hard guarantee: never leave the panel at opacity 0.
+    fallbackTimer = window.setTimeout(finish, spec.duration + 200)
+
     return () => {
       cancelled = true
-      cancelAnimationFrame(raf1)
-      cancelAnimationFrame(raf2)
+      cancelAnimationFrame(startRaf1)
+      cancelAnimationFrame(startRaf2)
+      handle?.cancel()
       window.clearTimeout(fallbackTimer)
-      try {
-        anim?.cancel()
-      } catch {
-        /* ignore */
-      }
       el.style.removeProperty('opacity')
       el.style.removeProperty('transform')
       el.classList.remove('wall-game-dialog--enter-settled', 'wall-game-dialog--enter-running')
     }
-  }, [enter, spec.duration, spec.easing])
+  }, [enter, spec.duration])
 
   return (
     <div
