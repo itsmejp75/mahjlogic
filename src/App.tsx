@@ -1897,7 +1897,7 @@ export default function App() {
   /** Captured once from Home → Play navigation (cleared from location.state after mount). */
   const homePlayIntentRef = useRef(
     readPlayLocationState(location.state).playIntent ??
-      (new URLSearchParams(location.search).get('previewWinConfetti') === '1' ? 'new' : undefined),
+      (new URLSearchParams(location.search).get('previewEndDialog') != null ? 'new' : undefined),
   )
   /** Home → Play (new): deal in useLayoutEffect before first paint — do not wait on cloud hydrate. */
   const eagerNewDealDoneRef = useRef(false)
@@ -2008,14 +2008,20 @@ export default function App() {
   const [wallGameReviewing, setWallGameReviewing] = useState(false)
   const [mahjongWinReviewing, setMahjongWinReviewing] = useState(false)
   const [botMahjongWinReviewing, setBotMahjongWinReviewing] = useState(false)
-  /** Dev preview: `?previewWinConfetti=1` — confetti without winning a hand. */
-  const previewWinConfetti =
-    new URLSearchParams(location.search).get('previewWinConfetti') === '1'
-  const [previewWinConfettiBurst, setPreviewWinConfettiBurst] = useState(0)
   /** Win dialog mounts after confetti peaks, then drops in. */
   const [mahjongWinDialogShown, setMahjongWinDialogShown] = useState(false)
-  /** Remount MahJ button pop animation (real win + preview Replay). */
+  /** Remount MahJ button pop animation on a fresh win. */
   const [mahjongWinBtnPopKey, setMahjongWinBtnPopKey] = useState(0)
+  /**
+   * Dev preview: `?previewEndDialog=1` (or `wall` / `bot`) — drop-in end dialogs without
+   * finishing a hand. Replay remounts the panel to re-run `--end-enter`.
+   */
+  const previewEndDialogActive =
+    new URLSearchParams(location.search).get('previewEndDialog') != null
+  const [previewEndKind, setPreviewEndKind] = useState<'wall' | 'bot'>(() =>
+    new URLSearchParams(location.search).get('previewEndDialog') === 'bot' ? 'bot' : 'wall',
+  )
+  const [previewEndBurst, setPreviewEndBurst] = useState(0)
   /** Overlay dismissed — table review after wall game / mahjong; hands tray + focus highlights stay available. */
   const postGameTableReviewing =
     wallGameReviewing || mahjongWinReviewing || botMahjongWinReviewing
@@ -4064,11 +4070,9 @@ export default function App() {
   }, [mainPhase])
 
   const mahjongWinCelebrating =
-    previewWinConfetti ||
-    (charlestonDone && mainPhase === 'mahjong-declared' && !mahjongWinReviewing)
+    charlestonDone && mainPhase === 'mahjong-declared' && !mahjongWinReviewing
   /** Cyan MahJ glyph stays lit for the whole win (including Review). */
-  const mahjongWinGlyphLit =
-    previewWinConfetti || (charlestonDone && mainPhase === 'mahjong-declared')
+  const mahjongWinGlyphLit = charlestonDone && mainPhase === 'mahjong-declared'
 
   useEffect(() => {
     if (!mahjongWinCelebrating) {
@@ -4080,9 +4084,7 @@ export default function App() {
       typeof window !== 'undefined' &&
       typeof window.matchMedia === 'function' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    // Preview always animates; real wins skip the beat when animations are off.
-    const skipDelay = reduceMotion || (!previewWinConfetti && !animationsEnabled)
-    if (skipDelay) {
+    if (reduceMotion || !animationsEnabled) {
       setMahjongWinDialogShown(true)
       return
     }
@@ -4090,12 +4092,7 @@ export default function App() {
     // Wait until confetti is clearly falling, then start the slower drop.
     const t = window.setTimeout(() => setMahjongWinDialogShown(true), 1100)
     return () => window.clearTimeout(t)
-  }, [
-    mahjongWinCelebrating,
-    previewWinConfetti,
-    previewWinConfettiBurst,
-    animationsEnabled,
-  ])
+  }, [mahjongWinCelebrating, animationsEnabled])
 
   const suggestedTilesButtonLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const suggestedTilesButtonLongPressFired = useRef(false)
@@ -4983,11 +4980,11 @@ export default function App() {
     performNewHandDeal()
   }, [markSessionReady, performNewHandDeal])
 
-  /** Confetti preview: skip Continue/New Game and deal a fresh table under the blast. */
+  /** End-dialog preview: skip Continue/New Game and deal a fresh table under the panel. */
   useEffect(() => {
-    if (!previewWinConfetti || resumePrompt == null) return
+    if (!previewEndDialogActive || resumePrompt == null) return
     declineResumeStartNewGame()
-  }, [previewWinConfetti, resumePrompt, declineResumeStartNewGame])
+  }, [previewEndDialogActive, resumePrompt, declineResumeStartNewGame])
 
   /**
    * Fresh session: deal once (committed before revealing), fly-in armed when the boot loader lifts.
@@ -7312,10 +7309,82 @@ export default function App() {
           </div>
         </div>
       ) : null}
+      {previewEndDialogActive ? (
+        <>
+          <div
+            key={`end-preview-${previewEndKind}-${previewEndBurst}`}
+            className="wall-game-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="end-dialog-preview-title"
+          >
+            <div
+              className="wall-game-dialog wall-game-dialog--wall-seats wall-game-dialog--end-enter"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 id="end-dialog-preview-title" className="wall-game-dialog__title">
+                {previewEndKind === 'wall' ? 'Wall Game' : 'Mah Jongg'}
+              </h2>
+              <p className="wall-game-dialog__intro">
+                {previewEndKind === 'wall'
+                  ? 'The wall ran out — no one drew a winning tile.'
+                  : 'Bot 1 (West) wins — preview only, not a real loss.'}
+              </p>
+            </div>
+          </div>
+          <div
+            className="mahjong-win-confetti-preview-bar"
+            role="region"
+            aria-label="End dialog preview controls"
+          >
+            <button
+              type="button"
+              className="btn btn--primary rack-bottom-tile-cell wall-game-dialog__action-btn mahjong-win-confetti-preview-bar__btn"
+              aria-pressed={previewEndKind === 'wall'}
+              onClick={() => {
+                setPreviewEndKind('wall')
+                setPreviewEndBurst((n) => n + 1)
+              }}
+            >
+              Wall
+            </button>
+            <button
+              type="button"
+              className="btn btn--primary rack-bottom-tile-cell wall-game-dialog__action-btn mahjong-win-confetti-preview-bar__btn"
+              aria-pressed={previewEndKind === 'bot'}
+              onClick={() => {
+                setPreviewEndKind('bot')
+                setPreviewEndBurst((n) => n + 1)
+              }}
+            >
+              Bot
+            </button>
+            <button
+              type="button"
+              className="btn btn--primary rack-bottom-tile-cell wall-game-dialog__action-btn mahjong-win-confetti-preview-bar__btn"
+              onClick={() => setPreviewEndBurst((n) => n + 1)}
+            >
+              Replay
+            </button>
+            <button
+              type="button"
+              className="btn btn--primary rack-bottom-tile-cell wall-game-dialog__action-btn mahjong-win-confetti-preview-bar__btn"
+              onClick={() => {
+                const next = new URLSearchParams(location.search)
+                next.delete('previewEndDialog')
+                const qs = next.toString()
+                navigate({ pathname: location.pathname, search: qs ? `?${qs}` : '' }, { replace: true })
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </>
+      ) : null}
       {mainPhase === 'wall-game' && !wallGameReviewing ? (
         <div className="wall-game-overlay" role="dialog" aria-modal="true" aria-labelledby="wall-game-title">
           <div
-            className="wall-game-dialog wall-game-dialog--wall-seats"
+            className="wall-game-dialog wall-game-dialog--wall-seats wall-game-dialog--end-enter"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id="wall-game-title" className="wall-game-dialog__title">Wall Game</h2>
@@ -7381,62 +7450,6 @@ export default function App() {
             </div>
           </div>
         </div>
-      ) : null}
-      {previewWinConfetti ? (
-        <>
-          <MahjongWinConfetti
-            active
-            animationsEnabled
-            originRef={mahjongBtnRef}
-            burstKey={previewWinConfettiBurst}
-          />
-          {mahjongWinDialogShown ? (
-            <div
-              className="wall-game-overlay wall-game-overlay--mahjong-win-enter"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="mj-win-confetti-preview-title"
-            >
-              <div
-                className="wall-game-dialog wall-game-dialog--wall-seats wall-game-dialog--mahjong-win-enter"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <h2
-                  id="mj-win-confetti-preview-title"
-                  className="wall-game-dialog__title wall-game-dialog__title--mahjong-win wall-game-dialog__title--mahjong-win-punch"
-                >
-                  Mah Jongg!
-                </h2>
-                <p className="wall-game-dialog__intro">Confetti preview — not a real win.</p>
-              </div>
-            </div>
-          ) : null}
-          <div
-            className="mahjong-win-confetti-preview-bar"
-            role="region"
-            aria-label="Confetti preview controls"
-          >
-            <button
-              type="button"
-              className="btn btn--primary rack-bottom-tile-cell wall-game-dialog__action-btn mahjong-win-confetti-preview-bar__btn"
-              onClick={() => setPreviewWinConfettiBurst((n) => n + 1)}
-            >
-              Replay
-            </button>
-            <button
-              type="button"
-              className="btn btn--primary rack-bottom-tile-cell wall-game-dialog__action-btn mahjong-win-confetti-preview-bar__btn"
-              onClick={() => {
-                const next = new URLSearchParams(location.search)
-                next.delete('previewWinConfetti')
-                const qs = next.toString()
-                navigate({ pathname: location.pathname, search: qs ? `?${qs}` : '' }, { replace: true })
-              }}
-            >
-              Close
-            </button>
-          </div>
-        </>
       ) : null}
       {charlestonDone && mainPhase === 'mahjong-declared' && !mahjongWinReviewing && (
         <>
@@ -7525,7 +7538,7 @@ export default function App() {
       {charlestonDone && mainPhase === 'bot-mahjong' && postGameBotMahjongReview && !botMahjongWinReviewing && (
         <div className="wall-game-overlay" role="dialog" aria-modal="true" aria-labelledby="bot-mj-win-title">
           <div
-            className="wall-game-dialog wall-game-dialog--wall-seats"
+            className="wall-game-dialog wall-game-dialog--wall-seats wall-game-dialog--end-enter"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id="bot-mj-win-title" className="wall-game-dialog__title">

@@ -85,13 +85,10 @@ export function MahjongWinConfetti({
   active,
   animationsEnabled,
   originRef,
-  /** Change to re-fire the burst while still mounted (preview replay). */
-  burstKey = 0,
 }: {
   active: boolean
   animationsEnabled: boolean
   originRef: RefObject<HTMLElement | null>
-  burstKey?: number
 }) {
   const behindRef = useRef<HTMLCanvasElement>(null)
   const frontRef = useRef<HTMLCanvasElement>(null)
@@ -226,7 +223,7 @@ export function MahjongWinConfetti({
       bctx?.clearRect(0, 0, behind.width, behind.height)
       fctx?.clearRect(0, 0, front.width, front.height)
     }
-  }, [active, animationsEnabled, originRef, burstKey])
+  }, [active, animationsEnabled, originRef])
 
   if (!active || !animationsEnabled) return null
 

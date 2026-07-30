@@ -91,7 +91,7 @@ export type PlaySurfaceProps = {
   mahjongWinCelebrate?: boolean
   /** Keep MahJ logo lit in brand cyan after the pop (through Review). */
   mahjongWinGlyphLit?: boolean
-  /** Bump to re-run the MahJ button pop (preview Replay / fresh win). */
+  /** Bump to re-run the MahJ button pop on a fresh win. */
   mahjongWinBtnPopKey?: number
   mahjongBtnRef?: RefObject<HTMLButtonElement | null>
 

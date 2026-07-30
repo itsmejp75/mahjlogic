@@ -3713,7 +3713,7 @@ html body .app .app-menu-modal-layer .app-menu-modal
   margin-top: 0.45rem;
 }
 
-/* Tiny preview chrome for `?previewWinConfetti=1` — stay out of the way of the burst. */
+/* Tiny preview chrome for `?previewEndDialog=1` — stay out of the way of the drop-in. */
 .mahjong-win-confetti-preview-bar {
   --rack-action-face: var(--app-action-btn-face);
   --rack-action-face-pressed: var(--app-action-btn-face-pressed);
@@ -3747,6 +3747,10 @@ html body .app .app-menu-modal-layer .app-menu-modal
   font-size: 0.68rem;
   line-height: 1;
   border-radius: 999px;
+}
+
+.mahjong-win-confetti-preview-bar__btn[aria-pressed='true'] {
+  outline: 1px solid color-mix(in srgb, var(--rack-action-label-color, #e8eaed) 55%, transparent);
 }
 
 /* Mah Jongg win confetti: behind rack (spawn), then front fallout over the overlay. */
@@ -3818,6 +3822,12 @@ html body .app .app-menu-modal-layer .app-menu-modal
 .wall-game-dialog--mahjong-win-enter {
   /* Ease-in drop so it rides down with the confetti. */
   animation: mahjong-win-dialog-in 1.35s cubic-bezier(0.33, 0.08, 0.22, 1) both;
+  will-change: transform, opacity;
+}
+
+/* Wall game + bot Mah Jongg: same top drop, immediate + snappier (no confetti wait). */
+.wall-game-dialog--end-enter {
+  animation: mahjong-win-dialog-in 0.48s cubic-bezier(0.28, 0.1, 0.2, 1) both;
   will-change: transform, opacity;
 }
 
@@ -4049,6 +4059,7 @@ html body .app .app-menu-modal-layer .app-menu-modal
 }
 
 .app[data-animations='off'] .wall-game-dialog--mahjong-win-enter,
+.app[data-animations='off'] .wall-game-dialog--end-enter,
 .app[data-animations='off'] .wall-game-dialog__title--mahjong-win-punch,
 .app[data-animations='off'] .app-layout .panel--hand .rack-stage__rack-bottom::before,
 .app[data-animations='off'] .app-layout .panel--hand .btn.btn--mahjong-win-pop {
@@ -4061,6 +4072,7 @@ html body .app .app-menu-modal-layer .app-menu-modal
   }
 
   .wall-game-dialog--mahjong-win-enter,
+  .wall-game-dialog--end-enter,
   .wall-game-dialog__title--mahjong-win-punch,
   .app-layout[data-mahjong-win-celebrate='on'] .panel--hand .rack-stage__rack-bottom::before,
   .app-layout[data-mahjong-win-celebrate='on'] .panel--hand .btn.btn--mahjong-win-pop {
