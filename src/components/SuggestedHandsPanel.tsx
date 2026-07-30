@@ -65,33 +65,58 @@ const SUGGEST_JOKER_TIMESHARE_DEF: TileDef = { cat: 'joker' }
 const SUGGEST_JOKER_TIMESHARE_MS = 4000
 
 /**
- * iOS WKWebView / installed PWA often freezes CSS opacity keyframes on strip faces (especially
- * when a face remounts in the same frame as `animation`). Drive the crossfade from rAF into CSS
- * variables on the strip root instead — every joker cell stays in phase automatically.
+ * iOS WKWebView / installed PWA: CSS @keyframes opacity freezes, and updating CSS *variables*
+ * on an ancestor often does not repaint descendant `opacity: var(...)`. Drive the crossfade by
+ * writing `style.opacity` on the stacked faces from rAF (shared clock → stays in phase).
+ *
+ * Do not gate on `prefers-reduced-motion` — this is game info (which slots are joker fills), and
+ * iOS Reduce Motion would otherwise permanently hide the joker flash. In-app Animations off still
+ * disables it.
  */
-function applySuggestJokerTimeshareOpacities(root: HTMLElement, nowMs: number): void {
+function suggestJokerTimeshareOpacities(nowMs: number): { natural: number; joker: number } {
   const t = (nowMs % SUGGEST_JOKER_TIMESHARE_MS) / SUGGEST_JOKER_TIMESHARE_MS
   let natural: number
   if (t <= 0.7) natural = 1
   else if (t < 0.8) natural = 1 - (t - 0.7) / 0.1
   else if (t <= 0.95) natural = 0
   else natural = (t - 0.95) / 0.05
-  root.style.setProperty('--suggest-joker-natural-opacity', String(natural))
-  root.style.setProperty('--suggest-joker-joker-opacity', String(1 - natural))
+  return { natural, joker: 1 - natural }
 }
 
-function clearSuggestJokerTimeshareOpacities(root: HTMLElement): void {
-  root.style.removeProperty('--suggest-joker-natural-opacity')
-  root.style.removeProperty('--suggest-joker-joker-opacity')
+type SuggestJokerTimesharePair = {
+  natural: HTMLElement | null
+  joker: HTMLElement | null
 }
 
-function suggestJokerTimeshareMotionBlocked(root: HTMLElement): boolean {
-  if (
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  ) {
-    return true
+function collectSuggestJokerTimesharePairs(root: HTMLElement): SuggestJokerTimesharePair[] {
+  const cells = root.querySelectorAll<HTMLElement>(
+    '.hands-list__pattern-tile-cell--suggest-joker, .hands-sheet__tile-cell--suggest-joker',
+  )
+  const pairs: SuggestJokerTimesharePair[] = []
+  for (let i = 0; i < cells.length; i++) {
+    const cell = cells[i]!
+    let natural: HTMLElement | null = null
+    let joker: HTMLElement | null = null
+    const kids = cell.children
+    for (let c = 0; c < kids.length; c++) {
+      const child = kids[c]
+      if (!(child instanceof HTMLElement) || !child.classList.contains('tile-face')) continue
+      if (child.classList.contains('tile-face--suggest-joker-timeshare')) joker = child
+      else natural = child
+    }
+    pairs.push({ natural, joker })
   }
+  return pairs
+}
+
+function clearSuggestJokerTimeshareInlineOpacity(root: HTMLElement): void {
+  const faces = root.querySelectorAll<HTMLElement>('.tile-face')
+  for (let i = 0; i < faces.length; i++) {
+    faces[i]!.style.removeProperty('opacity')
+  }
+}
+
+function suggestJokerTimeshareAnimationsOff(root: HTMLElement): boolean {
   return root.closest('[data-animations]')?.getAttribute('data-animations') === 'off'
 }
 /** Extra rows mounted above/below the viewport so fast flings do not flash empty gaps. */
@@ -765,31 +790,31 @@ const SuggestedHandStripRuns = memo(function SuggestedHandStripRuns({
   runClassPrefix: 'hands-sheet__tile-run' | 'hands-list__pattern-tile-run'
   cellClassPrefix: 'hands-sheet__tile-cell' | 'hands-list__pattern-tile-cell'
 }) {
-const runs = useMemo(() => segmentSuggestedStripIntoRuns(slots), [slots])
+  const runs = useMemo(() => segmentSuggestedStripIntoRuns(slots), [slots])
   const stripRef = useRef<HTMLDivElement>(null)
   const hasJokerFill = useMemo(() => slots.some((s) => s.jokerSuggested), [slots])
 
   useEffect(() => {
     const root = stripRef.current
-    if (!root) return
-    if (!isActiveRow || !hasJokerFill) {
-      clearSuggestJokerTimeshareOpacities(root)
-      return
-    }
-    if (suggestJokerTimeshareMotionBlocked(root)) {
-      root.style.setProperty('--suggest-joker-natural-opacity', '1')
-      root.style.setProperty('--suggest-joker-joker-opacity', '0')
-      return
-    }
+    if (!root || !isActiveRow || !hasJokerFill) return
+    if (suggestJokerTimeshareAnimationsOff(root)) return
+
     let raf = 0
     const tick = (now: number) => {
-      applySuggestJokerTimeshareOpacities(root, now)
+      const { natural, joker } = suggestJokerTimeshareOpacities(now)
+      // Re-query each frame so late joker joins / virtualization still paint on iOS.
+      const pairs = collectSuggestJokerTimesharePairs(root)
+      for (let i = 0; i < pairs.length; i++) {
+        const p = pairs[i]!
+        if (p.natural) p.natural.style.opacity = String(natural)
+        if (p.joker) p.joker.style.opacity = String(joker)
+      }
       raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
     return () => {
       cancelAnimationFrame(raf)
-      clearSuggestJokerTimeshareOpacities(root)
+      clearSuggestJokerTimeshareInlineOpacity(root)
     }
   }, [isActiveRow, hasJokerFill])
 
