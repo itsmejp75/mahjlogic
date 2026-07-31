@@ -59,7 +59,6 @@ import {
   type PlaySurfaceDnDApi,
 } from './usePlaySurfaceDnD'
 import { usePlayerSeatLabelLayout } from './usePlayerSeatLabelLayout'
-import { useMahjongWinBtnPop } from './useMahjongWinBtnPop'
 import type {
   PlaySurfaceActionBarProps,
   PlaySurfaceCoachProps,
@@ -88,13 +87,8 @@ export type PlaySurfaceProps = {
   botHandsIdentifierEnabled: boolean
   botHandsIdentifierFocusSeat: BotSeat | null
   onBotExposureRowClick: (seat: BotSeat) => void
-  /** Soft rack glow while player Mah Jongg confetti / win dialog celebrate. */
-  mahjongWinCelebrate?: boolean
-  /** Keep MahJ logo lit in brand cyan after the pop (through Review). */
+  /** Keep MahJ logo lit in brand cyan through the win / Review. */
   mahjongWinGlyphLit?: boolean
-  /** Bump to re-run the MahJ button pop on a fresh win. */
-  mahjongWinBtnPopKey?: number
-  mahjongBtnRef?: RefObject<HTMLButtonElement | null>
 
   charlestonDone: boolean
   mainPhase: MainPhase
@@ -181,10 +175,7 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
     botHandsIdentifierEnabled,
     botHandsIdentifierFocusSeat,
     onBotExposureRowClick,
-    mahjongWinCelebrate = false,
     mahjongWinGlyphLit = false,
-    mahjongWinBtnPopKey = 0,
-    mahjongBtnRef,
     charlestonDone,
     mainPhase,
     charlestonPhase,
@@ -314,11 +305,14 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
     eastPlayerExposureRackMelds,
     callMeldInsetCols,
     eastCallStagedWaveFlyIn,
+    winHandFlyInTileIds,
+    winHandFlyInOriginByTileId,
+    winHandFlyWave,
+    winHandDumpOnExposure,
     eastExposureLastSlotLabel,
     eastExposureLastSlotClassName,
     eastDiscardLastSlotReplace,
     visibleHandTiles,
-    winHandSortedTiles,
   } = rackChrome
 
   usePlayerSeatLabelLayout({
@@ -333,12 +327,6 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
     handLength: hand.length,
     incomingBotDiscardCallDragActive,
   })
-
-  useMahjongWinBtnPop(
-    mahjongBtnRef,
-    Boolean(mahjongWinCelebrate && animationsEnabled),
-    mahjongWinBtnPopKey,
-  )
 
   const charlestonPassPhantomTile = useMemo(() => {
     if (!charlestonPassIntoHandPreview) return null
@@ -455,7 +443,7 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
       <div
         className="app-layout"
         data-animations={animationsEnabled ? 'on' : 'off'}
-        data-mahjong-win-celebrate={mahjongWinCelebrate ? 'on' : undefined}
+        data-mahjong-win-undim={mainPhase === 'mahjong-declared' ? 'on' : undefined}
         data-hand-fly-in={
           animationsEnabled && handTileFlyIn ? handTileFlyIn.from : undefined
         }
@@ -661,12 +649,10 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                 </>
                               ) : null}
                               <button
-                                ref={mahjongBtnRef}
                                 type="button"
                                 className={[
                                   'btn btn--mahjong rack-bottom-tile-cell rack-bottom-tile-cell--c5-6',
                                   showMahjongRackHint ? 'btn--mahjong-hint' : '',
-                                  mahjongWinCelebrate ? 'btn--mahjong-win-pop' : '',
                                   mahjongWinGlyphLit ? 'btn--mahjong-win-lit' : '',
                                 ]
                                   .filter(Boolean)
@@ -763,17 +749,49 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                             <ExposureRack
                               stackSuitTiles
                               ownedMeldHighlight
-                              callStagingWaveFlyIn={
-                                animationsEnabled ? (eastCallStagedWaveFlyIn as never) : null
+                              hideWatermark={winHandDumpOnExposure}
+                              preserveTileOrder={winHandDumpOnExposure}
+                              className={
+                                mainPhase === 'mahjong-declared'
+                                  ? 'exposure-rack--win-hand-dump'
+                                  : undefined
                               }
-                              flyInTileIds={exposureJokerSwapFlyInTileIds}
-                              flyInFromBelowTileIds={exposureJokerSwapFlyInTileIds}
-                              jokerSwapHintBounceTileIds={jokerSwapHintBounceIds?.jokers ?? null}
+                              callStagingWaveFlyIn={
+                                winHandFlyWave
+                                  ? winHandFlyWave
+                                  : animationsEnabled
+                                    ? (eastCallStagedWaveFlyIn as never)
+                                    : null
+                              }
+                              flyInTileIds={
+                                winHandDumpOnExposure
+                                  ? winHandFlyInTileIds
+                                  : exposureJokerSwapFlyInTileIds
+                              }
+                              flyInFromBelowTileIds={
+                                winHandDumpOnExposure
+                                  ? null
+                                  : exposureJokerSwapFlyInTileIds
+                              }
+                              flyInOriginByTileId={
+                                winHandDumpOnExposure ? winHandFlyInOriginByTileId : null
+                              }
+                              jokerSwapHintBounceTileIds={
+                                winHandDumpOnExposure
+                                  ? null
+                                  : (jokerSwapHintBounceIds?.jokers ?? null)
+                              }
                               jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
                               melds={eastPlayerExposureRackMelds as never}
-                              suggestedTileGuide={suggestedTileGuideForRack}
+                              suggestedTileGuide={
+                                winHandDumpOnExposure ? null : suggestedTileGuideForRack
+                              }
                               highlightCalledTile={mainPhase === 'call-staging'}
-                              ariaLabel="Your exposures"
+                              ariaLabel={
+                                winHandDumpOnExposure
+                                  ? 'Your winning hand'
+                                  : 'Your exposures'
+                              }
                               reserveLastSlotForDiscard={mainPhase !== 'call-staging' && mainPhase !== 'mahjong-declared' && mainPhase !== 'bot-mahjong'}
                               lastSlotTile={
                                 activeBotDiscard && mainPhase === 'bot-turn'
@@ -804,34 +822,56 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                               />
                             ) : null}
                             <div ref={playerHandRackBottomRef} className="rack-stage__rack-bottom">
-                                <HandBank>
-                                  <SortableHand
-                                    tiles={
-                                      mainPhase === 'mahjong-declared'
-                                        ? (winHandSortedTiles ?? [])
-                                        : visibleHandTiles
-                                    }
-                                    sortableOrder={undefined}
-                                    externalInsertPreviewIndex={eastDiscardIntoHandPreviewIndex}
-                                    selectedTileId={
-                                      mainPhase === 'east-discard' ? null : selectedHandTileId
-                                    }
-                                    onTileActivate={onHandTileActivate}
-                                    highlightedTileId={drawnTileId}
-                                    charlestonGlowTileIds={charlestonGlowTileIds ?? undefined}
-                                    handTileFlyIn={animationsEnabled ? handTileFlyIn : null}
-                                    handJokerSwapFlyInFromBelowId={
-                                      animationsEnabled ? handJokerSwapFlyInFromBelowId : null
-                                    }
-                                    suggestedTileGuide={suggestedTileGuideForRack}
-                                    suggestedDeadTileGuide={suggestedDeadTileGuideForRack}
-                                    discardMode={false}
-                                    animationsEnabled={animationsEnabled}
-                                    jokerSwapHintBounceTileIds={jokerSwapHintBounceIds?.hand ?? null}
-                                    jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
-                                    suppressRemovalShift={mainPhase === 'call-staging'}
-                                  />
-                                </HandBank>
+                              <HandBank>
+                                <SortableHand
+                                  tiles={
+                                    winHandDumpOnExposure ? [] : visibleHandTiles
+                                  }
+                                  sortableOrder={undefined}
+                                  externalInsertPreviewIndex={
+                                    winHandDumpOnExposure
+                                      ? null
+                                      : eastDiscardIntoHandPreviewIndex
+                                  }
+                                  selectedTileId={
+                                    mainPhase === 'east-discard' || winHandDumpOnExposure
+                                      ? null
+                                      : selectedHandTileId
+                                  }
+                                  onTileActivate={onHandTileActivate}
+                                  highlightedTileId={
+                                    winHandDumpOnExposure ? null : drawnTileId
+                                  }
+                                  charlestonGlowTileIds={charlestonGlowTileIds ?? undefined}
+                                  handTileFlyIn={
+                                    animationsEnabled && !winHandDumpOnExposure
+                                      ? handTileFlyIn
+                                      : null
+                                  }
+                                  handJokerSwapFlyInFromBelowId={
+                                    animationsEnabled && !winHandDumpOnExposure
+                                      ? handJokerSwapFlyInFromBelowId
+                                      : null
+                                  }
+                                  suggestedTileGuide={
+                                    winHandDumpOnExposure ? null : suggestedTileGuideForRack
+                                  }
+                                  suggestedDeadTileGuide={
+                                    winHandDumpOnExposure
+                                      ? null
+                                      : suggestedDeadTileGuideForRack
+                                  }
+                                  discardMode={false}
+                                  animationsEnabled={animationsEnabled}
+                                  jokerSwapHintBounceTileIds={
+                                    winHandDumpOnExposure
+                                      ? null
+                                      : (jokerSwapHintBounceIds?.hand ?? null)
+                                  }
+                                  jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
+                                  suppressRemovalShift={mainPhase === 'call-staging'}
+                                />
+                              </HandBank>
                             </div>
                             {mainPhase !== 'dead-hand' ? (
                               <div
@@ -895,12 +935,10 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                   </>
                                 ) : null}
                                 <button
-                                  ref={mahjongBtnRef}
                                   type="button"
                                   className={[
                                     'btn btn--mahjong rack-bottom-tile-cell rack-bottom-tile-cell--c5-6',
                                     showMahjongRackHint ? 'btn--mahjong-hint' : '',
-                                    mahjongWinCelebrate ? 'btn--mahjong-win-pop' : '',
                                     mahjongWinGlyphLit ? 'btn--mahjong-win-lit' : '',
                                   ]
                                     .filter(Boolean)

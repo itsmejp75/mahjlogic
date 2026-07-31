@@ -68,9 +68,10 @@ export function buildPlayerSeatLabelProps(args: {
   const { charlestonDone, mainPhase, botTurnBannerDiscarderBotIndex, botTurnBannerPresent } =
     args
   const playerSeatLabelActiveTurn = (() => {
+    // Player Mah Jongg: keep the green turn chip — it was their seat when they won.
+    if (mainPhase === 'mahjong-declared') return true
     if (
       mainPhase === 'wall-game' ||
-      mainPhase === 'mahjong-declared' ||
       mainPhase === 'bot-mahjong' ||
       mainPhase === 'dead-hand'
     ) {
@@ -207,9 +208,16 @@ export type PlaySurfaceRackChromeProps = {
   eastPlayerExposureRackMelds: unknown
   callMeldInsetCols: number
   eastCallStagedWaveFlyIn: unknown
+  /** Player Mah Jongg: former hand tiles flying into the existing exposure strip. */
+  winHandFlyInTileIds: ReadonlySet<string> | null
+  /** Measured hand centers for FLIP into the exposure strip (flying phase only). */
+  winHandFlyInOriginByTileId: ReadonlyMap<string, { x: number; y: number }> | null
+  /** Left→right stagger while former hand tiles FLIP onto the exposure strip. */
+  winHandFlyWave: { staggerDelayMs: number; baseDelayMs: number } | null
+  /** True once the winning 14 live on the exposure strip (flying or settled). */
+  winHandDumpOnExposure: boolean
   eastExposureLastSlotLabel: string | undefined
   eastExposureLastSlotClassName: string | undefined
   eastDiscardLastSlotReplace: ReactNode
   visibleHandTiles: TileInstance[]
-  winHandSortedTiles: TileInstance[] | null
 }

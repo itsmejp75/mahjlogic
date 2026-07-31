@@ -71,6 +71,20 @@ function sameReadonlySet(
   return true
 }
 
+function sameViewportOriginMap(
+  a: ReadonlyMap<string, { x: number; y: number }> | null | undefined,
+  b: ReadonlyMap<string, { x: number; y: number }> | null | undefined,
+): boolean {
+  if (a === b) return true
+  if (a == null || b == null) return a == null && b == null
+  if (a.size !== b.size) return false
+  for (const [id, pa] of a) {
+    const pb = b.get(id)
+    if (!pb || pa.x !== pb.x || pa.y !== pb.y) return false
+  }
+  return true
+}
+
 function sameMeldGroups(a: readonly MeldGroup[], b: readonly MeldGroup[]): boolean {
   if (a === b) return true
   if (a.length !== b.length) return false
@@ -100,6 +114,7 @@ function ExposureRackFlyInTile({
   tileId,
   animate,
   flyOrigin = 'above',
+  flyFromViewport = null,
   animationDelayMs,
   children,
 }: {
@@ -107,6 +122,11 @@ function ExposureRackFlyInTile({
   animate: boolean
   /** `'right'` — claimed discard from the discard-tray side; `'below'` — staged call tiles wave upward. */
   flyOrigin?: 'above' | 'right' | 'below'
+  /**
+   * Absolute viewport center to fly from (FLIP). When set, skips the synthetic above/below
+   * origin and does **not** clip — so hand→exposure travels stay visible.
+   */
+  flyFromViewport?: { x: number; y: number } | null
   /** Opening-deal style stagger (`index * staggerMs`), applied as CSS `animation-delay`. */
   animationDelayMs?: number
   children: ReactNode
@@ -114,7 +134,8 @@ function ExposureRackFlyInTile({
   const wrapRef = useRef<HTMLDivElement>(null)
   const flyRef = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
-    if (!animate || flyOrigin === 'right') return
+    if (!animate) return
+    if (flyOrigin === 'right' && !flyFromViewport) return
 
     let raf1 = 0
     let raf2 = 0
@@ -128,6 +149,11 @@ function ExposureRackFlyInTile({
       const tileRect = el.getBoundingClientRect()
       const tileCx = tileRect.left + tileRect.width / 2
       const tileCy = tileRect.top + tileRect.height / 2
+      if (flyFromViewport) {
+        flyEl.style.setProperty('--draw-anim-dx', `${flyFromViewport.x - tileCx}px`)
+        flyEl.style.setProperty('--draw-anim-dy', `${flyFromViewport.y - tileCy}px`)
+        return
+      }
       const h = tileRect.height
       const ox = tileCx
       const oy = flyOrigin === 'below' ? tileCy + h * 1.05 : tileCy - h * 1.2
@@ -151,14 +177,17 @@ function ExposureRackFlyInTile({
       cancelAnimationFrame(raf1)
       cancelAnimationFrame(raf2)
     }
-  }, [animate, tileId, flyOrigin])
+  }, [animate, tileId, flyOrigin, flyFromViewport])
 
+  const viewportFly = !!flyFromViewport && animate
   const innerClass =
-    flyOrigin === 'right' && animate
+    flyOrigin === 'right' && animate && !viewportFly
       ? 'exposure-rack__tile-fly exposure-rack__incoming-discard-fly exposure-rack__incoming-discard-fly--from-right'
-      : flyOrigin === 'below' && animate
+      : flyOrigin === 'below' && animate && !viewportFly
         ? 'exposure-rack__tile-fly sortable-tile-wrap__fly sortable-tile-wrap--just-drawn exposure-rack__call-staging-fly-up'
-      : animate && flyOrigin === 'above'
+      : viewportFly
+        ? 'exposure-rack__tile-fly sortable-tile-wrap__fly sortable-tile-wrap--just-drawn exposure-rack__tile-fly--from-viewport'
+        : animate && flyOrigin === 'above'
         ? 'exposure-rack__tile-fly sortable-tile-wrap__fly sortable-tile-wrap--just-drawn'
         : 'exposure-rack__tile-fly sortable-tile-wrap__fly'
 
@@ -166,7 +195,7 @@ function ExposureRackFlyInTile({
     animate &&
     animationDelayMs != null &&
     animationDelayMs > 0 &&
-    (flyOrigin === 'above' || flyOrigin === 'below')
+    (flyOrigin === 'above' || flyOrigin === 'below' || viewportFly)
       ? { animationDelay: `${animationDelayMs}ms` }
       : undefined
 
@@ -175,7 +204,8 @@ function ExposureRackFlyInTile({
       ref={wrapRef}
       className={[
         'exposure-rack__tile-fly-wrap',
-        flyOrigin === 'below' && animate ? 'exposure-rack__tile-fly-wrap--clip' : '',
+        // Clip only the short call-staging rise — viewport FLIP must stay unclipped.
+        flyOrigin === 'below' && animate && !viewportFly ? 'exposure-rack__tile-fly-wrap--clip' : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -263,7 +293,8 @@ function IncomingBotDiscardDraggable({
 }
 
 /** Claimed discard is always shown in the first rack slot; remaining tiles follow usual meld order. */
-function orderMeldForRack(meld: MeldGroup): TileInstance[] {
+function orderMeldForRack(meld: MeldGroup, preserveTileOrder = false): TileInstance[] {
+  if (preserveTileOrder) return [...meld.tiles]
   if (!meld.calledTileId) return orderMeldTilesForDisplay(meld.tiles)
   const called = meld.tiles.find((t) => t.id === meld.calledTileId)
   const rest = meld.tiles.filter((t) => t.id !== meld.calledTileId)
@@ -379,6 +410,7 @@ type CallMeldStripTileGuideProps = {
   flyIn?: boolean
   flyFromRight?: boolean
   flyInFromBelowTileIds?: ReadonlySet<string> | null
+  flyFromViewport?: { x: number; y: number } | null
   callStagingWave?: {
     staggerDelayMs: number
     baseDelayMs: number
@@ -465,11 +497,19 @@ function CallMeldStripTileFace({
   flyIn,
   flyFromRight,
   flyInFromBelowTileIds,
+  flyFromViewport = null,
   callStagingWave,
   elevated,
 }: Pick<
   CallMeldStripTileGuideProps,
-  'tile' | 'stackSuitTiles' | 'flyIn' | 'flyFromRight' | 'flyInFromBelowTileIds' | 'callStagingWave' | 'elevated'
+  | 'tile'
+  | 'stackSuitTiles'
+  | 'flyIn'
+  | 'flyFromRight'
+  | 'flyInFromBelowTileIds'
+  | 'flyFromViewport'
+  | 'callStagingWave'
+  | 'elevated'
 >) {
   let waveDelayMs: number | null = null
   if (callStagingWave) {
@@ -482,6 +522,8 @@ function CallMeldStripTileFace({
         tileId={tile.id}
         animate
         flyOrigin={exposureFlyOriginForTile(tile.id, !!flyFromRight, flyInFromBelowTileIds)}
+        flyFromViewport={flyFromViewport}
+        animationDelayMs={waveDelayMs ?? undefined}
       >
         <TileFace def={tile.def} elevated={elevated} rackSuitStacked={stackSuitTiles} />
       </ExposureRackFlyInTile>
@@ -646,11 +688,13 @@ function CallMeldStrip({
   flyInTileIds,
   flyInFromRightTileIds = null,
   flyInFromBelowTileIds = null,
+  flyInOriginByTileId = null,
   jokerSwapHintBounceTileIds = null,
   jokerSwapHintBounceEpoch = 0,
   callStagingWaveFlyIn = null,
   dropZoneId,
   ownedMeldHighlight = false,
+  preserveTileOrder = false,
 }: {
   meld: MeldGroup
   gi: number
@@ -666,6 +710,7 @@ function CallMeldStrip({
   flyInTileIds: ReadonlySet<string> | null | undefined
   flyInFromRightTileIds?: ReadonlySet<string> | null
   flyInFromBelowTileIds?: ReadonlySet<string> | null
+  flyInOriginByTileId?: ReadonlyMap<string, { x: number; y: number }> | null
   jokerSwapHintBounceTileIds?: ReadonlySet<string> | null
   jokerSwapHintBounceEpoch?: number
   callStagingWaveFlyIn?: {
@@ -675,9 +720,10 @@ function CallMeldStrip({
   dropZoneId?: string
   /** Committed player melds: per-tile vignette instead of a group ring (always lit). */
   ownedMeldHighlight?: boolean
+  preserveTileOrder?: boolean
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: dropZoneId ?? '', disabled: !dropZoneId })
-  const ordered = orderMeldForRack(meld)
+  const ordered = orderMeldForRack(meld, preserveTileOrder)
   const onAmend = meld.onAmendCallMeld
   const onTileClick = meld.onTileClick
   const ownedMeldTile = ownedMeldHighlight && locked && !staging
@@ -699,8 +745,10 @@ function CallMeldStrip({
         {ordered.map((tile) => {
           const isCalled = meld.calledTileId === tile.id
           const highlightCalled = highlightCalledTile && isCalled
+          const flyIn = !!flyInTileIds?.has(tile.id)
+          // Staging wave, or win-hand FLIP wave across locked call strips.
           const waveTiming =
-            staging && callStagingWaveFlyIn != null
+            callStagingWaveFlyIn != null && (staging || flyIn)
               ? {
                   staggerDelayMs: callStagingWaveFlyIn.staggerDelayMs,
                   baseDelayMs: callStagingWaveFlyIn.baseDelayMs,
@@ -719,9 +767,10 @@ function CallMeldStrip({
             ownedMeld: ownedMeldTile,
             jokerSwapHintBounceTileIds,
             amendable: !!onAmend,
-            flyIn: !!flyInTileIds?.has(tile.id),
+            flyIn,
             flyFromRight: !!flyInFromRightTileIds?.has(tile.id),
             flyInFromBelowTileIds,
+            flyFromViewport: flyInOriginByTileId?.get(tile.id) ?? null,
             callStagingWave: waveTiming,
           }
 
@@ -1074,6 +1123,11 @@ type Props = {
    * replacing an exposed joker). Takes precedence over the default from-above path.
    */
   flyInFromBelowTileIds?: ReadonlySet<string> | null
+  /**
+   * Optional viewport centers (tile id → center) for FLIP fly-ins. When present for a tile,
+   * overrides above/below synthetic origins and skips clip so long travels stay visible.
+   */
+  flyInOriginByTileId?: ReadonlyMap<string, { x: number; y: number }> | null
   /** Same semantics as `SortableHand` — highlights tiles that count toward the focused suggested line. */
   suggestedTileGuide?: ExposureSuggestedTileGuide | null
   /** Exposure tile ids that just died for the focused suggested line (flash then stay dim). */
@@ -1119,6 +1173,11 @@ type Props = {
    * Use after opening post-game review so a full winning-hand strip is not overlaid on the logo.
    */
   hideWatermark?: boolean
+  /**
+   * Keep each meld’s tiles in the order provided (skip joker/call display reordering).
+   * Use for post-win practice-line dumps on the exposure strip.
+   */
+  preserveTileOrder?: boolean
   /**
    * Discard-tracker bot rows: wrap each flow meld in a single grid cell spanning its tile count
    * so layout stays stable when joker-swap droppables toggle on during the player’s turn.
@@ -1167,11 +1226,13 @@ export const ExposureRack = memo(
   flyInTileIds = null,
   flyInFromRightTileIds = null,
   flyInFromBelowTileIds = null,
+  flyInOriginByTileId = null,
   botJokerBorderMenuOn,
   jokerSwapHintBounceTileIds = null,
   jokerSwapHintBounceEpoch = 0,
   callStagingWaveFlyIn = null,
   hideWatermark = false,
+  preserveTileOrder = false,
   gridMeldColumnSpans = false,
   ownedMeldHighlight = false,
   possibleOpenHandsCount = null,
@@ -1195,7 +1256,8 @@ export const ExposureRack = memo(
   const emptyCount = Math.max(0, freeAfterMelds - possibleOpenHandsHintSlots)
   const callInitiateShown = firstEmptyOverride != null
   // No trailing green empty wells while staging a call — discard green returns after commit.
-  const emptySlotCount = callStagingActive
+  const winHandDumpActive = !!className?.includes('exposure-rack--win-hand-dump')
+  const emptySlotCount = callStagingActive || winHandDumpActive
     ? 0
     : callInitiateShown
       ? Math.max(0, emptyCount - 1)
@@ -1224,7 +1286,7 @@ export const ExposureRack = memo(
   const filledMeldCount = melds.filter((m) => m.tiles.length > 0).length
 
   const renderCallMeldEntry = (meld: MeldGroup, gi: number) => {
-    const ordered = orderMeldForRack(meld)
+    const ordered = orderMeldForRack(meld, preserveTileOrder)
     const wrapMeldContent = (content: ReactNode, slotSpan = 1) =>
       meld.sortableMeldId ? (
         <SortableMeldGroup key={meld.sortableMeldId} id={meld.sortableMeldId} slotSpan={slotSpan}>
@@ -1246,10 +1308,12 @@ export const ExposureRack = memo(
       flyInTileIds,
       flyInFromRightTileIds,
       flyInFromBelowTileIds,
+      flyInOriginByTileId,
       jokerSwapHintBounceTileIds,
       jokerSwapHintBounceEpoch,
       callStagingWaveFlyIn,
       ownedMeldHighlight,
+      preserveTileOrder,
     }
     if (meld.dropZoneId) {
       return wrapMeldContent(
@@ -1300,6 +1364,8 @@ export const ExposureRack = memo(
       </div>
     ) : null
 
+  /** Left→right wave index across flow melds (win-hand dump / shared call-staging stagger). */
+  let flowWaveSlotIndex = 0
   const flowMeldEntries = flowMelds.map((meld, gi) => {
     const meldSpanKey = meld.sortableMeldId ?? `flow-meld-${gi}-${meld.tiles[0]?.id ?? gi}`
     const wrapMeldContent = (content: ReactNode, slotSpan = 1) => {
@@ -1344,7 +1410,7 @@ export const ExposureRack = memo(
       return content
     }
     if (meld.dropZoneId || gridMeldColumnSpans) {
-      const dropSpan = Math.max(1, orderMeldForRack(meld).length)
+      const dropSpan = Math.max(1, orderMeldForRack(meld, preserveTileOrder).length)
       return wrapMeldContent(
         <DroppableMeldSlots
           meld={meld}
@@ -1366,7 +1432,7 @@ export const ExposureRack = memo(
         dropSpan,
       )
     }
-    const ordered = orderMeldForRack(meld)
+    const ordered = orderMeldForRack(meld, preserveTileOrder)
     if (meld.onTileClick) {
       const handler = meld.onTileClick
       return ordered.map((tile, ti) => (
@@ -1401,6 +1467,11 @@ export const ExposureRack = memo(
       )
       const flyIn = !!flyInTileIds?.has(tile.id)
       const flyFromRight = !!flyInFromRightTileIds?.has(tile.id)
+      const waveDelayMs =
+        flyIn && callStagingWaveFlyIn != null
+          ? callStagingWaveFlyIn.baseDelayMs +
+            flowWaveSlotIndex++ * callStagingWaveFlyIn.staggerDelayMs
+          : undefined
       return (
         <div
           key={exposureTileSlotKey({
@@ -1430,6 +1501,8 @@ export const ExposureRack = memo(
               tileId={tile.id}
               animate
               flyOrigin={exposureFlyOriginForTile(tile.id, flyFromRight, flyInFromBelowTileIds)}
+              flyFromViewport={flyInOriginByTileId?.get(tile.id) ?? null}
+              animationDelayMs={waveDelayMs}
             >
               <TileFace def={tile.def} rackSuitStacked={stackSuitTiles} />
             </ExposureRackFlyInTile>
@@ -1640,6 +1713,7 @@ export const ExposureRack = memo(
       sameReadonlySet(prev.flyInTileIds, next.flyInTileIds) &&
       sameReadonlySet(prev.flyInFromRightTileIds, next.flyInFromRightTileIds) &&
       sameReadonlySet(prev.flyInFromBelowTileIds, next.flyInFromBelowTileIds) &&
+      sameViewportOriginMap(prev.flyInOriginByTileId, next.flyInOriginByTileId) &&
       sameReadonlySet(prev.suggestedTileGuide?.bestIds, next.suggestedTileGuide?.bestIds) &&
       sameReadonlySet(
         prev.suggestedTileGuide?.blankExchangeIds,
@@ -1654,6 +1728,7 @@ export const ExposureRack = memo(
       prev.jokerSwapHintBounceEpoch === next.jokerSwapHintBounceEpoch &&
       prev.callStagingWaveFlyIn === next.callStagingWaveFlyIn &&
       prev.hideWatermark === next.hideWatermark &&
+      prev.preserveTileOrder === next.preserveTileOrder &&
       prev.gridMeldColumnSpans === next.gridMeldColumnSpans &&
       prev.ownedMeldHighlight === next.ownedMeldHighlight &&
       prev.possibleOpenHandsCount === next.possibleOpenHandsCount

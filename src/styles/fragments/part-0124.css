@@ -3753,46 +3753,6 @@ html body .app .app-menu-modal-layer .app-menu-modal
   outline: 1px solid color-mix(in srgb, var(--rack-action-label-color, #e8eaed) 55%, transparent);
 }
 
-/* Mah Jongg win confetti (portaled to body): behind rack, then front over overlay. */
-.mahjong-win-confetti {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  border: 0;
-  display: block;
-  /* Promote a compositor layer — WKWebView often skips unlayered canvas paints. */
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
-}
-
-/* Under the play surface so the opaque rack tray occludes the launch. */
-.mahjong-win-confetti--behind {
-  z-index: 0;
-}
-
-/* Over wall-game-overlay (500) — fallout covers dialog + table down to the bottom. */
-.mahjong-win-confetti--front {
-  z-index: 510;
-}
-
-/*
- * Confetti canvases portal to body. Lift `#root` / play tree above the behind canvas
- * (transparent regions still show it). Attribute is set by MahjongWinConfetti.
- */
-#root:has(.mahjong-win-confetti--behind),
-.app[data-mahjong-win-confetti='on'] {
-  position: relative;
-  z-index: 1;
-}
-
-.app[data-mahjong-win-confetti='on'] .app-layout,
-.app-layout[data-mahjong-win-celebrate='on'] {
-  position: relative;
-  z-index: 1;
-}
-
 .wall-game-overlay--mahjong-win-enter {
   overflow: visible;
 }
@@ -3808,53 +3768,11 @@ html body .app .app-menu-modal-layer .app-menu-modal
   transform: translateZ(0);
 }
 
-@keyframes mahjong-win-rack-glow {
-  0% {
-    opacity: 0;
-  }
-  18% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
-/*
- * MahJ button pop: Web Animations API in useMahjongWinBtnPop (rise + grow, hold, return).
- * CSS only keeps overflow/z-index so the enlarged control isn’t clipped by the action well.
- */
-.app-layout[data-mahjong-win-celebrate='on'][data-animations='on']
-  .panel--hand
-  .panel-hand-rack__action-well,
-.app-layout[data-mahjong-win-celebrate='on'][data-animations='on']
-  .panel--hand
-  .rack-bottom-bar--tile-grid {
-  overflow: visible;
-}
-
-.app-layout[data-mahjong-win-celebrate='on'][data-animations='on']
-  .panel--hand
-  .rack-bottom-bar--tile-grid
-  .btn.btn--mahjong.btn--mahjong-win-pop {
-  overflow: visible;
-  z-index: 40;
-  transform-origin: center bottom;
-}
-
 /*
  * Win glyph (stays lit through Review):
  *  back  = cyan logo img + soft border glow
  *  front = logo img + seat-chip-style alpha outline (feMorphology stroke)
  */
-@keyframes mahjong-win-glyph-glow {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
 
 /* Beat color-on disabled opacity: 0.5 so the white glyph + glow stay bright. */
 .app[data-color-buttons='on']
@@ -3970,66 +3888,7 @@ html body .app .app-menu-modal-layer .app-menu-modal
   pointer-events: none;
 }
 
-.app-layout[data-animations='on']
-  .panel--hand
-  .rack-bottom-bar--tile-grid
-  .btn.btn--mahjong.btn--mahjong-win-lit.btn--mahjong-win-pop
-  .btn--mahj__img.btn--mahj__img--win-glow {
-  animation: mahjong-win-glyph-glow 0.45s ease-out both;
-}
-
-.app-layout[data-animations='off']
-  .panel--hand
-  .rack-bottom-bar--tile-grid
-  .btn.btn--mahjong.btn--mahjong-win-lit
-  .btn--mahj__img.btn--mahj__img--win-glow {
-  animation: none;
-  opacity: 1;
-}
-
-/* Soft amber wash behind the winning 14 while celebrating. */
-.app-layout[data-mahjong-win-celebrate='on'] .panel--hand .rack-stage__rack-bottom {
-  position: relative;
-  isolation: isolate;
-}
-
-.app-layout[data-mahjong-win-celebrate='on'] .panel--hand .rack-stage__rack-bottom::before {
-  content: '';
-  position: absolute;
-  z-index: 0;
-  left: -2%;
-  right: -2%;
-  top: -12%;
-  bottom: -8%;
-  border-radius: 0.55rem;
-  pointer-events: none;
-  background: radial-gradient(
-    ellipse 78% 85% at 50% 55%,
-    color-mix(in srgb, #fbbf24 42%, transparent) 0%,
-    color-mix(in srgb, #f59e0b 18%, transparent) 42%,
-    transparent 72%
-  );
-  animation: mahjong-win-rack-glow 1.55s ease-out both;
-}
-
-.app-layout[data-mahjong-win-celebrate='on'] .panel--hand .rack-stage__rack-bottom > * {
-  position: relative;
-  z-index: 1;
-}
-
-.app[data-animations='off'] .wall-game-dialog--mahjong-win-enter,
 .app[data-animations='off'] .wall-game-dialog--end-enter {
   opacity: 1;
   transform: translateZ(0);
-}
-
-.app[data-animations='off'] .app-layout .panel--hand .rack-stage__rack-bottom::before {
-  animation: none;
-}
-
-/* Rack glow can stay CSS; if iOS skips it the wash simply never appears (non-blocking). */
-@media (prefers-reduced-motion: reduce) {
-  .app-layout[data-mahjong-win-celebrate='on'] .panel--hand .rack-stage__rack-bottom::before {
-    animation: none;
-  }
 }

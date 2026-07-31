@@ -44,7 +44,7 @@ import { clearPlayEnterFastPath, readPlayLocationState } from './app/playLocatio
 import { PLAYABLE_CARD_IDS, PLAYABLE_CARD_LABEL, type PlayableCardId, cardSectionOrderFromPatterns, patternsForCard, playableCardShortLabel, readPlayableCardFromStorage, writePlayableCardToStorage } from './card/cardCatalog'
 import type { PracticePattern } from './card/practicePatterns'
 import { patternByIdLookup, setActiveCardPatterns } from './card/activeCardPatternsScope'
-import { buildPinnedPatternsFromFocusKey, computeRackPatternHighlightIds, computeBlankExchangeFills, greedyPatternMatchDetail, jokerSwapHandHintUsesSingleBounceIteration, focusKeyForSuggestedHandLine, focusKeyPatternId, sortFullRackTilesForPattern, suggestedHandsTiedAtBest, summarizeRackTowardWin, computeSuggestedDiscardNeedHighlightIds, computeSuggestedDiscardTrackerNeedDefs, computeBotExposureSuggestedBestIds, findInfeasibleBestIds, buildUnavailableTileDefCounts, tileMultisetSignature, type RankSuggestedHandsInput } from './analysis/suggestedHands'
+import { buildPinnedPatternsFromFocusKey, computeRackPatternHighlightIds, computeBlankExchangeFills, greedyPatternMatchDetail, jokerSwapHandHintUsesSingleBounceIteration, focusKeyForSuggestedHandLine, focusKeyPatternId, segmentRackIntoExposureRuns, sortFullRackTilesForPattern, suggestedHandsTiedAtBest, summarizeRackTowardWin, computeSuggestedDiscardNeedHighlightIds, computeSuggestedDiscardTrackerNeedDefs, computeBotExposureSuggestedBestIds, findInfeasibleBestIds, buildUnavailableTileDefCounts, tileMultisetSignature, type RankSuggestedHandsInput } from './analysis/suggestedHands'
 import { tileInstancesWithClaimMeldJokersResolved, listOpenHandsFittingClaimMelds, openClaimMeldsFitSomePracticeLine } from './analysis/eastExposurePatternFit'
 import { useRankSuggestedHandsWorker } from './analysis/rankSuggestedHandsAsync'
 import { CharlestonPassStripInstructionMain } from './components/CharlestonPassStripInstructionLabel'
@@ -97,7 +97,6 @@ import { createResizeScheduler } from './lib/resizeSchedule'
 import type { RoundState } from './app/roundState'
 import { eastExposureMeldSortId } from './app/playSurfaceDnDHelpers'
 import { PlaySurface, type PlaySurfaceDnDApi } from './app/PlaySurface'
-import { MahjongWinConfetti } from './components/MahjongWinConfetti'
 import { WallGameDialogPanel } from './components/WallGameDialogPanel'
 import {
   buildPlaySurfaceActionBarProps,
@@ -778,9 +777,58 @@ function createPendingOpeningRound(): RoundState {
   }
 }
 
+/**
+ * Dev preview (`?previewWinHand=1`): seed 1 exposure + concealed hand, then (after paint)
+ * flip to `mahjong-declared` so the hand→exposure FLIP can be seen / Replay’d.
+ */
+function createPreviewWinHandRound(phase: 'pre' | 'won' = 'pre'): RoundState {
+  let n = 0
+  const id = () =>
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? `preview-win-${crypto.randomUUID()}`
+      : `preview-win-${Date.now()}-${++n}`
+  const t = (def: TileDef): TileInstance => ({ id: id(), def })
+  const pung = (def: TileDef) => [t(def), t(def), t(def)]
+  const expTiles = pung({ cat: 'suit', suit: 'dot', rank: 2 })
+  const hand = [
+    ...pung({ cat: 'suit', suit: 'bam', rank: 1 }),
+    ...pung({ cat: 'suit', suit: 'bam', rank: 3 }),
+    ...pung({ cat: 'suit', suit: 'crak', rank: 5 }),
+    t({ cat: 'dragon', dragon: 'soap' }),
+    t({ cat: 'dragon', dragon: 'soap' }),
+  ]
+  return {
+    ...createPendingOpeningRound(),
+    charlestonPhase: 'done',
+    mainPhase: phase === 'won' ? 'mahjong-declared' : 'east-discard',
+    hand,
+    eastExposures: [
+      {
+        tiles: expTiles,
+        claimType: 'pung',
+        calledTileId: expTiles[2]!.id,
+      },
+    ],
+    playerWinMethod:
+      phase === 'won' ? { type: 'self-draw', tile: hand[0]!.def } : null,
+    openingWallTileCount: 40,
+  }
+}
 
-/** Stable empty melds for memo(ExposureRack) during mahjong-declared. */
+
+/** Stable empty melds for memo(ExposureRack) when there is nothing to show. */
 const EMPTY_EXPOSURE_RACK_MELDS: { tiles: TileInstance[] }[] = []
+
+/**
+ * Hand → call-strip FLIP. CSS `tile-flip-in` is 0.82s (part-0075); settle/dialog use the
+ * visual park time so we don’t wait on the ease-out tail.
+ *
+ * Stagger restarts per call-meld strip (groups fly in parallel) — settle must use the
+ * largest flying group, not total flying tiles, or the dialog lags after the last land.
+ */
+const WIN_HAND_FLY_STAGGER_MS = 52
+const WIN_HAND_FLY_VISUAL_MS = 420
+type WinHandDumpPhase = 'off' | 'measure' | 'flying' | 'settled'
 
 type BotTurnResult = {
   botHand: TileInstance[]
@@ -1981,7 +2029,6 @@ export default function App() {
   const suggestedHandsPopupRef = useRef<HTMLDivElement>(null)
   const eastExposureRackTopRef = useRef<HTMLDivElement>(null)
   const playerHandRackBottomRef = useRef<HTMLDivElement>(null)
-  const mahjongBtnRef = useRef<HTMLButtonElement>(null)
   const topDiscardTrackerPanelRef = useRef<HTMLElement>(null)
   const handPanelRef = useRef<HTMLElement>(null)
   /** While true, ResizeObserver / visualViewport must not rewrite `--hand-panel-cqw` (mobile drag). */
@@ -2009,10 +2056,20 @@ export default function App() {
   const [wallGameReviewing, setWallGameReviewing] = useState(false)
   const [mahjongWinReviewing, setMahjongWinReviewing] = useState(false)
   const [botMahjongWinReviewing, setBotMahjongWinReviewing] = useState(false)
-  /** Win dialog mounts after confetti peaks, then drops in. */
+  /**
+   * Win dialog mounts after concealed tiles settle into the exposure strip when
+   * animations are on; immediate otherwise.
+   */
   const [mahjongWinDialogShown, setMahjongWinDialogShown] = useState(false)
-  /** Remount MahJ button pop animation on a fresh win. */
-  const [mahjongWinBtnPopKey, setMahjongWinBtnPopKey] = useState(0)
+  /**
+   * Player Mah Jongg dump: measure hand → opaque FLIP onto the call strip → settle.
+   * `measure` keeps tiles in the hand one frame for rect reads.
+   */
+  const [winHandDumpPhase, setWinHandDumpPhase] = useState<WinHandDumpPhase>('off')
+  const [winHandFlyOrigins, setWinHandFlyOrigins] = useState<ReadonlyMap<
+    string,
+    { x: number; y: number }
+  > | null>(null)
   /**
    * Dev preview: `?previewEndDialog=1` (or `wall` / `bot`) — drop-in end dialogs without
    * finishing a hand. Replay remounts the panel to re-run `--end-enter`.
@@ -2023,6 +2080,13 @@ export default function App() {
     new URLSearchParams(location.search).get('previewEndDialog') === 'bot' ? 'bot' : 'wall',
   )
   const [previewEndBurst, setPreviewEndBurst] = useState(0)
+  /**
+   * Dev preview: `?previewWinHand=1` — seed a win with one exposure and replay the
+   * exposure-strip dump + delayed win dialog.
+   */
+  const previewWinHandActive =
+    new URLSearchParams(location.search).get('previewWinHand') != null
+  const [previewWinHandBurst, setPreviewWinHandBurst] = useState(0)
   /** Overlay dismissed — table review after wall game / mahjong; hands tray + focus highlights stay available. */
   const postGameTableReviewing =
     wallGameReviewing || mahjongWinReviewing || botMahjongWinReviewing
@@ -2579,13 +2643,29 @@ export default function App() {
 
   /** Columns reserved at the left for pinned call melds — hand row shifts right to match. */
   const callMeldInsetCols = useMemo(() => {
-    if (mainPhase === 'mahjong-declared' || mainPhase === 'bot-mahjong') return 0
+    if (mainPhase === 'bot-mahjong') return 0
+    // Keep inset while measuring hand rects so FLIP origins match on-table columns.
+    if (
+      mainPhase === 'mahjong-declared' &&
+      (winHandDumpPhase === 'flying' ||
+        winHandDumpPhase === 'settled' ||
+        !animationsEnabled)
+    ) {
+      return 0
+    }
     let n = playerExposureMelds.reduce((sum, exp) => sum + exp.tiles.length, 0)
     if (mainPhase === 'call-staging' && activeBotDiscard) {
       n += 1 + stagedCallTileIds.length
     }
     return n
-  }, [playerExposureMelds, mainPhase, activeBotDiscard, stagedCallTileIds])
+  }, [
+    playerExposureMelds,
+    mainPhase,
+    activeBotDiscard,
+    stagedCallTileIds,
+    winHandDumpPhase,
+    animationsEnabled,
+  ])
 
   const charlestonGlowTileIds = useMemo(() => {
     if (charlestonDone || charlestonNewTileIds.length === 0) return null
@@ -4063,35 +4143,45 @@ export default function App() {
       setSuggestedDeadTableGuidesByKey({})
       trayOpenBeforeBotHandsRef.current = null
       setBotHandsIdentifierFocusSeat(null)
-      // Player Mah Jongg: keep the Hands tray open if it already was (show only the winning line).
-      if (mainPhase !== 'mahjong-declared') {
-        suggestedHandsTrayApiRef.current.setTrayOpen(false)
-      }
+      // Close Hands (CSS slide) on every end — reopen after a win still lists the winning line.
+      suggestedHandsTrayApiRef.current.setTrayOpen(false)
     }
   }, [mainPhase])
 
-  const mahjongWinCelebrating =
-    charlestonDone && mainPhase === 'mahjong-declared' && !mahjongWinReviewing
   /** Cyan MahJ glyph stays lit for the whole win (including Review). */
   const mahjongWinGlyphLit = charlestonDone && mainPhase === 'mahjong-declared'
 
-  useEffect(() => {
-    if (!mahjongWinCelebrating) {
-      setMahjongWinDialogShown(false)
+  useLayoutEffect(() => {
+    if (mainPhase !== 'mahjong-declared') {
+      setWinHandDumpPhase('off')
+      setWinHandFlyOrigins(null)
       return
     }
-    setMahjongWinBtnPopKey((k) => k + 1)
-    // In-app Animations only — do not skip the celebrate beat for OS Reduce Motion
-    // (that setting would skip confetti/btn pop and still show a frozen dialog).
     if (!animationsEnabled) {
-      setMahjongWinDialogShown(true)
+      setWinHandDumpPhase('settled')
+      setWinHandFlyOrigins(null)
       return
     }
-    setMahjongWinDialogShown(false)
-    // After MahJ pop apex (~72% of 1450ms) + a beat of fallout — same on phone/desktop.
-    const t = window.setTimeout(() => setMahjongWinDialogShown(true), 1650)
-    return () => window.clearTimeout(t)
-  }, [mahjongWinCelebrating, animationsEnabled])
+    setWinHandDumpPhase('measure')
+    setWinHandFlyOrigins(null)
+  }, [mainPhase, animationsEnabled, previewWinHandBurst])
+
+  /** Read hand centers, then FLIP those tiles onto the existing call/exposure strip. */
+  useLayoutEffect(() => {
+    if (winHandDumpPhase !== 'measure' || mainPhase !== 'mahjong-declared') return
+    const origins = new Map<string, { x: number; y: number }>()
+    for (const tile of hand) {
+      const el = playerHandRackBottomRef.current?.querySelector(
+        `[data-hand-tile-id="${CSS.escape(tile.id)}"]`,
+      )
+      if (!(el instanceof HTMLElement)) continue
+      const r = el.getBoundingClientRect()
+      if (r.width < 4 || r.height < 4) continue
+      origins.set(tile.id, { x: r.left + r.width / 2, y: r.top + r.height / 2 })
+    }
+    setWinHandFlyOrigins(origins.size > 0 ? origins : null)
+    setWinHandDumpPhase('flying')
+  }, [winHandDumpPhase, mainPhase, hand])
 
   const suggestedTilesButtonLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const suggestedTilesButtonLongPressFired = useRef(false)
@@ -4226,8 +4316,8 @@ export default function App() {
   }, [mainPhase, bots, hand, wall.length, discardTiles, botExposures, eastExposures, cardPatterns, botSlotSeats, playerYouLabelText])
 
   /**
-   * On win: full 14 (concealed + exposures) left-to-right in the order of the winning
-   * practice line — shown on the main hand row (not the exposure/call strip above it).
+   * On win: full 14 in winning practice-line order (used to order concealed tiles on the
+   * exposure strip).
    */
   const winHandSortedTiles = useMemo(() => {
     if (mainPhase !== 'mahjong-declared') return null
@@ -4245,6 +4335,92 @@ export default function App() {
     if (!closestLine) return allTiles
     return sortFullRackTilesForPattern(closestLine.id, rankInput, focusKeyForSuggestedHandLine(closestLine))
   }, [mainPhase, hand, eastExposures, wall.length, discardTiles, botExposures, cardPatterns])
+
+  /**
+   * Same CallMeldStrip path as normal exposures (`calledTileId` set) so the winning 14 sit
+   * on the existing exposure↔hand divider — not a separate full-height flow row.
+   */
+  const winHandExposureMelds = useMemo(() => {
+    if (mainPhase !== 'mahjong-declared') return null
+    const ordered =
+      winHandSortedTiles && winHandSortedTiles.length > 0
+        ? winHandSortedTiles
+        : [...playerExposureMelds.flatMap((e) => e.tiles), ...sortTiles(hand, 'suit')]
+    if (ordered.length === 0) return EMPTY_EXPOSURE_RACK_MELDS
+    return segmentRackIntoExposureRuns(ordered, playerExposureMelds).map((run) => {
+      const claimCalled =
+        run.meldIdx != null ? playerExposureMelds[run.meldIdx]?.calledTileId : undefined
+      return {
+        tiles: run.tiles,
+        // Any calledTileId forces the locked call-meld strip (normal expose geometry).
+        calledTileId: claimCalled ?? run.tiles[0]?.id,
+      }
+    })
+  }, [mainPhase, winHandSortedTiles, playerExposureMelds, hand])
+
+  useEffect(() => {
+    if (winHandDumpPhase !== 'flying') return
+    const flyIds = winHandFlyOrigins
+    let maxGroupFly = flyIds?.size ?? hand.length
+    if (flyIds && winHandExposureMelds && winHandExposureMelds.length > 0) {
+      maxGroupFly = 1
+      for (const meld of winHandExposureMelds) {
+        let n = 0
+        for (const t of meld.tiles) {
+          if (flyIds.has(t.id)) n++
+        }
+        if (n > maxGroupFly) maxGroupFly = n
+      }
+    }
+    const clearMs =
+      WIN_HAND_FLY_VISUAL_MS + Math.max(0, maxGroupFly - 1) * WIN_HAND_FLY_STAGGER_MS
+    const tid = window.setTimeout(() => setWinHandDumpPhase('settled'), clearMs)
+    return () => window.clearTimeout(tid)
+  }, [winHandDumpPhase, hand.length, winHandFlyOrigins, winHandExposureMelds])
+
+  useEffect(() => {
+    const canShow =
+      charlestonDone && mainPhase === 'mahjong-declared' && !mahjongWinReviewing
+    if (!canShow) {
+      setMahjongWinDialogShown(false)
+      return
+    }
+    // Right after the hand→exposure transfer visually finishes.
+    if (!animationsEnabled || winHandDumpPhase === 'settled') {
+      setMahjongWinDialogShown(true)
+      return
+    }
+    setMahjongWinDialogShown(false)
+  }, [
+    charlestonDone,
+    mainPhase,
+    mahjongWinReviewing,
+    animationsEnabled,
+    winHandDumpPhase,
+  ])
+
+  /** Dump layout on the call strip (after measure, or immediately when animations are off). */
+  const winHandDumpOnExposure =
+    mainPhase === 'mahjong-declared' &&
+    (winHandDumpPhase === 'flying' ||
+      winHandDumpPhase === 'settled' ||
+      (!animationsEnabled && winHandDumpPhase !== 'measure'))
+
+  /** Former hand tiles only — opaque FLIP from measured hand centers; claims stay put. */
+  const winHandFlyInTileIds = useMemo(() => {
+    if (mainPhase !== 'mahjong-declared' || winHandDumpPhase !== 'flying' || !animationsEnabled) {
+      return null
+    }
+    if (!winHandFlyOrigins || winHandFlyOrigins.size === 0) return null
+    return new Set(winHandFlyOrigins.keys())
+  }, [mainPhase, winHandDumpPhase, animationsEnabled, winHandFlyOrigins])
+
+  const winHandFlyInOriginByTileId = winHandDumpPhase === 'flying' ? winHandFlyOrigins : null
+
+  const winHandFlyWave = useMemo(() => {
+    if (winHandDumpPhase !== 'flying' || !animationsEnabled) return null
+    return { staggerDelayMs: WIN_HAND_FLY_STAGGER_MS, baseDelayMs: 0 }
+  }, [winHandDumpPhase, animationsEnabled])
 
   /**
    * On player Mah Jongg (win popup or Review), Hands lists only the completed winning line
@@ -4763,6 +4939,7 @@ export default function App() {
 
   /** Persist finished hands to Supabase once per round. */
   useEffect(() => {
+    if (previewWinHandActive) return
     const terminal =
       mainPhase === 'mahjong-declared' ||
       mainPhase === 'bot-mahjong' ||
@@ -4863,6 +5040,7 @@ export default function App() {
       assists: [...handAssistsRef.current],
     })
   }, [
+    previewWinHandActive,
     mainPhase,
     hand,
     wall.length,
@@ -4981,6 +5159,57 @@ export default function App() {
     declineResumeStartNewGame()
   }, [previewEndDialogActive, resumePrompt, declineResumeStartNewGame])
 
+  /** Win-hand dump preview: seed pre-win table, then declare so the FLIP can run. */
+  useLayoutEffect(() => {
+    if (!previewWinHandActive) return
+    eagerNewDealDoneRef.current = true
+    gameResultRecordedRef.current = true
+    inProgressSaverRef.current.cancel()
+    void clearInProgressGame()
+    setResumePrompt(null)
+    setBlockingDialog(null)
+    setMahjongWinReviewing(false)
+    setMahjongWinDialogShown(false)
+    setWinHandDumpPhase('off')
+    setWinHandFlyOrigins(null)
+    setRound(createPreviewWinHandRound('pre'))
+    markSessionReady()
+    clearPlayEnterFastPath()
+  }, [previewWinHandActive, previewWinHandBurst, markSessionReady])
+
+  useEffect(() => {
+    if (!previewWinHandActive) return
+    let cancelled = false
+    let raf2 = 0
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        if (cancelled) return
+        setRound((r) => {
+          if (r.mainPhase === 'mahjong-declared') return r
+          const winTile = r.hand[0]?.def
+          return {
+            ...r,
+            mainPhase: 'mahjong-declared',
+            playerWinMethod: winTile
+              ? { type: 'self-draw', tile: winTile }
+              : r.playerWinMethod,
+          }
+        })
+      })
+    })
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(raf1)
+      cancelAnimationFrame(raf2)
+    }
+  }, [previewWinHandActive, previewWinHandBurst])
+
+  useEffect(() => {
+    if (!previewWinHandActive || resumePrompt == null) return
+    setResumePrompt(null)
+    setBlockingDialog(null)
+  }, [previewWinHandActive, resumePrompt])
+
   /**
    * Fresh session: deal once (committed before revealing), fly-in armed when the boot loader lifts.
    * flushSync so the loader never dismisses onto an empty rack / wall 0.
@@ -4998,6 +5227,7 @@ export default function App() {
    * Waiting on cloud hydrate was the empty-rack / wall-0 hesitation.
    */
   useLayoutEffect(() => {
+    if (previewWinHandActive) return
     if (eagerNewDealDoneRef.current) return
     if (homePlayIntentRef.current !== 'new') return
     eagerNewDealDoneRef.current = true
@@ -5005,7 +5235,7 @@ export default function App() {
     void clearInProgressGame()
     beginFreshSessionWithOpeningFlyIn()
     clearPlayEnterFastPath()
-  }, [beginFreshSessionWithOpeningFlyIn])
+  }, [beginFreshSessionWithOpeningFlyIn, previewWinHandActive])
 
   /** Load cloud prefs + in-progress game on login; prompt to resume when a hand was autosaved. */
   useEffect(() => {
@@ -5688,7 +5918,9 @@ export default function App() {
   )
 
   const eastPlayerExposureRackMelds = useMemo(() => {
-    if (mainPhase === 'mahjong-declared') return EMPTY_EXPOSURE_RACK_MELDS
+    if (mainPhase === 'mahjong-declared' && winHandDumpOnExposure) {
+      return winHandExposureMelds ?? EMPTY_EXPOSURE_RACK_MELDS
+    }
     const allowSort =
       (mainPhase === 'east-discard' || mainPhase === 'bot-turn') &&
       playerExposureMelds.length > 1
@@ -5728,6 +5960,8 @@ export default function App() {
     stagedCallTileIds,
     jokerSwapUiActive,
     onToggleStagedCallTile,
+    winHandExposureMelds,
+    winHandDumpOnExposure,
   ])
 
   const charlestonPassStrip = useMemo(
@@ -5968,11 +6202,14 @@ export default function App() {
       eastPlayerExposureRackMelds,
       callMeldInsetCols,
       eastCallStagedWaveFlyIn,
+      winHandFlyInTileIds,
+      winHandFlyInOriginByTileId,
+      winHandFlyWave,
+      winHandDumpOnExposure,
       eastExposureLastSlotLabel,
       eastExposureLastSlotClassName,
       eastDiscardLastSlotReplace,
       visibleHandTiles,
-      winHandSortedTiles,
     }
   }, [
     charlestonPassSortableItems,
@@ -5983,11 +6220,14 @@ export default function App() {
     eastPlayerExposureRackMelds,
     callMeldInsetCols,
     eastCallStagedWaveFlyIn,
+    winHandFlyInTileIds,
+    winHandFlyInOriginByTileId,
+    winHandFlyWave,
+    winHandDumpOnExposure,
     eastExposureLastSlotLabel,
     eastExposureLastSlotClassName,
     eastDiscardLastSlotReplace,
     visibleHandTiles,
-    winHandSortedTiles,
   ])
 
   /** Write overlay CSS vars on the popup node — avoids App setState / re-render on every resize tick. */
@@ -7301,6 +7541,37 @@ export default function App() {
           </div>
         </div>
       ) : null}
+      {previewWinHandActive ? (
+        <div
+          className="mahjong-win-confetti-preview-bar"
+          role="region"
+          aria-label="Win hand preview controls"
+        >
+          <button
+            type="button"
+            className="btn btn--primary rack-bottom-tile-cell wall-game-dialog__action-btn mahjong-win-confetti-preview-bar__btn"
+            onClick={() => {
+              setMahjongWinReviewing(false)
+              setMahjongWinDialogShown(false)
+              setPreviewWinHandBurst((n) => n + 1)
+            }}
+          >
+            Replay
+          </button>
+          <button
+            type="button"
+            className="btn btn--primary rack-bottom-tile-cell wall-game-dialog__action-btn mahjong-win-confetti-preview-bar__btn"
+            onClick={() => {
+              const next = new URLSearchParams(location.search)
+              next.delete('previewWinHand')
+              const qs = next.toString()
+              navigate({ pathname: location.pathname, search: qs ? `?${qs}` : '' }, { replace: true })
+            }}
+          >
+            Close
+          </button>
+        </div>
+      ) : null}
       {previewEndDialogActive ? (
         <>
           <div
@@ -7311,7 +7582,6 @@ export default function App() {
             aria-labelledby="end-dialog-preview-title"
           >
             <WallGameDialogPanel
-              enter="end"
               className="wall-game-dialog--wall-seats"
               onClick={(e) => e.stopPropagation()}
             >
@@ -7377,7 +7647,6 @@ export default function App() {
       {mainPhase === 'wall-game' && !wallGameReviewing ? (
         <div className="wall-game-overlay" role="dialog" aria-modal="true" aria-labelledby="wall-game-title">
           <WallGameDialogPanel
-            enter="end"
             className="wall-game-dialog--wall-seats"
             onClick={(e) => e.stopPropagation()}
           >
@@ -7445,17 +7714,15 @@ export default function App() {
           </WallGameDialogPanel>
         </div>
       ) : null}
-      {charlestonDone && mainPhase === 'mahjong-declared' && !mahjongWinReviewing && (
-        <>
-        <MahjongWinConfetti
-          active
-          animationsEnabled={animationsEnabled}
-          originRef={mahjongBtnRef}
-        />
-        {mahjongWinDialogShown ? (
-        <div className="wall-game-overlay wall-game-overlay--mahjong-win-enter" role="dialog" aria-modal="true" aria-labelledby="mj-win-title">
+      {mahjongWinDialogShown ? (
+        <div
+          key={previewWinHandActive ? `mj-win-preview-${previewWinHandBurst}` : 'mj-win'}
+          className="wall-game-overlay wall-game-overlay--mahjong-win-enter"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mj-win-title"
+        >
           <WallGameDialogPanel
-            enter="win"
             className="wall-game-dialog--wall-seats"
             onClick={(e) => e.stopPropagation()}
           >
@@ -7524,13 +7791,10 @@ export default function App() {
             </div>
           </WallGameDialogPanel>
         </div>
-        ) : null}
-        </>
-      )}
+      ) : null}
       {charlestonDone && mainPhase === 'bot-mahjong' && postGameBotMahjongReview && !botMahjongWinReviewing && (
         <div className="wall-game-overlay" role="dialog" aria-modal="true" aria-labelledby="bot-mj-win-title">
           <WallGameDialogPanel
-            enter="end"
             className="wall-game-dialog--wall-seats"
             onClick={(e) => e.stopPropagation()}
           >
@@ -7604,10 +7868,7 @@ export default function App() {
         botHandsIdentifierEnabled={botHandsIdentifierEnabled}
         botHandsIdentifierFocusSeat={botHandsIdentifierFocusSeat}
         onBotExposureRowClick={onBotExposureRowClick}
-        mahjongWinCelebrate={mahjongWinCelebrating}
         mahjongWinGlyphLit={mahjongWinGlyphLit}
-        mahjongWinBtnPopKey={mahjongWinBtnPopKey}
-        mahjongBtnRef={mahjongBtnRef}
         charlestonDone={charlestonDone}
         mainPhase={mainPhase}
         charlestonPhase={charlestonPhase}

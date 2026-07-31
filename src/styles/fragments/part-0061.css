@@ -1295,15 +1295,10 @@
   display: none;
 }
 
-.panel--discard-tracker
-  .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot--discarded:not(.sorted-discard-tray__slot--suggest-need):not(
-    .sorted-discard-tray__slot--suggest-dim
-  )
-  .tile-face:not(.tile--joker)::after {
-  content: none;
-  display: none;
-}
+/*
+ * Discarded tracker faces keep a resting dim `::after` (part-0075, opacity 0) so clearing
+ * suggest-dim can fade brightness back in. Do not `content: none` that layer here.
+ */
 
 /* Beat Menu preset glyph rules on sorted prism glyphs only (bot row uses theme ink like main rack). */
 .app[data-tile-graphics] .panel--discard-tracker

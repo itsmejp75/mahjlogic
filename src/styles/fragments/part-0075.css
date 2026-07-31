@@ -217,6 +217,7 @@
 .exposure-rack__slot .tile-face,
 .exposure-rack__call-meld-strip__tile .tile-face,
 .discard-entry .tile-face,
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded .tile-face,
 .mahjong-win__bots-review-tile .tile-face {
   position: relative;
 }
@@ -224,7 +225,9 @@
 /* Non-jokers: dim on `::after`. Jokers use `::after` for the inscribed ring — if we also paint the
    dim on `::after`, the cascade merges properties and breaks the ring. We exclude jokers from the
    overlay, then dim jokers with `filter` (avoids taking `::before`, which the designer theme uses
-   for lustre). */
+   for lustre).
+   Discarded tracker slots always keep a resting `::after` (opacity 0) so clearing suggest-dim
+   can cross-fade back to full brightness instead of removing the pseudo and snapping. */
 .sortable-tile-wrap .tile-face:not(.tile--joker)::after,
 .pass-strip__tile-wrap .tile-face:not(.tile--joker)::after,
 .east-discard-staging__tile .tile-face:not(.tile--joker)::after,
@@ -234,7 +237,7 @@
 .exposure-rack__call-meld-strip__tile .tile-face:not(.tile--joker)::after,
 .discard-entry .tile-face:not(.tile--joker)::after,
 .discard-tracker__overlay-grid
-  .sorted-discard-tray__slot--discarded.sorted-discard-tray__slot--suggest-dim
+  .sorted-discard-tray__slot--discarded
   .tile-face:not(.tile--joker)::after,
 .mahjong-win__bots-review-tile .tile-face:not(.tile--joker)::after {
   content: '';
@@ -253,6 +256,118 @@
     box-shadow 0s linear 0.2s;
 }
 
+/*
+ * Player Mah Jongg: bot S/W/N full-hand dump fades in (1.5s). No animation-fill-mode so if
+ * WKWebView skips the animation the faces stay visible (opacity 1) instead of freezing at 0.
+ */
+@keyframes mahjong-win-bot-hand-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.app-layout[data-mahjong-win-undim='on'][data-animations='on']
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot
+  .tile-face {
+  animation: mahjong-win-bot-hand-fade-in 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/*
+ * Win: hand row keeps height so the action bar stays put, but empty wells must not paint
+ * (they read as “slots the tiles are moving into”).
+ */
+.app-layout[data-mahjong-win-undim='on']
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .hand-slot--empty {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  pointer-events: none;
+}
+
+.app-layout[data-mahjong-win-undim='on']
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .hand-slot--empty::before,
+.app-layout[data-mahjong-win-undim='on']
+  .panel--hand
+  .panel-hand-rack__hand-tray
+  .hand-row
+  > .hand-slot--empty::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* No green destination wells on the exposure strip during the win dump. */
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack--win-hand-dump
+  .exposure-rack__slot--empty,
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack--win-hand-dump
+  .exposure-rack__slot--possible-hands,
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack--win-hand-dump
+  .exposure-rack__call-initiate-target--near {
+  display: none !important;
+}
+
+/* FLIP may travel through the hand band; keep stacking clear. */
+.panel--hand .rack-stage__rack-top:has(.exposure-rack--win-hand-dump),
+.panel--hand .rack-stage__rack-top .exposure-rack--win-hand-dump {
+  overflow: visible;
+}
+
+/*
+ * Opaque hand→strip FLIP (no opacity:0 — that left empty dark wells at the destinations).
+ * Duration matches WIN_HAND_FLY_MS in App.tsx.
+ */
+@keyframes tile-flip-in {
+  0% {
+    translate: var(--draw-anim-dx, 0px) var(--draw-anim-dy, 0px);
+    opacity: 1;
+  }
+  100% {
+    translate: 0 0;
+    opacity: 1;
+  }
+}
+
+.exposure-rack
+  .exposure-rack__tile-fly.exposure-rack__tile-fly--from-viewport.sortable-tile-wrap--just-drawn {
+  animation: tile-flip-in 0.82s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+/*
+ * Win-hand dump: hold every owned-meld lift until the FLIP finishes.
+ * Per-tile / fly-face vignettes stack at just-drawn z-index and read as a left→right lift with
+ * overlapping shadows; revealing them together on the normal slot plane keeps one shared axis
+ * (seam clips + equal z-index from part-0123).
+ */
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack--win-hand-dump:has(.exposure-rack__tile-fly--from-viewport)
+  :is(
+    .exposure-rack__call-meld-strip__tile,
+    .exposure-rack__slot
+  ).exposure-rack__slot--owned-meld::after {
+  content: none !important;
+  display: none !important;
+  box-shadow: none !important;
+}
+
 .sortable-tile-wrap .tile-face.tile--joker,
 .pass-strip__tile-wrap .tile-face.tile--joker,
 .east-discard-staging__tile .tile-face.tile--joker,
@@ -261,6 +376,7 @@
 .exposure-rack__slot .tile-face.tile--joker,
 .exposure-rack__call-meld-strip__tile .tile-face.tile--joker,
 .discard-entry .tile-face.tile--joker,
+.discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded .tile-face.tile--joker,
 .mahjong-win__bots-review-tile .tile-face.tile--joker {
   --tile-face-suggest-dim-inset: 0 0 0 0 transparent;
   transition: filter 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -275,6 +391,9 @@
 .exposure-rack__slot--suggest-dim .tile-face:not(.tile--joker)::after,
 .discard-entry--suggest-dim .tile-face:not(.tile--joker)::after,
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded.sorted-discard-tray__slot--suggest-dim
+  .tile-face:not(.tile--joker)::after,
+.discard-tracker__overlay-grid
+  .exposure-rack__slot--suggest-dim
   .tile-face:not(.tile--joker)::after,
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--awaiting-discard .tile-face:not(.tile--joker)::after,
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--inactive .tile-face:not(.tile--joker)::after,
@@ -296,10 +415,48 @@
 .discard-entry--suggest-dim .tile-face.tile--joker,
 .discard-tracker__overlay-grid .sorted-discard-tray__slot--discarded.sorted-discard-tray__slot--suggest-dim
   .tile-face.tile--joker,
+.discard-tracker__overlay-grid .exposure-rack__slot--suggest-dim .tile-face.tile--joker,
 .mahjong-win__bots-review-tile--dim .tile-face.tile--joker {
   /* ~ match other tiles’ dim overlay in luminance (ring + J included). */
   --tile-face-suggest-dim-inset: var(--suggest-dim-inset-shadow);
   filter: brightness(var(--suggest-dim-joker-brightness));
+}
+
+/* Tracker jokers: snap dim on. */
+.discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--discarded.sorted-discard-tray__slot--suggest-dim
+  .tile-face.tile--joker,
+.discard-tracker__overlay-grid .exposure-rack__slot--suggest-dim .tile-face.tile--joker {
+  transition: filter 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/*
+ * Player Mah Jongg only: tracker undim matches bot-hand fade (1.5s).
+ * Declared after the suggest-dim 0.2s rules so the win undim wins on the way out.
+ */
+.app-layout[data-mahjong-win-undim='on']
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--discarded:not(.sorted-discard-tray__slot--suggest-dim)
+  .tile-face:not(.tile--joker)::after,
+.app-layout[data-mahjong-win-undim='on']
+  .discard-tracker__overlay-grid
+  .exposure-rack__slot:not(.exposure-rack__slot--suggest-dim)
+  .tile-face:not(.tile--joker)::after {
+  transition:
+    opacity 1.5s cubic-bezier(0.4, 0, 0.2, 1),
+    background 0s linear 1.5s,
+    box-shadow 0s linear 1.5s;
+}
+
+.app-layout[data-mahjong-win-undim='on']
+  .discard-tracker__overlay-grid
+  .sorted-discard-tray__slot--discarded:not(.sorted-discard-tray__slot--suggest-dim)
+  .tile-face.tile--joker,
+.app-layout[data-mahjong-win-undim='on']
+  .discard-tracker__overlay-grid
+  .exposure-rack__slot:not(.exposure-rack__slot--suggest-dim)
+  .tile-face.tile--joker {
+  transition: filter 1.5s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 1.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Post-game / wall-game modals: tile faces are much smaller than the main rack. The dim hairline
