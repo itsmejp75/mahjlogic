@@ -1,26 +1,12 @@
 import { useLayoutEffect, type RefObject } from 'react'
 import { rafAnimate, sampleKeyframes, type RafAnimHandle } from '../lib/rafAnimate'
+import { winBtnPopPeak } from '../lib/winCelebrateScale'
 
 const POP_MS = 1450
 
-/** Rise (rem) and scale stops matching the former CSS keyframes. */
-const Y_STOPS: Array<[number, number]> = [
-  [0, 0],
-  [0.22, -2.35],
-  [0.72, -2.35],
-  [1, 0],
-]
-const S_STOPS: Array<[number, number]> = [
-  [0, 1],
-  [0.22, 1.9],
-  [0.72, 1.9],
-  [1, 1],
-]
-
 /**
  * MahJ win pop (rise + grow, hold, return) via rAF + inline transform.
- * CSS @keyframes / WAAPI freeze on iOS WKWebView / installed PWA; this path paints.
- * In-app Animations only — do not gate on prefers-reduced-motion.
+ * Peak rise/scale shrink on phone so the control keeps the same page ratio as desktop.
  */
 export function useMahjongWinBtnPop(
   btnRef: RefObject<HTMLElement | null> | undefined,
@@ -42,6 +28,20 @@ export function useMahjongWinBtnPop(
     }
 
     const startOn = (el: HTMLElement) => {
+      const { risePx, peakScale } = winBtnPopPeak(el)
+      const yStops: Array<[number, number]> = [
+        [0, 0],
+        [0.22, -risePx],
+        [0.72, -risePx],
+        [1, 0],
+      ]
+      const sStops: Array<[number, number]> = [
+        [0, 1],
+        [0.22, peakScale],
+        [0.72, peakScale],
+        [1, 1],
+      ]
+
       el.style.transform = 'translateY(0px) scale(1)'
       void el.offsetWidth
 
@@ -50,13 +50,12 @@ export function useMahjongWinBtnPop(
           if (cancelled || !btnRef?.current) return
           handle = rafAnimate({
             durationMs: POP_MS,
-            // Linear raw t — keyframe stops already encode the hold.
             easing: (t) => t,
             onUpdate: (_e, rawT) => {
               if (!btnRef?.current) return
-              const y = sampleKeyframes(Y_STOPS, rawT)
-              const s = sampleKeyframes(S_STOPS, rawT)
-              btnRef.current.style.transform = `translateY(${y}rem) scale(${s})`
+              const y = sampleKeyframes(yStops, rawT)
+              const s = sampleKeyframes(sStops, rawT)
+              btnRef.current.style.transform = `translateY(${y}px) scale(${s})`
             },
             onDone: () => {
               if (cancelled || !btnRef?.current) return

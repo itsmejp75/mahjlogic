@@ -4088,8 +4088,8 @@ export default function App() {
       return
     }
     setMahjongWinDialogShown(false)
-    // Wait until confetti is clearly falling, then start the slower drop.
-    const t = window.setTimeout(() => setMahjongWinDialogShown(true), 1100)
+    // After MahJ pop apex (~72% of 1450ms) + a beat of fallout — same on phone/desktop.
+    const t = window.setTimeout(() => setMahjongWinDialogShown(true), 1650)
     return () => window.clearTimeout(t)
   }, [mahjongWinCelebrating, animationsEnabled])
 

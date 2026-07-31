@@ -1,5 +1,6 @@
 import { useEffect, useRef, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
+import { viewportCssSize, winCelebrateMotionScale } from '../lib/winCelebrateScale'
 
 type Particle = {
   x: number
@@ -11,7 +12,6 @@ type Particle = {
   rot: number
   vr: number
   color: string
-  /** Once true, draw on the front layer (over dialog / rack / everything). */
   emerged: boolean
   life: number
   decay: number
@@ -29,37 +29,34 @@ const COLORS = [
   '#2dd4bf',
 ]
 
-function viewportSize(): { width: number; height: number } {
-  const vv = window.visualViewport
-  const width = Math.max(1, Math.round(vv?.width ?? window.innerWidth))
-  const height = Math.max(1, Math.round(vv?.height ?? window.innerHeight))
-  return { width, height }
-}
-
 function createBurst(
   originX: number,
   originY: number,
   count: number,
-  power = 1,
+  power: number,
+  motion: number,
 ): Particle[] {
   const out: Particle[] = []
   const pwr = Math.max(0.28, Math.min(1, power))
+  const m = motion
   for (let i = 0; i < count; i++) {
-    const angle = -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI * (0.52 + 0.14 * pwr))
-    const speed = (12 + Math.random() * 15) * pwr
+    // Narrower fountain on small screens (desktop was ~±58°).
+    const spread = Math.PI * (0.42 + 0.12 * pwr) * (0.55 + 0.45 * m)
+    const angle = -Math.PI / 2 + (Math.random() - 0.5) * spread
+    const speed = (10 + Math.random() * 12) * pwr * m
     out.push({
-      x: originX + (Math.random() - 0.5) * 24,
-      y: originY + (Math.random() - 0.5) * 8,
-      vx: Math.cos(angle) * speed + (Math.random() - 0.5) * (1.4 + pwr),
-      vy: Math.sin(angle) * speed - (1.6 + 3 * pwr + Math.random() * 4 * pwr),
-      w: 5.5 + Math.random() * 5.5,
-      h: 7.5 + Math.random() * 9,
+      x: originX + (Math.random() - 0.5) * 18 * m,
+      y: originY + (Math.random() - 0.5) * 6 * m,
+      vx: Math.cos(angle) * speed + (Math.random() - 0.5) * (1.1 + pwr) * m,
+      vy: Math.sin(angle) * speed - (1.2 + 2.4 * pwr + Math.random() * 3 * pwr) * m,
+      w: (4.2 + Math.random() * 4.2) * m,
+      h: (5.5 + Math.random() * 7) * m,
       rot: Math.random() * Math.PI * 2,
-      vr: (Math.random() - 0.5) * 0.35,
+      vr: (Math.random() - 0.5) * 0.28,
       color: COLORS[(Math.random() * COLORS.length) | 0]!,
       emerged: false,
       life: 1,
-      decay: 0.004 + Math.random() * 0.0035,
+      decay: 0.0042 + Math.random() * 0.0032,
     })
   }
   return out
@@ -77,11 +74,7 @@ function drawParticle(ctx: CanvasRenderingContext2D, p: Particle) {
 
 /**
  * Celebration burst on player Mah Jongg.
- *
- * Portaled to `document.body` so `#root` / `.app` overflow cannot clip the fixed
- * canvases in iOS WKWebView. Behind layer sits under a lifted `.app-layout`; front
- * layer is above the win overlay. Does not gate on prefers-reduced-motion — only
- * the in-app Animations toggle (iOS Reduce Motion would otherwise kill the burst).
+ * Speeds / piece size / spread scale with viewport so phone keeps desktop page ratio.
  */
 export function MahjongWinConfetti({
   active,
@@ -102,7 +95,6 @@ export function MahjongWinConfetti({
     const front = frontRef.current
     if (!behind || !front) return
 
-    // Mark celebrate on the app shell so CSS can lift `.app-layout` above the behind canvas.
     const app = document.querySelector('.app')
     app?.setAttribute('data-mahjong-win-confetti', 'on')
 
@@ -110,6 +102,7 @@ export function MahjongWinConfetti({
     let width = 0
     let height = 0
     let rackTop = 0
+    let motion = 1
     let particles: Particle[] = []
     let raf = 0
     let cancelled = false
@@ -122,9 +115,10 @@ export function MahjongWinConfetti({
     }
 
     const syncSize = () => {
-      const size = viewportSize()
+      const size = viewportCssSize()
       width = size.width
       height = size.height
+      motion = winCelebrateMotionScale(originRef.current)
       for (const canvas of [behind, front]) {
         canvas.width = Math.max(1, Math.floor(width * dpr))
         canvas.height = Math.max(1, Math.floor(height * dpr))
@@ -152,8 +146,11 @@ export function MahjongWinConfetti({
     }
 
     syncSize()
-    const totalCount = Math.round(Math.min(220, Math.max(120, width * 0.18)))
-    const emitMs = 250
+    // Fewer pieces on narrow/short viewports — keeps rAF steady on WKWebView.
+    const totalCount = Math.round(
+      Math.min(180, Math.max(70, width * 0.12 * (0.55 + 0.45 * motion))),
+    )
+    const emitMs = 280
     let startTs = 0
     let spawned = 0
 
@@ -161,7 +158,8 @@ export function MahjongWinConfetti({
       if (cancelled) return
       if (!startTs) startTs = ts
       const elapsed = ts - startTs
-      const dt = lastTs ? Math.min(32, ts - lastTs) / 16.67 : 1
+      // Cap dt tightly so a hitch doesn’t fling particles across a small screen.
+      const dt = lastTs ? Math.min(22, ts - lastTs) / 16.67 : 1
       lastTs = ts
 
       if (spawned < totalCount) {
@@ -172,15 +170,18 @@ export function MahjongWinConfetti({
           const o = measureOrigin()
           rackTop = o.top
           const power = 1 - 0.58 * progress * progress
-          particles.push(...createBurst(o.x, o.y, n, power))
+          particles.push(...createBurst(o.x, o.y, n, power, motion))
           spawned = target
         }
       }
 
-      bctx.clearRect(0, 0, width, height)
+      // On compact viewports the behind canvas sits under an opaque shell — draw front only
+      // (half the clears/fills → much smoother on WKWebView).
+      const dualLayer = motion > 0.85
+      if (dualLayer) bctx.clearRect(0, 0, width, height)
       fctx.clearRect(0, 0, width, height)
 
-      const gravity = 0.28 * dt
+      const gravity = 0.28 * motion * dt
       const drag = Math.pow(0.992, dt)
 
       let alive = 0
@@ -199,15 +200,15 @@ export function MahjongWinConfetti({
 
         if (p.life <= 0 || p.y > height + 40) continue
         alive += 1
-        // If behind layer is occluded by an opaque shell, still show on front once emerged.
-        drawParticle(p.emerged ? fctx : bctx, p)
+        if (!dualLayer || p.emerged) drawParticle(fctx, p)
+        else drawParticle(bctx, p)
       }
 
       if (alive > 0 || spawned < totalCount) {
         raf = requestAnimationFrame(tick)
         return
       }
-      bctx.clearRect(0, 0, width, height)
+      if (dualLayer) bctx.clearRect(0, 0, width, height)
       fctx.clearRect(0, 0, width, height)
     }
 
@@ -223,6 +224,7 @@ export function MahjongWinConfetti({
     const startRaf1 = requestAnimationFrame(() => {
       startRaf2 = requestAnimationFrame(() => {
         if (cancelled) return
+        motion = winCelebrateMotionScale(originRef.current)
         const o = measureOrigin()
         rackTop = o.top
         raf = requestAnimationFrame(tick)

@@ -977,8 +977,8 @@ export type PostGameBotReviewRackRow = {
   melds: ReadonlyArray<{ tiles: TileInstance[] }>
   /** `null` = winner (all lit). Otherwise lit tile ids; tiles not listed are dim. */
   litTileIds: ReadonlySet<string> | null
-  /** Closest line tiles-away; shown in slot 14 for non-winners. */
-  bestTilesAway: number
+  /** Open claim melds only (not the concealed dump) — for the slot-14 possible-hands count. */
+  claimMelds: ReadonlyArray<{ tiles: TileInstance[] }>
 }
 
 /** 3 rows: 13-column sorted discard grid (inset) + prefix + 14-column bot exposures. */
@@ -1141,9 +1141,15 @@ export function DiscardTrackerSlotGrid({
             : null
           : botExposureSuggestedTileGuide
         const rowSuggestedDeadIds = reviewRow ? null : botExposureDeadIds
-        // Non-winners end with 13 tiles — put "N away" in the empty 14th slot.
-        const tilesAway =
-          reviewRow != null && reviewRow.litTileIds != null ? reviewRow.bestTilesAway : null
+        // Non-winners end with 13 tiles — put possible-hands count in the empty 14th slot
+        // (claim melds only; full-hand dump would inflate the count).
+        const reviewPossibleHandsCount =
+          reviewRow != null &&
+          reviewRow.litTileIds != null &&
+          botHandsIdentifierEnabled &&
+          reviewRow.claimMelds.length > 0
+            ? countOpenHandsFittingClaimMelds(reviewRow.claimMelds)
+            : null
         return (
           <div
             key={seat}
@@ -1246,17 +1252,16 @@ export function DiscardTrackerSlotGrid({
                   jokerSwapHintBounceTileIds={reviewRow ? null : jokerSwapHintBounceTileIds}
                   jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}
                   possibleOpenHandsCount={botRowPossibleOpenHandsCounts[rowIdx] ?? null}
-                  reserveTrailingSlots={tilesAway != null ? 1 : 0}
+                  reserveTrailingSlots={reviewPossibleHandsCount != null ? 1 : 0}
                   trailingSuffix={
-                    tilesAway != null ? (
+                    reviewPossibleHandsCount != null ? (
                       <div
-                        className="exposure-rack__slot exposure-rack__slot--empty exposure-rack__slot--tiles-away"
+                        className="exposure-rack__slot exposure-rack__slot--empty exposure-rack__slot--possible-hands"
                         role="status"
-                        aria-label={`${tilesAway} away`}
+                        aria-label={`${reviewPossibleHandsCount} possible hand${reviewPossibleHandsCount === 1 ? '' : 's'}`}
                       >
-                        <span className="exposure-rack__tiles-away" aria-hidden="true">
-                          <span className="exposure-rack__tiles-away__n">{tilesAway}</span>
-                          <span className="exposure-rack__tiles-away__label">away</span>
+                        <span className="exposure-rack__possible-hands-count" aria-hidden="true">
+                          {reviewPossibleHandsCount}
                         </span>
                       </div>
                     ) : null
