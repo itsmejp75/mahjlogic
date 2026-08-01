@@ -13,7 +13,7 @@
 
   Single shared keyframe + duration so the swappable hand tile and the redeemable
   exposed jokers bounce in unison (same tempo, same time, usually 4 iterations; 1 when
-  a focused suggested line marks the swap natural on a non-joker strip slot). After
+  a focused suggested line lights the swap natural — swapping it would hurt that hand). After
   the hint applies, `var(--joker-swap-hint-bounce-delay)` passes before the bounce loop starts
   (hand fly + bot exposure; longhand `animation-*` so delay is never misparsed).
 

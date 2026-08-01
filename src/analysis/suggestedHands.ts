@@ -5700,9 +5700,9 @@ export function focusKeyPatternId(focusKey: string): string {
 }
 
 /**
- * Joker swap dock-bounce: when a suggested line is focused, if any swappable hand natural that is
- * also highlighted for that line sits on a strip slot where jokers may not substitute (printed
- * pair / single / short run on the card), run the bounce animation once instead of looping.
+ * Joker swap dock-bounce: when a suggested line is focused, if any swappable hand natural is also
+ * lit for that line (needed by the selected hand), run the bounce animation once instead of
+ * looping — swapping it away would hurt the focused hand.
  */
 export function jokerSwapHandHintUsesSingleBounceIteration(args: {
   focusKey: string | null
@@ -5735,40 +5735,14 @@ export function jokerSwapHandHintUsesSingleBounceIteration(args: {
   const pinnedPatterns =
     variantSep >= 0 ? buildPinnedPatternsFromFocusKey(p, focusKey) : []
   const candidates = pinnedPatterns.length > 0 ? pinnedPatterns : [p]
-
-  for (const bid of bounce) {
-    for (const pinnedP of candidates) {
-      if (jokerSwapHintNaturalInNonJokerStripSlot(pinnedP, rack, bid, exposureTileIds)) return true
-    }
-  }
-  return false
-}
-
-function jokerSwapHintNaturalInNonJokerStripSlot(
-  pinnedP: PracticePattern,
-  rack: TileInstance[],
-  tileId: string,
-  exposureTileIds: ReadonlySet<string> | undefined,
-): boolean {
   const greedyUiOpts = exposureTileIds && exposureTileIds.size > 0 ? { exposureTileIds } : undefined
-  const detail = greedyPatternMatchDetail(rack, pinnedP, greedyUiOpts)
-  const bestIds = computeRackPatternHighlightIds(rack, pinnedP, detail, exposureTileIds)
-  if (!bestIds.has(tileId)) return false
 
-  const assign = computePreviewStripAssignment(
-    pinnedP,
-    rack,
-    detail.usedOrder,
-    bestIds,
-    detail.usedMeta,
-    null,
-    greedyUiOpts,
-  )
-  const jElig = patternPreviewJokerEligibleBySlot(pinnedP)
-  const n = Math.min(assign.slotTileIdByStripIndex.length, jElig.length)
-  for (let i = 0; i < n; i++) {
-    if (assign.slotTileIdByStripIndex[i] !== tileId) continue
-    return jElig[i] !== true
+  for (const pinnedP of candidates) {
+    const detail = greedyPatternMatchDetail(rack, pinnedP, greedyUiOpts)
+    const bestIds = computeRackPatternHighlightIds(rack, pinnedP, detail, exposureTileIds)
+    for (const bid of bounce) {
+      if (bestIds.has(bid)) return true
+    }
   }
   return false
 }

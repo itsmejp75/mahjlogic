@@ -257,7 +257,7 @@
 }
 
 /*
- * Player Mah Jongg: bot S/W/N full-hand dump fades in (1.5s). No animation-fill-mode so if
+ * Table Review: bot S/W/N full-hand dump fades in (2.4s). No animation-fill-mode so if
  * WKWebView skips the animation the faces stay visible (opacity 1) instead of freezing at 0.
  */
 @keyframes mahjong-win-bot-hand-fade-in {
@@ -269,12 +269,22 @@
   }
 }
 
-.app-layout[data-mahjong-win-undim='on'][data-animations='on']
+/* Losers: only the newly dumped concealed (dim) faces — keep live exposures steady. */
+.app-layout[data-post-game-bot-reveal='on'][data-animations='on']
   .discard-tracker__overlay-grid
   .exposure-rack--discard-tracker-bot-row
+  .exposure-rack__slot--suggest-dim
+  .tile-face {
+  animation: mahjong-win-bot-hand-fade-in 2.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Winner: full hand is lit (no suggest-dim) — fade the whole rail dump. */
+.app-layout[data-post-game-bot-reveal='on'][data-animations='on']
+  .discard-tracker__overlay-grid
+  .exposure-rack--discard-tracker-bot-row.exposure-rack--post-game-winner-reveal
   .exposure-rack__slot
   .tile-face {
-  animation: mahjong-win-bot-hand-fade-in 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: mahjong-win-bot-hand-fade-in 2.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /*

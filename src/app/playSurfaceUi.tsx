@@ -971,7 +971,7 @@ export function BlankExchangeOverlay({
   )
 }
 
-/** Per-bot full-hand dump on the table when the round ends (exposed lit / concealed dim). */
+/** Per-bot full-hand dump on the table after Review (exposed lit / concealed dim). */
 export type PostGameBotReviewRackRow = {
   seat: BotSeat
   melds: ReadonlyArray<{ tiles: TileInstance[] }>
@@ -1028,7 +1028,7 @@ export function DiscardTrackerSlotGrid({
   onBotExposureRowClick?: (seat: BotSeat) => void
   suggestedDiscardTrackerNeedDefs: readonly TileDef[] | null
   botSlotSeats: BotSlotSeats
-  /** When set (table Review), replace live exposures with full-hand lit/dim racks. */
+  /** After Review/Menu: replace live exposures with full-hand lit/dim racks. */
   postGameBotReviewRacks?: readonly PostGameBotReviewRackRow[] | null
 }) {
   const botExposureSeats = useMemo(
@@ -1238,7 +1238,16 @@ export function DiscardTrackerSlotGrid({
                 <ExposureRack
                   melds={melds}
                   slotCount={DISCARD_TRACKER_BOT_ROW_SLOTS}
-                  className="exposure-rack--discard-tracker-opponent exposure-rack--discard-tracker-bot-row"
+                  className={[
+                    'exposure-rack--discard-tracker-opponent',
+                    'exposure-rack--discard-tracker-bot-row',
+                    // Winner dump is all-lit (no suggest-dim); mark so CSS can fade the rail in.
+                    reviewRow != null && reviewRow.litTileIds == null
+                      ? 'exposure-rack--post-game-winner-reveal'
+                      : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
                   gridMeldColumnSpans
                   ariaLabel={`${seat} exposures`}
                   stackSuitTiles

@@ -97,7 +97,7 @@ export type PlaySurfaceProps = {
 
   displayedDiscardPile: readonly DiscardEntry[]
   botExposures: BotExposure[]
-  /** Table Review: full-hand lit/dim dump into opponent exposure rails. */
+  /** After Review/Menu: full-hand lit/dim dump into opponent exposure rails. */
   postGameBotReviewRacks?: readonly PostGameBotReviewRackRow[] | null
   activeBotIndex: number | null
   botTurnBannerDiscarderBotIndex: number | null
@@ -444,6 +444,7 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
         className="app-layout"
         data-animations={animationsEnabled ? 'on' : 'off'}
         data-mahjong-win-undim={mainPhase === 'mahjong-declared' ? 'on' : undefined}
+        data-post-game-bot-reveal={postGameBotReviewRacks ? 'on' : undefined}
         data-hand-fly-in={
           animationsEnabled && handTileFlyIn ? handTileFlyIn.from : undefined
         }

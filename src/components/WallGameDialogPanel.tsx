@@ -65,9 +65,10 @@ export function WallGameDialogPanel({
       settleEnter(ref.current)
     }
 
-    const fromY = Math.max(el.getBoundingClientRect().height + 20, 96)
+    // Measure once — a second getBoundingClientRect on the start frame forces layout mid-flight.
+    const dist = Math.max(el.getBoundingClientRect().height + 20, 96)
     el.style.opacity = '1'
-    el.style.transform = `translate3d(0, ${-fromY}px, 0)`
+    el.style.transform = `translate3d(0, ${-dist}px, 0)`
     el.classList.add('wall-game-dialog--enter-running')
     void el.offsetWidth
 
@@ -75,14 +76,12 @@ export function WallGameDialogPanel({
     const startRaf = requestAnimationFrame(() => {
       if (cancelled || !ref.current) return
       const node = ref.current
-      const dist = Math.max(node.getBoundingClientRect().height + 20, fromY)
 
       handle = rafAnimate({
         durationMs: ENTER_MS,
         easing: easeOutCubic,
         onUpdate: (e) => {
-          if (!ref.current) return
-          ref.current.style.transform = `translate3d(0, ${-dist * (1 - e)}px, 0)`
+          node.style.transform = `translate3d(0, ${-dist * (1 - e)}px, 0)`
         },
         onDone: finish,
       })

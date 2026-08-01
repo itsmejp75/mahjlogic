@@ -4498,12 +4498,13 @@ export default function App() {
   }, [mainPhase, botWin, bots, hand, wall.length, discardTiles, botExposures, eastExposures, cardPatterns, botSlotSeats, playerYouLabelText])
 
   /**
-   * End-game table rails: dump each bot’s full hand into the exposure rail as soon as the
-   * round ends (while the overlay is still up). Keep claim melds contiguous (table order)
-   * so exposed groups stay together; concealed tiles follow, suit-sorted. Lit = exposed;
-   * dim = concealed. Winner keeps every tile lit. Review/Menu only dismisses the overlay.
+   * End-game table rails: dump each bot’s full hand into the exposure rail only after
+   * Review/Menu (table review). Keep claim melds contiguous (table order) so exposed
+   * groups stay together; concealed tiles follow, suit-sorted. Lit = exposed; dim =
+   * concealed. Winner keeps every tile lit.
    */
   const postGameBotTableReviewRacks = useMemo(() => {
+    if (!postGameTableReviewing) return null
     if (
       mainPhase !== 'wall-game' &&
       mainPhase !== 'mahjong-declared' &&
@@ -4551,6 +4552,7 @@ export default function App() {
       }
     })
   }, [
+    postGameTableReviewing,
     mainPhase,
     botWin,
     botSlotSeats,
