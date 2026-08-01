@@ -2355,9 +2355,8 @@ html body .app.rack-checker .rack-checker__actions
   background-color: var(--rack-action-label-color-disabled, var(--app-action-btn-label-disabled));
 }
 
-.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong.rack-bottom-tile-cell--c5-6:not(
-    .btn--mahjong-win-lit
-  )
+/* Brand cyan SVG img is decorative only — masked ::after is the visible glyph (rest + win). */
+.app .panel--hand .rack-bottom-bar--tile-grid .btn.btn--mahjong.rack-bottom-tile-cell--c5-6
   .btn--mahj__img {
   opacity: 0;
   filter: none;
@@ -2393,30 +2392,20 @@ html body .app .panel--hand .rack-bottom-bar--tile-grid :is(
 }
 
 /*
- * Rack action hints: gold ring + halo on MAHJ (legal win) and Swap (joker swap available).
- * Stroke / glow track `--hand-button-row-h`. Glow stays while pressed; face uses normal
- * resting / press-in chrome (`.btn--pointer-down` + drag-off restore).
+ * Rack action hints (MahJ legal win / Swap available): colorful aurora border
+ * (`RackActionAuroraBorder`) instead of the old gold ring. Face stays normal
+ * resting / press-in chrome; lift z-index so the glow isn’t clipped by siblings.
  */
 html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-tile-cell.btn--mahjong-hint:not(:disabled):not(
     .btn--mahjong-rack-pressed-in
   ),
 html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-tile-cell.btn--joker-swap-hint:not(:disabled) {
-  /* ~0.5 / 1 / 8 / 1.5 / 14 / 2 px at a ~33px action-row pill. */
-  --_hint-scale: var(--hand-button-row-h, var(--rack-tile-w, 2.65rem));
-  --_hint-border: max(0.5px, calc(var(--_hint-scale) * 0.015));
-  --_hint-ring: max(0.5px, calc(var(--_hint-scale) * 0.03));
-  --_hint-glow-blur: max(2px, calc(var(--_hint-scale) * 0.24));
-  --_hint-glow-spread: max(0.5px, calc(var(--_hint-scale) * 0.045));
-  --_hint-halo-blur: max(2px, calc(var(--_hint-scale) * 0.42));
-  --_hint-halo-spread: max(0.5px, calc(var(--_hint-scale) * 0.06));
-  /* Above later action-row siblings (Discard / undo z-index 2) so the ring isn’t clipped. */
   position: relative;
   z-index: 5;
-  border: var(--_hint-border) solid var(--rack-action-hint-border, #ffb800) !important;
   overflow: visible;
 }
 
-/* Resting / hover / drag-off: raised face + gold halo. */
+/* Resting / hover / drag-off: raised face only (aurora paints the hint). */
 html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-tile-cell.btn--mahjong-hint:not(:disabled):not(
     .btn--mahjong-rack-pressed-in
   ):not(.btn--pointer-down):not(:active),
@@ -2436,18 +2425,13 @@ html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-t
     .btn--pointer-down
   ) {
   background: var(--rack-action-face) !important;
-  box-shadow:
-    var(--rack-action-shadow-rest),
-    0 0 0 var(--_hint-ring) color-mix(in srgb, var(--rack-action-hint-border, #ffb800) 92%, #fff 8%),
-    0 0 var(--_hint-glow-blur) var(--_hint-glow-spread)
-      color-mix(in srgb, var(--rack-action-hint-border, #ffb800) 72%, transparent),
-    0 0 var(--_hint-halo-blur) var(--_hint-halo-spread)
-      color-mix(in srgb, var(--rack-action-hint-border, #ffb800) 38%, transparent) !important;
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870)) !important;
+  box-shadow: var(--rack-action-shadow-rest) !important;
   transition: none;
   transform: none;
 }
 
-/* Press-in: pressed face + inset, gold halo kept. */
+/* Press-in: pressed face; aurora keeps running. */
 html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-tile-cell.btn--mahjong-hint.btn--pointer-down:not(
     :disabled
   ):not(.btn--mahjong-rack-pressed-in),
@@ -2455,13 +2439,8 @@ html body .app .panel--hand .rack-bottom-bar--tile-grid button.btn.rack-bottom-t
     :disabled
   ) {
   background: var(--rack-action-face-pressed-chrome) !important;
-  box-shadow:
-    var(--rack-action-pressed),
-    0 0 0 var(--_hint-ring) color-mix(in srgb, var(--rack-action-hint-border, #ffb800) 92%, #fff 8%),
-    0 0 var(--_hint-glow-blur) var(--_hint-glow-spread)
-      color-mix(in srgb, var(--rack-action-hint-border, #ffb800) 72%, transparent),
-    0 0 var(--_hint-halo-blur) var(--_hint-halo-spread)
-      color-mix(in srgb, var(--rack-action-hint-border, #ffb800) 38%, transparent) !important;
+  border-color: var(--rack-action-border-hold, var(--rack-action-border-rest, #636870)) !important;
+  box-shadow: var(--rack-action-pressed) !important;
   transition: none;
   transform: none;
 }
@@ -3769,10 +3748,33 @@ html body .app .app-menu-modal-layer .app-menu-modal
 }
 
 /*
- * Win glyph (stays lit through Review):
- *  back  = cyan logo img + soft border glow
- *  front = logo img + seat-chip-style alpha outline (feMorphology stroke)
+ * Rack aurora (MahJ hint / Swap hint / win-lit MahJ):
+ * thin masked ring + blur on an outer wrapper so the glow feathers outward.
+ * Win glyph (stays lit through Review): cyan/soft back + SVG face on top.
  */
+
+@property --mahj-aurora-angle {
+  syntax: '<angle>';
+  inherits: true;
+  initial-value: 0deg;
+}
+
+@keyframes mahj-win-aurora-sweep {
+  to {
+    --mahj-aurora-angle: 360deg;
+  }
+}
+
+/* Any action pill hosting the aurora host. */
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.rack-bottom-tile-cell:has(> .btn--mahj__aurora) {
+  position: relative;
+  z-index: 5;
+  overflow: visible;
+  isolation: isolate;
+}
 
 /* Beat color-on disabled opacity: 0.5 so the white glyph + glow stay bright. */
 .app[data-color-buttons='on']
@@ -3789,40 +3791,152 @@ html body .app .app-menu-modal-layer .app-menu-modal
   .btn.btn--mahjong.btn--mahjong-win-lit {
   opacity: 1;
   filter: none;
+}
+
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.rack-bottom-tile-cell
+  .btn--mahj__aurora {
+  --mahj-aurora-angle: 0deg;
+  --_aurora-pad: max(2px, calc(var(--hand-button-row-h, 2.65rem) * 0.065));
+  --_aurora-glow: max(7px, calc(var(--hand-button-row-h, 2.65rem) * 0.32));
+  /* Match the action pill; expanded layers add this to their radius (concentric). */
+  --_aurora-r: var(--rack-tile-btn-border-radius, 0.7rem);
+  --_aurora-bloom-out: calc(var(--_aurora-glow) * 1.15);
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-sizing: border-box;
+  overflow: visible;
+  animation: mahj-win-aurora-sweep 1.35s linear infinite;
+}
+
+/* Soft bloom: blur the wrapper, not the masked ring (lets color fade outward). */
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.rack-bottom-tile-cell
+  .btn--mahj__aurora-bloom {
+  position: absolute;
+  inset: calc(var(--_aurora-bloom-out) * -1);
+  border-radius: calc(var(--_aurora-r) + var(--_aurora-bloom-out));
+  filter: blur(var(--_aurora-glow)) saturate(1.35) brightness(1.15);
+  opacity: 0.88;
   overflow: visible;
 }
 
-.app-layout:has(.btn.btn--mahjong-win-lit)
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.rack-bottom-tile-cell
+  .btn--mahj__aurora-ring,
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.rack-bottom-tile-cell
+  .btn--mahj__aurora-rim {
+  position: absolute;
+  box-sizing: border-box;
+  background: conic-gradient(
+    from var(--mahj-aurora-angle),
+    #ff2d55 0deg,
+    #ff6a1a 72deg,
+    #ffcc33 144deg,
+    #6dff5a 216deg,
+    #3da9ff 288deg,
+    #ff2d55 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+
+/*
+ * Rings sit just outside the button face. Radius = button R + pad so corners stay
+ * concentric (inherit on a larger box leaves corner gaps).
+ */
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.rack-bottom-tile-cell
+  .btn--mahj__aurora-ring {
+  /* Bloom is larger by bloom-out; pull ring back to the pad outset around the button. */
+  inset: calc(var(--_aurora-bloom-out) - var(--_aurora-pad));
+  border-radius: calc(var(--_aurora-r) + var(--_aurora-pad));
+  padding: max(1.25px, calc(var(--_aurora-pad) * 0.65));
+}
+
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.rack-bottom-tile-cell
+  .btn--mahj__aurora-rim {
+  inset: calc(var(--_aurora-pad) * -1);
+  border-radius: calc(var(--_aurora-r) + var(--_aurora-pad));
+  padding: var(--_aurora-pad);
+  filter: saturate(1.4) brightness(1.3);
+  opacity: 1;
+}
+
+.app-layout[data-animations='off']
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.rack-bottom-tile-cell
+  .btn--mahj__aurora {
+  animation: none;
+  --mahj-aurora-angle: 40deg;
+}
+
+.app-layout:has(.rack-bottom-tile-cell > .btn--mahj__aurora)
   .panel--hand
   .panel-hand-rack__action-well,
-.app-layout:has(.btn.btn--mahjong-win-lit)
+.app-layout:has(.rack-bottom-tile-cell > .btn--mahj__aurora)
   .panel--hand
   .rack-bottom-bar--tile-grid {
   overflow: visible;
 }
 
-.app
-  .panel--hand
-  .rack-bottom-bar--tile-grid
-  .btn.btn--mahjong.btn--mahjong-win-lit
-  .btn--mahj__logo-stack {
+/* Discard-seam lift so the aurora isn’t clipped under the lower tray. */
+.app-dnd-frame:has(.rack-bottom-bar--tile-grid .btn--mahj__aurora) > .app-rack-stage {
   position: relative;
-  display: grid;
-  place-items: center;
+  z-index: 5;
   overflow: visible;
-  isolation: isolate;
+}
+
+.app-dnd-frame:has(.rack-bottom-bar--tile-grid .btn--mahj__aurora) > .app-discard-bottom-container {
+  position: relative;
   z-index: 1;
 }
 
+.app-dnd-frame:has(.rack-bottom-bar--tile-grid .btn--mahj__aurora)
+  :is(.panel--hand, .panel-hand-rack, .panel-hand-rack__action-well, .panel-hand-rack__charleston-actions-well) {
+  overflow: visible;
+}
+
+/* Label / logo above the aurora layer. */
 .app
   .panel--hand
   .rack-bottom-bar--tile-grid
-  .btn.btn--mahjong.btn--mahjong-win-lit
-  .btn--mahj__logo-stack__well {
-  display: none;
+  .btn.rack-bottom-tile-cell:has(> .btn--mahj__aurora)
+  > .btn--rack-action-label,
+.app
+  .panel--hand
+  .rack-bottom-bar--tile-grid
+  .btn.btn--mahjong:has(> .btn--mahj__aurora)
+  .btn--mahj__logo-stack {
+  position: relative;
+  z-index: 2;
 }
 
-/* Hide masked ::after + decorative logo img; SVG face is the front mark. */
+/* Win glyph: same crisp CSS mask as resting MahJ — solid white (no SVG filter / soft glow). */
 .app
   .panel--hand
   .rack-bottom-bar--tile-grid
@@ -3833,59 +3947,9 @@ html body .app .app-menu-modal-layer .app-menu-modal
   .rack-bottom-bar--tile-grid
   .btn.btn--mahjong.btn--mahjong-win-lit.rack-bottom-tile-cell--c5-6:disabled
   .btn--mahj__logo-stack::after {
-  opacity: 0;
-  filter: none;
-}
-
-.app
-  .panel--hand
-  .rack-bottom-bar--tile-grid
-  .btn.btn--mahjong.btn--mahjong-win-lit.rack-bottom-tile-cell--c5-6
-  .btn--mahj__img:not(.btn--mahj__img--win-glow) {
-  grid-area: 1 / 1;
-  opacity: 0;
-  filter: none;
-}
-
-/* Back: cyan logo + soft border glow. */
-.app
-  .panel--hand
-  .rack-bottom-bar--tile-grid
-  .btn.btn--mahjong.btn--mahjong-win-lit.rack-bottom-tile-cell--c5-6
-  .btn--mahj__img.btn--mahj__img--win-glow {
-  grid-area: 1 / 1;
-  z-index: 0;
-  position: relative;
-  height: 1.35em;
-  width: auto;
-  max-width: none;
-  max-height: none;
+  background-color: #ffffff;
   opacity: 1;
-  filter:
-    drop-shadow(0 0 0.75px #00b4d8)
-    drop-shadow(0 0 2px rgba(0, 180, 216, 0.95))
-    drop-shadow(0 0 4px rgba(0, 180, 216, 0.75))
-    drop-shadow(0 0 7px rgba(0, 180, 216, 0.45));
-  pointer-events: none;
-}
-
-/* Front: white fill + uniform outer stroke (same approach as seat-chip text-stroke). */
-.app
-  .panel--hand
-  .rack-bottom-bar--tile-grid
-  .btn.btn--mahjong.btn--mahjong-win-lit
-  .btn--mahj__win-face {
-  grid-area: 1 / 1;
-  z-index: 2;
-  position: relative;
-  display: block;
-  height: 1.35em;
-  width: auto;
-  max-width: none;
-  max-height: none;
-  opacity: 1;
-  overflow: visible;
-  pointer-events: none;
+  filter: none;
 }
 
 .app[data-animations='off'] .wall-game-dialog--end-enter {

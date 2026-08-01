@@ -52,7 +52,7 @@ import {
   type CharlestonPhase,
 } from '../mahjong/charleston'
 import mahjLogoSrc from '../assets/mahj-logo.svg?url'
-import { MahjWinFaceGlyph } from '../components/MahjWinFaceGlyph'
+import { RackActionAuroraBorder } from '../components/RackActionAuroraBorder'
 import type { RoundState } from './roundState'
 import {
   usePlaySurfaceDnD,
@@ -654,6 +654,7 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                   'btn btn--mahjong rack-bottom-tile-cell rack-bottom-tile-cell--c5-6',
                                   showMahjongRackHint ? 'btn--mahjong-hint' : '',
                                   mahjongWinGlyphLit ? 'btn--mahjong-win-lit' : '',
+                                  mahjongWinGlyphLit ? 'btn--mahjong-rack-pressed-in' : '',
                                 ]
                                   .filter(Boolean)
                                   .join(' ')}
@@ -661,20 +662,11 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                 onClick={declareMahjong}
                                 aria-label="Mah Jongg"
                               >
+                                {mahjongWinGlyphLit || showMahjongRackHint ? (
+                                  <RackActionAuroraBorder />
+                                ) : null}
                                 <span className="btn--mahj__logo-stack">
                                   <span className="btn--mahj__logo-stack__well" aria-hidden />
-                                  {mahjongWinGlyphLit ? (
-                                    <>
-                                      <img
-                                        className="btn--mahj__img btn--mahj__img--win-glow"
-                                        src={mahjLogoSrc}
-                                        alt=""
-                                        draggable={false}
-                                        aria-hidden
-                                      />
-                                      <MahjWinFaceGlyph className="btn--mahj__win-face" strokeWidth={0.7} />
-                                    </>
-                                  ) : null}
                                   <img className="btn--mahj__img" src={mahjLogoSrc} alt="" draggable={false} />
                                 </span>
                               </button>
@@ -940,6 +932,7 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                     'btn btn--mahjong rack-bottom-tile-cell rack-bottom-tile-cell--c5-6',
                                     showMahjongRackHint ? 'btn--mahjong-hint' : '',
                                     mahjongWinGlyphLit ? 'btn--mahjong-win-lit' : '',
+                                    mahjongWinGlyphLit ? 'btn--mahjong-rack-pressed-in' : '',
                                   ]
                                     .filter(Boolean)
                                     .join(' ')}
@@ -947,20 +940,11 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                   aria-label="Mah Jongg"
                                   onClick={declareMahjong}
                                 >
+                                  {mahjongWinGlyphLit || showMahjongRackHint ? (
+                                    <RackActionAuroraBorder />
+                                  ) : null}
                                   <span className="btn--mahj__logo-stack">
                                     <span className="btn--mahj__logo-stack__well" aria-hidden />
-                                    {mahjongWinGlyphLit ? (
-                                      <>
-                                        <img
-                                          className="btn--mahj__img btn--mahj__img--win-glow"
-                                          src={mahjLogoSrc}
-                                          alt=""
-                                          draggable={false}
-                                          aria-hidden
-                                        />
-                                        <MahjWinFaceGlyph className="btn--mahj__win-face" strokeWidth={0.7} />
-                                      </>
-                                    ) : null}
                                     <img className="btn--mahj__img" src={mahjLogoSrc} alt="" draggable={false} />
                                   </span>
                                 </button>
@@ -978,7 +962,8 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                     onClick={executeSwapFromSlot}
                                     aria-label="Swap"
                                   >
-                                    Swap
+                                    {showJokerSwapRackHint ? <RackActionAuroraBorder /> : null}
+                                    <span className="btn--rack-action-label">Swap</span>
                                   </button>
                                 ) : (
                                   <button
