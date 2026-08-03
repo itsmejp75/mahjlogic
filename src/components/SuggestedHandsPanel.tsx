@@ -36,6 +36,7 @@ import {
 import { CardHandNotation, showCardHandNotation } from '../card/CardHandNotation'
 import type { PracticePattern } from '../card/practicePatterns'
 import type { TileDef, TileInstance } from '../mahjong/types'
+import { tileDefsEqual } from '../mahjong/tileUtils'
 import {
   formatDeadCauseMessage,
   splitTitleTextForDeadCause,
@@ -641,10 +642,43 @@ function segmentSuggestedStripIntoRuns(slots: readonly SuggestedStripSlot[]): Su
   return runs
 }
 
+const EMPTY_INDEX_SET: ReadonlySet<number> = new Set()
+const EMPTY_TILE_DEF_LIST: readonly TileDef[] = []
+
+/** Slot indices on the focused strip that a blank can redeem from discards (one per fill). */
+function blankExchangeHintSlotIndices(
+  slots: readonly SuggestedStripSlot[],
+  targetDefs: readonly TileDef[],
+): ReadonlySet<number> {
+  if (targetDefs.length === 0) return EMPTY_INDEX_SET
+  const remaining = targetDefs.slice()
+  const out = new Set<number>()
+  const claim = (i: number) => {
+    const slot = slots[i]!
+    if (slot.highlight) return false
+    const matchAt = remaining.findIndex((d) => tileDefsEqual(d, slot.displayDef))
+    if (matchAt < 0) return false
+    remaining.splice(matchAt, 1)
+    out.add(i)
+    return remaining.length === 0
+  }
+  // Prefer plain need slots; only fall back to joker-fill cells if needed.
+  for (let i = 0; i < slots.length; i++) {
+    if (slots[i]!.jokerSuggested) continue
+    if (claim(i)) return out
+  }
+  for (let i = 0; i < slots.length; i++) {
+    if (!slots[i]!.jokerSuggested) continue
+    if (claim(i)) return out
+  }
+  return out
+}
+
 const SuggestedHandStripTileCell = memo(function SuggestedHandStripTileCell({
   slot,
   showJokerGuide,
   suggestBest,
+  suggestBlankExchange,
   dim,
   deadCauseSlot,
   classPrefix,
@@ -652,6 +686,7 @@ const SuggestedHandStripTileCell = memo(function SuggestedHandStripTileCell({
   slot: SuggestedStripSlot
   showJokerGuide: boolean
   suggestBest: boolean
+  suggestBlankExchange: boolean
   dim: boolean
   deadCauseSlot: boolean
   classPrefix: 'hands-sheet__tile-cell' | 'hands-list__pattern-tile-cell'
@@ -664,6 +699,10 @@ const SuggestedHandStripTileCell = memo(function SuggestedHandStripTileCell({
     classPrefix === 'hands-sheet__tile-cell'
       ? 'hands-sheet__tile-cell--suggest-best'
       : 'hands-list__pattern-tile-cell--suggest-best'
+  const blankExchangeClass =
+    classPrefix === 'hands-sheet__tile-cell'
+      ? 'hands-sheet__tile-cell--blank-exchange-hint'
+      : 'hands-list__pattern-tile-cell--blank-exchange-hint'
   const dimClass =
     classPrefix === 'hands-sheet__tile-cell'
       ? 'hands-sheet__tile-cell--suggest-dim'
@@ -679,6 +718,7 @@ const SuggestedHandStripTileCell = memo(function SuggestedHandStripTileCell({
         classPrefix,
         showJokerGuide ? jokerClass : '',
         suggestBest ? bestClass : '',
+        suggestBlankExchange ? blankExchangeClass : '',
         dim ? dimClass : '',
         deadCauseSlot ? deadClass : '',
       ]
@@ -778,6 +818,7 @@ const SuggestedHandStripRuns = memo(function SuggestedHandStripRuns({
   isActiveRow,
   keyPrefix,
   deadCause,
+  blankExchangeTargetDefs,
   gridClassName,
   runClassPrefix,
   cellClassPrefix,
@@ -786,6 +827,7 @@ const SuggestedHandStripRuns = memo(function SuggestedHandStripRuns({
   isActiveRow: boolean
   keyPrefix: string
   deadCause: DeadCauseHint | null
+  blankExchangeTargetDefs: readonly TileDef[]
   gridClassName: string
   runClassPrefix: 'hands-sheet__tile-run' | 'hands-list__pattern-tile-run'
   cellClassPrefix: 'hands-sheet__tile-cell' | 'hands-list__pattern-tile-cell'
@@ -793,6 +835,11 @@ const SuggestedHandStripRuns = memo(function SuggestedHandStripRuns({
   const runs = useMemo(() => segmentSuggestedStripIntoRuns(slots), [slots])
   const stripRef = useRef<HTMLDivElement>(null)
   const hasJokerFill = useMemo(() => slots.some((s) => s.jokerSuggested), [slots])
+  const blankExchangeHintIndices = useMemo(
+    () =>
+      isActiveRow ? blankExchangeHintSlotIndices(slots, blankExchangeTargetDefs) : EMPTY_INDEX_SET,
+    [isActiveRow, slots, blankExchangeTargetDefs],
+  )
 
   useEffect(() => {
     const root = stripRef.current
@@ -834,6 +881,7 @@ const SuggestedHandStripRuns = memo(function SuggestedHandStripRuns({
             const i = run.startIndex + j
             const showJokerGuide = isActiveRow && slot.jokerSuggested
             const suggestBest = isActiveRow && slot.highlight
+            const suggestBlankExchange = blankExchangeHintIndices.has(i)
             const dim = isActiveRow && !slot.highlight && !slot.jokerSuggested
             const deadCauseSlot = isActiveRow && stripSlotMatchesDeadCause(slot, deadCause)
             return (
@@ -842,6 +890,7 @@ const SuggestedHandStripRuns = memo(function SuggestedHandStripRuns({
                 slot={slot}
                 showJokerGuide={showJokerGuide}
                 suggestBest={suggestBest}
+                suggestBlankExchange={suggestBlankExchange}
                 dim={dim}
                 deadCauseSlot={deadCauseSlot}
                 classPrefix={cellClassPrefix}
@@ -859,11 +908,13 @@ const SuggestedHandSheetTileGrid = memo(function SuggestedHandSheetTileGrid({
   isActiveRow,
   keyPrefix,
   deadCause,
+  blankExchangeTargetDefs,
 }: {
   slots: SuggestedStripSlot[]
   isActiveRow: boolean
   keyPrefix: string
   deadCause: DeadCauseHint | null
+  blankExchangeTargetDefs: readonly TileDef[]
 }) {
   return (
     <SuggestedHandStripRuns
@@ -871,6 +922,7 @@ const SuggestedHandSheetTileGrid = memo(function SuggestedHandSheetTileGrid({
       isActiveRow={isActiveRow}
       keyPrefix={keyPrefix}
       deadCause={deadCause}
+      blankExchangeTargetDefs={blankExchangeTargetDefs}
       gridClassName="hands-sheet__tiles-grid"
       runClassPrefix="hands-sheet__tile-run"
       cellClassPrefix="hands-sheet__tile-cell"
@@ -883,11 +935,13 @@ const SuggestedHandListTileGrid = memo(function SuggestedHandListTileGrid({
   isActiveRow,
   keyPrefix,
   deadCause,
+  blankExchangeTargetDefs,
 }: {
   slots: SuggestedStripSlot[]
   isActiveRow: boolean
   keyPrefix: string
   deadCause: DeadCauseHint | null
+  blankExchangeTargetDefs: readonly TileDef[]
 }) {
   return (
     <SuggestedHandStripRuns
@@ -895,6 +949,7 @@ const SuggestedHandListTileGrid = memo(function SuggestedHandListTileGrid({
       isActiveRow={isActiveRow}
       keyPrefix={keyPrefix}
       deadCause={deadCause}
+      blankExchangeTargetDefs={blankExchangeTargetDefs}
       gridClassName="hands-list__pattern-tiles-grid"
       runClassPrefix="hands-list__pattern-tile-run"
       cellClassPrefix="hands-list__pattern-tile-cell"
@@ -913,6 +968,7 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
   showHandProbability,
   isPinned,
   showPinColumn,
+  blankExchangeTargetDefs,
   bindPatternRowInteraction,
   onPinToggle,
 }: {
@@ -927,6 +983,7 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
   showHandProbability: boolean
   isPinned: boolean
   showPinColumn: boolean
+  blankExchangeTargetDefs: readonly TileDef[]
   bindPatternRowInteraction: (focusKey: string) => PatternRowInteractionProps
   onPinToggle: (pinKey: string) => void
 }) {
@@ -1083,6 +1140,7 @@ const SuggestedHandsSheetRow = memo(function SuggestedHandsSheetRow({
                 isActiveRow={rowLit}
                 keyPrefix={rowKey}
                 deadCause={rowDeadCause}
+                blankExchangeTargetDefs={blankExchangeTargetDefs}
               />
             ) : (
               <span className="hands-sheet__paren">
@@ -1178,6 +1236,7 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
   rowHitGridStyle,
   isPinned,
   showPinColumn,
+  blankExchangeTargetDefs,
   bindPatternRowInteraction,
   onPinToggle,
 }: {
@@ -1193,6 +1252,7 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
   rowHitGridStyle: CSSProperties
   isPinned: boolean
   showPinColumn: boolean
+  blankExchangeTargetDefs: readonly TileDef[]
   bindPatternRowInteraction: (focusKey: string) => PatternRowInteractionProps
   onPinToggle: (pinKey: string) => void
 }) {
@@ -1322,6 +1382,7 @@ const SuggestedHandsCompactListRow = memo(function SuggestedHandsCompactListRow(
                   isActiveRow={rowIsFocused}
                   keyPrefix={row.reactKey}
                   deadCause={rowDeadCause}
+                  blankExchangeTargetDefs={blankExchangeTargetDefs}
                 />
               ) : null}
             </div>
@@ -1433,6 +1494,11 @@ type Props = {
   deadCauseByFocusKey?: Readonly<Record<string, DeadCauseHint>>
   /** Live dead-cause hint for {@link activePatternId} — not gated on the Tiles toggle. */
   focusedHandDeadCause?: DeadCauseHint | null
+  /**
+   * Discard defs a blank can redeem for the focused line — orange ring on matching
+   * unfilled strip slots (same border as rack blank-exchange hints).
+   */
+  blankExchangeTargetDefs?: readonly TileDef[]
 }
 
 export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
@@ -1458,6 +1524,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   onPinnedPatternChange,
   deadCauseByFocusKey = {},
   focusedHandDeadCause = null,
+  blankExchangeTargetDefs = EMPTY_TILE_DEF_LIST,
 }: Props) {
   /** Strip slot rows are expensive — defer only the rebuild, not turning tiles off. */
   const tilesStripSlotsOn = useDeferredValue(tilesGuideOn)
@@ -2655,6 +2722,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                           showHandProbability={showHandProbability}
                           isPinned={pinnedKeySet.has(row.pinKey)}
                           showPinColumn={showPinColumn}
+                          blankExchangeTargetDefs={blankExchangeTargetDefs}
                           bindPatternRowInteraction={bindPatternRowInteraction}
                           onPinToggle={emitRowPinToggle}
                         />
@@ -2865,6 +2933,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                     rowHitGridStyle={rowHitGridStyle}
                     isPinned={pinnedKeySet.has(row.pinKey)}
                     showPinColumn={showPinColumn}
+                    blankExchangeTargetDefs={blankExchangeTargetDefs}
                     bindPatternRowInteraction={bindPatternRowInteraction}
                     onPinToggle={emitRowPinToggle}
                   />

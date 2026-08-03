@@ -11,9 +11,9 @@ export type PlayableCardId = 'mock' | '2025' | '2026'
 export const PLAYABLE_CARD_IDS: readonly PlayableCardId[] = ['mock', '2025', '2026'] as const
 
 export const PLAYABLE_CARD_LABEL: Record<PlayableCardId, string> = {
-  mock: 'Sample',
-  '2025': '2025',
-  '2026': '2026',
+  mock: 'Mahj Logic Sample',
+  '2025': 'NMJL 2025',
+  '2026': 'NMJL 2026',
 }
 
 export const LS_KEY_PLAYABLE_CARD = 'mahjlogic.playableCardId.v1'

@@ -20,5 +20,3 @@ export type GameBlockingDialog =
   | { variant: 'invalid-call-meld-warning' }
   | { variant: 'discard-dead-warning'; rankInput: RankSuggestedHandsInput }
   | { variant: 'concealed-call-warning' }
-  /** Signed-in reload: resume autosaved hand or start a new game. */
-  | { variant: 'resume-game' }

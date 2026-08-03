@@ -1,4 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react'
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import watermarkSrc from '../assets/mahjlogic-watermark.svg?url'
 import { applyAppThemeToDocument, DEFAULT_APP_THEME } from '../app/appTheme'
@@ -7,7 +13,9 @@ import {
   isGoogleIdentityConfigured,
   mountGoogleContinueButton,
 } from '../lib/googleIdentity'
+import { LandingTileAtmosphere } from '../components/LandingTileAtmosphere'
 import '../styles/landing.css'
+
 
 type Mode = 'sign-in' | 'sign-up' | 'forgot'
 
@@ -206,6 +214,7 @@ export function LandingPage() {
       <div className="landing__atmosphere" aria-hidden="true" />
       <div className="landing__glow landing__glow--cyan" aria-hidden="true" />
       <div className="landing__glow landing__glow--gold" aria-hidden="true" />
+      <LandingTileAtmosphere />
 
       <div className="landing__frame">
         <header className="landing__brand">
@@ -217,133 +226,131 @@ export function LandingPage() {
             draggable={false}
           />
           <p className="landing__tagline">American Mah Jongg Intelligence</p>
-          <p className="landing__description">
-            Practice American Mah Jongg with suggested hands and tiles, probabilities, and stats — guidance in one clear console.
-          </p>
+          <p className="landing__description">All-In-One Practice Console</p>
         </header>
 
-        <div className="landing__auth-column">
-          <section className="landing-auth" aria-label="Account">
+        <section className="landing-auth" aria-label="Account">
+          {mode !== 'forgot' ? (
+            <>
+              <div className="landing-auth__google-wrap">
+                <button
+                  type="button"
+                  className="btn landing-auth__action-btn landing-auth__social-btn"
+                  disabled={formBusy || loading}
+                  onClick={() => void onGoogleFallback()}
+                  tabIndex={gisReady ? -1 : 0}
+                  aria-hidden={gisReady || undefined}
+                >
+                  <GoogleMark />
+                  Continue with Google
+                </button>
+                {useGis ? (
+                  <div
+                    ref={googleHostRef}
+                    className={
+                      gisReady && !googleBusy && !loading
+                        ? 'landing-auth__google-gsi landing-auth__google-gsi--ready'
+                        : 'landing-auth__google-gsi'
+                    }
+                    aria-label="Continue with Google"
+                  />
+                ) : null}
+              </div>
+
+              <div className="landing-auth__divider">
+                <span>Or sign in with</span>
+              </div>
+            </>
+          ) : (
+            <p className="landing-auth__forgot-lead">
+              Enter your email and we&apos;ll send a password reset link.
+            </p>
+          )}
+
+          <form className="landing-auth__form" onSubmit={(e) => void onSubmit(e)}>
+            <label className="landing-auth__field">
+              <span className="landing-auth__field-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="18" height="18">
+                  <path
+                    fill="currentColor"
+                    d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2Zm0 4-8 5L4 8V6l8 5 8-5v2Z"
+                  />
+                </svg>
+              </span>
+              <input
+                type="email"
+                name="email"
+                autoComplete="email"
+                required
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={formBusy || loading}
+              />
+            </label>
+
             {mode !== 'forgot' ? (
-              <>
-                <div className="landing-auth__google-wrap">
-                  <button
-                    type="button"
-                    className="btn landing-auth__action-btn landing-auth__social-btn"
-                    disabled={formBusy || loading}
-                    onClick={() => void onGoogleFallback()}
-                    tabIndex={gisReady ? -1 : 0}
-                    aria-hidden={gisReady || undefined}
-                  >
-                    <GoogleMark />
-                    Continue with Google
-                  </button>
-                  {useGis ? (
-                    <div
-                      ref={googleHostRef}
-                      className={
-                        gisReady && !googleBusy && !loading
-                          ? 'landing-auth__google-gsi landing-auth__google-gsi--ready'
-                          : 'landing-auth__google-gsi'
-                      }
-                      aria-label="Continue with Google"
-                    />
-                  ) : null}
-                </div>
-
-                <div className="landing-auth__divider">
-                  <span>Or sign in with</span>
-                </div>
-              </>
-            ) : (
-              <p className="landing-auth__forgot-lead">
-                Enter your email and we&apos;ll send a password reset link.
-              </p>
-            )}
-
-            <form className="landing-auth__form" onSubmit={(e) => void onSubmit(e)}>
               <label className="landing-auth__field">
                 <span className="landing-auth__field-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24" width="18" height="18">
                     <path
                       fill="currentColor"
-                      d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2Zm0 4-8 5L4 8V6l8 5 8-5v2Z"
+                      d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2Zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2Zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2Z"
                     />
                   </svg>
                 </span>
                 <input
-                  type="email"
-                  name="email"
-                  autoComplete="email"
+                  type="password"
+                  name="password"
+                  autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
                   required
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  minLength={6}
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   disabled={formBusy || loading}
                 />
               </label>
+            ) : null}
 
-              {mode !== 'forgot' ? (
-                <label className="landing-auth__field">
-                  <span className="landing-auth__field-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" width="18" height="18">
-                      <path
-                        fill="currentColor"
-                        d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2Zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2Zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2Z"
-                      />
-                    </svg>
-                  </span>
-                  <input
-                    type="password"
-                    name="password"
-                    autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
-                    required
-                    minLength={6}
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={formBusy || loading}
-                  />
-                </label>
-              ) : null}
+            {mode === 'sign-in' ? (
+              <div className="landing-auth__row">
+                <button
+                  type="button"
+                  className="landing-auth__text-btn"
+                  disabled={formBusy || loading}
+                  onClick={() => {
+                    setMode('forgot')
+                    clearMessages()
+                  }}
+                >
+                  Forgot Password?
+                </button>
+              </div>
+            ) : null}
 
-              {mode === 'sign-in' ? (
-                <div className="landing-auth__row">
-                  <button
-                    type="button"
-                    className="landing-auth__text-btn"
-                    disabled={formBusy || loading}
-                    onClick={() => {
-                      setMode('forgot')
-                      clearMessages()
-                    }}
-                  >
-                    Forgot Password?
-                  </button>
-                </div>
-              ) : null}
+            {error ? (
+              <p className="landing-auth__error" role="alert">
+                {error}
+              </p>
+            ) : null}
+            {info ? (
+              <p className="landing-auth__info" role="status">
+                {info}
+              </p>
+            ) : null}
 
-              {error ? (
-                <p className="landing-auth__error" role="alert">
-                  {error}
-                </p>
-              ) : null}
-              {info ? (
-                <p className="landing-auth__info" role="status">
-                  {info}
-                </p>
-              ) : null}
+            <button
+              type="submit"
+              className="btn landing-auth__action-btn landing-auth__action-btn--primary"
+              disabled={formBusy || loading}
+            >
+              {busy ? 'Please wait…' : submitLabel}
+            </button>
+          </form>
+        </section>
 
-              <button
-                type="submit"
-                className="btn landing-auth__action-btn landing-auth__action-btn--primary"
-                disabled={formBusy || loading}
-              >
-                {busy ? 'Please wait…' : submitLabel}
-              </button>
-            </form>
-          </section>
-
+        <div className="landing__auth-footer">
           <p className="landing__switch">
             {mode === 'sign-up' ? (
               <>

@@ -13,6 +13,8 @@ import type { MainPhase } from './playSurfaceUi'
 export type SuggestedTileGuide = {
   bestIds: ReadonlySet<string>
   blankExchangeIds?: ReadonlySet<string>
+  /** Discard defs a blank can redeem for the focused line (multiplicity = fill count). */
+  blankExchangeTargetDefs?: readonly TileDef[]
 } | null
 
 export type SuggestedDeadTileGuide = {

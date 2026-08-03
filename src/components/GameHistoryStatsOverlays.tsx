@@ -226,32 +226,12 @@ function StatsBody({
               </span>
             </li>
             <li>
-              <span className="game-meta-stats__label">Unassisted wins</span>
-              <span className="game-meta-stats__value">{summary.unassistedWins}</span>
-            </li>
-            <li>
-              <span className="game-meta-stats__label">Assisted wins</span>
-              <span className="game-meta-stats__value">{summary.assistedWins}</span>
-            </li>
-            <li>
               <span className="game-meta-stats__label">Points won</span>
               <span className="game-meta-stats__value">{summary.pointsWon}</span>
             </li>
-            <li>
-              <span className="game-meta-stats__label">Points lost</span>
-              <span className="game-meta-stats__value">{summary.pointsLost}</span>
-            </li>
           </ul>
-          <p className="game-meta-dialog__footnote">
-            Finished % is hands played to a result (win, loss, or wall) out of all starts, including
-            optional new-rack early exits — those are not losses. Win / loss / wall % are among
-            finished hands only. Assisted means helper tools were used (see History for * details).
-            Points use NMJL payouts: discard win collects 4× the card value; self-pick collects 6×.
-            On a bot win you pay 2× if you discarded (or on a self-pick), otherwise 1×. Dead hands
-            end the round here, so they do not add points won or lost.
-          </p>
 
-          <h3 className="game-meta-dialog__section-title">Hands you’ve won</h3>
+          <h3 className="game-meta-dialog__section-title">Hands Won</h3>
           {summary.winningHands.length === 0 ? (
             <p className="game-meta-dialog__status">No recorded winning hands yet.</p>
           ) : (

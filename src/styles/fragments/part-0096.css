@@ -90,6 +90,10 @@
   line-height: 1.3;
 }
 
+.app-menu-modal__diff-block--tile-graphics .app-menu-modal__tile-graphics-category {
+  justify-content: center;
+}
+
 .app-menu-modal__diff-block--tile-graphics .app-menu-modal__tile-graphics-category--illustrative {
   margin-top: 0.55rem;
 }

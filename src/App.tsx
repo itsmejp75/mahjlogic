@@ -1,4 +1,6 @@
-import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import watermarkSrc from './assets/mahjlogic-watermark.svg?url'
+import { LandingTileAtmosphere } from './components/LandingTileAtmosphere'
 import { flushSync } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { RackCheckerPage } from './pages/RackCheckerPage'
@@ -51,7 +53,7 @@ import { CharlestonPassStripInstructionMain } from './components/CharlestonPassS
 import { BotExposureHandsPanel } from './components/BotExposureHandsPanel'
 import { SuggestedHandsPanel } from './components/SuggestedHandsPanel'
 import { PostGameLoserRackRow } from './components/PostGameLoserRackRow'
-import { HIDE_CONCEALED_HANDS_STORAGE_KEY, readHideConcealedHandsFromStorage, writeHideConcealedHandsToStorage, readUncheckedSectionsFromStorage, writeUncheckedSectionsToStorage, suggestedHandsFilterMenuColumns, SUGGESTED_HANDS_UNCHECKED_SECTIONS_KEY, suggestedHandSectionMenuLabel, suggestedHandSectionsAvailableWithClaimMelds, isSuggestedHandSectionFilterEnabled, toggledSuggestedHandSectionFilter } from './suggestedHands/filterSettings'
+import { HIDE_CONCEALED_HANDS_STORAGE_KEY, readHideConcealedHandsFromStorage, writeHideConcealedHandsToStorage, readUncheckedSectionsFromStorage, writeUncheckedSectionsToStorage, suggestedHandsFilterMenuColumns, SUGGESTED_HANDS_UNCHECKED_SECTIONS_KEY, suggestedHandSectionMenuLabel, suggestedHandSectionsAvailableWithClaimMelds, isSuggestedHandSectionFilterEnabled, resolveHideConcealedHands, SHOW_SUGGESTED_HAND_FILTERS_IN_MENU, toggledSuggestedHandSectionFilter } from './suggestedHands/filterSettings'
 
 /** Rare overlays — keep analysis-heavy dialogs out of the initial play bundle. */
 const IllegalMahjongDialog = lazy(() =>
@@ -183,6 +185,12 @@ const LS_KEY_HINT_DELAY_3S_LEGACY = 'mahjlogic.hintDelay3SecondsEnabled'
 const HINT_DELAY_SECONDS_OPTIONS = [0, 2, 4] as const
 type HintDelaySeconds = (typeof HINT_DELAY_SECONDS_OPTIONS)[number]
 const DEFAULT_HINT_DELAY_SECONDS: HintDelaySeconds = 0
+/**
+ * When false, delay-second chips are omitted from the Mah Jongg / Joker swap hint menu rows
+ * and delays use {@link DEFAULT_HINT_DELAY_SECONDS}. Flip to `true` to restore the chips;
+ * storage + setters stay wired for that.
+ */
+const SHOW_HINT_DELAY_IN_MENU = false
 
 function isHintDelaySeconds(n: number): n is HintDelaySeconds {
   return (HINT_DELAY_SECONDS_OPTIONS as readonly number[]).includes(n)
@@ -206,6 +214,11 @@ const LS_KEY_BLANK_TILE_COUNT = 'mahjlogic.blankTileCount'
 const LS_KEY_TEN_JOKERS = 'mahjlogic.tenJokersEnabled'
 const LS_KEY_PLAY_AS_EAST = 'mahjlogic.playAsEastEnabled'
 const LS_KEY_SUGGESTED_HANDS_TRAY = 'mahjlogic.suggestedHandsTrayDefaultOpen'
+/**
+ * When false, the Suggested hands tray toggle is omitted from the app menu.
+ * Flip to `true` to restore; storage + setters stay wired for that.
+ */
+const SHOW_SUGGESTED_HANDS_TRAY_TOGGLE_IN_MENU = false
 const LS_KEY_HAND_PROBABILITY = 'mahjlogic.handProbabilityEnabled'
 /** Stable empty section filter for player Mah Jongg Hands review (avoids per-render `new Set()`). */
 const EMPTY_SUGGESTED_HAND_SECTIONS = new Set<string>()
@@ -213,7 +226,7 @@ const BLANK_TILES_LABEL = 'Blank tiles'
 const SUGGESTED_HANDS_TRAY_LABEL = 'Suggested hands'
 const HAND_PROBABILITY_LABEL = 'Hand Probability %'
 const TEN_JOKERS_LABEL = '10 Jokers'
-const PLAY_AS_EAST_LABEL = 'Play as East'
+const PLAY_AS_EAST_LABEL = 'Play as East only'
 const CONCEALED_HAND_REMINDER_LABEL = 'Concealed hand reminder'
 const JOKER_SWAP_HINT_BOUNCE_DELAY_MS = 500
 const JOKER_SWAP_HINT_BOUNCE_DURATION_MS = 1700
@@ -561,6 +574,261 @@ function MenuCardDraftOnClose({ onClosed }: { onClosed: () => void }) {
     prevRef.current = menuOpen
   }, [menuOpen, onClosed])
   return null
+}
+
+/** Closing the menu while a reload resume is pending continues the autosaved hand. */
+function ResumePromptOnMenuClose({
+  resumePromptActive,
+  onContinue,
+}: {
+  resumePromptActive: boolean
+  onContinue: () => void
+}) {
+  const { menuOpen } = useAppMenuOpen()
+  const prevRef = useRef(false)
+  useEffect(() => {
+    if (prevRef.current && !menuOpen && resumePromptActive) onContinue()
+    prevRef.current = menuOpen
+  }, [menuOpen, resumePromptActive, onContinue])
+  return null
+}
+
+/** Menu modal with Lobby slide panel — owns lobbyOpen so App does not re-render on toggle. */
+function AppMenuSlideShell({
+  children,
+  onOpenRackChecker,
+}: {
+  children: ReactNode
+  onOpenRackChecker: () => void
+}) {
+  const [lobbyOpen, setLobbyOpen] = useState(false)
+  const { menuOpen } = useAppMenuOpen()
+
+  useEffect(() => {
+    if (!menuOpen) setLobbyOpen(false)
+  }, [menuOpen])
+
+  return (
+    <div
+      id="app-menu-modal"
+      className={['app-menu-modal', lobbyOpen ? 'app-menu-modal--lobby' : ''].filter(Boolean).join(' ')}
+      role="dialog"
+      aria-modal="true"
+      aria-label={lobbyOpen ? 'Lobby' : 'Menu'}
+    >
+      {/* Outside the slide track so it stays put across Lobby ↔ Menu. */}
+      <LandingTileAtmosphere className="app-menu-modal__lobby-tiles" />
+      <div className="app-menu-modal__slide-viewport">
+        <div
+          className={[
+            'app-menu-modal__slide-track',
+            lobbyOpen ? 'app-menu-modal__slide-track--lobby' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
+          <div
+            className="app-menu-modal__lobby"
+            aria-hidden={!lobbyOpen}
+            {...(!lobbyOpen ? ({ inert: '' } as Record<string, string>) : {})}
+          >
+            <div className="app-menu-modal__lobby-brand">
+              <img
+                className="app-menu-modal__lobby-logo"
+                src={watermarkSrc}
+                alt="Mahj Logic"
+                decoding="async"
+                draggable={false}
+              />
+              <p className="app-menu-modal__lobby-tagline">American Mah Jongg Intelligence</p>
+            </div>
+            <div className="app-menu-modal__lobby-modes" aria-label="Lobby">
+              <button
+                type="button"
+                className="btn app-menu-tray__diff-btn app-menu-modal__lobby-mode-btn"
+                onClick={() => {
+                  setLobbyOpen(false)
+                  appMenuOpenApiRef.current.setMenuOpen(false)
+                  onOpenRackChecker()
+                }}
+              >
+                Rack Checker
+              </button>
+              <button
+                type="button"
+                className="btn app-menu-tray__diff-btn app-menu-modal__lobby-mode-btn"
+                disabled
+                title="Coming soon"
+              >
+                Rack of the Day
+                <span className="app-menu-modal__lobby-soon">Soon</span>
+              </button>
+              <button
+                type="button"
+                className="btn app-menu-tray__diff-btn app-menu-modal__lobby-mode-btn"
+                disabled
+                title="Coming soon"
+              >
+                Help / Tutorial
+                <span className="app-menu-modal__lobby-soon">Soon</span>
+              </button>
+            </div>
+            <div className="app-menu-modal__lobby-footer">
+              <button
+                type="button"
+                className="btn app-menu-tray__diff-btn app-menu-modal__lobby-play"
+                onClick={() => setLobbyOpen(false)}
+              >
+                Play
+              </button>
+            </div>
+          </div>
+          <div
+            className="app-menu-modal__menu-pane"
+            aria-hidden={lobbyOpen}
+            {...(lobbyOpen ? ({ inert: '' } as Record<string, string>) : {})}
+          >
+            <header className="app-menu-modal__header">
+              <button
+                type="button"
+                className="btn app-menu-tray__diff-btn app-menu-modal__lobby-open"
+                aria-label="Home"
+                title="Home"
+                onClick={() => setLobbyOpen(true)}
+              >
+                <svg
+                  className="app-menu-modal__lobby-home-icon"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path
+                    fill="currentColor"
+                    d="M12 3.2 3.8 10.2c-.3.25-.3.7 0 .95l.7.55c.25.2.6.2.85 0L12 6.55l6.65 5.15c.25.2.6.2.85 0l.7-.55c.3-.25.3-.7 0-.95L12 3.2Zm-5.2 8.5V19c0 .55.45 1 1 1h3.1v-4.2c0-.4.35-.75.75-.75h2.7c.4 0 .75.35.75.75V20h3.1c.55 0 1-.45 1-1v-7.3L12 7.85 6.8 11.7Z"
+                  />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="app-menu-modal__close"
+                aria-label="Close"
+                onClick={() => appMenuOpenApiRef.current.setMenuOpen(false)}
+              >
+                ✕
+              </button>
+            </header>
+            {children}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Custom card picker — native `<select>` popups cannot be centered with the trigger. */
+function MenuPlayableCardSelect({
+  value,
+  onChange,
+}: {
+  value: PlayableCardId
+  onChange: (next: PlayableCardId) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const listId = useId()
+  const { menuOpen } = useAppMenuOpen()
+
+  useEffect(() => {
+    if (!menuOpen) setOpen(false)
+  }, [menuOpen])
+
+  useEffect(() => {
+    if (!open) return
+    const onDocMouseDown = (event: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setOpen(false)
+      }
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onDocMouseDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onDocMouseDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open])
+
+  return (
+    <div
+      className={[
+        'app-menu-tray__diff-row',
+        'app-menu-modal__diff-row',
+        'app-menu-modal__card-select-row',
+        open ? 'app-menu-modal__card-select-row--open' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      ref={rootRef}
+    >
+      <div className="app-menu-modal__card-select-picker">
+        <button
+          type="button"
+          className={[
+            'btn',
+            'app-menu-tray__diff-btn',
+            'app-menu-modal__card-select-trigger',
+            open ? 'app-menu-modal__card-select-trigger--open' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-controls={listId}
+          aria-labelledby="app-menu-playable-card-label"
+          onClick={() => setOpen((wasOpen) => !wasOpen)}
+        >
+          <span className="app-menu-modal__card-select-trigger-label">
+            {PLAYABLE_CARD_LABEL[value]}
+          </span>
+        </button>
+        {open ? (
+          <ul
+            id={listId}
+            className="app-menu-modal__card-select-menu"
+            role="listbox"
+            aria-labelledby="app-menu-playable-card-label"
+          >
+            {PLAYABLE_CARD_IDS.map((id) => {
+              const selected = id === value
+              return (
+                <li
+                  key={id}
+                  role="option"
+                  aria-selected={selected}
+                  className={[
+                    'app-menu-modal__card-select-option',
+                    selected ? 'app-menu-modal__card-select-option--selected' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  onClick={() => {
+                    onChange(id)
+                    setOpen(false)
+                  }}
+                >
+                  <span className="app-menu-modal__card-select-option-label">
+                    {PLAYABLE_CARD_LABEL[id]}
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        ) : null}
+      </div>
+    </div>
+  )
 }
 
 
@@ -1971,6 +2239,8 @@ export default function App() {
   const sessionBoot = useSessionBoot()
   /** Cold-start opening deal: arm fly-in only after the boot load screen dismisses. */
   const pendingOpeningDealFlyInRef = useRef(false)
+  /** Reload / login (no Home play intent): open the menu once the boot loader is gone. */
+  const pendingOpenMenuAfterBootRef = useRef(false)
   const [gameMetaPanel, setGameMetaPanel] = useState<'stats' | 'history' | null>(null)
   const replayOpeningMetaRef = useRef<Pick<OpeningDealMeta, 'playerSeat' | 'botSlotSeats'>>({
     playerSeat: 'east',
@@ -2070,6 +2340,11 @@ export default function App() {
     string,
     { x: number; y: number }
   > | null>(null)
+  /**
+   * Dev preview: `?previewMenu=1` — open the in-game menu on mount for cleanup work.
+   */
+  const previewMenuActive =
+    new URLSearchParams(location.search).get('previewMenu') != null
   /**
    * Dev preview: `?previewEndDialog=1` (or `wall` / `bot`) — drop-in end dialogs without
    * finishing a hand. Replay remounts the panel to re-run `--end-enter`.
@@ -3059,10 +3334,16 @@ export default function App() {
     eastExposures,
   ])
 
-  const mahjongHintDelayMs = mahjongHintDelaySeconds * 1000
-  const jokerSwapHintDelayMs = jokerSwapHintDelaySeconds * 1000
+  const effectiveMahjongHintDelaySeconds = SHOW_HINT_DELAY_IN_MENU
+    ? mahjongHintDelaySeconds
+    : DEFAULT_HINT_DELAY_SECONDS
+  const effectiveJokerSwapHintDelaySeconds = SHOW_HINT_DELAY_IN_MENU
+    ? jokerSwapHintDelaySeconds
+    : DEFAULT_HINT_DELAY_SECONDS
+  const mahjongHintDelayMs = effectiveMahjongHintDelaySeconds * 1000
+  const jokerSwapHintDelayMs = effectiveJokerSwapHintDelaySeconds * 1000
   const jokerSwapHintBounceDelayMs =
-    jokerSwapHintDelaySeconds > 0
+    effectiveJokerSwapHintDelaySeconds > 0
       ? jokerSwapHintDelayMs
       : JOKER_SWAP_HINT_BOUNCE_DELAY_MS
   /** Rack Swap button purple border waits for the chosen joker-swap delay. */
@@ -3503,8 +3784,11 @@ export default function App() {
         ])
       : null
 
-    const computeBlankExchangeIds = (pinnedP: PracticePattern): Set<string> => {
+    const computeBlankExchange = (
+      pinnedP: PracticePattern,
+    ): { ids: Set<string>; targets: TileDef[] } => {
       const blankIds = new Set<string>()
+      const targets: TileDef[] = []
       if (
         blankExchangeEligibleDiscardDefs.length > 0 &&
         rackForSuggestedPatternMatch.some((t) => t.def.cat === 'blank')
@@ -3516,9 +3800,10 @@ export default function App() {
           greedyUiOpts,
         )) {
           blankIds.add(fill.blankTileId)
+          targets.push(fill.targetDef)
         }
       }
-      return blankIds
+      return { ids: blankIds, targets }
     }
 
     const computeAvailableRackHighlightIds = (pinnedP: PracticePattern) => {
@@ -3556,18 +3841,29 @@ export default function App() {
       if (pinnedPatterns.length > 0) {
         const unionIds = new Set<string>()
         const unionBlankIds = new Set<string>()
+        const unionTargets: TileDef[] = []
         for (const pinnedP of pinnedPatterns) {
           const ids = computeAvailableRackHighlightIds(pinnedP)
           for (const id of ids) unionIds.add(id)
-          for (const id of computeBlankExchangeIds(pinnedP)) unionBlankIds.add(id)
+          const bx = computeBlankExchange(pinnedP)
+          for (const id of bx.ids) unionBlankIds.add(id)
+          for (const def of bx.targets) unionTargets.push(def)
         }
-        return { bestIds: unionIds, blankExchangeIds: unionBlankIds }
+        return {
+          bestIds: unionIds,
+          blankExchangeIds: unionBlankIds,
+          blankExchangeTargetDefs:
+            unionTargets.length > 0 ? unionTargets : EMPTY_TILE_DEF_LIST,
+        }
       }
     }
 
+    const blankExchange = computeBlankExchange(p)
     return {
       bestIds: computeAvailableRackHighlightIds(p),
-      blankExchangeIds: computeBlankExchangeIds(p),
+      blankExchangeIds: blankExchange.ids,
+      blankExchangeTargetDefs:
+        blankExchange.targets.length > 0 ? blankExchange.targets : EMPTY_TILE_DEF_LIST,
     }
   }, [deferredSuggestedFocusHandKey, suggestedSuppressedHandKey, suggestedHandsCoachActive, rackForSuggestedPatternMatch, suggestedHandsExposureTileIds, suggestedHandsExposureMelds, cardPatternsById, deadTileHintEnabled, discardTiles, botExposures, blankExchangeEligibleDiscardDefs])
 
@@ -3696,7 +3992,11 @@ export default function App() {
     ) {
       const merged = new Set(suggestedTileGuide.bestIds)
       merged.add(activeBotDiscard.id)
-      return { bestIds: merged, blankExchangeIds: suggestedTileGuide.blankExchangeIds }
+      return {
+        bestIds: merged,
+        blankExchangeIds: suggestedTileGuide.blankExchangeIds,
+        blankExchangeTargetDefs: suggestedTileGuide.blankExchangeTargetDefs,
+      }
     }
     // Keep the upstream object identity so memoized racks can bail across App re-renders.
     return suggestedTileGuide
@@ -4843,53 +5143,6 @@ export default function App() {
     [menuCardId, mainPhase, performNewHandDeal],
   )
 
-  const canEndGame =
-    charlestonDone &&
-    mainPhase !== 'wall-game' &&
-    mainPhase !== 'mahjong-declared' &&
-    mainPhase !== 'bot-mahjong' &&
-    mainPhase !== 'dead-hand'
-
-  const endGame = useCallback(() => {
-    if (!charlestonDone) return
-    setCharlestonPassError(null)
-    setCallRuleError(null)
-    setBlockingDialog(null)
-    setPendingJokerSwapTileId(null)
-    setWallGameReviewing(false)
-    setMahjongWinReviewing(false)
-    setBotMahjongWinReviewing(false)
-    wallGameEndedByRef.current = 'manual_end'
-    setRound((r) => {
-      if (
-        r.mainPhase === 'wall-game' ||
-        r.mainPhase === 'mahjong-declared' ||
-        r.mainPhase === 'bot-mahjong' ||
-        r.mainPhase === 'dead-hand'
-      ) {
-        return r
-      }
-      return {
-        ...r,
-        mainPhase: 'wall-game',
-        activeBotIndex: null,
-        activeBotDiscard: null,
-        botTurnBanner: null,
-        pendingEastDiscardTile: null,
-        pendingEastDiscardIdx: null,
-        drawnTileId: null,
-        handTileFlyIn: null,
-        selectedHandTileId: null,
-        stagedCallTileIds: [],
-        callAmendableAfterClaimTileId: null,
-        callAmendFromBotIndex: null,
-        botWin: null,
-        playerWinMethod: null,
-      }
-    })
-    appMenuOpenApiRef.current.setMenuOpen(false)
-  }, [charlestonDone])
-
   const collectSyncedPrefs = useCallback((): SyncedUserPreferences => {
     return {
       playableCardId: menuCardIdRef.current,
@@ -5099,7 +5352,7 @@ export default function App() {
     }
   }, [])
 
-  /** Put the autosaved hand on the table (no fly-in). Optionally skip Continue dialog (Home → Resume). */
+  /** Put the autosaved hand on the table (no fly-in). Optionally skip menu gate (Home → Resume). */
   const loadSavedGameOntoTable = useCallback(
     (snap: InProgressGameSnapshot, opts?: { autoContinue?: boolean }) => {
       applyResumeSettings(snap)
@@ -5133,20 +5386,18 @@ export default function App() {
         return
       }
       setResumePrompt(snap)
-      // Resume dialog opens only after the boot loader dismisses (see effect below).
+      // Menu opens for Resume / New Game after the boot loader dismisses (see effect below).
     },
     [applyResumeSettings, markSessionReady],
   )
 
   /** Continue: table already shows the saved hand — just dismiss the prompt. */
   const confirmContinueSavedGame = useCallback(() => {
-    setBlockingDialog(null)
     setResumePrompt(null)
     markSessionReady()
   }, [markSessionReady])
 
   const declineResumeStartNewGame = useCallback(() => {
-    setBlockingDialog(null)
     setResumePrompt(null)
     inProgressSaverRef.current.cancel()
     void clearInProgressGame()
@@ -5155,7 +5406,7 @@ export default function App() {
     performNewHandDeal()
   }, [markSessionReady, performNewHandDeal])
 
-  /** End-dialog preview: skip Continue/New Game and deal a fresh table under the panel. */
+  /** End-dialog preview: skip Resume/New Game and deal a fresh table under the panel. */
   useEffect(() => {
     if (!previewEndDialogActive || resumePrompt == null) return
     declineResumeStartNewGame()
@@ -5239,12 +5490,13 @@ export default function App() {
     clearPlayEnterFastPath()
   }, [beginFreshSessionWithOpeningFlyIn, previewWinHandActive])
 
-  /** Load cloud prefs + in-progress game on login; prompt to resume when a hand was autosaved. */
+  /** Load cloud prefs + in-progress game on login; open menu for Resume / New Game when needed. */
   useEffect(() => {
     if (!user) {
       cloudPrefsHydratedRef.current = false
       prefsSaverRef.current.cancel()
       inProgressSaverRef.current.cancel()
+      pendingOpenMenuAfterBootRef.current = false
       sessionReadyRef.current = true
       setSessionReady(true)
       setResumePrompt(null)
@@ -5271,14 +5523,17 @@ export default function App() {
         cloudPrefsHydratedRef.current = true
         const playIntent = homePlayIntentRef.current
         homePlayIntentRef.current = undefined
+        const openMenuWhenReady = playIntent == null && !eagerNewDealDoneRef.current
         if (eagerNewDealDoneRef.current || playIntent === 'new') {
           inProgressSaverRef.current.cancel()
           void clearInProgressGame()
           if (!sessionReadyRef.current) beginFreshSessionWithOpeningFlyIn()
         } else if (savedGame) {
           loadSavedGameOntoTable(savedGame, { autoContinue: playIntent === 'resume' })
+          if (openMenuWhenReady) pendingOpenMenuAfterBootRef.current = true
         } else {
           beginFreshSessionWithOpeningFlyIn()
+          if (openMenuWhenReady) pendingOpenMenuAfterBootRef.current = true
         }
         return
       }
@@ -5511,6 +5766,7 @@ export default function App() {
 
       const playIntent = homePlayIntentRef.current
       homePlayIntentRef.current = undefined
+      const openMenuWhenReady = playIntent == null && !eagerNewDealDoneRef.current
 
       // Home → Play already dealt in useLayoutEffect — apply cloud prefs above, do not redeal.
       if (eagerNewDealDoneRef.current || playIntent === 'new') {
@@ -5523,10 +5779,12 @@ export default function App() {
       // Restore the saved table first — never flash a new opening deal under a resume.
       if (savedGame) {
         loadSavedGameOntoTable(savedGame, { autoContinue: playIntent === 'resume' })
+        if (openMenuWhenReady) pendingOpenMenuAfterBootRef.current = true
         return
       }
 
       beginFreshSessionWithOpeningFlyIn()
+      if (openMenuWhenReady) pendingOpenMenuAfterBootRef.current = true
     })()
 
     return () => {
@@ -5555,14 +5813,14 @@ export default function App() {
     clearPlayEnterFastPath()
   }, [user, sessionReady, resumePrompt, sessionBoot])
 
-  /** Show Continue / New Game only after the load screen (and bar) are gone. */
+  /** Reload / login: open the menu after the load screen (Resume / New Game live there). */
   useEffect(() => {
-    if (!resumePrompt) return
-    if (!sessionBoot?.bootLoaderDismissed) return
-    setBlockingDialog((prev) =>
-      prev?.variant === 'resume-game' ? prev : { variant: 'resume-game' },
-    )
-  }, [resumePrompt, sessionBoot?.bootLoaderDismissed])
+    if (!pendingOpenMenuAfterBootRef.current) return
+    if (!sessionReady && resumePrompt == null) return
+    if (sessionBoot != null && !sessionBoot.bootLoaderDismissed) return
+    pendingOpenMenuAfterBootRef.current = false
+    appMenuOpenApiRef.current.setMenuOpen(true)
+  }, [sessionReady, resumePrompt, sessionBoot, sessionBoot?.bootLoaderDismissed])
 
   /** Start the cold-start opening-deal fly-in only after the load screen lifts. */
   useLayoutEffect(() => {
@@ -6034,8 +6292,7 @@ export default function App() {
           suggestDim={
             !!pendingEastDiscardTile &&
             !!suggestedTileGuideForRack &&
-            !suggestedTileGuideForRack.bestIds.has(pendingEastDiscardTile.id) &&
-            !suggestedTileGuideForRack.blankExchangeIds?.has(pendingEastDiscardTile.id)
+            !suggestedTileGuideForRack.bestIds.has(pendingEastDiscardTile.id)
           }
           jokerSwapHintBounce={
             !!pendingEastDiscardTile &&
@@ -6461,13 +6718,18 @@ export default function App() {
                   : suggestedHandsUncheckedSections
               }
               hideConcealedHands={
-                playerMahjongWinReviewHands ? false : suggestedHandsHideConcealed
+                playerMahjongWinReviewHands
+                  ? false
+                  : resolveHideConcealedHands(suggestedHandsHideConcealed)
               }
               cardPatterns={cardPatterns}
               cardId={committedCardId}
               cardSectionOrder={cardSectionOrder}
               deadCauseByFocusKey={suggestedDeadCauseByFocusKey}
               focusedHandDeadCause={suggestedFocusedHandDeadCause}
+              blankExchangeTargetDefs={
+                suggestedTileGuideForRack?.blankExchangeTargetDefs ?? EMPTY_TILE_DEF_LIST
+              }
             />
           )
         }
@@ -6501,13 +6763,18 @@ export default function App() {
     cardSectionOrder,
     suggestedDeadCauseByFocusKey,
     suggestedFocusedHandDeadCause,
+    suggestedTileGuideForRack?.blankExchangeTargetDefs,
   ])
 
   return (
-    <AppMenuOpenProvider>
+    <AppMenuOpenProvider initialOpen={previewMenuActive}>
     <TileGraphicsProvider tileGraphics={tileGraphics}>
     <SuggestedHandsTrayProvider initialOpen={false}>
     <MenuCardDraftOnClose onClosed={resetMenuCardDraftOnClose} />
+    <ResumePromptOnMenuClose
+      resumePromptActive={resumePrompt != null}
+      onContinue={confirmContinueSavedGame}
+    />
     <SuggestedHandsPinOnTrayClose
       focusKeyRef={suggestedFocusHandKeyRef}
       onClosedWithFocus={(k) => {
@@ -6539,111 +6806,47 @@ export default function App() {
             aria-label="Close menu"
             onClick={() => appMenuOpenApiRef.current.setMenuOpen(false)}
           />
-          <div
-            id="app-menu-modal"
-            className="app-menu-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Menu"
+          <AppMenuSlideShell
+            onOpenRackChecker={() => setRackCheckerOpen(true)}
           >
-            <header className="app-menu-modal__header">
-              <button
-                type="button"
-                className="app-menu-modal__close"
-                aria-label="Close"
-                onClick={() => appMenuOpenApiRef.current.setMenuOpen(false)}
-              >
-                ✕
-              </button>
-            </header>
             <div className="app-menu-modal__body">
               <div className="app-menu-modal__diff-block">
                 <div className="app-menu-modal__subhead" id="app-menu-playable-card-label">
                   Select card
                 </div>
-                <div
-                  className="app-menu-tray__diff-row app-menu-modal__diff-row"
-                  role="radiogroup"
-                  aria-labelledby="app-menu-playable-card-label"
-                >
-                  {PLAYABLE_CARD_IDS.map((id) => (
-                    <button
-                      key={id}
-                      type="button"
-                      className={[
-                        'btn',
-                        'app-menu-tray__diff-btn',
-                        menuCardId === id ? 'app-menu-tray__diff-btn--on' : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                      role="radio"
-                      aria-checked={menuCardId === id}
-                      onClick={() => requestPlayableCard(id)}
-                    >
-                      {PLAYABLE_CARD_LABEL[id]}
-                    </button>
-                  ))}
-                </div>
+                <MenuPlayableCardSelect value={menuCardId} onChange={requestPlayableCard} />
               </div>
               <div className="app-menu-modal__diff-block app-menu-modal__diff-block--game-actions">
                 <div className="app-menu-modal__game-actions-row app-menu-tray__diff-row app-menu-modal__diff-row">
                   <button
                     type="button"
-                    className="btn app-menu-tray__diff-btn app-menu-modal__end-game"
-                    disabled={!canEndGame}
-                    onClick={endGame}
+                    className="btn app-menu-tray__diff-btn"
+                    onClick={() => {
+                      if (resumePrompt != null) confirmContinueSavedGame()
+                      appMenuOpenApiRef.current.setMenuOpen(false)
+                    }}
                   >
-                    End Game
+                    Resume
                   </button>
                   <button
                     type="button"
                     className="btn app-menu-tray__diff-btn app-menu-modal__new-game"
                     onClick={() => {
+                      if (resumePrompt != null) {
+                        declineResumeStartNewGame()
+                        appMenuOpenApiRef.current.setMenuOpen(false)
+                        return
+                      }
                       if (newHand()) appMenuOpenApiRef.current.setMenuOpen(false)
                     }}
                   >
                     New Game
                   </button>
                 </div>
-                <div className="app-menu-modal__game-actions-row app-menu-tray__diff-row app-menu-modal__diff-row app-menu-modal__game-meta-row">
-                  <button
-                    type="button"
-                    className="btn app-menu-tray__diff-btn"
-                    onClick={() => {
-                      appMenuOpenApiRef.current.setMenuOpen(false)
-                      setGameMetaPanel('history')
-                    }}
-                  >
-                    History
-                  </button>
-                  <button
-                    type="button"
-                    className="btn app-menu-tray__diff-btn"
-                    onClick={() => {
-                      appMenuOpenApiRef.current.setMenuOpen(false)
-                      setGameMetaPanel('stats')
-                    }}
-                  >
-                    Stats
-                  </button>
-                </div>
-                <div className="app-menu-modal__game-actions-row app-menu-tray__diff-row app-menu-modal__diff-row app-menu-modal__game-meta-row">
-                  <button
-                    type="button"
-                    className="btn app-menu-tray__diff-btn"
-                    onClick={() => {
-                      appMenuOpenApiRef.current.setMenuOpen(false)
-                      setRackCheckerOpen(true)
-                    }}
-                  >
-                    Rack Checker
-                  </button>
-                </div>
               </div>
               <div className="app-menu-modal__diff-block">
                 <div className="app-menu-modal__subhead" id="bot-difficulty-menu-label">
-                  Bot difficulty
+                  Bot skill
                 </div>
                 <div
                   className="app-menu-tray__diff-row app-menu-modal__diff-row"
@@ -6707,14 +6910,12 @@ export default function App() {
               </div>
               <div className="app-menu-modal__diff-block app-menu-modal__diff-block--tile-graphics">
                 <div className="app-menu-modal__tile-graphics-category">
-                  <hr className="app-menu-modal__tile-graphics-category__line" aria-hidden="true" />
                   <span
                     className="app-menu-modal__tile-graphics-category__label"
                     id="tile-graphics-menu-label"
                   >
                     Tile graphics
                   </span>
-                  <hr className="app-menu-modal__tile-graphics-category__line" aria-hidden="true" />
                 </div>
                 <div
                   className="app-menu-modal__tile-graphics-modes app-menu-tray__diff-row app-menu-modal__diff-row"
@@ -6755,6 +6956,7 @@ export default function App() {
                   ))}
                 </div>
               </div>
+              {SHOW_SUGGESTED_HAND_FILTERS_IN_MENU ? (
               <div className="app-menu-modal__diff-block app-menu-modal__diff-block--suggested-hand-filters">
                 <div className="app-menu-modal__tile-graphics-category">
                   <hr className="app-menu-modal__tile-graphics-category__line" aria-hidden="true" />
@@ -6843,6 +7045,7 @@ export default function App() {
                   </div>
                 </div>
               </div>
+              ) : null}
               <div className="app-menu-modal__diff-block app-menu-modal__diff-block--settings-toggles">
                 <div className="app-menu-modal__body-footer app-menu-modal__body-footer--settings-toggles">
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
@@ -6878,6 +7081,7 @@ export default function App() {
                     {BOT_WINS_LABEL}
                   </span>
                 </div>
+                {SHOW_SUGGESTED_HANDS_TRAY_TOGGLE_IN_MENU ? (
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
                   <AppMenuSettingSwitch
                     labelId="app-menu-label-suggested-hands-tray"
@@ -6888,6 +7092,7 @@ export default function App() {
                     {SUGGESTED_HANDS_TRAY_LABEL}
                   </span>
                 </div>
+                ) : null}
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
                   <AppMenuSettingSwitch
                     labelId="app-menu-label-hand-probability"
@@ -6911,6 +7116,7 @@ export default function App() {
                     {DEAD_HAND_WARNINGS_LABEL}
                   </span>
                 </div>
+                {SHOW_HINT_DELAY_IN_MENU ? (
                 <div className="app-menu-modal__row app-menu-modal__row--toggle app-menu-modal__row--blank-tiles">
                   <AppMenuSettingSwitch
                     labelId="app-menu-label-mahjong-hint"
@@ -6953,6 +7159,19 @@ export default function App() {
                     </span>
                   </div>
                 </div>
+                ) : (
+                <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                  <AppMenuSettingSwitch
+                    labelId="app-menu-label-mahjong-hint"
+                    pressed={mahjongHintEnabled}
+                    onToggle={toggleMahjongHint}
+                  />
+                  <span className="app-menu-modal__label" id="app-menu-label-mahjong-hint">
+                    {MAHJONG_HINT_LABEL}
+                  </span>
+                </div>
+                )}
+                {SHOW_HINT_DELAY_IN_MENU ? (
                 <div className="app-menu-modal__row app-menu-modal__row--toggle app-menu-modal__row--blank-tiles">
                   <AppMenuSettingSwitch
                     labelId="app-menu-label-joker-swap-hint"
@@ -7000,6 +7219,21 @@ export default function App() {
                     </span>
                   </div>
                 </div>
+                ) : (
+                <div className="app-menu-modal__row app-menu-modal__row--toggle">
+                  <AppMenuSettingSwitch
+                    labelId="app-menu-label-joker-swap-hint"
+                    pressed={jokerSwapHintEnabled}
+                    onToggle={toggleJokerSwapHint}
+                  />
+                  <span
+                    className="app-menu-modal__label"
+                    id="app-menu-label-joker-swap-hint"
+                  >
+                    {JOKER_SWAP_HINT_LABEL}
+                  </span>
+                </div>
+                )}
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
                   <AppMenuSettingSwitch
                     labelId="app-menu-label-dead-tile-hint"
@@ -7093,9 +7327,33 @@ export default function App() {
                 </div>
                 </div>
               </div>
+              <div className="app-menu-modal__diff-block app-menu-modal__diff-block--game-meta">
+                <div className="app-menu-modal__game-actions-row app-menu-tray__diff-row app-menu-modal__diff-row app-menu-modal__game-meta-row">
+                  <button
+                    type="button"
+                    className="btn app-menu-tray__diff-btn"
+                    onClick={() => {
+                      appMenuOpenApiRef.current.setMenuOpen(false)
+                      setGameMetaPanel('history')
+                    }}
+                  >
+                    History
+                  </button>
+                  <button
+                    type="button"
+                    className="btn app-menu-tray__diff-btn"
+                    onClick={() => {
+                      appMenuOpenApiRef.current.setMenuOpen(false)
+                      setGameMetaPanel('stats')
+                    }}
+                  >
+                    Stats
+                  </button>
+                </div>
+              </div>
               <AppMenuAccountFooter />
             </div>
-          </div>
+          </AppMenuSlideShell>
         </div>
       </AppMenuOpenGate>
       {gameMetaPanel ? (
@@ -7120,7 +7378,6 @@ export default function App() {
             if (blockingDialog?.variant === 'invalid-call-meld-warning') return
             if (blockingDialog?.variant === 'discard-dead-warning') return
             if (blockingDialog?.variant === 'concealed-call-warning') return
-            if (blockingDialog?.variant === 'resume-game') return
             setCharlestonPassError(null)
             setCallRuleError(null)
             setBlockingDialog(null)
@@ -7158,9 +7415,6 @@ export default function App() {
               blockingDialog?.variant === 'mahjong-blocked'
                 ? 'charleston-error-dialog--table charleston-error-dialog--mahjong-blocked'
                 : '',
-              blockingDialog?.variant === 'resume-game'
-                ? 'charleston-error-dialog--menu-shell charleston-error-dialog--new-game-warning'
-                : '',
               callRuleError ? 'charleston-error-dialog--call-warning' : '',
             ]
               .filter(Boolean)
@@ -7175,8 +7429,7 @@ export default function App() {
               blockingDialog?.variant === 'call-meld-size-warning' ||
               blockingDialog?.variant === 'invalid-call-meld-warning' ||
               blockingDialog?.variant === 'discard-dead-warning' ||
-              blockingDialog?.variant === 'concealed-call-warning' ||
-              blockingDialog?.variant === 'resume-game'
+              blockingDialog?.variant === 'concealed-call-warning'
                 ? 'game-blocking-error-title'
                 : blockingDialog?.variant === 'mahjong-blocked'
                   ? 'mj-blocked-title'
@@ -7190,45 +7443,13 @@ export default function App() {
               blockingDialog?.variant === 'call-meld-size-warning' ||
               blockingDialog?.variant === 'invalid-call-meld-warning' ||
               blockingDialog?.variant === 'discard-dead-warning' ||
-              blockingDialog?.variant === 'concealed-call-warning' ||
-              blockingDialog?.variant === 'resume-game'
+              blockingDialog?.variant === 'concealed-call-warning'
                 ? 'game-blocking-error-body'
                 : undefined
             }
             onClick={(e) => e.stopPropagation()}
           >
-            {blockingDialog?.variant === 'resume-game' ? (
-              <>
-                <h2 id="game-blocking-error-title" className="charleston-error-dialog__title">
-                  Continue game?
-                </h2>
-                <p id="game-blocking-error-body" className="charleston-error-dialog__body">
-                  You have a game in progress. Continue where you left off, or start a new game?
-                </p>
-                <div className="charleston-error-dialog__actions charleston-error-dialog__actions--spread">
-                  <button
-                    type="button"
-                    className="btn charleston-error-dialog__rack-action"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      declineResumeStartNewGame()
-                    }}
-                  >
-                    New Game
-                  </button>
-                  <button
-                    type="button"
-                    className="btn charleston-error-dialog__rack-action"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      confirmContinueSavedGame()
-                    }}
-                  >
-                    Continue
-                  </button>
-                </div>
-              </>
-            ) : blockingDialog?.variant === 'concealed-call-warning' ? (
+            {blockingDialog?.variant === 'concealed-call-warning' ? (
               <>
                 <h2 id="game-blocking-error-title" className="charleston-error-dialog__title">
                   Concealed Hand Reminder

@@ -5,11 +5,15 @@
 import {
   memo,
   useCallback,
+  useEffect,
   useMemo,
+  useRef,
+  useState,
   type CSSProperties,
   type Dispatch,
   type KeyboardEvent,
   type MutableRefObject,
+  type PointerEvent as ReactPointerEvent,
   type ReactNode,
   type RefObject,
   type SetStateAction,
@@ -74,6 +78,96 @@ function wallRemainHeatStyle(
   return {
     '--wall-t': String(Math.max(0, Math.min(1, wallLen / (openingWallLen - 1)))),
   } as CSSProperties
+}
+
+/**
+ * MahJ action control. Latches pressed-in (+ hint aurora) on pointerdown so the
+ * chrome does not pop out between pointerup (clears btn--pointer-down) and the
+ * React commit that applies win-lit / pressed-in.
+ */
+function MahjongRackActionButton({
+  enabled,
+  showHint,
+  winGlyphLit,
+  onDeclare,
+}: {
+  enabled: boolean
+  showHint: boolean
+  winGlyphLit: boolean
+  onDeclare: () => void
+}) {
+  const [pressLatch, setPressLatch] = useState(false)
+  const [auroraLatch, setAuroraLatch] = useState(false)
+  const winGlyphLitRef = useRef(winGlyphLit)
+  winGlyphLitRef.current = winGlyphLit
+
+  useEffect(() => {
+    if (!winGlyphLit) return
+    // Win chrome owns the look; drop transient gesture latches.
+    setPressLatch(false)
+    setAuroraLatch(false)
+  }, [winGlyphLit])
+
+  useEffect(() => {
+    if (enabled || winGlyphLit) return
+    setPressLatch(false)
+    setAuroraLatch(false)
+  }, [enabled, winGlyphLit])
+
+  const clearLatchIfNotWon = useCallback(() => {
+    // Wait for click + commit so a successful declare keeps continuous chrome.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (winGlyphLitRef.current) return
+        setPressLatch(false)
+        setAuroraLatch(false)
+      })
+    })
+  }, [])
+
+  const onPointerDown = useCallback(
+    (e: ReactPointerEvent<HTMLButtonElement>) => {
+      if (!enabled) return
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId)
+      } catch {
+        /* ignore — capture is best-effort for drag-off release */
+      }
+      setPressLatch(true)
+      if (showHint) setAuroraLatch(true)
+    },
+    [enabled, showHint],
+  )
+
+  const showPressedIn = winGlyphLit || pressLatch
+  const showAurora = winGlyphLit || showHint || auroraLatch
+  const showHintClass = (showHint || auroraLatch) && !winGlyphLit
+
+  return (
+    <button
+      type="button"
+      className={[
+        'btn btn--mahjong rack-bottom-tile-cell rack-bottom-tile-cell--c5-6',
+        showHintClass ? 'btn--mahjong-hint' : '',
+        winGlyphLit ? 'btn--mahjong-win-lit' : '',
+        showPressedIn ? 'btn--mahjong-rack-pressed-in' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      disabled={!enabled}
+      aria-label="Mah Jongg"
+      onPointerDown={onPointerDown}
+      onPointerUp={clearLatchIfNotWon}
+      onPointerCancel={clearLatchIfNotWon}
+      onClick={onDeclare}
+    >
+      {showAurora ? <RackActionAuroraBorder /> : null}
+      <span className="btn--mahj__logo-stack">
+        <span className="btn--mahj__logo-stack__well" aria-hidden />
+        <img className="btn--mahj__img" src={mahjLogoSrc} alt="" draggable={false} />
+      </span>
+    </button>
+  )
 }
 
 export type { PlaySurfaceDnDApi }
@@ -347,7 +441,6 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
         onPassBoxClick={charlestonPassStrip.onPassBoxClick}
         onPassTileClickReturn={charlestonPassStrip.onPassTileClickReturn}
         suggestedBestIds={suggestedTileGuideForRack?.bestIds}
-        suggestedBlankExchangeIds={suggestedTileGuideForRack?.blankExchangeIds}
         flyOutFrom={charlestonPassStrip.flyOutFrom}
         hiddenSortableTileId={null}
         returningTileId={charlestonPassIntoHandPreview?.tileId ?? null}
@@ -649,28 +742,12 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                   </button>
                                 </>
                               ) : null}
-                              <button
-                                type="button"
-                                className={[
-                                  'btn btn--mahjong rack-bottom-tile-cell rack-bottom-tile-cell--c5-6',
-                                  showMahjongRackHint ? 'btn--mahjong-hint' : '',
-                                  mahjongWinGlyphLit ? 'btn--mahjong-win-lit' : '',
-                                  mahjongWinGlyphLit ? 'btn--mahjong-rack-pressed-in' : '',
-                                ]
-                                  .filter(Boolean)
-                                  .join(' ')}
-                                disabled={!mahjongButtonEnabled}
-                                onClick={declareMahjong}
-                                aria-label="Mah Jongg"
-                              >
-                                {mahjongWinGlyphLit || showMahjongRackHint ? (
-                                  <RackActionAuroraBorder />
-                                ) : null}
-                                <span className="btn--mahj__logo-stack">
-                                  <span className="btn--mahj__logo-stack__well" aria-hidden />
-                                  <img className="btn--mahj__img" src={mahjLogoSrc} alt="" draggable={false} />
-                                </span>
-                              </button>
+                              <MahjongRackActionButton
+                                enabled={mahjongButtonEnabled}
+                                showHint={showMahjongRackHint}
+                                winGlyphLit={mahjongWinGlyphLit}
+                                onDeclare={declareMahjong}
+                              />
                               <button
                                 type="button"
                                 className="btn btn--joker-swap-action rack-bottom-tile-cell rack-bottom-tile-cell--c9-10"
@@ -927,28 +1004,12 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                     </button>
                                   </>
                                 ) : null}
-                                <button
-                                  type="button"
-                                  className={[
-                                    'btn btn--mahjong rack-bottom-tile-cell rack-bottom-tile-cell--c5-6',
-                                    showMahjongRackHint ? 'btn--mahjong-hint' : '',
-                                    mahjongWinGlyphLit ? 'btn--mahjong-win-lit' : '',
-                                    mahjongWinGlyphLit ? 'btn--mahjong-rack-pressed-in' : '',
-                                  ]
-                                    .filter(Boolean)
-                                    .join(' ')}
-                                  disabled={!mahjongButtonEnabled}
-                                  aria-label="Mah Jongg"
-                                  onClick={declareMahjong}
-                                >
-                                  {mahjongWinGlyphLit || showMahjongRackHint ? (
-                                    <RackActionAuroraBorder />
-                                  ) : null}
-                                  <span className="btn--mahj__logo-stack">
-                                    <span className="btn--mahj__logo-stack__well" aria-hidden />
-                                    <img className="btn--mahj__img" src={mahjLogoSrc} alt="" draggable={false} />
-                                  </span>
-                                </button>
+                                <MahjongRackActionButton
+                                  enabled={mahjongButtonEnabled}
+                                  showHint={showMahjongRackHint}
+                                  winGlyphLit={mahjongWinGlyphLit}
+                                  onDeclare={declareMahjong}
+                                />
                                 {mainBarSharedSlotIsSwap ? (
                                   <button
                                     type="button"

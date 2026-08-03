@@ -6417,7 +6417,6 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
       Math.max(...consecPermuteGroup.colorGroups.flatMap((cg) => cg.map((sg) => sg.rank))) - 1
     const searchBases = Array.from({ length: 9 - maxRankOff }, (_, i) => i + 1)
     const perms = suitPermutations(nSlots)
-    const jokerCount = rackForPattern.filter((t) => t.def.cat === 'joker').length
 
     // Score for each (perm, base) combo: natural fill + joker contribution to suit-permute group.
     // Other groups (e.g. flower) use their score from the primary matchedInHand minus the
@@ -6425,9 +6424,12 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
     const primaryDetail = greedyPatternMatchDetail(rackForPattern, p, greedyExposureOpts)
     const gi = p.groups!.findIndex((g) => g.kind === 'suit-permute')
     const remForPermute = rackAfterPriorGroups(rackForPattern, primaryDetail.usedMeta, gi)
-    // Natural tiles consumed by groups BEFORE the suit-permute group (e.g. flowers).
-    // These are fixed regardless of which (perm, base) we use for the suit-permute group.
+    // Tiles consumed by groups BEFORE the suit-permute group (e.g. flowers + jokers already
+    // placed there). Fixed for every (perm, base). Jokers left for the permute group must come
+    // from `remForPermute` — never the full-rack joker count, or those prior jokers are counted twice
+    // and secondary-tier Away drifts ahead of the strip/rack highlights.
     const priorGroupsMatched = primaryDetail.usedMeta.filter((m) => m.groupIdx < gi).length
+    const jokersRemainingForPermute = remForPermute.filter((t) => t.def.cat === 'joker').length
 
     type ComboScore = {
       perm: Suit[]
@@ -6478,7 +6480,7 @@ export function rankSuggestedHands(input: RankSuggestedHandsInput): SuggestedHan
             jokerEligibleUnfilled += tdc - count
           }
         }
-        const jokerFill = Math.min(jokerCount, jokerEligibleUnfilled)
+        const jokerFill = Math.min(jokersRemainingForPermute, jokerEligibleUnfilled)
         const total = priorGroupsMatched + naturalFill + jokerFill
         const { maxSlotFill, slotSquareFill } = scoreSuitPermuteCombo(
           remForPermute,

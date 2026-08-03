@@ -1132,7 +1132,7 @@
   padding: 0;
   border: 2px solid var(--card-ink-red);
   border-radius: 0.15em;
-  background: var(--hands-row-active-fill, #334155);
+  background: #1a2332;
   color: var(--card-ink-red);
   line-height: 1;
 }

@@ -183,10 +183,29 @@
     .drag-overlay-tile.sortable-tile-wrap--blank-exchange-hint,
     .pass-strip__tile-wrap--blank-exchange-hint,
     .pass-strip__tile-wrap--suggest-dim.pass-strip__tile-wrap--blank-exchange-hint,
-    .east-discard-staging__tile--blank-exchange-hint
+    .east-discard-staging__tile--blank-exchange-hint,
+    .hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--blank-exchange-hint,
+    .hands-list__row-hit--with-tiles
+      .hands-list__pattern-tile-cell--suggest-dim.hands-list__pattern-tile-cell--blank-exchange-hint,
+    .hands-sheet__tile-cell--blank-exchange-hint,
+    .hands-sheet__tile-cell--suggest-dim.hands-sheet__tile-cell--blank-exchange-hint
   )
   .tile-face.tile-face--illustrative-art::after {
   border: var(--illustrative-blank-exchange-hint-border);
+}
+
+/* Blank-exchange hint + suggest-dim: keep dim wash under the orange ring (do not undim). */
+.app:is([data-tile-graphics='illustrative-classic'], [data-tile-graphics='illustrative-large'])
+  :is(
+    .sortable-tile-wrap--suggest-dim.sortable-tile-wrap--blank-exchange-hint,
+    .pass-strip__tile-wrap--suggest-dim.pass-strip__tile-wrap--blank-exchange-hint,
+    .east-discard-staging__tile--suggest-dim.east-discard-staging__tile--blank-exchange-hint,
+    .hands-list__row-hit--with-tiles
+      .hands-list__pattern-tile-cell--suggest-dim.hands-list__pattern-tile-cell--blank-exchange-hint,
+    .hands-sheet__tile-cell--suggest-dim.hands-sheet__tile-cell--blank-exchange-hint
+  )
+  .tile-face.tile-face--illustrative-art::after {
+  background: var(--suggest-dim-overlay);
 }
 
 /* Joker: beat circular-ring + SVG suppress rules — same full-tile inner border as naturals. */
@@ -1885,6 +1904,175 @@ html
   border: none;
 }
 
+/* Lobby panel inside the menu slide track. */
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__lobby {
+  position: relative;
+  box-sizing: border-box;
+  padding: 1rem 1.2rem 1.15rem;
+  gap: 1rem;
+}
+
+/*
+ * Stationary tile wallpaper behind Lobby ↔ Menu (not inside the slide track).
+ * Soft bottom fade; cover the modal shell with the full dump.
+ */
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__lobby-tiles.landing__tiles {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0.02;
+  --landing-tile-w: clamp(1.45rem, 2.7vw, 2rem);
+  container-type: size;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 12%,
+    rgba(0, 0, 0, 0.45) 26%,
+    transparent 40%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 12%,
+    rgba(0, 0, 0, 0.45) 26%,
+    transparent 40%
+  );
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__lobby-tiles .landing__tiles-cluster {
+  left: 46%;
+  top: 42%;
+  /* Fill the modal with the full wood-pile dump (slight overscale, no crop gap). */
+  --landing-cluster-scale: max(
+    122cqw / (var(--landing-cluster-units-w) * var(--landing-tile-w)),
+    122cqh / (var(--landing-cluster-units-h) * var(--landing-tile-w)),
+    38rem / (var(--landing-cluster-units-w) * var(--landing-tile-w)),
+    42rem / (var(--landing-cluster-units-h) * var(--landing-tile-w))
+  );
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__lobby-brand {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  padding: 0.35rem 0.5rem 0.15rem;
+  gap: 0.35rem;
+  text-align: center;
+  /* Watermark art is left-weighted (bird / M); nudge so ink reads centered. */
+  transform: translate(-0.55rem, 1.35rem);
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__lobby-logo {
+  display: block;
+  width: min(100%, 30rem);
+  max-height: min(28vh, 10.5rem);
+  height: auto;
+  margin: 0 auto;
+  object-fit: contain;
+  object-position: center;
+  user-select: none;
+  /* Same soft dark pool as login `.landing__logo`. */
+  filter:
+    drop-shadow(0 1px 2px rgba(0, 0, 0, 0.55))
+    drop-shadow(0 10px 28px rgba(0, 0, 0, 0.72))
+    drop-shadow(0 28px 64px rgba(0, 0, 0, 0.55));
+  pointer-events: none;
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__lobby-tagline {
+  margin: 0;
+  font-family: 'Noto Serif', var(--heading), serif;
+  font-size: clamp(0.9rem, 2.2vh, 1.15rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  color: color-mix(in srgb, #e8edf4 72%, transparent);
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__lobby-modes {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0.55rem;
+  /* Full content width — same as menu body rows (lobby already uses 1.2rem side padding). */
+  width: 100%;
+  max-width: none;
+  min-height: 0;
+  margin: 0;
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__lobby-mode-btn,
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__lobby-play {
+  /* Do not grow — `.app-menu-tray__diff-btn` defaults to flex: 1 1 20%. */
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+  /* Same face height as menu `.app-menu-tray__diff-btn` (part-0102). */
+  min-height: 2.5rem;
+  height: 2.5rem;
+  max-height: 2.5rem;
+  padding: 0.42rem 0.3rem;
+  gap: 0.4rem;
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__lobby-soon {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #ffb800;
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__lobby-footer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding-top: 0.25rem;
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__lobby-open {
+  text-transform: none;
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__lobby-home-icon {
+  display: block;
+  width: 1.35rem;
+  height: 1.35rem;
+  flex: 0 0 auto;
+  pointer-events: none;
+}
+
+/* Keep Home centered; beat the shared menu pressable `position: relative` rule. */
+html body .app .app-menu-modal-layer .app-menu-modal .app-menu-modal__lobby-open.app-menu-tray__diff-btn {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 2.5rem;
+  min-width: 2.5rem;
+  max-width: 2.5rem;
+  height: 2.5rem;
+  min-height: 2.5rem;
+  max-height: 2.5rem;
+  margin: auto;
+  padding: 0;
+}
+
 /*
  * Menu typography must not use rack/container-derived `--app-ui-control-fs*`. On iPhone
  * landscape first paint those tokens resolve tiny, then jump larger after the first tap.
@@ -1897,6 +2085,172 @@ html
 .app-menu-modal-layer .app-menu-modal .app-menu-tray__diff-btn {
   font-size: var(--app-menu-type-action, 1.05rem);
   font-weight: 700;
+}
+
+/* Select card: custom listbox overlays controls below (does not push layout). */
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__card-select-row {
+  width: 100%;
+  position: relative;
+  z-index: 2;
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__card-select-row--open {
+  z-index: 40;
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__diff-block:has(.app-menu-modal__card-select-row--open) {
+  position: relative;
+  z-index: 40;
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__card-select-picker {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__card-select-trigger.app-menu-tray__diff-btn {
+  box-sizing: border-box;
+  flex: 1 1 100%;
+  width: 100%;
+  max-width: none;
+  /* Match Bot skill / Theme / New Game pills (part-0102). */
+  height: 2.5rem;
+  min-height: 2.5rem;
+  max-height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 2rem;
+  text-align: center;
+}
+
+/* Trigger stays resting when closed (not selected/--on); no hover wash. */
+html body .app .app-menu-modal-layer .app-menu-modal
+  .app-menu-modal__card-select-trigger.app-menu-tray__diff-btn:not(:disabled):not(:active):not(
+    .app-menu-modal__card-select-trigger--open
+  ),
+html body .app .app-menu-modal-layer .app-menu-modal
+  .app-menu-modal__card-select-trigger.app-menu-tray__diff-btn:not(:disabled):not(:active):not(
+    .app-menu-modal__card-select-trigger--open
+  ):hover {
+  background: var(--rack-action-face, var(--app-action-btn-face));
+  border: 1px solid var(--rack-action-border-rest, var(--app-action-btn-border-rest));
+  box-shadow: var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest));
+  color: var(--rack-action-label-color, var(--app-action-btn-label));
+  opacity: 1;
+  filter: none;
+  text-shadow: none;
+  transform: none;
+}
+
+/* Dropdown open: keep press-in chrome (same as transient :active, no green rim). */
+html body .app .app-menu-modal-layer .app-menu-modal
+  .app-menu-modal__card-select-trigger.app-menu-tray__diff-btn.app-menu-modal__card-select-trigger--open:not(
+    :disabled
+  ),
+html body .app .app-menu-modal-layer .app-menu-modal
+  .app-menu-modal__card-select-trigger.app-menu-tray__diff-btn.app-menu-modal__card-select-trigger--open:not(
+    :disabled
+  ):hover,
+html body .app .app-menu-modal-layer .app-menu-modal
+  .app-menu-modal__card-select-trigger.app-menu-tray__diff-btn.app-menu-modal__card-select-trigger--open:not(
+    :disabled
+  ):active {
+  background: var(--rack-action-face-pressed-chrome, var(--app-action-btn-face-pressed-chrome));
+  border: 1px solid var(--rack-action-border-rest, var(--app-action-btn-border-rest));
+  box-shadow: var(--rack-action-pressed, var(--app-action-btn-shadow-pressed-deep));
+  color: var(--rack-action-label-color, var(--app-action-btn-label));
+  opacity: 1;
+  filter: none;
+  text-shadow: none;
+  transition: none;
+  transform: none;
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__card-select-trigger-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__card-select-trigger::after {
+  content: '';
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-70%) rotate(45deg);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__card-select-menu {
+  position: absolute;
+  z-index: 50;
+  left: 0;
+  right: 0;
+  top: calc(100% + 0.15rem);
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  border-radius: var(--rack-tile-btn-border-radius);
+  border: 1px solid var(--rack-action-border-rest, var(--app-action-btn-border-rest));
+  background: var(--rack-action-face, var(--app-action-btn-face));
+  box-shadow:
+    var(--rack-action-shadow-rest, var(--app-action-btn-shadow-rest)),
+    0 10px 28px color-mix(in srgb, var(--color-black, #000) 35%, transparent);
+  overflow: hidden;
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__card-select-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 2.35rem;
+  margin: 0.15rem 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid
+    color-mix(in srgb, var(--color-black, #000) 28%, var(--rack-action-border-rest, #636870) 72%);
+  border-radius: var(--rack-tile-btn-border-radius);
+  text-align: center;
+  font-size: var(--app-menu-type-action, 1.05rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--rack-action-label-color, var(--app-action-btn-label));
+  cursor: pointer;
+  user-select: none;
+  background: transparent;
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__card-select-option:hover {
+  background: transparent;
+}
+
+/* Selected card, or any option while press-in: pressed chrome. */
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__card-select-option--selected,
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__card-select-option--selected:hover,
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__card-select-option:active {
+  background: var(--rack-action-face-pressed-chrome, var(--app-action-btn-face-pressed-chrome));
+  border: 2px solid var(--app-menu-rim-active, #22c55e);
+  box-shadow: var(--rack-action-pressed, var(--app-action-btn-shadow-pressed-deep));
+  transition: none;
+  transform: none;
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__card-select-option-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Compact count chips keep a smaller fixed face — do not use action-row type. */
@@ -1928,10 +2282,14 @@ html body .app .app-menu-modal-layer .app-menu-modal
 }
 
 .app-menu-modal-layer .app-menu-modal__label,
-.app-menu-modal-layer .app-menu-modal__row-label,
+.app-menu-modal-layer .app-menu-modal__row-label {
+  font-size: var(--app-menu-type-body, 1.15rem);
+}
+
+/* Section titles (Select card, Bot skill, Theme, Tile graphics, …) — a step under body. */
 .app-menu-modal-layer .app-menu-modal__subhead,
 .app-menu-modal-layer .app-menu-modal__diff-block .app-menu-modal__tile-graphics-category__label {
-  font-size: var(--app-menu-type-body, 1.15rem);
+  font-size: 1rem;
 }
 
 .app-menu-modal-layer .app-menu-modal .app-menu-tray__item:not(.app-menu-tray__item--switch),
@@ -1980,7 +2338,7 @@ html body .app .app-menu-modal-layer .app-menu-modal :is(
   .app-menu-modal__close:not(:disabled)
 ):not(:active):not(.app-menu-tray__diff-btn--on):not(.app-menu-modal__blank-tile-count-btn--on):not(
     .hands-panel__display-toggle--on
-  ),
+  ):not(.app-menu-modal__card-select-trigger--open),
 html body .app .charleston-error-overlay :is(
   .charleston-error-dialog--menu-shell,
   .charleston-error-dialog--new-game-warning,
@@ -2009,7 +2367,7 @@ html body .app .app-menu-modal-layer .app-menu-modal :is(
   .app-menu-modal__close:not(:disabled)
 ):not(:active):not(.app-menu-tray__diff-btn--on):not(
     .hands-panel__display-toggle--on
-  ):hover,
+  ):not(.app-menu-modal__card-select-trigger--open):hover,
 html body .app .charleston-error-overlay :is(
   .charleston-error-dialog--menu-shell,
   .charleston-error-dialog--new-game-warning,
@@ -2163,7 +2521,7 @@ html body .app .app-menu-modal-layer .app-menu-modal :is(
   .app-menu-modal__close:not(:disabled)
 ):active:not(.btn--pointer-down):not(.app-menu-tray__diff-btn--on):not(.app-menu-modal__blank-tile-count-btn--on):not(
     .hands-panel__display-toggle--on
-  ),
+  ):not(.app-menu-modal__card-select-trigger--open),
 html body .app .charleston-error-overlay :is(
   .charleston-error-dialog--menu-shell,
   .charleston-error-dialog--new-game-warning,
@@ -3448,19 +3806,30 @@ html body .app .app-menu-modal-layer .app-menu-modal
 .game-meta-dialog__header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
+  position: relative;
   gap: 0.75rem;
+  min-height: 2.5rem;
 }
 
 .game-meta-dialog__title {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.5rem;
   font-weight: 650;
+  text-align: center;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 6rem);
+  pointer-events: none;
 }
 
 .game-meta-dialog__close {
   flex: 0 0 auto;
   min-width: 4.5rem;
+  position: relative;
+  z-index: 1;
 }
 
 .game-meta-dialog .charleston-error-dialog__rack-action:not(:disabled) {
@@ -3567,8 +3936,9 @@ html body .app .app-menu-modal-layer .app-menu-modal
 
 .game-meta-dialog__section-title {
   margin: 0.25rem 0 0;
-  font-size: 0.95rem;
+  font-size: 1.35rem;
   font-weight: 650;
+  text-align: center;
 }
 
 .game-meta-stats {

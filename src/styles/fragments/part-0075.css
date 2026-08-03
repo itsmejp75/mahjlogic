@@ -508,7 +508,6 @@
 
 .sortable-tile-wrap--suggest-dim.sortable-tile-wrap--selected .tile-face,
 .sortable-tile-wrap--suggest-dim.sortable-tile-wrap--suggest-best .tile-face,
-.sortable-tile-wrap--suggest-dim.sortable-tile-wrap--blank-exchange-hint .tile-face,
 .hands-sheet__tile-cell--suggest-dim.hands-sheet__tile-cell--suggest-best .tile-face {
   opacity: 1;
 }
@@ -525,14 +524,15 @@
   --tile-face-highlight-shadow: 0 0 0 0 transparent;
 }
 
-/* Yellow ring on `::after` (z-index 5) — above rim bevel / dim overlay, same stack as green suggest-best. */
+/* Yellow ring on `::after` (z-index 5) — above rim bevel, same stack as green suggest-best.
+ * When also suggest-dim, keep the dim wash (do not lift/undim — border only). */
 .sortable-tile-wrap--blank-exchange-hint .tile-face:not(.tile--joker)::after,
-.sortable-tile-wrap--blank-exchange-hint.sortable-tile-wrap--suggest-dim .tile-face:not(.tile--joker)::after,
 .drag-overlay-tile.sortable-tile-wrap--blank-exchange-hint .tile-face:not(.tile--joker)::after,
 .pass-strip__tile-wrap--blank-exchange-hint .tile-face:not(.tile--joker)::after,
-.pass-strip__tile-wrap--blank-exchange-hint.pass-strip__tile-wrap--suggest-dim
+.east-discard-staging__tile--blank-exchange-hint .tile-face:not(.tile--joker)::after,
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--blank-exchange-hint
   .tile-face:not(.tile--joker)::after,
-.east-discard-staging__tile--blank-exchange-hint .tile-face:not(.tile--joker)::after {
+.hands-sheet__tile-cell--blank-exchange-hint .tile-face:not(.tile--joker)::after {
   content: '';
   display: block;
   position: absolute;
@@ -559,7 +559,23 @@
     box-shadow 0s;
 }
 
-.sortable-tile-wrap--suggest-dim.sortable-tile-wrap--blank-exchange-hint .tile-face {
+.hands-list__row-hit--with-tiles .hands-list__pattern-tile-cell--blank-exchange-hint
+  .tile-face:not(.tile--joker)::after,
+.hands-sheet__tile-cell--blank-exchange-hint .tile-face:not(.tile--joker)::after {
+  border-radius: max(var(--tile-face-border-radius), var(--hands-coaching-ring-radius-min, 0.22rem));
+}
+
+.sortable-tile-wrap--blank-exchange-hint.sortable-tile-wrap--suggest-dim .tile-face:not(.tile--joker)::after,
+.pass-strip__tile-wrap--blank-exchange-hint.pass-strip__tile-wrap--suggest-dim
+  .tile-face:not(.tile--joker)::after,
+.east-discard-staging__tile--blank-exchange-hint.east-discard-staging__tile--suggest-dim
+  .tile-face:not(.tile--joker)::after,
+.hands-list__row-hit--with-tiles
+  .hands-list__pattern-tile-cell--blank-exchange-hint.hands-list__pattern-tile-cell--suggest-dim
+  .tile-face:not(.tile--joker)::after,
+.hands-sheet__tile-cell--blank-exchange-hint.hands-sheet__tile-cell--suggest-dim
+  .tile-face:not(.tile--joker)::after {
+  background: var(--suggest-dim-overlay);
   opacity: 1;
 }
 
@@ -636,6 +652,23 @@
 ) .tile-face:not(.tile--joker)::after {
   box-shadow: none;
   background: transparent;
+}
+
+/* Blank-exchange on a joker-fill cell: keep the orange ring (coaching block sets border: none). */
+.hands-list__row-hit--with-tiles
+  .hands-list__pattern-tile-cell--blank-exchange-hint
+  .tile-face:not(.tile--joker)::after,
+.hands-sheet__tile-cell--blank-exchange-hint .tile-face:not(.tile--joker)::after {
+  border: var(--illustrative-blank-exchange-hint-border, 2px solid var(--simple-joker-yellow, #ffc107));
+  box-shadow: none;
+}
+
+.hands-list__row-hit--with-tiles
+  .hands-list__pattern-tile-cell--blank-exchange-hint.hands-list__pattern-tile-cell--suggest-dim
+  .tile-face:not(.tile--joker)::after,
+.hands-sheet__tile-cell--blank-exchange-hint.hands-sheet__tile-cell--suggest-dim
+  .tile-face:not(.tile--joker)::after {
+  background: var(--suggest-dim-overlay);
 }
 
 /*

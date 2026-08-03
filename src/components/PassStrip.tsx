@@ -157,11 +157,9 @@ type Props = {
   variant?: 'boxed' | 'inlineTail'
   /**
    * When set (suggested hand is focused), tiles in this set get the coach lift. Other pass-box
-   * tiles dim like unneeded rack tiles (`suggestedBlankExchangeIds` stay undimmed).
+   * tiles dim like unneeded rack tiles (including blank-exchange candidates).
    */
   suggestedBestIds?: ReadonlySet<string> | null
-  /** Blank-exchange candidates — stay undimmed with the yellow hint when a hand is focused. */
-  suggestedBlankExchangeIds?: ReadonlySet<string> | null
   /** Charleston: tiles fly out toward this direction while the pass is committing. */
   flyOutFrom?: PassStripFlyOutFrom | null
   /** While this pass tile is registered in the hand sortable list (drag preview), hide its pass-strip sortable. */
@@ -193,7 +191,6 @@ export function PassStrip({
   onPassBoxClick,
   variant = 'boxed',
   suggestedBestIds,
-  suggestedBlankExchangeIds,
   flyOutFrom = null,
   hiddenSortableTileId = null,
   returningTileId = null,
@@ -353,9 +350,7 @@ export function PassStrip({
               onTileClick={() => onPassTileClickReturn(index)}
               suggestBest={!!suggestedBestIds?.has(tile.id)}
               suggestDim={
-                suggestedBestIds != null &&
-                !suggestedBestIds.has(tile.id) &&
-                !suggestedBlankExchangeIds?.has(tile.id)
+                suggestedBestIds != null && !suggestedBestIds.has(tile.id)
               }
               compactShift={compactShifts.get(tile.id) ?? null}
               returnActive={returnActive}

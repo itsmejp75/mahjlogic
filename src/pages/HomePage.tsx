@@ -34,13 +34,9 @@ import {
 } from '../mahjong/deck'
 import { DEFAULT_TILE_GRAPHICS, type TileGraphics } from '../tiles/tileGraphics'
 import {
-  HELP_PRESET_LABEL,
-  HELP_PRESETS,
   LS_KEY_HELP_PRESET,
   helpFlagsForPreset,
   readHelpPresetFromStorage,
-  writeHelpPresetToStorage,
-  type HelpPreset,
 } from '../lib/helpPreset'
 import {
   isResumableSnapshot,
@@ -59,6 +55,22 @@ const BOT_DIFFICULTY_LABEL: Record<BotDifficulty, string> = {
   easy: 'Novice',
   normal: 'Advanced',
   hard: 'Expert',
+}
+
+/** Lines under the Resume CTA — saved hand settings + wall tiles left. */
+function resumeSettingsSummaryLines(snap: InProgressGameSnapshot): string[] {
+  const { settings } = snap
+  const card = settings.cardId === 'mock' ? 'Sample' : `${settings.cardId} NMJL`
+  const lines = [
+    `Card: ${card}`,
+    `Bot skill: ${BOT_DIFFICULTY_LABEL[settings.botDifficulty]}`,
+  ]
+  if (settings.blankTilesEnabled) lines.push(`Blanks: ${settings.blankTileCount}`)
+  if (settings.tenJokersEnabled) lines.push('10 Jokers')
+  if (settings.playAsEastEnabled) lines.push('Position: East')
+  if (settings.botWinsEnabled) lines.push('Bot wins')
+  lines.push(`Tiles remaining: ${snap.round.wall.length}`)
+  return lines
 }
 
 const LS_KEY_BOT_DIFFICULTY = 'mahjlogic.botDifficulty'
@@ -182,7 +194,6 @@ export function HomePage() {
   const [blankTilesEnabled, setBlankTilesEnabled] = useState(() => readBool(LS_KEY_BLANK_TILES, false))
   const [blankTileCount, setBlankTileCount] = useState<BlankTileCount>(() => readBlankTileCount())
   const [tenJokersEnabled, setTenJokersEnabled] = useState(() => readBool(LS_KEY_TEN_JOKERS, false))
-  const [helpPreset, setHelpPreset] = useState<HelpPreset>(() => readHelpPresetFromStorage())
   const [appTheme, setAppTheme] = useState<AppTheme>(() => readAppThemeFromStorage())
   const [resumeSnap, setResumeSnap] = useState<InProgressGameSnapshot | null>(null)
   const [resumeLoading, setResumeLoading] = useState(true)
@@ -287,7 +298,6 @@ export function HomePage() {
         setBlankTilesEnabled(merged.blankTilesEnabled)
         setBlankTileCount(merged.blankTileCount)
         setTenJokersEnabled(merged.tenJokersEnabled)
-        setHelpPreset(merged.helpPreset)
         setAppTheme(merged.appTheme)
         // Older cloud rows lack helpPreset — persist the resolved full prefs once.
         if (!prefs.helpPreset) {
@@ -345,13 +355,6 @@ export function HomePage() {
     setTenJokersEnabled(on)
     writeBool(LS_KEY_TEN_JOKERS, on)
     patchPrefs({ tenJokersEnabled: on })
-  }
-
-  const onHelpPreset = (preset: HelpPreset) => {
-    setHelpPreset(preset)
-    writeHelpPresetToStorage(preset)
-    const flags = helpFlagsForPreset(preset)
-    patchPrefs({ helpPreset: preset, ...flags })
   }
 
   const onTheme = (t: AppTheme) => {
@@ -478,10 +481,17 @@ export function HomePage() {
             <div className="home-hub__cta-row">
               <button
                 type="button"
-                className="btn home-hub__action-btn home-hub__action-btn--primary"
+                className="btn home-hub__action-btn home-hub__action-btn--primary home-hub__action-btn--resume"
                 onClick={() => goPlay('resume')}
               >
-                Resume
+                <span className="home-hub__resume-label">Resume</span>
+                <span className="home-hub__resume-meta">
+                  {resumeSettingsSummaryLines(resumeSnap).map((line) => (
+                    <span key={line} className="home-hub__resume-meta-line">
+                      {line}
+                    </span>
+                  ))}
+                </span>
               </button>
               <button
                 type="button"
@@ -500,6 +510,31 @@ export function HomePage() {
               Play
             </button>
           )}
+          <div className="home-hub__modes" aria-label="More">
+            <button
+              type="button"
+              className="btn home-hub__action-btn home-hub__mode-btn"
+              onClick={() => navigate('/rack-checker')}
+            >
+              Rack Checker
+            </button>
+            <button
+              type="button"
+              className="btn home-hub__action-btn home-hub__mode-btn"
+              disabled
+              title="Coming soon"
+            >
+              Rack of the Day
+              <span className="home-hub__soon">Soon</span>
+            </button>
+            <button
+              type="button"
+              className="btn home-hub__action-btn home-hub__mode-btn"
+              onClick={() => setStatsOpen(true)}
+            >
+              Stats
+            </button>
+          </div>
         </section>
 
         <section className="home-hub__options" aria-label="Game options">
@@ -613,55 +648,6 @@ export function HomePage() {
             </div>
           </div>
 
-          <div className="home-hub__option-row">
-            <div className="home-hub__subhead" id="home-help-label">
-              Help level
-            </div>
-            <div className="home-hub__chip-row" role="radiogroup" aria-labelledby="home-help-label">
-              {HELP_PRESETS.map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  className={['btn', 'home-hub__chip', helpPreset === p ? 'home-hub__chip--on' : '']
-                    .filter(Boolean)
-                    .join(' ')}
-                  role="radio"
-                  aria-checked={helpPreset === p}
-                  onClick={() => onHelpPreset(p)}
-                >
-                  {HELP_PRESET_LABEL[p]}
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <hr className="home-hub__divider" />
-
-        <section className="home-hub__modes" aria-label="More">
-          <button
-            type="button"
-            className="btn home-hub__action-btn home-hub__mode-btn"
-            disabled
-            title="Coming soon"
-          >
-            Rack of the Day
-            <span className="home-hub__soon">Soon</span>
-          </button>
-          <button
-            type="button"
-            className="btn home-hub__action-btn home-hub__mode-btn"
-            onClick={() => navigate('/rack-checker')}
-          >
-            Rack Checker
-          </button>
-          <button
-            type="button"
-            className="btn home-hub__action-btn home-hub__mode-btn"
-            onClick={() => setStatsOpen(true)}
-          >
-            Stats
-          </button>
         </section>
       </div>
 

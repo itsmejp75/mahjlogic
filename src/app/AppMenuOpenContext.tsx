@@ -35,8 +35,15 @@ export const appMenuOpenApiRef: {
  * Owns `menuOpen` above the play tree. Non-consumer children keep their last element
  * identity from `App`, so opening/closing the menu does not re-render racks / DnD.
  */
-export function AppMenuOpenProvider({ children }: { children: ReactNode }) {
-  const [menuOpen, setMenuOpen] = useState(false)
+export function AppMenuOpenProvider({
+  children,
+  /** Dev: `?previewMenu=1` opens the menu on mount for cleanup work. */
+  initialOpen = false,
+}: {
+  children: ReactNode
+  initialOpen?: boolean
+}) {
+  const [menuOpen, setMenuOpen] = useState(initialOpen)
   const toggleMenu = useCallback(() => setMenuOpen((v) => !v), [])
   const value = useMemo(
     () => ({ menuOpen, setMenuOpen, toggleMenu }),

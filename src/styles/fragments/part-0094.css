@@ -15,10 +15,39 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding: 0.75rem 0.75rem 0.6rem;
+  /* Match body horizontal padding so Lobby width lines up with Resume / New Game. */
+  padding: 0.65rem 1.2rem 0.55rem;
   border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
   /* Transparent so the modal atmosphere paint shows through. */
   background: transparent;
+}
+
+.app-menu-modal__lobby-open {
+  box-sizing: border-box;
+  /* Centered Home icon control — square face matching menu action height. */
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 2.5rem;
+  min-width: 2.5rem;
+  max-width: 2.5rem;
+  min-height: 2.5rem;
+  height: 2.5rem;
+  max-height: 2.5rem;
+  margin: auto;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-menu-modal__header .app-menu-modal__close {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .app-menu-modal__close {
@@ -42,6 +71,7 @@
   outline-offset: 2px;
 }
 
+.app-menu-modal__menu-pane .app-menu-modal__body,
 .app-menu-modal__body {
   position: relative;
   z-index: 1;

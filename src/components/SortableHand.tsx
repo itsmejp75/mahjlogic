@@ -691,7 +691,7 @@ export const SortableHand = memo(
               selected={selectedTileId === tile.id}
               charlestonGlow={charlestonGlowTileIds?.has(tile.id) ?? false}
               discardMode={discardMode}
-              suggestDim={isDeadSuggested || (!!g && !isBest && !isBlankExchange)}
+              suggestDim={isDeadSuggested || (!!g && !isBest)}
               suggestBest={isBest}
               suggestBlankExchange={isBlankExchange}
               suggestDying={isDeadSuggested}

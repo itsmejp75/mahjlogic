@@ -1274,13 +1274,10 @@ export const ExposureRack = memo(
       )
     : false
   const lastSlotJoker = lastSlotTile?.def.cat === 'joker'
-  const lastSlotBlankExchange =
-    !!lastSlotTile && !!gLast?.blankExchangeIds?.has(lastSlotTile.id)
   const lastSlotIsDeadSuggested =
     !!lastSlotTile && !!suggestedDeadTileIds?.has(lastSlotTile.id) && !lastSlotIsBest
   const lastSlotSuggestDim =
-    lastSlotIsDeadSuggested ||
-    (!!gLast && !!lastSlotTile && !lastSlotIsBest && !lastSlotBlankExchange)
+    lastSlotIsDeadSuggested || (!!gLast && !!lastSlotTile && !lastSlotIsBest)
 
   // Count every meld that actually shows tiles (including joker-swap droppables: they still cover the watermark).
   const filledMeldCount = melds.filter((m) => m.tiles.length > 0).length

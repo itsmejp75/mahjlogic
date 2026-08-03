@@ -13,6 +13,13 @@ import type { TileInstance } from '../mahjong/types'
  */
 const SUGGESTED_HAND_SECTION_DISPLAY_LABEL = CARD_SECTION_DISPLAY_LABEL
 
+/**
+ * When false, the Suggested Hand Filters block is omitted from the app menu and category /
+ * Concealed (C) filters are ignored (all hands show). Flip to `true` to restore the menu UI;
+ * storage + helpers below stay wired for that.
+ */
+export const SHOW_SUGGESTED_HAND_FILTERS_IN_MENU = false
+
 /** When `'1'`, hands marked concealed (C) are omitted from the suggested list. */
 export const HIDE_CONCEALED_HANDS_STORAGE_KEY = 'mahjlogic:suggested-hands-hide-concealed'
 
@@ -47,7 +54,13 @@ export function isSuggestedHandSectionFilterEnabled(
   section: string,
   uncheckedSections: ReadonlySet<string>,
 ): boolean {
+  if (!SHOW_SUGGESTED_HAND_FILTERS_IN_MENU) return true
   return !suggestedHandSectionFilterKeys(section).some((k) => uncheckedSections.has(k))
+}
+
+/** Stored Concealed (C) preference, or always show concealed while the menu filters are hidden. */
+export function resolveHideConcealedHands(stored: boolean): boolean {
+  return SHOW_SUGGESTED_HAND_FILTERS_IN_MENU && stored
 }
 
 /** Apply one menu toggle; keeps alias keys in sync across cards. */

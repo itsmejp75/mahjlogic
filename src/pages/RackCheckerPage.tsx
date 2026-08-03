@@ -59,6 +59,7 @@ import type { DiscardEntry, Seat, TileDef, TileInstance } from '../mahjong/types
 import {
   readHideConcealedHandsFromStorage,
   readUncheckedSectionsFromStorage,
+  resolveHideConcealedHands,
 } from '../suggestedHands/filterSettings'
 import { TileGraphicsProvider } from '../tiles/TileGraphicsContext'
 import { DEFAULT_TILE_GRAPHICS } from '../tiles/tileGraphics'
@@ -196,7 +197,10 @@ export function RackCheckerPage({
   const blankTilesEnabled = useMemo(() => readBool(LS_KEY_BLANK_TILES, false), [])
   const blankTileCount = useMemo(() => readBlankTileCount(), [])
   const uncheckedSections = useMemo(() => readUncheckedSectionsFromStorage(), [])
-  const hideConcealedHands = useMemo(() => readHideConcealedHandsFromStorage(), [])
+  const hideConcealedHands = useMemo(
+    () => resolveHideConcealedHands(readHideConcealedHandsFromStorage()),
+    [],
+  )
 
   const cardPatterns = useMemo(() => patternsForCard(cardId), [cardId])
   const cardPatternsById = useMemo(() => patternByIdLookup(cardPatterns), [cardPatterns])
