@@ -2104,7 +2104,48 @@ html body .app .app-menu-modal-layer .app-menu-modal .app-menu-modal__lobby-open
   font-weight: 700;
 }
 
-/* Paired menu dropdowns: title above each, side by side. */
+/* Resume / New Game — twice the standard menu pill height (2.5rem → 5rem). */
+.app-menu-modal-layer .app-menu-modal
+  .app-menu-modal__diff-block--game-actions
+  .app-menu-modal__game-actions-row
+  .app-menu-tray__diff-btn {
+  height: 5rem;
+  min-height: 5rem;
+  max-height: 5rem;
+}
+
+/* Bordered section frames (Game settings / House Rules / Visuals). */
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__diff-block--game-settings,
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__diff-block--house-rules,
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__diff-block--helpers {
+  padding-top: 0.2rem;
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__section-frame > .app-menu-modal__row--toggle {
+  padding-block: 0.18rem;
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__section-frame {
+
+  margin: 0;
+  padding: 0.55rem 0.55rem 0.5rem;
+  min-width: 0;
+  border: 1.5px solid var(--app-menu-rim-hairline, color-mix(in srgb, var(--color-white) 18%, #1f2429));
+  border-radius: 0.55rem;
+  background: transparent;
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__section-frame-title {
+  padding: 0 0.35rem;
+  font-size: var(--app-menu-type-action, 1.05rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  /* Match Helpers toggle labels (not the brighter action-button ink). */
+  color: var(--text-h, var(--fg));
+}
+
+/* Paired menu dropdowns: side by side. */
 .app-menu-modal-layer .app-menu-modal .app-menu-modal__select-pair-row {
   display: flex;
   flex-direction: row;
@@ -2112,6 +2153,10 @@ html body .app .app-menu-modal-layer .app-menu-modal .app-menu-modal__lobby-open
   gap: 0.4rem;
   width: 100%;
   min-width: 0;
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__select-pair-row + .app-menu-modal__select-pair-row {
+  margin-top: 0.55rem;
 }
 
 .app-menu-modal-layer .app-menu-modal .app-menu-modal__select-pair-col {
@@ -2126,9 +2171,14 @@ html body .app .app-menu-modal-layer .app-menu-modal .app-menu-modal__lobby-open
   padding: 0;
 }
 
-/* Menu listbox dropdowns (card / theme / tile graphics): overlay below trigger. */
+/* Menu listbox: title left of trigger; selected value centered in the button. */
 .app-menu-modal-layer .app-menu-modal .app-menu-modal__card-select-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
   width: 100%;
+  min-width: 0;
   position: relative;
   z-index: 2;
 }
@@ -2142,15 +2192,33 @@ html body .app .app-menu-modal-layer .app-menu-modal .app-menu-modal__lobby-open
   z-index: 40;
 }
 
+/* Shared title column so stacked select buttons line up (fits “10 Jokers:”). */
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__card-select-title {
+  flex: 0 0 6.75rem;
+  box-sizing: border-box;
+  width: 6.75rem;
+  font-size: var(--app-menu-type-action, 1.05rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  text-align: end;
+  /* Match Helpers toggle labels (not the brighter action-button ink). */
+  color: var(--text-h, var(--fg));
+  white-space: nowrap;
+  user-select: none;
+}
+
 .app-menu-modal-layer .app-menu-modal .app-menu-modal__card-select-picker {
   position: relative;
   display: flex;
-  width: 100%;
+  flex: 1 1 0;
+  width: auto;
   min-width: 0;
 }
 
 .app-menu-modal-layer .app-menu-modal .app-menu-modal__card-select-trigger.app-menu-tray__diff-btn {
   box-sizing: border-box;
+  position: relative;
   flex: 1 1 100%;
   width: 100%;
   max-width: none;
@@ -2213,6 +2281,7 @@ html body .app .app-menu-modal-layer .app-menu-modal
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: var(--app-menu-type-action, 1.05rem);
 }
 
 .app-menu-modal-layer .app-menu-modal .app-menu-modal__card-select-trigger::after {

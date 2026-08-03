@@ -105,7 +105,7 @@
 }
 
 /* Undo and lower — same raised tray as other menu sections; row spacing matches category filters. */
-.app-menu-modal__diff-block--settings-toggles > .app-menu-modal__body-footer--settings-toggles {
+.app-menu-modal__diff-block--settings-toggles .app-menu-modal__body-footer--settings-toggles {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;

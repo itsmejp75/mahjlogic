@@ -1,10 +1,9 @@
 import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import watermarkSrc from './assets/mahjlogic-watermark.svg?url'
 import { LandingTileAtmosphere } from './components/LandingTileAtmosphere'
 import { flushSync } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { RackCheckerPage } from './pages/RackCheckerPage'
-import { americanDeckTileCount, BLANK_TILE_COUNT_OPTIONS, buildAmericanDeck, dealOpeningFour, DEFAULT_BLANK_TILE_COUNT, isBlankTileCount, shuffle, STANDARD_JOKER_COUNT, TEN_JOKERS_COUNT } from './mahjong/deck'
+import { americanDeckTileCount, buildAmericanDeck, dealOpeningFour, DEFAULT_BLANK_TILE_COUNT, isBlankTileCount, shuffle, STANDARD_JOKER_COUNT, TEN_JOKERS_COUNT } from './mahjong/deck'
 import type { BlankTileCount } from './mahjong/deck'
 import type { ClaimType, DiscardEntry, EastExposure, Seat, TileDef, TileInstance } from './mahjong/types'
 import { formatMahjongWinDescription } from './mahjong/labels'
@@ -217,6 +216,18 @@ const LS_KEY_BLANK_TILES = 'mahjlogic.blankTilesEnabled'
 const LS_KEY_BLANK_TILE_COUNT = 'mahjlogic.blankTileCount'
 const LS_KEY_TEN_JOKERS = 'mahjlogic.tenJokersEnabled'
 const LS_KEY_PLAY_AS_EAST = 'mahjlogic.playAsEastEnabled'
+/** Seat picker values — maps onto `playAsEastEnabled` (east = true, random = false). */
+const SEAT_MODES = ['east', 'random'] as const
+type SeatMode = (typeof SEAT_MODES)[number]
+const SEAT_MODE_LABEL: Record<SeatMode, string> = {
+  east: 'East',
+  random: 'Random',
+}
+/**
+ * When false, the legacy Play as East toggle is omitted from the settings list
+ * (Seat dropdown owns the control). Flip to `true` to restore both.
+ */
+const SHOW_PLAY_AS_EAST_TOGGLE_IN_MENU = false
 const LS_KEY_SUGGESTED_HANDS_TRAY = 'mahjlogic.suggestedHandsTrayDefaultOpen'
 /**
  * When false, the Suggested hands tray toggle is omitted from the app menu.
@@ -226,10 +237,8 @@ const SHOW_SUGGESTED_HANDS_TRAY_TOGGLE_IN_MENU = false
 const LS_KEY_HAND_PROBABILITY = 'mahjlogic.handProbabilityEnabled'
 /** Stable empty section filter for player Mah Jongg Hands review (avoids per-render `new Set()`). */
 const EMPTY_SUGGESTED_HAND_SECTIONS = new Set<string>()
-const BLANK_TILES_LABEL = 'Blank tiles'
 const SUGGESTED_HANDS_TRAY_LABEL = 'Suggested hands'
 const HAND_PROBABILITY_LABEL = 'Hand Probability %'
-const TEN_JOKERS_LABEL = '10 Jokers'
 const PLAY_AS_EAST_LABEL = 'Play as East only'
 const CONCEALED_HAND_REMINDER_LABEL = 'Concealed hand reminder'
 const JOKER_SWAP_HINT_BOUNCE_DELAY_MS = 500
@@ -677,16 +686,6 @@ function AppMenuSlideShell({
             aria-hidden={!lobbyOpen}
             {...(!lobbyOpen ? ({ inert: '' } as Record<string, string>) : {})}
           >
-            <div className="app-menu-modal__lobby-brand">
-              <img
-                className="app-menu-modal__lobby-logo"
-                src={watermarkSrc}
-                alt="Mahj Logic"
-                decoding="async"
-                draggable={false}
-              />
-              <p className="app-menu-modal__lobby-tagline">American Mah Jongg Intelligence</p>
-            </div>
             <div className="app-menu-modal__lobby-modes" aria-label="Lobby">
               <button
                 type="button"
@@ -775,24 +774,27 @@ function AppMenuSlideShell({
 /**
  * Menu listbox dropdown — native `<select>` popups cannot be centered with the trigger.
  * Reuses the Select card chrome (`.app-menu-modal__card-select-*`).
+ * Title sits left of the trigger; the trigger centers the selected value only.
  */
 function MenuSelectDropdown<T extends string>({
   value,
   options,
   labels,
-  labelId,
+  title,
   onChange,
 }: {
   value: T
   options: readonly T[]
   labels: Record<T, string>
-  labelId: string
+  title: string
   onChange: (next: T) => void
 }) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
   const listId = useId()
   const { menuOpen } = useAppMenuOpen()
+  const valueLabel = labels[value]
 
   useEffect(() => {
     if (!menuOpen) setOpen(false)
@@ -828,6 +830,9 @@ function MenuSelectDropdown<T extends string>({
         .join(' ')}
       ref={rootRef}
     >
+      <span className="app-menu-modal__card-select-title" id={titleId}>
+        {title}:
+      </span>
       <div className="app-menu-modal__card-select-picker">
         <button
           type="button"
@@ -842,11 +847,11 @@ function MenuSelectDropdown<T extends string>({
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-controls={listId}
-          aria-labelledby={labelId}
+          aria-labelledby={titleId}
           onClick={() => setOpen((wasOpen) => !wasOpen)}
         >
           <span className="app-menu-modal__card-select-trigger-label">
-            {labels[value]}
+            {valueLabel}
           </span>
         </button>
         {open ? (
@@ -854,7 +859,7 @@ function MenuSelectDropdown<T extends string>({
             id={listId}
             className="app-menu-modal__card-select-menu"
             role="listbox"
-            aria-labelledby={labelId}
+            aria-labelledby={titleId}
           >
             {options.map((id) => {
               const selected = id === value
@@ -885,6 +890,32 @@ function MenuSelectDropdown<T extends string>({
       </div>
     </div>
   )
+}
+
+/** 10 Jokers menu dropdown — On / Off. */
+const TEN_JOKERS_MODES = ['on', 'off'] as const
+type TenJokersMode = (typeof TEN_JOKERS_MODES)[number]
+const TEN_JOKERS_MODE_LABEL: Record<TenJokersMode, string> = {
+  on: 'On',
+  off: 'Off',
+}
+
+/** Blanks menu dropdown — None turns blanks off; 2 / 4 / 6 enables that count. */
+const BLANK_MENU_MODES = ['none', '2', '4', '6'] as const
+type BlankMenuMode = (typeof BLANK_MENU_MODES)[number]
+const BLANK_MENU_MODE_LABEL: Record<BlankMenuMode, string> = {
+  none: 'None',
+  '2': '2',
+  '4': '4',
+  '6': '6',
+}
+
+function blankMenuModeFromState(
+  blankTilesEnabled: boolean,
+  blankTileCount: BlankTileCount,
+): BlankMenuMode {
+  if (!blankTilesEnabled) return 'none'
+  return String(blankTileCount) as BlankMenuMode
 }
 
 
@@ -5116,41 +5147,56 @@ export default function App() {
   }, [])
 
   /** Seat / deck prefs: redeal a fresh rack behind the open menu (do not close it). */
+  const setSeatMode = useCallback(
+    (mode: SeatMode) => {
+      const next = mode === 'east'
+      if (next === playAsEastEnabledRef.current) return
+      try {
+        localStorage.setItem(LS_KEY_PLAY_AS_EAST, next ? 'true' : 'false')
+      } catch {
+        /* ignore */
+      }
+      setPlayAsEastEnabled(next)
+      playAsEastEnabledRef.current = next
+      performNewHandDeal()
+    },
+    [performNewHandDeal],
+  )
+
   const togglePlayAsEast = useCallback(() => {
-    const next = !playAsEastEnabledRef.current
-    try {
-      localStorage.setItem(LS_KEY_PLAY_AS_EAST, next ? 'true' : 'false')
-    } catch {
-      /* ignore */
-    }
-    setPlayAsEastEnabled(next)
-    playAsEastEnabledRef.current = next
-    performNewHandDeal()
-  }, [performNewHandDeal])
+    setSeatMode(playAsEastEnabledRef.current ? 'random' : 'east')
+  }, [setSeatMode])
 
-  const toggleTenJokers = useCallback(() => {
-    const next = !tenJokersEnabledRef.current
-    try {
-      localStorage.setItem(LS_KEY_TEN_JOKERS, next ? 'true' : 'false')
-    } catch {
-      /* ignore */
-    }
-    setTenJokersEnabled(next)
-    tenJokersEnabledRef.current = next
-    performNewHandDeal()
-  }, [performNewHandDeal])
+  const setTenJokersMode = useCallback(
+    (mode: TenJokersMode) => {
+      const next = mode === 'on'
+      if (next === tenJokersEnabledRef.current) return
+      try {
+        localStorage.setItem(LS_KEY_TEN_JOKERS, next ? 'true' : 'false')
+      } catch {
+        /* ignore */
+      }
+      setTenJokersEnabled(next)
+      tenJokersEnabledRef.current = next
+      performNewHandDeal()
+    },
+    [performNewHandDeal],
+  )
 
-  const toggleBlankTiles = useCallback(() => {
-    const next = !blankTilesEnabledRef.current
-    try {
-      localStorage.setItem(LS_KEY_BLANK_TILES, next ? 'true' : 'false')
-    } catch {
-      /* ignore */
-    }
-    setBlankTilesEnabled(next)
-    blankTilesEnabledRef.current = next
-    performNewHandDeal()
-  }, [performNewHandDeal])
+  const setBlankTilesEnabledLevel = useCallback(
+    (next: boolean) => {
+      if (next === blankTilesEnabledRef.current) return
+      try {
+        localStorage.setItem(LS_KEY_BLANK_TILES, next ? 'true' : 'false')
+      } catch {
+        /* ignore */
+      }
+      setBlankTilesEnabled(next)
+      blankTilesEnabledRef.current = next
+      performNewHandDeal()
+    },
+    [performNewHandDeal],
+  )
 
   const setBlankTileCountLevel = useCallback(
     (count: BlankTileCount) => {
@@ -5168,6 +5214,18 @@ export default function App() {
       performNewHandDeal()
     },
     [performNewHandDeal],
+  )
+
+  const setBlankMenuMode = useCallback(
+    (mode: BlankMenuMode) => {
+      if (mode === 'none') {
+        setBlankTilesEnabledLevel(false)
+        return
+      }
+      const count = Number(mode)
+      if (isBlankTileCount(count)) setBlankTileCountLevel(count)
+    },
+    [setBlankTileCountLevel, setBlankTilesEnabledLevel],
   )
 
   /** @returns true (menu may close). */
@@ -6866,34 +6924,6 @@ export default function App() {
             onOpenRackChecker={() => setRackCheckerOpen(true)}
           >
             <div className="app-menu-modal__body">
-              <div className="app-menu-modal__diff-block">
-                <div className="app-menu-modal__select-pair-row">
-                  <div className="app-menu-modal__select-pair-col">
-                    <div className="app-menu-modal__subhead" id="app-menu-playable-card-label">
-                      Select card
-                    </div>
-                    <MenuSelectDropdown
-                      value={menuCardId}
-                      options={PLAYABLE_CARD_IDS}
-                      labels={PLAYABLE_CARD_LABEL}
-                      labelId="app-menu-playable-card-label"
-                      onChange={requestPlayableCard}
-                    />
-                  </div>
-                  <div className="app-menu-modal__select-pair-col">
-                    <div className="app-menu-modal__subhead" id="bot-difficulty-menu-label">
-                      Bot skill
-                    </div>
-                    <MenuSelectDropdown
-                      value={botDifficulty}
-                      options={BOT_DIFFICULTIES}
-                      labels={BOT_DIFFICULTY_LABEL}
-                      labelId="bot-difficulty-menu-label"
-                      onChange={setBotDifficultyLevel}
-                    />
-                  </div>
-                </div>
-              </div>
               <div className="app-menu-modal__diff-block app-menu-modal__diff-block--game-actions">
                 <div className="app-menu-modal__game-actions-row app-menu-tray__diff-row app-menu-modal__diff-row">
                   <button
@@ -6922,47 +6952,111 @@ export default function App() {
                   </button>
                 </div>
               </div>
+              <div className="app-menu-modal__diff-block app-menu-modal__diff-block--game-settings">
+                <fieldset className="app-menu-modal__section-frame">
+                  <legend className="app-menu-modal__section-frame-title">Game settings</legend>
+                  <div className="app-menu-modal__select-pair-row">
+                    <div className="app-menu-modal__select-pair-col">
+                      <MenuSelectDropdown
+                        title="Card"
+                        value={menuCardId}
+                        options={PLAYABLE_CARD_IDS}
+                        labels={PLAYABLE_CARD_LABEL}
+                        onChange={requestPlayableCard}
+                      />
+                    </div>
+                  </div>
+                  <div className="app-menu-modal__select-pair-row">
+                    <div className="app-menu-modal__select-pair-col">
+                      <MenuSelectDropdown
+                        title="Seat"
+                        value={playAsEastEnabled ? 'east' : 'random'}
+                        options={SEAT_MODES}
+                        labels={SEAT_MODE_LABEL}
+                        onChange={setSeatMode}
+                      />
+                    </div>
+                  </div>
+                  <div className="app-menu-modal__select-pair-row">
+                    <div className="app-menu-modal__select-pair-col">
+                      <MenuSelectDropdown
+                        title="Bots"
+                        value={botDifficulty}
+                        options={BOT_DIFFICULTIES}
+                        labels={BOT_DIFFICULTY_LABEL}
+                        onChange={setBotDifficultyLevel}
+                      />
+                    </div>
+                  </div>
+                </fieldset>
+              </div>
+              <div className="app-menu-modal__diff-block app-menu-modal__diff-block--house-rules">
+                <fieldset className="app-menu-modal__section-frame">
+                  <legend className="app-menu-modal__section-frame-title">House Rules</legend>
+                  <div className="app-menu-modal__select-pair-row">
+                    <div className="app-menu-modal__select-pair-col">
+                      <MenuSelectDropdown
+                        title="10 Jokers"
+                        value={tenJokersEnabled ? 'on' : 'off'}
+                        options={TEN_JOKERS_MODES}
+                        labels={TEN_JOKERS_MODE_LABEL}
+                        onChange={setTenJokersMode}
+                      />
+                    </div>
+                  </div>
+                  <div className="app-menu-modal__select-pair-row">
+                    <div className="app-menu-modal__select-pair-col">
+                      <MenuSelectDropdown
+                        title="Blanks"
+                        value={blankMenuModeFromState(blankTilesEnabled, blankTileCount)}
+                        options={BLANK_MENU_MODES}
+                        labels={BLANK_MENU_MODE_LABEL}
+                        onChange={setBlankMenuMode}
+                      />
+                    </div>
+                  </div>
+                </fieldset>
+              </div>
               <div className="app-menu-modal__diff-block app-menu-modal__diff-block--appearance">
-                <div className="app-menu-modal__select-pair-row">
-                  <div className="app-menu-modal__select-pair-col">
-                    <div className="app-menu-modal__subhead" id="app-theme-menu-label">
-                      Theme
+                <fieldset className="app-menu-modal__section-frame">
+                  <legend className="app-menu-modal__section-frame-title">Visuals</legend>
+                  <div className="app-menu-modal__select-pair-row">
+                    <div className="app-menu-modal__select-pair-col">
+                      <MenuSelectDropdown
+                        title="Theme"
+                        value={appTheme}
+                        options={APP_THEMES}
+                        labels={APP_THEME_LABEL}
+                        onChange={setAppThemeMode}
+                      />
                     </div>
-                    <MenuSelectDropdown
-                      value={appTheme}
-                      options={APP_THEMES}
-                      labels={APP_THEME_LABEL}
-                      labelId="app-theme-menu-label"
-                      onChange={setAppThemeMode}
-                    />
                   </div>
-                  <div className="app-menu-modal__select-pair-col">
-                    <div className="app-menu-modal__subhead" id="tile-graphics-menu-label">
-                      Tile graphics
+                  <div className="app-menu-modal__select-pair-row">
+                    <div className="app-menu-modal__select-pair-col">
+                      <MenuSelectDropdown
+                        title="Tiles"
+                        value={tileGraphics}
+                        options={MENU_TILE_GRAPHICS}
+                        labels={TILE_GRAPHICS_LABEL}
+                        onChange={setTileGraphicsMode}
+                      />
                     </div>
-                    <MenuSelectDropdown
-                      value={tileGraphics}
-                      options={MENU_TILE_GRAPHICS}
-                      labels={TILE_GRAPHICS_LABEL}
-                      labelId="tile-graphics-menu-label"
-                      onChange={setTileGraphicsMode}
-                    />
                   </div>
-                </div>
-                <div
-                  key={tileGraphics}
-                  className="app-menu-modal__tile-graphics-preview"
-                  role="group"
-                  aria-label="Sample tiles for the current tile graphics selection"
-                >
-                  {MENU_TILE_GRAPHICS_PREVIEW.map((spec) => (
-                    <TileFace
-                      key={spec.label}
-                      def={spec.def}
-                      rackSuitStacked
-                    />
-                  ))}
-                </div>
+                  <div
+                    key={tileGraphics}
+                    className="app-menu-modal__tile-graphics-preview"
+                    role="group"
+                    aria-label="Sample tiles for the current tile graphics selection"
+                  >
+                    {MENU_TILE_GRAPHICS_PREVIEW.map((spec) => (
+                      <TileFace
+                        key={spec.label}
+                        def={spec.def}
+                        rackSuitStacked
+                      />
+                    ))}
+                  </div>
+                </fieldset>
               </div>
               {SHOW_SUGGESTED_HAND_FILTERS_IN_MENU ? (
               <div className="app-menu-modal__diff-block app-menu-modal__diff-block--suggested-hand-filters">
@@ -7054,7 +7148,9 @@ export default function App() {
                 </div>
               </div>
               ) : null}
-              <div className="app-menu-modal__diff-block app-menu-modal__diff-block--settings-toggles">
+              <div className="app-menu-modal__diff-block app-menu-modal__diff-block--settings-toggles app-menu-modal__diff-block--helpers">
+                <fieldset className="app-menu-modal__section-frame">
+                  <legend className="app-menu-modal__section-frame-title">Helpers</legend>
                 <div className="app-menu-modal__body-footer app-menu-modal__body-footer--settings-toggles">
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
                   <AppMenuSettingSwitch
@@ -7274,6 +7370,7 @@ export default function App() {
                     {CONCEALED_HAND_REMINDER_LABEL}
                   </span>
                 </div>
+                {SHOW_PLAY_AS_EAST_TOGGLE_IN_MENU ? (
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
                   <AppMenuSettingSwitch
                     labelId="app-menu-label-play-as-east"
@@ -7284,58 +7381,9 @@ export default function App() {
                     {PLAY_AS_EAST_LABEL}
                   </span>
                 </div>
-                <div className="app-menu-modal__row app-menu-modal__row--toggle">
-                  <AppMenuSettingSwitch
-                    labelId="app-menu-label-ten-jokers"
-                    pressed={tenJokersEnabled}
-                    onToggle={toggleTenJokers}
-                  />
-                  <span className="app-menu-modal__label" id="app-menu-label-ten-jokers">
-                    {TEN_JOKERS_LABEL}
-                  </span>
+                ) : null}
                 </div>
-                <div
-                  className="app-menu-modal__row app-menu-modal__row--toggle app-menu-modal__row--blank-tiles"
-                >
-                  <AppMenuSettingSwitch
-                    labelId="app-menu-label-blank-tiles"
-                    pressed={blankTilesEnabled}
-                    onToggle={toggleBlankTiles}
-                  />
-                  <div className="app-menu-modal__blank-tiles-trail">
-                    <span className="app-menu-modal__label" id="app-menu-label-blank-tiles">
-                      {BLANK_TILES_LABEL}
-                    </span>
-                    <div
-                      className="app-menu-modal__blank-tile-counts"
-                      role="radiogroup"
-                      aria-labelledby="app-menu-label-blank-tiles"
-                    >
-                      {BLANK_TILE_COUNT_OPTIONS.map((n) => (
-                        <button
-                          key={n}
-                          type="button"
-                          className={[
-                            'btn',
-                            'app-menu-modal__blank-tile-count-btn',
-                            blankTilesEnabled && blankTileCount === n
-                              ? 'app-menu-modal__blank-tile-count-btn--on'
-                              : '',
-                          ]
-                            .filter(Boolean)
-                            .join(' ')}
-                          role="radio"
-                          aria-checked={blankTilesEnabled && blankTileCount === n}
-                          disabled={!blankTilesEnabled}
-                          onClick={() => setBlankTileCountLevel(n)}
-                        >
-                          {n}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                </div>
+                </fieldset>
               </div>
               <div className="app-menu-modal__diff-block app-menu-modal__diff-block--game-meta">
                 <div className="app-menu-modal__game-actions-row app-menu-tray__diff-row app-menu-modal__diff-row app-menu-modal__game-meta-row">
