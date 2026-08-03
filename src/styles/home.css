@@ -82,8 +82,8 @@
   margin: 0.55rem 0 0;
   font-family: 'Noto Serif', var(--heading), serif;
   font-size: clamp(0.95rem, 2.4vh, 1.2rem);
-  font-weight: 700;
-  color: color-mix(in srgb, #e8edf4 72%, transparent);
+  font-weight: 500;
+  color: color-mix(in srgb, #e8edf4 90%, transparent);
   letter-spacing: 0.04em;
   line-height: 1.2;
 }

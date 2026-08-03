@@ -2,6 +2,15 @@
    work but are not loaded (they were unused or fallback-only). */
 @import './styles/app-background.css';
 
+/* Noto Serif Medium (500) — lobby / home tagline. */
+@font-face {
+  font-family: 'Noto Serif';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../assets/fonts/Noto_Serif/static/NotoSerif-Medium.ttf') format('truetype');
+}
+
 /* Noto Serif Black (900) — rack watermark "Mahj". */
 @font-face {
   font-family: 'Noto Serif';

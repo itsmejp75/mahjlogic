@@ -1989,10 +1989,10 @@ html
   margin: 0;
   font-family: 'Noto Serif', var(--heading), serif;
   font-size: clamp(0.9rem, 2.2vh, 1.15rem);
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.04em;
   line-height: 1.2;
-  color: color-mix(in srgb, #e8edf4 72%, transparent);
+  color: color-mix(in srgb, #e8edf4 90%, transparent);
 }
 
 .app-menu-modal-layer .app-menu-modal .app-menu-modal__lobby-modes {
@@ -2004,11 +2004,16 @@ html
   align-items: stretch;
   justify-content: center;
   gap: 0.55rem;
-  /* Full content width — same as menu body rows (lobby already uses 1.2rem side padding). */
+  box-sizing: border-box;
+  /*
+   * Match menu button content width: body already shares 1.2rem side padding with the lobby;
+   * menu controls also sit inside `.app-menu-modal__diff-block` (0.55rem) + `.app-menu-tray__diff-row` (0.1rem).
+   */
   width: 100%;
   max-width: none;
   min-height: 0;
   margin: 0;
+  padding-inline: 0.65rem;
 }
 
 .app-menu-modal-layer .app-menu-modal .app-menu-modal__lobby-mode-btn,
@@ -2038,10 +2043,22 @@ html
   z-index: 1;
   display: flex;
   flex: 0 0 auto;
+  flex-direction: column;
+  align-items: stretch;
+  box-sizing: border-box;
   width: 100%;
   max-width: none;
   margin: 0;
   padding-top: 0.25rem;
+  padding-inline: 0.65rem;
+  gap: 0.65rem;
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__lobby-footer .app-menu-modal__account-footer {
+  /* Undo lobby button inset so legal/account matches former menu body width. */
+  margin: 0 -0.65rem;
+  margin-top: 0;
+  padding-top: 0.65rem;
 }
 
 .app-menu-modal-layer .app-menu-modal .app-menu-modal__lobby-open {
@@ -2087,7 +2104,29 @@ html body .app .app-menu-modal-layer .app-menu-modal .app-menu-modal__lobby-open
   font-weight: 700;
 }
 
-/* Select card: custom listbox overlays controls below (does not push layout). */
+/* Paired menu dropdowns: title above each, side by side. */
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__select-pair-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.4rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__select-pair-col {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.app-menu-modal-layer .app-menu-modal .app-menu-modal__select-pair-col .app-menu-modal__card-select-row {
+  padding: 0;
+}
+
+/* Menu listbox dropdowns (card / theme / tile graphics): overlay below trigger. */
 .app-menu-modal-layer .app-menu-modal .app-menu-modal__card-select-row {
   width: 100%;
   position: relative;

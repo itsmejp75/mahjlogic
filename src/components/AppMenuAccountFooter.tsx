@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
 import { appMenuOpenApiRef } from '../app/AppMenuOpenContext'
 
-/** Signed-in identity + sign out + legal links at the bottom of the app menu. */
+/** Signed-in identity + sign out + legal links at the bottom of the lobby. */
 export function AppMenuAccountFooter() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()

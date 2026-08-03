@@ -76,13 +76,12 @@ import {
   DEFAULT_TILE_GRAPHICS,
   isIllustrativeTileGraphics,
   isTileGraphics,
-  MENU_TILE_GRAPHICS_ITEMS,
+  MENU_TILE_GRAPHICS,
   TILE_GRAPHICS_LABEL,
   type TileGraphics,
 } from './tiles/tileGraphics'
 import {
   APP_THEMES,
-  APP_THEME_BTN_PREVIEW,
   APP_THEME_LABEL,
   applyAppThemeToDocument,
   isAppTheme,
@@ -170,6 +169,11 @@ const LS_KEY_UNDO = 'mahjlogic.undoEnabled'
 const UNDO_LABEL = 'Undo'
 const LS_KEY_ANIMATIONS = 'mahjlogic.animationsEnabled'
 const ANIMATIONS_LABEL = 'Animations'
+/**
+ * When false, the Animations toggle is omitted from the app menu.
+ * Flip to `true` to restore; storage + setters stay wired for that.
+ */
+const SHOW_ANIMATIONS_TOGGLE_IN_MENU = false
 const LS_KEY_DEAD_HAND_WARNINGS = 'mahjlogic.deadHandWarningsEnabled'
 const DEAD_HAND_WARNINGS_LABEL = 'Dead hand warnings'
 /** Highlight the Mah Jongg rack button when a declaration would succeed (self-draw or on a live discard). */
@@ -603,10 +607,50 @@ function AppMenuSlideShell({
 }) {
   const [lobbyOpen, setLobbyOpen] = useState(false)
   const { menuOpen } = useAppMenuOpen()
+  const slideTrackRef = useRef<HTMLDivElement>(null)
+  const menuPaneRef = useRef<HTMLDivElement>(null)
+  const prevLobbyOpenRef = useRef(lobbyOpen)
 
   useEffect(() => {
     if (!menuOpen) setLobbyOpen(false)
   }, [menuOpen])
+
+  /**
+   * After Menu → Lobby settles, pin the menu body to the top (off-screen) so
+   * Play returns without a mid-slide jump.
+   */
+  useEffect(() => {
+    const wasLobbyOpen = prevLobbyOpenRef.current
+    prevLobbyOpenRef.current = lobbyOpen
+    if (wasLobbyOpen || !lobbyOpen) return
+
+    const track = slideTrackRef.current
+    const body = menuPaneRef.current?.querySelector<HTMLElement>('.app-menu-modal__body')
+    if (!body) return
+
+    let done = false
+    const resetScroll = () => {
+      if (done) return
+      done = true
+      body.scrollTop = 0
+    }
+
+    if (!track) {
+      resetScroll()
+      return
+    }
+
+    const onEnd = (event: TransitionEvent) => {
+      if (event.target !== track || event.propertyName !== 'transform') return
+      resetScroll()
+    }
+    track.addEventListener('transitionend', onEnd)
+    const fallbackId = window.setTimeout(resetScroll, 700)
+    return () => {
+      track.removeEventListener('transitionend', onEnd)
+      window.clearTimeout(fallbackId)
+    }
+  }, [lobbyOpen])
 
   return (
     <div
@@ -620,6 +664,7 @@ function AppMenuSlideShell({
       <LandingTileAtmosphere className="app-menu-modal__lobby-tiles" />
       <div className="app-menu-modal__slide-viewport">
         <div
+          ref={slideTrackRef}
           className={[
             'app-menu-modal__slide-track',
             lobbyOpen ? 'app-menu-modal__slide-track--lobby' : '',
@@ -681,9 +726,11 @@ function AppMenuSlideShell({
               >
                 Play
               </button>
+              <AppMenuAccountFooter />
             </div>
           </div>
           <div
+            ref={menuPaneRef}
             className="app-menu-modal__menu-pane"
             aria-hidden={lobbyOpen}
             {...(lobbyOpen ? ({ inert: '' } as Record<string, string>) : {})}
@@ -725,13 +772,22 @@ function AppMenuSlideShell({
   )
 }
 
-/** Custom card picker — native `<select>` popups cannot be centered with the trigger. */
-function MenuPlayableCardSelect({
+/**
+ * Menu listbox dropdown — native `<select>` popups cannot be centered with the trigger.
+ * Reuses the Select card chrome (`.app-menu-modal__card-select-*`).
+ */
+function MenuSelectDropdown<T extends string>({
   value,
+  options,
+  labels,
+  labelId,
   onChange,
 }: {
-  value: PlayableCardId
-  onChange: (next: PlayableCardId) => void
+  value: T
+  options: readonly T[]
+  labels: Record<T, string>
+  labelId: string
+  onChange: (next: T) => void
 }) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -786,11 +842,11 @@ function MenuPlayableCardSelect({
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-controls={listId}
-          aria-labelledby="app-menu-playable-card-label"
+          aria-labelledby={labelId}
           onClick={() => setOpen((wasOpen) => !wasOpen)}
         >
           <span className="app-menu-modal__card-select-trigger-label">
-            {PLAYABLE_CARD_LABEL[value]}
+            {labels[value]}
           </span>
         </button>
         {open ? (
@@ -798,9 +854,9 @@ function MenuPlayableCardSelect({
             id={listId}
             className="app-menu-modal__card-select-menu"
             role="listbox"
-            aria-labelledby="app-menu-playable-card-label"
+            aria-labelledby={labelId}
           >
-            {PLAYABLE_CARD_IDS.map((id) => {
+            {options.map((id) => {
               const selected = id === value
               return (
                 <li
@@ -819,7 +875,7 @@ function MenuPlayableCardSelect({
                   }}
                 >
                   <span className="app-menu-modal__card-select-option-label">
-                    {PLAYABLE_CARD_LABEL[id]}
+                    {labels[id]}
                   </span>
                 </li>
               )
@@ -6811,10 +6867,32 @@ export default function App() {
           >
             <div className="app-menu-modal__body">
               <div className="app-menu-modal__diff-block">
-                <div className="app-menu-modal__subhead" id="app-menu-playable-card-label">
-                  Select card
+                <div className="app-menu-modal__select-pair-row">
+                  <div className="app-menu-modal__select-pair-col">
+                    <div className="app-menu-modal__subhead" id="app-menu-playable-card-label">
+                      Select card
+                    </div>
+                    <MenuSelectDropdown
+                      value={menuCardId}
+                      options={PLAYABLE_CARD_IDS}
+                      labels={PLAYABLE_CARD_LABEL}
+                      labelId="app-menu-playable-card-label"
+                      onChange={requestPlayableCard}
+                    />
+                  </div>
+                  <div className="app-menu-modal__select-pair-col">
+                    <div className="app-menu-modal__subhead" id="bot-difficulty-menu-label">
+                      Bot skill
+                    </div>
+                    <MenuSelectDropdown
+                      value={botDifficulty}
+                      options={BOT_DIFFICULTIES}
+                      labels={BOT_DIFFICULTY_LABEL}
+                      labelId="bot-difficulty-menu-label"
+                      onChange={setBotDifficultyLevel}
+                    />
+                  </div>
                 </div>
-                <MenuPlayableCardSelect value={menuCardId} onChange={requestPlayableCard} />
               </div>
               <div className="app-menu-modal__diff-block app-menu-modal__diff-block--game-actions">
                 <div className="app-menu-modal__game-actions-row app-menu-tray__diff-row app-menu-modal__diff-row">
@@ -6844,102 +6922,32 @@ export default function App() {
                   </button>
                 </div>
               </div>
-              <div className="app-menu-modal__diff-block">
-                <div className="app-menu-modal__subhead" id="bot-difficulty-menu-label">
-                  Bot skill
-                </div>
-                <div
-                  className="app-menu-tray__diff-row app-menu-modal__diff-row"
-                  role="radiogroup"
-                  aria-labelledby="bot-difficulty-menu-label"
-                >
-                  {BOT_DIFFICULTIES.map((d) => (
-                    <button
-                      key={d}
-                      type="button"
-                      className={['btn', 'app-menu-tray__diff-btn', botDifficulty === d ? 'app-menu-tray__diff-btn--on' : ''].filter(Boolean).join(' ')}
-                      role="radio"
-                      aria-checked={botDifficulty === d}
-                      onClick={() => setBotDifficultyLevel(d)}
-                    >
-                      {BOT_DIFFICULTY_LABEL[d]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="app-menu-modal__diff-block">
-                <div className="app-menu-modal__subhead" id="app-theme-menu-label">
-                  Theme
-                </div>
-                <div
-                  className="app-menu-tray__diff-row app-menu-modal__diff-row"
-                  role="radiogroup"
-                  aria-labelledby="app-theme-menu-label"
-                >
-                  {APP_THEMES.map((t) => {
-                    const preview = APP_THEME_BTN_PREVIEW[t]
-                    return (
-                      <button
-                        key={t}
-                        type="button"
-                        className={[
-                          'btn',
-                          'app-menu-tray__diff-btn',
-                          'app-menu-modal__theme-btn',
-                          `app-menu-modal__theme-btn--${t}`,
-                          appTheme === t ? 'app-menu-tray__diff-btn--on' : '',
-                        ]
-                          .filter(Boolean)
-                          .join(' ')}
-                        style={
-                          {
-                            '--theme-btn-face': preview.face,
-                            '--theme-btn-face-pressed': preview.facePressed,
-                            '--theme-btn-border': preview.border,
-                          } as CSSProperties
-                        }
-                        role="radio"
-                        aria-checked={appTheme === t}
-                        onClick={() => setAppThemeMode(t)}
-                      >
-                        {APP_THEME_LABEL[t]}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-              <div className="app-menu-modal__diff-block app-menu-modal__diff-block--tile-graphics">
-                <div className="app-menu-modal__tile-graphics-category">
-                  <span
-                    className="app-menu-modal__tile-graphics-category__label"
-                    id="tile-graphics-menu-label"
-                  >
-                    Tile graphics
-                  </span>
-                </div>
-                <div
-                  className="app-menu-modal__tile-graphics-modes app-menu-tray__diff-row app-menu-modal__diff-row"
-                  role="radiogroup"
-                  aria-labelledby="tile-graphics-menu-label"
-                >
-                  {MENU_TILE_GRAPHICS_ITEMS.map((item) => (
-                    <button
-                      key={item.graphics}
-                      type="button"
-                      className={[
-                        'btn',
-                        'app-menu-tray__diff-btn',
-                        tileGraphics === item.graphics ? 'app-menu-tray__diff-btn--on' : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                      role="radio"
-                      aria-checked={tileGraphics === item.graphics}
-                      onClick={() => setTileGraphicsMode(item.graphics)}
-                    >
-                      {TILE_GRAPHICS_LABEL[item.graphics]}
-                    </button>
-                  ))}
+              <div className="app-menu-modal__diff-block app-menu-modal__diff-block--appearance">
+                <div className="app-menu-modal__select-pair-row">
+                  <div className="app-menu-modal__select-pair-col">
+                    <div className="app-menu-modal__subhead" id="app-theme-menu-label">
+                      Theme
+                    </div>
+                    <MenuSelectDropdown
+                      value={appTheme}
+                      options={APP_THEMES}
+                      labels={APP_THEME_LABEL}
+                      labelId="app-theme-menu-label"
+                      onChange={setAppThemeMode}
+                    />
+                  </div>
+                  <div className="app-menu-modal__select-pair-col">
+                    <div className="app-menu-modal__subhead" id="tile-graphics-menu-label">
+                      Tile graphics
+                    </div>
+                    <MenuSelectDropdown
+                      value={tileGraphics}
+                      options={MENU_TILE_GRAPHICS}
+                      labels={TILE_GRAPHICS_LABEL}
+                      labelId="tile-graphics-menu-label"
+                      onChange={setTileGraphicsMode}
+                    />
+                  </div>
                 </div>
                 <div
                   key={tileGraphics}
@@ -7058,6 +7066,7 @@ export default function App() {
                     {UNDO_LABEL}
                   </span>
                 </div>
+                {SHOW_ANIMATIONS_TOGGLE_IN_MENU ? (
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
                   <AppMenuSettingSwitch
                     labelId="app-menu-label-animations"
@@ -7068,6 +7077,7 @@ export default function App() {
                     {ANIMATIONS_LABEL}
                   </span>
                 </div>
+                ) : null}
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
                   <AppMenuSettingSwitch
                     labelId="app-menu-label-bot-wins"
@@ -7351,7 +7361,6 @@ export default function App() {
                   </button>
                 </div>
               </div>
-              <AppMenuAccountFooter />
             </div>
           </AppMenuSlideShell>
         </div>
