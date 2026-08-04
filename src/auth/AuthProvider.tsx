@@ -74,11 +74,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         nonce,
       })
       if (error) return { error: error.message }
+      // Eager session so protected routes never mount with a stale signed-out context.
       if (data.session) setSession(data.session)
       return { error: null }
     },
     [],
   )
+
+  const signInWithEmail = useCallback(async (email: string, password: string) => {
+    const supabase = getSupabase()
+    if (!supabase) return { error: 'Supabase is not configured.' }
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) return { error: error.message }
+    if (data.session) setSession(data.session)
+    return { error: null }
+  }, [])
+
+  const signUpWithEmail = useCallback(async (email: string, password: string) => {
+    const supabase = getSupabase()
+    if (!supabase) return { error: 'Supabase is not configured.', needsConfirmation: false }
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: authRedirectTo('/auth/callback') },
+    })
+    if (error) return { error: error.message, needsConfirmation: false }
+    if (data.session) setSession(data.session)
+    const needsConfirmation = Boolean(data.user) && !data.session
+    return { error: null, needsConfirmation }
+  }, [])
+
+  const signInWithProvider = useCallback(
+    async (provider: OAuthProvider) => {
+      const supabase = getSupabase()
+      if (!supabase) return { error: 'Supabase is not configured.' }
+      if (provider === 'google') {
+        const result = await signInWithGoogleOAuthRedirect()
+        return { error: result.error }
+      }
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: authRedirectTo('/auth/callback'),
+          skipBrowserRedirect: true,
+        },
+      })
+      if (error) return { error: error.message }
+      if (data.url) window.location.assign(data.url)
+      return { error: null }
+    },
+    [signInWithGoogleOAuthRedirect],
+  )
+
+  const resetPasswordForEmail = useCallback(async (email: string) => {
+    const supabase = getSupabase()
+    if (!supabase) return { error: 'Supabase is not configured.' }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: authRedirectTo('/auth/callback'),
+    })
+    return { error: error?.message ?? null }
+  }, [])
+
+  const signOut = useCallback(async () => {
+    const supabase = getSupabase()
+    if (!supabase) return
+    await supabase.auth.signOut()
+  }, [])
 
   useEffect(() => {
     const supabase = getSupabase()
@@ -112,57 +173,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     session,
     user: session?.user ?? null,
-    async signInWithEmail(email, password) {
-      const supabase = getSupabase()
-      if (!supabase) return { error: 'Supabase is not configured.' }
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      return { error: error?.message ?? null }
-    },
-    async signUpWithEmail(email, password) {
-      const supabase = getSupabase()
-      if (!supabase) return { error: 'Supabase is not configured.', needsConfirmation: false }
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: authRedirectTo('/auth/callback') },
-      })
-      if (error) return { error: error.message, needsConfirmation: false }
-      const needsConfirmation = Boolean(data.user) && !data.session
-      return { error: null, needsConfirmation }
-    },
-    async signInWithProvider(provider) {
-      const supabase = getSupabase()
-      if (!supabase) return { error: 'Supabase is not configured.' }
-      if (provider === 'google') {
-        const result = await signInWithGoogleOAuthRedirect()
-        return { error: result.error }
-      }
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: authRedirectTo('/auth/callback'),
-          skipBrowserRedirect: true,
-        },
-      })
-      if (error) return { error: error.message }
-      if (data.url) window.location.assign(data.url)
-      return { error: null }
-    },
+    signInWithEmail,
+    signUpWithEmail,
+    signInWithProvider,
     signInWithGoogle: signInWithGoogleOAuthRedirect,
     signInWithGoogleIdToken,
-    async resetPasswordForEmail(email) {
-      const supabase = getSupabase()
-      if (!supabase) return { error: 'Supabase is not configured.' }
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: authRedirectTo('/auth/callback'),
-      })
-      return { error: error?.message ?? null }
-    },
-    async signOut() {
-      const supabase = getSupabase()
-      if (!supabase) return
-      await supabase.auth.signOut()
-    },
+    resetPasswordForEmail,
+    signOut,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

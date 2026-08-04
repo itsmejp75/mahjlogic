@@ -143,7 +143,6 @@ const BOT_DIFFICULTY_LABEL: Record<BotDifficulty, string> = {
 
 const LS_KEY_BOT_WINS = 'mahjlogic.botWinsEnabled'
 
-const BOT_WINS_LABEL = 'Bot wins'
 /** When false, rack / table action buttons use neutral gray (like Sort) instead of teal, purple, etc. */
 const LS_KEY_COLOR_BUTTONS = 'mahjlogic.colorButtonsEnabled'
 const LS_KEY_BOT_DIFFICULTY = 'mahjlogic.botDifficulty'
@@ -606,27 +605,48 @@ function ResumePromptOnMenuClose({
   return null
 }
 
-/** Menu modal with Lobby slide panel — owns lobbyOpen so App does not re-render on toggle. */
+/** Settings modal with Menu (lobby) slide panel — owns lobbyOpen so App does not re-render on toggle. */
 function AppMenuSlideShell({
   children,
   onOpenRackChecker,
+  onOpenStats,
+  onResume,
+  onNewGame,
+  openToMenu = false,
+  onOpenToMenuApplied,
 }: {
   children: ReactNode
   onOpenRackChecker: () => void
+  onOpenStats: () => void
+  onResume: () => void
+  onNewGame: () => void
+  /** When the modal opens, show the Menu pane first (e.g. Resume / New Game). */
+  openToMenu?: boolean
+  /** Fired after `openToMenu` is applied so one-shot parents can clear their flag. */
+  onOpenToMenuApplied?: () => void
 }) {
-  const [lobbyOpen, setLobbyOpen] = useState(false)
   const { menuOpen } = useAppMenuOpen()
+  const [lobbyOpen, setLobbyOpen] = useState(() => menuOpen && openToMenu)
   const slideTrackRef = useRef<HTMLDivElement>(null)
   const menuPaneRef = useRef<HTMLDivElement>(null)
   const prevLobbyOpenRef = useRef(lobbyOpen)
+  const onOpenToMenuAppliedRef = useRef(onOpenToMenuApplied)
+  onOpenToMenuAppliedRef.current = onOpenToMenuApplied
 
   useEffect(() => {
-    if (!menuOpen) setLobbyOpen(false)
-  }, [menuOpen])
+    if (!menuOpen) {
+      setLobbyOpen(false)
+      return
+    }
+    if (openToMenu) {
+      setLobbyOpen(true)
+      onOpenToMenuAppliedRef.current?.()
+    }
+  }, [menuOpen, openToMenu])
 
   /**
-   * After Menu → Lobby settles, pin the menu body to the top (off-screen) so
-   * Play returns without a mid-slide jump.
+   * After Settings → Menu settles, pin the settings body to the top (off-screen) so
+   * returning to Settings does not mid-slide jump.
    */
   useEffect(() => {
     const wasLobbyOpen = prevLobbyOpenRef.current
@@ -667,9 +687,9 @@ function AppMenuSlideShell({
       className={['app-menu-modal', lobbyOpen ? 'app-menu-modal--lobby' : ''].filter(Boolean).join(' ')}
       role="dialog"
       aria-modal="true"
-      aria-label={lobbyOpen ? 'Lobby' : 'Menu'}
+      aria-label={lobbyOpen ? 'Menu' : 'Game Settings'}
     >
-      {/* Outside the slide track so it stays put across Lobby ↔ Menu. */}
+      {/* Outside the slide track so it stays put across Menu ↔ Settings. */}
       <LandingTileAtmosphere className="app-menu-modal__lobby-tiles" />
       <div className="app-menu-modal__slide-viewport">
         <div
@@ -686,7 +706,34 @@ function AppMenuSlideShell({
             aria-hidden={!lobbyOpen}
             {...(!lobbyOpen ? ({ inert: '' } as Record<string, string>) : {})}
           >
-            <div className="app-menu-modal__lobby-modes" aria-label="Lobby">
+            <div className="app-menu-modal__lobby-modes" aria-label="Menu">
+              <div className="app-menu-modal__diff-block app-menu-modal__diff-block--game-actions">
+                <div className="app-menu-modal__section-frame">
+                  <div className="app-menu-modal__game-actions-row app-menu-tray__diff-row app-menu-modal__diff-row">
+                    <button
+                      type="button"
+                      className="btn app-menu-tray__diff-btn app-menu-modal__new-game"
+                      onClick={onNewGame}
+                    >
+                      New Game
+                    </button>
+                    <button
+                      type="button"
+                      className="btn app-menu-tray__diff-btn"
+                      onClick={onResume}
+                    >
+                      Resume
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn app-menu-tray__diff-btn app-menu-modal__lobby-play"
+                onClick={() => setLobbyOpen(false)}
+              >
+                Game Settings
+              </button>
               <button
                 type="button"
                 className="btn app-menu-tray__diff-btn app-menu-modal__lobby-mode-btn"
@@ -701,11 +748,13 @@ function AppMenuSlideShell({
               <button
                 type="button"
                 className="btn app-menu-tray__diff-btn app-menu-modal__lobby-mode-btn"
-                disabled
-                title="Coming soon"
+                onClick={() => {
+                  setLobbyOpen(false)
+                  appMenuOpenApiRef.current.setMenuOpen(false)
+                  onOpenStats()
+                }}
               >
-                Rack of the Day
-                <span className="app-menu-modal__lobby-soon">Soon</span>
+                Stats
               </button>
               <button
                 type="button"
@@ -718,13 +767,6 @@ function AppMenuSlideShell({
               </button>
             </div>
             <div className="app-menu-modal__lobby-footer">
-              <button
-                type="button"
-                className="btn app-menu-tray__diff-btn app-menu-modal__lobby-play"
-                onClick={() => setLobbyOpen(false)}
-              >
-                Play
-              </button>
               <AppMenuAccountFooter />
             </div>
           </div>
@@ -738,22 +780,13 @@ function AppMenuSlideShell({
               <button
                 type="button"
                 className="btn app-menu-tray__diff-btn app-menu-modal__lobby-open"
-                aria-label="Home"
-                title="Home"
+                aria-label="Menu"
+                title="Menu"
                 onClick={() => setLobbyOpen(true)}
               >
-                <svg
-                  className="app-menu-modal__lobby-home-icon"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                  focusable="false"
-                >
-                  <path
-                    fill="currentColor"
-                    d="M12 3.2 3.8 10.2c-.3.25-.3.7 0 .95l.7.55c.25.2.6.2.85 0L12 6.55l6.65 5.15c.25.2.6.2.85 0l.7-.55c.3-.25.3-.7 0-.95L12 3.2Zm-5.2 8.5V19c0 .55.45 1 1 1h3.1v-4.2c0-.4.35-.75.75-.75h2.7c.4 0 .75.35.75.75V20h3.1c.55 0 1-.45 1-1v-7.3L12 7.85 6.8 11.7Z"
-                  />
-                </svg>
+                <span className="app-menu-modal__lobby-open-label">Menu</span>
               </button>
+              <h2 className="app-menu-modal__title">Game Settings</h2>
               <button
                 type="button"
                 className="app-menu-modal__close"
@@ -890,6 +923,14 @@ function MenuSelectDropdown<T extends string>({
       </div>
     </div>
   )
+}
+
+/** Bot wins menu dropdown — Enabled / Disabled. */
+const BOT_WINS_MODES = ['enabled', 'disabled'] as const
+type BotWinsMode = (typeof BOT_WINS_MODES)[number]
+const BOT_WINS_MODE_LABEL: Record<BotWinsMode, string> = {
+  enabled: 'Enabled',
+  disabled: 'Disabled',
 }
 
 /** 10 Jokers menu dropdown — On / Off. */
@@ -2306,6 +2347,8 @@ export default function App() {
   /** Home → Play (new): deal in useLayoutEffect before first paint — do not wait on cloud hydrate. */
   const eagerNewDealDoneRef = useRef(false)
   const [rackCheckerOpen, setRackCheckerOpen] = useState(false)
+  /** One-shot: reopen the Menu pane after closing Rack Checker (not Game Settings). */
+  const [openMenuToLobby, setOpenMenuToLobby] = useState(false)
   const replayOpeningDeckRef = useRef<TileInstance[] | null>(null)
   const gameResultRecordedRef = useRef(false)
   /** Helper tools actually used during the current hand (reset on each new deal). */
@@ -2576,9 +2619,10 @@ export default function App() {
     applyAppThemeToDocument(appTheme)
   }, [appTheme])
 
-  const toggleBotWins = useCallback(() => {
+  const setBotWinsMode = useCallback((mode: BotWinsMode) => {
+    const next = mode === 'enabled'
     setBotWinsEnabled((v) => {
-      const next = !v
+      if (v === next) return v
       try {
         localStorage.setItem(LS_KEY_BOT_WINS, next ? 'true' : 'false')
       } catch {
@@ -5927,12 +5971,13 @@ export default function App() {
     clearPlayEnterFastPath()
   }, [user, sessionReady, resumePrompt, sessionBoot])
 
-  /** Reload / login: open the menu after the load screen (Resume / New Game live there). */
+  /** Reload / login: open the main Menu (lobby) after the load screen. */
   useEffect(() => {
     if (!pendingOpenMenuAfterBootRef.current) return
     if (!sessionReady && resumePrompt == null) return
     if (sessionBoot != null && !sessionBoot.bootLoaderDismissed) return
     pendingOpenMenuAfterBootRef.current = false
+    setOpenMenuToLobby(true)
     appMenuOpenApiRef.current.setMenuOpen(true)
   }, [sessionReady, resumePrompt, sessionBoot, sessionBoot?.bootLoaderDismissed])
 
@@ -6922,36 +6967,25 @@ export default function App() {
           />
           <AppMenuSlideShell
             onOpenRackChecker={() => setRackCheckerOpen(true)}
+            onOpenStats={() => setGameMetaPanel('stats')}
+            openToMenu={resumePrompt != null || openMenuToLobby}
+            onOpenToMenuApplied={() => {
+              if (openMenuToLobby) setOpenMenuToLobby(false)
+            }}
+            onResume={() => {
+              if (resumePrompt != null) confirmContinueSavedGame()
+              appMenuOpenApiRef.current.setMenuOpen(false)
+            }}
+            onNewGame={() => {
+              if (resumePrompt != null) {
+                declineResumeStartNewGame()
+                appMenuOpenApiRef.current.setMenuOpen(false)
+                return
+              }
+              if (newHand()) appMenuOpenApiRef.current.setMenuOpen(false)
+            }}
           >
             <div className="app-menu-modal__body">
-              <div className="app-menu-modal__diff-block app-menu-modal__diff-block--game-actions">
-                <div className="app-menu-modal__game-actions-row app-menu-tray__diff-row app-menu-modal__diff-row">
-                  <button
-                    type="button"
-                    className="btn app-menu-tray__diff-btn"
-                    onClick={() => {
-                      if (resumePrompt != null) confirmContinueSavedGame()
-                      appMenuOpenApiRef.current.setMenuOpen(false)
-                    }}
-                  >
-                    Resume
-                  </button>
-                  <button
-                    type="button"
-                    className="btn app-menu-tray__diff-btn app-menu-modal__new-game"
-                    onClick={() => {
-                      if (resumePrompt != null) {
-                        declineResumeStartNewGame()
-                        appMenuOpenApiRef.current.setMenuOpen(false)
-                        return
-                      }
-                      if (newHand()) appMenuOpenApiRef.current.setMenuOpen(false)
-                    }}
-                  >
-                    New Game
-                  </button>
-                </div>
-              </div>
               <div className="app-menu-modal__diff-block app-menu-modal__diff-block--game-settings">
                 <fieldset className="app-menu-modal__section-frame">
                   <legend className="app-menu-modal__section-frame-title">Game settings</legend>
@@ -6985,6 +7019,17 @@ export default function App() {
                         options={BOT_DIFFICULTIES}
                         labels={BOT_DIFFICULTY_LABEL}
                         onChange={setBotDifficultyLevel}
+                      />
+                    </div>
+                  </div>
+                  <div className="app-menu-modal__select-pair-row">
+                    <div className="app-menu-modal__select-pair-col">
+                      <MenuSelectDropdown
+                        title="Bot wins"
+                        value={botWinsEnabled ? 'enabled' : 'disabled'}
+                        options={BOT_WINS_MODES}
+                        labels={BOT_WINS_MODE_LABEL}
+                        onChange={setBotWinsMode}
                       />
                     </div>
                   </div>
@@ -7174,19 +7219,6 @@ export default function App() {
                   </span>
                 </div>
                 ) : null}
-                <div className="app-menu-modal__row app-menu-modal__row--toggle">
-                  <AppMenuSettingSwitch
-                    labelId="app-menu-label-bot-wins"
-                    pressed={botWinsEnabled}
-                    onToggle={toggleBotWins}
-                  />
-                  <span
-                    className="app-menu-modal__label"
-                    id="app-menu-label-bot-wins"
-                  >
-                    {BOT_WINS_LABEL}
-                  </span>
-                </div>
                 {SHOW_SUGGESTED_HANDS_TRAY_TOGGLE_IN_MENU ? (
                 <div className="app-menu-modal__row app-menu-modal__row--toggle">
                   <AppMenuSettingSwitch
@@ -7384,30 +7416,6 @@ export default function App() {
                 ) : null}
                 </div>
                 </fieldset>
-              </div>
-              <div className="app-menu-modal__diff-block app-menu-modal__diff-block--game-meta">
-                <div className="app-menu-modal__game-actions-row app-menu-tray__diff-row app-menu-modal__diff-row app-menu-modal__game-meta-row">
-                  <button
-                    type="button"
-                    className="btn app-menu-tray__diff-btn"
-                    onClick={() => {
-                      appMenuOpenApiRef.current.setMenuOpen(false)
-                      setGameMetaPanel('history')
-                    }}
-                  >
-                    History
-                  </button>
-                  <button
-                    type="button"
-                    className="btn app-menu-tray__diff-btn"
-                    onClick={() => {
-                      appMenuOpenApiRef.current.setMenuOpen(false)
-                      setGameMetaPanel('stats')
-                    }}
-                  >
-                    Stats
-                  </button>
-                </div>
               </div>
             </div>
           </AppMenuSlideShell>
@@ -8217,6 +8225,7 @@ export default function App() {
         overlay
         onClose={() => {
           setRackCheckerOpen(false)
+          setOpenMenuToLobby(true)
           appMenuOpenApiRef.current.setMenuOpen(true)
         }}
       />

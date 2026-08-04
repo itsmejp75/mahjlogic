@@ -5,9 +5,10 @@ import {
   useState,
   type FormEvent,
 } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import watermarkSrc from '../assets/mahjlogic-watermark.svg?url'
 import { applyAppThemeToDocument, DEFAULT_APP_THEME } from '../app/appTheme'
+import { AuthThemeLoading } from '../auth/AuthThemeLoading'
 import { useAuth } from '../auth/AuthProvider'
 import {
   isGoogleIdentityConfigured,
@@ -43,7 +44,6 @@ function GoogleMark() {
 }
 
 export function LandingPage() {
-  const navigate = useNavigate()
   const {
     configured,
     loading,
@@ -59,6 +59,8 @@ export function LandingPage() {
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [googleBusy, setGoogleBusy] = useState(false)
+  /** Stay on the Mahj Logic loader after success until auth context redirects to /play. */
+  const [enteringApp, setEnteringApp] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
   const [gisReady, setGisReady] = useState(false)
@@ -76,7 +78,7 @@ export function LandingPage() {
   }
 
   useEffect(() => {
-    if (!useGis || mode === 'forgot' || user) {
+    if (!useGis || mode === 'forgot' || user || enteringApp) {
       setGisReady(false)
       return
     }
@@ -97,10 +99,12 @@ export function LandingPage() {
                 const { error: googleError } = await signInWithGoogleIdToken(credential, nonce)
                 if (googleError) {
                   setError(googleError)
+                  setGoogleBusy(false)
                   return
                 }
-                navigate('/play', { replace: true })
-              } finally {
+                // Declarative redirect once `user` is set — avoid /play before context commits.
+                setEnteringApp(true)
+              } catch {
                 setGoogleBusy(false)
               }
             })()
@@ -124,10 +128,14 @@ export function LandingPage() {
       unmount?.()
       setGisReady(false)
     }
-  }, [useGis, mode, user, navigate, signInWithGoogleIdToken])
+  }, [useGis, mode, user, enteringApp, signInWithGoogleIdToken])
 
   if (!loading && user) {
     return <Navigate to="/play" replace />
+  }
+
+  if (enteringApp) {
+    return <AuthThemeLoading />
   }
 
   async function onSubmit(e: FormEvent) {
@@ -161,7 +169,7 @@ export function LandingPage() {
           setError(signInError)
           return
         }
-        navigate('/play', { replace: true })
+        setEnteringApp(true)
         return
       }
 
@@ -175,7 +183,7 @@ export function LandingPage() {
         setMode('sign-in')
         return
       }
-      navigate('/play', { replace: true })
+      setEnteringApp(true)
     } finally {
       setBusy(false)
     }
@@ -201,8 +209,11 @@ export function LandingPage() {
       return
     }
     if (redirected) return
+    if (signedIn) {
+      setEnteringApp(true)
+      return
+    }
     setGoogleBusy(false)
-    if (signedIn) navigate('/play', { replace: true })
   }
 
   const submitLabel =

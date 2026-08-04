@@ -89,6 +89,15 @@
   white-space: nowrap;
 }
 
+/* Settings cog — scale with the action-row control face. */
+.app-bottom-center-controls__menu-btn-icon {
+  display: block;
+  width: 1.15em;
+  height: 1.15em;
+  flex: 0 0 auto;
+  pointer-events: none;
+}
+
 /* Two- and three-slot hand controls share one label scale. */
 .panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c3-4,
 .panel--hand .rack-bottom-bar--tile-grid .btn.rack-bottom-tile-cell--c4-5,

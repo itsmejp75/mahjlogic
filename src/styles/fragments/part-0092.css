@@ -177,7 +177,7 @@
   z-index: 0;
 }
 
-/* Lobby ↔ menu vertical slide (lobby above; closed track shows menu). */
+/* Menu ↔ Settings vertical slide (Menu above; closed track shows Settings). */
 .app-menu-modal__slide-viewport {
   position: relative;
   /* Above stationary tile wallpaper (z-index 1). */
@@ -194,7 +194,7 @@
   width: 100%;
   height: 200%;
   transform: translateY(-50%);
-  /* Lobby ↔ Menu: ease-in start + ease-out settle (both directions). */
+  /* Menu ↔ Settings: ease-in start + ease-out settle (both directions). */
   transition: transform 0.62s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: transform;
 }

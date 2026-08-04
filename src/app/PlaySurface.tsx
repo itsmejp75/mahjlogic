@@ -702,11 +702,14 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                               />
                               <button
                                 type="button"
-                                className="btn btn--rack-neutral rack-bottom-tile-cell rack-bottom-tile-cell--c3"
+                                className="btn btn--rack-neutral rack-bottom-tile-cell rack-bottom-tile-cell--c3 rack-bottom-tile-cell--new-game"
                                 onClick={newHand}
-                                aria-label="New game"
+                                aria-label="New Game"
                               >
-                                New
+                                <span className="rack-bottom-tile-cell__stack" aria-hidden="true">
+                                  <span>New</span>
+                                  <span>Game</span>
+                                </span>
                               </button>
                               {showSuggestedHandsPanel ? (
                                 <>
@@ -964,11 +967,14 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                 />
                                 <button
                                   type="button"
-                                  className="btn btn--rack-neutral rack-bottom-tile-cell rack-bottom-tile-cell--c3"
+                                  className="btn btn--rack-neutral rack-bottom-tile-cell rack-bottom-tile-cell--c3 rack-bottom-tile-cell--new-game"
                                   onClick={newHand}
-                                  aria-label="New game"
+                                  aria-label="New Game"
                                 >
-                                  New
+                                  <span className="rack-bottom-tile-cell__stack" aria-hidden="true">
+                                    <span>New</span>
+                                    <span>Game</span>
+                                  </span>
                                 </button>
                                 {showSuggestedHandsPanel ? (
                                   <>

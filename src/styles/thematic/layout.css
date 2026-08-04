@@ -2089,12 +2089,16 @@
 .app-menu-modal__close {
   flex-shrink: 0;
   box-sizing: border-box;
-  min-width: 2.75rem;
-  min-height: 2.75rem;
+  width: 2.5rem;
+  min-width: 2.5rem;
+  max-width: 2.5rem;
+  height: 2.5rem;
+  min-height: 2.5rem;
+  max-height: 2.5rem;
   margin: 0;
   padding: 0;
   border: 1px solid var(--app-menu-rim-hairline, color-mix(in srgb, var(--color-white) 20%, #1a1d22));
-  border-radius: 0.45rem;
+  border-radius: var(--rack-tile-btn-border-radius);
   background: var(--app-menu-sort-surface, var(--color-slate-mid));
   font: inherit;
   font-size: 1.6rem;
@@ -2172,7 +2176,7 @@
 .app-menu-modal__diff-block {
   margin: 0;
   padding: 0.4rem 0.55rem 0.5rem;
-  border-radius: 0.55rem;
+  border-radius: var(--rack-tile-btn-border-radius);
   border: 1px solid color-mix(in srgb, var(--border) 50%, var(--text-muted) 50%);
   background: color-mix(in srgb, var(--fg) 6.5%, var(--bg-elevated) 93.5%);
   box-shadow:
