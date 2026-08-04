@@ -706,10 +706,7 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                 onClick={newHand}
                                 aria-label="New Game"
                               >
-                                <span className="rack-bottom-tile-cell__stack" aria-hidden="true">
-                                  <span>New</span>
-                                  <span>Game</span>
-                                </span>
+                                New
                               </button>
                               {showSuggestedHandsPanel ? (
                                 <>
@@ -971,10 +968,7 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                                   onClick={newHand}
                                   aria-label="New Game"
                                 >
-                                  <span className="rack-bottom-tile-cell__stack" aria-hidden="true">
-                                    <span>New</span>
-                                    <span>Game</span>
-                                  </span>
+                                  New
                                 </button>
                                 {showSuggestedHandsPanel ? (
                                   <>

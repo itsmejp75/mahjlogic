@@ -37,6 +37,26 @@ export function setLeagueCardEntitled(on: boolean): void {
   }
 }
 
+/**
+ * Play Hub monetization: Sample is always free; NMJL years need a paid unlock.
+ * Until billing ships, bundled builds stay playable. Set the entitlement key to
+ * `0` to preview the locked hub UI, or `1` to force unlock on stub builds.
+ */
+export function hasNmjlPlayAccess(): boolean {
+  try {
+    const v = localStorage.getItem(LS_KEY_LEAGUE_CARD_ENTITLED)
+    if (v === '0') return false
+    if (v === '1') return true
+  } catch {
+    /* ignore */
+  }
+  return isCardBookBundled()
+}
+
+export function canPlayCardId(id: 'mock' | '2025' | '2026'): boolean {
+  return id === 'mock' || hasNmjlPlayAccess()
+}
+
 /** When false, UI must not put hand lines like `FF 11 22 33…` into the DOM or aria labels. */
 export function showCardHandNotation(): boolean {
   return isLeagueCardEntitled()

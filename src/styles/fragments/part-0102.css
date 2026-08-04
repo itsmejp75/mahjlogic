@@ -293,7 +293,7 @@
 .app-menu-modal .app-menu-tray__diff-btn.app-menu-tray__diff-btn--on:hover:not(:disabled),
 .app-menu-modal .app-menu-tray__diff-btn.app-menu-tray__diff-btn--on:active:not(:disabled) {
   font-weight: 600;
-  text-shadow: none;
+  text-shadow: var(--rack-action-label-shadow, var(--app-action-btn-label-shadow));
 }
 
 .app-menu-modal .app-menu-tray__diff-btn:disabled {

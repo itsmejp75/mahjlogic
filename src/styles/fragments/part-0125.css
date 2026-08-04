@@ -249,6 +249,140 @@ html[data-home-screen-app]:not([data-native-app]) .rack-checker {
   min-width: 0;
   margin: 0.15rem auto 0.25rem;
   min-height: var(--rack-checker-action-h);
+  position: relative;
+}
+
+.rack-checker__actions--card-select-open {
+  z-index: 40;
+}
+
+.rack-checker__card-select {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: none;
+  display: flex;
+  align-items: stretch;
+}
+
+.rack-checker__card-select .btn.rack-checker__action-btn.rack-checker__card-select-trigger {
+  flex: 1 1 100%;
+  width: 100%;
+  max-width: none;
+  position: relative;
+  padding-inline-end: 1.35em;
+}
+
+.rack-checker__card-select-trigger-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rack-checker__card-select-trigger::after {
+  content: '';
+  position: absolute;
+  right: 0.45em;
+  top: 50%;
+  width: 0.42em;
+  height: 0.42em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-70%) rotate(45deg);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+/* Open: keep press-in chrome (same as Check toggled / menu card select). */
+html body .app.rack-checker .rack-checker__actions
+  .btn.rack-checker__action-btn.rack-checker__card-select-trigger--open:not(:disabled),
+html body .app.rack-checker .rack-checker__actions
+  .btn.rack-checker__action-btn.rack-checker__card-select-trigger--open:hover:not(:disabled),
+html body .app.rack-checker .rack-checker__actions
+  .btn.rack-checker__action-btn.rack-checker__card-select-trigger--open:is(
+    :active,
+    .btn--pointer-down
+  ):not(:disabled) {
+  background: var(--rack-action-face-pressed-chrome);
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
+  box-shadow: var(--rack-action-pressed);
+  color: var(--rack-action-label-color, #e2e4e8);
+  transition: none;
+  transform: none;
+}
+
+.rack-checker__card-select-menu {
+  position: absolute;
+  z-index: 50;
+  left: 0;
+  right: 0;
+  top: calc(100% + 0.15rem);
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 4.5rem;
+  margin: 0;
+  padding: 0.2rem 0;
+  list-style: none;
+  border-radius: var(
+    --rack-tile-btn-border-radius,
+    max(0.36rem, calc(var(--hand-rack-tile-w, 2.65rem) * 0.128))
+  );
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
+  background: var(--rack-action-face);
+  box-shadow:
+    var(--rack-action-shadow-rest),
+    0 10px 28px color-mix(in srgb, var(--color-black, #000) 35%, transparent);
+  overflow: hidden;
+}
+
+.rack-checker__card-select-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: calc(var(--rack-checker-action-h) * 1.05);
+  margin: 0.12rem 0.28rem;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid
+    color-mix(in srgb, var(--color-black, #000) 28%, var(--rack-action-border-rest, #636870) 72%);
+  border-radius: var(
+    --rack-tile-btn-border-radius,
+    max(0.36rem, calc(var(--hand-rack-tile-w, 2.65rem) * 0.128))
+  );
+  text-align: center;
+  font-family: 'Figtree', var(--sans);
+  font-size: min(
+    var(--rack-hand-action-label-fs, var(--rack-control-label-fs, 0.72rem)),
+    calc(var(--rack-checker-action-h) * 0.56)
+  );
+  font-weight: 700;
+  letter-spacing: max(0.028em, calc(0.042em + 0.026rem));
+  color: var(--rack-action-label-color, #e2e4e8);
+  cursor: pointer;
+  user-select: none;
+  background: transparent;
+}
+
+.rack-checker__card-select-option:hover {
+  background: transparent;
+}
+
+.rack-checker__card-select-option--selected,
+.rack-checker__card-select-option--selected:hover,
+.rack-checker__card-select-option:active {
+  background: var(--rack-action-face-pressed-chrome);
+  border: 2px solid var(--app-menu-rim-active, #22c55e);
+  box-shadow: var(--rack-action-pressed);
+  transition: none;
+  transform: none;
+}
+
+.rack-checker__card-select-option-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /*
@@ -262,7 +396,7 @@ html body .app.rack-checker .rack-checker__actions .btn.rack-checker__action-btn
   justify-content: center;
   flex: 1 1 0;
   min-width: 0;
-  max-width: 7.5rem;
+  max-width: none;
   min-height: var(--rack-checker-action-h);
   height: var(--rack-checker-action-h);
   max-height: var(--rack-checker-action-h);
@@ -297,7 +431,7 @@ html body .app.rack-checker .rack-checker__actions .btn.rack-checker__action-btn
 html body .app.rack-checker .rack-checker__actions
   .btn.rack-checker__action-btn:hover:not(:disabled):not(:active):not(.btn--pointer-down):not(
     .rack-checker__check-btn--on
-  ) {
+  ):not(.rack-checker__card-select-trigger--open) {
   background: var(--rack-action-face);
   border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
   box-shadow: var(--rack-action-shadow-rest);

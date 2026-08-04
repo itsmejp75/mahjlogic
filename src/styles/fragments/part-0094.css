@@ -23,9 +23,9 @@
   background: transparent;
 }
 
-.app-menu-modal__lobby-open {
+.app-menu-modal__home {
   box-sizing: border-box;
-  /* Compact Menu + up arrow — left side; keep Settings visibly centered. */
+  /* Compact Home — left side; keep Settings title visibly centered. */
   position: relative;
   z-index: 2;
   flex: 0 0 auto;

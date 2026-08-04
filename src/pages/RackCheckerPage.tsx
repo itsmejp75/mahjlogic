@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -38,9 +39,10 @@ import {
 } from '../analysis/suggestedHands'
 import { patternByIdLookup } from '../card/activeCardPatternsScope'
 import {
+  PLAYABLE_CARD_IDS,
+  PLAYABLE_CARD_LABEL,
   cardSectionOrderFromPatterns,
   patternsForCard,
-  readPlayableCardFromStorage,
   type PlayableCardId,
 } from '../card/cardCatalog'
 import { SortableHand } from '../components/SortableHand'
@@ -149,7 +151,10 @@ export function RackCheckerPage({
   const [appTheme] = useState<AppTheme>(() => readAppThemeFromStorage())
   /** Rack Checker always uses classic faces (picker + rack), independent of menu Simple. */
   const tileGraphics = DEFAULT_TILE_GRAPHICS
-  const [cardId] = useState<PlayableCardId>(() => readPlayableCardFromStorage())
+  const [cardId, setCardId] = useState<PlayableCardId>('2026')
+  const [cardSelectOpen, setCardSelectOpen] = useState(false)
+  const cardSelectRef = useRef<HTMLDivElement | null>(null)
+  const cardSelectListId = useId()
 
   // Standalone `/rack-checker` is wrapped in RequireAuth — dismiss the boot loader.
   useEffect(() => {
@@ -163,6 +168,31 @@ export function RackCheckerPage({
   const [dragGhost, setDragGhost] = useState<DragGhost | null>(null)
   const [catalogDropOverRack, setCatalogDropOverRack] = useState(false)
   const [activeHandDragTile, setActiveHandDragTile] = useState<TileInstance | null>(null)
+
+  useEffect(() => {
+    if (!cardSelectOpen) return
+    const onDocMouseDown = (event: MouseEvent) => {
+      if (cardSelectRef.current && !cardSelectRef.current.contains(event.target as Node)) {
+        setCardSelectOpen(false)
+      }
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setCardSelectOpen(false)
+    }
+    document.addEventListener('mousedown', onDocMouseDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onDocMouseDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [cardSelectOpen])
+
+  const selectCard = useCallback((next: PlayableCardId) => {
+    setCardId(next)
+    setCardSelectOpen(false)
+    setFocusKey(null)
+    setPinnedHandKeys([])
+  }, [])
 
   const dragRef = useRef<{
     def: TileDef
@@ -496,7 +526,7 @@ export function RackCheckerPage({
       onClose()
       return
     }
-    navigate('/play')
+    navigate('/home')
   }, [navigate, onClose])
 
   return (
@@ -558,7 +588,14 @@ export function RackCheckerPage({
           </DndContext>
         </div>
 
-        <div className="rack-checker__actions">
+        <div
+          className={[
+            'rack-checker__actions',
+            cardSelectOpen ? 'rack-checker__actions--card-select-open' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
           <button
             type="button"
             className="btn btn--primary rack-bottom-tile-cell rack-checker__action-btn"
@@ -567,6 +604,65 @@ export function RackCheckerPage({
           >
             Sort
           </button>
+          <div
+            className={[
+              'rack-checker__card-select',
+              cardSelectOpen ? 'rack-checker__card-select--open' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            ref={cardSelectRef}
+          >
+            <button
+              type="button"
+              className={[
+                'btn btn--primary rack-bottom-tile-cell rack-checker__action-btn',
+                'rack-checker__card-select-trigger',
+                cardSelectOpen ? 'rack-checker__card-select-trigger--open' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              aria-label="Card"
+              aria-haspopup="listbox"
+              aria-expanded={cardSelectOpen}
+              aria-controls={cardSelectListId}
+              onClick={() => setCardSelectOpen((wasOpen) => !wasOpen)}
+            >
+              <span className="rack-checker__card-select-trigger-label">
+                {PLAYABLE_CARD_LABEL[cardId]}
+              </span>
+            </button>
+            {cardSelectOpen ? (
+              <ul
+                id={cardSelectListId}
+                className="rack-checker__card-select-menu"
+                role="listbox"
+                aria-label="Card"
+              >
+                {PLAYABLE_CARD_IDS.map((id) => {
+                  const selected = id === cardId
+                  return (
+                    <li
+                      key={id}
+                      role="option"
+                      aria-selected={selected}
+                      className={[
+                        'rack-checker__card-select-option',
+                        selected ? 'rack-checker__card-select-option--selected' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      onClick={() => selectCard(id)}
+                    >
+                      <span className="rack-checker__card-select-option-label">
+                        {PLAYABLE_CARD_LABEL[id]}
+                      </span>
+                    </li>
+                  )
+                })}
+              </ul>
+            ) : null}
+          </div>
           <button
             type="button"
             className={[

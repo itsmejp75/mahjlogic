@@ -1882,7 +1882,7 @@
 /* Default buttons only — rack / bot toolbar / menu use flat fills (tweak colors without hover wash). */
 .btn:hover:not(:disabled):not(.rack-bottom-tile-cell):not(.app-bottom-center-controls__menu-btn):not(
     .panel--bot-exposures__clear
-  ):not(.panel--bot-exposures__hint):not(.suggested-hands-tab):not(.app-menu-tray__item):not(.wall-game-dialog__action-btn):not(.rack-checker__action-btn):not(.landing-auth__action-btn) {
+  ):not(.panel--bot-exposures__hint):not(.suggested-hands-tab):not(.app-menu-tray__item):not(.wall-game-dialog__action-btn):not(.rack-checker__action-btn):not(.landing-auth__action-btn):not(.home-hub__action-btn):not(.home-hub__chip):not(.home-hub__account-chip) {
   background: color-mix(in srgb, var(--bg-elevated) 86%, var(--color-white) 14%);
   box-shadow:
     0 2px 5px color-mix(in srgb, var(--color-black) 18%, transparent),
@@ -1891,7 +1891,7 @@
 
 .btn:active:not(:disabled):not(.rack-bottom-tile-cell):not(.app-bottom-center-controls__menu-btn):not(
     .panel--bot-exposures__hint
-  ):not(.app-menu-tray__item):not(.wall-game-dialog__action-btn):not(.rack-checker__action-btn):not(.landing-auth__action-btn) {
+  ):not(.app-menu-tray__item):not(.wall-game-dialog__action-btn):not(.rack-checker__action-btn):not(.landing-auth__action-btn):not(.home-hub__action-btn):not(.home-hub__chip):not(.home-hub__account-chip) {
   transition: none;
   transform: scale(0.98);
   box-shadow:

@@ -1,33 +1,36 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import watermarkSrc from '../assets/mahjlogic-watermark.svg?url'
+import mahjLogoSrc from '../assets/mahj-logo.svg?url'
+import logicLogoSrc from '../assets/logic-logo.svg?url'
 import {
-  APP_THEME_BTN_PREVIEW,
-  APP_THEME_LABEL,
-  APP_THEMES,
   persistAppTheme,
   readAppThemeFromStorage,
   type AppTheme,
 } from '../app/appTheme'
-import { markPlayEnterFastPath, readPlayLocationState } from '../app/playLocationState'
+import {
+  markPlayEnterFastPath,
+  readHomeLocationState,
+  readPlayLocationState,
+} from '../app/playLocationState'
 import { useSessionBoot } from '../auth/sessionBoot'
 import { useAuth } from '../auth/AuthProvider'
 import {
-  BOT_DIFFICULTIES,
   DEFAULT_BOT_DIFFICULTY,
   isBotDifficulty,
   type BotDifficulty,
 } from '../analysis/botAI'
 import {
-  PLAYABLE_CARD_IDS,
-  PLAYABLE_CARD_LABEL,
   readPlayableCardFromStorage,
   writePlayableCardToStorage,
-  type PlayableCardId,
 } from '../card/cardCatalog'
-import { GameHistoryStatsOverlay } from '../components/GameHistoryStatsOverlays'
+import { canPlayCardId } from '../card/cardContentAccess'
 import {
-  BLANK_TILE_COUNT_OPTIONS,
+  GameHistoryStatsOverlay,
+  prefetchGameStatsSummary,
+} from '../components/GameHistoryStatsOverlays'
+import { LandingTileAtmosphere } from '../components/LandingTileAtmosphere'
+import { StoreBadges } from '../components/StoreBadges'
+import {
   DEFAULT_BLANK_TILE_COUNT,
   isBlankTileCount,
   type BlankTileCount,
@@ -94,14 +97,6 @@ function readBool(key: string, fallback: boolean): boolean {
     /* ignore */
   }
   return fallback
-}
-
-function writeBool(key: string, on: boolean): void {
-  try {
-    localStorage.setItem(key, on ? 'true' : 'false')
-  } catch {
-    /* ignore */
-  }
 }
 
 function readBotDifficulty(): BotDifficulty {
@@ -181,6 +176,9 @@ function buildPrefsFromLocal(
   }
 }
 
+/** Last known in-progress hand for this session — avoids blanking the hub while cloud reloads. */
+let homeResumeCache: { userId: string; snap: InProgressGameSnapshot | null } | null = null
+
 export function HomePage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -189,34 +187,23 @@ export function HomePage() {
   const prefsSaverRef = useRef(createDebouncedPrefsSaver(400))
   const prefsRef = useRef<SyncedUserPreferences>(buildPrefsFromLocal())
 
-  const [cardId, setCardId] = useState<PlayableCardId>(() => readPlayableCardFromStorage())
-  const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>(() => readBotDifficulty())
-  const [blankTilesEnabled, setBlankTilesEnabled] = useState(() => readBool(LS_KEY_BLANK_TILES, false))
-  const [blankTileCount, setBlankTileCount] = useState<BlankTileCount>(() => readBlankTileCount())
-  const [tenJokersEnabled, setTenJokersEnabled] = useState(() => readBool(LS_KEY_TEN_JOKERS, false))
   const [appTheme, setAppTheme] = useState<AppTheme>(() => readAppThemeFromStorage())
-  const [resumeSnap, setResumeSnap] = useState<InProgressGameSnapshot | null>(null)
-  const [resumeLoading, setResumeLoading] = useState(true)
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  /** Prefer cached snap so Resume CTAs paint immediately on remount (Menu → Home). */
+  const [resumeSnap, setResumeSnap] = useState<InProgressGameSnapshot | null>(() =>
+    homeResumeCache?.userId === user?.id ? homeResumeCache.snap : null,
+  )
   const [signOutBusy, setSignOutBusy] = useState(false)
   const [statsOpen, setStatsOpen] = useState(false)
-
-  const schedulePrefs = useCallback((next: SyncedUserPreferences) => {
-    prefsRef.current = next
-    prefsSaverRef.current.schedule(next)
-  }, [])
-
-  const patchPrefs = useCallback(
-    (patch: Partial<SyncedUserPreferences>) => {
-      schedulePrefs({ ...prefsRef.current, ...patch })
-    },
-    [schedulePrefs],
-  )
 
   // Home has no game bootstrap — dismiss the auth boot loader immediately.
   useEffect(() => {
     sessionBoot?.notifySessionBootReady()
   }, [sessionBoot])
+
+  // Warm Stats so the overlay opens with numbers instead of "Loading…".
+  useEffect(() => {
+    prefetchGameStatsSummary()
+  }, [user?.id])
 
   useEffect(() => {
     const saver = prefsSaverRef.current
@@ -224,12 +211,13 @@ export function HomePage() {
   }, [])
 
   useEffect(() => {
-    const st = readPlayLocationState(location.state)
-    if (st.openRackChecker) {
+    const homeSt = readHomeLocationState(location.state)
+    const playSt = readPlayLocationState(location.state)
+    if (playSt.openRackChecker) {
       navigate('/rack-checker', { replace: true })
       return
     }
-    if (st.openStats) {
+    if (homeSt.openStats || playSt.openStats) {
       setStatsOpen(true)
       navigate(location.pathname, { replace: true, state: {} })
     }
@@ -249,13 +237,15 @@ export function HomePage() {
           ...prefs,
           helpPreset: prefs.helpPreset ?? readHelpPresetFromStorage(),
         })
-        writePlayableCardToStorage(merged.playableCardId)
+        const playable = canPlayCardId(merged.playableCardId) ? merged.playableCardId : 'mock'
+        writePlayableCardToStorage(playable)
         try {
           localStorage.setItem(LS_KEY_HELP_PRESET, merged.helpPreset)
           localStorage.setItem(LS_KEY_BOT_DIFFICULTY, merged.botDifficulty)
           localStorage.setItem(LS_KEY_BLANK_TILES, merged.blankTilesEnabled ? 'true' : 'false')
           localStorage.setItem(LS_KEY_BLANK_TILE_COUNT, String(merged.blankTileCount))
           localStorage.setItem(LS_KEY_TEN_JOKERS, merged.tenJokersEnabled ? 'true' : 'false')
+          localStorage.setItem(LS_KEY_PLAY_AS_EAST, merged.playAsEastEnabled ? 'true' : 'false')
           localStorage.setItem(
             'mahjlogic.suggestedHandsTrayDefaultOpen',
             merged.suggestedHandsTrayDefaultOpen ? 'true' : 'false',
@@ -292,82 +282,45 @@ export function HomePage() {
           /* ignore */
         }
         persistAppTheme(merged.appTheme)
-        prefsRef.current = merged
-        setCardId(merged.playableCardId)
-        setBotDifficulty(merged.botDifficulty)
-        setBlankTilesEnabled(merged.blankTilesEnabled)
-        setBlankTileCount(merged.blankTileCount)
-        setTenJokersEnabled(merged.tenJokersEnabled)
+        const nextPrefs = { ...merged, playableCardId: playable }
+        prefsRef.current = nextPrefs
         setAppTheme(merged.appTheme)
         // Older cloud rows lack helpPreset — persist the resolved full prefs once.
-        if (!prefs.helpPreset) {
-          void saveUserPreferences(merged)
+        if (!prefs.helpPreset || prefs.playableCardId !== playable) {
+          void saveUserPreferences(nextPrefs)
         }
       } else {
         const local = buildPrefsFromLocal()
-        prefsRef.current = local
-        void saveUserPreferences(local)
+        const playable = canPlayCardId(local.playableCardId) ? local.playableCardId : 'mock'
+        const next = { ...local, playableCardId: playable }
+        writePlayableCardToStorage(playable)
+        prefsRef.current = next
+        void saveUserPreferences(next)
       }
 
-      setResumeSnap(isResumableSnapshot(snapshot) ? snapshot : null)
-      setResumeLoading(false)
+      const nextSnap = isResumableSnapshot(snapshot) ? snapshot : null
+      if (user?.id) homeResumeCache = { userId: user.id, snap: nextSnap }
+      setResumeSnap(nextSnap)
     })()
     return () => {
       cancelled = true
     }
   }, [user?.id])
 
-  const onCard = (id: PlayableCardId) => {
-    setCardId(id)
-    writePlayableCardToStorage(id)
-    patchPrefs({ playableCardId: id })
-  }
-
-  const onDifficulty = (d: BotDifficulty) => {
-    setBotDifficulty(d)
-    try {
-      localStorage.setItem(LS_KEY_BOT_DIFFICULTY, d)
-    } catch {
-      /* ignore */
-    }
-    patchPrefs({ botDifficulty: d })
-  }
-
-  const onBlankTiles = (on: boolean) => {
-    setBlankTilesEnabled(on)
-    writeBool(LS_KEY_BLANK_TILES, on)
-    patchPrefs({ blankTilesEnabled: on })
-  }
-
-  const onBlankCount = (n: BlankTileCount) => {
-    setBlankTileCount(n)
-    setBlankTilesEnabled(true)
-    try {
-      localStorage.setItem(LS_KEY_BLANK_TILE_COUNT, String(n))
-      localStorage.setItem(LS_KEY_BLANK_TILES, 'true')
-    } catch {
-      /* ignore */
-    }
-    patchPrefs({ blankTileCount: n, blankTilesEnabled: true })
-  }
-
-  const onTenJokers = (on: boolean) => {
-    setTenJokersEnabled(on)
-    writeBool(LS_KEY_TEN_JOKERS, on)
-    patchPrefs({ tenJokersEnabled: on })
-  }
-
-  const onTheme = (t: AppTheme) => {
-    setAppTheme(t)
-    persistAppTheme(t)
-    patchPrefs({ appTheme: t })
-  }
-
   const goPlay = (intent: 'new' | 'resume') => {
     prefsSaverRef.current.cancel()
     void saveUserPreferences(prefsRef.current)
+    if (intent === 'new' && user?.id) {
+      homeResumeCache = { userId: user.id, snap: null }
+      setResumeSnap(null)
+    }
     markPlayEnterFastPath()
-    navigate('/play', { state: { playIntent: intent } })
+    navigate('/play', {
+      state: {
+        playIntent: intent,
+        ...(intent === 'new' ? { openSettings: true } : {}),
+      },
+    })
   }
 
   async function onSignOut() {
@@ -375,6 +328,7 @@ export function HomePage() {
     setSignOutBusy(true)
     try {
       prefsSaverRef.current.cancel()
+      homeResumeCache = null
       await signOut()
       navigate('/', { replace: true })
     } finally {
@@ -386,137 +340,117 @@ export function HomePage() {
 
   return (
     <main className="app home-hub" data-app-theme={appTheme}>
-      <div className="home-hub__shell">
-        <header className="home-hub__header">
-          <div className="home-hub__brand">
-            <img
-              className="home-hub__logo"
-              src={watermarkSrc}
-              alt="Mahj Logic"
-              decoding="async"
-              draggable={false}
-            />
-            <p className="home-hub__tagline">American Mah Jongg Intelligence</p>
-          </div>
-          <button
-            type="button"
-            className="btn home-hub__gear"
-            aria-label="Settings"
-            aria-expanded={settingsOpen}
-            onClick={() => setSettingsOpen((v) => !v)}
-          >
-            ⚙
-          </button>
-        </header>
+      <LandingTileAtmosphere />
+      <header className="home-hub__header">
+        <div className="home-hub__brand" aria-label="Mahj Logic">
+          <img
+            className="home-hub__logo home-hub__logo--mahj"
+            src={mahjLogoSrc}
+            alt=""
+            decoding="async"
+            draggable={false}
+          />
+          <img
+            className="home-hub__logo home-hub__logo--logic"
+            src={logicLogoSrc}
+            alt=""
+            decoding="async"
+            draggable={false}
+          />
+        </div>
+      </header>
 
-        {settingsOpen ? (
-          <div className="home-hub__settings" role="region" aria-label="Settings">
-            <div className="home-hub__option-row">
-              <div className="home-hub__subhead" id="home-theme-label">
-                Theme
+      <div className="home-hub__scroll">
+        <div className="home-hub__shell">
+          <section className="home-hub__features" aria-label="Modes">
+            <article className="home-hub__feature">
+              <div className="home-hub__feature-media">
+                <img
+                  className="home-hub__feature-img"
+                  src="/marketing/practice.svg"
+                  alt="Mahj Logic practice table"
+                  decoding="async"
+                  fetchPriority="high"
+                  draggable={false}
+                />
               </div>
-              <div
-                className="home-hub__chip-row"
-                role="radiogroup"
-                aria-labelledby="home-theme-label"
-              >
-                {APP_THEMES.map((t) => {
-                  const preview = APP_THEME_BTN_PREVIEW[t]
-                  return (
+              <div className="home-hub__feature-body">
+                <h2 className="home-hub__feature-title">Practice</h2>
+                <p className="home-hub__feature-copy">
+                  Play full American Mah Jongg hands against bots — Charleston through Mah
+                  Jongg — with the card and coaching tools right under your rack.
+                </p>
+                <div className="home-hub__feature-actions">
+                  {hasResume ? (
+                    <>
+                      <button
+                        type="button"
+                        className="btn home-hub__action-btn home-hub__feature-cta"
+                        onClick={() => goPlay('resume')}
+                      >
+                        Resume
+                      </button>
+                      <p className="home-hub__resume-under">
+                        {resumeSettingsSummaryLines(resumeSnap).join(' · ')}
+                      </p>
+                      <button
+                        type="button"
+                        className="btn home-hub__action-btn home-hub__feature-cta"
+                        onClick={() => goPlay('new')}
+                      >
+                        Play
+                      </button>
+                    </>
+                  ) : (
                     <button
-                      key={t}
                       type="button"
-                      className={[
-                        'btn',
-                        'home-hub__chip',
-                        'home-hub__theme-chip',
-                        appTheme === t ? 'home-hub__chip--on' : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                      style={
-                        {
-                          '--theme-btn-face': preview.face,
-                          '--theme-btn-face-pressed': preview.facePressed,
-                          '--theme-btn-border': preview.border,
-                        } as CSSProperties
-                      }
-                      role="radio"
-                      aria-checked={appTheme === t}
-                      onClick={() => onTheme(t)}
+                      className="btn home-hub__action-btn home-hub__feature-cta"
+                      onClick={() => goPlay('new')}
                     >
-                      {APP_THEME_LABEL[t]}
+                      Play
                     </button>
-                  )
-                })}
+                  )}
+                </div>
               </div>
-            </div>
-            {user ? (
-              <p className="home-hub__account">
-                Signed in as <span>{user.email ?? 'account'}</span>
-              </p>
-            ) : null}
-            <button
-              type="button"
-              className="btn home-hub__action-btn"
-              disabled={signOutBusy}
-              onClick={() => void onSignOut()}
-            >
-              {signOutBusy ? 'Signing out…' : 'Sign out'}
-            </button>
-            <footer className="home-hub__legal">
-              <a href="mailto:support@mahjlogic.com">support@mahjlogic.com</a>
-              <span aria-hidden="true">·</span>
-              <Link to="/privacy">Privacy</Link>
-              <span aria-hidden="true">·</span>
-              <Link to="/terms">Terms</Link>
-            </footer>
-          </div>
-        ) : null}
+            </article>
 
-        <section className="home-hub__primary" aria-label="Play">
-          {resumeLoading ? (
-            <p className="home-hub__status">Checking for a saved game…</p>
-          ) : hasResume ? (
-            <div className="home-hub__cta-row">
-              <button
-                type="button"
-                className="btn home-hub__action-btn home-hub__action-btn--primary home-hub__action-btn--resume"
-                onClick={() => goPlay('resume')}
-              >
-                <span className="home-hub__resume-label">Resume</span>
-                <span className="home-hub__resume-meta">
-                  {resumeSettingsSummaryLines(resumeSnap).map((line) => (
-                    <span key={line} className="home-hub__resume-meta-line">
-                      {line}
-                    </span>
-                  ))}
-                </span>
-              </button>
-              <button
-                type="button"
-                className="btn home-hub__action-btn"
-                onClick={() => goPlay('new')}
-              >
-                New Game
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              className="btn home-hub__action-btn home-hub__action-btn--primary home-hub__action-btn--solo"
-              onClick={() => goPlay('new')}
-            >
-              Play
-            </button>
-          )}
+            <article className="home-hub__feature">
+              <div className="home-hub__feature-media">
+                <img
+                  className="home-hub__feature-img"
+                  src="/marketing/rack-checker.svg"
+                  alt="Mahj Logic Rack Checker"
+                  decoding="async"
+                  fetchPriority="high"
+                  draggable={false}
+                />
+              </div>
+              <div className="home-hub__feature-body">
+                <h2 className="home-hub__feature-title">Rack Checker</h2>
+                <p className="home-hub__feature-copy">
+                  Enter your tiles to see every matching hand on the card — spot overlaps and
+                  sections you might have overlooked.
+                </p>
+                <div className="home-hub__feature-actions">
+                  <button
+                    type="button"
+                    className="btn home-hub__action-btn home-hub__feature-cta"
+                    onClick={() => navigate('/rack-checker')}
+                  >
+                    Open Rack Checker
+                  </button>
+                </div>
+              </div>
+            </article>
+          </section>
+
           <div className="home-hub__modes" aria-label="More">
             <button
               type="button"
               className="btn home-hub__action-btn home-hub__mode-btn"
-              onClick={() => navigate('/rack-checker')}
+              onClick={() => setStatsOpen(true)}
             >
-              Rack Checker
+              Stats
             </button>
             <button
               type="button"
@@ -527,128 +461,36 @@ export function HomePage() {
               Rack of the Day
               <span className="home-hub__soon">Soon</span>
             </button>
-            <button
-              type="button"
-              className="btn home-hub__action-btn home-hub__mode-btn"
-              onClick={() => setStatsOpen(true)}
-            >
-              Stats
-            </button>
           </div>
-        </section>
 
-        <section className="home-hub__options" aria-label="Game options">
-          <div className="home-hub__option-row">
-            <div className="home-hub__subhead" id="home-card-label">
-              Card
-            </div>
-            <div className="home-hub__chip-row" role="radiogroup" aria-labelledby="home-card-label">
-              {PLAYABLE_CARD_IDS.map((id) => (
+          <StoreBadges className="home-hub__store-badges" />
+
+          {user ? (
+            <div className="home-hub__account-footer">
+              <div className="home-hub__account">
+                <p className="home-hub__account-status">
+                  Signed in as{' '}
+                  <span className="home-hub__account-email">{user.email ?? 'account'}</span>
+                </p>
                 <button
-                  key={id}
                   type="button"
-                  className={['btn', 'home-hub__chip', cardId === id ? 'home-hub__chip--on' : '']
-                    .filter(Boolean)
-                    .join(' ')}
-                  role="radio"
-                  aria-checked={cardId === id}
-                  onClick={() => onCard(id)}
+                  className="home-hub__sign-out"
+                  disabled={signOutBusy}
+                  onClick={() => void onSignOut()}
                 >
-                  {PLAYABLE_CARD_LABEL[id]}
+                  {signOutBusy ? 'Signing out…' : 'Sign out'}
                 </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="home-hub__option-row">
-            <div className="home-hub__subhead" id="home-bot-label">
-              Bot skill
-            </div>
-            <div className="home-hub__chip-row" role="radiogroup" aria-labelledby="home-bot-label">
-              {BOT_DIFFICULTIES.map((d) => (
-                <button
-                  key={d}
-                  type="button"
-                  className={[
-                    'btn',
-                    'home-hub__chip',
-                    botDifficulty === d ? 'home-hub__chip--on' : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                  role="radio"
-                  aria-checked={botDifficulty === d}
-                  onClick={() => onDifficulty(d)}
-                >
-                  {BOT_DIFFICULTY_LABEL[d]}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="home-hub__option-row">
-            <div className="home-hub__subhead" id="home-house-label">
-              House rules
-            </div>
-            <div className="home-hub__option-trail">
-              <button
-                type="button"
-                className={[
-                  'btn',
-                  'home-hub__chip',
-                  blankTilesEnabled ? 'home-hub__chip--on' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                aria-pressed={blankTilesEnabled}
-                onClick={() => onBlankTiles(!blankTilesEnabled)}
-              >
-                Blank tiles
-              </button>
-              <div
-                className="home-hub__chip-row home-hub__chip-row--counts"
-                role="radiogroup"
-                aria-label="Blank tile count"
-              >
-                {BLANK_TILE_COUNT_OPTIONS.map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    className={[
-                      'btn',
-                      'home-hub__chip',
-                      'home-hub__chip--count',
-                      blankTilesEnabled && blankTileCount === n ? 'home-hub__chip--on' : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')}
-                    role="radio"
-                    aria-checked={blankTilesEnabled && blankTileCount === n}
-                    disabled={!blankTilesEnabled}
-                    onClick={() => onBlankCount(n)}
-                  >
-                    {n}
-                  </button>
-                ))}
               </div>
-              <button
-                type="button"
-                className={[
-                  'btn',
-                  'home-hub__chip',
-                  tenJokersEnabled ? 'home-hub__chip--on' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                aria-pressed={tenJokersEnabled}
-                onClick={() => onTenJokers(!tenJokersEnabled)}
-              >
-                10 Jokers
-              </button>
+              <p className="home-hub__legal">
+                <a href="mailto:support@mahjlogic.com">support@mahjlogic.com</a>
+                <span aria-hidden="true">·</span>
+                <Link to="/privacy">Privacy</Link>
+                <span aria-hidden="true">·</span>
+                <Link to="/terms">Terms</Link>
+              </p>
             </div>
-          </div>
-
-        </section>
+          ) : null}
+        </div>
       </div>
 
       {statsOpen ? (

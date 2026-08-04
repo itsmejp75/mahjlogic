@@ -1,7 +1,7 @@
 /*
- * Authenticated Home hub — landscape-first lobby on the main app felt.
- * No inset panels: content sits directly on `--app-bg-paint-*`.
- * Action buttons use PokerStars gray / press chrome.
+ * Authenticated Play Hub — Eight Bam–inspired feature showcase on the app felt.
+ * Portrait stacks; landscape / desktop places Practice + Rack Checker side-by-side.
+ * Short viewports scroll (scrollbar hidden); buttons keep fixed tap heights.
  */
 
 .home-hub {
@@ -15,7 +15,13 @@
   --rack-action-border-color: var(--app-action-btn-border-rest);
   --rack-action-label-color: var(--app-action-btn-label, #ffffff);
   --rack-action-label-color-disabled: var(--app-action-btn-label-disabled-text);
+  --home-hub-cta-h: 2.65rem;
+  /* Mahj glyph height; LOGIC lifts to AHJ letter baseline (not the M-bird bottom). */
+  --home-hub-mahj-h: 2.55rem;
+  --home-hub-ahj-baseline-inset: 0.232;
 
+  position: relative;
+  isolation: isolate;
   box-sizing: border-box;
   flex: 1 1 auto;
   align-self: stretch;
@@ -25,11 +31,10 @@
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   justify-content: flex-start;
-  padding: max(1.5rem, calc(env(safe-area-inset-top) + 1rem)) max(1rem, env(safe-area-inset-right))
-    max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
-  overflow: auto;
+  padding: 0;
+  overflow: hidden;
   color: #f0f3f7;
   font-family: 'Figtree', var(--sans);
   background-color: var(--app-bg-paint-color, var(--app-bg-base, #0d1522));
@@ -40,76 +45,100 @@
   background-attachment: var(--app-bg-paint-attachment, fixed);
 }
 
-.home-hub__shell {
-  width: min(100%, 52rem);
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: clamp(0.75rem, 2.2vh, 1.25rem);
+/* Same soft tile carpet as login / menu lobby (styles via LandingTileAtmosphere). */
+.home-hub > .landing__tiles {
+  z-index: 0;
 }
 
+/* Frozen top bar — Mahj + LOGIC mark */
 .home-hub__header {
   position: relative;
+  z-index: 5;
+  flex: 0 0 auto;
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  min-height: 2.5rem;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 3rem;
+  padding: max(0.55rem, env(safe-area-inset-top)) max(0.85rem, env(safe-area-inset-right)) 0.55rem
+    max(0.85rem, env(safe-area-inset-left));
+  box-sizing: border-box;
+  border-bottom: 1px solid color-mix(in srgb, #ffffff 10%, transparent);
+  background-color: color-mix(in srgb, var(--app-bg-paint-color, #0d1522) 92%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .home-hub__brand {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 0.4rem;
   min-width: 0;
-  width: 100%;
-  padding-inline: 3rem;
+  text-align: left;
 }
 
 .home-hub__logo {
   display: block;
-  width: min(100%, 28rem);
-  max-height: min(22vh, 8.5rem);
+  width: auto;
   height: auto;
-  margin: 0 auto;
+  margin: 0;
   object-fit: contain;
-  object-position: center;
+  object-position: left bottom;
   user-select: none;
-  filter: drop-shadow(0 8px 22px rgba(0, 0, 0, 0.4));
+  pointer-events: none;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
 }
 
-.home-hub__tagline {
-  margin: 0.55rem 0 0;
-  font-family: 'Noto Serif', var(--heading), serif;
-  font-size: clamp(0.95rem, 2.4vh, 1.2rem);
-  font-weight: 500;
-  color: color-mix(in srgb, #e8edf4 90%, transparent);
-  letter-spacing: 0.04em;
-  line-height: 1.2;
+.home-hub__logo--mahj {
+  height: var(--home-hub-mahj-h);
 }
 
-.home-hub__gear {
-  position: absolute;
-  top: 0;
-  right: 0;
-  z-index: 1;
-  flex: 0 0 auto;
+.home-hub__logo--logic {
+  height: 1.4rem;
+  /* Bird hangs below AHJ in the SVG — raise LOGIC to the letter baseline. */
+  margin-bottom: calc(var(--home-hub-mahj-h) * var(--home-hub-ahj-baseline-inset));
+}
+
+/* Scrollable hub body under the frozen header */
+.home-hub__scroll {
+  position: relative;
+  z-index: 2;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 0.85rem max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom))
+    max(1rem, env(safe-area-inset-left));
   box-sizing: border-box;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 0.55rem;
-  font-size: 1.1rem;
-  line-height: 1;
-  color: var(--rack-action-label-color);
-  background: var(--rack-action-face);
-  /* Constant 2px border — selected green must not reflow neighbors. */
-  border: 2px solid var(--rack-action-border-rest);
-  box-shadow: var(--rack-action-shadow-rest);
-  transition: none;
-  transform: none;
 }
 
-.home-hub__gear:hover:not(:disabled):not(:active):not(.btn--pointer-down),
+.home-hub__scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.home-hub__shell {
+  width: min(100%, 56rem);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex: 0 0 auto;
+  gap: clamp(0.75rem, 2vh, 1.2rem);
+  min-width: 0;
+}
+
 .home-hub__chip:hover:not(:disabled):not(:active):not(.btn--pointer-down),
 .home-hub__action-btn:hover:not(:disabled):not(:active):not(.btn--pointer-down) {
   background: var(--rack-action-face);
@@ -119,7 +148,6 @@
   transform: none;
 }
 
-.home-hub__gear:is(:active, .btn--pointer-down):not(:disabled),
 .home-hub__chip:is(:active, .btn--pointer-down):not(:disabled),
 .home-hub__action-btn:is(:active, .btn--pointer-down):not(:disabled) {
   background: var(--rack-action-face-pressed-chrome);
@@ -129,7 +157,6 @@
   transform: none;
 }
 
-.home-hub__gear:active:not(:disabled):not(.btn--pointer-down),
 .home-hub__chip:active:not(:disabled):not(.btn--pointer-down),
 .home-hub__action-btn:active:not(:disabled):not(.btn--pointer-down) {
   background: var(--rack-action-face);
@@ -147,24 +174,57 @@
   box-shadow: var(--rack-action-pressed);
 }
 
-/* Settings: no panel fill — just a soft top rule under the header. */
-.home-hub__settings {
+.home-hub__account-footer {
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
-  padding: 0.65rem 0 0.15rem;
-  border-top: 1px solid color-mix(in srgb, #ffffff 12%, transparent);
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.35rem 0 0.15rem;
 }
 
 .home-hub__account {
-  margin: 0;
-  font-size: 0.82rem;
-  color: color-mix(in srgb, #e8edf4 62%, transparent);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem 0.75rem;
 }
 
-.home-hub__account span {
+.home-hub__account-status {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.3;
+  color: color-mix(in srgb, #e8edf4 62%, transparent);
+  text-align: center;
+}
+
+.home-hub__account-email {
   color: #f7f9fc;
-  font-weight: 600;
+  font-weight: 650;
+}
+
+.home-hub__sign-out {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  font-family: 'Figtree', var(--sans);
+  font-weight: 650;
+  font-size: 0.86rem;
+  color: #7dd3fc;
+  cursor: pointer;
+}
+
+.home-hub__sign-out:hover:not(:disabled) {
+  color: color-mix(in srgb, #7dd3fc 70%, #fff 30%);
+}
+
+.home-hub__sign-out:disabled {
+  opacity: 0.65;
+  cursor: default;
 }
 
 .home-hub__legal {
@@ -172,6 +232,8 @@
   flex-wrap: wrap;
   gap: 0.35rem 0.5rem;
   align-items: center;
+  justify-content: center;
+  margin: 0;
   font-size: 0.75rem;
   color: color-mix(in srgb, #e8edf4 48%, transparent);
 }
@@ -185,42 +247,122 @@
   text-decoration: underline;
 }
 
-.home-hub__primary {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.15rem 0 0.25rem;
+/* Feature showcase — Practice + Rack Checker */
+.home-hub__features {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(0.85rem, 2.2vh, 1.25rem);
+  width: 100%;
+  flex: 0 0 auto;
+  min-width: 0;
 }
 
-.home-hub__cta-row {
+.home-hub__feature {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.7rem;
-  justify-content: center;
-  align-items: center;
-  width: min(100%, 26rem);
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 0.85rem;
+  border: 1px solid color-mix(in srgb, #ffffff 12%, transparent);
+  background: color-mix(in srgb, #0a1220 55%, transparent);
+  overflow: hidden;
+}
+
+.home-hub__feature-media {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  width: 100%;
+  background: #0b1512;
+  overflow: hidden;
+}
+
+.home-hub__feature-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  user-select: none;
+  pointer-events: none;
+}
+
+.home-hub__feature-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.9rem 1rem 1rem;
+  min-width: 0;
+}
+
+.home-hub__feature-title {
+  margin: 0;
+  font-family: 'Noto Serif', var(--heading), serif;
+  font-size: clamp(1.15rem, 2.6vh, 1.35rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #f7f9fc;
+  line-height: 1.15;
+}
+
+.home-hub__feature-copy {
+  margin: 0;
+  flex: 1 1 auto;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: color-mix(in srgb, #e8edf4 74%, transparent);
+}
+
+.home-hub__feature-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.45rem;
+  margin-top: 0.15rem;
+}
+
+.home-hub__resume-under {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.35;
+  color: color-mix(in srgb, #e8edf4 58%, transparent);
+  text-align: center;
+}
+
+.home-hub__setup,
+.home-hub__upgrade {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex: 0 0 auto;
+  gap: 0.65rem;
+  padding: 0.1rem 0 0.2rem;
+}
+
+.home-hub__setup-title {
+  margin: 0;
+  font-family: 'Figtree', var(--sans);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: #f7f9fc;
 }
 
 .home-hub__status {
   margin: 0;
   font-size: 0.9rem;
+  text-align: center;
   color: color-mix(in srgb, #e8edf4 62%, transparent);
-}
-
-/* Options: open rows on the felt — no boxed containers. */
-.home-hub__options {
-  display: flex;
-  flex-direction: column;
-  gap: clamp(0.55rem, 1.6vh, 0.85rem);
-  padding: 0.15rem 0;
 }
 
 .home-hub__option-row {
   display: grid;
   grid-template-columns: 6.5rem minmax(0, 1fr);
   align-items: center;
-  gap: 0.65rem 0.85rem;
+  gap: 0.55rem 0.75rem;
 }
 
 @media (max-width: 560px) {
@@ -254,7 +396,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.55rem 0.85rem;
+  gap: 0.45rem 0.65rem;
 }
 
 .home-hub__chip,
@@ -263,17 +405,19 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.4rem;
-  padding: 0.35rem 0.9rem;
+  flex: 0 0 auto;
+  min-height: var(--home-hub-cta-h);
+  height: var(--home-hub-cta-h);
+  max-height: var(--home-hub-cta-h);
+  padding: 0.4rem 0.95rem;
   border-radius: 0.55rem;
   font-family: 'Figtree', var(--sans);
   font-weight: 700;
   letter-spacing: 0.03em;
-  font-size: 0.84rem;
+  font-size: 0.9rem;
   line-height: 1.1;
   color: var(--rack-action-label-color);
   background: var(--rack-action-face);
-  /* Always 2px so selected green rim does not grow the control. */
   border: 2px solid var(--rack-action-border-rest);
   box-shadow: var(--rack-action-shadow-rest);
   opacity: 1;
@@ -281,6 +425,12 @@
   cursor: pointer;
   transition: none;
   transform: none;
+}
+
+.home-hub__chip {
+  height: auto;
+  max-height: none;
+  min-height: 2.4rem;
 }
 
 .home-hub__chip--count {
@@ -292,6 +442,18 @@
   border-color: var(--app-menu-rim-active, #22c55e);
   background: var(--rack-action-face-pressed-chrome);
   box-shadow: var(--rack-action-pressed);
+}
+
+.home-hub__chip--locked {
+  gap: 0.35rem;
+}
+
+.home-hub__chip-note {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #ffb800;
 }
 
 .home-hub__theme-chip {
@@ -311,71 +473,28 @@
   filter: none;
 }
 
-.home-hub__action-btn--primary {
-  min-width: 11rem;
-  min-height: 3.05rem;
-  font-size: 1.08rem;
-  letter-spacing: 0.04em;
-}
-
-.home-hub__action-btn--resume {
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.85rem;
-  width: 100%;
-  min-width: min(100%, 16rem);
-  min-height: 0;
-  padding: 0.55rem 0.95rem;
-  text-align: left;
-}
-
-.home-hub__resume-label {
-  flex: 0 0 auto;
-  font-size: 1.08rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  line-height: 1.1;
-  text-align: left;
-}
-
-.home-hub__resume-meta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 0.1rem;
-  margin-left: auto;
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  line-height: 1.25;
-  color: color-mix(in srgb, var(--rack-action-label-color) 72%, transparent);
-  text-align: right;
-}
-
-.home-hub__resume-meta-line {
-  display: block;
-  white-space: nowrap;
-}
-
-.home-hub__action-btn--solo {
-  min-width: min(100%, 16rem);
-}
-
-.home-hub__modes {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.55rem;
-  width: min(100%, 26rem);
-  margin-top: 0.15rem;
-}
-
+.home-hub__feature-cta,
 .home-hub__mode-btn {
   width: 100%;
   min-width: 0;
   gap: 0.4rem;
+}
+
+.home-hub__modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* Match feature columns so each button lines up with Play / Open Rack Checker. */
+  gap: clamp(0.85rem, 2.2vh, 1.25rem);
+  width: 100%;
+  flex: 0 0 auto;
+}
+
+/* Inset like `.home-hub__feature-body` so width matches the Play CTA. */
+.home-hub__modes .home-hub__mode-btn {
+  width: calc(100% - 2rem);
+  margin-inline: 1rem;
+  justify-self: center;
+  box-sizing: border-box;
 }
 
 .home-hub__soon {
@@ -386,51 +505,181 @@
   color: #ffb800;
 }
 
-/* Landscape: brand + play on the left, options on the right — one clear flow. */
-@media (min-width: 820px) and (orientation: landscape) {
-  .home-hub__shell {
-    width: min(100%, 58rem);
-    display: grid;
-    grid-template-columns: minmax(14rem, 0.95fr) minmax(18rem, 1.15fr);
-    grid-template-areas:
-      'header header'
-      'play options'
-      'settings settings';
-    column-gap: clamp(1.25rem, 4vw, 2.5rem);
-    row-gap: clamp(0.65rem, 2vh, 1rem);
-    align-items: center;
-  }
+.home-hub__setup-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-top: 0.35rem;
+}
 
-  .home-hub__header {
-    grid-area: header;
-  }
+.home-hub__setup-actions .home-hub__action-btn {
+  width: 100%;
+  min-width: 0;
+}
 
-  .home-hub__settings {
-    grid-area: settings;
-  }
+.home-hub__upgrade-link {
+  width: 100%;
+  gap: 0.4rem;
+}
 
-  .home-hub__primary {
-    grid-area: play;
+.home-hub__upgrade-copy,
+.home-hub__upgrade-note {
+  margin: 0;
+  text-align: center;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: color-mix(in srgb, #e8edf4 72%, transparent);
+}
+
+.home-hub__upgrade-note {
+  font-size: 0.78rem;
+  color: color-mix(in srgb, #e8edf4 52%, transparent);
+}
+
+.home-hub__upgrade-tiers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.home-hub__upgrade-price {
+  width: 100%;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* Same 2-up footprint as Practice + Rack Checker feature panels. */
+.home-hub__store-badges.store-badges {
+  margin-top: 0.15rem;
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(0.85rem, 2.2vh, 1.25rem);
+  width: 100%;
+  min-width: 0;
+}
+
+.store-badges__badge {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  /* Match feature media + body stack height roughly via media aspect + pad. */
+  aspect-ratio: 16 / 10;
+  padding: 1.1rem 1.15rem;
+  border-radius: 0.85rem;
+  border: 1px solid color-mix(in srgb, #ffffff 12%, transparent);
+  background: color-mix(in srgb, #0a1220 55%, transparent);
+  color: #f5f7fa;
+  font-family: 'Figtree', var(--sans);
+  text-align: center;
+  cursor: default;
+  opacity: 0.88;
+}
+
+.store-badges__mark {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 3.25rem;
+  height: 3.25rem;
+}
+
+.store-badges__mark svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.store-badges__text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.store-badges__eyebrow {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, #f5f7fa 70%, transparent);
+}
+
+.store-badges__title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+}
+
+.store-badges__soon {
+  margin-top: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #ffb800;
+}
+
+/* Side-by-side feature panels — landscape / wider viewports */
+@media (min-width: 820px), ((orientation: landscape) and (min-width: 700px)) {
+  .home-hub__features,
+  .home-hub__store-badges.store-badges {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: stretch;
-    justify-content: center;
   }
 
-  .home-hub__cta-row {
-    width: 100%;
-    flex-direction: column;
+  .home-hub__feature {
+    height: 100%;
   }
 
-  .home-hub__action-btn--primary,
-  .home-hub__action-btn--solo {
-    width: 100%;
-    min-width: 0;
+  .home-hub__store-badges .store-badges__badge {
+    height: 100%;
+    aspect-ratio: auto;
+    min-height: 12rem;
   }
 
-  .home-hub__modes {
-    width: 100%;
+  .home-hub__feature-body {
+    justify-content: space-between;
+  }
+}
+
+/* Short landscape: keep natural control size; body scrolls under frozen header */
+@media (orientation: landscape) and (max-height: 480px) {
+  .home-hub__header {
+    min-height: 2.65rem;
+    padding-block: 0.4rem;
   }
 
-  .home-hub__options {
-    grid-area: options;
+  .home-hub {
+    --home-hub-mahj-h: 2.15rem;
+  }
+
+  .home-hub__logo--logic {
+    height: 1.2rem;
+  }
+
+  .home-hub__scroll {
+    padding-block: 0.55rem max(0.55rem, env(safe-area-inset-bottom));
+  }
+
+  .home-hub__shell {
+    gap: 0.6rem;
+  }
+
+  .home-hub__feature-media {
+    aspect-ratio: 16 / 8;
+  }
+
+  .home-hub__feature-copy {
+    font-size: 0.84rem;
   }
 }

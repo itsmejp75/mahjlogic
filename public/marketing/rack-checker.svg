@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600" role="img" aria-label="Rack Checker placeholder">
+  <defs>
+    <linearGradient id="felt2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#182438"/>
+      <stop offset="55%" stop-color="#121c2c"/>
+      <stop offset="100%" stop-color="#0c1420"/>
+    </linearGradient>
+    <linearGradient id="glow2" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="#fbbf24" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="600" rx="28" fill="url(#felt2)"/>
+  <rect width="960" height="600" rx="28" fill="url(#glow2)"/>
+  <rect x="48" y="56" width="520" height="360" rx="18" fill="#101826" stroke="#334155" stroke-width="2"/>
+  <rect x="592" y="56" width="320" height="360" rx="18" fill="#101826" stroke="#334155" stroke-width="2"/>
+  <g fill="#e8edf4" opacity="0.9">
+    <rect x="84" y="130" width="48" height="66" rx="7"/>
+    <rect x="144" y="130" width="48" height="66" rx="7"/>
+    <rect x="204" y="130" width="48" height="66" rx="7"/>
+    <rect x="264" y="130" width="48" height="66" rx="7"/>
+    <rect x="324" y="130" width="48" height="66" rx="7"/>
+    <rect x="384" y="130" width="48" height="66" rx="7"/>
+    <rect x="444" y="130" width="48" height="66" rx="7"/>
+  </g>
+  <g fill="#94a3b8" opacity="0.45">
+    <rect x="620" y="90" width="264" height="28" rx="8"/>
+    <rect x="620" y="136" width="264" height="28" rx="8"/>
+    <rect x="620" y="182" width="220" height="28" rx="8"/>
+    <rect x="620" y="228" width="248" height="28" rx="8"/>
+    <rect x="620" y="274" width="200" height="28" rx="8"/>
+    <rect x="620" y="320" width="240" height="28" rx="8"/>
+  </g>
+  <text x="480" y="500" text-anchor="middle" fill="#e8edf4" font-family="Georgia, serif" font-size="34" letter-spacing="1">Rack Checker</text>
+  <text x="480" y="540" text-anchor="middle" fill="#9aa8b8" font-family="system-ui, sans-serif" font-size="18">Screenshot placeholder</text>
+</svg>

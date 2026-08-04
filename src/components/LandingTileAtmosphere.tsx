@@ -648,6 +648,8 @@ async function bakeLandingWallpaper(
 let wallpaperCachedRev: string | null = null
 let wallpaperUrlPromise: Promise<string> | null = null
 let wallpaperObjectUrl: string | null = null
+/** Resolved URL for sync remounts — avoid blanking the carpet while the promise re-settles. */
+let wallpaperResolvedUrl: string | null = null
 
 function getLandingWallpaperUrl(): Promise<string> {
   if (typeof document === 'undefined') {
@@ -660,6 +662,7 @@ function getLandingWallpaperUrl(): Promise<string> {
     URL.revokeObjectURL(wallpaperObjectUrl)
     wallpaperObjectUrl = null
   }
+  wallpaperResolvedUrl = null
   wallpaperCachedRev = LANDING_FIELD_REV
   wallpaperUrlPromise = bakeLandingWallpaper(
     LANDING_TILE_FIELD.tiles,
@@ -667,11 +670,13 @@ function getLandingWallpaperUrl(): Promise<string> {
   )
     .then((url) => {
       wallpaperObjectUrl = url.startsWith('blob:') ? url : null
+      wallpaperResolvedUrl = url
       return url
     })
     .catch((err) => {
       wallpaperUrlPromise = null
       wallpaperCachedRev = null
+      wallpaperResolvedUrl = null
       throw err
     })
   return wallpaperUrlPromise
@@ -679,11 +684,12 @@ function getLandingWallpaperUrl(): Promise<string> {
 
 export function LandingTileAtmosphere({ className }: { className?: string } = {}) {
   const { bounds } = LANDING_TILE_FIELD
-  const [wallpaperSrc, setWallpaperSrc] = useState<string | null>(null)
+  const [wallpaperSrc, setWallpaperSrc] = useState<string | null>(() =>
+    wallpaperCachedRev === LANDING_FIELD_REV ? wallpaperResolvedUrl : null,
+  )
 
   useEffect(() => {
     let alive = true
-    setWallpaperSrc(null)
     getLandingWallpaperUrl()
       .then((url) => {
         if (alive) setWallpaperSrc(url)

@@ -40,8 +40,9 @@
   --_menu-switch-h: 1.55rem;
   --_menu-switch-thumb: 1.1rem;
   --_menu-switch-pad: 0.2rem;
-  /* Match blank-tile count / menu action button corners (not a full pill). */
-  --_menu-switch-radius: var(--rack-tile-btn-border-radius);
+  /* Fixed modest radius — do not use --rack-tile-btn-border-radius (grows with tile
+   * width on desktop and reads as an oval pill; keep the compact rectangular look). */
+  --_menu-switch-radius: 0.36rem;
   position: relative;
   display: block;
   width: var(--_menu-switch-w);

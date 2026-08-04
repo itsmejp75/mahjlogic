@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PLAYABLE_CARD_LABEL, type PlayableCardId, isPlayableCardId } from '../card/cardCatalog'
 import {
   assistLabels,
@@ -44,44 +44,77 @@ type Props = {
   onClose: () => void
 }
 
+/** Session cache so reopen paints immediately while a background refresh runs. */
+let cachedStatsSummary: GameStatsSummary | null = null
+let cachedHistoryRows: GameResultRow[] | null = null
+let statsPrefetchPromise: Promise<void> | null = null
+
+/** Warm stats before the overlay mounts (e.g. while sitting on Home). */
+export function prefetchGameStatsSummary(): void {
+  if (cachedStatsSummary != null || statsPrefetchPromise) return
+  statsPrefetchPromise = fetchStatsSummary({ limit: 5000 })
+    .then(({ summary, error }) => {
+      if (!error) cachedStatsSummary = summary
+    })
+    .catch(() => {
+      /* ignore — overlay will retry */
+    })
+    .finally(() => {
+      statsPrefetchPromise = null
+    })
+}
+
 export function GameHistoryStatsOverlay({ kind, onClose }: Props) {
-  const [loading, setLoading] = useState(true)
+  const hasCache = kind === 'stats' ? cachedStatsSummary != null : cachedHistoryRows != null
+  const [loading, setLoading] = useState(!hasCache)
   const [error, setError] = useState<string | null>(null)
-  const [summary, setSummary] = useState<GameStatsSummary | null>(null)
-  const [rows, setRows] = useState<GameResultRow[]>([])
+  const [summary, setSummary] = useState<GameStatsSummary | null>(() =>
+    kind === 'stats' ? cachedStatsSummary : null,
+  )
+  const [rows, setRows] = useState<GameResultRow[]>(() =>
+    kind === 'history' ? (cachedHistoryRows ?? []) : [],
+  )
   const [confirmReset, setConfirmReset] = useState(false)
   const [resetBusy, setResetBusy] = useState(false)
-
-  const reload = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    if (kind === 'stats') {
-      const { summary: next, error: err } = await fetchStatsSummary({ limit: 5000 })
-      setSummary(next)
-      setError(err)
-    } else {
-      const { rows: next, error: err } = await fetchGameResults({ limit: 50 })
-      setRows(next)
-      setError(err)
-    }
-    setLoading(false)
-  }, [kind])
 
   useEffect(() => {
     let cancelled = false
     setConfirmReset(false)
+    setError(null)
     void (async () => {
-      setLoading(true)
-      setError(null)
+      // Prefer an in-flight Home prefetch so the first open isn't a blank "Loading…".
+      if (kind === 'stats' && statsPrefetchPromise) {
+        await statsPrefetchPromise
+        if (cancelled) return
+        if (cachedStatsSummary != null) {
+          setSummary(cachedStatsSummary)
+          setLoading(false)
+        }
+      }
+
+      const silent =
+        kind === 'stats' ? cachedStatsSummary != null : cachedHistoryRows != null
+      if (!silent) setLoading(true)
+
       if (kind === 'stats') {
         const { summary: next, error: err } = await fetchStatsSummary({ limit: 5000 })
         if (cancelled) return
-        setSummary(next)
+        if (!err) {
+          cachedStatsSummary = next
+          setSummary(next)
+        } else if (!silent) {
+          setSummary(next)
+        }
         setError(err)
       } else {
         const { rows: next, error: err } = await fetchGameResults({ limit: 50 })
         if (cancelled) return
-        setRows(next)
+        if (!err) {
+          cachedHistoryRows = next
+          setRows(next)
+        } else if (!silent) {
+          setRows(next)
+        }
         setError(err)
       }
       setLoading(false)
@@ -102,9 +135,11 @@ export function GameHistoryStatsOverlay({ kind, onClose }: Props) {
       return
     }
     setConfirmReset(false)
-    setSummary(emptyGameStatsSummary())
+    const empty = emptyGameStatsSummary()
+    cachedStatsSummary = empty
+    cachedHistoryRows = []
+    setSummary(empty)
     setRows([])
-    await reload()
   }
 
   const title = kind === 'stats' ? 'Stats' : 'Game History'
@@ -140,15 +175,7 @@ export function GameHistoryStatsOverlay({ kind, onClose }: Props) {
             .filter(Boolean)
             .join(' ')}
         >
-          {loading ? (
-            <p className="game-meta-dialog__status">Loading…</p>
-          ) : error ? (
-            <p className="game-meta-dialog__status game-meta-dialog__status--error">
-              {error.includes('relation') || error.includes('does not exist')
-                ? 'Stats are not set up yet. Run the Supabase SQL migration, then try again.'
-                : error}
-            </p>
-          ) : kind === 'stats' && summary ? (
+          {kind === 'stats' && summary ? (
             <StatsBody
               summary={summary}
               confirmReset={confirmReset}
@@ -157,8 +184,16 @@ export function GameHistoryStatsOverlay({ kind, onClose }: Props) {
               onCancelReset={() => setConfirmReset(false)}
               onConfirmReset={() => void onConfirmReset()}
             />
-          ) : kind === 'history' ? (
+          ) : kind === 'history' && !loading ? (
             <HistoryBody rows={rows} />
+          ) : loading ? (
+            <p className="game-meta-dialog__status">Loading…</p>
+          ) : error ? (
+            <p className="game-meta-dialog__status game-meta-dialog__status--error">
+              {error.includes('relation') || error.includes('does not exist')
+                ? 'Stats are not set up yet. Run the Supabase SQL migration, then try again.'
+                : error}
+            </p>
           ) : null}
         </div>
       </div>
