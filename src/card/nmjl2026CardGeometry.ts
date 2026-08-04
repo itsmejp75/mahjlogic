@@ -473,9 +473,17 @@ function buildGroupsAndMatches(row: Nmjl2026CsvHandRow): { groups: PatternGroup[
         : anySuit
   if (isAnyDragonsMeldPermuteParenthetical(row)) {
     const { needs, cardDragons } = dragonMeldsFromAnyThreeDragonsRow(row)
-    if (needs.length >= 2 && needs.reduce((a, b) => a + b, 0) > 0) {
+    const dragonNeedTotal = needs.reduce((a, b) => a + b, 0)
+    if (dragonNeedTotal > 0) {
       const withoutDragonMelds = groups.filter((g) => !isDragonOnlyMeldGroup(g))
-      withoutDragonMelds.push({ kind: 'dragon-meld-permute', needs, cardDragons })
+      if (needs.length >= 2) {
+        // W&D #2 / Year #3 / Any-2-Dragons: multiple D-only melds permute types.
+        withoutDragonMelds.push({ kind: 'dragon-meld-permute', needs, cardDragons })
+      } else {
+        // Singular “Any Dragon” (W&D #5 DDDD, Like #s #3 DD): one fixed any-dragon meld.
+        // Previously these were skipped (`needs.length >= 2`), so strips showed 10/12 tiles.
+        withoutDragonMelds.push({ kind: 'fixed', need: needs[0]!, test: dragon })
+      }
       groups.length = 0
       groups.push(...withoutDragonMelds)
     }

@@ -67,8 +67,12 @@ import { TileGraphicsProvider } from '../tiles/TileGraphicsContext'
 import { DEFAULT_TILE_GRAPHICS } from '../tiles/tileGraphics'
 
 const RACK_SIZE = 14
-/** Neutral wall size so Prob % is usable without a live deal. */
-const RACK_CHECKER_WALL_REMAINING = 72
+/**
+ * Post-deal wall (~99) so Prob % matches opening-rack evaluation.
+ * Mid-wall values (e.g. 72) skip Charleston exchange credit and crush
+ * typical Away-5..8 lines to the 1% display floor.
+ */
+const RACK_CHECKER_WALL_REMAINING = 99
 const DRAG_SLOP_PX = 8
 
 const LS_KEY_HAND_PROBABILITY = 'mahjlogic.handProbabilityEnabled'

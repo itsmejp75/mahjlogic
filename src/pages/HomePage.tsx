@@ -189,9 +189,10 @@ export function HomePage() {
 
   const [appTheme, setAppTheme] = useState<AppTheme>(() => readAppThemeFromStorage())
   /** Prefer cached snap so Resume CTAs paint immediately on remount (Menu → Home). */
-  const [resumeSnap, setResumeSnap] = useState<InProgressGameSnapshot | null>(() =>
-    homeResumeCache?.userId === user?.id ? homeResumeCache.snap : null,
-  )
+  const [resumeSnap, setResumeSnap] = useState<InProgressGameSnapshot | null>(() => {
+    const cached = homeResumeCache
+    return cached && cached.userId === user?.id ? cached.snap : null
+  })
   const [signOutBusy, setSignOutBusy] = useState(false)
   const [statsOpen, setStatsOpen] = useState(false)
 
