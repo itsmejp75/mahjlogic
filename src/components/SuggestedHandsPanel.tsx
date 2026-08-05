@@ -1488,6 +1488,11 @@ type Props = {
   discardTraySurface?: boolean
   /** Discard-tray overlay open — remeasures frozen list-column width for card-hand layout. */
   trayOpen?: boolean
+  /**
+   * Increment on each new deal. The tray stays mounted while closed, so scrollTop would otherwise
+   * reopen on the previous hand — bumping this resets the list to the top.
+   */
+  scrollResetKey?: number
   /** Toggle whether `handKey` is pinned (add/remove from {@link pinnedHandKeys}). */
   onPinnedPatternChange?: (handKey: string) => void
   /** Per focus key: why the line is no longer completable (dead tile hint). */
@@ -1521,6 +1526,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   cardSectionOrder,
   discardTraySurface,
   trayOpen = false,
+  scrollResetKey = 0,
   onPinnedPatternChange,
   deadCauseByFocusKey = {},
   focusedHandDeadCause = null,
@@ -1967,6 +1973,24 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     },
     [expandedHandsMeta.length, focusedRowIndex, rowHeightForVirtual],
   )
+
+  // New deal: jump to the top even while the tray is closed (DOM scrollTop otherwise persists).
+  useLayoutEffect(() => {
+    if (scrollResetKey === 0) return
+    const scrollEl = getTrayScrollTarget()
+    if (scrollEl) scrollEl.scrollTop = 0
+    handsListScrollSnapshotRef.current = {
+      rowKeys: [],
+      anchorKey: null,
+      anchorPatternId: null,
+      anchorViewportTop: 0,
+      scrollTop: 0,
+    }
+    prevEffectiveFocusRowKeyRef.current = null
+    setHasHandsAboveView(false)
+    setVirtualRange({ start: 0, end: HANDS_LIST_VIRTUAL_MIN_WINDOW })
+    if (scrollEl) syncVirtualRange(scrollEl)
+  }, [scrollResetKey, getTrayScrollTarget, syncVirtualRange])
 
   // Reset estimated row height when Tiles mode changes; a follow-up measure replaces it.
   useLayoutEffect(() => {

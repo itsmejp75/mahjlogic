@@ -323,6 +323,10 @@ export function HomePage() {
             decoding="async"
             draggable={false}
           />
+          <span className="home-hub__tagline-sep" aria-hidden="true">
+            —
+          </span>
+          <p className="home-hub__tagline">American Mah Jongg Intelligence</p>
         </div>
       </header>
 
@@ -333,7 +337,7 @@ export function HomePage() {
               <div className="home-hub__feature-media">
                 <img
                   className="home-hub__feature-img"
-                  src="/marketing/practice.svg"
+                  src="/marketing/practice.jpg"
                   alt="Mahj Logic practice table"
                   decoding="async"
                   fetchPriority="high"
@@ -363,7 +367,7 @@ export function HomePage() {
               <div className="home-hub__feature-media">
                 <img
                   className="home-hub__feature-img"
-                  src="/marketing/rack-checker.svg"
+                  src="/marketing/rack-checker.jpg"
                   alt="Mahj Logic Rack Checker"
                   decoding="async"
                   fetchPriority="high"

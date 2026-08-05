@@ -1326,7 +1326,7 @@ html .app-discard-bottom-container .discard-tracker__discard-container {
   .panel--hand
   .panel-hand-rack__hand-tray
   > .panel-hand-rack__seat-label {
-  /* Under rack-bottom so fly-in tiles clear "Playing position:" + seat chip. */
+  /* Under rack-bottom so fly-in tiles clear "NMJL …-Seat:" + seat chip. */
   z-index: 1;
 }
 

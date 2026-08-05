@@ -40,6 +40,7 @@ import {
   type TopBandDropFrame,
 } from '../mahjong/jokerSwapTarget'
 import { tileAriaLabel, tileSuitRackWord } from '../mahjong/labels'
+import { playableCardColumnLabel, type PlayableCardId } from '../card/cardCatalog'
 import { seatLabel, type BotSlotSeats } from '../mahjong/seats'
 import { countDiscardEntriesMatchingDef, tileDefsEqual } from '../mahjong/tileUtils'
 import type { DiscardEntry, Seat, TileDef, TileInstance } from '../mahjong/types'
@@ -326,10 +327,13 @@ export function SuggestedHandsTrayToggleButton() {
 /** Player compass seat — centered in the well from discard-tracker bottom to main-rack top. */
 export function PlayerRackSeatLabel({
   seat,
+  cardId,
   isActiveTurn = false,
   isCalledThrower = false,
 }: {
   seat: Seat
+  /** Active playable card — prefix shows e.g. `NMJL 2026-Seat:`. */
+  cardId: PlayableCardId
   /** Green fill — player's turn (discard / Charleston / call-staging). */
   isActiveTurn?: boolean
   /** Green inset border — someone called this seat's discard (mirrors discard-tracker bot seat labels). */
@@ -340,7 +344,9 @@ export function PlayerRackSeatLabel({
       className="panel-hand-rack__seat-label"
       aria-hidden
     >
-      <span className="panel-hand-rack__seat-label__prefix">Playing position:</span>
+      <span className="panel-hand-rack__seat-label__prefix">
+        {playableCardColumnLabel(cardId)}-Seat:
+      </span>
       <span
         className={[
           'panel-hand-rack__seat-label__chip',

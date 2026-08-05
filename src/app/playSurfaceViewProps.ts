@@ -3,6 +3,7 @@
  * stable across App overlay/settings re-renders so memo(PlaySurface) can bail.
  */
 import type { ReactNode } from 'react'
+import type { PlayableCardId } from '../card/cardCatalog'
 import type { PassStripFlyOutFrom } from '../components/PassStrip'
 import { discardedDefsForBlankExchange } from '../mahjong/blankExchange'
 import type { PassSlots } from '../mahjong/passTargets'
@@ -57,18 +58,25 @@ export type PlaySurfaceActionBarProps = {
 }
 
 export type PlaySurfaceSeatLabelProps = {
+  cardId: PlayableCardId
   playerSeatLabelActiveTurn: boolean
   playerSeatLabelCalledThrower: boolean
 }
 
 export function buildPlayerSeatLabelProps(args: {
+  cardId: PlayableCardId
   charlestonDone: boolean
   mainPhase: MainPhase
   botTurnBannerDiscarderBotIndex: number | null | undefined
   botTurnBannerPresent: boolean
 }): PlaySurfaceSeatLabelProps {
-  const { charlestonDone, mainPhase, botTurnBannerDiscarderBotIndex, botTurnBannerPresent } =
-    args
+  const {
+    cardId,
+    charlestonDone,
+    mainPhase,
+    botTurnBannerDiscarderBotIndex,
+    botTurnBannerPresent,
+  } = args
   const playerSeatLabelActiveTurn = (() => {
     // Player Mah Jongg: keep the green turn chip — it was their seat when they won.
     if (mainPhase === 'mahjong-declared') return true
@@ -89,7 +97,7 @@ export function buildPlayerSeatLabelProps(args: {
     botTurnBannerPresent &&
     botTurnBannerDiscarderBotIndex === null
 
-  return { playerSeatLabelActiveTurn, playerSeatLabelCalledThrower }
+  return { cardId, playerSeatLabelActiveTurn, playerSeatLabelCalledThrower }
 }
 
 export function buildPlaySurfaceActionBarProps(args: {

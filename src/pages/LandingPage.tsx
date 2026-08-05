@@ -271,7 +271,7 @@ export function LandingPage() {
               <div className="landing__feature-media">
                 <img
                   className="landing__feature-img"
-                  src="/marketing/practice.svg"
+                  src="/marketing/practice.jpg"
                   alt="Mahj Logic practice table"
                   decoding="async"
                   draggable={false}
@@ -290,7 +290,7 @@ export function LandingPage() {
               <div className="landing__feature-media">
                 <img
                   className="landing__feature-img"
-                  src="/marketing/rack-checker.svg"
+                  src="/marketing/rack-checker.jpg"
                   alt="Mahj Logic Rack Checker"
                   decoding="async"
                   draggable={false}

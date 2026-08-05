@@ -470,7 +470,11 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
     canUndo,
   } = actionBar
 
-  const { playerSeatLabelActiveTurn, playerSeatLabelCalledThrower } = seatLabelProps
+  const {
+    cardId: seatLabelCardId,
+    playerSeatLabelActiveTurn,
+    playerSeatLabelCalledThrower,
+  } = seatLabelProps
 
   const onDiscardPileContainerNode = useCallback(
     (node: HTMLDivElement | null) => {
@@ -652,6 +656,7 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                           <div className="panel-hand-rack__hand-tray">
                             <PlayerRackSeatLabel
                               seat={playerSeat}
+                              cardId={seatLabelCardId}
                               isActiveTurn={playerSeatLabelActiveTurn}
                               isCalledThrower={playerSeatLabelCalledThrower}
                             />
@@ -887,6 +892,7 @@ function PlaySurfaceInner(p: PlaySurfaceProps) {
                             !hidePlayerSeatLabelForCallSlot ? (
                               <PlayerRackSeatLabel
                                 seat={playerSeat}
+                                cardId={seatLabelCardId}
                                 isActiveTurn={playerSeatLabelActiveTurn}
                                 isCalledThrower={playerSeatLabelCalledThrower}
                               />

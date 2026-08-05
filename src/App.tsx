@@ -2232,6 +2232,8 @@ export default function App() {
   const [suggestedFocusHandKey, setSuggestedFocusHandKey] = useState<string | null>(null)
   const suggestedFocusHandKeyRef = useRef<string | null>(null)
   suggestedFocusHandKeyRef.current = suggestedFocusHandKey
+  /** Bumps on each new deal so the Hands tray resets scroll to the top while closed. */
+  const [suggestedHandsScrollResetKey, setSuggestedHandsScrollResetKey] = useState(0)
   /**
    * Deferred copy of the focused suggested-hand key for the EXPENSIVE rack/discard coaching
    * highlights only. On a tap, `suggestedFocusHandKey` updates urgently (the tapped row + panel
@@ -5017,6 +5019,8 @@ export default function App() {
     suggestedHandsTrayApiRef.current.setTrayOpen(false)
     trayOpenBeforeBotHandsRef.current = null
     setBotHandsIdentifierFocusSeat(null)
+    // Tray stays mounted while closed — reset scroll so reopen starts at the top hand.
+    setSuggestedHandsScrollResetKey((n) => n + 1)
     if (m !== c) {
       try {
         writePlayableCardToStorage(m)
@@ -6464,12 +6468,13 @@ export default function App() {
   const playSurfaceSeatLabel = useMemo(
     () =>
       buildPlayerSeatLabelProps({
+        cardId: committedCardId,
         charlestonDone,
         mainPhase,
         botTurnBannerPresent: botTurnBanner != null,
         botTurnBannerDiscarderBotIndex: botTurnBanner?.discarderBotIndex,
       }),
-    [charlestonDone, mainPhase, botTurnBanner],
+    [committedCardId, charlestonDone, mainPhase, botTurnBanner],
   )
 
   const playSurfaceActionBar = useMemo(
@@ -6796,6 +6801,7 @@ export default function App() {
             <SuggestedHandsPanel
               discardTraySurface
               trayOpen={trayOpen}
+              scrollResetKey={suggestedHandsScrollResetKey}
               onPinnedPatternChange={toggleSuggestedPinnedHandKey}
               hands={playerMahjongWinReviewHands ?? eastSuggestedHands}
               activePatternId={suggestedFocusHandKey}
@@ -6844,6 +6850,7 @@ export default function App() {
     eastSuggestedHands,
     suggestedFocusHandKey,
     suggestedPinnedHandKeys,
+    suggestedHandsScrollResetKey,
     onSuggestedPatternClick,
     onSuggestedFocusKeyMigrate,
     mainPhase,

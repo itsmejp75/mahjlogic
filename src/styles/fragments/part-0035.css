@@ -20,7 +20,7 @@
  * Always lift the hand-tray above rack-top (z-index 6 beats staged rack-top 5) so drawn
  * tiles clear the green Discard> well. Lift rack-bottom so tile z-index:10 clears within
  * the tray. Drop the seat chip under rack-bottom for the flight window so opening-deal /
- * Charleston / wall-draw tiles paint over "Playing position:" (same idea as joker-swap
+ * Charleston / wall-draw tiles paint over "NMJL …-Seat:" (same idea as joker-swap
  * bounce). Resting seat stays at z-index 10 (part-0084) above melds after the flight.
  *
  * That tray lift also buries call melds (nudged down into the hand band) under hand
@@ -144,7 +144,7 @@
   .panel--hand
   .panel-hand-rack__hand-tray
   > .panel-hand-rack__seat-label {
-  /* Under rack-bottom (3 / 6) so fly-in tiles clear "Playing position:" + seat chip. */
+  /* Under rack-bottom (3 / 6) so fly-in tiles clear "NMJL …-Seat:" + seat chip. */
   z-index: 1;
 }
 
