@@ -290,6 +290,27 @@ html:has(.landing),
   margin-bottom: calc(var(--landing-mahj-h) * var(--landing-ahj-baseline-inset));
 }
 
+.landing__tagline-sep {
+  margin: 0 0 calc(var(--landing-mahj-h) * var(--landing-ahj-baseline-inset));
+  font-family: 'Noto Serif', var(--heading), serif;
+  font-size: clamp(0.82rem, 1.8vw, 1.05rem);
+  font-weight: 500;
+  line-height: 1.15;
+  color: color-mix(in srgb, #e8edf4 28%, transparent);
+}
+
+.landing__tagline {
+  margin: 0 0 calc(var(--landing-mahj-h) * var(--landing-ahj-baseline-inset));
+  min-width: 0;
+  font-family: 'Noto Serif', var(--heading), serif;
+  font-size: clamp(0.82rem, 1.8vw, 1.05rem);
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  line-height: 1.15;
+  color: color-mix(in srgb, #e8edf4 82%, transparent);
+  white-space: nowrap;
+}
+
 /* Scrollable body under frozen header */
 .landing__shell {
   position: relative;
@@ -758,6 +779,10 @@ html:has(.landing),
 
   .landing__mark-logo--logic {
     height: 1.2rem;
+  }
+
+  .landing__tagline {
+    font-size: 0.78rem;
   }
 
   .landing__shell {

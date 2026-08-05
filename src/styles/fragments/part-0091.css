@@ -484,6 +484,22 @@
   margin-top: 0.95rem;
 }
 
+/* In-progress resume gate: title + two actions only (no body copy). */
+.charleston-error-dialog.charleston-error-dialog--resume-prompt {
+  max-width: min(22rem, 100%);
+  padding-block: 1.15rem 1.2rem;
+}
+
+.charleston-error-dialog.charleston-error-dialog--resume-prompt
+  .charleston-error-dialog__title {
+  margin: 0 0 0.85rem;
+}
+
+.charleston-error-dialog.charleston-error-dialog--resume-prompt
+  .charleston-error-dialog__actions--spread {
+  margin-top: 0;
+}
+
 /* Swap (and similar): felt + gold border — matches coach teal + pass-box gold accents */
 .charleston-error-dialog--table {
   position: relative;

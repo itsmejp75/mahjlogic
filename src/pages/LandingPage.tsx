@@ -257,6 +257,10 @@ export function LandingPage() {
             decoding="async"
             draggable={false}
           />
+          <span className="landing__tagline-sep" aria-hidden="true">
+            —
+          </span>
+          <p className="landing__tagline">American Mah Jongg Intelligence</p>
         </div>
       </header>
 
@@ -280,8 +284,9 @@ export function LandingPage() {
               <div className="landing__feature-body">
                 <h2 className="landing__feature-title">Practice</h2>
                 <p className="landing__feature-copy">
-                  Play full American Mah Jongg hands against bots — Charleston through Mah Jongg —
-                  with the card and coaching tools right under your rack.
+                  Practice American Mah Jongg in an Intelligent All-In-One Console that includes
+                  guidance with suggested hands, highlighted tiles, discard tracking, opponent
+                  hand identification, and other hints.
                 </p>
               </div>
             </article>
@@ -299,8 +304,9 @@ export function LandingPage() {
               <div className="landing__feature-body">
                 <h2 className="landing__feature-title">Rack Checker</h2>
                 <p className="landing__feature-copy">
-                  Enter your tiles to see every matching hand on the card — spot overlaps and
-                  sections you might have overlooked.
+                  Enter your tiles to see the closest matching hands on the card. See
+                  probabilities of finishing your hand before the wall runs out. Spot overlaps
+                  and sections you might have overlooked.
                 </p>
               </div>
             </article>

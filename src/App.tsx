@@ -606,6 +606,51 @@ function ResumePromptOnMenuClose({
   return null
 }
 
+/** Short Resume / New Game gate — only when a saved hand is pending (not full Settings). */
+function ResumeGamePromptDialog({
+  active,
+  onResume,
+  onNewGame,
+}: {
+  active: boolean
+  onResume: () => void
+  onNewGame: () => void
+}) {
+  const { menuOpen } = useAppMenuOpen()
+  if (!active || menuOpen) return null
+  return (
+    <div className="charleston-error-overlay" role="presentation">
+      <div
+        className="charleston-error-dialog charleston-error-dialog--new-game-warning charleston-error-dialog--resume-prompt"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="resume-game-prompt-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 id="resume-game-prompt-title" className="charleston-error-dialog__title">
+          Game in progress
+        </h2>
+        <div className="charleston-error-dialog__actions charleston-error-dialog__actions--spread">
+          <button
+            type="button"
+            className="btn charleston-error-dialog__rack-action"
+            onClick={onResume}
+          >
+            Resume
+          </button>
+          <button
+            type="button"
+            className="btn charleston-error-dialog__rack-action"
+            onClick={onNewGame}
+          >
+            New Game
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /** Settings modal chrome — Home in the header; body is Game Settings. */
 function AppMenuSlideShell({
   children,
@@ -5367,7 +5412,7 @@ export default function App() {
     }
   }, [])
 
-  /** Put the autosaved hand on the table (no fly-in). Optionally skip menu gate (Home → Resume). */
+  /** Put the autosaved hand on the table (no fly-in). Optionally skip resume prompt (Home → Resume). */
   const loadSavedGameOntoTable = useCallback(
     (snap: InProgressGameSnapshot, opts?: { autoContinue?: boolean }) => {
       applyResumeSettings(snap)
@@ -5401,7 +5446,7 @@ export default function App() {
         return
       }
       setResumePrompt(snap)
-      // Settings opens with Replay / Resume / New Game after the boot loader dismisses.
+      // Short Resume / New Game prompt shows after the boot loader dismisses.
     },
     [applyResumeSettings, markSessionReady],
   )
@@ -5505,7 +5550,7 @@ export default function App() {
 
   /**
    * Home → Play: paint the table immediately from Home's resume cache when possible.
-   * - Saved hand: show those tiles under Settings (Resume / New Game decided there).
+   * - Saved hand: show those tiles under the Resume / New Game prompt.
    * - Known empty: deal fresh (same as legacy playIntent `new`).
    * - Unknown: wait for cloud hydrate (below).
    */
@@ -5542,7 +5587,7 @@ export default function App() {
     user?.id,
   ])
 
-  /** Load cloud prefs + in-progress game on login; open menu for Resume / New Game when needed. */
+  /** Load cloud prefs + in-progress game on login; short Resume / New Game prompt when needed. */
   useEffect(() => {
     if (!user) {
       cloudPrefsHydratedRef.current = false
@@ -5587,23 +5632,22 @@ export default function App() {
           navigate('/home', { replace: true })
           return
         }
+        // Dev preview / bare reload without Home intent: open settings after boot.
         const openMenuWhenReady = playIntent == null && !eagerNewDealDoneRef.current
-        const openSettingsForEnter =
-          playIntent === 'enter' || playIntent === 'resume'
         if (eagerNewDealDoneRef.current || playIntent === 'new') {
           inProgressSaverRef.current.cancel()
           void clearInProgressGame()
           if (!sessionReadyRef.current) beginFreshSessionWithOpeningFlyIn()
         } else if (savedGame && isResumableSnapshot(savedGame)) {
-          // Show previous tiles under Settings; Resume / New Game decided there.
+          // Show previous tiles under the Resume / New Game prompt.
           loadSavedGameOntoTable(savedGame, { autoContinue: false })
-          if (openMenuWhenReady || openSettingsForEnter) {
+          if (openMenuWhenReady) {
             pendingOpenMenuAfterBootRef.current = true
           }
         } else {
           if (eagerResumePaintDoneRef.current) setResumePrompt(null)
           beginFreshSessionWithOpeningFlyIn()
-          if (openMenuWhenReady || openSettingsForEnter) {
+          if (openMenuWhenReady) {
             pendingOpenMenuAfterBootRef.current = true
           }
         }
@@ -5849,9 +5893,8 @@ export default function App() {
         navigate('/home', { replace: true })
         return
       }
+      // Dev preview / bare reload without Home intent: open settings after boot.
       const openMenuWhenReady = playIntent == null && !eagerNewDealDoneRef.current
-      const openSettingsForEnter =
-        playIntent === 'enter' || playIntent === 'resume'
 
       // Home → Play already dealt a fresh table — apply cloud prefs above, do not redeal.
       if (eagerNewDealDoneRef.current || playIntent === 'new') {
@@ -5863,9 +5906,9 @@ export default function App() {
 
       // Restore the saved table first — never flash a new opening deal under a resume.
       if (savedGame && isResumableSnapshot(savedGame)) {
-        // Show previous tiles under Settings; Resume / New Game decided there.
+        // Show previous tiles under the Resume / New Game prompt.
         loadSavedGameOntoTable(savedGame, { autoContinue: false })
-        if (openMenuWhenReady || openSettingsForEnter) {
+        if (openMenuWhenReady) {
           pendingOpenMenuAfterBootRef.current = true
         }
         return
@@ -5873,7 +5916,7 @@ export default function App() {
 
       if (eagerResumePaintDoneRef.current) setResumePrompt(null)
       beginFreshSessionWithOpeningFlyIn()
-      if (openMenuWhenReady || openSettingsForEnter) {
+      if (openMenuWhenReady) {
         pendingOpenMenuAfterBootRef.current = true
       }
     })()
@@ -7397,6 +7440,11 @@ export default function App() {
           }}
         />
       ) : null}
+      <ResumeGamePromptDialog
+        active={resumePrompt != null}
+        onResume={confirmContinueSavedGame}
+        onNewGame={declineResumeStartNewGame}
+      />
       {charlestonPassError || callRuleError || blockingDialog ? (
         <div
           className="charleston-error-overlay"

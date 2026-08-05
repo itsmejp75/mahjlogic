@@ -282,11 +282,10 @@ export function HomePage() {
     prefsSaverRef.current.cancel()
     void saveUserPreferences(prefsRef.current)
     markPlayEnterFastPath()
-    // App restores a saved hand onto the table when one exists; Resume / New Game live in Settings.
+    // App restores a saved hand onto the table when one exists; Resume / New Game use a short prompt.
     navigate('/play', {
       state: {
         playIntent: 'enter',
-        openSettings: true,
       },
     })
   }
@@ -377,8 +376,9 @@ export function HomePage() {
               <div className="home-hub__feature-body">
                 <h2 className="home-hub__feature-title">Rack Checker</h2>
                 <p className="home-hub__feature-copy">
-                  Enter your tiles to see every matching hand on the card — spot overlaps and
-                  sections you might have overlooked.
+                  Enter your tiles to see the closest matching hands on the card. See
+                  probabilities of finishing your hand before the wall runs out. Spot overlaps
+                  and sections you might have overlooked.
                 </p>
                 <div className="home-hub__feature-actions">
                   <button
