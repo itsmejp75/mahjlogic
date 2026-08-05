@@ -10,15 +10,16 @@
 
 .app-menu-modal__diff-block--game-actions .app-menu-modal__game-actions-row {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: stretch;
   gap: 0.4rem;
   padding: 0;
 }
 
 .app-menu-modal__game-actions-row .app-menu-tray__diff-btn {
-  flex: 0 0 auto;
+  flex: 1 1 0;
   min-width: 0;
-  width: 100%;
+  width: auto;
   margin: 0;
 }
 

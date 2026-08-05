@@ -321,16 +321,6 @@
   margin-top: 0.15rem;
 }
 
-.home-hub__resume-under {
-  margin: 0;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  line-height: 1.35;
-  color: color-mix(in srgb, #e8edf4 58%, transparent);
-  text-align: center;
-}
-
 .home-hub__setup,
 .home-hub__upgrade {
   display: flex;

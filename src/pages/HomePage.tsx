@@ -41,10 +41,10 @@ import {
   helpFlagsForPreset,
   readHelpPresetFromStorage,
 } from '../lib/helpPreset'
+import { clearHomeResumeCache, setHomeResumeCache } from '../app/homeResumeCache'
 import {
   isResumableSnapshot,
   loadInProgressGame,
-  type InProgressGameSnapshot,
 } from '../lib/inProgressGame'
 import {
   createDebouncedPrefsSaver,
@@ -53,28 +53,6 @@ import {
   type SyncedUserPreferences,
 } from '../lib/userPreferences'
 import '../styles/home.css'
-
-const BOT_DIFFICULTY_LABEL: Record<BotDifficulty, string> = {
-  easy: 'Novice',
-  normal: 'Advanced',
-  hard: 'Expert',
-}
-
-/** Lines under the Resume CTA — saved hand settings + wall tiles left. */
-function resumeSettingsSummaryLines(snap: InProgressGameSnapshot): string[] {
-  const { settings } = snap
-  const card = settings.cardId === 'mock' ? 'Sample' : `${settings.cardId} NMJL`
-  const lines = [
-    `Card: ${card}`,
-    `Bot skill: ${BOT_DIFFICULTY_LABEL[settings.botDifficulty]}`,
-  ]
-  if (settings.blankTilesEnabled) lines.push(`Blanks: ${settings.blankTileCount}`)
-  if (settings.tenJokersEnabled) lines.push('10 Jokers')
-  if (settings.playAsEastEnabled) lines.push('Position: East')
-  if (settings.botWinsEnabled) lines.push('Bot wins')
-  lines.push(`Tiles remaining: ${snap.round.wall.length}`)
-  return lines
-}
 
 const LS_KEY_BOT_DIFFICULTY = 'mahjlogic.botDifficulty'
 const LS_KEY_BLANK_TILES = 'mahjlogic.blankTilesEnabled'
@@ -176,9 +154,6 @@ function buildPrefsFromLocal(
   }
 }
 
-/** Last known in-progress hand for this session — avoids blanking the hub while cloud reloads. */
-let homeResumeCache: { userId: string; snap: InProgressGameSnapshot | null } | null = null
-
 export function HomePage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -188,11 +163,6 @@ export function HomePage() {
   const prefsRef = useRef<SyncedUserPreferences>(buildPrefsFromLocal())
 
   const [appTheme, setAppTheme] = useState<AppTheme>(() => readAppThemeFromStorage())
-  /** Prefer cached snap so Resume CTAs paint immediately on remount (Menu → Home). */
-  const [resumeSnap, setResumeSnap] = useState<InProgressGameSnapshot | null>(() => {
-    const cached = homeResumeCache
-    return cached && cached.userId === user?.id ? cached.snap : null
-  })
   const [signOutBusy, setSignOutBusy] = useState(false)
   const [statsOpen, setStatsOpen] = useState(false)
 
@@ -299,27 +269,24 @@ export function HomePage() {
         void saveUserPreferences(next)
       }
 
-      const nextSnap = isResumableSnapshot(snapshot) ? snapshot : null
-      if (user?.id) homeResumeCache = { userId: user.id, snap: nextSnap }
-      setResumeSnap(nextSnap)
+      if (user?.id) {
+        setHomeResumeCache(user.id, isResumableSnapshot(snapshot) ? snapshot : null)
+      }
     })()
     return () => {
       cancelled = true
     }
   }, [user?.id])
 
-  const goPlay = (intent: 'new' | 'resume') => {
+  const goPlay = () => {
     prefsSaverRef.current.cancel()
     void saveUserPreferences(prefsRef.current)
-    if (intent === 'new' && user?.id) {
-      homeResumeCache = { userId: user.id, snap: null }
-      setResumeSnap(null)
-    }
     markPlayEnterFastPath()
+    // App restores a saved hand onto the table when one exists; Resume / New Game live in Settings.
     navigate('/play', {
       state: {
-        playIntent: intent,
-        ...(intent === 'new' ? { openSettings: true } : {}),
+        playIntent: 'enter',
+        openSettings: true,
       },
     })
   }
@@ -329,15 +296,13 @@ export function HomePage() {
     setSignOutBusy(true)
     try {
       prefsSaverRef.current.cancel()
-      homeResumeCache = null
+      clearHomeResumeCache()
       await signOut()
       navigate('/', { replace: true })
     } finally {
       setSignOutBusy(false)
     }
   }
-
-  const hasResume = resumeSnap != null
 
   return (
     <main className="app home-hub" data-app-theme={appTheme}>
@@ -378,39 +343,18 @@ export function HomePage() {
               <div className="home-hub__feature-body">
                 <h2 className="home-hub__feature-title">Practice</h2>
                 <p className="home-hub__feature-copy">
-                  Play full American Mah Jongg hands against bots — Charleston through Mah
-                  Jongg — with the card and coaching tools right under your rack.
+                  Practice American Mah Jongg in an Intelligent All-In-One Console that includes
+                  guidance with suggested hands, highlighted tiles, discard tracking, opponent
+                  hand identification, and other hints.
                 </p>
                 <div className="home-hub__feature-actions">
-                  {hasResume ? (
-                    <>
-                      <button
-                        type="button"
-                        className="btn home-hub__action-btn home-hub__feature-cta"
-                        onClick={() => goPlay('resume')}
-                      >
-                        Resume
-                      </button>
-                      <p className="home-hub__resume-under">
-                        {resumeSettingsSummaryLines(resumeSnap).join(' · ')}
-                      </p>
-                      <button
-                        type="button"
-                        className="btn home-hub__action-btn home-hub__feature-cta"
-                        onClick={() => goPlay('new')}
-                      >
-                        Play
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn home-hub__action-btn home-hub__feature-cta"
-                      onClick={() => goPlay('new')}
-                    >
-                      Play
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    className="btn home-hub__action-btn home-hub__feature-cta"
+                    onClick={goPlay}
+                  >
+                    Play
+                  </button>
                 </div>
               </div>
             </article>

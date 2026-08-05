@@ -1132,7 +1132,12 @@
   padding: 0;
   border: 2px solid var(--card-ink-red);
   border-radius: 0.15em;
-  background: #1a2332;
+  /* Semi-dark recess from the pill face — not a separate navy fill. */
+  background: color-mix(
+    in srgb,
+    var(--app-action-btn-bottom-pressed) 78%,
+    #000 22%
+  );
   color: var(--card-ink-red);
   line-height: 1;
 }

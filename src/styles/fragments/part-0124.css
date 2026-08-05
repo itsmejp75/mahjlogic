@@ -2130,14 +2130,21 @@ html body .app .app-menu-modal-layer .app-menu-modal .app-menu-modal__close {
   font-weight: 700;
 }
 
-/* Resume / New Game (Menu pane) — 150% of the standard menu pill height (2.5rem → 3.75rem). */
+/* Replay / Resume / New Game — 150% of the standard menu pill height (2.5rem → 3.75rem). */
 .app-menu-modal-layer .app-menu-modal
   .app-menu-modal__diff-block--game-actions
   .app-menu-modal__game-actions-row
   .app-menu-tray__diff-btn {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
   height: 3.75rem;
   min-height: 3.75rem;
   max-height: 3.75rem;
+  padding-inline: 0.3rem;
+  white-space: normal;
+  line-height: 1.15;
+  text-wrap: balance;
 }
 
 .app-menu-modal-layer .app-menu-modal .app-menu-modal__lobby-modes

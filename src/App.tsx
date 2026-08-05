@@ -29,10 +29,12 @@ import {
   buildInProgressSnapshot,
   clearInProgressGame,
   createDebouncedInProgressGameSaver,
+  isResumableSnapshot,
   loadInProgressGame,
   saveInProgressGame,
   type InProgressGameSnapshot,
 } from './lib/inProgressGame'
+import { peekHomeResumeCache, setHomeResumeCache } from './app/homeResumeCache'
 import {
   createDebouncedPrefsSaver,
   loadUserPreferences,
@@ -2194,8 +2196,10 @@ export default function App() {
   const pendingOpenSettingsAfterBootRef = useRef(
     readPlayLocationState(location.state).openSettings === true,
   )
-  /** Home → Play (new): deal in useLayoutEffect before first paint — do not wait on cloud hydrate. */
+  /** Home → Play (new / known-empty): deal in useLayoutEffect before first paint — do not wait on cloud hydrate. */
   const eagerNewDealDoneRef = useRef(false)
+  /** Home → Play (enter): painted a cached saved hand before cloud hydrate. */
+  const eagerResumePaintDoneRef = useRef(false)
   const [rackCheckerOpen, setRackCheckerOpen] = useState(false)
   const replayOpeningDeckRef = useRef<TileInstance[] | null>(null)
   const gameResultRecordedRef = useRef(false)
@@ -5393,12 +5397,12 @@ export default function App() {
         return
       }
       setResumePrompt(snap)
-      // Settings opens with Continue / New Game after the boot loader dismisses (see effect below).
+      // Settings opens with Replay / Resume / New Game after the boot loader dismisses.
     },
     [applyResumeSettings, markSessionReady],
   )
 
-  /** Continue: table already shows the saved hand — just dismiss the prompt. */
+  /** Resume: table already shows the saved hand — just dismiss the prompt. */
   const confirmContinueSavedGame = useCallback(() => {
     setResumePrompt(null)
     markSessionReady()
@@ -5408,10 +5412,23 @@ export default function App() {
     setResumePrompt(null)
     inProgressSaverRef.current.cancel()
     void clearInProgressGame()
+    if (user?.id) setHomeResumeCache(user.id, null)
     // sessionReady must be true before performNewHandDeal so it clears the cloud row.
     markSessionReady()
     performNewHandDeal()
-  }, [markSessionReady, performNewHandDeal])
+  }, [markSessionReady, performNewHandDeal, user?.id])
+
+  /** Menu → Replay: same opening deal. Clears a pending resume first. */
+  const replayFromMenu = useCallback(() => {
+    if (resumePrompt != null) {
+      setResumePrompt(null)
+      inProgressSaverRef.current.cancel()
+      void clearInProgressGame()
+      if (user?.id) setHomeResumeCache(user.id, null)
+      markSessionReady()
+    }
+    performNewHandDeal({ replayLastOpening: true })
+  }, [resumePrompt, markSessionReady, performNewHandDeal, user?.id])
 
   /** End-dialog preview: skip Resume/New Game and deal a fresh table under the panel. */
   useEffect(() => {
@@ -5483,19 +5500,43 @@ export default function App() {
   }, [markSessionReady, performNewHandDeal])
 
   /**
-   * Home → Play: deal from local prefs immediately (Home already saved them).
-   * Waiting on cloud hydrate was the empty-rack / wall-0 hesitation.
+   * Home → Play: paint the table immediately from Home's resume cache when possible.
+   * - Saved hand: show those tiles under Settings (Resume / New Game decided there).
+   * - Known empty: deal fresh (same as legacy playIntent `new`).
+   * - Unknown: wait for cloud hydrate (below).
    */
   useLayoutEffect(() => {
     if (previewWinHandActive) return
-    if (eagerNewDealDoneRef.current) return
-    if (homePlayIntentRef.current !== 'new') return
+    if (eagerNewDealDoneRef.current || eagerResumePaintDoneRef.current) return
+    const intent = homePlayIntentRef.current
+    if (intent === 'new') {
+      eagerNewDealDoneRef.current = true
+      inProgressSaverRef.current.cancel()
+      void clearInProgressGame()
+      beginFreshSessionWithOpeningFlyIn()
+      clearPlayEnterFastPath()
+      return
+    }
+    if (intent !== 'enter' && intent !== 'resume') return
+    const peeked = peekHomeResumeCache(user?.id)
+    if (peeked.status !== 'ready') return
+    if (peeked.snap && isResumableSnapshot(peeked.snap)) {
+      eagerResumePaintDoneRef.current = true
+      loadSavedGameOntoTable(peeked.snap, { autoContinue: false })
+      clearPlayEnterFastPath()
+      return
+    }
     eagerNewDealDoneRef.current = true
     inProgressSaverRef.current.cancel()
     void clearInProgressGame()
     beginFreshSessionWithOpeningFlyIn()
     clearPlayEnterFastPath()
-  }, [beginFreshSessionWithOpeningFlyIn, previewWinHandActive])
+  }, [
+    beginFreshSessionWithOpeningFlyIn,
+    loadSavedGameOntoTable,
+    previewWinHandActive,
+    user?.id,
+  ])
 
   /** Load cloud prefs + in-progress game on login; open menu for Resume / New Game when needed. */
   useEffect(() => {
@@ -5543,16 +5584,24 @@ export default function App() {
           return
         }
         const openMenuWhenReady = playIntent == null && !eagerNewDealDoneRef.current
+        const openSettingsForEnter =
+          playIntent === 'enter' || playIntent === 'resume'
         if (eagerNewDealDoneRef.current || playIntent === 'new') {
           inProgressSaverRef.current.cancel()
           void clearInProgressGame()
           if (!sessionReadyRef.current) beginFreshSessionWithOpeningFlyIn()
-        } else if (savedGame) {
-          loadSavedGameOntoTable(savedGame, { autoContinue: playIntent === 'resume' })
-          if (openMenuWhenReady) pendingOpenMenuAfterBootRef.current = true
+        } else if (savedGame && isResumableSnapshot(savedGame)) {
+          // Show previous tiles under Settings; Resume / New Game decided there.
+          loadSavedGameOntoTable(savedGame, { autoContinue: false })
+          if (openMenuWhenReady || openSettingsForEnter) {
+            pendingOpenMenuAfterBootRef.current = true
+          }
         } else {
+          if (eagerResumePaintDoneRef.current) setResumePrompt(null)
           beginFreshSessionWithOpeningFlyIn()
-          if (openMenuWhenReady) pendingOpenMenuAfterBootRef.current = true
+          if (openMenuWhenReady || openSettingsForEnter) {
+            pendingOpenMenuAfterBootRef.current = true
+          }
         }
         return
       }
@@ -5797,8 +5846,10 @@ export default function App() {
         return
       }
       const openMenuWhenReady = playIntent == null && !eagerNewDealDoneRef.current
+      const openSettingsForEnter =
+        playIntent === 'enter' || playIntent === 'resume'
 
-      // Home → Play already dealt in useLayoutEffect — apply cloud prefs above, do not redeal.
+      // Home → Play already dealt a fresh table — apply cloud prefs above, do not redeal.
       if (eagerNewDealDoneRef.current || playIntent === 'new') {
         inProgressSaverRef.current.cancel()
         void clearInProgressGame()
@@ -5807,14 +5858,20 @@ export default function App() {
       }
 
       // Restore the saved table first — never flash a new opening deal under a resume.
-      if (savedGame) {
-        loadSavedGameOntoTable(savedGame, { autoContinue: playIntent === 'resume' })
-        if (openMenuWhenReady) pendingOpenMenuAfterBootRef.current = true
+      if (savedGame && isResumableSnapshot(savedGame)) {
+        // Show previous tiles under Settings; Resume / New Game decided there.
+        loadSavedGameOntoTable(savedGame, { autoContinue: false })
+        if (openMenuWhenReady || openSettingsForEnter) {
+          pendingOpenMenuAfterBootRef.current = true
+        }
         return
       }
 
+      if (eagerResumePaintDoneRef.current) setResumePrompt(null)
       beginFreshSessionWithOpeningFlyIn()
-      if (openMenuWhenReady) pendingOpenMenuAfterBootRef.current = true
+      if (openMenuWhenReady || openSettingsForEnter) {
+        pendingOpenMenuAfterBootRef.current = true
+      }
     })()
 
     return () => {
@@ -6854,32 +6911,41 @@ export default function App() {
             }}
           >
             <div className="app-menu-modal__body">
-              {resumePrompt != null ? (
-                <div className="app-menu-modal__diff-block app-menu-modal__diff-block--game-actions">
-                  <div className="app-menu-modal__game-actions-row" aria-label="Resume saved game">
-                    <button
-                      type="button"
-                      className="btn app-menu-tray__diff-btn app-menu-modal__lobby-play"
-                      onClick={() => {
-                        confirmContinueSavedGame()
-                        appMenuOpenApiRef.current.setMenuOpen(false)
-                      }}
-                    >
-                      Continue
-                    </button>
-                    <button
-                      type="button"
-                      className="btn app-menu-tray__diff-btn app-menu-modal__new-game"
-                      onClick={() => {
-                        declineResumeStartNewGame()
-                        appMenuOpenApiRef.current.setMenuOpen(false)
-                      }}
-                    >
-                      New Game
-                    </button>
-                  </div>
+              <div className="app-menu-modal__diff-block app-menu-modal__diff-block--game-actions">
+                <div className="app-menu-modal__game-actions-row" aria-label="Game">
+                  <button
+                    type="button"
+                    className="btn app-menu-tray__diff-btn app-menu-modal__replay"
+                    onClick={() => {
+                      replayFromMenu()
+                      appMenuOpenApiRef.current.setMenuOpen(false)
+                    }}
+                  >
+                    Replay
+                  </button>
+                  <button
+                    type="button"
+                    className="btn app-menu-tray__diff-btn app-menu-modal__lobby-play"
+                    onClick={() => {
+                      if (resumePrompt != null) confirmContinueSavedGame()
+                      appMenuOpenApiRef.current.setMenuOpen(false)
+                    }}
+                  >
+                    Resume
+                  </button>
+                  <button
+                    type="button"
+                    className="btn app-menu-tray__diff-btn app-menu-modal__new-game"
+                    onClick={() => {
+                      if (resumePrompt != null) declineResumeStartNewGame()
+                      else performNewHandDeal()
+                      appMenuOpenApiRef.current.setMenuOpen(false)
+                    }}
+                  >
+                    New Game
+                  </button>
                 </div>
-              ) : null}
+              </div>
               <div className="app-menu-modal__diff-block app-menu-modal__diff-block--game-settings">
                 <fieldset className="app-menu-modal__section-frame">
                   <legend className="app-menu-modal__section-frame-title">Game settings</legend>
