@@ -341,71 +341,19 @@
 }
 
 /*
- * Win dump: fit the winning 14 to the same 14×1fr tracks as `.hand-row` / the action bar
- * (part-0008 / part-0017). Call-meld strips still use frozen `--rack-tile-w` flex widths;
- * fourteen independently rounded faces + gaps pile leftover sub-pixels onto tile 14 so it
- * sticks past Ignore. Flatten strip wrappers into one grid and size faces from the track.
+ * Win dump: keep normal call-meld geometry (⅓-tile in-flow strip, faces hang over the hand,
+ * seat-label measures those boxes). Retarget `--rack-tile-w` from this rack’s inline size so
+ * fourteen frozen faces match the action bar; 1px safety covers sub-pixel rounding pile-up.
+ * Pin `--rack-tile-h` so the fit stays horizontal-only.
  */
-.panel--hand .rack-stage__rack-top .exposure-rack--win-hand-dump {
+.panel--hand
+  .rack-stage__rack-top
+  .exposure-rack.exposure-rack--win-hand-dump {
   width: 100%;
   max-width: 100%;
-}
-
-.panel--hand
-  .rack-stage__rack-top
-  .exposure-rack--win-hand-dump
-  .exposure-rack__call-meld-anchor {
-  display: grid;
-  grid-template-columns: repeat(14, 1fr);
-  gap: var(--player-rack-face-gap);
-  align-items: end;
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-.panel--hand
-  .rack-stage__rack-top
-  .exposure-rack--win-hand-dump
-  .exposure-rack__call-meld-anchor
-  > :is(div, .exposure-rack__meld-sortable),
-.panel--hand
-  .rack-stage__rack-top
-  .exposure-rack--win-hand-dump
-  .exposure-rack__call-meld-strip,
-.panel--hand
-  .rack-stage__rack-top
-  .exposure-rack--win-hand-dump
-  .exposure-rack__call-meld-strip__inner {
-  display: contents;
-}
-
-.panel--hand
-  .rack-stage__rack-top
-  .exposure-rack--win-hand-dump
-  .exposure-rack__call-meld-strip__tile {
-  width: 100%;
-  min-width: 0;
-  max-width: none;
-  flex: none;
-  height: var(--rack-tile-h);
-  box-sizing: border-box;
-}
-
-.panel--hand
-  .rack-stage__rack-top
-  .exposure-rack--win-hand-dump
-  .exposure-rack__call-meld-strip__tile
-  .tile-face,
-.panel--hand
-  .rack-stage__rack-top
-  .exposure-rack--win-hand-dump
-  .exposure-rack__call-meld-strip__tile
-  > .exposure-rack__tile-fly-wrap {
-  width: 100%;
-  height: 100%;
-  min-width: 0;
-  flex: none;
+  container-type: inline-size;
+  --rack-tile-w: calc((100cqi - 13 * var(--player-rack-face-gap) - 1px) / 14);
+  --rack-tile-h: var(--hand-top-rack-tile-h);
 }
 
 /*

@@ -92,21 +92,32 @@ export function usePlayerSeatLabelLayout(args: {
     // (it hides behind the meld). Drop it into the empty band below the meld — between the meld's
     // bottom and the action-button row — as soon as the meld appears.
     //
-    // Measure the layout slot (not `.tile-face`): fly-up transforms move the face's
-    // getBoundingClientRect, and settle/RAF samples were snapping the label up in jumps.
+    // Prefer `.exposure-rack__call-meld-strip__inner` (full `--rack-tile-h` layout box that hangs
+    // over the hand tray). Tile slots alone can read short when strip chrome is only ⅓ tile tall
+    // (win-hand dump fit tracks). Still avoid `.tile-face` — fly-up transforms move that rect.
     const rackTop = eastExposureRackTopRef.current
-    const meldSlots = rackTop?.querySelectorAll(
+    const meldInners = rackTop?.querySelectorAll(
+      '.exposure-rack__call-meld-strip__inner',
+    )
+    const meldTiles = rackTop?.querySelectorAll(
       '.exposure-rack__call-meld-strip__tile',
     )
-    const meldPinned = Boolean(meldSlots && meldSlots.length > 0)
+    const meldPinned = Boolean(
+      (meldInners && meldInners.length > 0) || (meldTiles && meldTiles.length > 0),
+    )
     const animateForMeld = meldPinned !== meldPinnedRef.current
     meldPinnedRef.current = meldPinned
 
-    if (meldPinned && meldSlots) {
+    if (meldPinned) {
       let meldBottom = -Infinity
-      meldSlots.forEach((el) => {
-        meldBottom = Math.max(meldBottom, el.getBoundingClientRect().bottom)
-      })
+      const measure = (els: NodeListOf<Element> | undefined) => {
+        els?.forEach((el) => {
+          meldBottom = Math.max(meldBottom, el.getBoundingClientRect().bottom)
+        })
+      }
+      // Max of both — win-dump strip chrome is ⅓ tile; inners/tiles carry the hanging face box.
+      measure(meldInners)
+      measure(meldTiles)
       const actionWell = handTray?.querySelector(
         '.panel-hand-rack__action-well',
       ) as HTMLElement | null
