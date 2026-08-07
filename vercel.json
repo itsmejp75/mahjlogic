@@ -136,28 +136,48 @@
       "permanent": true
     },
     {
-      "source": "/american-mah-jongg-app",
-      "destination": "/american-mahjong-app",
+      "source": "/american-mahjong-app",
+      "destination": "/american-mah-jongg-app",
       "permanent": true
     },
     {
       "source": "/mahjong-app",
-      "destination": "/american-mahjong-app",
+      "destination": "/american-mah-jongg-app",
       "permanent": true
     },
     {
       "source": "/mah-jongg-app",
-      "destination": "/american-mahjong-app",
+      "destination": "/american-mah-jongg-app",
       "permanent": true
     },
     {
       "source": "/american-mahjong-practice-app",
-      "destination": "/american-mahjong-app",
+      "destination": "/american-mah-jongg-app",
       "permanent": true
     },
     {
       "source": "/american-mah-jongg-practice-app",
-      "destination": "/american-mahjong-app",
+      "destination": "/american-mah-jongg-app",
+      "permanent": true
+    },
+    {
+      "source": "/amercian-mah-jongg-app",
+      "destination": "/american-mah-jongg-app",
+      "permanent": true
+    },
+    {
+      "source": "/amercian-mahjong-app",
+      "destination": "/american-mah-jongg-app",
+      "permanent": true
+    },
+    {
+      "source": "/amercian-mah-jongg-practice-app",
+      "destination": "/american-mah-jongg-app",
+      "permanent": true
+    },
+    {
+      "source": "/amercian-mahjong-practice-app",
+      "destination": "/american-mah-jongg-app",
       "permanent": true
     }
   ],

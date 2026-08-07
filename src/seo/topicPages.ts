@@ -12,12 +12,17 @@ export type SeoTopic = PageMeta & {
   heroAlt: string
   sections: Array<{ heading: string; paragraphs: string[]; bullets?: string[] }>
   ctaLabel: string
+  /** In-app destination (`RequireAuth` sends signed-out users to `/`). */
+  ctaTo: '/home' | '/rack-checker'
   related: Array<{ to: string; label: string }>
 }
 
 /**
  * Indexable pillar pages. Synonym URLs 301 → these paths in `vercel.json`
  * so authority consolidates instead of spreading across thin duplicates.
+ *
+ * On-page copy uses “Mah Jongg” only. Meta `description` may include “Mahjong”
+ * for search matching without showing that spelling in the visible page.
  */
 export const SEO_TOPICS: Record<SeoTopicId, SeoTopic> = {
   practice: {
@@ -27,17 +32,18 @@ export const SEO_TOPICS: Record<SeoTopicId, SeoTopic> = {
     description:
       'Practice and train American Mah Jongg (Mahjong) with suggested hands, tile highlights, discard tracking, and smart coaching — a home drill console for NMJL-style play.',
     h1: 'American Mah Jongg practice & training',
-    lead: 'MahjLogic is a practice console for American Mah Jongg — also searched as American Mahjong — built for drills, training sessions, and getting sharper between table games.',
+    lead: 'MahjLogic is a practice console for American Mah Jongg — built for drills, training sessions, and getting sharper between table games.',
     heroImage: '/marketing/practice.jpg',
     heroAlt: 'MahjLogic American Mah Jongg practice table',
     image: '/marketing/practice.jpg',
     ctaLabel: 'Start practicing free',
+    ctaTo: '/home',
     sections: [
       {
         heading: 'Practice, train, and drill at home',
         paragraphs: [
           'Whether you call it practice, training, or drilling hands, the goal is the same: recognize patterns faster and make better discards. MahjLogic gives you a full American Mah Jongg training table with guidance built in — suggested hands, highlighted tiles, opponent-hand cues, and other coaching hints so every session teaches something.',
-          'Use it as a Mah Jongg coach between club nights, or as a quiet Mahjong workout when you want reps without waiting for three other players.',
+          'Use it as a Mah Jongg coach between club nights, or as a quiet workout when you want reps without waiting for three other players.',
         ],
       },
       {
@@ -49,7 +55,7 @@ export const SEO_TOPICS: Record<SeoTopicId, SeoTopic> = {
           'Suggested hands so you see which card lines fit your rack',
           'Highlighted tiles and discard tracking while you practice',
           'Hints for Mah Jongg calls, joker swaps, and dead-hand risk',
-          'A console that doubles as American Mahjong training between games',
+          'A console that doubles as American Mah Jongg training between games',
         ],
       },
       {
@@ -61,7 +67,7 @@ export const SEO_TOPICS: Record<SeoTopicId, SeoTopic> = {
     ],
     related: [
       { to: '/mah-jongg-tile-checker', label: 'Tile / rack checker' },
-      { to: '/american-mahjong-app', label: 'American Mahjong app' },
+      { to: '/american-mah-jongg-app', label: 'American Mah Jongg app' },
     ],
   },
 
@@ -70,19 +76,20 @@ export const SEO_TOPICS: Record<SeoTopicId, SeoTopic> = {
     path: '/mah-jongg-tile-checker',
     title: 'Mah Jongg Tile Checker & Rack Checker | MahjLogic',
     description:
-      'Check American Mah Jongg tiles against the card: rack checker, tile checker, and tile scanner-style analysis with closest hands and finish probabilities.',
+      'Check American Mah Jongg (Mahjong) tiles against the card: rack checker, tile checker, and tile scanner-style analysis with closest hands and finish probabilities.',
     h1: 'Mah Jongg tile checker & rack checker',
     lead: 'Enter your tiles to check what your rack can become — a Mah Jongg tile checker, tiles checker, rack checker, and hand checker in one place, with finish odds before the wall runs out.',
     heroImage: '/marketing/rack-checker.jpg',
     heroAlt: 'MahjLogic Rack Checker checking Mah Jongg tiles',
     image: '/marketing/rack-checker.jpg',
     ctaLabel: 'Check your tiles',
+    ctaTo: '/rack-checker',
     sections: [
       {
         heading: 'Check tiles against the card',
         paragraphs: [
           'Paste or build your rack and MahjLogic scans it the way a careful player would: closest matching hands, overlooked sections, and overlaps you might miss when staring at the card. Think of it as a tile scanner for American Mah Jongg — without photographing the table.',
-          'People search for rack checker, tile checker, tiles checker, hand checker, or “check my Mahjong tiles.” Same job: make sense of the tiles in front of you.',
+          'People look for a rack checker, tile checker, tiles checker, or hand checker to make sense of the tiles in front of them. Same job: match your rack to the card.',
         ],
       },
       {
@@ -94,7 +101,7 @@ export const SEO_TOPICS: Record<SeoTopicId, SeoTopic> = {
           'Closest card hands for your current tiles',
           'Spot sections you may have overlooked',
           'Finish odds while tiles remain in the wall',
-          'Works for American Mah Jongg and American Mahjong spelling searches',
+          'Built for American Mah Jongg card play',
         ],
       },
       {
@@ -106,33 +113,34 @@ export const SEO_TOPICS: Record<SeoTopicId, SeoTopic> = {
     ],
     related: [
       { to: '/american-mah-jongg-practice', label: 'Practice & training' },
-      { to: '/american-mahjong-app', label: 'American Mahjong app' },
+      { to: '/american-mah-jongg-app', label: 'American Mah Jongg app' },
     ],
   },
 
   app: {
     id: 'app',
-    path: '/american-mahjong-app',
-    title: 'American Mahjong App for Practice | MahjLogic',
+    path: '/american-mah-jongg-app',
+    title: 'American Mah Jongg App for Practice | MahjLogic',
     description:
-      'MahjLogic is an American Mahjong / American Mah Jongg app for practice, training, and checking tiles — suggested hands, probabilities, and coaching in one console.',
-    h1: 'American Mahjong & Mah Jongg app',
-    lead: 'Looking for an American Mahjong app — or American Mah Jongg app — built for practice, training, and checking tiles? MahjLogic is a smart console for NMJL-style play.',
+      'MahjLogic is an American Mah Jongg (Mahjong) app for practice, training, and checking tiles — suggested hands, probabilities, and coaching in one console.',
+    h1: 'American Mah Jongg app',
+    lead: 'Looking for an American Mah Jongg app built for practice, training, and checking tiles? MahjLogic is a smart console for NMJL-style play.',
     heroImage: '/marketing/practice.jpg',
-    heroAlt: 'MahjLogic American Mahjong practice app',
+    heroAlt: 'MahjLogic American Mah Jongg practice app',
     image: '/marketing/practice.jpg',
-    ctaLabel: 'Open MahjLogic',
+    ctaLabel: 'Open Mahj Logic',
+    ctaTo: '/home',
     sections: [
       {
         heading: 'One app for practice and tile checks',
         paragraphs: [
-          'MahjLogic combines an American Mah Jongg practice table with a rack / tile checker. Train with suggested hands and coaching, or check Mahjong tiles when you want a fast read on the card — without juggling separate tools.',
+          'MahjLogic combines an American Mah Jongg practice table with a rack / tile checker. Train with suggested hands and coaching, or check your tiles when you want a fast read on the card — without juggling separate tools.',
         ],
       },
       {
         heading: 'Built for American-style play',
         paragraphs: [
-          'This is not Chinese or Japanese mahjong solitaire. The product language matches how American players search and speak: Mah Jongg and Mahjong, practice and training, rack checker and tile scanner.',
+          'This is American Mah Jongg — NMJL-style card play with Charleston, exposures, and jokers — not a generic tile-matching solitaire. Practice, train, check your rack, and improve between real table games.',
         ],
         bullets: [
           'Practice / training console with intelligent hints',

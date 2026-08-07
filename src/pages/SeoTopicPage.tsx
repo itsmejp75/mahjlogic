@@ -1,6 +1,7 @@
 import { useLayoutEffect } from 'react'
 import { Link } from 'react-router-dom'
-import appIconSrc from '../assets/mahjlogic-app-icon.svg?url'
+import mahjLogoSrc from '../assets/mahj-logo.svg?url'
+import logicLogoSrc from '../assets/logic-logo.svg?url'
 import { applyAppThemeToDocument, DEFAULT_APP_THEME } from '../app/appTheme'
 import { SEO_TOPICS, type SeoTopicId } from '../seo/topicPages'
 import { usePageMeta } from '../seo/usePageMeta'
@@ -29,14 +30,30 @@ export function SeoTopicPage({ topicId }: Props) {
       <div className="seo-topic__atmosphere" aria-hidden="true" />
       <div className="seo-topic__shell">
         <header className="seo-topic__header">
-          <Link className="seo-topic__brand" to="/">
-            <img src={appIconSrc} alt="" width={36} height={36} decoding="async" draggable={false} />
-            <span>Mahj Logic</span>
+          <Link className="seo-topic__brand" to="/" aria-label="Mahj Logic home">
+            <img
+              className="seo-topic__mark-logo seo-topic__mark-logo--mahj"
+              src={mahjLogoSrc}
+              alt=""
+              decoding="async"
+              draggable={false}
+            />
+            <img
+              className="seo-topic__mark-logo seo-topic__mark-logo--logic"
+              src={logicLogoSrc}
+              alt=""
+              decoding="async"
+              draggable={false}
+            />
+            <span className="seo-topic__tagline-sep" aria-hidden="true">
+              —
+            </span>
+            <span className="seo-topic__tagline">American Mah Jongg Intelligence</span>
           </Link>
           <nav className="seo-topic__nav" aria-label="Product">
             <Link to="/american-mah-jongg-practice">Practice</Link>
             <Link to="/mah-jongg-tile-checker">Tile checker</Link>
-            <Link to="/american-mahjong-app">App</Link>
+            <Link to="/american-mah-jongg-app">App</Link>
           </nav>
         </header>
 
@@ -55,7 +72,7 @@ export function SeoTopicPage({ topicId }: Props) {
           <p className="seo-topic__lead">{topic.lead}</p>
 
           <p className="seo-topic__cta-wrap">
-            <Link className="btn seo-topic__cta" to="/">
+            <Link className="btn seo-topic__cta" to={topic.ctaTo}>
               {topic.ctaLabel}
             </Link>
           </p>
@@ -85,14 +102,19 @@ export function SeoTopicPage({ topicId }: Props) {
                 </li>
               ))}
               <li>
-                <Link to="/">Sign in to MahjLogic</Link>
+                <Link to="/home">Open Mahj Logic home</Link>
+              </li>
+              <li>
+                <Link to="/">Sign in</Link>
               </li>
             </ul>
           </nav>
         </article>
 
         <p className="seo-topic__back">
-          <Link to="/">← Back to sign in</Link>
+          <Link to="/home">← Open app</Link>
+          <span aria-hidden="true"> · </span>
+          <Link to="/">Sign in</Link>
           <span aria-hidden="true"> · </span>
           <Link to="/privacy">Privacy</Link>
           <span aria-hidden="true"> · </span>

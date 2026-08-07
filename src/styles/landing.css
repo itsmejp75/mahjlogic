@@ -420,6 +420,16 @@ html:has(.landing),
   color: color-mix(in srgb, #e8edf4 74%, transparent);
 }
 
+.landing__feature-actions {
+  margin-top: auto;
+  padding-top: 0.35rem;
+}
+
+.btn.landing__feature-cta {
+  width: 100%;
+  text-decoration: none;
+}
+
 .landing__auth-col {
   display: flex;
   flex-direction: column;

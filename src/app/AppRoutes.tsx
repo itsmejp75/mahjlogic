@@ -22,7 +22,7 @@ export function AppRoutes() {
         element={<SeoTopicPage topicId="practice" />}
       />
       <Route path="/mah-jongg-tile-checker" element={<SeoTopicPage topicId="tile-checker" />} />
-      <Route path="/american-mahjong-app" element={<SeoTopicPage topicId="app" />} />
+      <Route path="/american-mah-jongg-app" element={<SeoTopicPage topicId="app" />} />
       {/* Dev / non-Vercel synonym fallbacks (production prefers HTTP 301s) */}
       <Route path="/mahjong-practice" element={<Navigate to="/american-mah-jongg-practice" replace />} />
       <Route path="/mah-jongg-practice" element={<Navigate to="/american-mah-jongg-practice" replace />} />
@@ -72,16 +72,26 @@ export function AppRoutes() {
         path="/american-mah-jongg-tile-checker"
         element={<Navigate to="/mah-jongg-tile-checker" replace />}
       />
-      <Route path="/american-mah-jongg-app" element={<Navigate to="/american-mahjong-app" replace />} />
-      <Route path="/mahjong-app" element={<Navigate to="/american-mahjong-app" replace />} />
-      <Route path="/mah-jongg-app" element={<Navigate to="/american-mahjong-app" replace />} />
+      <Route path="/american-mahjong-app" element={<Navigate to="/american-mah-jongg-app" replace />} />
+      <Route path="/mahjong-app" element={<Navigate to="/american-mah-jongg-app" replace />} />
+      <Route path="/mah-jongg-app" element={<Navigate to="/american-mah-jongg-app" replace />} />
       <Route
         path="/american-mahjong-practice-app"
-        element={<Navigate to="/american-mahjong-app" replace />}
+        element={<Navigate to="/american-mah-jongg-app" replace />}
       />
       <Route
         path="/american-mah-jongg-practice-app"
-        element={<Navigate to="/american-mahjong-app" replace />}
+        element={<Navigate to="/american-mah-jongg-app" replace />}
+      />
+      <Route path="/amercian-mah-jongg-app" element={<Navigate to="/american-mah-jongg-app" replace />} />
+      <Route path="/amercian-mahjong-app" element={<Navigate to="/american-mah-jongg-app" replace />} />
+      <Route
+        path="/amercian-mah-jongg-practice-app"
+        element={<Navigate to="/american-mah-jongg-app" replace />}
+      />
+      <Route
+        path="/amercian-mahjong-practice-app"
+        element={<Navigate to="/american-mah-jongg-app" replace />}
       />
       <Route
         path="/home"

@@ -5,7 +5,8 @@ import {
   useState,
   type FormEvent,
 } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { markPlayEnterFastPath } from '../app/playLocationState'
 import mahjLogoSrc from '../assets/mahj-logo.svg?url'
 import logicLogoSrc from '../assets/logic-logo.svg?url'
 import { applyAppThemeToDocument, DEFAULT_APP_THEME } from '../app/appTheme'
@@ -53,6 +54,7 @@ export function LandingPage() {
     path: '/',
   })
 
+  const navigate = useNavigate()
   const {
     configured,
     loading,
@@ -238,6 +240,11 @@ export function LandingPage() {
     }
   }
 
+  function goPlay() {
+    markPlayEnterFastPath()
+    navigate('/play', { state: { playIntent: 'enter' } })
+  }
+
   const submitLabel =
     mode === 'forgot' ? 'Send reset link' : mode === 'sign-up' ? 'Create account' : 'Sign In'
   const formBusy = busy || googleBusy
@@ -296,6 +303,17 @@ export function LandingPage() {
                   guidance with suggested hands, highlighted tiles, discard tracking, opponent
                   hand identification, and other hints.
                 </p>
+                {user ? (
+                  <div className="landing__feature-actions">
+                    <button
+                      type="button"
+                      className="btn landing-auth__action-btn landing-auth__action-btn--primary landing__feature-cta"
+                      onClick={goPlay}
+                    >
+                      Play
+                    </button>
+                  </div>
+                ) : null}
               </div>
             </article>
 
@@ -316,6 +334,16 @@ export function LandingPage() {
                   probabilities of finishing your hand before the wall runs out. Spot overlaps
                   and sections you might have overlooked.
                 </p>
+                {user ? (
+                  <div className="landing__feature-actions">
+                    <Link
+                      className="btn landing-auth__action-btn landing-auth__action-btn--primary landing__feature-cta"
+                      to="/rack-checker"
+                    >
+                      Open Rack Checker
+                    </Link>
+                  </div>
+                ) : null}
               </div>
             </article>
           </section>
@@ -510,6 +538,9 @@ export function LandingPage() {
                   Signed in as{' '}
                   <span className="landing__account-email">{user.email ?? 'account'}</span>
                 </p>
+                <Link className="landing__sign-out" to="/home">
+                  Home setup
+                </Link>
                 <button
                   type="button"
                   className="landing__sign-out"
