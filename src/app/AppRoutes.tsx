@@ -4,6 +4,10 @@ import { RequireAuth } from '../auth/RequireAuth'
 import { AuthCallbackPage } from '../pages/AuthCallbackPage'
 import { HomePage } from '../pages/HomePage'
 import { LandingPage } from '../pages/LandingPage'
+import { AppGuidePage } from '../pages/learn/AppGuidePage'
+import { HowToPlayPage } from '../pages/learn/HowToPlayPage'
+import { LearnHubPage } from '../pages/learn/LearnHubPage'
+import { StrategiesPage } from '../pages/learn/StrategiesPage'
 import { PrivacyPage } from '../pages/PrivacyPage'
 import { RackCheckerPage } from '../pages/RackCheckerPage'
 import { SeoTopicPage } from '../pages/SeoTopicPage'
@@ -16,6 +20,10 @@ export function AppRoutes() {
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
+      <Route path="/learn" element={<LearnHubPage />} />
+      <Route path="/learn/how-to-play" element={<HowToPlayPage />} />
+      <Route path="/learn/app-guide" element={<AppGuidePage />} />
+      <Route path="/learn/strategies" element={<StrategiesPage />} />
       {/* Public SEO pillars — production synonyms also 301 via vercel.json */}
       <Route
         path="/american-mah-jongg-practice"

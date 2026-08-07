@@ -51,6 +51,12 @@ html:has(.seo-topic),
     linear-gradient(160deg, #101826 0%, #0d1522 100%);
 }
 
+/* Same soft tile carpet as login / home (styles via LandingTileAtmosphere). */
+.seo-topic > .landing__tiles {
+  position: fixed;
+  z-index: 0;
+}
+
 .seo-topic__shell {
   position: relative;
   z-index: 1;
@@ -64,6 +70,24 @@ html:has(.seo-topic),
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1.25rem;
+}
+
+.seo-topic__top-nav {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 1rem;
+}
+
+.seo-topic__top-nav a {
+  color: #00b4d8;
+  font-weight: 650;
+  font-size: 1.15rem;
+  text-decoration: none;
+}
+
+.seo-topic__top-nav a:hover {
+  color: color-mix(in srgb, #00b4d8 70%, #fff 30%);
 }
 
 .seo-topic__brand {
@@ -120,29 +144,12 @@ html:has(.seo-topic),
 }
 
 @media (max-width: 40rem) {
-  .seo-topic__header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
   .seo-topic__tagline,
   .seo-topic__tagline-sep {
     white-space: normal;
   }
-
-  .seo-topic__nav {
-    justify-content: flex-start;
-  }
 }
 
-.seo-topic__nav {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.85rem 1rem;
-}
-
-.seo-topic__nav a,
 .seo-topic__back a,
 .seo-topic__doc a:not(.seo-topic__cta) {
   color: #00b4d8;
@@ -150,7 +157,6 @@ html:has(.seo-topic),
   text-decoration: none;
 }
 
-.seo-topic__nav a:hover,
 .seo-topic__back a:hover,
 .seo-topic__doc a:not(.seo-topic__cta):hover {
   color: color-mix(in srgb, #00b4d8 70%, #fff 30%);

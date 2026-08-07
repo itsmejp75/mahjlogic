@@ -21,8 +21,9 @@ export type SeoTopic = PageMeta & {
  * Indexable pillar pages. Synonym URLs 301 → these paths in `vercel.json`
  * so authority consolidates instead of spreading across thin duplicates.
  *
- * On-page copy uses “Mah Jongg” only. Meta `description` may include “Mahjong”
- * for search matching without showing that spelling in the visible page.
+ * On-page copy uses “Mah Jongg” and the product name “Rack Checker”.
+ * Meta `description` may include search synonyms (Mahjong, tile checker, etc.)
+ * without listing them as separate products in the visible page.
  */
 export const SEO_TOPICS: Record<SeoTopicId, SeoTopic> = {
   practice: {
@@ -36,7 +37,7 @@ export const SEO_TOPICS: Record<SeoTopicId, SeoTopic> = {
     heroImage: '/marketing/practice.jpg',
     heroAlt: 'MahjLogic American Mah Jongg practice table',
     image: '/marketing/practice.jpg',
-    ctaLabel: 'Start practicing free',
+    ctaLabel: 'Play Now',
     ctaTo: '/home',
     sections: [
       {
@@ -66,7 +67,7 @@ export const SEO_TOPICS: Record<SeoTopicId, SeoTopic> = {
       },
     ],
     related: [
-      { to: '/mah-jongg-tile-checker', label: 'Tile / rack checker' },
+      { to: '/mah-jongg-tile-checker', label: 'Rack Checker' },
       { to: '/american-mah-jongg-app', label: 'American Mah Jongg app' },
     ],
   },
@@ -74,28 +75,28 @@ export const SEO_TOPICS: Record<SeoTopicId, SeoTopic> = {
   'tile-checker': {
     id: 'tile-checker',
     path: '/mah-jongg-tile-checker',
-    title: 'Mah Jongg Tile Checker & Rack Checker | MahjLogic',
+    title: 'Mah Jongg Rack Checker | MahjLogic',
     description:
-      'Check American Mah Jongg (Mahjong) tiles against the card: rack checker, tile checker, and tile scanner-style analysis with closest hands and finish probabilities.',
-    h1: 'Mah Jongg tile checker & rack checker',
-    lead: 'Enter your tiles to check what your rack can become — a Mah Jongg tile checker, tiles checker, rack checker, and hand checker in one place, with finish odds before the wall runs out.',
+      'MahjLogic Rack Checker: check American Mah Jongg (Mahjong) tiles against the card — closest hands, finish probabilities, tile checker / tile scanner style analysis in one tool.',
+    h1: 'Mah Jongg Rack Checker',
+    lead: 'Enter your tiles and see which card hands fit — closest matches, overlooked sections, and finish odds before the wall runs out.',
     heroImage: '/marketing/rack-checker.jpg',
-    heroAlt: 'MahjLogic Rack Checker checking Mah Jongg tiles',
+    heroAlt: 'MahjLogic Rack Checker',
     image: '/marketing/rack-checker.jpg',
-    ctaLabel: 'Check your tiles',
+    ctaLabel: 'Play Now',
     ctaTo: '/rack-checker',
     sections: [
       {
-        heading: 'Check tiles against the card',
+        heading: 'Check your tiles against the card',
         paragraphs: [
-          'Paste or build your rack and MahjLogic scans it the way a careful player would: closest matching hands, overlooked sections, and overlaps you might miss when staring at the card. Think of it as a tile scanner for American Mah Jongg — without photographing the table.',
-          'People look for a rack checker, tile checker, tiles checker, or hand checker to make sense of the tiles in front of them. Same job: match your rack to the card.',
+          'Build your rack and MahjLogic reads it the way a careful player would: closest matching hands, sections you might have missed, and overlaps that are easy to overlook when staring at the card.',
+          'Rack Checker is one mode inside MahjLogic — not a separate app. Use it when you want a focused look at the tiles in front of you.',
         ],
       },
       {
         heading: 'Probabilities, not guesswork',
         paragraphs: [
-          'Beyond “what hands am I close to,” see the probability of finishing before the wall is gone. That turns a quick tile check into a real planning tool for Charleston and mid-game pivots.',
+          'Beyond “what hands am I close to,” see the probability of finishing before the wall is gone. That turns a quick rack check into a real planning tool for Charleston and mid-game pivots.',
         ],
         bullets: [
           'Closest card hands for your current tiles',
@@ -105,9 +106,9 @@ export const SEO_TOPICS: Record<SeoTopicId, SeoTopic> = {
         ],
       },
       {
-        heading: 'Practice table + checker together',
+        heading: 'Practice table + Rack Checker',
         paragraphs: [
-          'Use the checker when you want a focused read on a rack, then jump into full practice / training play when you want the whole table experience with coaching hints.',
+          'Use Rack Checker when you want a focused read on a rack, then jump into full practice and training when you want the whole table experience with coaching hints.',
         ],
       },
     ],
@@ -122,19 +123,19 @@ export const SEO_TOPICS: Record<SeoTopicId, SeoTopic> = {
     path: '/american-mah-jongg-app',
     title: 'American Mah Jongg App for Practice | MahjLogic',
     description:
-      'MahjLogic is an American Mah Jongg (Mahjong) app for practice, training, and checking tiles — suggested hands, probabilities, and coaching in one console.',
+      'MahjLogic is an American Mah Jongg (Mahjong) app for practice, training, and Rack Checker — suggested hands, probabilities, and coaching in one console.',
     h1: 'American Mah Jongg app',
-    lead: 'Looking for an American Mah Jongg app built for practice, training, and checking tiles? MahjLogic is a smart console for NMJL-style play.',
+    lead: 'Looking for an American Mah Jongg app built for practice, training, and checking your rack? MahjLogic is a smart console for NMJL-style play.',
     heroImage: '/marketing/practice.jpg',
     heroAlt: 'MahjLogic American Mah Jongg practice app',
     image: '/marketing/practice.jpg',
-    ctaLabel: 'Open Mahj Logic',
+    ctaLabel: 'Play Now',
     ctaTo: '/home',
     sections: [
       {
-        heading: 'One app for practice and tile checks',
+        heading: 'One console for practice and Rack Checker',
         paragraphs: [
-          'MahjLogic combines an American Mah Jongg practice table with a rack / tile checker. Train with suggested hands and coaching, or check your tiles when you want a fast read on the card — without juggling separate tools.',
+          'MahjLogic combines an American Mah Jongg practice table with Rack Checker. Train with suggested hands and coaching, or check your tiles when you want a fast read on the card — two modes, one app.',
         ],
       },
       {
@@ -144,21 +145,21 @@ export const SEO_TOPICS: Record<SeoTopicId, SeoTopic> = {
         ],
         bullets: [
           'Practice / training console with intelligent hints',
-          'Rack checker to check tiles and closest hands',
+          'Rack Checker for closest hands and finish odds',
           'Tile probabilities and discard awareness',
           'Stats and game history as you improve',
         ],
       },
       {
-        heading: 'Start free in the browser',
+        heading: 'Play in the browser',
         paragraphs: [
-          'Sign in on the web to practice American Mah Jongg, run tile checks, and build the habits that show up at your next real table. Mobile app store listings are on the way; the web console is ready now.',
+          'Sign in on the web to practice American Mah Jongg, open Rack Checker, and build the habits that show up at your next real table. Mobile app store listings are on the way; the web console is ready now.',
         ],
       },
     ],
     related: [
       { to: '/american-mah-jongg-practice', label: 'Practice & training' },
-      { to: '/mah-jongg-tile-checker', label: 'Tile / rack checker' },
+      { to: '/mah-jongg-tile-checker', label: 'Rack Checker' },
     ],
   },
 }

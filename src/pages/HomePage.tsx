@@ -307,25 +307,35 @@ export function HomePage() {
     <main className="app home-hub" data-app-theme={appTheme}>
       <LandingTileAtmosphere />
       <header className="home-hub__header">
-        <div className="home-hub__brand" aria-label="Mahj Logic">
-          <img
-            className="home-hub__logo home-hub__logo--mahj"
-            src={mahjLogoSrc}
-            alt=""
-            decoding="async"
-            draggable={false}
-          />
-          <img
-            className="home-hub__logo home-hub__logo--logic"
-            src={logicLogoSrc}
-            alt=""
-            decoding="async"
-            draggable={false}
-          />
-          <span className="home-hub__tagline-sep" aria-hidden="true">
-            —
-          </span>
-          <p className="home-hub__tagline">American Mah Jongg Intelligence</p>
+        <div className="home-hub__header-inner">
+          <div className="home-hub__brand" aria-label="Mahj Logic">
+            <img
+              className="home-hub__logo home-hub__logo--mahj"
+              src={mahjLogoSrc}
+              alt=""
+              decoding="async"
+              draggable={false}
+            />
+            <img
+              className="home-hub__logo home-hub__logo--logic"
+              src={logicLogoSrc}
+              alt=""
+              decoding="async"
+              draggable={false}
+            />
+            <span className="home-hub__tagline-sep" aria-hidden="true">
+              —
+            </span>
+            <p className="home-hub__tagline">American Mah Jongg Intelligence</p>
+          </div>
+          <nav className="home-hub__top-nav" aria-label="Site">
+            <Link to="/home" aria-current="page">
+              Home
+            </Link>
+            <Link to="/learn">Learn</Link>
+            <Link to="/rack-checker">Rack Checker</Link>
+            <Link to="/play">Play</Link>
+          </nav>
         </div>
       </header>
 

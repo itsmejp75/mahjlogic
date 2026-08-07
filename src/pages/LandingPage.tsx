@@ -257,25 +257,33 @@ export function LandingPage() {
       <LandingTileAtmosphere />
 
       <header className="landing__header">
-        <div className="landing__brand-mark" aria-label="Mahj Logic">
-          <img
-            className="landing__mark-logo landing__mark-logo--mahj"
-            src={mahjLogoSrc}
-            alt=""
-            decoding="async"
-            draggable={false}
-          />
-          <img
-            className="landing__mark-logo landing__mark-logo--logic"
-            src={logicLogoSrc}
-            alt=""
-            decoding="async"
-            draggable={false}
-          />
-          <span className="landing__tagline-sep" aria-hidden="true">
-            —
-          </span>
-          <p className="landing__tagline">American Mah Jongg Intelligence</p>
+        <div className="landing__header-inner">
+          <div className="landing__brand-mark" aria-label="Mahj Logic">
+            <img
+              className="landing__mark-logo landing__mark-logo--mahj"
+              src={mahjLogoSrc}
+              alt=""
+              decoding="async"
+              draggable={false}
+            />
+            <img
+              className="landing__mark-logo landing__mark-logo--logic"
+              src={logicLogoSrc}
+              alt=""
+              decoding="async"
+              draggable={false}
+            />
+            <span className="landing__tagline-sep" aria-hidden="true">
+              —
+            </span>
+            <p className="landing__tagline">American Mah Jongg Intelligence</p>
+          </div>
+          <nav className="landing__top-nav" aria-label="Site">
+            <Link to="/home">Home</Link>
+            <Link to="/learn">Learn</Link>
+            <Link to="/rack-checker">Rack Checker</Link>
+            <Link to="/play">Play</Link>
+          </nav>
         </div>
       </header>
 
@@ -523,7 +531,7 @@ export function LandingPage() {
                   <span aria-hidden="true">·</span>
                   <Link to="/american-mah-jongg-practice">Practice</Link>
                   <span aria-hidden="true">·</span>
-                  <Link to="/mah-jongg-tile-checker">Tile checker</Link>
+                  <Link to="/mah-jongg-tile-checker">Rack Checker</Link>
                   <span aria-hidden="true">·</span>
                   <Link to="/privacy">Privacy</Link>
                   <span aria-hidden="true">·</span>
@@ -555,7 +563,7 @@ export function LandingPage() {
                 <span aria-hidden="true">·</span>
                 <Link to="/american-mah-jongg-practice">Practice</Link>
                 <span aria-hidden="true">·</span>
-                <Link to="/mah-jongg-tile-checker">Tile checker</Link>
+                <Link to="/mah-jongg-tile-checker">Rack Checker</Link>
                 <span aria-hidden="true">·</span>
                 <Link to="/privacy">Privacy</Link>
                 <span aria-hidden="true">·</span>

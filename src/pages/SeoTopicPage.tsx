@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import mahjLogoSrc from '../assets/mahj-logo.svg?url'
 import logicLogoSrc from '../assets/logic-logo.svg?url'
 import { applyAppThemeToDocument, DEFAULT_APP_THEME } from '../app/appTheme'
+import { LandingTileAtmosphere } from '../components/LandingTileAtmosphere'
 import { SEO_TOPICS, type SeoTopicId } from '../seo/topicPages'
 import { usePageMeta } from '../seo/usePageMeta'
 import '../styles/seo.css'
@@ -28,6 +29,7 @@ export function SeoTopicPage({ topicId }: Props) {
   return (
     <main className="seo-topic">
       <div className="seo-topic__atmosphere" aria-hidden="true" />
+      <LandingTileAtmosphere />
       <div className="seo-topic__shell">
         <header className="seo-topic__header">
           <Link className="seo-topic__brand" to="/" aria-label="Mahj Logic home">
@@ -50,10 +52,11 @@ export function SeoTopicPage({ topicId }: Props) {
             </span>
             <span className="seo-topic__tagline">American Mah Jongg Intelligence</span>
           </Link>
-          <nav className="seo-topic__nav" aria-label="Product">
-            <Link to="/american-mah-jongg-practice">Practice</Link>
-            <Link to="/mah-jongg-tile-checker">Tile checker</Link>
-            <Link to="/american-mah-jongg-app">App</Link>
+          <nav className="seo-topic__top-nav" aria-label="Site">
+            <Link to="/home">Home</Link>
+            <Link to="/learn">Learn</Link>
+            <Link to="/rack-checker">Rack Checker</Link>
+            <Link to="/play">Play</Link>
           </nav>
         </header>
 

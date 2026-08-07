@@ -64,6 +64,8 @@ import { BOT_DIFFICULTIES, type BotDifficulty, chooseBotDiscard, botCallStrategi
 import { hasLegalMahjongOnBotDiscard, isMahjongWinOnLiveBotDiscard, isSelfDrawMahjongWin, type CallValidationRoundSlice } from './mahjong/callValidation'
 import { deadHandExplanation } from './mahjong/deadHandReason'
 import {
+  effectiveMahjongBasePoints,
+  handUsesJoker,
   isPlayerTheDiscarder,
   nonWinnerPaysPoints,
   winnerCollectsPoints,
@@ -5303,9 +5305,14 @@ export default function App() {
         handSection = closestLine.section
         cardHandCode = closestLine.cardHandCode ?? null
         closed = closestLine.closed
-        // Player collects 4× base on discard win, 6× on self-pick.
-        points =
-          winMethod != null ? winnerCollectsPoints(closestLine.points, winMethod) : closestLine.points
+        // Jokerless Mah Jongg doubles card value (except Singles and Pairs), then
+        // player collects 4× base on discard win, 6× on self-pick.
+        const winTiles = [...hand, ...eastExposures.flatMap((e) => e.tiles)]
+        const base = effectiveMahjongBasePoints(closestLine.points, {
+          section: closestLine.section,
+          usesJoker: handUsesJoker(winTiles),
+        })
+        points = winMethod != null ? winnerCollectsPoints(base, winMethod) : base
       }
     } else if (outcome === 'bot_win' && botWin) {
       const bi = botWin.botIndex
@@ -5330,8 +5337,14 @@ export default function App() {
         closed = closestLine.closed
         const threwWinningTile =
           botWin.how === 'called-discard' && isPlayerTheDiscarder(botWin.discardFrom, playerSeat)
-        // What this player pays: 2× if self-pick or they discarded; else 1×.
-        points = nonWinnerPaysPoints(closestLine.points, winMethod, threwWinningTile)
+        // Jokerless double on the winner’s hand, then what this player pays:
+        // 2× if self-pick or they discarded; else 1×.
+        const winTiles = [...botHand, ...claims.flatMap((e) => e.tiles)]
+        const base = effectiveMahjongBasePoints(closestLine.points, {
+          section: closestLine.section,
+          usesJoker: handUsesJoker(winTiles),
+        })
+        points = nonWinnerPaysPoints(base, winMethod, threwWinningTile)
       }
     } else if (outcome === 'dead_hand') {
       // Solo app ends the round immediately → no payout. Future multi-player:
