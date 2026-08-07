@@ -2,3 +2,11 @@
 # (see index.html). Card hand notation is not for republication in search results.
 User-agent: *
 Allow: /
+
+# Auth / app surfaces — low value as search landing pages
+Disallow: /home
+Disallow: /play
+Disallow: /rack-checker
+Disallow: /auth/
+
+Sitemap: https://mahjlogic.com/sitemap.xml

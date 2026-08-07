@@ -1,4 +1,166 @@
 {
+  "redirects": [
+    {
+      "source": "/mahjong-practice",
+      "destination": "/american-mah-jongg-practice",
+      "permanent": true
+    },
+    {
+      "source": "/mah-jongg-practice",
+      "destination": "/american-mah-jongg-practice",
+      "permanent": true
+    },
+    {
+      "source": "/american-mahjong-practice",
+      "destination": "/american-mah-jongg-practice",
+      "permanent": true
+    },
+    {
+      "source": "/american-mah-jongg-training",
+      "destination": "/american-mah-jongg-practice",
+      "permanent": true
+    },
+    {
+      "source": "/american-mahjong-training",
+      "destination": "/american-mah-jongg-practice",
+      "permanent": true
+    },
+    {
+      "source": "/mahjong-training",
+      "destination": "/american-mah-jongg-practice",
+      "permanent": true
+    },
+    {
+      "source": "/mah-jongg-training",
+      "destination": "/american-mah-jongg-practice",
+      "permanent": true
+    },
+    {
+      "source": "/mahjong-drill",
+      "destination": "/american-mah-jongg-practice",
+      "permanent": true
+    },
+    {
+      "source": "/mah-jongg-drill",
+      "destination": "/american-mah-jongg-practice",
+      "permanent": true
+    },
+    {
+      "source": "/mahjong-coach",
+      "destination": "/american-mah-jongg-practice",
+      "permanent": true
+    },
+    {
+      "source": "/mah-jongg-coach",
+      "destination": "/american-mah-jongg-practice",
+      "permanent": true
+    },
+    {
+      "source": "/practice-american-mah-jongg",
+      "destination": "/american-mah-jongg-practice",
+      "permanent": true
+    },
+    {
+      "source": "/practice-american-mahjong",
+      "destination": "/american-mah-jongg-practice",
+      "permanent": true
+    },
+    {
+      "source": "/tile-checker",
+      "destination": "/mah-jongg-tile-checker",
+      "permanent": true
+    },
+    {
+      "source": "/tiles-checker",
+      "destination": "/mah-jongg-tile-checker",
+      "permanent": true
+    },
+    {
+      "source": "/tile-scanner",
+      "destination": "/mah-jongg-tile-checker",
+      "permanent": true
+    },
+    {
+      "source": "/mahjong-tile-checker",
+      "destination": "/mah-jongg-tile-checker",
+      "permanent": true
+    },
+    {
+      "source": "/mahjong-tile-scanner",
+      "destination": "/mah-jongg-tile-checker",
+      "permanent": true
+    },
+    {
+      "source": "/mah-jongg-tile-scanner",
+      "destination": "/mah-jongg-tile-checker",
+      "permanent": true
+    },
+    {
+      "source": "/mah-jongg-rack-checker",
+      "destination": "/mah-jongg-tile-checker",
+      "permanent": true
+    },
+    {
+      "source": "/mahjong-rack-checker",
+      "destination": "/mah-jongg-tile-checker",
+      "permanent": true
+    },
+    {
+      "source": "/rack-checker-tool",
+      "destination": "/mah-jongg-tile-checker",
+      "permanent": true
+    },
+    {
+      "source": "/hand-checker",
+      "destination": "/mah-jongg-tile-checker",
+      "permanent": true
+    },
+    {
+      "source": "/check-mahjong-tiles",
+      "destination": "/mah-jongg-tile-checker",
+      "permanent": true
+    },
+    {
+      "source": "/check-mah-jongg-tiles",
+      "destination": "/mah-jongg-tile-checker",
+      "permanent": true
+    },
+    {
+      "source": "/american-mahjong-tile-checker",
+      "destination": "/mah-jongg-tile-checker",
+      "permanent": true
+    },
+    {
+      "source": "/american-mah-jongg-tile-checker",
+      "destination": "/mah-jongg-tile-checker",
+      "permanent": true
+    },
+    {
+      "source": "/american-mah-jongg-app",
+      "destination": "/american-mahjong-app",
+      "permanent": true
+    },
+    {
+      "source": "/mahjong-app",
+      "destination": "/american-mahjong-app",
+      "permanent": true
+    },
+    {
+      "source": "/mah-jongg-app",
+      "destination": "/american-mahjong-app",
+      "permanent": true
+    },
+    {
+      "source": "/american-mahjong-practice-app",
+      "destination": "/american-mahjong-app",
+      "permanent": true
+    },
+    {
+      "source": "/american-mah-jongg-practice-app",
+      "destination": "/american-mahjong-app",
+      "permanent": true
+    }
+  ],
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
   "headers": [
     {

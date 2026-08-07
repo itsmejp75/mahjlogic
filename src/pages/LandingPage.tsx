@@ -16,6 +16,7 @@ import {
   mountGoogleContinueButton,
 } from '../lib/googleIdentity'
 import { LandingTileAtmosphere } from '../components/LandingTileAtmosphere'
+import { usePageMeta } from '../seo/usePageMeta'
 import '../styles/landing.css'
 
 
@@ -45,6 +46,13 @@ function GoogleMark() {
 }
 
 export function LandingPage() {
+  usePageMeta({
+    title: 'MahjLogic: American Mah Jongg Intelligence',
+    description:
+      'MahjLogic helps you practice American Mah Jongg (Mahjong) with suggested hands and tiles, tile probabilities, and stats — smart guidance in one console.',
+    path: '/',
+  })
+
   const {
     configured,
     loading,
@@ -485,6 +493,10 @@ export function LandingPage() {
                 <p className="landing__legal-links">
                   <a href="mailto:support@mahjlogic.com">support@mahjlogic.com</a>
                   <span aria-hidden="true">·</span>
+                  <Link to="/american-mah-jongg-practice">Practice</Link>
+                  <span aria-hidden="true">·</span>
+                  <Link to="/mah-jongg-tile-checker">Tile checker</Link>
+                  <span aria-hidden="true">·</span>
                   <Link to="/privacy">Privacy</Link>
                   <span aria-hidden="true">·</span>
                   <Link to="/terms">Terms</Link>
@@ -509,6 +521,10 @@ export function LandingPage() {
               </div>
               <p className="landing__legal-links">
                 <a href="mailto:support@mahjlogic.com">support@mahjlogic.com</a>
+                <span aria-hidden="true">·</span>
+                <Link to="/american-mah-jongg-practice">Practice</Link>
+                <span aria-hidden="true">·</span>
+                <Link to="/mah-jongg-tile-checker">Tile checker</Link>
                 <span aria-hidden="true">·</span>
                 <Link to="/privacy">Privacy</Link>
                 <span aria-hidden="true">·</span>

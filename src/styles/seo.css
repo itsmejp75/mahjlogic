@@ -1,0 +1,257 @@
+/*
+ * Public SEO topic pages — same navy shell as legal docs; CTA uses PokerStars
+ * action chrome (see action-row-buttons rule).
+ */
+
+.seo-topic {
+  --rack-action-face: var(--app-action-btn-face-neutral);
+  --rack-action-face-pressed: var(--app-action-btn-face-pressed-neutral);
+  --rack-action-face-pressed-chrome: var(--app-action-btn-face-pressed-chrome-neutral);
+  --rack-action-shadow-rest: var(--app-action-btn-shadow-rest-neutral);
+  --rack-action-pressed: var(--app-action-btn-shadow-pressed-deep-neutral);
+  --rack-action-border-rest: var(--app-action-btn-border-rest-neutral);
+  --rack-action-border-hold: var(--app-action-btn-border-rest-neutral);
+  --rack-action-border-color: var(--app-action-btn-border-rest-neutral);
+  --rack-action-label-color: #ffffff;
+  --rack-action-label-color-disabled: var(--app-action-btn-label-disabled-text-neutral);
+
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  align-self: stretch;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+  padding: max(1rem, env(safe-area-inset-top)) max(1.25rem, env(safe-area-inset-right))
+    max(1.25rem, env(safe-area-inset-bottom)) max(1.25rem, env(safe-area-inset-left));
+  color: #e8eef6;
+  font-family: var(--sans);
+  background: #0d1522;
+  overflow: auto;
+}
+
+html:has(.seo-topic),
+#root:has(.seo-topic) {
+  background-color: #0d1522 !important;
+  background: #0d1522 !important;
+}
+
+.seo-topic__atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(70% 50% at 15% 0%, color-mix(in srgb, #1e3a5f 45%, transparent), transparent 60%),
+    linear-gradient(160deg, #101826 0%, #0d1522 100%);
+}
+
+.seo-topic__shell {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 42rem);
+  margin: 0 auto;
+}
+
+.seo-topic__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.seo-topic__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: #f2f4f7;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.seo-topic__brand img {
+  border-radius: 22%;
+}
+
+.seo-topic__nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.85rem 1rem;
+}
+
+.seo-topic__nav a,
+.seo-topic__back a,
+.seo-topic__doc a:not(.seo-topic__cta) {
+  color: #00b4d8;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.seo-topic__nav a:hover,
+.seo-topic__back a:hover,
+.seo-topic__doc a:not(.seo-topic__cta):hover {
+  color: color-mix(in srgb, #00b4d8 70%, #fff 30%);
+}
+
+.seo-topic__doc {
+  padding: 1.35rem 1.4rem 1.5rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, #152033 94%, #000 6%);
+  border: 1px solid color-mix(in srgb, #6f859e 34%, transparent);
+  box-shadow: 0 16px 36px -18px rgba(0, 0, 0, 0.55);
+}
+
+.seo-topic__hero {
+  margin: 0 0 1rem;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, #6f859e 28%, transparent);
+}
+
+.seo-topic__hero-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  object-position: center;
+}
+
+.seo-topic__doc h1 {
+  margin: 0 0 0.55rem;
+  font-family: 'Noto Serif', var(--heading), serif;
+  font-weight: 900;
+  font-size: clamp(1.55rem, 3vw, 1.9rem);
+  line-height: 1.15;
+  color: #f2f4f7;
+}
+
+.seo-topic__lead {
+  margin: 0 0 1rem;
+  font-size: 1.02rem;
+  line-height: 1.5;
+  color: color-mix(in srgb, #e8eef6 92%, #8b93a1 8%);
+}
+
+.seo-topic__cta-wrap {
+  margin: 0 0 1.25rem;
+}
+
+.btn.seo-topic__cta {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.7rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 0.75rem;
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.015em;
+  text-decoration: none;
+  cursor: pointer;
+  color: #fff;
+  /* Cyan primary — same family as landing SIGN IN */
+  --rack-action-face: linear-gradient(
+    180deg,
+    color-mix(in srgb, #00b4d8 88%, #fff 12%) 0%,
+    #0891b2 100%
+  );
+  --rack-action-face-pressed: #0e7490;
+  --rack-action-face-pressed-chrome: linear-gradient(
+      0deg,
+      color-mix(in srgb, #7dd3fc 28%, transparent) 0%,
+      transparent 22%
+    ),
+    var(--rack-action-face-pressed);
+  --rack-action-border-color: color-mix(in srgb, #00b4d8 55%, #fff 20%);
+  --rack-action-border-rest: color-mix(in srgb, #00b4d8 45%, #0e7490 55%);
+  --rack-action-label-color: #ffffff;
+  background: var(--rack-action-face);
+  border: 1px solid var(--rack-action-border-color, #636870);
+  box-shadow: var(--rack-action-shadow-rest);
+  transition: box-shadow 0.12s ease, background 0.12s ease;
+  transform: none;
+}
+
+.btn.seo-topic__cta:hover:not(:disabled):not(:active) {
+  background: var(--rack-action-face);
+  box-shadow: var(--rack-action-shadow-rest);
+  transform: none;
+}
+
+.btn.seo-topic__cta:active:not(:disabled),
+.btn.seo-topic__cta.btn--pointer-down:not(:disabled) {
+  background: var(--rack-action-face-pressed-chrome);
+  box-shadow: var(--rack-action-pressed);
+  transition: none;
+  transform: none;
+}
+
+.btn.seo-topic__cta:active:not(:disabled):not(.btn--pointer-down) {
+  background: var(--rack-action-face);
+  border: 1px solid var(--rack-action-border-rest, var(--rack-action-border-color, #636870));
+  box-shadow: var(--rack-action-shadow-rest);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+  transform: none;
+}
+
+.seo-topic__doc h2 {
+  margin: 1.35rem 0 0.45rem;
+  font-size: 1.05rem;
+  font-weight: 750;
+  color: #f2f4f7;
+}
+
+.seo-topic__doc p,
+.seo-topic__doc li {
+  margin: 0 0 0.7rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: color-mix(in srgb, #e8eef6 86%, #8b93a1 14%);
+}
+
+.seo-topic__doc ul {
+  margin: 0 0 0.7rem;
+  padding-left: 1.2rem;
+}
+
+.seo-topic__doc li {
+  margin-bottom: 0.4rem;
+}
+
+.seo-topic__related ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.seo-topic__related li {
+  margin-bottom: 0.35rem;
+}
+
+.seo-topic__back {
+  margin: 1rem 0 0;
+  text-align: center;
+  font-size: 0.92rem;
+  color: color-mix(in srgb, #d7dde6 58%, #1b2430 42%);
+}
+
+@media (orientation: landscape) and (max-height: 480px) {
+  .seo-topic__doc {
+    padding: 1rem 1.1rem;
+  }
+
+  .seo-topic__doc h1 {
+    font-size: 1.35rem;
+  }
+
+  .seo-topic__hero {
+    display: none;
+  }
+}
