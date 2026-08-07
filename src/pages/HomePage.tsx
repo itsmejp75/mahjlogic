@@ -334,7 +334,15 @@ export function HomePage() {
             </Link>
             <Link to="/learn">Learn</Link>
             <Link to="/rack-checker">Rack Checker</Link>
-            <Link to="/play">Play</Link>
+            <Link
+              to="/play"
+              onClick={(e) => {
+                e.preventDefault()
+                goPlay()
+              }}
+            >
+              Play
+            </Link>
           </nav>
         </div>
       </header>

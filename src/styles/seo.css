@@ -66,17 +66,21 @@ html:has(.seo-topic),
 
 .seo-topic__header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  column-gap: 1rem;
+  row-gap: 0.45rem;
   margin-bottom: 1.25rem;
 }
 
 .seo-topic__top-nav {
   display: flex;
-  flex: 0 0 auto;
+  /* Don't shrink into the brand — wrap to a second header row instead. */
+  flex: 1 0 auto;
   align-items: center;
-  gap: 1rem;
+  justify-content: flex-end;
+  gap: 1.5rem;
 }
 
 .seo-topic__top-nav a {

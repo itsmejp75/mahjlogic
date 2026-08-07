@@ -145,7 +145,7 @@ export function LandingPage() {
 
   /** Fresh login → enter the app; already-signed-in visits stay on this page. */
   if (!loading && user && enteringApp) {
-    return <Navigate to="/home" replace />
+    return <Navigate to="/home" replace state={{ fullSessionBoot: true }} />
   }
 
   if (enteringApp) {
@@ -282,7 +282,15 @@ export function LandingPage() {
             <Link to="/home">Home</Link>
             <Link to="/learn">Learn</Link>
             <Link to="/rack-checker">Rack Checker</Link>
-            <Link to="/play">Play</Link>
+            <Link
+              to="/play"
+              onClick={(e) => {
+                e.preventDefault()
+                goPlay()
+              }}
+            >
+              Play
+            </Link>
           </nav>
         </div>
       </header>

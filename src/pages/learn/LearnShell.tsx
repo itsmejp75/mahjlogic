@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import mahjLogoSrc from '../../assets/mahj-logo.svg?url'
 import logicLogoSrc from '../../assets/logic-logo.svg?url'
 import { applyAppThemeToDocument, DEFAULT_APP_THEME } from '../../app/appTheme'
+import { markPlayEnterFastPath } from '../../app/playLocationState'
 import { LandingTileAtmosphere } from '../../components/LandingTileAtmosphere'
 import '../../styles/learn.css'
 
@@ -52,7 +53,13 @@ export function LearnShell({ children, article = false }: Props) {
               Learn
             </Link>
             <Link to="/rack-checker">Rack Checker</Link>
-            <Link to="/play">Play</Link>
+            <Link
+              to="/play"
+              state={{ playIntent: 'enter' }}
+              onClick={() => markPlayEnterFastPath()}
+            >
+              Play
+            </Link>
           </nav>
         </div>
       </header>

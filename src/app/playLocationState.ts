@@ -12,6 +12,11 @@ export type PlayLocationState = {
 /** Location state for `/home` Play Hub. */
 export type HomeLocationState = {
   openStats?: boolean
+  /**
+   * Fresh sign-in / OAuth → Home: run the full auth boot loader (theme + progress bar).
+   * In-app Home clicks while already signed in skip that theater.
+   */
+  fullSessionBoot?: boolean
 }
 
 export function readHomeLocationState(state: unknown): HomeLocationState {
@@ -19,6 +24,7 @@ export function readHomeLocationState(state: unknown): HomeLocationState {
   const s = state as Record<string, unknown>
   const out: HomeLocationState = {}
   if (s.openStats === true) out.openStats = true
+  if (s.fullSessionBoot === true) out.fullSessionBoot = true
   return out
 }
 

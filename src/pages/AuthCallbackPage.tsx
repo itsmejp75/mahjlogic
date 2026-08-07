@@ -50,5 +50,5 @@ export function AuthCallbackPage() {
     )
   }
 
-  return <Navigate to="/home" replace />
+  return <Navigate to="/home" replace state={{ fullSessionBoot: true }} />
 }

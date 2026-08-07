@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import mahjLogoSrc from '../assets/mahj-logo.svg?url'
 import logicLogoSrc from '../assets/logic-logo.svg?url'
 import { applyAppThemeToDocument, DEFAULT_APP_THEME } from '../app/appTheme'
+import { markPlayEnterFastPath } from '../app/playLocationState'
 import { LandingTileAtmosphere } from '../components/LandingTileAtmosphere'
 import { SEO_TOPICS, type SeoTopicId } from '../seo/topicPages'
 import { usePageMeta } from '../seo/usePageMeta'
@@ -56,7 +57,13 @@ export function SeoTopicPage({ topicId }: Props) {
             <Link to="/home">Home</Link>
             <Link to="/learn">Learn</Link>
             <Link to="/rack-checker">Rack Checker</Link>
-            <Link to="/play">Play</Link>
+            <Link
+              to="/play"
+              state={{ playIntent: 'enter' }}
+              onClick={() => markPlayEnterFastPath()}
+            >
+              Play
+            </Link>
           </nav>
         </header>
 

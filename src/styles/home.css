@@ -68,9 +68,11 @@
 
 .home-hub__header-inner {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  column-gap: 0.75rem;
+  row-gap: 0.45rem;
   width: min(100%, 56rem);
   margin: 0 auto;
   box-sizing: border-box;
@@ -78,9 +80,11 @@
 
 .home-hub__top-nav {
   display: flex;
-  flex: 0 0 auto;
+  /* Don't shrink into the brand — wrap to a second header row instead. */
+  flex: 1 0 auto;
   align-items: center;
-  gap: 1rem;
+  justify-content: flex-end;
+  gap: 1.5rem;
 }
 
 .home-hub__top-nav a {
