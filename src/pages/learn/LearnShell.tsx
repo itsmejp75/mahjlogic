@@ -4,6 +4,7 @@ import mahjLogoSrc from '../../assets/mahj-logo.svg?url'
 import logicLogoSrc from '../../assets/logic-logo.svg?url'
 import { applyAppThemeToDocument, DEFAULT_APP_THEME } from '../../app/appTheme'
 import { markPlayEnterFastPath } from '../../app/playLocationState'
+import { useAuth } from '../../auth/AuthProvider'
 import { LandingTileAtmosphere } from '../../components/LandingTileAtmosphere'
 import '../../styles/learn.css'
 
@@ -15,6 +16,7 @@ type Props = {
 
 export function LearnShell({ children, article = false }: Props) {
   const { pathname } = useLocation()
+  const { user } = useAuth()
   const onLearnHub = pathname === '/learn'
 
   useLayoutEffect(() => {
@@ -23,7 +25,9 @@ export function LearnShell({ children, article = false }: Props) {
 
   return (
     <main className="learn">
-      <div className="learn__atmosphere" aria-hidden="true" />
+      <div className="landing__atmosphere" aria-hidden="true" />
+      <div className="landing__glow landing__glow--cyan" aria-hidden="true" />
+      <div className="landing__glow landing__glow--gold" aria-hidden="true" />
       <LandingTileAtmosphere />
       <header className="learn__top">
         <div className="learn__top-inner">
@@ -48,18 +52,22 @@ export function LearnShell({ children, article = false }: Props) {
             <span className="learn__tagline">American Mah Jongg Intelligence</span>
           </Link>
           <nav className="learn__top-nav" aria-label="Site">
-            <Link to="/home">Home</Link>
+            <Link to={user ? '/home' : '/'}>Home</Link>
             <Link to="/learn" aria-current={onLearnHub || article ? 'page' : undefined}>
               Learn
             </Link>
-            <Link to="/rack-checker">Rack Checker</Link>
-            <Link
-              to="/play"
-              state={{ playIntent: 'enter' }}
-              onClick={() => markPlayEnterFastPath()}
-            >
-              Play
-            </Link>
+            {user ? <Link to="/rack-checker">Rack Checker</Link> : null}
+            {user ? (
+              <Link
+                to="/play"
+                state={{ playIntent: 'enter' }}
+                onClick={() => markPlayEnterFastPath()}
+              >
+                Play
+              </Link>
+            ) : (
+              <Link to="/login">Login</Link>
+            )}
           </nav>
         </div>
       </header>
@@ -70,14 +78,14 @@ export function LearnShell({ children, article = false }: Props) {
               ← Learn
             </Link>
           ) : (
-            <Link className="learn__back" to="/home">
+            <Link className="learn__back" to={user ? '/home' : '/'}>
               ← Home
             </Link>
           )}
         </p>
         {children}
         <p className="learn__footer">
-          <Link to="/home">Home</Link>
+          <Link to={user ? '/home' : '/'}>Home</Link>
           <span aria-hidden="true"> · </span>
           <Link to="/privacy">Privacy</Link>
           <span aria-hidden="true"> · </span>

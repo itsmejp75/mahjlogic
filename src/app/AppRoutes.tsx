@@ -4,6 +4,7 @@ import { RequireAuth } from '../auth/RequireAuth'
 import { AuthCallbackPage } from '../pages/AuthCallbackPage'
 import { HomePage } from '../pages/HomePage'
 import { LandingPage } from '../pages/LandingPage'
+import { LoginPage } from '../pages/LoginPage'
 import { AppGuidePage } from '../pages/learn/AppGuidePage'
 import { HowToPlayPage } from '../pages/learn/HowToPlayPage'
 import { LearnHubPage } from '../pages/learn/LearnHubPage'
@@ -17,6 +18,7 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<LoginPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/auth/callback" element={<AuthCallbackPage />} />

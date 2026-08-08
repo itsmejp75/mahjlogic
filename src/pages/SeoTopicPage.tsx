@@ -4,6 +4,7 @@ import mahjLogoSrc from '../assets/mahj-logo.svg?url'
 import logicLogoSrc from '../assets/logic-logo.svg?url'
 import { applyAppThemeToDocument, DEFAULT_APP_THEME } from '../app/appTheme'
 import { markPlayEnterFastPath } from '../app/playLocationState'
+import { useAuth } from '../auth/AuthProvider'
 import { LandingTileAtmosphere } from '../components/LandingTileAtmosphere'
 import { SEO_TOPICS, type SeoTopicId } from '../seo/topicPages'
 import { usePageMeta } from '../seo/usePageMeta'
@@ -15,6 +16,7 @@ type Props = {
 
 export function SeoTopicPage({ topicId }: Props) {
   const topic = SEO_TOPICS[topicId]
+  const { user } = useAuth()
 
   useLayoutEffect(() => {
     applyAppThemeToDocument(DEFAULT_APP_THEME)
@@ -54,16 +56,20 @@ export function SeoTopicPage({ topicId }: Props) {
             <span className="seo-topic__tagline">American Mah Jongg Intelligence</span>
           </Link>
           <nav className="seo-topic__top-nav" aria-label="Site">
-            <Link to="/home">Home</Link>
+            <Link to={user ? '/home' : '/'}>Home</Link>
             <Link to="/learn">Learn</Link>
-            <Link to="/rack-checker">Rack Checker</Link>
-            <Link
-              to="/play"
-              state={{ playIntent: 'enter' }}
-              onClick={() => markPlayEnterFastPath()}
-            >
-              Play
-            </Link>
+            {user ? <Link to="/rack-checker">Rack Checker</Link> : null}
+            {user ? (
+              <Link
+                to="/play"
+                state={{ playIntent: 'enter' }}
+                onClick={() => markPlayEnterFastPath()}
+              >
+                Play
+              </Link>
+            ) : (
+              <Link to="/login">Login</Link>
+            )}
           </nav>
         </header>
 

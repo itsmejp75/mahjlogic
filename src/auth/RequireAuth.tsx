@@ -15,7 +15,7 @@ function isLightAuthRoute(pathname: string): boolean {
   return pathname === '/home' || pathname === '/rack-checker'
 }
 
-/** Sends signed-out users to the landing page. */
+/** Sends signed-out users to the login page. */
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { loading, user } = useAuth()
   const location = useLocation()
@@ -106,7 +106,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   }, [user?.id])
 
   if (!loading && !user) {
-    return <Navigate to="/" replace />
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
 
   const appMounted = Boolean(user && !loading && themeReady)

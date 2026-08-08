@@ -147,10 +147,44 @@ html:has(.seo-topic),
   white-space: nowrap;
 }
 
-@media (max-width: 40rem) {
-  .seo-topic__tagline,
+/* Portrait: logo → tagline → nav, each centered (no sideways tagline clip). */
+@media (orientation: portrait) {
+  .seo-topic__header {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    row-gap: 0.55rem;
+  }
+
+  .seo-topic__brand {
+    flex: 0 0 auto;
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-end;
+    text-align: center;
+    column-gap: 0.4rem;
+    row-gap: 0.3rem;
+  }
+
   .seo-topic__tagline-sep {
+    display: none;
+  }
+
+  .seo-topic__tagline {
+    flex: 1 0 100%;
+    width: 100%;
+    margin: 0.1rem 0 0;
+    text-align: center;
     white-space: normal;
+  }
+
+  .seo-topic__top-nav {
+    flex: 0 0 auto;
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 1.5rem;
   }
 }
 

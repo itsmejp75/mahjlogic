@@ -364,9 +364,9 @@ export function HomePage() {
               <div className="home-hub__feature-body">
                 <h2 className="home-hub__feature-title">Practice</h2>
                 <p className="home-hub__feature-copy">
-                  Practice American Mah Jongg in an Intelligent All-In-One Console that includes
-                  guidance with suggested hands, highlighted tiles, discard tracking, opponent
-                  hand identification, and other hints.
+                  Play against bots and practice American Mah Jongg in an Intelligent All-In-One
+                  Console with guidance — suggested hands, highlighted tiles, discard tracking,
+                  opponent hand identification, and other hints.
                 </p>
                 <div className="home-hub__feature-actions">
                   <button
