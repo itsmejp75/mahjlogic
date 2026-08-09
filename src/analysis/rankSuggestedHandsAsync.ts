@@ -69,6 +69,11 @@ function getSharedWorker(): Worker | null {
   }
 }
 
+/** Spin up the shared rank worker during Play boot so the first tray paint is not cold. */
+export function warmRankSuggestedHandsWorker(): void {
+  getSharedWorker()
+}
+
 function omitPatterns(input: RankSuggestedHandsInput): Omit<RankSuggestedHandsInput, 'patterns'> {
   const { patterns: _patterns, ...rest } = input
   return rest

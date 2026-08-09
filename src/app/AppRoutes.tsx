@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import App from '../App.tsx'
+import { PlayEnterLoaderHost } from '../auth/PlayEnterLoaderHost'
 import { RequireAuth } from '../auth/RequireAuth'
 import { AuthCallbackPage } from '../pages/AuthCallbackPage'
 import { HomePage } from '../pages/HomePage'
@@ -16,6 +17,8 @@ import { TermsPage } from '../pages/TermsPage'
 
 export function AppRoutes() {
   return (
+    <>
+    <PlayEnterLoaderHost />
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
@@ -129,5 +132,6 @@ export function AppRoutes() {
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   )
 }

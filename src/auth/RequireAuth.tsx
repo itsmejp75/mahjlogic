@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
-import {
-  peekPlayEnterFastPath,
-  readHomeLocationState,
-} from '../app/playLocationState'
+import { Navigate, useLocation } from 'react-router-dom'
+import { useSyncExternalStore } from 'react'
 import { isAppTheme, persistAppTheme, readAppThemeFromStorage } from '../app/appTheme'
 import { loadUserPreferences } from '../lib/userPreferences'
 import { AuthThemeLoading } from './AuthThemeLoading'
 import { useAuth } from './AuthProvider'
+import {
+  endPlayEnterLoader,
+  getPlayEnterLoaderActive,
+  getPlayEnterLoaderBarComplete,
+  subscribePlayEnterLoader,
+} from './playEnterLoader'
 import { SessionBootProvider } from './sessionBoot'
 
-/** Hub routes that do not need game bootstrap — skip remount theater when already signed in. */
+/** Hub routes that do not need game bootstrap — never show the logo + progress bar. */
 function isLightAuthRoute(pathname: string): boolean {
   return pathname === '/home' || pathname === '/rack-checker'
 }
@@ -19,30 +22,29 @@ function isLightAuthRoute(pathname: string): boolean {
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { loading, user } = useAuth()
   const location = useLocation()
-  const navigate = useNavigate()
-  const forceFullBoot = readHomeLocationState(location.state).fullSessionBoot === true
-  /** Home → Play: theme already applied; skip cloud theme wait + boot-bar fill. */
-  const fastPlayEnterRef = useRef(peekPlayEnterFastPath())
+  const lightRoute = isLightAuthRoute(location.pathname)
+  const playEnterActive = useSyncExternalStore(
+    subscribePlayEnterLoader,
+    getPlayEnterLoaderActive,
+    () => false,
+  )
+  const playEnterBarComplete = useSyncExternalStore(
+    subscribePlayEnterLoader,
+    getPlayEnterLoaderBarComplete,
+    () => false,
+  )
   /**
-   * Already-signed-in navigations to Home / Rack Checker should not replay the
-   * logo + progress bar (that theater is for cold auth, post–sign-in, and Play).
+   * Home / Rack Checker never play the boot theater (including refresh / cold auth).
+   * Play still runs the full logo + bar while the table and assets warm.
    */
-  const skipBootTheaterRef = useRef(
-    fastPlayEnterRef.current ||
-      (isLightAuthRoute(location.pathname) &&
-        !forceFullBoot &&
-        !loading &&
-        Boolean(user)),
-  )
+  const skipBootTheaterRef = useRef(lightRoute)
   const [themeReady, setThemeReady] = useState(() => skipBootTheaterRef.current)
-  // Fast Play still waits on game hydrate; light-route skip can dismiss immediately.
-  const [sessionBootReady, setSessionBootReady] = useState(
-    () => skipBootTheaterRef.current && !fastPlayEnterRef.current,
-  )
+  const [sessionBootReady, setSessionBootReady] = useState(() => skipBootTheaterRef.current)
   const [barFillComplete, setBarFillComplete] = useState(() => skipBootTheaterRef.current)
   /** Bumps when an authenticated boot starts so the status bar remounts/restarts. */
   const [bootEpoch, setBootEpoch] = useState(0)
-  const clearedFullBootRef = useRef(false)
+  /** True when this mount already had a session (Home → Play) — skip bar remount thrash. */
+  const hadSessionOnMountRef = useRef(!loading && Boolean(user))
 
   const notifySessionBootReady = useCallback(() => {
     setSessionBootReady(true)
@@ -52,18 +54,11 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     setBarFillComplete(true)
   }, [])
 
-  // Drop one-shot post–sign-in boot flag so later Home visits stay instant.
-  useEffect(() => {
-    if (!forceFullBoot || clearedFullBootRef.current) return
-    clearedFullBootRef.current = true
-    navigate(location.pathname, { replace: true, state: {} })
-  }, [forceFullBoot, location.pathname, navigate])
-
   /**
    * Apply cloud theme before mounting the game shell so a stale localStorage
    * value (e.g. legacy Grape/Mystic default) cannot flash the wrong theme.
    * The boot loader itself stays Abyss (see AuthThemeLoading) regardless.
-   * Fast Play enter / already-warm hub visits keep the local theme and skip the bar.
+   * Hub routes keep the local theme and skip the bar (Home applies cloud prefs itself).
    */
   useEffect(() => {
     if (!user) return
@@ -73,6 +68,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
       persistAppTheme(readAppThemeFromStorage())
       setThemeReady(true)
       setBarFillComplete(true)
+      setSessionBootReady(true)
       return
     }
 
@@ -80,9 +76,11 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     setThemeReady(false)
     setSessionBootReady(false)
 
-    // Remount AuthThemeLoading so the status bar always restarts for this boot
-    // (avoids a bar that finished during auth `loading` staying stuck at 100%).
-    setBootEpoch((n) => n + 1)
+    // Remount local bar only after a cold auth wait (bar may already be at 100%).
+    // Home → Play already has a session and uses PlayEnterLoaderHost instead.
+    if (!hadSessionOnMountRef.current && !getPlayEnterLoaderActive()) {
+      setBootEpoch((n) => n + 1)
+    }
 
     let cancelled = false
 
@@ -105,13 +103,36 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- user.id
   }, [user?.id])
 
+  // Dismiss the route-survivable Play loader once theme, session, and bar are ready.
+  useEffect(() => {
+    if (!playEnterActive || lightRoute) return
+    if (!user || loading || !themeReady || !sessionBootReady || !playEnterBarComplete) return
+    endPlayEnterLoader()
+  }, [
+    playEnterActive,
+    playEnterBarComplete,
+    lightRoute,
+    user,
+    loading,
+    themeReady,
+    sessionBootReady,
+  ])
+
+  useEffect(() => {
+    if (!loading && !user && playEnterActive) endPlayEnterLoader()
+  }, [loading, user, playEnterActive])
+
   if (!loading && !user) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
 
   const appMounted = Boolean(user && !loading && themeReady)
-  const showLoader =
-    loading || Boolean(user && (!themeReady || !sessionBootReady || !barFillComplete))
+  // External host owns the theater for Home → Play; local loader is for cold /play.
+  const showLocalLoader =
+    !lightRoute &&
+    !playEnterActive &&
+    (loading || Boolean(user && (!themeReady || !sessionBootReady || !barFillComplete)))
+  const showLoader = showLocalLoader || (playEnterActive && !lightRoute)
   const bootLoaderDismissed = appMounted && !showLoader
 
   return (
@@ -124,7 +145,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
           {children}
         </SessionBootProvider>
       ) : null}
-      {showLoader ? (
+      {showLocalLoader ? (
         <AuthThemeLoading
           key={`boot-loader-${bootEpoch}`}
           cover={appMounted}

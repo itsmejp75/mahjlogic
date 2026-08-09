@@ -1,9 +1,10 @@
-import { useLayoutEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
-import { markPlayEnterFastPath } from '../app/playLocationState'
 import mahjLogoSrc from '../assets/mahj-logo.svg?url'
 import logicLogoSrc from '../assets/logic-logo.svg?url'
 import { applyAppThemeToDocument, DEFAULT_APP_THEME } from '../app/appTheme'
+import { beginPlayEnterLoader, endPlayEnterLoader } from '../auth/playEnterLoader'
 import { useAuth } from '../auth/AuthProvider'
 import { LandingTileAtmosphere } from '../components/LandingTileAtmosphere'
 import { usePageMeta } from '../seo/usePageMeta'
@@ -26,6 +27,11 @@ export function LandingPage() {
     applyAppThemeToDocument(DEFAULT_APP_THEME)
   }, [])
 
+  // Clear a Play-enter loader if the user navigates back to the landing page mid-boot.
+  useEffect(() => {
+    endPlayEnterLoader()
+  }, [])
+
   async function onSignOut() {
     if (signOutBusy) return
     setSignOutBusy(true)
@@ -37,7 +43,9 @@ export function LandingPage() {
   }
 
   function goPlay() {
-    markPlayEnterFastPath()
+    flushSync(() => {
+      beginPlayEnterLoader()
+    })
     navigate('/play', { state: { playIntent: 'enter' } })
   }
 
@@ -74,8 +82,6 @@ export function LandingPage() {
             <Link to={user ? '/home' : '/'} aria-current={user ? undefined : 'page'}>
               Home
             </Link>
-            <Link to="/learn">Learn</Link>
-            {user ? <Link to="/rack-checker">Rack Checker</Link> : null}
             {user ? (
               <Link
                 to="/play"
@@ -89,6 +95,8 @@ export function LandingPage() {
             ) : (
               <Link to="/login">Login</Link>
             )}
+            {user ? <Link to="/rack-checker">Rack Checker</Link> : null}
+            <Link to="/learn">Learn</Link>
           </nav>
         </div>
       </header>
@@ -97,17 +105,8 @@ export function LandingPage() {
         <div className="landing__frame landing__frame--signed-in">
           <section className="landing__features" aria-label="Mahj Logic modes">
             <article className="landing__feature">
-              <div className="landing__feature-media">
-                <img
-                  className="landing__feature-img"
-                  src="/marketing/practice.jpg"
-                  alt="Mahj Logic practice table"
-                  decoding="async"
-                  draggable={false}
-                />
-              </div>
               <div className="landing__feature-body">
-                <h2 className="landing__feature-title">Practice</h2>
+                <h2 className="landing__feature-title">Play American Mah Jongg</h2>
                 <p className="landing__feature-copy">
                   Play against bots and practice American Mah Jongg in an Intelligent All-In-One
                   Console with guidance — suggested hands, highlighted tiles, discard tracking,
@@ -133,18 +132,18 @@ export function LandingPage() {
                   )}
                 </div>
               </div>
-            </article>
-
-            <article className="landing__feature">
               <div className="landing__feature-media">
                 <img
                   className="landing__feature-img"
-                  src="/marketing/rack-checker.jpg"
-                  alt="Mahj Logic Rack Checker"
+                  src="/marketing/practice.jpg"
+                  alt="Mahj Logic practice table"
                   decoding="async"
                   draggable={false}
                 />
               </div>
+            </article>
+
+            <article className="landing__feature">
               <div className="landing__feature-body">
                 <h2 className="landing__feature-title">Rack Checker</h2>
                 <p className="landing__feature-copy">
@@ -170,6 +169,15 @@ export function LandingPage() {
                     </Link>
                   )}
                 </div>
+              </div>
+              <div className="landing__feature-media">
+                <img
+                  className="landing__feature-img"
+                  src="/marketing/rack-checker.jpg"
+                  alt="Mahj Logic Rack Checker"
+                  decoding="async"
+                  draggable={false}
+                />
               </div>
             </article>
           </section>

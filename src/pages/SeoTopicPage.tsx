@@ -1,9 +1,10 @@
-import { useLayoutEffect } from 'react'
+import { useEffect, useLayoutEffect } from 'react'
+import { flushSync } from 'react-dom'
 import { Link } from 'react-router-dom'
 import mahjLogoSrc from '../assets/mahj-logo.svg?url'
 import logicLogoSrc from '../assets/logic-logo.svg?url'
 import { applyAppThemeToDocument, DEFAULT_APP_THEME } from '../app/appTheme'
-import { markPlayEnterFastPath } from '../app/playLocationState'
+import { beginPlayEnterLoader, endPlayEnterLoader } from '../auth/playEnterLoader'
 import { useAuth } from '../auth/AuthProvider'
 import { LandingTileAtmosphere } from '../components/LandingTileAtmosphere'
 import { SEO_TOPICS, type SeoTopicId } from '../seo/topicPages'
@@ -20,6 +21,10 @@ export function SeoTopicPage({ topicId }: Props) {
 
   useLayoutEffect(() => {
     applyAppThemeToDocument(DEFAULT_APP_THEME)
+  }, [])
+
+  useEffect(() => {
+    endPlayEnterLoader()
   }, [])
 
   usePageMeta({
@@ -57,19 +62,23 @@ export function SeoTopicPage({ topicId }: Props) {
           </Link>
           <nav className="seo-topic__top-nav" aria-label="Site">
             <Link to={user ? '/home' : '/'}>Home</Link>
-            <Link to="/learn">Learn</Link>
-            {user ? <Link to="/rack-checker">Rack Checker</Link> : null}
             {user ? (
               <Link
                 to="/play"
                 state={{ playIntent: 'enter' }}
-                onClick={() => markPlayEnterFastPath()}
+                onClick={() => {
+                  flushSync(() => {
+                    beginPlayEnterLoader()
+                  })
+                }}
               >
                 Play
               </Link>
             ) : (
               <Link to="/login">Login</Link>
             )}
+            {user ? <Link to="/rack-checker">Rack Checker</Link> : null}
+            <Link to="/learn">Learn</Link>
           </nav>
         </header>
 

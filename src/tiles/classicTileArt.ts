@@ -62,15 +62,13 @@ export function markClassicTileArtReady(url: string): void {
   classicTileArtReady.add(url)
 }
 
-const tileArtPreloadStarted = new Set<IllustrativeTileGraphics>()
-
 /** Keep mobile Safari’s ~6-connection pool free for JS chunks + the suggested-hands worker. */
 const PRELOAD_CONCURRENCY = 2
 const PRELOAD_RETRY_LIMIT = 2
 
 type PreloadOptions = {
   /**
-   * Native Capacitor splash can afford an immediate warm. Mobile Safari / PWA must wait —
+   * Native Capacitor splash / Play boot can afford an immediate warm. Cold web boot may wait —
    * flooding ~45 SVGs at module load starves JS chunks and the rank worker (empty Logic panel +
    * broken tile faces).
    */
@@ -79,62 +77,129 @@ type PreloadOptions = {
   graphics?: IllustrativeTileGraphics
 }
 
-/**
- * Fetch + decode illustrative tile SVGs with a small concurrency cap.
- * Called after first paint (web) or during splash (native) so the first rack paint can hit cache
- * without blocking boot.
- */
-export function preloadClassicTileArt(options?: PreloadOptions): void {
-  if (typeof Image === 'undefined') return
-  const graphics = options?.graphics ?? 'illustrative-classic'
-  if (tileArtPreloadStarted.has(graphics)) return
-  tileArtPreloadStarted.add(graphics)
+type PreloadEntry = {
+  promise: Promise<void>
+  resolve: () => void
+  /** Pump has started (idle wait cancelled or never scheduled). */
+  pumping: boolean
+  idleHandle: number | null
+  idleIsRic: boolean
+}
+
+const tileArtPreloadBySet = new Map<IllustrativeTileGraphics, PreloadEntry>()
+
+function cancelIdle(entry: PreloadEntry) {
+  if (entry.idleHandle == null) return
+  if (entry.idleIsRic && typeof window.cancelIdleCallback === 'function') {
+    window.cancelIdleCallback(entry.idleHandle)
+  } else {
+    window.clearTimeout(entry.idleHandle)
+  }
+  entry.idleHandle = null
+}
+
+function runTileArtPump(graphics: IllustrativeTileGraphics, entry: PreloadEntry) {
+  if (entry.pumping) return
+  entry.pumping = true
+  cancelIdle(entry)
 
   const urls = allUrlsForSet(graphics)
-  if (urls.length === 0) return
-
-  const run = () => {
-    const queue = urls.map((url) => ({ url, attempts: 0 }))
-    let active = 0
-
-    const pump = () => {
-      while (active < PRELOAD_CONCURRENCY && queue.length > 0) {
-        const item = queue.shift()!
-        active += 1
-        const img = new Image()
-        const finish = () => {
-          active -= 1
-          pump()
-        }
-        img.onload = () => {
-          markClassicTileArtReady(item.url)
-          void img.decode?.().catch(() => undefined).finally(finish)
-        }
-        img.onerror = () => {
-          if (item.attempts + 1 < PRELOAD_RETRY_LIMIT) {
-            queue.push({ url: item.url, attempts: item.attempts + 1 })
-          }
-          finish()
-        }
-        img.src = item.url
-      }
-    }
-
-    pump()
-  }
-
-  if (options?.immediate) {
-    run()
+  if (urls.length === 0) {
+    entry.resolve()
     return
   }
 
-  // Let the main bundle, CSS, fonts, and rank worker claim connections first.
-  const start = () => run()
-  if (typeof window.requestIdleCallback === 'function') {
-    window.requestIdleCallback(start, { timeout: 2500 })
-  } else {
-    window.setTimeout(start, 600)
+  const queue = urls.map((url) => ({ url, attempts: 0 }))
+  let active = 0
+  let settled = false
+
+  const settle = () => {
+    if (settled) return
+    settled = true
+    entry.resolve()
   }
+
+  const pump = () => {
+    while (active < PRELOAD_CONCURRENCY && queue.length > 0) {
+      const item = queue.shift()!
+      active += 1
+      const img = new Image()
+      const finish = () => {
+        active -= 1
+        if (queue.length === 0 && active === 0) settle()
+        else pump()
+      }
+      img.onload = () => {
+        markClassicTileArtReady(item.url)
+        void img.decode?.().catch(() => undefined).finally(finish)
+      }
+      img.onerror = () => {
+        if (item.attempts + 1 < PRELOAD_RETRY_LIMIT) {
+          queue.push({ url: item.url, attempts: item.attempts + 1 })
+        }
+        finish()
+      }
+      img.src = item.url
+    }
+    if (queue.length === 0 && active === 0) settle()
+  }
+
+  pump()
+}
+
+/**
+ * Fetch + decode illustrative tile SVGs with a small concurrency cap.
+ * Resolves when the pack is warm (or empty). A later `{ immediate: true }` call upgrades a
+ * pending idle schedule so Play boot does not wait on requestIdleCallback.
+ */
+export function preloadClassicTileArtAsync(options?: PreloadOptions): Promise<void> {
+  if (typeof Image === 'undefined') return Promise.resolve()
+  const graphics = options?.graphics ?? 'illustrative-classic'
+
+  let entry = tileArtPreloadBySet.get(graphics)
+  if (!entry) {
+    let resolve!: () => void
+    const promise = new Promise<void>((r) => {
+      resolve = r
+    })
+    entry = {
+      promise,
+      resolve,
+      pumping: false,
+      idleHandle: null,
+      idleIsRic: false,
+    }
+    tileArtPreloadBySet.set(graphics, entry)
+  }
+
+  if (entry.pumping) return entry.promise
+
+  if (options?.immediate) {
+    runTileArtPump(graphics, entry)
+    return entry.promise
+  }
+
+  if (entry.idleHandle == null) {
+    const start = () => runTileArtPump(graphics, entry!)
+    if (typeof window.requestIdleCallback === 'function') {
+      entry.idleIsRic = true
+      entry.idleHandle = window.requestIdleCallback(start, { timeout: 2500 })
+    } else {
+      entry.idleIsRic = false
+      entry.idleHandle = window.setTimeout(start, 600)
+    }
+  }
+
+  return entry.promise
+}
+
+/**
+ * Fetch + decode illustrative tile SVGs with a small concurrency cap.
+ * Called after first paint (web) or during splash / Play boot (immediate) so the first rack
+ * paint can hit cache without blocking boot.
+ */
+export function preloadClassicTileArt(options?: PreloadOptions): void {
+  void preloadClassicTileArtAsync(options)
 }
 
 function tileArtUrlFromStemMap(urlByStem: Map<string, string>, def: TileDef): string | null {

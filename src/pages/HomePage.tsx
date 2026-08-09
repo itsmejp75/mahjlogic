@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import mahjLogoSrc from '../assets/mahj-logo.svg?url'
 import logicLogoSrc from '../assets/logic-logo.svg?url'
@@ -8,10 +9,10 @@ import {
   type AppTheme,
 } from '../app/appTheme'
 import {
-  markPlayEnterFastPath,
   readHomeLocationState,
   readPlayLocationState,
 } from '../app/playLocationState'
+import { beginPlayEnterLoader, endPlayEnterLoader } from '../auth/playEnterLoader'
 import { useSessionBoot } from '../auth/sessionBoot'
 import { useAuth } from '../auth/AuthProvider'
 import {
@@ -35,7 +36,12 @@ import {
   isBlankTileCount,
   type BlankTileCount,
 } from '../mahjong/deck'
-import { DEFAULT_TILE_GRAPHICS, type TileGraphics } from '../tiles/tileGraphics'
+import { preloadClassicTileArt } from '../tiles/classicTileArt'
+import {
+  DEFAULT_TILE_GRAPHICS,
+  isIllustrativeTileGraphics,
+  type TileGraphics,
+} from '../tiles/tileGraphics'
 import {
   LS_KEY_HELP_PRESET,
   helpFlagsForPreset,
@@ -166,6 +172,11 @@ export function HomePage() {
   const [signOutBusy, setSignOutBusy] = useState(false)
   const [statsOpen, setStatsOpen] = useState(false)
 
+  // Clear a Play-enter loader if the user navigates back to Home mid-boot.
+  useEffect(() => {
+    endPlayEnterLoader()
+  }, [])
+
   // Home has no game bootstrap — dismiss the auth boot loader immediately.
   useEffect(() => {
     sessionBoot?.notifySessionBootReady()
@@ -281,7 +292,15 @@ export function HomePage() {
   const goPlay = () => {
     prefsSaverRef.current.cancel()
     void saveUserPreferences(prefsRef.current)
-    markPlayEnterFastPath()
+    // Start tile-face warm under the Play boot loader (before the route mounts App).
+    const g = prefsRef.current.tileGraphics
+    if (isIllustrativeTileGraphics(g)) {
+      preloadClassicTileArt({ graphics: g, immediate: true })
+    }
+    // Route-survivable loader: paints this frame and keeps running across /play mount.
+    flushSync(() => {
+      beginPlayEnterLoader()
+    })
     // App restores a saved hand onto the table when one exists; Resume / New Game use a short prompt.
     navigate('/play', {
       state: {
@@ -332,8 +351,6 @@ export function HomePage() {
             <Link to="/home" aria-current="page">
               Home
             </Link>
-            <Link to="/learn">Learn</Link>
-            <Link to="/rack-checker">Rack Checker</Link>
             <Link
               to="/play"
               onClick={(e) => {
@@ -343,6 +360,8 @@ export function HomePage() {
             >
               Play
             </Link>
+            <Link to="/rack-checker">Rack Checker</Link>
+            <Link to="/learn">Learn</Link>
           </nav>
         </div>
       </header>
@@ -351,18 +370,8 @@ export function HomePage() {
         <div className="home-hub__shell">
           <section className="home-hub__features" aria-label="Modes">
             <article className="home-hub__feature">
-              <div className="home-hub__feature-media">
-                <img
-                  className="home-hub__feature-img"
-                  src="/marketing/practice.jpg"
-                  alt="Mahj Logic practice table"
-                  decoding="async"
-                  fetchPriority="high"
-                  draggable={false}
-                />
-              </div>
               <div className="home-hub__feature-body">
-                <h2 className="home-hub__feature-title">Practice</h2>
+                <h2 className="home-hub__feature-title">Play American Mah Jongg</h2>
                 <p className="home-hub__feature-copy">
                   Play against bots and practice American Mah Jongg in an Intelligent All-In-One
                   Console with guidance — suggested hands, highlighted tiles, discard tracking,
@@ -378,19 +387,19 @@ export function HomePage() {
                   </button>
                 </div>
               </div>
-            </article>
-
-            <article className="home-hub__feature">
               <div className="home-hub__feature-media">
                 <img
                   className="home-hub__feature-img"
-                  src="/marketing/rack-checker.jpg"
-                  alt="Mahj Logic Rack Checker"
+                  src="/marketing/practice.jpg"
+                  alt="Mahj Logic practice table"
                   decoding="async"
                   fetchPriority="high"
                   draggable={false}
                 />
               </div>
+            </article>
+
+            <article className="home-hub__feature">
               <div className="home-hub__feature-body">
                 <h2 className="home-hub__feature-title">Rack Checker</h2>
                 <p className="home-hub__feature-copy">
@@ -407,6 +416,16 @@ export function HomePage() {
                     Open Rack Checker
                   </button>
                 </div>
+              </div>
+              <div className="home-hub__feature-media">
+                <img
+                  className="home-hub__feature-img"
+                  src="/marketing/rack-checker.jpg"
+                  alt="Mahj Logic Rack Checker"
+                  decoding="async"
+                  fetchPriority="high"
+                  draggable={false}
+                />
               </div>
             </article>
           </section>

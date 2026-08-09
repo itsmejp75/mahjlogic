@@ -42,13 +42,17 @@ import {
   type SyncedUserPreferences,
 } from './lib/userPreferences'
 import { LS_KEY_HELP_PRESET, readHelpPresetFromStorage } from './lib/helpPreset'
-import { clearPlayEnterFastPath, readPlayLocationState } from './app/playLocationState'
+import { readPlayLocationState } from './app/playLocationState'
 import { PLAYABLE_CARD_IDS, PLAYABLE_CARD_LABEL, type PlayableCardId, cardSectionOrderFromPatterns, patternsForCard, playableCardShortLabel, readPlayableCardFromStorage, writePlayableCardToStorage } from './card/cardCatalog'
 import type { PracticePattern } from './card/practicePatterns'
 import { patternByIdLookup, setActiveCardPatterns } from './card/activeCardPatternsScope'
 import { buildPinnedPatternsFromFocusKey, computeRackPatternHighlightIds, computeBlankExchangeFills, greedyPatternMatchDetail, jokerSwapHandHintUsesSingleBounceIteration, focusKeyForSuggestedHandLine, focusKeyPatternId, segmentRackIntoExposureRuns, sortFullRackTilesForPattern, suggestedHandsTiedAtBest, summarizeRackTowardWin, computeSuggestedDiscardNeedHighlightIds, computeSuggestedDiscardTrackerNeedDefs, computeBotExposureSuggestedBestIds, findInfeasibleBestIds, buildUnavailableTileDefCounts, tileMultisetSignature, type RankSuggestedHandsInput } from './analysis/suggestedHands'
 import { tileInstancesWithClaimMeldJokersResolved, listOpenHandsFittingClaimMelds, openClaimMeldsFitSomePracticeLine } from './analysis/eastExposurePatternFit'
-import { useRankSuggestedHandsWorker } from './analysis/rankSuggestedHandsAsync'
+import {
+  rankSuggestedHandsAsync,
+  useRankSuggestedHandsWorker,
+  warmRankSuggestedHandsWorker,
+} from './analysis/rankSuggestedHandsAsync'
 import { CharlestonPassStripInstructionMain } from './components/CharlestonPassStripInstructionLabel'
 import { BotExposureHandsPanel } from './components/BotExposureHandsPanel'
 import { SuggestedHandsPanel } from './components/SuggestedHandsPanel'
@@ -73,7 +77,7 @@ import {
 import { incomingBotDiscardDragId } from './mahjong/jokerSwapIds'
 import { discardedDefsForBlankExchange } from './mahjong/blankExchange'
 import { eastExposureSwapDropId, findNextJokerSwapTarget, collectHandTileIdsSwappableForJokers, collectSwappableJokerTileIds } from './mahjong/jokerSwapTarget'
-import { preloadClassicTileArt } from './tiles/classicTileArt'
+import { preloadClassicTileArt, preloadClassicTileArtAsync } from './tiles/classicTileArt'
 import {
   DEFAULT_TILE_GRAPHICS,
   isIllustrativeTileGraphics,
@@ -3707,6 +3711,8 @@ export default function App() {
     () => tileMultisetSignature(suggestedRankInput.hand),
     [suggestedRankInput.hand],
   )
+  const suggestedRankInputRef = useRef(suggestedRankInput)
+  suggestedRankInputRef.current = suggestedRankInput
 
   /**
    * Full-card ranking runs in a Web Worker so rack interactions stay on the urgent path.
@@ -5513,7 +5519,6 @@ export default function App() {
     setWinHandFlyOrigins(null)
     setRound(createPreviewWinHandRound('pre'))
     markSessionReady()
-    clearPlayEnterFastPath()
   }, [previewWinHandActive, previewWinHandBurst, markSessionReady])
 
   useEffect(() => {
@@ -5576,7 +5581,6 @@ export default function App() {
       inProgressSaverRef.current.cancel()
       void clearInProgressGame()
       beginFreshSessionWithOpeningFlyIn()
-      clearPlayEnterFastPath()
       return
     }
     if (intent !== 'enter' && intent !== 'resume') return
@@ -5585,14 +5589,12 @@ export default function App() {
     if (peeked.snap && isResumableSnapshot(peeked.snap)) {
       eagerResumePaintDoneRef.current = true
       loadSavedGameOntoTable(peeked.snap, { autoContinue: false })
-      clearPlayEnterFastPath()
       return
     }
     eagerNewDealDoneRef.current = true
     inProgressSaverRef.current.cancel()
     void clearInProgressGame()
     beginFreshSessionWithOpeningFlyIn()
-    clearPlayEnterFastPath()
   }, [
     beginFreshSessionWithOpeningFlyIn,
     loadSavedGameOntoTable,
@@ -5952,13 +5954,63 @@ export default function App() {
     return () => saver.cancel()
   }, [])
 
-  /** Tell the single boot loader (in RequireAuth) that cloud hydrate is finished. */
+  /**
+   * Keep the Play boot loader up until the table is ready AND tile faces + suggested hands
+   * have had a chance to warm (so the first rack/Logic paint is not cold). Cap the wait so a
+   * stalled image/worker cannot trap the loader. Opening-deal fly-in waits on
+   * `bootLoaderDismissed` separately.
+   */
+  const playBootAssetsNotifiedRef = useRef(false)
   useEffect(() => {
-    if (!user) return
+    if (!user) {
+      playBootAssetsNotifiedRef.current = false
+      return
+    }
     if (!(sessionReady || resumePrompt != null)) return
-    sessionBoot?.notifySessionBootReady()
-    clearPlayEnterFastPath()
-  }, [user, sessionReady, resumePrompt, sessionBoot])
+    if (playBootAssetsNotifiedRef.current) return
+    const notifyReady = sessionBoot?.notifySessionBootReady
+    if (!notifyReady) return
+
+    let cancelled = false
+    const PLAY_ASSET_WARM_MS = 4000
+
+    void (async () => {
+      const warmTiles = isIllustrativeTileGraphics(tileGraphics)
+        ? preloadClassicTileArtAsync({ graphics: tileGraphics, immediate: true })
+        : Promise.resolve()
+
+      warmRankSuggestedHandsWorker()
+      const warmHands =
+        suggestedHandsCoachActive && suggestedRankInputRef.current.hand.length > 0
+          ? rankSuggestedHandsAsync(
+              committedCardIdRef.current,
+              suggestedRankInputRef.current,
+            ).catch(() => [])
+          : Promise.resolve([])
+
+      await Promise.race([
+        Promise.all([warmTiles, warmHands]),
+        new Promise<void>((resolve) => {
+          window.setTimeout(resolve, PLAY_ASSET_WARM_MS)
+        }),
+      ])
+
+      if (cancelled) return
+      playBootAssetsNotifiedRef.current = true
+      notifyReady()
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    user,
+    sessionReady,
+    resumePrompt,
+    sessionBoot?.notifySessionBootReady,
+    tileGraphics,
+    suggestedHandsCoachActive,
+  ])
 
   /** Reload / login: open Game Settings after the load screen. */
   useEffect(() => {

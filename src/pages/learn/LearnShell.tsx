@@ -1,9 +1,10 @@
-import { useLayoutEffect, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, type ReactNode } from 'react'
+import { flushSync } from 'react-dom'
 import { Link, useLocation } from 'react-router-dom'
 import mahjLogoSrc from '../../assets/mahj-logo.svg?url'
 import logicLogoSrc from '../../assets/logic-logo.svg?url'
 import { applyAppThemeToDocument, DEFAULT_APP_THEME } from '../../app/appTheme'
-import { markPlayEnterFastPath } from '../../app/playLocationState'
+import { beginPlayEnterLoader, endPlayEnterLoader } from '../../auth/playEnterLoader'
 import { useAuth } from '../../auth/AuthProvider'
 import { LandingTileAtmosphere } from '../../components/LandingTileAtmosphere'
 import '../../styles/learn.css'
@@ -21,6 +22,10 @@ export function LearnShell({ children, article = false }: Props) {
 
   useLayoutEffect(() => {
     applyAppThemeToDocument(DEFAULT_APP_THEME)
+  }, [])
+
+  useEffect(() => {
+    endPlayEnterLoader()
   }, [])
 
   return (
@@ -53,21 +58,25 @@ export function LearnShell({ children, article = false }: Props) {
           </Link>
           <nav className="learn__top-nav" aria-label="Site">
             <Link to={user ? '/home' : '/'}>Home</Link>
-            <Link to="/learn" aria-current={onLearnHub || article ? 'page' : undefined}>
-              Learn
-            </Link>
-            {user ? <Link to="/rack-checker">Rack Checker</Link> : null}
             {user ? (
               <Link
                 to="/play"
                 state={{ playIntent: 'enter' }}
-                onClick={() => markPlayEnterFastPath()}
+                onClick={() => {
+                  flushSync(() => {
+                    beginPlayEnterLoader()
+                  })
+                }}
               >
                 Play
               </Link>
             ) : (
               <Link to="/login">Login</Link>
             )}
+            {user ? <Link to="/rack-checker">Rack Checker</Link> : null}
+            <Link to="/learn" aria-current={onLearnHub || article ? 'page' : undefined}>
+              Learn
+            </Link>
           </nav>
         </div>
       </header>

@@ -1,6 +1,6 @@
 /*
  * Authenticated Play Hub — Eight Bam–inspired feature showcase on the app felt.
- * Portrait stacks; landscape / desktop places Practice + Rack Checker side-by-side.
+ * Practice + Rack Checker stack vertically (copy above large screenshots).
  * Short viewports scroll (scrollbar hidden); buttons keep fixed tap heights.
  */
 
@@ -185,7 +185,7 @@
 }
 
 .home-hub__shell {
-  width: min(100%, 68rem);
+  width: min(100%, 56rem);
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -327,8 +327,8 @@
   position: relative;
   box-sizing: border-box;
   width: 100%;
-  /* Uniform inset — image fills width so no side letterboxing when stacked. */
-  padding: 1rem;
+  /* Tight inset so stacked screenshots read large. */
+  padding: 0.65rem 0.85rem 0.95rem;
   background: #0b1512;
   overflow: hidden;
 }
@@ -339,17 +339,17 @@
   height: auto;
   object-fit: contain;
   object-position: center;
-  border-radius: 0.4rem;
+  border-radius: 0.45rem;
   user-select: none;
   pointer-events: none;
 }
 
 .home-hub__feature-body {
   display: flex;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   flex-direction: column;
   gap: 0.55rem;
-  padding: 1.15rem 1.25rem 1.3rem;
+  padding: 1.25rem 1.35rem 1rem;
   min-width: 0;
 }
 
@@ -357,7 +357,7 @@
   margin: 0;
   font-family: 'Noto Serif', var(--heading), serif;
   font-size: clamp(1.25rem, 2.8vh, 1.55rem);
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.02em;
   color: #f7f9fc;
   line-height: 1.15;
@@ -531,17 +531,14 @@
 .home-hub__modes {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  /* Match feature columns so each button lines up with Play / Open Rack Checker. */
   gap: clamp(0.85rem, 2.2vh, 1.25rem);
   width: 100%;
   flex: 0 0 auto;
 }
 
-/* Inset like `.home-hub__feature-body` so width matches the Play CTA. */
 .home-hub__modes .home-hub__mode-btn {
-  width: calc(100% - 2rem);
-  margin-inline: 1rem;
-  justify-self: center;
+  width: 100%;
+  min-width: 0;
   box-sizing: border-box;
 }
 
@@ -596,7 +593,6 @@
   gap: 0.5rem;
 }
 
-/* Same 2-up footprint as Practice + Rack Checker feature panels. */
 .home-hub__store-badges.store-badges {
   margin-top: 0.15rem;
   flex: 0 0 auto;
@@ -677,26 +673,17 @@
   color: #ffb800;
 }
 
-/* Side-by-side feature panels — only when wide enough to stay comfortable */
-@media (min-width: 1200px) {
-  .home-hub__features,
+/* Store badges can sit 2-up on wide screens; feature screenshots stay stacked. */
+@media (min-width: 720px) {
   .home-hub__store-badges.store-badges {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: stretch;
   }
 
-  .home-hub__feature {
-    height: 100%;
-  }
-
   .home-hub__store-badges .store-badges__badge {
     height: 100%;
     aspect-ratio: auto;
-    min-height: 12rem;
-  }
-
-  .home-hub__feature-body {
-    justify-content: space-between;
+    min-height: 10rem;
   }
 }
 

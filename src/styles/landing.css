@@ -390,12 +390,12 @@ html:has(.landing),
 
 .landing__frame--signed-in {
   grid-template-columns: 1fr;
-  width: min(100%, 68rem);
+  width: min(100%, 56rem);
 }
 
 .landing__features {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: clamp(1rem, 2.4vw, 1.5rem);
   min-width: 0;
   align-items: stretch;
@@ -415,8 +415,8 @@ html:has(.landing),
   position: relative;
   box-sizing: border-box;
   width: 100%;
-  /* Uniform inset — image fills width so no side letterboxing when stacked. */
-  padding: 1rem;
+  /* Tight inset so stacked screenshots read large. */
+  padding: 0.65rem 0.85rem 0.95rem;
   background: #0b1512;
   overflow: hidden;
 }
@@ -427,17 +427,17 @@ html:has(.landing),
   height: auto;
   object-fit: contain;
   object-position: center;
-  border-radius: 0.4rem;
+  border-radius: 0.45rem;
   user-select: none;
   pointer-events: none;
 }
 
 .landing__feature-body {
   display: flex;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   flex-direction: column;
   gap: 0.55rem;
-  padding: 1.15rem 1.25rem 1.3rem;
+  padding: 1.25rem 1.35rem 1rem;
   min-width: 0;
 }
 
@@ -445,7 +445,7 @@ html:has(.landing),
   margin: 0;
   font-family: 'Noto Serif', var(--heading), serif;
   font-size: clamp(1.25rem, 2.8vh, 1.55rem);
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.02em;
   color: #f7f9fc;
   line-height: 1.15;
@@ -459,8 +459,8 @@ html:has(.landing),
 }
 
 .landing__feature-actions {
-  margin-top: auto;
-  padding-top: 0.55rem;
+  margin-top: 0.15rem;
+  padding-top: 0;
 }
 
 .btn.landing__feature-cta {
@@ -923,52 +923,13 @@ html:has(.landing),
 
   .landing__frame,
   .landing__frame--signed-in {
-    width: min(100%, 34rem);
+    width: min(100%, 56rem);
     grid-template-columns: 1fr;
     gap: 1.15rem;
   }
 
-  .landing__features {
-    grid-template-columns: 1fr;
-  }
-
-  .landing__feature-media {
-    padding: 0.9rem;
-  }
-
   .landing__tiles {
     --landing-tile-w: clamp(2.6rem, 11vw, 3.5rem);
-  }
-}
-
-/*
- * Stack before side-by-side cards shrink too small (header may still be one row).
- * Keep cards compact so two stacked panels stay scrollable from the top.
- */
-@media (max-width: 1200px) {
-  .landing__features {
-    grid-template-columns: 1fr;
-  }
-
-  .landing__frame--signed-in {
-    width: min(100%, 36rem);
-  }
-
-  .landing__feature-media {
-    padding: 0.85rem;
-  }
-
-  .landing__feature-body {
-    padding: 0.9rem 1rem 1.05rem;
-    gap: 0.45rem;
-  }
-
-  .landing__feature-title {
-    font-size: clamp(1.15rem, 2.4vh, 1.35rem);
-  }
-
-  .landing__feature-copy {
-    font-size: 0.92rem;
   }
 }
 

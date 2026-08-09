@@ -9,8 +9,8 @@ import { Link, Navigate, useLocation } from 'react-router-dom'
 import mahjLogoSrc from '../assets/mahj-logo.svg?url'
 import logicLogoSrc from '../assets/logic-logo.svg?url'
 import { applyAppThemeToDocument, DEFAULT_APP_THEME } from '../app/appTheme'
-import { markPlayEnterFastPath } from '../app/playLocationState'
 import { AuthThemeLoading } from '../auth/AuthThemeLoading'
+import { beginPlayEnterLoader } from '../auth/playEnterLoader'
 import { useAuth } from '../auth/AuthProvider'
 import { LandingTileAtmosphere } from '../components/LandingTileAtmosphere'
 import {
@@ -53,7 +53,7 @@ function postLoginNav(from: unknown): { path: string; state?: Record<string, unk
   if (from === '/rack-checker') {
     return { path: '/rack-checker' }
   }
-  return { path: '/home', state: { fullSessionBoot: true } }
+  return { path: '/home' }
 }
 
 export function LoginPage() {
@@ -157,9 +157,14 @@ export function LoginPage() {
     }
   }, [useGis, mode, user, enteringApp, signInWithGoogleIdToken])
 
+  // Start the route-survivable Play loader once (not during render).
+  useEffect(() => {
+    if (!enteringApp) return
+    if (postLoginNav(from).path === '/play') beginPlayEnterLoader()
+  }, [enteringApp, from])
+
   if (!loading && user && enteringApp) {
     const dest = postLoginNav(from)
-    if (dest.path === '/play') markPlayEnterFastPath()
     return <Navigate to={dest.path} replace state={dest.state} />
   }
 
@@ -167,8 +172,9 @@ export function LoginPage() {
     return <Navigate to="/home" replace />
   }
 
-  if (enteringApp) {
-    return <AuthThemeLoading />
+  // Host owns the theater; keep a local cover if Play loader has not painted yet.
+  if (enteringApp && postLoginNav(from).path === '/play') {
+    return <AuthThemeLoading cover />
   }
 
   async function onSubmit(e: FormEvent) {
@@ -284,10 +290,10 @@ export function LoginPage() {
           </Link>
           <nav className="landing__top-nav" aria-label="Site">
             <Link to="/">Home</Link>
-            <Link to="/learn">Learn</Link>
             <Link to="/login" aria-current="page">
               Login
             </Link>
+            <Link to="/learn">Learn</Link>
           </nav>
         </div>
       </header>
