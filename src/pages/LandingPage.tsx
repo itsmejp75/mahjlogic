@@ -137,6 +137,8 @@ export function LandingPage() {
                   className="landing__feature-img"
                   src="/marketing/practice.jpg"
                   alt="Mahj Logic practice table"
+                  width={2560}
+                  height={1318}
                   decoding="async"
                   draggable={false}
                 />
@@ -175,6 +177,8 @@ export function LandingPage() {
                   className="landing__feature-img"
                   src="/marketing/rack-checker.jpg"
                   alt="Mahj Logic Rack Checker"
+                  width={2560}
+                  height={1313}
                   decoding="async"
                   draggable={false}
                 />

@@ -392,6 +392,8 @@ export function HomePage() {
                   className="home-hub__feature-img"
                   src="/marketing/practice.jpg"
                   alt="Mahj Logic practice table"
+                  width={2560}
+                  height={1318}
                   decoding="async"
                   fetchPriority="high"
                   draggable={false}
@@ -422,6 +424,8 @@ export function HomePage() {
                   className="home-hub__feature-img"
                   src="/marketing/rack-checker.jpg"
                   alt="Mahj Logic Rack Checker"
+                  width={2560}
+                  height={1313}
                   decoding="async"
                   fetchPriority="high"
                   draggable={false}
