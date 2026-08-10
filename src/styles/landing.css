@@ -449,6 +449,7 @@ html:has(.landing),
   letter-spacing: 0.02em;
   color: #f7f9fc;
   line-height: 1.15;
+  text-align: center;
 }
 
 .landing__feature-copy {
@@ -466,6 +467,9 @@ html:has(.landing),
 .btn.landing__feature-cta {
   width: 100%;
   text-decoration: none;
+  /* Outrank global `.btn { text-transform: uppercase }` — title case labels. */
+  text-transform: none;
+  font-size: 1.15rem;
 }
 
 .landing__auth-col {

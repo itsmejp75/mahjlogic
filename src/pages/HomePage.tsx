@@ -373,9 +373,13 @@ export function HomePage() {
               <div className="home-hub__feature-body">
                 <h2 className="home-hub__feature-title">Play American Mah Jongg</h2>
                 <p className="home-hub__feature-copy">
-                  Play against bots and practice American Mah Jongg in an Intelligent All-In-One
-                  Console with guidance — suggested hands, highlighted tiles, discard tracking,
-                  opponent hand identification, and other hints.
+                  A solo training tool against AI. Mahj Logic’s condensed layout allows for larger
+                  tiles in an efficient design so you can see all information front and center —
+                  suggested hands, highlights, discard tracking, exposures, and real-time
+                  probabilities of
+                  finishing before the wall runs out. Learn and practice new cards, see which hands
+                  you win with the most, and warm up before a live game. Use the helper tools as
+                  much or as little as you want.
                 </p>
                 <div className="home-hub__feature-actions">
                   <button
