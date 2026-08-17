@@ -35,6 +35,15 @@ export function handUsesJoker(tiles: readonly { def: { cat: string } }[]): boole
   return tiles.some((t) => t.def.cat === 'joker')
 }
 
+/** Jokers in the winning hand (concealeds + exposures). */
+export function countJokersInHand(tiles: readonly { def: { cat: string } }[]): number {
+  let n = 0
+  for (const t of tiles) {
+    if (t.def.cat === 'joker') n += 1
+  }
+  return n
+}
+
 /**
  * Card value after the NMJL jokerless-Mah-Jongg double.
  * Doubles when the win used no jokers, except Singles and Pairs.

@@ -3,7 +3,7 @@ import { flushSync } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import mahjLogoSrc from '../assets/mahj-logo.svg?url'
 import logicLogoSrc from '../assets/logic-logo.svg?url'
-import { applyAppThemeToDocument, DEFAULT_APP_THEME } from '../app/appTheme'
+import { applyAppThemeToDocument, readAppThemeFromStorage } from '../app/appTheme'
 import { beginPlayEnterLoader, endPlayEnterLoader } from '../auth/playEnterLoader'
 import { useAuth } from '../auth/AuthProvider'
 import { LandingTileAtmosphere } from '../components/LandingTileAtmosphere'
@@ -22,9 +22,9 @@ export function LandingPage() {
   const { user, signOut } = useAuth()
   const [signOutBusy, setSignOutBusy] = useState(false)
 
-  /** Marketing always paints Abyss; do not rewrite localStorage (cloud restores on sign-in). */
+  /** Same felt as Play — follow the saved theme, do not rewrite localStorage. */
   useLayoutEffect(() => {
-    applyAppThemeToDocument(DEFAULT_APP_THEME)
+    applyAppThemeToDocument(readAppThemeFromStorage())
   }, [])
 
   // Clear a Play-enter loader if the user navigates back to the landing page mid-boot.
@@ -51,9 +51,6 @@ export function LandingPage() {
 
   return (
     <main className="landing">
-      <div className="landing__atmosphere" aria-hidden="true" />
-      <div className="landing__glow landing__glow--cyan" aria-hidden="true" />
-      <div className="landing__glow landing__glow--gold" aria-hidden="true" />
       <LandingTileAtmosphere />
 
       <header className="landing__header">

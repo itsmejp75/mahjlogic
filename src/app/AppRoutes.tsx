@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import App from '../App.tsx'
+import { GaPageViews } from './GaPageViews'
 import { PlayEnterLoaderHost } from '../auth/PlayEnterLoaderHost'
 import { RequireAuth } from '../auth/RequireAuth'
 import { AuthCallbackPage } from '../pages/AuthCallbackPage'
@@ -18,6 +19,7 @@ import { TermsPage } from '../pages/TermsPage'
 export function AppRoutes() {
   return (
     <>
+    <GaPageViews />
     <PlayEnterLoaderHost />
     <Routes>
       <Route path="/" element={<LandingPage />} />

@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
+import { setAnalyticsUser } from '../lib/analytics'
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase'
 
 type OAuthProvider = 'google' | 'apple'
@@ -167,6 +168,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription.unsubscribe()
     }
   }, [])
+
+  useEffect(() => {
+    setAnalyticsUser(session?.user.id ?? null)
+  }, [session?.user.id])
 
   const value: AuthContextValue = {
     configured: isSupabaseConfigured,

@@ -55,17 +55,27 @@
   overflow: hidden;
   color: var(--landing-ink);
   font-family: var(--sans);
-  background: #0d1522;
+  /* Same themed felt as Play (`--app-bg-paint-*` on `html[data-app-theme]`). */
+  background-color: var(--app-bg-paint-color, #0d1522);
+  background-image: var(--app-bg-paint-image);
+  background-size: var(--app-bg-paint-size, auto);
+  background-repeat: var(--app-bg-paint-repeat, no-repeat);
+  background-blend-mode: var(--app-bg-paint-blend, normal);
+  /* `scroll` — `isolation: isolate` would pin `fixed` to this box, not the viewport. */
+  background-attachment: scroll;
 }
 
 /*
- * Auth start URL paints landing navy; index.html theme script leaves html at
- * #23282e. Match shell paint so any residual home-indicator gap is invisible.
+ * Match Play chrome in any residual home-indicator gap. Login still forces Abyss
+ * on `html`, so this stays navy there.
  */
 html:has(.landing),
 #root:has(.landing) {
-  background-color: #0d1522 !important;
-  background: #0d1522 !important;
+  background-color: var(--app-bg-paint-color, #0d1522) !important;
+  background-image: var(--app-bg-paint-image) !important;
+  background-size: var(--app-bg-paint-size, auto) !important;
+  background-repeat: var(--app-bg-paint-repeat, no-repeat) !important;
+  background-blend-mode: var(--app-bg-paint-blend, normal) !important;
 }
 
 .landing--callback {
@@ -252,7 +262,7 @@ html:has(.landing),
     max(1rem, env(safe-area-inset-left));
   box-sizing: border-box;
   border-bottom: 1px solid color-mix(in srgb, #ffffff 10%, transparent);
-  background-color: color-mix(in srgb, #0d1522 88%, transparent);
+  background-color: color-mix(in srgb, var(--app-bg-paint-color, #0d1522) 88%, transparent);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
@@ -464,12 +474,15 @@ html:has(.landing),
   padding-top: 0;
 }
 
-.btn.landing__feature-cta {
+.btn.landing__feature-cta,
+.btn.landing-auth__action-btn.landing__feature-cta {
   width: 100%;
   text-decoration: none;
   /* Outrank global `.btn { text-transform: uppercase }` — title case labels. */
   text-transform: none;
+  /* Beat `.btn.landing-auth__action-btn` (0.95rem) so Login CTAs match `/home`. */
   font-size: 1.15rem;
+  letter-spacing: 0.03em;
 }
 
 .landing__auth-col {

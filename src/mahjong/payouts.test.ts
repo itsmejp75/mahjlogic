@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  countJokersInHand,
   effectiveMahjongBasePoints,
   handUsesJoker,
   isSinglesAndPairsSection,
@@ -17,6 +18,18 @@ describe('jokerless Mah Jongg base value', () => {
   it('detects jokers in the winning tile set', () => {
     expect(handUsesJoker([{ def: { cat: 'suit' } }, { def: { cat: 'joker' } }])).toBe(true)
     expect(handUsesJoker([{ def: { cat: 'suit' } }, { def: { cat: 'dragon' } }])).toBe(false)
+  })
+
+  it('counts jokers in the winning tile set', () => {
+    expect(countJokersInHand([{ def: { cat: 'suit' } }, { def: { cat: 'joker' } }])).toBe(1)
+    expect(
+      countJokersInHand([
+        { def: { cat: 'joker' } },
+        { def: { cat: 'suit' } },
+        { def: { cat: 'joker' } },
+      ]),
+    ).toBe(2)
+    expect(countJokersInHand([{ def: { cat: 'dragon' } }])).toBe(0)
   })
 
   it('doubles card value when the hand has no joker', () => {

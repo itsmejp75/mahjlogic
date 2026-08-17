@@ -8,7 +8,7 @@ import {
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import mahjLogoSrc from '../assets/mahj-logo.svg?url'
 import logicLogoSrc from '../assets/logic-logo.svg?url'
-import { applyAppThemeToDocument, DEFAULT_APP_THEME } from '../app/appTheme'
+import { applyAppThemeToDocument, readAppThemeFromStorage } from '../app/appTheme'
 import { AuthThemeLoading } from '../auth/AuthThemeLoading'
 import { beginPlayEnterLoader } from '../auth/playEnterLoader'
 import { useAuth } from '../auth/AuthProvider'
@@ -96,7 +96,7 @@ export function LoginPage() {
   const useGis = configured && isGoogleIdentityConfigured()
 
   useLayoutEffect(() => {
-    applyAppThemeToDocument(DEFAULT_APP_THEME)
+    applyAppThemeToDocument(readAppThemeFromStorage())
   }, [])
 
   function clearMessages() {
@@ -261,9 +261,6 @@ export function LoginPage() {
 
   return (
     <main className="landing login-page">
-      <div className="landing__atmosphere" aria-hidden="true" />
-      <div className="landing__glow landing__glow--cyan" aria-hidden="true" />
-      <div className="landing__glow landing__glow--gold" aria-hidden="true" />
       <LandingTileAtmosphere />
 
       <header className="landing__header">

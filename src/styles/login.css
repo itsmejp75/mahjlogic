@@ -4,7 +4,7 @@
  */
 
 .login-page {
-  /* Fill under the frozen header; landing already sets Abyss + action tokens. */
+  /* Fill under the frozen header; `.landing` already paints the Play felt. */
   overflow-x: hidden;
   overflow-y: auto;
   scrollbar-width: none;

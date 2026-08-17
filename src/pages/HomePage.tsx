@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import mahjLogoSrc from '../assets/mahj-logo.svg?url'
 import logicLogoSrc from '../assets/logic-logo.svg?url'
 import {
+  applyAppThemeToDocument,
   persistAppTheme,
   readAppThemeFromStorage,
   type AppTheme,
@@ -171,6 +172,10 @@ export function HomePage() {
   const [appTheme, setAppTheme] = useState<AppTheme>(() => readAppThemeFromStorage())
   const [signOutBusy, setSignOutBusy] = useState(false)
   const [statsOpen, setStatsOpen] = useState(false)
+
+  useLayoutEffect(() => {
+    applyAppThemeToDocument(appTheme)
+  }, [appTheme])
 
   // Clear a Play-enter loader if the user navigates back to Home mid-boot.
   useEffect(() => {

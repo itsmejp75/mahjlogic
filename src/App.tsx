@@ -19,6 +19,7 @@ import { GameHistoryStatsOverlay } from './components/GameHistoryStatsOverlays'
 import { TileFace } from './components/TileFace'
 import { useAuth } from './auth/AuthProvider'
 import { useSessionBoot } from './auth/sessionBoot'
+import { trackGameEnd, trackGameStart } from './lib/analytics'
 import {
   recordGameResult,
   type GameAssistKey,
@@ -68,6 +69,7 @@ import { BOT_DIFFICULTIES, type BotDifficulty, chooseBotDiscard, botCallStrategi
 import { hasLegalMahjongOnBotDiscard, isMahjongWinOnLiveBotDiscard, isSelfDrawMahjongWin, type CallValidationRoundSlice } from './mahjong/callValidation'
 import { deadHandExplanation } from './mahjong/deadHandReason'
 import {
+  countJokersInHand,
   effectiveMahjongBasePoints,
   handUsesJoker,
   isPlayerTheDiscarder,
@@ -5008,6 +5010,12 @@ export default function App() {
           botDifficulty: botDifficultyRef.current,
           assists: [],
         })
+        trackGameEnd({
+          outcome: 'new_rack',
+          roundId: roundKey,
+          cardId: committedCardIdRef.current,
+          botDifficulty: botDifficultyRef.current,
+        })
       } else {
         gameResultRecordedRef.current = true
       }
@@ -5098,6 +5106,11 @@ export default function App() {
           return r
         })()
     setRound(opts?.deferOpeningFlyIn ? { ...nextRound, handTileFlyIn: null } : nextRound)
+    trackGameStart({
+      roundId: clientRoundIdRef.current,
+      cardId: menuCardIdRef.current,
+      botDifficulty: botDifficultyRef.current,
+    })
   }, [])
 
   /** Seat / deck prefs: redeal a fresh rack behind the open menu (do not close it). */
@@ -5292,8 +5305,11 @@ export default function App() {
     let points: number | null = null
     let closed: boolean | null = null
     let winMethod: GameWinMethod | null = null
+    let jokerCount: number | null = null
 
     if (outcome === 'player_win') {
+      const winTiles = [...hand, ...eastExposures.flatMap((e) => e.tiles)]
+      jokerCount = countJokersInHand(winTiles)
       const { closestLine } = summarizeRackTowardWin({
         hand,
         wallRemaining: wall.length,
@@ -5313,7 +5329,6 @@ export default function App() {
         closed = closestLine.closed
         // Jokerless Mah Jongg doubles card value (except Singles and Pairs), then
         // player collects 4× base on discard win, 6× on self-pick.
-        const winTiles = [...hand, ...eastExposures.flatMap((e) => e.tiles)]
         const base = effectiveMahjongBasePoints(closestLine.points, {
           section: closestLine.section,
           usesJoker: handUsesJoker(winTiles),
@@ -5325,6 +5340,8 @@ export default function App() {
       const winnerSeat = seatLabel(botSlotSeats[bi]!)
       const botHand = bots[bi] ?? []
       const claims = botExposures.filter((e) => e.seat === winnerSeat)
+      const winTiles = [...botHand, ...claims.flatMap((e) => e.tiles)]
+      jokerCount = countJokersInHand(winTiles)
       const { closestLine } = summarizeRackTowardWin({
         hand: botHand,
         wallRemaining: wall.length,
@@ -5345,7 +5362,6 @@ export default function App() {
           botWin.how === 'called-discard' && isPlayerTheDiscarder(botWin.discardFrom, playerSeat)
         // Jokerless double on the winner’s hand, then what this player pays:
         // 2× if self-pick or they discarded; else 1×.
-        const winTiles = [...botHand, ...claims.flatMap((e) => e.tiles)]
         const base = effectiveMahjongBasePoints(closestLine.points, {
           section: closestLine.section,
           usesJoker: handUsesJoker(winTiles),
@@ -5372,6 +5388,22 @@ export default function App() {
       botDifficulty,
       endedBy: outcome === 'wall_game' ? wallGameEndedByRef.current : null,
       assists: [...handAssistsRef.current],
+    })
+    trackGameEnd({
+      outcome,
+      roundId: roundKey,
+      cardId: committedCardId,
+      botDifficulty,
+      handTitle,
+      handSection,
+      cardHandCode,
+      jokerCount,
+      winMethod,
+      endedBy: outcome === 'wall_game' ? wallGameEndedByRef.current : null,
+      botSeat:
+        outcome === 'bot_win' && botWin
+          ? seatLabel(botSlotSeats[botWin.botIndex]!)
+          : null,
     })
   }, [
     previewWinHandActive,
@@ -5462,6 +5494,12 @@ export default function App() {
       if (opts?.autoContinue) {
         setResumePrompt(null)
         markSessionReady()
+        trackGameStart({
+          roundId: snap.clientRoundId,
+          cardId: snap.settings.cardId,
+          botDifficulty: snap.settings.botDifficulty,
+          resumed: true,
+        })
         return
       }
       setResumePrompt(snap)
@@ -5471,10 +5509,18 @@ export default function App() {
   )
 
   /** Resume: table already shows the saved hand — just dismiss the prompt. */
-  const confirmContinueSavedGame = useCallback(() => {
+  const confirmContinueSavedGame = useCallback((opts?: { trackResume?: boolean }) => {
+    const snap = resumePrompt
     setResumePrompt(null)
     markSessionReady()
-  }, [markSessionReady])
+    if (opts?.trackResume === false || !snap) return
+    trackGameStart({
+      roundId: snap.clientRoundId,
+      cardId: snap.settings.cardId,
+      botDifficulty: snap.settings.botDifficulty,
+      resumed: true,
+    })
+  }, [markSessionReady, resumePrompt])
 
   const declineResumeStartNewGame = useCallback(() => {
     setResumePrompt(null)
@@ -7021,7 +7067,7 @@ export default function App() {
           <AppMenuSlideShell
             onGoHome={() => {
               appMenuOpenApiRef.current.setMenuOpen(false)
-              if (resumePrompt != null) confirmContinueSavedGame()
+              if (resumePrompt != null) confirmContinueSavedGame({ trackResume: false })
               navigate('/home')
             }}
           >

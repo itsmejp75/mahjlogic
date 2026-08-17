@@ -1,5 +1,5 @@
 /*
- * Authenticated Play Hub — Eight Bam–inspired feature showcase on the app felt.
+ * Authenticated Play Hub — Eight Bam–inspired feature showcase on the Play felt.
  * Practice + Rack Checker stack vertically (copy above large screenshots).
  * Short viewports scroll (scrollbar hidden); buttons keep fixed tap heights.
  */
@@ -42,7 +42,26 @@
   background-size: var(--app-bg-paint-size, auto);
   background-repeat: var(--app-bg-paint-repeat, no-repeat);
   background-blend-mode: var(--app-bg-paint-blend, normal);
-  background-attachment: var(--app-bg-paint-attachment, fixed);
+  background-attachment: scroll;
+}
+
+html:has(.home-hub),
+#root:has(.home-hub) {
+  background-color: var(--app-bg-paint-color, #0d1522) !important;
+  background-image: var(--app-bg-paint-image) !important;
+  background-size: var(--app-bg-paint-size, auto) !important;
+  background-repeat: var(--app-bg-paint-repeat, no-repeat) !important;
+  background-blend-mode: var(--app-bg-paint-blend, normal) !important;
+}
+
+/* Beat `.app { background: transparent }` from the play shell. */
+.app.home-hub {
+  background-color: var(--app-bg-paint-color, var(--app-bg-base, #0d1522));
+  background-image: var(--app-bg-paint-image);
+  background-size: var(--app-bg-paint-size, auto);
+  background-repeat: var(--app-bg-paint-repeat, no-repeat);
+  background-blend-mode: var(--app-bg-paint-blend, normal);
+  background-attachment: scroll;
 }
 
 /* Same soft tile carpet as login / menu lobby (styles via LandingTileAtmosphere). */
@@ -61,7 +80,7 @@
     max(1rem, env(safe-area-inset-left));
   box-sizing: border-box;
   border-bottom: 1px solid color-mix(in srgb, #ffffff 10%, transparent);
-  background-color: color-mix(in srgb, var(--app-bg-paint-color, #0d1522) 92%, transparent);
+  background-color: color-mix(in srgb, var(--app-bg-paint-color, #0d1522) 88%, transparent);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
