@@ -2,7 +2,7 @@
 /**
  * Rasterize SVG → PNGs via Puppeteer + macOS `sips`.
  *
- * App icons (default): PWA + Capacitor — uses src/assets/mahjlogic-app-icon-button.svg.
+ * App icons (default): PWA + Capacitor — uses src/assets/mahjlogic-app-icon.svg.
  * Solid Abyss canvas + the same tossed-tile dump as home/login
  * (`LANDING_TILE_FIELD`) + one cyan bird path with a thin dark stroke.
  *
@@ -31,7 +31,7 @@ const argv = process.argv.slice(2)
 const faviconOnly = argv.includes('--favicon-only')
 const positional = argv.filter((a) => a !== '--favicon-only')
 const faviconSvgSrc = path.join(root, 'src', 'assets', 'mahjlogic-favicon.svg')
-const appIconSvgSrc = path.join(root, 'src', 'assets', 'mahjlogic-app-icon-button.svg')
+const appIconSvgSrc = path.join(root, 'src', 'assets', 'mahjlogic-app-icon.svg')
 const positionalPath = positional[0]
 
 const svgPath = path.resolve(positionalPath ?? (faviconOnly ? faviconSvgSrc : appIconSvgSrc))
@@ -43,7 +43,7 @@ const masterPng = path.join(root, '.tmp-app-icon-master.png')
  * Flip this back to `tiles` to restore the last carpet.
  */
 const ICON_BG_STYLE = process.env.ICON_BG_STYLE || 'solid'
-const ICON_SOLID_BG = '#ffffff'
+const ICON_SOLID_BG = '#0d1522'
 /** Solid canvas behind the mark. Override with ICON_CANVAS_BG. */
 const ICON_CANVAS_BG =
   process.env.ICON_CANVAS_BG || (ICON_BG_STYLE === 'solid' ? ICON_SOLID_BG : '#0d1522')
