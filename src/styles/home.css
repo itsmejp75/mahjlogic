@@ -400,6 +400,7 @@ html:has(.home-hub),
   align-items: stretch;
   gap: 0.45rem;
   margin-top: 0;
+  margin-bottom: 0.85rem;
 }
 
 .home-hub__setup,

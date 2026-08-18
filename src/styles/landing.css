@@ -474,6 +474,7 @@ html:has(.landing),
 
 .landing__feature-actions {
   margin-top: 0;
+  margin-bottom: 0.85rem;
   padding-top: 0;
 }
 

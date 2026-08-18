@@ -103,9 +103,8 @@ export function LandingPage() {
       <div className="landing__shell">
         <div className="landing__frame landing__frame--signed-in">
           <section className="landing__features" aria-label="Mahj Logic modes">
-            <article className="landing__feature">
+            <article className="landing__feature" aria-label="Play American Mah Jongg">
               <div className="landing__feature-body">
-                <h2 className="landing__feature-title">Play American Mah Jongg</h2>
                 <div className="landing__feature-actions">
                   {user ? (
                     <button
@@ -126,7 +125,7 @@ export function LandingPage() {
                   )}
                 </div>
                 <p className="landing__feature-copy">
-                  Mahj Logic is an American Mah Jongg solo training tool against AI in a condensed
+                  Mahj Logic is an intelligent American Mah Jongg solo training tool against AI in a condensed
                   layout which allows for larger tiles in an efficient design so you can see all
                   information front and center — suggested hands, highlights, discard tracking,
                   exposures, and real-time probabilities of finishing before the wall runs out.
@@ -147,9 +146,8 @@ export function LandingPage() {
               </div>
             </article>
 
-            <article className="landing__feature">
+            <article className="landing__feature" aria-label="Rack Checker">
               <div className="landing__feature-body">
-                <h2 className="landing__feature-title">Rack Checker</h2>
                 <div className="landing__feature-actions">
                   {user ? (
                     <Link

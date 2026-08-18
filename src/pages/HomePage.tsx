@@ -374,9 +374,8 @@ export function HomePage() {
       <div className="home-hub__scroll">
         <div className="home-hub__shell">
           <section className="home-hub__features" aria-label="Modes">
-            <article className="home-hub__feature">
+            <article className="home-hub__feature" aria-label="Play American Mah Jongg">
               <div className="home-hub__feature-body">
-                <h2 className="home-hub__feature-title">Play American Mah Jongg</h2>
                 <div className="home-hub__feature-actions">
                   <button
                     type="button"
@@ -387,7 +386,7 @@ export function HomePage() {
                   </button>
                 </div>
                 <p className="home-hub__feature-copy">
-                  Mahj Logic is an American Mah Jongg solo training tool against AI in a condensed
+                  Mahj Logic is an intelligent American Mah Jongg solo training tool against AI in a condensed
                   layout which allows for larger tiles in an efficient design so you can see all
                   information front and center — suggested hands, highlights, discard tracking,
                   exposures, and real-time probabilities of finishing before the wall runs out.
@@ -409,9 +408,8 @@ export function HomePage() {
               </div>
             </article>
 
-            <article className="home-hub__feature">
+            <article className="home-hub__feature" aria-label="Rack Checker">
               <div className="home-hub__feature-body">
-                <h2 className="home-hub__feature-title">Rack Checker</h2>
                 <div className="home-hub__feature-actions">
                   <button
                     type="button"
