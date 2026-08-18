@@ -50,14 +50,14 @@ const BIRD_EDGE_STROKE_WIDTH = 6
  */
 
 /**
- * Same dumped tile field as home / login (`.landing__tiles`). Those pages sit at
- * 0.02; a launcher icon needs a little more or the carpet disappears.
+ * Same dumped tile field as home / login. 0% under the bird, 15% at the edges.
  */
-const ICON_TILE_OPACITY = Number(process.env.ICON_TILE_OPACITY ?? 0.12)
+const ICON_TILE_OPACITY_EDGE = Number(process.env.ICON_TILE_OPACITY ?? 0.15)
+const ICON_TILE_OPACITY_CENTER = Number(process.env.ICON_TILE_OPACITY_CENTER ?? 0)
 /** Zoom into the dump so faces read larger on a 60–180px icon. */
 const ICON_TILE_COVER = 1.9
 /** Nudge the dump right (percent of the 1024 canvas). */
-const ICON_TILE_SHIFT_X = 6
+const ICON_TILE_SHIFT_X = 12
 const TILE_ART_DIR = path.join(root, 'src', 'assets', 'tiles', 'classic')
 
 function tileArtDataUrl(stem) {
@@ -166,6 +166,8 @@ async function rasterMaster() {
     .filter(Boolean)
     .join(';')
   const tileLayer = faviconOnly ? '' : iconTileLayerHtml()
+  const tileMaskCenter = Math.min(1, ICON_TILE_OPACITY_CENTER / ICON_TILE_OPACITY_EDGE)
+  const tileMask = `radial-gradient(ellipse farthest-side at 50% 48%, rgba(0,0,0,${tileMaskCenter}) 0%, rgba(0,0,0,${tileMaskCenter}) 8%, #000 100%)`
   const birdMarkup = faviconOnly
     ? `<img src="${dataUrl}" alt="" style="${imgStyle}"/>`
     : svg
@@ -175,7 +177,7 @@ async function rasterMaster() {
     `<!DOCTYPE html><html><head><style>
 html,body{margin:0;width:1024px;height:1024px;overflow:hidden;background:${ICON_CANVAS_BG}}
 body{position:relative;box-sizing:border-box}
-.icon-tiles{position:absolute;inset:0;overflow:hidden;opacity:${ICON_TILE_OPACITY};pointer-events:none}
+.icon-tiles{position:absolute;inset:0;overflow:hidden;opacity:${ICON_TILE_OPACITY_EDGE};pointer-events:none;-webkit-mask-image:${tileMask};mask-image:${tileMask}}
 .icon-tile{position:absolute;aspect-ratio:3/4;border-radius:13.2%;background:#fdfbf7;overflow:hidden;box-shadow:0 2px 5px rgba(0,0,0,.28);transform-origin:center center}
 .icon-tile img{display:block;width:100%;height:100%;object-fit:cover}
 .icon-bird{position:relative;z-index:2;box-sizing:border-box;width:100%;height:100%;padding:${pad};display:flex;align-items:center;justify-content:center;overflow:visible}
