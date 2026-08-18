@@ -53,7 +53,7 @@ const BIRD_EDGE_STROKE_WIDTH = 6
  * Same dumped tile field as home / login (`.landing__tiles`). Those pages sit at
  * 0.02; a launcher icon needs a little more or the carpet disappears.
  */
-const ICON_TILE_OPACITY = Number(process.env.ICON_TILE_OPACITY ?? 0.09)
+const ICON_TILE_OPACITY = Number(process.env.ICON_TILE_OPACITY ?? 0.12)
 /** Same 118% cover as `.landing__tiles-cluster`. */
 const ICON_TILE_COVER = 1.18
 const TILE_ART_DIR = path.join(root, 'src', 'assets', 'tiles', 'classic')
