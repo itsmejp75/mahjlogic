@@ -377,15 +377,6 @@ export function HomePage() {
             <article className="home-hub__feature">
               <div className="home-hub__feature-body">
                 <h2 className="home-hub__feature-title">Play American Mah Jongg</h2>
-                <p className="home-hub__feature-copy">
-                  A solo training tool against AI. Mahj Logic’s condensed layout allows for larger
-                  tiles in an efficient design so you can see all information front and center —
-                  suggested hands, highlights, discard tracking, exposures, and real-time
-                  probabilities of
-                  finishing before the wall runs out. Learn and practice new cards, see which hands
-                  you win with the most, and warm up before a live game. Use the helper tools as
-                  much or as little as you want.
-                </p>
                 <div className="home-hub__feature-actions">
                   <button
                     type="button"
@@ -395,6 +386,14 @@ export function HomePage() {
                     Play
                   </button>
                 </div>
+                <p className="home-hub__feature-copy">
+                  Mahj Logic is an American Mah Jongg solo training tool against AI in a condensed
+                  layout which allows for larger tiles in an efficient design so you can see all
+                  information front and center — suggested hands, highlights, discard tracking,
+                  exposures, and real-time probabilities of finishing before the wall runs out.
+                  Learn and practice new cards, see which hands you win with the most, and warm up
+                  before a live game. Use the helper tools as much or as little as you want.
+                </p>
               </div>
               <div className="home-hub__feature-media">
                 <img
@@ -413,11 +412,6 @@ export function HomePage() {
             <article className="home-hub__feature">
               <div className="home-hub__feature-body">
                 <h2 className="home-hub__feature-title">Rack Checker</h2>
-                <p className="home-hub__feature-copy">
-                  Enter your tiles to see the closest matching hands on the card. See
-                  probabilities of finishing your hand before the wall runs out. Spot overlaps
-                  and sections you might have overlooked.
-                </p>
                 <div className="home-hub__feature-actions">
                   <button
                     type="button"
@@ -427,6 +421,10 @@ export function HomePage() {
                     Open Rack Checker
                   </button>
                 </div>
+                <p className="home-hub__feature-copy">
+                  Enter your tiles to see the closest matching hands and probabilities of
+                  finishing before the wall runs out.
+                </p>
               </div>
               <div className="home-hub__feature-media">
                 <img

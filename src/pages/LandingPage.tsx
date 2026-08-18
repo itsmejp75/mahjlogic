@@ -90,7 +90,9 @@ export function LandingPage() {
                 Play
               </Link>
             ) : (
-              <Link to="/login">Login</Link>
+              <Link to="/login" state={{ from: '/home' }}>
+                Login
+              </Link>
             )}
             {user ? <Link to="/rack-checker">Rack Checker</Link> : null}
             <Link to="/learn">Learn</Link>
@@ -104,15 +106,6 @@ export function LandingPage() {
             <article className="landing__feature">
               <div className="landing__feature-body">
                 <h2 className="landing__feature-title">Play American Mah Jongg</h2>
-                <p className="landing__feature-copy">
-                  A solo training tool against AI. Mahj Logic’s condensed layout allows for larger
-                  tiles in an efficient design so you can see all information front and center —
-                  suggested hands, highlights, discard tracking, exposures, and real-time
-                  probabilities of
-                  finishing before the wall runs out. Learn and practice new cards, see which hands
-                  you win with the most, and warm up before a live game. Use the helper tools as
-                  much or as little as you want.
-                </p>
                 <div className="landing__feature-actions">
                   {user ? (
                     <button
@@ -132,6 +125,14 @@ export function LandingPage() {
                     </Link>
                   )}
                 </div>
+                <p className="landing__feature-copy">
+                  Mahj Logic is an American Mah Jongg solo training tool against AI in a condensed
+                  layout which allows for larger tiles in an efficient design so you can see all
+                  information front and center — suggested hands, highlights, discard tracking,
+                  exposures, and real-time probabilities of finishing before the wall runs out.
+                  Learn and practice new cards, see which hands you win with the most, and warm up
+                  before a live game. Use the helper tools as much or as little as you want.
+                </p>
               </div>
               <div className="landing__feature-media">
                 <img
@@ -149,11 +150,6 @@ export function LandingPage() {
             <article className="landing__feature">
               <div className="landing__feature-body">
                 <h2 className="landing__feature-title">Rack Checker</h2>
-                <p className="landing__feature-copy">
-                  Enter your tiles to see the closest matching hands on the card. See
-                  probabilities of finishing your hand before the wall runs out. Spot overlaps
-                  and sections you might have overlooked.
-                </p>
                 <div className="landing__feature-actions">
                   {user ? (
                     <Link
@@ -172,6 +168,10 @@ export function LandingPage() {
                     </Link>
                   )}
                 </div>
+                <p className="landing__feature-copy">
+                  Enter your tiles to see the closest matching hands and probabilities of
+                  finishing before the wall runs out.
+                </p>
               </div>
               <div className="landing__feature-media">
                 <img

@@ -414,11 +414,15 @@ html:has(.landing),
 .landing__feature {
   display: flex;
   flex-direction: column;
+  gap: clamp(0.7rem, 1.8vw, 0.95rem);
   min-width: 0;
+}
+
+.landing__feature-body,
+.landing__feature-media {
   border-radius: 1rem;
   border: 1px solid color-mix(in srgb, #ffffff 12%, transparent);
   background: color-mix(in srgb, #0a1220 55%, transparent);
-  overflow: hidden;
 }
 
 .landing__feature-media {
@@ -426,8 +430,7 @@ html:has(.landing),
   box-sizing: border-box;
   width: 100%;
   /* Tight inset so stacked screenshots read large. */
-  padding: 0.65rem 0.85rem 0.95rem;
-  background: #0b1512;
+  padding: 0.65rem 0.85rem 0.85rem;
   overflow: hidden;
 }
 
@@ -447,7 +450,7 @@ html:has(.landing),
   flex: 0 0 auto;
   flex-direction: column;
   gap: 0.55rem;
-  padding: 1.25rem 1.35rem 1rem;
+  padding: 1.25rem 1.35rem 1.2rem;
   min-width: 0;
 }
 
@@ -470,7 +473,7 @@ html:has(.landing),
 }
 
 .landing__feature-actions {
-  margin-top: 0.15rem;
+  margin-top: 0;
   padding-top: 0;
 }
 

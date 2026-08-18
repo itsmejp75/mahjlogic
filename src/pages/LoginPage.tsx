@@ -10,6 +10,7 @@ import mahjLogoSrc from '../assets/mahj-logo.svg?url'
 import logicLogoSrc from '../assets/logic-logo.svg?url'
 import { applyAppThemeToDocument, readAppThemeFromStorage } from '../app/appTheme'
 import { AuthThemeLoading } from '../auth/AuthThemeLoading'
+import { postLoginNav, rememberPostLoginFrom } from '../auth/postLoginNav'
 import { beginPlayEnterLoader } from '../auth/playEnterLoader'
 import { useAuth } from '../auth/AuthProvider'
 import { LandingTileAtmosphere } from '../components/LandingTileAtmosphere'
@@ -44,16 +45,6 @@ function GoogleMark() {
       />
     </svg>
   )
-}
-
-function postLoginNav(from: unknown): { path: string; state?: Record<string, unknown> } {
-  if (from === '/play') {
-    return { path: '/play', state: { playIntent: 'enter' } }
-  }
-  if (from === '/rack-checker') {
-    return { path: '/rack-checker' }
-  }
-  return { path: '/home' }
 }
 
 export function LoginPage() {
@@ -98,6 +89,11 @@ export function LoginPage() {
   useLayoutEffect(() => {
     applyAppThemeToDocument(readAppThemeFromStorage())
   }, [])
+
+  // Persist so Google OAuth / email-confirm can honor Play vs hub after the redirect.
+  useEffect(() => {
+    rememberPostLoginFrom(from)
+  }, [from])
 
   function clearMessages() {
     setError(null)
@@ -159,17 +155,13 @@ export function LoginPage() {
 
   // Start the route-survivable Play loader once (not during render).
   useEffect(() => {
-    if (!enteringApp) return
+    if (loading || !user) return
     if (postLoginNav(from).path === '/play') beginPlayEnterLoader()
-  }, [enteringApp, from])
+  }, [loading, user, from])
 
-  if (!loading && user && enteringApp) {
+  if (!loading && user) {
     const dest = postLoginNav(from)
     return <Navigate to={dest.path} replace state={dest.state} />
-  }
-
-  if (!loading && user && !enteringApp) {
-    return <Navigate to="/home" replace />
   }
 
   // Host owns the theater; keep a local cover if Play loader has not painted yet.

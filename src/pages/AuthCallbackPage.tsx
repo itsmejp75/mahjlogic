@@ -1,13 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Navigate } from 'react-router-dom'
+import { consumePostLoginFrom, postLoginNav } from '../auth/postLoginNav'
+import { beginPlayEnterLoader } from '../auth/playEnterLoader'
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase'
 
 /**
- * Completes OAuth / email-confirm PKCE exchange, then sends the user to Home.
+ * Completes OAuth / email-confirm PKCE exchange, then continues to the
+ * destination remembered from the login CTA (Play, Rack Checker, or Home).
  */
 export function AuthCallbackPage() {
   const [ready, setReady] = useState(!isSupabaseConfigured)
   const [error, setError] = useState<string | null>(null)
+  const destOnceRef = useRef<ReturnType<typeof postLoginNav> | null>(
+    isSupabaseConfigured ? null : postLoginNav(consumePostLoginFrom()),
+  )
+  const [dest, setDest] = useState(destOnceRef.current)
 
   useEffect(() => {
     const supabase = getSupabase()
@@ -19,8 +26,18 @@ export function AuthCallbackPage() {
     let cancelled = false
     void supabase.auth.getSession().then(({ data, error: sessionError }) => {
       if (cancelled) return
-      if (sessionError) setError(sessionError.message)
-      else if (!data.session) setError('Could not complete sign-in. Try again from the home page.')
+      if (sessionError) {
+        setError(sessionError.message)
+      } else if (!data.session) {
+        setError('Could not complete sign-in. Try again from the home page.')
+      } else {
+        if (!destOnceRef.current) {
+          destOnceRef.current = postLoginNav(consumePostLoginFrom())
+        }
+        const next = destOnceRef.current
+        if (next.path === '/play') beginPlayEnterLoader()
+        setDest(next)
+      }
       setReady(true)
     })
 
@@ -50,5 +67,6 @@ export function AuthCallbackPage() {
     )
   }
 
-  return <Navigate to="/home" replace />
+  if (!dest) return null
+  return <Navigate to={dest.path} replace state={dest.state} />
 }
