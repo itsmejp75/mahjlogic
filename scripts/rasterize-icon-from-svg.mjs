@@ -38,16 +38,16 @@ const svgPath = path.resolve(positionalPath ?? (faviconOnly ? faviconSvgSrc : ap
 /** SVG file read for Puppeteer raster (may differ from svgPath when copying padded favicon.svg). */
 const rasterSvgPath = positionalPath ? svgPath : faviconOnly ? faviconSvgSrc : svgPath
 const masterPng = path.join(root, '.tmp-app-icon-master.png')
-/** Solid canvas behind the mark (Abyss pad). Override with ICON_CANVAS_BG. */
-const ICON_CANVAS_BG = process.env.ICON_CANVAS_BG || '#0d1522'
-/** Thin darker-Abyss outer rim on the cyan bird. */
-const BIRD_EDGE_STROKE = '#05080c'
-/** ViewBox units (~910 wide); keep thin — thick/round joins read as a second bird. */
-const BIRD_EDGE_STROKE_WIDTH = 6
 /**
- * Soft dark halo so the cyan bird lifts off the faint tile carpet.
- * CSS filter only — do not pad the SVG viewBox for the shadow or the bird shrinks.
+ * `tiles` = abyss + tile carpet (settings below). `solid` = flat canvas color.
+ * Flip this back to `tiles` to restore the last carpet.
  */
+const ICON_BG_STYLE = process.env.ICON_BG_STYLE || 'solid'
+const ICON_SOLID_BG = '#ffffff'
+/** Solid canvas behind the mark. Override with ICON_CANVAS_BG. */
+const ICON_CANVAS_BG =
+  process.env.ICON_CANVAS_BG || (ICON_BG_STYLE === 'solid' ? ICON_SOLID_BG : '#0d1522')
+const ICON_SHOW_TILES = ICON_BG_STYLE === 'tiles'
 
 /**
  * Same dumped tile field as home / login. 0% under the bird, 40% at the edges.
@@ -95,24 +95,13 @@ function prepareAppIconSvg(svg) {
   if (!d) {
     throw new Error('rasterize-icon-from-svg: cyan bird path (path13) not found')
   }
-  // Stroke is centered on the path; miter joins at sharp M tips stick out farther.
-  const pad = BIRD_EDGE_STROKE_WIDTH * 3
-  const viewBox = `${vbX - pad} ${vbY - pad} ${vbW + pad * 2} ${vbH + pad * 2}`
+  const viewBox = `${vbX} ${vbY} ${vbW} ${vbH}`
   // Source bird lives under translate(1011.7469,-559.78164) in the app-icon SVG.
   const transform = 'translate(1011.7469,-559.78164)'
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" overflow="visible">
   <g transform="${transform}">
-    <path
-      d="${d}"
-      fill="#00b4d8"
-      stroke="${BIRD_EDGE_STROKE}"
-      stroke-width="${BIRD_EDGE_STROKE_WIDTH}"
-      stroke-linejoin="miter"
-      stroke-miterlimit="3"
-      stroke-linecap="butt"
-      paint-order="stroke fill"
-    />
+    <path d="${d}" fill="#00b4d8" />
   </g>
 </svg>`
 }
@@ -165,7 +154,7 @@ async function rasterMaster() {
   ]
     .filter(Boolean)
     .join(';')
-  const tileLayer = faviconOnly ? '' : iconTileLayerHtml()
+  const tileLayer = faviconOnly || !ICON_SHOW_TILES ? '' : iconTileLayerHtml()
   const tileMaskCenter = Math.min(1, ICON_TILE_OPACITY_CENTER / ICON_TILE_OPACITY_EDGE)
   const ramp = (t) => tileMaskCenter + (1 - tileMaskCenter) * t
   const tileMask = `radial-gradient(ellipse farthest-side at 50% 58%, rgba(0,0,0,${tileMaskCenter}) 0%, rgba(0,0,0,${tileMaskCenter}) 32%, rgba(0,0,0,${ramp(0.2)}) 45%, rgba(0,0,0,${ramp(0.4)}) 58%, rgba(0,0,0,${ramp(0.6)}) 72%, rgba(0,0,0,${ramp(0.8)}) 86%, #000 100%)`
@@ -183,7 +172,7 @@ body{position:relative;box-sizing:border-box}
 .icon-tile img{display:block;width:100%;height:100%;object-fit:cover}
 .icon-bird{position:relative;z-index:2;box-sizing:border-box;width:100%;height:100%;padding:${pad};display:flex;align-items:center;justify-content:center;overflow:visible}
 .icon-bird img{${imgStyle}}
-.icon-bird__mark{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 10px rgba(0,0,0,.82)) drop-shadow(0 0 48px rgba(0,0,0,.86)) drop-shadow(0 0 64px rgba(0,0,0,.72))}
+.icon-bird__mark{width:100%;height:100%;overflow:visible}
 </style></head><body>
 ${tileLayer}
 <div class="icon-bird">${birdMarkup}</div>
