@@ -3,7 +3,8 @@
  * Rasterize SVG → PNGs via Puppeteer + macOS `sips`.
  *
  * App icons (default): PWA + Capacitor — uses src/assets/mahjlogic-app-icon-button.svg.
- * Solid Abyss canvas + one cyan bird path with a thin dark stroke (nothing else).
+ * Solid Abyss canvas + the same tossed-tile dump as home/login
+ * (`LANDING_TILE_FIELD`) + one cyan bird path with a thin dark stroke.
  *
  * Tab favicon only: copies src/assets/mahjlogic-favicon.svg → public/favicon.svg.
  *
@@ -22,6 +23,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import puppeteer from 'puppeteer'
+import { LANDING_TILE_FIELD } from '../src/tiles/landingTileField.ts'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
@@ -43,18 +45,41 @@ const BIRD_EDGE_STROKE = '#05080c'
 /** ViewBox units (~910 wide); keep thin — thick/round joins read as a second bird. */
 const BIRD_EDGE_STROKE_WIDTH = 6
 /**
- * Drop shadow off on Abyss: on-device it mostly reads as a dimmer belly, not lift.
- * Re-enable via ICON_BIRD_DROP_SHADOW if testing on a lighter pad.
+ * Soft dark halo so the cyan bird lifts off the faint tile carpet.
+ * CSS filter only — do not pad the SVG viewBox for the shadow or the bird shrinks.
  */
-const BIRD_DROP_SHADOW = process.env.ICON_BIRD_DROP_SHADOW || ''
 
 /**
- * Rebuild as a minimal SVG: one cyan bird path + stroke. Drops Inkscape clipPaths,
- * gold LOGIC letters, text, blurs, and every other layer from the source file.
- *
- * The source bird fills its viewBox edge-to-edge — pad the viewBox so the stroke
- * isn't clipped into a square that cuts the M tips / belly.
+ * Same dumped tile field as home / login (`.landing__tiles`). Those pages sit at
+ * 0.02; a launcher icon needs a little more or the carpet disappears.
  */
+const ICON_TILE_OPACITY = Number(process.env.ICON_TILE_OPACITY ?? 0.06)
+/** Same 118% cover as `.landing__tiles-cluster`. */
+const ICON_TILE_COVER = 1.18
+const TILE_ART_DIR = path.join(root, 'src', 'assets', 'tiles', 'classic')
+
+function tileArtDataUrl(stem) {
+  const file = path.join(TILE_ART_DIR, `${stem}.svg`)
+  const svg = fs.readFileSync(file, 'utf8')
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)
+}
+
+function iconTileLayerHtml() {
+  const { tiles, bounds } = LANDING_TILE_FIELD
+  const unitPct = (100 * ICON_TILE_COVER) / Math.min(bounds.w, bounds.h)
+  const ox = (100 - bounds.w * unitPct) / 2
+  const oy = (100 - bounds.h * unitPct) / 2
+  const ordered = [...tiles].sort((a, b) => a.z - b.z)
+  const html = ordered
+    .map((t) => {
+      const left = ox + t.x * unitPct
+      const top = oy + t.y * unitPct
+      return `<div class="icon-tile" style="left:${left}%;top:${top}%;width:${unitPct}%;transform:rotate(${t.rotate}deg)"><img src="${tileArtDataUrl(t.stem)}" alt="" /></div>`
+    })
+    .join('')
+  return `<div class="icon-tiles" aria-hidden="true">${html}</div>`
+}
+
 function prepareAppIconSvg(svg) {
   const parts = (svg.match(/viewBox="([^"]+)"/)?.[1] ?? '0 0 910.03613 755.43872')
     .trim()
@@ -135,15 +160,33 @@ async function rasterMaster() {
     'height:100%',
     'object-fit:contain',
     'object-position:center center',
-    !faviconOnly && BIRD_DROP_SHADOW ? `filter:${BIRD_DROP_SHADOW}` : '',
   ]
     .filter(Boolean)
     .join(';')
+  const tileLayer = faviconOnly ? '' : iconTileLayerHtml()
+  const birdMarkup = faviconOnly
+    ? `<img src="${dataUrl}" alt="" style="${imgStyle}"/>`
+    : svg
+        .replace(/^<\?xml[^>]*>\s*/, '')
+        .replace('<svg ', '<svg class="icon-bird__mark" ')
   await page.setContent(
-    `<!DOCTYPE html><html><body style="margin:0;background:${ICON_CANVAS_BG};box-sizing:border-box;width:1024px;height:1024px;padding:${pad};display:flex;align-items:center;justify-content:center;overflow:hidden;">
-<img src="${dataUrl}" alt="" style="${imgStyle}"/>
+    `<!DOCTYPE html><html><head><style>
+html,body{margin:0;width:1024px;height:1024px;overflow:hidden;background:${ICON_CANVAS_BG}}
+body{position:relative;box-sizing:border-box}
+.icon-tiles{position:absolute;inset:0;overflow:hidden;opacity:${ICON_TILE_OPACITY};pointer-events:none}
+.icon-tile{position:absolute;aspect-ratio:3/4;border-radius:13.2%;background:#fdfbf7;overflow:hidden;box-shadow:0 2px 5px rgba(0,0,0,.28);transform-origin:center center}
+.icon-tile img{display:block;width:100%;height:100%;object-fit:cover}
+.icon-bird{position:relative;z-index:2;box-sizing:border-box;width:100%;height:100%;padding:${pad};display:flex;align-items:center;justify-content:center;overflow:visible}
+.icon-bird img{${imgStyle}}
+.icon-bird__mark{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 2px 8px rgba(0,0,0,.72)) drop-shadow(0 10px 42px rgba(0,0,0,.78)) drop-shadow(0 0 56px rgba(0,0,0,.62))}
+</style></head><body>
+${tileLayer}
+<div class="icon-bird">${birdMarkup}</div>
 </body></html>`,
     { waitUntil: 'networkidle0' },
+  )
+  await page.evaluate(() =>
+    Promise.all([...document.images].map((img) => img.decode().catch(() => undefined))),
   )
   await new Promise((r) => setTimeout(r, 150))
   await page.screenshot({
