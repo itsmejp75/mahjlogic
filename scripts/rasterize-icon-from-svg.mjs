@@ -182,7 +182,7 @@ body{position:relative;box-sizing:border-box}
 .icon-tile img{display:block;width:100%;height:100%;object-fit:cover}
 .icon-bird{position:relative;z-index:2;box-sizing:border-box;width:100%;height:100%;padding:${pad};display:flex;align-items:center;justify-content:center;overflow:visible}
 .icon-bird img{${imgStyle}}
-.icon-bird__mark{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 2px 8px rgba(0,0,0,.72)) drop-shadow(0 10px 42px rgba(0,0,0,.78)) drop-shadow(0 0 56px rgba(0,0,0,.62))}
+.icon-bird__mark{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 10px rgba(0,0,0,.82)) drop-shadow(0 0 48px rgba(0,0,0,.86)) drop-shadow(0 0 64px rgba(0,0,0,.72))}
 </style></head><body>
 ${tileLayer}
 <div class="icon-bird">${birdMarkup}</div>
