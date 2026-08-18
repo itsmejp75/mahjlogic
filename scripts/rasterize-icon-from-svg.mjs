@@ -50,9 +50,9 @@ const BIRD_EDGE_STROKE_WIDTH = 6
  */
 
 /**
- * Same dumped tile field as home / login. 0% under the bird, 25% at the edges.
+ * Same dumped tile field as home / login. 0% under the bird, 40% at the edges.
  */
-const ICON_TILE_OPACITY_EDGE = Number(process.env.ICON_TILE_OPACITY ?? 0.25)
+const ICON_TILE_OPACITY_EDGE = Number(process.env.ICON_TILE_OPACITY ?? 0.4)
 const ICON_TILE_OPACITY_CENTER = Number(process.env.ICON_TILE_OPACITY_CENTER ?? 0)
 /** Zoom into the dump so faces read larger on a 60–180px icon. */
 const ICON_TILE_COVER = 1.9
@@ -167,7 +167,8 @@ async function rasterMaster() {
     .join(';')
   const tileLayer = faviconOnly ? '' : iconTileLayerHtml()
   const tileMaskCenter = Math.min(1, ICON_TILE_OPACITY_CENTER / ICON_TILE_OPACITY_EDGE)
-  const tileMask = `radial-gradient(ellipse farthest-side at 50% 58%, rgba(0,0,0,${tileMaskCenter}) 0%, rgba(0,0,0,${tileMaskCenter}) 32%, #000 100%)`
+  const ramp = (t) => tileMaskCenter + (1 - tileMaskCenter) * t
+  const tileMask = `radial-gradient(ellipse farthest-side at 50% 58%, rgba(0,0,0,${tileMaskCenter}) 0%, rgba(0,0,0,${tileMaskCenter}) 32%, rgba(0,0,0,${ramp(0.2)}) 45%, rgba(0,0,0,${ramp(0.4)}) 58%, rgba(0,0,0,${ramp(0.6)}) 72%, rgba(0,0,0,${ramp(0.8)}) 86%, #000 100%)`
   const birdMarkup = faviconOnly
     ? `<img src="${dataUrl}" alt="" style="${imgStyle}"/>`
     : svg
