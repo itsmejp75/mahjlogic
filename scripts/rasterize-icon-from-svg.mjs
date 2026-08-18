@@ -54,8 +54,10 @@ const BIRD_EDGE_STROKE_WIDTH = 6
  * 0.02; a launcher icon needs a little more or the carpet disappears.
  */
 const ICON_TILE_OPACITY = Number(process.env.ICON_TILE_OPACITY ?? 0.12)
-/** Same 118% cover as `.landing__tiles-cluster`. */
-const ICON_TILE_COVER = 1.18
+/** Zoom into the dump so faces read larger on a 60–180px icon. */
+const ICON_TILE_COVER = 1.9
+/** Nudge the dump right (percent of the 1024 canvas). */
+const ICON_TILE_SHIFT_X = 6
 const TILE_ART_DIR = path.join(root, 'src', 'assets', 'tiles', 'classic')
 
 function tileArtDataUrl(stem) {
@@ -72,7 +74,7 @@ function iconTileLayerHtml() {
   const ordered = [...tiles].sort((a, b) => a.z - b.z)
   const html = ordered
     .map((t) => {
-      const left = ox + t.x * unitPct
+      const left = ox + ICON_TILE_SHIFT_X + t.x * unitPct
       const top = oy + t.y * unitPct
       return `<div class="icon-tile" style="left:${left}%;top:${top}%;width:${unitPct}%;transform:rotate(${t.rotate}deg)"><img src="${tileArtDataUrl(t.stem)}" alt="" /></div>`
     })
