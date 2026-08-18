@@ -12,6 +12,7 @@ import {
 import {
   readHomeLocationState,
   readPlayLocationState,
+  type PlayIntent,
 } from '../app/playLocationState'
 import { beginPlayEnterLoader, endPlayEnterLoader } from '../auth/playEnterLoader'
 import { useSessionBoot } from '../auth/sessionBoot'
@@ -48,7 +49,7 @@ import {
   helpFlagsForPreset,
   readHelpPresetFromStorage,
 } from '../lib/helpPreset'
-import { clearHomeResumeCache, setHomeResumeCache } from '../app/homeResumeCache'
+import { clearHomeResumeCache, peekHomeResumeCache, setHomeResumeCache } from '../app/homeResumeCache'
 import {
   isResumableSnapshot,
   loadInProgressGame,
@@ -172,6 +173,10 @@ export function HomePage() {
   const [appTheme, setAppTheme] = useState<AppTheme>(() => readAppThemeFromStorage())
   const [signOutBusy, setSignOutBusy] = useState(false)
   const [statsOpen, setStatsOpen] = useState(false)
+  const [hasResumableGame, setHasResumableGame] = useState(() => {
+    const peeked = peekHomeResumeCache(user?.id)
+    return peeked.status === 'ready' && peeked.snap != null
+  })
 
   useLayoutEffect(() => {
     applyAppThemeToDocument(appTheme)
@@ -286,7 +291,11 @@ export function HomePage() {
       }
 
       if (user?.id) {
-        setHomeResumeCache(user.id, isResumableSnapshot(snapshot) ? snapshot : null)
+        const resumable = isResumableSnapshot(snapshot) ? snapshot : null
+        setHomeResumeCache(user.id, resumable)
+        setHasResumableGame(resumable != null)
+      } else {
+        setHasResumableGame(false)
       }
     })()
     return () => {
@@ -294,7 +303,7 @@ export function HomePage() {
     }
   }, [user?.id])
 
-  const goPlay = () => {
+  const goPlay = (playIntent: PlayIntent) => {
     prefsSaverRef.current.cancel()
     void saveUserPreferences(prefsRef.current)
     // Start tile-face warm under the Play boot loader (before the route mounts App).
@@ -306,10 +315,9 @@ export function HomePage() {
     flushSync(() => {
       beginPlayEnterLoader()
     })
-    // App restores a saved hand onto the table when one exists; Resume / New Game use a short prompt.
     navigate('/play', {
       state: {
-        playIntent: 'enter',
+        playIntent,
       },
     })
   }
@@ -360,7 +368,7 @@ export function HomePage() {
               to="/play"
               onClick={(e) => {
                 e.preventDefault()
-                goPlay()
+                goPlay(hasResumableGame ? 'resume' : 'enter')
               }}
             >
               Play
@@ -376,13 +384,28 @@ export function HomePage() {
           <section className="home-hub__features" aria-label="Modes">
             <article className="home-hub__feature" aria-label="Play American Mah Jongg">
               <div className="home-hub__feature-body">
-                <div className="home-hub__feature-actions">
+                <div
+                  className={
+                    hasResumableGame
+                      ? 'home-hub__feature-actions home-hub__feature-actions--split'
+                      : 'home-hub__feature-actions'
+                  }
+                >
+                  {hasResumableGame ? (
+                    <button
+                      type="button"
+                      className="btn home-hub__action-btn home-hub__feature-cta"
+                      onClick={() => goPlay('resume')}
+                    >
+                      Resume
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     className="btn home-hub__action-btn home-hub__feature-cta"
-                    onClick={goPlay}
+                    onClick={() => goPlay(hasResumableGame ? 'new' : 'enter')}
                   >
-                    Play
+                    {hasResumableGame ? 'New game' : 'Play'}
                   </button>
                 </div>
                 <p className="home-hub__feature-copy">

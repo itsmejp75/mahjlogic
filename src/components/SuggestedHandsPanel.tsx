@@ -19,6 +19,7 @@ import {
   focusKeyPatternId,
   greedyPatternMatchDetail,
   realignSuggestedStripToClaimMelds,
+  suggestedStripRacksForLiveClaim,
   suggestedHandShownInPanelList,
   type GreedyPatternMatchOpts,
   type SuggestedStripSlot,
@@ -1470,6 +1471,12 @@ type Props = {
   exposureTileIdsForSuggestedStrip?: ReadonlySet<string>
   /** Claim melds for boxing exposed runs on the tile strip (same placement as bot possible-hands). */
   exposureMeldsForSuggestedStrip?: readonly ExposureMeld[]
+  /**
+   * Live unreclaimed discard (bot-turn Call/Ignore). When claiming it completes or improves a
+   * line, that row’s strip previews the post-call rack so jokers rebalance (e.g. slide off a
+   * pung onto a short kong).
+   */
+  liveClaimableDiscardForSuggestedStrip?: TileInstance | null
   /** Section names turned off in the app menu (not listed here ⇒ all sections from the card may show). */
   uncheckedSections: Set<string>
   /** When true, omit hands marked concealed (C) from the suggested list. */
@@ -1519,6 +1526,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
   rackTilesForPatternMatch,
   exposureTileIdsForSuggestedStrip,
   exposureMeldsForSuggestedStrip,
+  liveClaimableDiscardForSuggestedStrip,
   uncheckedSections,
   hideConcealedHands,
   cardPatterns,
@@ -2065,6 +2073,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
             .map((m) => m.tiles.map((t) => t.id).join(','))
             .join('|')
         : '',
+      liveClaimableDiscardForSuggestedStrip?.id ?? '',
     ].join('#')
     const cache = stripCacheRef.current
     if (
@@ -2078,18 +2087,13 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
       cache.map = new Map()
     }
 
-    const rackDisplay = rackTilesForSuggestedStrip
-    const rackMatch = rackTilesForPatternMatch ?? rackDisplay
-    const greedyOpts: GreedyPatternMatchOpts | undefined =
-      exposureTileIdsForSuggestedStrip?.size
-        ? { exposureTileIds: exposureTileIdsForSuggestedStrip }
-        : undefined
-    const rackIdSet = new Set(rackMatch.map((t) => t.id))
+    const rackDisplayBase = rackTilesForSuggestedStrip
+    const rackMatchBase = rackTilesForPatternMatch ?? rackDisplayBase
     const lineByKey = new Map<string, SuggestedHandLine>()
     for (const h of filtered) {
       lineByKey.set(handEntryKey(h), h)
     }
-    const boxMelds = exposureMeldsForSuggestedStrip?.length
+    const boxMeldsBase = exposureMeldsForSuggestedStrip?.length
       ? exposureMeldsForSuggestedStrip
       : undefined
 
@@ -2105,6 +2109,26 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
         cache.map.set(key, { rows: [], ocVariantSuffixes: [] })
         continue
       }
+      const liveRacks = suggestedStripRacksForLiveClaim(
+        p,
+        rackDisplayBase,
+        rackMatchBase,
+        boxMeldsBase,
+        exposureTileIdsForSuggestedStrip,
+        liveClaimableDiscardForSuggestedStrip,
+      )
+      const rackDisplay = liveRacks.rackDisplay
+      const rackMatch = liveRacks.rackMatch
+      const boxMelds = liveRacks.claimMelds
+      const exposureTileIds = liveRacks.exposureTileIds
+      const greedyOpts: GreedyPatternMatchOpts | undefined =
+        exposureTileIds?.size || boxMelds?.length
+          ? {
+              ...(exposureTileIds?.size ? { exposureTileIds } : {}),
+              ...(boxMelds?.length ? { claimMelds: boxMelds } : {}),
+            }
+          : undefined
+      const rackIdSet = new Set(rackMatch.map((t) => t.id))
       if (h.consecRanksTier) {
         const rows: SuggestedStripSlot[][] = []
         for (const { perm, base } of h.consecRanksTier.combos) {
@@ -2122,7 +2146,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
                 detail.usedOrder,
                 bestIdsForAssign,
                 detail.usedMeta,
-                exposureTileIdsForSuggestedStrip,
+                exposureTileIds,
               ),
             )
           } else {
@@ -2148,7 +2172,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
         detail.usedOrder,
         bestIdsForAssign,
         detail.usedMeta,
-        exposureTileIdsForSuggestedStrip,
+        exposureTileIds,
         boxMelds,
       )
       cache.map.set(key, {
@@ -2172,6 +2196,7 @@ export const SuggestedHandsPanel = memo(function SuggestedHandsPanel({
     stripPatternMatchRackSignature,
     exposureTileIdsForSuggestedStrip,
     exposureMeldsForSuggestedStrip,
+    liveClaimableDiscardForSuggestedStrip,
     handEntryKey,
     cardPatternsById,
     rackTilesForSuggestedStrip,

@@ -403,6 +403,16 @@ html:has(.home-hub),
   margin-bottom: 0.85rem;
 }
 
+.home-hub__feature-actions--split {
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0.55rem;
+}
+
+.home-hub__feature-actions--split .home-hub__feature-cta {
+  flex: 1 1 0;
+}
+
 .home-hub__setup,
 .home-hub__upgrade {
   display: flex;

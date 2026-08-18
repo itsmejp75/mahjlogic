@@ -60,7 +60,7 @@ describe('suggested strip with exposure melds', () => {
 
     expect(soapSlots).toHaveLength(3)
     expect(soapSlots.every((s) => s.highlight)).toBe(true)
-    expect(soapSlots.some((s) => s.jokerSuggested)).toBe(false)
+    expect(soapSlots.filter((s) => s.jokerSuggested).map((s) => s.tileId)).toEqual(['joker-exp'])
     expect(soapSlots.every((s) => s.exposureMeldId != null)).toBe(true)
     expect(new Set(soapSlots.map((s) => s.exposureMeldId)).size).toBe(1)
     expect(bam2Slots.filter((s) => s.jokerSuggested)).toHaveLength(0)

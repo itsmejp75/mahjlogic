@@ -16,6 +16,7 @@ import { handTileFlyInFromBotSeat } from './mahjong/handTileFlyIn'
 import { assignOpeningHands, botIndicesAfterCompassSeat, botIndicesAfterPlayerDiscard, botIndicesInCompassPlayOrder, botIndexForCompassSeat, DEFAULT_BOT_SLOT_SEATS, nextCompassSeat, playerYouLabel, seatLabel, toFourHands as fourHandsFromRound, type BotSlotSeats } from './mahjong/seats'
 import { type PassStripFlyOutFrom } from './components/PassStrip'
 import { GameHistoryStatsOverlay } from './components/GameHistoryStatsOverlays'
+import { AppMenuAccountFooter } from './components/AppMenuAccountFooter'
 import { TileFace } from './components/TileFace'
 import { useAuth } from './auth/AuthProvider'
 import { useSessionBoot } from './auth/sessionBoot'
@@ -5614,8 +5615,9 @@ export default function App() {
 
   /**
    * Home → Play: paint the table immediately from Home's resume cache when possible.
-   * - Saved hand: show those tiles under the Resume / New Game prompt.
-   * - Known empty: deal fresh (same as legacy playIntent `new`).
+   * - Home → Resume: restore the saved hand and skip the prompt.
+   * - Home → Play (enter): show those tiles under the Resume / New Game prompt.
+   * - Known empty / New game: deal fresh.
    * - Unknown: wait for cloud hydrate (below).
    */
   useLayoutEffect(() => {
@@ -5626,6 +5628,7 @@ export default function App() {
       eagerNewDealDoneRef.current = true
       inProgressSaverRef.current.cancel()
       void clearInProgressGame()
+      if (user?.id) setHomeResumeCache(user.id, null)
       beginFreshSessionWithOpeningFlyIn()
       return
     }
@@ -5634,7 +5637,7 @@ export default function App() {
     if (peeked.status !== 'ready') return
     if (peeked.snap && isResumableSnapshot(peeked.snap)) {
       eagerResumePaintDoneRef.current = true
-      loadSavedGameOntoTable(peeked.snap, { autoContinue: false })
+      loadSavedGameOntoTable(peeked.snap, { autoContinue: intent === 'resume' })
       return
     }
     eagerNewDealDoneRef.current = true
@@ -5698,10 +5701,11 @@ export default function App() {
         if (eagerNewDealDoneRef.current || playIntent === 'new') {
           inProgressSaverRef.current.cancel()
           void clearInProgressGame()
+          if (user?.id) setHomeResumeCache(user.id, null)
           if (!sessionReadyRef.current) beginFreshSessionWithOpeningFlyIn()
         } else if (savedGame && isResumableSnapshot(savedGame)) {
-          // Show previous tiles under the Resume / New Game prompt.
-          loadSavedGameOntoTable(savedGame, { autoContinue: false })
+          // Home → Resume skips the prompt; enter still shows Resume / New Game.
+          loadSavedGameOntoTable(savedGame, { autoContinue: playIntent === 'resume' })
           if (openMenuWhenReady) {
             pendingOpenMenuAfterBootRef.current = true
           }
@@ -5961,14 +5965,15 @@ export default function App() {
       if (eagerNewDealDoneRef.current || playIntent === 'new') {
         inProgressSaverRef.current.cancel()
         void clearInProgressGame()
+        if (user?.id) setHomeResumeCache(user.id, null)
         if (!sessionReadyRef.current) beginFreshSessionWithOpeningFlyIn()
         return
       }
 
       // Restore the saved table first — never flash a new opening deal under a resume.
       if (savedGame && isResumableSnapshot(savedGame)) {
-        // Show previous tiles under the Resume / New Game prompt.
-        loadSavedGameOntoTable(savedGame, { autoContinue: false })
+        // Home → Resume skips the prompt; enter still shows Resume / New Game.
+        loadSavedGameOntoTable(savedGame, { autoContinue: playIntent === 'resume' })
         if (openMenuWhenReady) {
           pendingOpenMenuAfterBootRef.current = true
         }
@@ -6969,6 +6974,9 @@ export default function App() {
               rackTilesForPatternMatch={deferredRackForSuggestedPatternMatch}
               exposureTileIdsForSuggestedStrip={suggestedHandsExposureTileIds}
               exposureMeldsForSuggestedStrip={suggestedHandsExposureMelds}
+              liveClaimableDiscardForSuggestedStrip={
+                mainPhase === 'bot-turn' && activeBotDiscard ? activeBotDiscard : null
+              }
               uncheckedSections={
                 playerMahjongWinReviewHands
                   ? EMPTY_SUGGESTED_HAND_SECTIONS
@@ -7014,6 +7022,7 @@ export default function App() {
     deferredRackForSuggestedPatternMatch,
     suggestedHandsExposureTileIds,
     suggestedHandsExposureMelds,
+    activeBotDiscard,
     suggestedHandsUncheckedSections,
     suggestedHandsHideConcealed,
     cardPatterns,
@@ -7538,6 +7547,42 @@ export default function App() {
                 </div>
                 </fieldset>
               </div>
+              <div className="app-menu-modal__diff-block app-menu-modal__diff-block--game-actions">
+                <div className="app-menu-modal__game-actions-row" aria-label="Stats, Rack Checker, and Help">
+                  <button
+                    type="button"
+                    className="btn app-menu-tray__diff-btn app-menu-modal__stats"
+                    onClick={() => {
+                      appMenuOpenApiRef.current.setMenuOpen(false)
+                      setGameMetaPanel('stats')
+                    }}
+                  >
+                    Stats
+                  </button>
+                  <button
+                    type="button"
+                    className="btn app-menu-tray__diff-btn app-menu-modal__rack-checker"
+                    onClick={() => {
+                      appMenuOpenApiRef.current.setMenuOpen(false)
+                      setRackCheckerOpen(true)
+                    }}
+                  >
+                    Rack Checker
+                  </button>
+                  <button
+                    type="button"
+                    className="btn app-menu-tray__diff-btn app-menu-modal__help"
+                    onClick={() => {
+                      appMenuOpenApiRef.current.setMenuOpen(false)
+                      if (resumePrompt != null) confirmContinueSavedGame({ trackResume: false })
+                      navigate('/learn')
+                    }}
+                  >
+                    Help
+                  </button>
+                </div>
+              </div>
+              {user ? <AppMenuAccountFooter /> : null}
             </div>
           </AppMenuSlideShell>
         </div>

@@ -441,6 +441,66 @@ function previewLiveClaimForProbability(
 }
 
 /**
+ * Post-claim hand + melds when the live unreclaimed discard improves this line (same
+ * paths as Prob %). Used so the suggested-tiles strip can rebalance jokers — e.g. a
+ * called 6C fills the pung so a leftover joker slides onto the 8s instead of sitting
+ * on a dim 8.
+ */
+export function previewLiveClaimForSuggestedStrip(
+  p: PracticePattern,
+  concealedHand: TileInstance[],
+  claimMelds: ReadonlyArray<{ tiles: TileInstance[] }>,
+  live: TileInstance | null | undefined,
+): { hand: TileInstance[]; melds: ReadonlyArray<{ tiles: TileInstance[] }> } | null {
+  if (!live) return null
+  if (concealedHand.some((t) => t.id === live.id)) return null
+  if (claimMelds.some((m) => m.tiles.some((t) => t.id === live.id))) return null
+  const currentAway = tilesAwayForPracticePattern(p, concealedHand, claimMelds)
+  if (currentAway <= 0) return null
+  const preview = previewLiveClaimForProbability(
+    p,
+    concealedHand,
+    claimMelds,
+    live,
+    currentAway,
+  )
+  return preview ? { hand: preview.hand, melds: preview.melds } : null
+}
+
+/** Display / match racks for the suggested strip after applying {@link previewLiveClaimForSuggestedStrip}. */
+export function suggestedStripRacksForLiveClaim(
+  p: PracticePattern,
+  rackDisplay: TileInstance[],
+  rackMatch: TileInstance[],
+  claimMelds: ReadonlyArray<{ tiles: TileInstance[] }> | undefined,
+  exposureTileIds: ReadonlySet<string> | undefined,
+  live: TileInstance | null | undefined,
+): {
+  rackDisplay: TileInstance[]
+  rackMatch: TileInstance[]
+  claimMelds: ReadonlyArray<{ tiles: TileInstance[] }> | undefined
+  exposureTileIds: ReadonlySet<string> | undefined
+} {
+  const expIds = exposureTileIds ?? new Set<string>()
+  const concealed = rackDisplay.filter((t) => !expIds.has(t.id))
+  const preview = previewLiveClaimForSuggestedStrip(p, concealed, claimMelds ?? [], live)
+  if (!preview) {
+    return { rackDisplay, rackMatch, claimMelds, exposureTileIds }
+  }
+  const nextExpIds = new Set(preview.melds.flatMap((m) => m.tiles.map((t) => t.id)))
+  const display = [...preview.hand, ...preview.melds.flatMap((m) => m.tiles)]
+  const match = [...tileInstancesWithClaimMeldJokersResolved(preview.hand, preview.melds)].sort(
+    (a, b) => Number(nextExpIds.has(b.id)) - Number(nextExpIds.has(a.id)),
+  )
+  return {
+    rackDisplay: display,
+    rackMatch: match,
+    claimMelds: preview.melds.length > 0 ? preview.melds : undefined,
+    exposureTileIds: nextExpIds.size > 0 ? nextExpIds : undefined,
+  }
+}
+
+/**
  * Wall-completion %. A live claimable discard that already wins → 100.
  * A live discard that can legally be called (pung+) and improves Away is scored on the
  * post-claim rack so Call does not drop Prob. Otherwise the lit tile is treated as already
@@ -2423,7 +2483,7 @@ function buildPreviewKindsByCategoryPartition(
   }
 
   const jokerMarksBcp = concealedRackJokers(rack, bestIds, exposureTileIds)
-  if (jokerMarksBcp.suggestionMarks > 0) {
+  if (jokerMarksBcp.suggestionMarks > 0 && !exposureTileIds?.size) {
     redistributeJokerPreviewMarksToFirstMeld(
       kinds,
       defs,
@@ -2472,7 +2532,9 @@ export function computePreviewStripAssignment(
       greedyOpts?.exposureTileIds,
     )
     const jokerMarks = concealedRackJokers(rackForPattern, bestIds, greedyOpts?.exposureTileIds)
-    if (jokerMarks.suggestionMarks > 0) {
+    // After a claim, keep jokers on the groups usedMeta assigned. Dumping them into the
+    // first pung makes a called joker-kong look like those jokers moved off the expose.
+    if (jokerMarks.suggestionMarks > 0 && !greedyOpts?.exposureTileIds?.size) {
       redistributeJokerPreviewMarksToFirstMeld(
         r.kinds,
         defs,
@@ -2536,15 +2598,17 @@ export function computePreviewStripAssignment(
   }
 
   const jokerMarksFb = concealedRackJokers(rackForPattern, bestIds, greedyOpts?.exposureTileIds)
-  redistributeJokerPreviewMarksToFirstMeld(
-    kinds,
-    defs,
-    jokerEligible,
-    jokerMarksFb.suggestionMarks,
-    slotTileIdByStripIndex,
-    jokerMarksFb.usedIds,
-    greedyOpts?.exposureTileIds,
-  )
+  if (!greedyOpts?.exposureTileIds?.size) {
+    redistributeJokerPreviewMarksToFirstMeld(
+      kinds,
+      defs,
+      jokerEligible,
+      jokerMarksFb.suggestionMarks,
+      slotTileIdByStripIndex,
+      jokerMarksFb.usedIds,
+      greedyOpts?.exposureTileIds,
+    )
+  }
 
   const r = { kinds, slotTileIdByStripIndex }
   return maybePermuteAssignmentToCardLine(p, r)
@@ -3601,7 +3665,6 @@ export function finalizeExposureMeldStripHighlights(
       out[si] = {
         ...out[si]!,
         highlight: true,
-        jokerSuggested: false,
       }
     }
   }
@@ -3624,15 +3687,20 @@ export function applyExposureMeldBoxesToStrip(
     slots.map((s) => s.displayDef),
     claimMelds,
   )
+  const exposureJokerIds = new Set(
+    claimMelds.flatMap((m) => m.tiles.filter((t) => t.def.cat === 'joker').map((t) => t.id)),
+  )
   return slots.map((s, i) => {
     const exposureMeldId = placed.meldRunId[i] ?? null
     if (exposureMeldId == null) return { ...s, exposureMeldId }
-    // Full expose run lights up — including joker stand-ins that never got a rack highlight id.
+    const isExposureJoker = s.tileId != null && exposureJokerIds.has(s.tileId)
+    // Full expose run lights up. Jokers in the claim stay marked so the strip still
+    // timeshares a JOKER face — they are not rewritten as extra naturals.
     return {
       ...s,
       exposureMeldId,
       highlight: true,
-      jokerSuggested: false,
+      jokerSuggested: isExposureJoker || s.jokerSuggested,
     }
   })
 }
@@ -3766,13 +3834,11 @@ function buildSuggestedStripSlotsFromStripDefs(
       const isExposure = exposureTileIds?.has(tid) ?? false
       if (t && t.def.cat === 'joker') {
         // Real rack joker filling this slot: keep the target tile's color/identifier;
-        // the JOKER badge renders on top so the meld type stays readable.
+        // the JOKER badge renders on top so the meld type stays readable — including
+        // jokers committed to an open claim (otherwise the expose looks like all-naturals).
         displayDef = targetDef
-        if (isExposure) {
-          highlight = true
-        } else {
-          jokerSuggested = true
-        }
+        jokerSuggested = true
+        if (isExposure) highlight = true
       } else if (t && t.def.cat !== 'joker') {
         const compatible = strictSuitMatching
           ? tileDefsEqual(targetDef, t.def)
@@ -3799,7 +3865,7 @@ function buildSuggestedStripSlotsFromStripDefs(
         ...provisional[i]!,
         displayDef: defs[i]!,
         highlight: true,
-        jokerSuggested: false,
+        jokerSuggested: true,
         tileId: tid,
       }
     }
@@ -3831,7 +3897,6 @@ function buildSuggestedStripSlotsFromStripDefs(
             ...provisional[si]!,
             displayDef: defs[si]!,
             highlight: true,
-            jokerSuggested: false,
           }
         }
       }
@@ -4600,7 +4665,7 @@ function buildSuitPermuteStripVariantRows(
     const variantDetail = greedyPatternMatchDetail(
       rack,
       pinnedP,
-      exposureTileIds?.size ? { exposureTileIds } : undefined,
+      greedyMatchOptsFromUi(exposureTileIds, claimMelds),
     )
     const rackIdSet = new Set(rack.map((t) => t.id))
     const variantBestIds = new Set(variantDetail.usedOrder.filter((id) => rackIdSet.has(id)))
