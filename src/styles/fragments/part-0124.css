@@ -54,11 +54,10 @@
     ),
     linear-gradient(
       to top,
-      rgba(28, 25, 22, 0.55) 0%,
-      rgba(28, 25, 22, 0.55) 1px,
-      rgba(28, 25, 22, 0.2) calc(var(--tile-shadow-fade) * 0.4),
-      rgba(28, 25, 22, 0.05) calc(var(--tile-shadow-fade) * 0.75),
-      rgba(28, 25, 22, 0) var(--tile-shadow-fade)
+      rgba(28, 25, 22, 0.45) 0%,
+      rgba(28, 25, 22, 0.14) calc(var(--tile-shadow-fade) * 0.4),
+      rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
+      rgba(28, 25, 22, 0) calc(var(--tile-shadow-fade) * 0.92)
     ),
     /* Left edge shadow (preview) */
     linear-gradient(
