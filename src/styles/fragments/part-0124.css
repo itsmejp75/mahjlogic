@@ -42,20 +42,22 @@
   --tile-rim-fade: 9%;
   --tile-shadow-fade: 7.5%;
   background:
-    /* Top only — soft catch-light (see `--tile-rim-top-*` on `:root`). */
+    /* Top only — soft catch-light (see `--tile-rim-top-*` on `:root`).
+     * Fade to same-hue 0-alpha — CSS `transparent` is rgba(0,0,0,0) and WebKit
+     * interpolates through black, which snaps to a 1px dark line on some iOS PWAs. */
     linear-gradient(
       to bottom,
       var(--tile-rim-top-peak) 0%,
       var(--tile-rim-top-mid) calc(var(--tile-rim-fade) * 0.4),
       var(--tile-rim-top-tail) calc(var(--tile-rim-fade) * 0.75),
-      transparent var(--tile-rim-fade)
+      rgba(255, 255, 255, 0) var(--tile-rim-fade)
     ),
     linear-gradient(
       to top,
-      rgba(28, 25, 22, 0.55) 0%,
+      rgba(28, 25, 22, 0.4) 1px,
       rgba(28, 25, 22, 0.2) calc(var(--tile-shadow-fade) * 0.4),
       rgba(28, 25, 22, 0.05) calc(var(--tile-shadow-fade) * 0.75),
-      transparent var(--tile-shadow-fade)
+      rgba(28, 25, 22, 0) var(--tile-shadow-fade)
     ),
     /* Left edge shadow (preview) */
     linear-gradient(
@@ -63,14 +65,14 @@
       rgba(28, 25, 22, 0.45) 0%,
       rgba(28, 25, 22, 0.14) calc(var(--tile-shadow-fade) * 0.4),
       rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
-      transparent calc(var(--tile-shadow-fade) * 0.92)
+      rgba(28, 25, 22, 0) calc(var(--tile-shadow-fade) * 0.92)
     ),
     linear-gradient(
       to left,
       rgba(28, 25, 22, 0.45) 0%,
       rgba(28, 25, 22, 0.14) calc(var(--tile-shadow-fade) * 0.4),
       rgba(28, 25, 22, 0.03) calc(var(--tile-shadow-fade) * 0.75),
-      transparent calc(var(--tile-shadow-fade) * 0.92)
+      rgba(28, 25, 22, 0) calc(var(--tile-shadow-fade) * 0.92)
     );
   box-shadow:
     inset calc(var(--rack-tile-w) * 0.045) 0 calc(var(--rack-tile-w) * 0.1) calc(var(--rack-tile-w) * -0.3)
