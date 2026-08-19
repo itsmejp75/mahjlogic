@@ -4,7 +4,11 @@ import { useDndContext } from '@dnd-kit/core'
 import { useSortable } from '@dnd-kit/sortable'
 import type { Transform } from '@dnd-kit/utilities'
 import type { TileInstance } from '../mahjong/types'
-import type { HandTileFlyIn } from '../mahjong/handTileFlyIn'
+import {
+  handFlyInUsesSharedOrigin,
+  viewportOriginForHandFlyIn,
+  type HandTileFlyIn,
+} from '../mahjong/handTileFlyIn'
 import { DeadCauseWarning } from './DeadCauseWarning'
 import { TileFace } from './TileFace'
 
@@ -97,6 +101,7 @@ function SortableTile({
   externalShift = false,
   externalPreviewActive = false,
   deferHandFlyMeasure = false,
+  groupFlyReady = true,
   shiftPhase = null,
   passStageShiftLeft = false,
 }: {
@@ -137,6 +142,11 @@ function SortableTile({
    * the animation (Charleston receive / opening deal). Avoids rewriting `--draw-anim-*` mid-flight.
    */
   deferHandFlyMeasure?: boolean
+  /**
+   * Shared clock for multi-tile receive: every incoming tile unpauses in the same frame so they
+   * fly as a group (per-tile rAF on a slower iPhone started them one slot at a time).
+   */
+  groupFlyReady?: boolean
   /**
    * Post-removal slide animation:
    *   `'pre'`  — tile is parked one column to the right (its old position) with no transition.
@@ -230,6 +240,7 @@ function SortableTile({
   const runFlyLayout = isJustDrawn || isHandFlyIn
   const handFlyInFrom = handTileFlyIn?.from
   const handFlyInIdsKey = handTileFlyIn?.ids.join('\u0001') ?? ''
+  const sharedFlyOrigin = handFlyInUsesSharedOrigin(handTileFlyIn)
   // Hold `just-drawn` until remasure finishes — updating --draw-anim-* mid-flight looks like a skip.
   const [flyAnimReady, setFlyAnimReady] = useState(!deferHandFlyMeasure)
   useLayoutEffect(() => {
@@ -237,9 +248,9 @@ function SortableTile({
       setFlyAnimReady(true)
       return
     }
-    if (deferHandFlyMeasure) setFlyAnimReady(false)
+    if (deferHandFlyMeasure) setFlyAnimReady(groupFlyReady)
     else setFlyAnimReady(true)
-  }, [runFlyLayout, deferHandFlyMeasure, handFlyInIdsKey, tile.id])
+  }, [runFlyLayout, deferHandFlyMeasure, groupFlyReady, handFlyInIdsKey, tile.id])
 
   useLayoutEffect(() => {
     if (!runFlyLayout) return
@@ -260,22 +271,28 @@ function SortableTile({
       let ox: number
       let oy: number
       if (isHandFlyIn && handFlyInFrom) {
-        const w = tileRect.width
-        const h = tileRect.height
-        switch (handFlyInFrom) {
-          case 'right':
-            ox = tileCx + w * 1.25
-            oy = tileCy
-            break
-          case 'left':
-            ox = tileCx - w * 1.25
-            oy = tileCy
-            break
-          case 'across':
-          default:
-            ox = tileCx
-            oy = tileCy - h * 1.2
-            break
+        if (sharedFlyOrigin) {
+          const origin = viewportOriginForHandFlyIn(handFlyInFrom)
+          ox = origin.x
+          oy = origin.y
+        } else {
+          const w = tileRect.width
+          const h = tileRect.height
+          switch (handFlyInFrom) {
+            case 'right':
+              ox = tileCx + w * 1.25
+              oy = tileCy
+              break
+            case 'left':
+              ox = tileCx - w * 1.25
+              oy = tileCy
+              break
+            case 'across':
+            default:
+              ox = tileCx
+              oy = tileCy - h * 1.2
+              break
+          }
         }
       } else if (isJustDrawn && drawInFromRackBottom) {
         const h = tileRect.height
@@ -293,12 +310,11 @@ function SortableTile({
     }
 
     if (deferHandFlyMeasure) {
-      // Measure only after the rack grid settles, then start the animation (no mid-flight var rewrite).
+      // Measure after the rack grid settles. Unpause is the parent `groupFlyReady` clock —
+      // do not flip ready per tile (slower iPhones started each slot on a different frame).
+      apply()
       raf1 = requestAnimationFrame(() => {
-        raf2 = requestAnimationFrame(() => {
-          apply()
-          setFlyAnimReady(true)
-        })
+        raf2 = requestAnimationFrame(apply)
       })
     } else {
       apply()
@@ -325,15 +341,20 @@ function SortableTile({
     isHandFlyIn,
     handFlyInFrom,
     handFlyInIdsKey,
+    sharedFlyOrigin,
     tile.id,
     drawInFromRackBottom,
     deferHandFlyMeasure,
+    groupFlyReady,
   ])
 
   // Mount `just-drawn` during deferred measure too (paused) so rack z-index lifts before the
   // first visible frame — otherwise tiles start behind the green pass strip and pop forward.
-  const showJustDrawnAnim = runFlyLayout && (flyAnimReady || deferHandFlyMeasure)
-  const flyPausedForMeasure = deferHandFlyMeasure && !flyAnimReady
+  // Drop the animation while any drag is active: `tile-drop-in` also drives `translate` +
+  // opacity, and on some iOS PWAs a neighbour-slide `translate` restarts it at opacity 0
+  // (tiles vanish in their slots until drop). Your phone/desktop never hit that fight.
+  const showJustDrawnAnim = !active && runFlyLayout && (flyAnimReady || deferHandFlyMeasure)
+  const flyPausedForMeasure = deferHandFlyMeasure && !groupFlyReady
 
   const flyStyle: CSSProperties = {
     ...flyMotionStyle,
@@ -527,6 +548,26 @@ export const SortableHand = memo(
   const passStageIndex = passStageTileId != null ? renderIds.indexOf(passStageTileId) : -1
   const deferHandFlyMeasure =
     handTileFlyIn != null && handTileFlyIn.ids.length > 1
+  const groupFlyKey =
+    deferHandFlyMeasure && handTileFlyIn
+      ? `${handTileFlyIn.from}:${handTileFlyIn.ids.join('\u0001')}:${handTileFlyIn.staggerWaveDelayMs ?? 0}`
+      : ''
+  const [groupFlyReady, setGroupFlyReady] = useState(!deferHandFlyMeasure)
+  useLayoutEffect(() => {
+    if (!deferHandFlyMeasure) {
+      setGroupFlyReady(true)
+      return
+    }
+    setGroupFlyReady(false)
+    let raf2 = 0
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setGroupFlyReady(true))
+    })
+    return () => {
+      cancelAnimationFrame(raf1)
+      if (raf2) cancelAnimationFrame(raf2)
+    }
+  }, [deferHandFlyMeasure, groupFlyKey])
   const handFlyInVisualWaveIndexById = useMemo(() => {
     if (!handTileFlyIn?.staggerWaveDelayMs) return null
     const idSet = new Set(handTileFlyIn.ids)
@@ -702,6 +743,7 @@ export const SortableHand = memo(
               handTileFlyIn={handTileFlyIn}
               handFlyInWaveDelayMs={handFlyInWaveDelayMs}
               deferHandFlyMeasure={deferHandFlyMeasure}
+              groupFlyReady={groupFlyReady}
               drawInFromRackBottom={handJokerSwapFlyInFromBelowId === tile.id}
               jokerSwapHintBounce={jokerSwapHintBounceTileIds?.has(tile.id) ?? false}
               jokerSwapHintBounceEpoch={jokerSwapHintBounceEpoch}

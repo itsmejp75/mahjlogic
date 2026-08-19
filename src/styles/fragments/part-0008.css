@@ -80,6 +80,22 @@
 }
 
 /*
+ * Neighbour slides live on `__fly` (`translate` into the next column). If the grid slot clips
+ * (`overflow` / `clip-path`), the tile vanishes in its own cell until drop — seen on some
+ * iOS PWAs, including leftover clip from a prior tile-bottom experiment. Joker-swap still clips.
+ */
+.app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap:not(
+    .sortable-tile-wrap--joker-swap-fly-clip
+  ),
+.app .panel--hand .panel-hand-rack__hand-tray .hand-row > .sortable-tile-wrap:not(
+    .sortable-tile-wrap--joker-swap-fly-clip
+  )
+  .sortable-tile-wrap__fly {
+  overflow: visible;
+  clip-path: none;
+}
+
+/*
  * dnd-kit reorder / pass-preview slides run on this inner wrapper (SortableHand), NOT on the grid
  * slot (`.sortable-tile-wrap`). Keeping the slot free of inline `transform`/`transition` stops
  * iOS WKWebView from re-laying out the 14-column grid every drag frame (the mobile rack jog).
