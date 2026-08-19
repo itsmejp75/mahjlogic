@@ -4,11 +4,7 @@ import { useDndContext } from '@dnd-kit/core'
 import { useSortable } from '@dnd-kit/sortable'
 import type { Transform } from '@dnd-kit/utilities'
 import type { TileInstance } from '../mahjong/types'
-import {
-  handFlyInUsesSharedOrigin,
-  viewportOriginForHandFlyIn,
-  type HandTileFlyIn,
-} from '../mahjong/handTileFlyIn'
+import type { HandTileFlyIn } from '../mahjong/handTileFlyIn'
 import { DeadCauseWarning } from './DeadCauseWarning'
 import { TileFace } from './TileFace'
 
@@ -117,7 +113,7 @@ function SortableTile({
   suggestDeadCause: boolean
   stagedForMeld: boolean
   isJustDrawn: boolean
-  /** Charleston / wall-draw fly-in (viewport corner origin). */
+  /** Charleston / wall-draw fly-in (from the pass direction: right, left, or across). */
   isHandFlyIn: boolean
   /** Present when `isHandFlyIn` (read `.from` only in that branch). */
   handTileFlyIn: HandTileFlyIn | null
@@ -240,7 +236,6 @@ function SortableTile({
   const runFlyLayout = isJustDrawn || isHandFlyIn
   const handFlyInFrom = handTileFlyIn?.from
   const handFlyInIdsKey = handTileFlyIn?.ids.join('\u0001') ?? ''
-  const sharedFlyOrigin = handFlyInUsesSharedOrigin(handTileFlyIn)
   // Hold `just-drawn` until remasure finishes — updating --draw-anim-* mid-flight looks like a skip.
   const [flyAnimReady, setFlyAnimReady] = useState(!deferHandFlyMeasure)
   useLayoutEffect(() => {
@@ -271,28 +266,22 @@ function SortableTile({
       let ox: number
       let oy: number
       if (isHandFlyIn && handFlyInFrom) {
-        if (sharedFlyOrigin) {
-          const origin = viewportOriginForHandFlyIn(handFlyInFrom)
-          ox = origin.x
-          oy = origin.y
-        } else {
-          const w = tileRect.width
-          const h = tileRect.height
-          switch (handFlyInFrom) {
-            case 'right':
-              ox = tileCx + w * 1.25
-              oy = tileCy
-              break
-            case 'left':
-              ox = tileCx - w * 1.25
-              oy = tileCy
-              break
-            case 'across':
-            default:
-              ox = tileCx
-              oy = tileCy - h * 1.2
-              break
-          }
+        const w = tileRect.width
+        const h = tileRect.height
+        switch (handFlyInFrom) {
+          case 'right':
+            ox = tileCx + w * 1.25
+            oy = tileCy
+            break
+          case 'left':
+            ox = tileCx - w * 1.25
+            oy = tileCy
+            break
+          case 'across':
+          default:
+            ox = tileCx
+            oy = tileCy - h * 1.2
+            break
         }
       } else if (isJustDrawn && drawInFromRackBottom) {
         const h = tileRect.height
@@ -341,7 +330,6 @@ function SortableTile({
     isHandFlyIn,
     handFlyInFrom,
     handFlyInIdsKey,
-    sharedFlyOrigin,
     tile.id,
     drawInFromRackBottom,
     deferHandFlyMeasure,

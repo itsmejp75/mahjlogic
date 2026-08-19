@@ -30,14 +30,6 @@ export function handTileFlyInFromBotSeat(botIndex: 0 | 1 | 2): HandTileFlyInFrom
   return 'left'
 }
 
-/**
- * Charleston receive (several tiles, no opening-deal stagger): one shared viewport origin so
- * they travel as a group instead of each dropping into its own slot.
- */
-export function handFlyInUsesSharedOrigin(fly: HandTileFlyIn | null | undefined): boolean {
-  return fly != null && fly.ids.length > 1 && fly.staggerWaveDelayMs == null
-}
-
 /** Pixel origin for fly-in toward the main rack (upper-right, top center, upper-left). */
 export function viewportOriginForHandFlyIn(from: HandTileFlyInFrom): { x: number; y: number } {
   if (typeof window === 'undefined') return { x: 200, y: 40 }
