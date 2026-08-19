@@ -107,16 +107,14 @@
   box-shadow: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  .tile-face {
-    border-color: color-mix(in srgb, var(--color-black) 35%, transparent);
-  }
+.tile-face {
+  border-color: color-mix(in srgb, var(--color-black) 35%, transparent);
+}
 
-  .exposure-rack__slot--empty::before {
-    background: color-mix(in srgb, var(--color-black) 12%, var(--bg-elevated));
-    box-shadow: none;
-    border-color: color-mix(in srgb, var(--border) 60%, transparent);
-  }
+.exposure-rack__slot--empty::before {
+  background: color-mix(in srgb, var(--color-black) 12%, var(--bg-elevated));
+  box-shadow: none;
+  border-color: color-mix(in srgb, var(--border) 60%, transparent);
 }
 
 /*

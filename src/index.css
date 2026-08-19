@@ -55,28 +55,32 @@
 }
 
 :root {
-  --text: #4a433c;
-  --text-h: #14110f;
-  --bg: #ebe4d8;
-  --bg-elevated: #f6f1e8;
-  --border: #cfc4b4;
-  --code-bg: #e2d8c8;
-  --accent: #b84a32;
-  --accent-bg: rgba(184, 74, 50, 0.14);
-  --accent-border: rgba(184, 74, 50, 0.5);
-  --coach-teal: #0d5c55;
-  --coach-teal-bg: rgba(13, 92, 85, 0.1);
-  --coach-teal-border: rgba(13, 92, 85, 0.35);
+  /*
+   * Always the dark play palette — do not follow iOS/Android Light Appearance.
+   * `color-scheme: only dark` tells the UA not to auto-retint for prefers-color-scheme.
+   */
+  --text: #e0e0e0;
+  --text-h: #e0e0e0;
+  --bg: #12151a;
+  --bg-elevated: #222a28;
+  --border: #3a4542;
+  --code-bg: #24302e;
+  --accent: #e07a5f;
+  --accent-bg: rgba(224, 122, 95, 0.12);
+  --accent-border: rgba(224, 122, 95, 0.45);
+  --coach-teal: #5eead4;
+  --coach-teal-bg: rgba(94, 234, 212, 0.08);
+  --coach-teal-border: rgba(94, 234, 212, 0.35);
   /*
    * Pass / Charleston / discard / call drag-over interior — built from `--coach-teal-border` so fill
    * matches the same teal opacity family as the 1px edge (avoids solid `--coach-teal` @ 30% looking “off”).
    */
   --rack-teal-slot-highlight-fill: color-mix(in srgb, var(--coach-teal-border) 58%, var(--bg-elevated) 42%);
   --rack-teal-slot-highlight-fill-mid: color-mix(in srgb, var(--coach-teal-border) 36%, var(--bg-elevated) 64%);
-  --stop-red: #b91c1c;
-  --stop-red-border: rgba(185, 28, 28, 0.35);
+  --stop-red: #f87171;
+  --stop-red-border: rgba(248, 113, 113, 0.35);
   --shadow:
-    rgba(20, 17, 15, 0.12) 0 10px 24px -6px, rgba(20, 17, 15, 0.06) 0 4px 10px -4px;
+    rgba(0, 0, 0, 0.45) 0 12px 28px -8px, rgba(0, 0, 0, 0.28) 0 6px 12px -6px;
 
   --sans: 'Figtree', system-ui, 'Segoe UI', sans-serif;
   --heading: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
@@ -104,13 +108,13 @@
    */
   --card-tile-skin-blue-bg: var(--card-ink-navy);
   --card-tile-skin-blue-fg: #ffffff;
-  --card-tile-skin-black-bg: #1c2430;
-  --card-tile-skin-black-fg: #f2f5fa;
+  --card-tile-skin-black-bg: #0f141c;
+  --card-tile-skin-black-fg: #e8edf5;
   --card-tile-skin-red-bg: var(--card-ink-red);
-  --card-tile-skin-red-fg: #1a0a0a;
+  --card-tile-skin-red-fg: #1a0505;
   --card-tile-skin-green-bg: var(--card-ink-green);
-  --card-tile-skin-green-fg: #0d1a0f;
-  --card-tile-skin-neutral-bg: #c4bdb2;
+  --card-tile-skin-green-fg: #061208;
+  --card-tile-skin-neutral-bg: #4a524e;
   --card-tile-skin-neutral-fg: var(--text-h);
 
   /* Page shell (gaps between trays) vs tray/container interiors. */
@@ -137,15 +141,15 @@
   --window-surface: var(--app-wrapper-surface);
   --window-border: color-mix(in srgb, #c8c8c8 55%, var(--app-container-surface));
   --window-inner-surface: var(--app-container-surface);
-  --window-fg: #4a433c;
-  --window-fg-muted: #8a8580;
+  --window-fg: #e0e0e0;
+  --window-fg-muted: #a8a8a8;
   /* Shared ivory for Classic illustrative art + wind/blank glyph faces. */
   --tile-illustrative-face: #fdfbf7;
-  --wind-tile-bg: var(--tile-illustrative-face);
+  --wind-tile-bg: #e8e6e0;
 
   font: 17px/145% var(--sans);
   letter-spacing: 0.01em;
-  color-scheme: dark;
+  color-scheme: only dark;
   color: var(--text);
   /* Match app shell so safe-area / scrollbar gutters align with the page surface. */
   background-color: var(--app-wrapper-surface);
@@ -156,58 +160,6 @@
 
   @media (max-width: 1024px) {
     font-size: 16px;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --text: #e0e0e0;
-    --text-h: #e0e0e0;
-    --bg: #12151a;
-    --bg-elevated: #222a28;
-    --border: #3a4542;
-    --code-bg: #24302e;
-    --accent: #e07a5f;
-    --accent-bg: rgba(224, 122, 95, 0.12);
-    --accent-border: rgba(224, 122, 95, 0.45);
-    --coach-teal: #5eead4;
-    --coach-teal-bg: rgba(94, 234, 212, 0.08);
-    --coach-teal-border: rgba(94, 234, 212, 0.35);
-    --rack-teal-slot-highlight-fill: color-mix(in srgb, var(--coach-teal-border) 58%, var(--bg-elevated) 42%);
-    --rack-teal-slot-highlight-fill-mid: color-mix(in srgb, var(--coach-teal-border) 36%, var(--bg-elevated) 64%);
-    --stop-red: #f87171;
-    --stop-red-border: rgba(248, 113, 113, 0.35);
-    --shadow:
-      rgba(0, 0, 0, 0.45) 0 12px 28px -8px, rgba(0, 0, 0, 0.28) 0 6px 12px -6px;
-
-    --card-ink-navy: #42a5f5;
-    --card-ink-green: #52B147;
-    --card-ink-red: #ff5252;
-    --card-ink-neutral: var(--text-h);
-
-    --card-tile-skin-blue-bg: var(--card-ink-navy);
-    --card-tile-skin-blue-fg: #ffffff;
-    --card-tile-skin-black-bg: #0f141c;
-    --card-tile-skin-black-fg: #e8edf5;
-    --card-tile-skin-red-bg: var(--card-ink-red);
-    --card-tile-skin-red-fg: #1a0505;
-    --card-tile-skin-green-bg: var(--card-ink-green);
-    --card-tile-skin-green-fg: #061208;
-    --card-tile-skin-neutral-bg: #4a524e;
-    --card-tile-skin-neutral-fg: var(--text-h);
-
-    --app-wrapper-surface: #ffffff;
-    --app-container-surface: #5c6066;
-    --felt-wrapper-bg: var(--app-wrapper-surface);
-    --felt-tray-bg: var(--app-container-surface);
-    --window-surface: var(--app-wrapper-surface);
-    --window-border: color-mix(in srgb, #c8c8c8 55%, var(--app-container-surface));
-    --window-inner-surface: var(--app-container-surface);
-    --window-inner-surface-fill: none;
-    --window-fg: #e0e0e0;
-    --window-fg-muted: #a8a8a8;
-    --wind-tile-bg: #e8e6e0;
   }
 }
 

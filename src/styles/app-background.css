@@ -465,15 +465,12 @@
 }
 
 /*
- * App chrome is always a dark felt. `:root` still ships a leftover light palette
- * (`--window-fg: #4a433c`) that iOS Light Appearance applies via
- * `prefers-color-scheme`. That made compass S/W/N paint warm brown on navy on a
- * first-install PWA while a Dark Mode phone stayed light gray. Lock ink here so
- * the OS appearance cannot retint play-surface text.
+ * App chrome is always a dark felt. `:root` now ships only the dark palette
+ * (`color-scheme: only dark`) so iOS/Android Light Appearance cannot retint ink.
  */
 html[data-app-theme],
 html:not([data-app-theme]) {
-  color-scheme: dark;
+  color-scheme: only dark;
   --window-fg: #e0e0e0;
   --window-fg-muted: #a8a8a8;
 }

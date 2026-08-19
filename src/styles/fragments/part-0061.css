@@ -1074,9 +1074,7 @@
   text-align: center;
   letter-spacing: 0;
   box-sizing: border-box;
-  /* Same compass ink as `.panel-hand-rack__seat-label` — not `--window-fg`, which
-   * followed iOS Light Appearance and went warm brown on the navy tracker. */
-  color: #c2c2c8;
+  color: var(--window-fg);
   opacity: 0.92;
   white-space: nowrap;
   pointer-events: none;
